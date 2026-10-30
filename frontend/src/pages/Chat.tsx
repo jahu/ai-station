@@ -39,7 +39,11 @@ import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
 import { musicScopeReady } from "./music-scope";
 import type { ChatProviderInfo } from "./ChatProviders";
-import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
+import {
+  acceptsLocalAttachments,
+  effectsScopeReady,
+  emptyOptions,
+} from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
   type ActionResult,
@@ -1283,7 +1287,9 @@ function ConversationView({
                 (options.action === "coding.commit" ||
                   options.action === "coding.publish")
               ? gitReady
-              : !!draft.trim() && musicScopeReady(options, draft);
+              : !!draft.trim() &&
+                musicScopeReady(options, draft) &&
+                effectsScopeReady(options);
   const thinking = useThinking(
     conversation.model,
     ["auto", "chat"].includes(options.action) &&
@@ -1839,6 +1845,7 @@ function ConversationView({
                     options.action === "audio.transcribe" ||
                     options.action === "audio.analyze" ||
                     options.action === "audio.music" ||
+                    options.action === "audio.effects" ||
                     options.action === "data.analyze" ||
                     options.action === "image.generate_video" ||
                     options.action === "project.create" ||

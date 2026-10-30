@@ -359,3 +359,15 @@ it("does not promise automatic retry after a composed job failed with remaining 
   expect(screen.queryByLabelText("Resource wait")).toBeNull();
   expect(screen.getByText("A segment failed")).toBeTruthy();
 });
+
+it("reports audio finishing separately after all silent video segments complete", async () => {
+  mount("composing", undefined, {
+    soundtrack_status: "mixing",
+    completed_segments: 23,
+    final_artifact_id: null,
+  });
+  expect(
+    (await screen.findByText(/Mixing the film and sound/)).textContent,
+  ).toContain("after verification");
+  expect(screen.queryByRole("link", { name: /Download/ })).toBeNull();
+});

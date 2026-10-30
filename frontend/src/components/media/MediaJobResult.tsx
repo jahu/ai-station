@@ -328,6 +328,16 @@ export default function MediaJobResult({
           ))}
         </>
       )}
+      {job?.soundtrack_status &&
+        !["succeeded", "failed"].includes(job.soundtrack_status) && (
+          <p className="muted" role="status">
+            {job.soundtrack_status === "waiting_for_film"
+              ? "Sound will be created after the film."
+              : job.soundtrack_status === "mixing"
+                ? "Mixing the film and sound. The final movie will appear after verification."
+                : "Creating the synchronized sound effects track."}
+          </p>
+        )}
       <ErrorNotice
         error={
           error ?? current.error ?? artifact.error ?? stop.error ?? resume.error

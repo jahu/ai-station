@@ -24,12 +24,13 @@ from sqlalchemy import select
 from app.assistant_github import GithubScope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, completion_stream, snapshot_provider
 from app.conversation_data_schema import DataScope
+from app.conversation_effects import EffectsScope
 from app.conversation_music import MusicScope
 from app.db import utcnow
 from app.events import append_event
 from app.llama import LoadModel
 from app.media_translation_text import TranslationOptions
-from app.models import Artifact, Conversation, Message, Project, Run, RuntimeInstance
+from app.models import Artifact, Conversation, CreativeSession, Message, Project, Run, RuntimeInstance
 from app.project_build import ProjectBuildScope, project_build_request
 from app.project_setup import ProjectAutomation
 from app.providers import ProviderError
@@ -52,6 +53,7 @@ Action = Literal[
     "image.generate_video",
     "audio.speech",
     "audio.music",
+    "audio.effects",
     "data.analyze",
     "audio.transcribe",
     "audio.analyze",
@@ -183,6 +185,8 @@ class AssistantInputs(BaseModel):
         values = handler(self)
         if self.media_translation is None:
             values.pop("media_translation", None)
+        if self.effects is None:
+            values.pop("effects", None)
         return values
 
     image_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
@@ -197,6 +201,7 @@ class AssistantInputs(BaseModel):
         "image.generate_video",
         "audio.speech",
         "audio.music",
+        "audio.effects",
         "data.analyze",
         "audio.transcribe",
         "audio.analyze",
@@ -220,6 +225,7 @@ class AssistantInputs(BaseModel):
     continuation: ContinuationScope | None = None
     media: VideoScope | None = None
     music: MusicScope | None = None
+    effects: EffectsScope | None = None
     data: DataScope | None = None
     github: GithubScope | None = None
     coding: CodingScope | None = None
@@ -271,6 +277,7 @@ def assistant_needs_provider(body):
         "image.upscale",
         "audio.speech",
         "audio.music",
+        "audio.effects",
         "page.describe",
         "project.create",
         "project.create_code",
@@ -651,6 +658,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         if body.data is not None and body.data.operation == "create"
         else None
     )
+    effects_video = None
+    if selected_plan and selected_plan.action == "audio.effects":
+        from app.conversation_effects import freeze_source
+
+        effects_video = freeze_source(session, body)
     needs_provider = assistant_needs_provider(body)
     snapshot = snapshot_provider(session, conversation) if needs_provider else {}
     task = create_task(
@@ -683,6 +695,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 if design_pages
                 else {}
             ),
+            **({"effects_video": effects_video} if effects_video is not None else {}),
             "user_message_id": user.id,
             "model": conversation.model,
             **(
@@ -732,7 +745,8 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             + (["filesystem_read", "workspace_write"] if body.audio_artifact_id else [])
             + (
                 ["filesystem_read", "workspace_write"]
-                if selected_plan and selected_plan.action == "audio.music"
+                if selected_plan
+                and (selected_plan.action in {"audio.music", "audio.effects"} or body.effects is not None)
                 else []
             )
             + (["filesystem_read", "manage_models"] if images else [])
@@ -813,6 +827,16 @@ def explicit_plan(params):
                 action="page.describe", reason="Read the selected page and inspect its visual design locally."
             )
         return Plan(action=action, reason="Using your selected action.")
+    from app.conversation_effects import new_film_requested
+
+    if new_film_requested(params):
+        return Plan(
+            action="video.generate", reason="Create the requested film and its described sound locally."
+        )
+    from app.conversation_effects import requested as requested_effects
+
+    if requested_effects(params):
+        return Plan(action="audio.effects", reason="Add reviewed local sound effects to the selected film.")
     from app.conversation_music import requested as requested_music
 
     if requested_music(params):
@@ -1103,10 +1127,54 @@ class AssistantExecutor:
                         action="clarify",
                         reason="Local music needs setup. Open Audio → Music to inspect the offline engine before generating.",
                     )
+        effects_profile = None
+        effects_mix_renderer = None
+        if plan and (
+            plan.action == "audio.effects"
+            or plan.action == "video.generate"
+            and run.parameters.get("effects")
+        ):
+            from app.effects import available_profile, video_snapshot
+            from app.effects import capabilities as effects_capabilities
+
+            authorized = explicit_plan(run.parameters)
+            if authorized is None or authorized.action != plan.action or not run.parameters.get("effects"):
+                plan = Plan(
+                    action="clarify",
+                    reason="Select a film or refer explicitly to its completed result before adding sound.",
+                )
+            else:
+                from app.conversation_effects import request as effects_request
+
+                if plan.action == "audio.effects":
+                    selected = effects_request(run.parameters)
+                    if video_snapshot(session, selected.video_artifact_id) != run.parameters.get(
+                        "effects_video"
+                    ):
+                        raise ValueError("The selected film changed after this sound request was queued")
+                from app.conversation_effects import preflight as effects_preflight
+
+                effects_profile = effects_preflight(session, run, effects_capabilities)
+                if not available_profile(effects_profile):
+                    plan = Plan(
+                        action="clarify",
+                        reason="Local film sound needs setup. Open Audio → Sound effects to inspect its engine.",
+                    )
+                elif run.parameters["effects"].get("preview_mode", "mix") == "mix":
+                    from app.timelines import capabilities as timeline_capabilities
+
+                    effects_mix_renderer = effects_preflight(session, run, timeline_capabilities)
+                    if not effects_mix_renderer.get("available"):
+                        plan = Plan(
+                            action="clarify",
+                            reason="The CPU film editor is unavailable or checking its setup. Open Video → Edit a film, then try again.",
+                        )
+        video_profile = None
         if plan and plan.action in {"video.generate", "image.generate_video"}:
             from app.video import capabilities
 
-            if not capabilities()["available"]:
+            video_profile = capabilities()
+            if not video_profile["available"]:
                 plan = Plan(
                     action="clarify",
                     reason="Local video needs setup. Open Video to inspect the configured Wan runtime before generating.",
@@ -1283,7 +1351,7 @@ class AssistantExecutor:
                     )
         elif plan.action == "video.generate":
             from app.media_jobs import LongVideoRequest, publish_video
-            from app.video import VideoRequest, capabilities, create_video_run
+            from app.video import VideoRequest, create_video_run
 
             if len(images) > 1 or params.get("audio_artifact_id"):
                 message.content = "Use a scene prompt and at most one first-frame image for a silent video."
@@ -1293,7 +1361,10 @@ class AssistantExecutor:
                 except ValueError as exc:
                     message.content = str(exc)
                 else:
-                    profile = capabilities()
+                    profile = video_profile
+                    from app.conversation_effects import visual_prompt
+
+                    film_prompt = visual_prompt(params) if params.get("effects") else params["content"]
                     selected_profile = "default"
                     if scope and scope.memory_profile is not None:
                         selected_profile = scope.memory_profile
@@ -1304,7 +1375,7 @@ class AssistantExecutor:
                         request = LongVideoRequest(
                             translation=params.get("media_translation"),
                             client_request_id=UUID(run.id),
-                            prompt=params["content"][:2000],
+                            prompt=film_prompt[:2000],
                             image_artifact_id=images[0] if images else None,
                             **scope.model_dump(exclude={"memory_profile"}),
                             **settings,
@@ -1316,7 +1387,7 @@ class AssistantExecutor:
                     else:
                         request = VideoRequest(
                             translation=params.get("media_translation"),
-                            prompt=params["content"][:2000],
+                            prompt=film_prompt[:2000],
                             image_artifact_id=images[0] if images else None,
                             **settings,
                         )
@@ -1325,6 +1396,14 @@ class AssistantExecutor:
                         )
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
+                    if params.get("effects"):
+                        from app.film_sound import enqueue
+
+                        source_id = (
+                            run.task.metadata_json["media_plan"]["compose_run_id"] if scope else child.id
+                        )
+                        enqueue(session, run, source_id, effects_profile, effects_mix_renderer)
+                        message.content += " Then creating the described sound and a synchronized film; the separate track and editable mix stay available."
                     if selected_profile == "bounded_11g":
                         message.content += " Using the reduced-RAM landscape profile."
         elif plan.action == "data.analyze":
@@ -1335,6 +1414,35 @@ class AssistantExecutor:
                 "Creating files locally from your instructions. Verified files and a result table will appear here."
                 if DataScope.model_validate(run.parameters["data"]).operation == "create"
                 else "Analyzing the selected data locally. A private workspace, verified table and CSV result will appear here. Your original files stay unchanged."
+            )
+        elif plan.action == "audio.effects":
+            from app.conversation_effects import request as effects_request
+            from app.effects import create_effects_run
+            from app.permissions import require
+
+            require(run.effective_permissions, "filesystem_read")
+            require(run.effective_permissions, "workspace_write")
+            child = create_effects_run(
+                session,
+                effects_request(params),
+                task=run.task,
+                parent_run_id=run.id,
+                observed_profile=effects_profile,
+            )
+            mode = EffectsScope.model_validate(params["effects"])
+            if mode.preview_mode == "mix":
+                child.parameters = {
+                    **child.parameters,
+                    "effects_mix": mode.model_dump(
+                        mode="json", include={"preview_mode", "original_gain", "effects_gain"}
+                    ),
+                    "effects_mix_renderer": effects_mix_renderer,
+                }
+            run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+            message.content = (
+                "Creating sound effects locally, then mixing them with the film's original sound. The track and film will appear here; you can reopen the mix in the editor."
+                if mode.preview_mode == "mix"
+                else "Creating a separate effects track and a film preview that replaces its original audio. Your original film stays in Library."
             )
         elif plan.action == "audio.music":
             from app.conversation_music import caption as music_caption
@@ -1874,11 +1982,41 @@ def task_results(session, message, run):
         from app.media_jobs import job_view
 
         media = job_view(session, run.task)
+    soundtrack = run.task.metadata_json.get("soundtrack_plan")
+    sound_steps = [step for step in steps if step.executor_type == "mmaudio_effects"]
+    if soundtrack:
+        from app.film_sound import stages as sound_stages
+
+        current = sound_stages(session, run.task)
+        final_run = current[-1] if len(current) == 3 else None
+        stem_run = current[1] if len(current) >= 2 else None
+        sound_steps = [stem_run] if stem_run else []
+        artifacts = [
+            a
+            for a in artifacts
+            if a.artifact_type == "video"
+            and final_run
+            and a.run_id == final_run.id
+            or a.artifact_type == "audio"
+            and stem_run
+            and a.run_id == stem_run.id
+            or a.artifact_type not in {"video", "audio"}
+        ]
     return {
         **({"media_runs": [run_dict(item) for item in media_runs]} if media_runs else {}),
         **({"media_retry_errors": media_errors} if media_errors else {}),
         **({"media_job": media} if media else {}),
         **data,
+        "sound_runs": [run_dict(step) for step in sound_steps],
+        "sound_edits": [
+            {"session_id": workspace.id, "run_id": step.metadata_json["effects_preview_run_id"]}
+            for step in sound_steps
+            if step.status == "succeeded"
+            and step.metadata_json.get("effects_edit_session_id")
+            and (workspace := session.get(CreativeSession, step.metadata_json["effects_edit_session_id"]))
+            is not None
+            and workspace.capability == "timeline"
+        ],
         "steps": [
             {
                 "id": step.id,

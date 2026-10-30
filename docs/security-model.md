@@ -1,3 +1,11 @@
+Conversation sound scopes never grant Library browsing to a model. Current-turn
+commands bind a manually selected owned film or the single completed film visibly
+linked to that conversation; ambiguous, partial and latest unfinished results are
+rejected. New-film sound waits on its exact final producer, then verifies its
+bytes/timing and the admitted runtime observations. Ordinary Task Stop serializes
+with publication. Effects, the saved mix/revision, histories and output files
+remain private; no user-supplied commands, filters or model paths are introduced.
+
 The [next-release account boundary](plans/next-release-0.1.md#accounts-and-data-ownership)
 requires private resource ownership, owner-bound workers/tools, protected file
 and event access, per-account browser state and optional TOTP. These boundaries

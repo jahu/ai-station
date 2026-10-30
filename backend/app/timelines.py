@@ -261,7 +261,7 @@ def save(session_id: UUID, body: SaveRevision, session: DB):
     return revision_dict(saved)
 
 
-def create_timeline_run(session, body, *, task=None, parent_run_id=None):
+def create_timeline_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
     saved = session.get(TimelineRevision, str(body.revision_id))
     if saved is None:
         raise HTTPException(404, "Saved edit not found")
@@ -272,7 +272,7 @@ def create_timeline_run(session, body, *, task=None, parent_run_id=None):
             raise ValueError("The saved media changed; inspect or restore it")
     except (ValueError, OSError, wave.Error, EOFError) as exc:
         raise HTTPException(422, str(exc)) from exc
-    ready = capabilities()
+    ready = capabilities() if observed_profile is None else observed_profile
     if (
         not ready.get("available")
         or ready.get("ram_mib") != RAM_MIB

@@ -1,3 +1,9 @@
+Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
+requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
+container coordinator waits for the verified final film before publishing sound;
+no second native API or execution engine is added. The original film, WAV and
+saved editable mix retain their ownership and immutable source lineage.
+
 The [next-release contract](plans/next-release-0.1.md), owner direction
 2026-10-29, plans private accounts and shared machine resources, persistent
 creative sessions, local prompt/search preparation, expressive sound/editing and
