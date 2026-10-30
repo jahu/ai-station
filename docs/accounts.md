@@ -292,6 +292,10 @@ Auto local-code selection uses the same shared source/device observations and a
 fixed projection of measured context from the exact startup event. This includes
 retained proof for a stopped model; no foreign prompt, full Run parameters or
 event payload becomes available. The 100k/context-fit checks remain in place.
+Shared model definitions also omit an inaccessible verification Run reference.
+The model picker shows an inspection link only when that Run is accessible and
+offers direct restart/unload only to an administrator; ordinary model selection
+and health checks remain usable.
 
 An account selecting a model another account is loading receives its own
 `runtime.wait` Run. Only that private waiter is a consumer prerequisite; no foreign

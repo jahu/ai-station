@@ -155,6 +155,14 @@ def preset_of(row: ModelDefinition) -> dict:
 
 
 def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict:
+    from sqlalchemy.orm import object_session
+
+    from app.data_access import ScopedSession
+
+    verification_id = row.last_verify_run_id
+    session = object_session(row)
+    if isinstance(session, ScopedSession) and verification_id and session.get(Run, verification_id) is None:
+        verification_id = None
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
     image = (row.metadata_json or {}).get("image")
     image_backend = image.get("backend") if isinstance(image, dict) and row.category == "image" else None
@@ -175,7 +183,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "file_id": row.file_id,
         "capabilities": list(row.capabilities or []),
         "status": row.status,
-        "last_verify_run_id": row.last_verify_run_id,
+        "last_verify_run_id": verification_id,
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
         "preset": preset_of(row),

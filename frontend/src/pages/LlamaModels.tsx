@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Check, ChevronDown, Cpu, Search, Server, X } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
+import { useAccount } from "../account-context";
 import { ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
@@ -25,7 +26,7 @@ type Instance = {
     context_size?: number;
     cache_type?: string;
     n_ctx_train?: number;
-    load_run_id: string;
+    load_run_id?: string;
     operation_run_id?: string;
     health_run_id?: string;
     observation?: { error?: string; n_ctx?: number };
@@ -87,6 +88,9 @@ export default function LlamaModels({
   triggerLabel?: string;
   selectionOnly?: boolean;
 }) {
+  const account = useAccount();
+  const canManageRuntime =
+    account.mode === "operator" || account.user?.is_admin === true;
   const cache = useQueryClient();
   const hardware = useHardware();
   const [open, setOpen] = useState(false);
@@ -114,6 +118,8 @@ export default function LlamaModels({
   }
   const choice = catalog.data?.models?.find((m) => m.model_key === draft);
   const instance = instanceFor(choice);
+  const inspectionRunId =
+    instance?.metadata.operation_run_id ?? instance?.metadata.load_run_id;
   const current = catalog.data?.models?.find((m) => m.model_key === value);
   const localModels = [
     ...new Set(models.filter((m) => !m.startsWith("llamacpp:"))),
@@ -484,21 +490,22 @@ export default function LlamaModels({
                         >
                           Check health
                         </Button>
-                        {(instance.status === "ready" ||
-                          instance.status === "stopped" ||
-                          instance.status === "failed") && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            disabled={pending}
-                            onClick={() => restart.mutate(instance.id)}
-                          >
-                            Restart owned runtime
-                          </Button>
-                        )}
+                        {canManageRuntime &&
+                          (instance.status === "ready" ||
+                            instance.status === "stopped" ||
+                            instance.status === "failed") && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={pending}
+                              onClick={() => restart.mutate(instance.id)}
+                            >
+                              Restart owned runtime
+                            </Button>
+                          )}
                       </div>
                     )}
-                    {instance?.status === "ready" && (
+                    {canManageRuntime && instance?.status === "ready" && (
                       <Button
                         type="button"
                         variant="secondary"
@@ -508,9 +515,9 @@ export default function LlamaModels({
                         Unload model · release GPUs
                       </Button>
                     )}
-                    {instance && (
+                    {inspectionRunId && (
                       <Link
-                        to={`/runs/${instance.metadata.operation_run_id ?? instance.metadata.load_run_id}`}
+                        to={`/runs/${inspectionRunId}`}
                         onClick={() => setOpen(false)}
                       >
                         Inspect runtime / cancel

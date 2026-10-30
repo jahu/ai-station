@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { AccountContext } from "../account-context";
 import {
   cleanup,
   fireEvent,
@@ -14,6 +15,91 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it.each([false, true])(
+  "uses a shared model without advertising private Runs (admin=%s)",
+  async (isAdmin) => {
+    const select = vi.fn();
+    const fetch = vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/hardware")
+          ? { gpus: [] }
+          : {
+              models: [
+                {
+                  id: "file",
+                  model_key: "llamacpp:file",
+                  name: "Shared.gguf",
+                  size_bytes: 1000,
+                },
+              ],
+              instances: [
+                {
+                  id: "shared",
+                  name: "Shared.gguf",
+                  status: "ready",
+                  metadata: {
+                    model_file_id: "file",
+                    gpus: [],
+                    context_size: 4096,
+                  },
+                },
+              ],
+            },
+    }));
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <AccountContext.Provider
+          value={{
+            mode: "accounts",
+            user: {
+              id: "alice",
+              username: "Alice",
+              display_name: "Alice",
+              is_admin: isAdmin,
+              enabled: true,
+              mfa_enabled: false,
+              created_at: "2026-10-30T00:00:00Z",
+            },
+          }}
+        >
+          <MemoryRouter>
+            <LlamaModels
+              value="llamacpp:file"
+              models={[]}
+              onSelect={select}
+              busy={false}
+            />
+          </MemoryRouter>
+        </AccountContext.Provider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Model" }));
+    await screen.findByRole("button", { name: /Shared/ });
+    fireEvent.click(screen.getByText("GPU, context and advanced options"));
+    expect(
+      screen.queryByRole("link", { name: "Inspect runtime / cancel" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Check health" })).toBeTruthy();
+    expect(
+      !!screen.queryByRole("button", { name: "Restart owned runtime" }),
+    ).toBe(isAdmin);
+    expect(!!screen.queryByRole("button", { name: /Unload model/ })).toBe(
+      isAdmin,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+    expect(select).toHaveBeenCalledWith("llamacpp:file");
+    expect(
+      fetch.mock.calls.every(([path]) => path !== "/api/llama/shared/stop"),
+    ).toBe(true);
+  },
+);
 
 it("chooses a first-use GGUF without starting or configuring a runtime", async () => {
   const select = vi.fn();

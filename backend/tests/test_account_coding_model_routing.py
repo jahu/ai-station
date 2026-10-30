@@ -7,7 +7,7 @@ from app.coding_model_routing import select_coding_model
 from app.data_access import DataScope, ScopedSession
 from app.db import control_session_factory, get_engine
 from app.events import append_event
-from app.models import Run, RuntimeInstance
+from app.models import ModelDefinition, Run, RuntimeInstance
 from app.runner_client import RunnerClient
 from app.runtime_coordination import runtime_coding_facts
 from test_account_private_api import accounts as accounts
@@ -77,3 +77,33 @@ def test_auto_can_select_a_foreign_models_verified_context_without_exposing_load
         encoded = json.dumps(selected)
         assert loader_id not in encoded and "Synthetic private producer" not in encoded
     assert alice.get("/api/runs/" + loader_id + "/events").status_code == 404
+
+
+def test_shared_model_definition_does_not_publish_another_accounts_private_verification_run(
+    accounts, managed
+):
+    owner, alice, _ = accounts
+    marker = owner.post("/api/testing/runs", json={"title": "Synthetic private model verification"}).json()[
+        "id"
+    ]
+    with control_session_factory()() as queue:
+        definition = ModelDefinition(
+            name="Synthetic shared model", file_id=managed[0], last_verify_run_id=marker
+        )
+        queue.add(definition)
+        queue.commit()
+        definition_id = definition.id
+    own = owner.get("/api/models/definitions/" + definition_id)
+    assert own.status_code == 200 and own.json()["last_verify_run_id"] == marker
+    for path in (
+        "/api/models/definitions",
+        "/api/models/definitions/" + definition_id,
+        "/api/models/" + managed[0],
+    ):
+        response = alice.get(path)
+        assert response.status_code == 200, response.text
+        assert marker not in response.text
+    inspected = owner.get(
+        "/api/models/definitions/" + definition_id, headers={"X-AI-Station-Inspect-All": "true"}
+    )
+    assert inspected.status_code == 200 and inspected.json()["last_verify_run_id"] == marker
