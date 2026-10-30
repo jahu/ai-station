@@ -56,6 +56,34 @@ it("does not request the user directory for a member", async () => {
   expect(screen.getByText("Administrator access required")).toBeTruthy();
   expect(fetch).not.toHaveBeenCalled();
 });
+it("opens a separate read-only workspace and restores focus on close", async () => {
+  const fetch = vi.fn(async (url: string) => {
+    if (url.endsWith("/workspace"))
+      return reply({
+        user: member,
+        read_only: true,
+        counts: {},
+        preferences: {},
+      });
+    if (url.includes("/workspace/"))
+      return reply({ items: [], total: 0, offset: 0, limit: 40 });
+    return reply([admin, member]);
+  });
+  mount(fetch);
+  const trigger = await screen.findByRole("button", {
+    name: "Inspect workspace of Bob",
+  });
+  fireEvent.click(trigger);
+  expect(
+    await screen.findByRole("heading", { name: "Bob’s workspace" }),
+  ).toBeTruthy();
+  expect(screen.getByText("Read only")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Close workspace inspection" }),
+  );
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
 it("creates a private member account and keeps password confirmation local", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => {
     if (options?.method === "POST") {

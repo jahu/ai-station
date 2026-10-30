@@ -352,6 +352,44 @@ authority still preserves enabled MFA and current recovery hashes.
 These are staged host-administration operations, outside HTTP and agent tools.
 The complete account request/execution/tool boundary remains the enablement gate.
 
+## Administrator workspace inspection (staged profile)
+
+Settings → Users → **Inspect workspace** opens a separate read-only dialog for
+one selected account. The header identifies both the subject and the actual
+administrator; it does not log in as that user or replace the administrator's
+ordinary workspace. Conversations/messages, Library (including Trash/deletion
+history), Runs/events, Tasks, Memory (including disabled entries), Agents,
+Projects, Approvals, model providers and connections have server-side search and
+paging. Saved parameters and provenance remain inspectable alongside transcripts
+and supported media previews. Named personal preferences are included; password,
+TOTP/recovery material and arbitrary internal settings are excluded.
+
+`GET /api/admin/users/{id}/workspace` and its fixed collection/detail/entries/file
+routes revalidate the real administrator's device and role on each request.
+They construct an explicit selected-owner, read-only `ScopedSession`: the actor
+stays the administrator, while counts, paging, derived records and identity-map
+lookups are restricted to the selected subject. Disabled subjects remain
+inspectable. A disabled, demoted or revoked administrator cannot keep opening
+their data. No inspection POST/PATCH/PUT/DELETE or executable actions exist.
+Normal administrator API requests still return only that administrator's data.
+
+Files reuse canonical artifact storage and existing deletion/internal-output
+guards. Cookie-authorized subject-bound file URLs support native range playback;
+they do not load whole videos into JavaScript or attach bearer tokens to URLs.
+Private responses are not cached. HTML/SVG and other non-preview files remain
+attachments under the existing `nosniff` policy. Provider/connection inspection
+reads stored metadata without probing endpoints or resolving credentials; stored
+secret values/references and unknown connector configuration keys are omitted.
+Inspection query keys contain actor and subject IDs; closing the dialog cancels
+requests and clears only those inspection caches. Changing the logged-in account
+continues to use the global account epoch/cache boundary.
+
+The focused A/B/admin tests cover all ten collections, counts/search/paging,
+messages/events, cross-subject IDs and files, credential omission, read-only
+writes, disabled subjects, revoked/demoted actors, range streaming and symlink
+escape. These tests and the dedicated UI checks qualify this inspector only;
+they do not activate accounts or replace the complete application audit below.
+
 ## Remaining enablement gate
 
 Shared llama.cpp stop/restart, operation coalescing, context upgrades and idle

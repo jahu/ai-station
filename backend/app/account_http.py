@@ -74,6 +74,7 @@ def inspection_requested(request: Request) -> bool:
 
 def install_account_access(app) -> None:
     """Enable only once the complete account/private-data cutover is qualified."""
+    from app.account_inspection import router as inspection_router
     from app.accounts import AccountError
     from app.accounts_api import router
     from app.data_access import DataAccessError
@@ -86,6 +87,7 @@ def install_account_access(app) -> None:
 
     previous = list(app.router.routes)
     app.include_router(router)
+    app.include_router(inspection_router)
     added = app.router.routes[len(previous) :]
     index = next(
         (

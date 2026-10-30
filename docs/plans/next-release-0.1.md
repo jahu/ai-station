@@ -252,9 +252,11 @@ NR-11 is in active implementation: staged ownership, private request/execution
 sessions, account/security UI, recovery, shared-model coordination, Docker-local
 first-admin setup and account-aware private-connection operations have separate
 synthetic/local qualifications. The shipped application still uses its existing
-operator profile. The complete operation audit, administrator all-data inspection,
+operator profile. Administrator inspection now has a staged selected-account,
+read-only UI with collection/detail/message/event and media access; its complete
+profile qualification remains part of cutover. The complete operation audit,
 remaining legacy execution-path removal and final preserved-data cutover remain
 enablement gates; see [account contracts](../accounts.md). The latest inventory
-contains 217 HTTP operations (209 API) and 35 ORM tables; enumeration alone is
+contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
 not an isolation pass. Other NR items remain open and research candidates remain
 unqualified. These increments do not complete the full next-release scope.

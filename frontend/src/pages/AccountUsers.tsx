@@ -1,11 +1,12 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, ShieldCheck, Users, X } from "lucide-react";
+import { Eye, Plus, Search, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "../api";
 import { useAccount, type AccountUser } from "../account-context";
 import { Button } from "../components/ui/button";
 import { Empty, ErrorNotice, Loading } from "../components/common";
+import AccountInspection from "./AccountInspection";
 
 const json = (method: string, body: unknown) => ({
   method,
@@ -314,6 +315,10 @@ export default function AccountUsers() {
   const { user } = useAccount();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<AccountUser | "new" | null>(null);
+  const [inspecting, setInspecting] = useState<{
+    user: AccountUser;
+    trigger: HTMLButtonElement;
+  } | null>(null);
   const users = useQuery({
     queryKey: KEY,
     queryFn: () => api<AccountUser[]>("/admin/users"),
@@ -393,6 +398,15 @@ export default function AccountUsers() {
                     : "2FA off"}
               </span>
               <Button
+                variant="ghost"
+                aria-label={`Inspect workspace of ${row.username}`}
+                onClick={(event) => {
+                  setInspecting({ user: row, trigger: event.currentTarget });
+                }}
+              >
+                <Eye size={16} /> Inspect workspace
+              </Button>
+              <Button
                 variant="secondary"
                 aria-label={`Manage ${row.username}`}
                 onClick={() => setEditing(row)}
@@ -417,6 +431,13 @@ export default function AccountUsers() {
             admins === 1
           }
           onDone={() => setEditing(null)}
+        />
+      )}
+      {inspecting && (
+        <AccountInspection
+          target={inspecting.user}
+          onClose={() => setInspecting(null)}
+          returnFocusTo={inspecting.trigger}
         />
       )}
     </section>

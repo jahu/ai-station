@@ -26,8 +26,11 @@ class DataScope:
     read_only: bool = False
     execution: bool = False
     session_id: str | None = None
+    inspection_owner_id: str | None = None
 
     def __post_init__(self):
+        if self.inspection_owner_id and not (self.inspect_all and self.administrator):
+            raise DataAccessError("Selecting an inspection owner requires an administrator")
         if self.inspect_all:
             object.__setattr__(self, "read_only", True)
 
@@ -102,6 +105,8 @@ REFERENCES = {
 
 def _criterion(model, scope: DataScope):
     if model in ROOTS:
+        if scope.inspection_owner_id:
+            return model.owner_id == scope.inspection_owner_id
         return model.owner_id.is_not(None) if scope.inspect_all else model.owner_id == scope.user_id
     clauses = []
     for field, parent in PARENTS[model]:
@@ -136,6 +141,8 @@ class ScopedSession(Session):
                 return None
             if owner != scope.user_id and not scope.inspect_all:
                 return None
+            if scope.inspection_owner_id and owner != scope.inspection_owner_id:
+                return None
         if isinstance(row, m.User) and row.id != scope.user_id:
             return None
         if isinstance(row, (m.UserSession, m.UserSetting)) and row.user_id != scope.user_id:
@@ -145,19 +152,27 @@ class ScopedSession(Session):
         return row
 
 
-def data_session_for(principal, *, inspect_all: bool = False) -> ScopedSession:
+def data_session_for(
+    principal, *, inspect_all: bool = False, inspection_owner_id: str | None = None
+) -> ScopedSession:
     """HTTP service factory: recheck the device/account before granting a scope."""
     from app.accounts import _actor
     from app.db import control_session_factory, get_engine
 
     with control_session_factory()() as auth:
         user = _actor(auth, principal, admin=inspect_all)
+        if inspection_owner_id:
+            if not inspect_all:
+                raise DataAccessError("Selecting an inspection owner requires read-only inspection")
+            if auth.get(m.User, inspection_owner_id) is None:
+                raise DataAccessError("The inspection account is unavailable")
         scope = DataScope(
             user.id,
             inspect_all,
             administrator=user.is_admin,
             read_only=inspect_all,
             session_id=principal.session_id,
+            inspection_owner_id=inspection_owner_id,
         )
     return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
 
