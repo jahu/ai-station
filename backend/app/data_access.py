@@ -191,6 +191,22 @@ def private_for_update(session: Session, model, identity):
     )
 
 
+def accessible_run_id(row, identity):
+    """Shared infrastructure cannot publish an inaccessible private provenance ID."""
+    from sqlalchemy.orm import object_session
+
+    from app.data_context import UNBOUND, current_data_scope
+
+    if not identity:
+        return None
+    session = object_session(row)
+    if isinstance(session, ScopedSession):
+        return identity if session.get(m.Run, identity) is not None else None
+    # Detached/global coordination records are not an owner-authorized lookup.
+    # The transitional unbound service path retains its old projection.
+    return identity if current_data_scope() is UNBOUND else None
+
+
 @event.listens_for(ScopedSession, "do_orm_execute")
 def _filter(execute):
     scope = execute.session.scope

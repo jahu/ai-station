@@ -311,6 +311,11 @@ Shared model definitions also omit an inaccessible verification Run reference.
 The model picker shows an inspection link only when that Run is accessible and
 offers direct restart/unload only to an administrator; ordinary model selection
 and health checks remain usable.
+Model-file discovery references follow the same rule, including detached/global
+records rendered in an owner context. Models shows ordinary users the shared
+saved preset with its permitted load/health actions; discovery, definition edits,
+installation, removal and runtime diagnostics remain administrator controls.
+An already ready or changing runtime cannot be loaded redundantly from its card.
 
 An account selecting a model another account is loading receives its own
 `runtime.wait` Run. Only that private waiter is a consumer prerequisite; no foreign

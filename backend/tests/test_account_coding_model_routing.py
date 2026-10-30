@@ -5,9 +5,11 @@ import json
 import pytest
 from app.coding_model_routing import select_coding_model
 from app.data_access import DataScope, ScopedSession
+from app.data_context import bind_data_scope
 from app.db import control_session_factory, get_engine
 from app.events import append_event
-from app.models import ModelDefinition, Run, RuntimeInstance
+from app.model_registry import file_dict
+from app.models import ModelDefinition, ModelFile, Run, RuntimeInstance
 from app.runner_client import RunnerClient
 from app.runtime_coordination import runtime_coding_facts
 from test_account_private_api import accounts as accounts
@@ -107,3 +109,26 @@ def test_shared_model_definition_does_not_publish_another_accounts_private_verif
         "/api/models/definitions/" + definition_id, headers={"X-AI-Station-Inspect-All": "true"}
     )
     assert inspected.status_code == 200 and inspected.json()["last_verify_run_id"] == marker
+
+
+def test_shared_model_files_hide_foreign_discovery_activity_but_retain_hardware_metadata(accounts, managed):
+    owner, alice, _ = accounts
+    marker = owner.post("/api/testing/runs", json={"title": "Synthetic private discovery"}).json()["id"]
+    with control_session_factory()() as queue:
+        queue.get(ModelFile, managed[0]).last_scan_run_id = marker
+        queue.commit()
+    for path in ("/api/models", "/api/models/" + managed[0]):
+        response = alice.get(path)
+        assert response.status_code == 200 and marker not in response.text
+    assert alice.get("/api/models/" + managed[0]).json()["host_path"] == "/models/model.gguf"
+    assert alice.get("/api/runs/" + marker).status_code == 404
+    own = owner.get("/api/models/" + managed[0])
+    assert own.status_code == 200 and own.json()["last_scan_run_id"] == marker
+    alice_id = alice.get("/api/auth").json()["user"]["id"]
+    with control_session_factory()() as coordination:
+        row = coordination.get(ModelFile, managed[0])
+        with bind_data_scope(DataScope(alice_id)):
+            assert file_dict(row)["last_scan_run_id"] is None
+        coordination.expunge(row)
+        with bind_data_scope(DataScope(alice_id)):
+            assert file_dict(row)["last_scan_run_id"] is None

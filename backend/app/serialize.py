@@ -226,8 +226,7 @@ def model_dict(row: ModelFile) -> dict:
 def runtime_dict(row: RuntimeInstance) -> dict:
     from sqlalchemy.orm import object_session
 
-    from app.data_access import ScopedSession
-    from app.models import Run
+    from app.data_access import ScopedSession, accessible_run_id
     from app.runtime_coordination import account_runtime_observation
 
     metadata = dict(row.metadata_json)
@@ -238,7 +237,7 @@ def runtime_dict(row: RuntimeInstance) -> dict:
         and not session.scope.inspect_all
     ):
         for key, value in list(metadata.items()):
-            if key.endswith("_run_id") and isinstance(value, str) and session.get(Run, value) is None:
+            if key.endswith("_run_id") and isinstance(value, str) and accessible_run_id(row, value) is None:
                 del metadata[key]
         for key in ("observation", "health"):
             if isinstance(metadata.get(key), dict):

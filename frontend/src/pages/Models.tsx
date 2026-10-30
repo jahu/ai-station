@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Box, RefreshCw } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
+import { useAccount } from "../account-context";
 import {
   Badge,
   Empty,
@@ -202,6 +203,9 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
 }
 
 export function Models() {
+  const account = useAccount();
+  const canManage =
+    account.mode === "operator" || account.user?.is_admin === true;
   const navigate = useNavigate();
   const [view, setView] = useState<"files" | "definitions">("files");
   const [category, setCategory] = useState("");
@@ -246,13 +250,15 @@ export function Models() {
         eyebrow="REGISTRY / INSTALLED FILES"
         title="Models"
         action={
-          <Button
-            onClick={() => scan.mutate()}
-            disabled={scan.isPending || Boolean(active)}
-          >
-            <RefreshCw size={16} />
-            {active ? "Scan in progress" : "Discover models"}
-          </Button>
+          canManage && (
+            <Button
+              onClick={() => scan.mutate()}
+              disabled={scan.isPending || Boolean(active)}
+            >
+              <RefreshCw size={16} />
+              {active ? "Scan in progress" : "Discover models"}
+            </Button>
+          )
         }
       >
         Your existing model files, observed on the host. Discovery reads
@@ -383,6 +389,9 @@ export function Models() {
 }
 
 export function ModelDetail() {
+  const account = useAccount();
+  const canManage =
+    account.mode === "operator" || account.user?.is_admin === true;
   const { id } = useParams();
   const navigate = useNavigate();
   const cache = useQueryClient();
@@ -574,9 +583,11 @@ export function ModelDetail() {
           </p>
         ) : (
           <p className="muted">
-            Discovery does not create definitions. Save one explicitly, then
-            install it to confirm the local file (and llama.cpp image, when
-            applicable) without downloading anything.
+            {canManage
+              ? "Discovery does not create definitions. Save one explicitly, then install it to confirm the local file (and llama.cpp image, when applicable) without downloading anything."
+              : row.category === "llm" && row.format === "gguf"
+                ? "No saved preset. You can select this model in a conversation; AI Station prepares it when needed."
+                : "No saved setup. An administrator can configure this model for its supported workspace."}
           </p>
         )}
         {definition?.compatibility && (
@@ -592,74 +603,103 @@ export function ModelDetail() {
           className="model-definition-form"
           onSubmit={(event) => {
             event.preventDefault();
-            save.mutate();
+            if (canManage) save.mutate();
           }}
         >
-          <label>
-            Display name
-            <input
-              value={selectedName}
-              onChange={(event) => setName(event.target.value)}
-              maxLength={200}
-              required
-            />
-          </label>
-          {!definition?.image_backend && (
+          {canManage ? (
             <>
               <label>
-                Context size
+                Display name
                 <input
-                  type="number"
-                  min={512}
-                  max={262144}
-                  step={256}
-                  value={selectedContext}
-                  onChange={(event) => setContext(Number(event.target.value))}
+                  value={selectedName}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={200}
+                  required
                 />
               </label>
-              <label>
-                KV cache
-                <select
-                  value={selectedCache}
-                  onChange={(event) =>
-                    setCacheType(event.target.value as "f16" | "q8_0")
-                  }
-                >
-                  <option value="f16">f16</option>
-                  <option value="q8_0">q8_0</option>
-                </select>
-              </label>
-              <fieldset>
-                <legend>Saved GPU preset</legend>
-                {(hardware.data?.gpus ?? []).length ? (
-                  <GpuChoiceList
-                    gpus={hardware.data?.gpus ?? []}
-                    selected={selectedGpus}
-                    onChange={setGpus}
-                  />
-                ) : (
-                  <p className="muted">
-                    No GPUs reported. An empty preset loads on CPU after
-                    installation.
-                  </p>
-                )}
-              </fieldset>
+              {!definition?.image_backend && (
+                <>
+                  <label>
+                    Context size
+                    <input
+                      type="number"
+                      min={512}
+                      max={262144}
+                      step={256}
+                      value={selectedContext}
+                      onChange={(event) =>
+                        setContext(Number(event.target.value))
+                      }
+                    />
+                  </label>
+                  <label>
+                    KV cache
+                    <select
+                      value={selectedCache}
+                      onChange={(event) =>
+                        setCacheType(event.target.value as "f16" | "q8_0")
+                      }
+                    >
+                      <option value="f16">f16</option>
+                      <option value="q8_0">q8_0</option>
+                    </select>
+                  </label>
+                  <fieldset>
+                    <legend>Saved GPU preset</legend>
+                    {(hardware.data?.gpus ?? []).length ? (
+                      <GpuChoiceList
+                        gpus={hardware.data?.gpus ?? []}
+                        selected={selectedGpus}
+                        onChange={setGpus}
+                      />
+                    ) : (
+                      <p className="muted">
+                        No GPUs reported. An empty preset loads on CPU after
+                        installation.
+                      </p>
+                    )}
+                  </fieldset>
+                </>
+              )}
             </>
-          )}
+          ) : definition ? (
+            <dl className="model-properties">
+              <dt>Name</dt>
+              <dd>{definition.name}</dd>
+              {!definition.image_backend && (
+                <>
+                  <dt>Saved context</dt>
+                  <dd>
+                    {definition.preset.context_size.toLocaleString()} tokens
+                  </dd>
+                  <dt>KV cache</dt>
+                  <dd>{definition.preset.cache_type}</dd>
+                  <dt>GPUs</dt>
+                  <dd>
+                    {definition.preset.gpus.length
+                      ? definition.preset.gpus.join(", ")
+                      : "CPU"}
+                  </dd>
+                </>
+              )}
+            </dl>
+          ) : null}
           {definition?.image_backend && (
             <Link to={`/images?model=${definition.id}`}>
               Choose this model in Images
             </Link>
           )}
           <div className="row">
-            <Button type="submit" disabled={save.isPending}>
-              {definition?.image_backend
-                ? "Save name"
-                : definition
-                  ? "Save preset"
-                  : "Save definition"}
-            </Button>
-            {definition && (
+            {canManage && (
+              <Button type="submit" disabled={save.isPending}>
+                {definition?.image_backend
+                  ? "Save name"
+                  : definition
+                    ? "Save preset"
+                    : "Save definition"}
+              </Button>
+            )}
+            {canManage && definition && (
               <Button
                 type="button"
                 variant="secondary"
@@ -677,13 +717,19 @@ export function ModelDetail() {
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={load.isPending}
+                  disabled={
+                    load.isPending ||
+                    Boolean(
+                      instance &&
+                      !["stopped", "failed"].includes(instance.status),
+                    )
+                  }
                   onClick={() => load.mutate(definition.id)}
                 >
                   Load with saved preset
                 </Button>
               )}
-            {definition && (
+            {canManage && definition && (
               <Button
                 type="button"
                 variant="ghost"
@@ -695,12 +741,19 @@ export function ModelDetail() {
             )}
           </div>
         </form>
-        <p className="muted">
-          Install confirms the existing file and, for GGUF language models, that
-          the configured llama.cpp image is already on this machine. It does not
-          pull images or copy weights. Load starts the existing owned llama.cpp
-          Run.
-        </p>
+        {canManage ? (
+          <p className="muted">
+            Install confirms the existing file and, for GGUF language models,
+            that the configured llama.cpp image is already on this machine. It
+            does not pull images or copy weights. Load starts the existing owned
+            llama.cpp Run.
+          </p>
+        ) : (
+          <p className="muted">
+            Models are shared across accounts. An administrator manages their
+            saved configuration.
+          </p>
+        )}
         {instance && (
           <div>
             <h3>Owned runtime</h3>
@@ -723,18 +776,19 @@ export function ModelDetail() {
               >
                 Check health
               </Button>
-              {(instance.status === "ready" ||
-                instance.status === "stopped" ||
-                instance.status === "failed") && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={restart.isPending}
-                  onClick={() => restart.mutate(instance.id)}
-                >
-                  Restart owned runtime
-                </Button>
-              )}
+              {canManage &&
+                (instance.status === "ready" ||
+                  instance.status === "stopped" ||
+                  instance.status === "failed") && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={restart.isPending}
+                    onClick={() => restart.mutate(instance.id)}
+                  >
+                    Restart owned runtime
+                  </Button>
+                )}
               {instance.metadata.health_run_id && (
                 <Link to={`/runs/${instance.metadata.health_run_id}`}>
                   Latest health Run
@@ -748,7 +802,7 @@ export function ModelDetail() {
             </p>
           </div>
         )}
-        <Link to="/system">Inspect runtime diagnostics</Link>
+        {canManage && <Link to="/system">Inspect runtime diagnostics</Link>}
       </section>
     </>
   );
