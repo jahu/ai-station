@@ -111,7 +111,14 @@ def video_snapshot(session, identity, *, verify=False):
         original is None
         or original.status != "succeeded"
         or original.executor_type
-        not in {"wan_video", "media_compose", "echomimic", "sonic_whole", "effects_preview"}
+        not in {
+            "wan_video",
+            "media_compose",
+            "echomimic",
+            "sonic_whole",
+            "effects_preview",
+            "timeline_render",
+        }
     ):
         raise ValueError("Choose a completed AI Station video with inspected timing")
     values = {k: source.metadata_json.get(k) for k in ("frames", "fps", "width", "height")}

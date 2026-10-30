@@ -1,5 +1,6 @@
 import ImageModelSelection from "./ImageModelSelection";
 import SpeechModelSelection from "./SpeechModelSelection";
+import EditTimelineLink from "./EditTimelineLink";
 import AddSoundLink from "./AddSoundLink";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -295,6 +296,7 @@ export default function MediaResult({
             )}
           <div className="media-result-actions">
             <AddSoundLink artifact={result} />
+            <EditTimelineLink artifact={result} />
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>
                 <ArrowUpRight size={15} />

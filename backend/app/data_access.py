@@ -60,6 +60,7 @@ ACCOUNTS = (m.User, m.UserSession, m.UserSetting, m.AccountEvent)
 
 # Each inherited record is visible only through all of its private parents.
 PARENTS = {
+    m.TimelineRevision: (("session_id", m.CreativeSession),),
     m.CreativeTurn: (("session_id", m.CreativeSession), ("task_id", m.Task), ("run_id", m.Run)),
     m.ResourceLock: (("run_id", m.Run),),
     m.RunDependency: (("run_id", m.Run), ("prerequisite_id", m.Run)),
@@ -91,6 +92,7 @@ PARENTS = {
     m.EmailDelivery: (("run_id", m.Run), ("connector_id", m.Connector)),
 }
 REFERENCES = {
+    m.TimelineRevision: (("parent_revision_id", m.TimelineRevision),),
     m.Task: (("project_id", m.Project), ("conversation_id", m.Conversation), ("agent_id", m.Agent)),
     m.Run: (
         ("task_id", m.Task),

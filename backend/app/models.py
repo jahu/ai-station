@@ -101,7 +101,7 @@ class CreativeSession(Owned, Base):
     __tablename__ = "creative_sessions"
     __table_args__ = (
         CheckConstraint(
-            "capability IN ('images','video','music','speech','avatars','effects')",
+            "capability IN ('images','video','music','speech','avatars','effects','timeline')",
             name="ck_creative_capability",
         ),
     )
@@ -134,6 +134,24 @@ class CreativeTurn(Base):
     position: Mapped[int] = mapped_column(Integer)
     feedback: Mapped[str] = mapped_column(Text, default="")
     request_parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class TimelineRevision(Base):
+    __tablename__ = "timeline_revisions"
+    __table_args__ = (
+        UniqueConstraint("session_id", "client_request_id", name="uq_timeline_revision_receipt"),
+        UniqueConstraint("session_id", "position", name="uq_timeline_revision_position"),
+        CheckConstraint("position > 0", name="ck_timeline_revision_position"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    session_id: Mapped[str] = mapped_column(ForeignKey("creative_sessions.id"), index=True)
+    parent_revision_id: Mapped[str | None] = mapped_column(ForeignKey("timeline_revisions.id"), nullable=True)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    position: Mapped[int] = mapped_column(Integer)
+    manifest: Mapped[dict] = mapped_column(JSON)
+    sources: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 

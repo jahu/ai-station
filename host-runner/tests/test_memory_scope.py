@@ -6,7 +6,7 @@ import pytest
 from ai_station_runner import memory_scope
 
 
-@pytest.mark.parametrize("maximum", [11264, 12288, 24576])
+@pytest.mark.parametrize("maximum", [4096, 11264, 12288, 24576])
 def test_fixed_scope_bounds_have_no_caller_selected_systemd_properties(monkeypatch, maximum):
     monkeypatch.setattr(memory_scope.shutil, "which", lambda name: "/usr/bin/systemd-run")
     run_id = str(uuid4())

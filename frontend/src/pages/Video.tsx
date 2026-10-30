@@ -31,6 +31,7 @@ import {
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
+import TimelineEditor from "./TimelineEditor";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
 import VideoMemoryProfile, {
   type VideoProfile,
@@ -53,11 +54,15 @@ export default function Video({
     mediaBusy(currentRun.data) ||
     jobBusy(currentJob.data) ||
     (!!search.get("job") && currentJob.isPending);
+  const editing = search.get("mode") === "edit";
   const avatar =
     search.get("mode") === "avatar" ||
     !!search.get("audio") ||
     currentJob.data?.kind === "avatar";
-  function wrap(capability: "video" | "avatars", child: ReactNode) {
+  function wrap(
+    capability: "video" | "avatars" | "timeline",
+    child: ReactNode,
+  ) {
     return withCreativeSessions ? (
       <CreativeWorkspace capability={capability}>{child}</CreativeWorkspace>
     ) : (
@@ -70,8 +75,8 @@ export default function Video({
         <button
           type="button"
           disabled={busy}
-          aria-pressed={!avatar}
-          className={!avatar ? "active" : ""}
+          aria-pressed={!avatar && !editing}
+          className={!avatar && !editing ? "active" : ""}
           onClick={() => setSearch(new URLSearchParams())}
         >
           Create a scene
@@ -85,21 +90,32 @@ export default function Video({
         >
           Talking avatar
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          aria-pressed={editing}
+          className={editing ? "active" : ""}
+          onClick={() => setSearch({ mode: "edit" })}
+        >
+          Edit a film
+        </button>
       </nav>
-      {avatar
-        ? wrap("avatars", <Avatars video />)
-        : wrap(
-            "video",
-            <VideoForm
-              key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
-              initialImage={
-                search.get("input") ??
-                currentJob.data?.request?.image_artifact_id ??
-                ""
-              }
-              initialRequest={currentJob.data?.request}
-            />,
-          )}
+      {editing
+        ? wrap("timeline", <TimelineEditor />)
+        : avatar
+          ? wrap("avatars", <Avatars video />)
+          : wrap(
+              "video",
+              <VideoForm
+                key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
+                initialImage={
+                  search.get("input") ??
+                  currentJob.data?.request?.image_artifact_id ??
+                  ""
+                }
+                initialRequest={currentJob.data?.request}
+              />,
+            )}
     </>
   );
 }

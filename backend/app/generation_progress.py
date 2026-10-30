@@ -21,6 +21,7 @@ EXECUTORS = {
     "fish_speech",
     "mmaudio_effects",
     "effects_preview",
+    "timeline_render",
     "ace_step_music",
     "media_compose",
 }
@@ -56,6 +57,21 @@ def positive(value):
 
 def parse_line(line, run):
     line = ANSI.sub("", line).strip()
+    if run.executor_type == "timeline_render":
+        if line in {"timeline.stage: inspecting", "timeline.stage: mixing"}:
+            return {"phase": "preparing"}
+        if line in {"timeline.stage: verifying", "timeline.stage: completed"}:
+            return {"phase": "finishing"}
+        match = re.fullmatch(r"timeline\.frames\.completed (\d{1,4})/(\d{1,4})", line)
+        if match:
+            completed, total = map(int, match.groups())
+            if 1 <= completed <= total <= 7500 and total == run.parameters.get("target_frames"):
+                return {
+                    "phase": "finishing" if completed == total else "generating",
+                    "completed": completed,
+                    "total": total,
+                    "unit": "frames",
+                }
     if run.executor_type == "mmaudio_effects":
         if line == "effects.model.loading":
             return {"phase": "preparing"}
@@ -293,7 +309,7 @@ def projection(run, *, now=None):
             and type(total) is int
             and 0 <= completed <= total
             and total > 0
-            and observation.get("unit") in {"sampling steps", "speech fragments"}
+            and observation.get("unit") in {"sampling steps", "speech fragments", "windows", "frames"}
         )
         fresh = 0 <= age <= max(120, rate * 3 if positive(rate) else 120)
         if valid and fresh and phase == "generating":
