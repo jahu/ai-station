@@ -6,6 +6,7 @@ export type WebSources = {
   query: string;
   original_query?: string;
   queries?: string[];
+  query_preparation?: { location: "local" | "external"; model: string };
   searched_at: string;
   partial: boolean;
   sources: { id: number; title: string; url: string; snippet: string }[];
@@ -168,7 +169,18 @@ export function SearchSources({ result }: { result: WebSources }) {
           </time>
         </p>
         {result.original_query && (
-          <p className="muted">Follow-up: {result.original_query}</p>
+          <p className="muted">Question: {result.original_query}</p>
+        )}
+        {result.query_preparation?.location === "local" && (
+          <p className="muted">
+            Query prepared locally · {result.query_preparation.model}
+          </p>
+        )}
+        {result.query_preparation?.location === "external" && (
+          <p className="muted">
+            Query prepared with selected external model ·{" "}
+            {result.query_preparation.model}
+          </p>
         )}
         {(result.queries?.length ?? 0) > 1 && (
           <p className="muted">

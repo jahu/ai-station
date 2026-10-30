@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -39,6 +40,12 @@ def inference(monkeypatch):
     seen = []
 
     async def stream(self, **params):
+        if params.get("json_output"):
+            question = params["messages"][-1]["content"]
+            if question.startswith('{"recent_text":'):
+                question = json.loads(question)["question"]
+            yield json.dumps({"query": question})
+            return
         seen.append(params)
         yield "Supported by [llama.cpp](https://github.com/ggml-org/llama.cpp)."
 
@@ -488,7 +495,10 @@ def test_invalid_rewrite_and_irrelevant_sources_do_not_produce_a_factual_answer(
         route = conversation(client)
         queued = client.post(
             route + "/messages",
-            json={"content": "A detailed question without matching sources", "web_search": {"enabled": True}},
+            json={
+                "content": "A detailed question without matching sources",
+                "web_search": {"enabled": True, "query": "A detailed question without matching sources"},
+            },
         )
         step()
         run = client.get("/api/runs/" + queued.json()["id"]).json()
@@ -527,7 +537,7 @@ def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeyp
             route + "/messages",
             json={
                 "content": "A detailed question with missing search results",
-                "web_search": {"enabled": True},
+                "web_search": {"enabled": True, "query": "A detailed question with missing search results"},
             },
         )
         run_id = queued.json()["id"]

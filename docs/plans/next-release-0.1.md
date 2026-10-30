@@ -20,7 +20,7 @@ media profiles. Product version remains 0.0.2 until release preparation.
 | NR-09 | A suitable product name | Record a short naming shortlist, availability checks and the selected direction. Apply accepted branding consistently to UI/site/docs/installers without breaking data paths, URLs or project identities. |
 | NR-10 | README model freedom and user responsibility | Explain compatible user-selected uncensored models/NSFW use, local execution and responsibility under applicable law/licenses. Do not claim universal format support, automatically uncensored behavior or absolute legal immunity. |
 | NR-11 | Real accounts, private data and optional 2FA | First startup creates an admin; admin manages users and can inspect all data. A/B users cannot enumerate or access each other's prompts, chats, Library, files, memory, agents, Runs, projects, settings or credentials through any API/UI/tool. Password/cookie sessions and opt-in TOTP/recovery work. Only infrastructure/model resources are shared. |
-| NR-12 | LLM-prepared Web searches | A local, tools-free preparation step derives relevant queries from the current question and bounded relevant conversation. Search uses those queries, displays them and returns sources relevant to ambiguous follow-ups. Explicit URLs still use page reading. |
+| NR-12 | LLM-prepared Web searches | A tools-free preparation step uses the selected permission-bound model (local by default; external only when explicitly selected) to derive relevant queries from the current question and bounded relevant conversation. Search uses those queries, displays them and returns sources relevant to ambiguous follow-ups. Explicit URLs still use page reading. |
 | NR-13 | Easy installation on Windows, macOS and Linux | A nontechnical user installs the application, creates the admin, selects fitting capabilities and obtains a real first result through a guided flow. Update/uninstall retain user data unless explicitly removed. Test every advertised platform. |
 | NR-14 | Hardware-aware model catalog and setup | Detect actual RAM/VRAM/devices, recommend compatible model/quantization/context profiles with headroom, show size/license/storage before download, and configure real readiness. Advanced users can search/select alternatives. Verified downloads recover from cancellation/restart and stale URLs without substituting unverified weights. |
 
@@ -260,3 +260,13 @@ enablement gates; see [account contracts](../accounts.md). The latest inventory
 contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
 not an isolation pass. Other NR items remain open and research candidates remain
 unqualified. These increments do not complete the full next-release scope.
+
+NR-12 has an automatic-search candidate: the selected admitted Chat model
+prepares the first query before retrieval, with bounded ordinary-text follow-up
+context, recorded query/model provenance, visible Sources details and cancellable
+tools-free JSON generation. Manual queries, reviewed agent/image research and
+page reading preserve their scopes. Synthetic search/caller qualification is
+separate from real-model relevance evidence. Explicitly selected external models
+reuse their existing permission grant and remain labelled external; no separate
+planner setting or hidden model load is introduced. See
+[search contracts](../web-search.md).
