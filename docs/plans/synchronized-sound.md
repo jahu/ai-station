@@ -278,7 +278,7 @@ acknowledgement before marking these entry points available. Shared native SFX
 qualification is retained; human perceptual sound synchronization remains a
 separate acceptance item. The timeline editor itself is deployed in PR #527.
 
-The media-agent entry point is implemented on the effects-agent feature branch:
+The media-agent entry point is implemented in PR #528:
 pure shared EffectsRequest schema, reviewed optional-until-activation film
 selection, fixed/goal preparation with immutable scene timing, ordinary effects
 and verified-preview children, existing approvals/Stop/receipts and private
@@ -286,3 +286,11 @@ results. Synthetic inference plus the real CPU compositor passed the compiled
 desktop/mobile review/save/enable/run/refresh flow; this does not repeat or claim
 new GPU inference/perceptual synchronization. Conversation source binding is the
 next distinct delivery and remains in scope.
+
+The remaining conversation delivery must cover both a reviewed existing film and
+a newly requested film followed by its described effects on the same Task. Bind
+explicit, unambiguous source authority; retain separate stems and cancellation
+across stages. When a source contains speech/music, make replacement versus
+layering visible and use the saved timeline mix to retain existing sound rather
+than silently dropping it. These conversation flows are not claimed by the
+media-agent delivery above.

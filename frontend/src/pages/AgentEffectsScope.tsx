@@ -30,7 +30,8 @@ export default function AgentEffectsScope({
       <p className="muted">
         Create an effects and ambience track for this film. The original stays
         in Library; a separate WAV and synchronized preview are saved each run.
-        Speech and music are separate outputs.
+        The preview plays the new effects track. Use Video → Edit a film to mix
+        it with original speech or music.
       </p>
       <MediaInput
         kind="video"
