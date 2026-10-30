@@ -108,7 +108,11 @@ def image_fields(run):
     params = run.parameters
     if run.executor_type == "echomimic":
         return {"prompt": params["prompt"]}
-    if run.executor_type in {"wan_video", "mmaudio_effects"}:
+    if run.executor_type == "mmaudio_effects":
+        from app.effects import descriptive_fields
+
+        return descriptive_fields(params)
+    if run.executor_type == "wan_video":
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
         return {"caption": params["caption"]}
@@ -173,6 +177,10 @@ def source_hash(run, fields):
     }.get(run.executor_type)
     if keys is not None:
         inputs = {key: run.parameters.get(key) for key in keys}
+        if run.executor_type == "mmaudio_effects" and run.parameters.get("cues"):
+            inputs["cue_timing"] = [
+                {k: c[k] for k in ("start_frame", "end_frame")} for c in run.parameters["cues"]
+            ]
         if run.executor_type == "wan_video":
             # Preserve the exact input identity of pre-strategy receipts, while
             # binding new plans to their frozen conditioning policy.
@@ -230,7 +238,9 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             target_language="en" if enabled else "original",
         )
     limits = {
-        key: 512
+        key: 500
+        if media.executor_type == "mmaudio_effects" and key.startswith("cue_")
+        else 512
         if key == "caption"
         else 2000
         if media.executor_type in {"wan_video", "echomimic", "mmaudio_effects"}
@@ -421,9 +431,18 @@ def apply_effective(session, run, media, effective, *, reviewed=False):
         apply_one(session, run, item, effective, reviewed=reviewed)
 
 
+def set_descriptions(media, fields):
+    if media.executor_type == "mmaudio_effects":
+        from app.effects import apply_descriptions
+
+        media.parameters = apply_descriptions(media.parameters, fields)
+    else:
+        media.parameters = {**media.parameters, **fields}
+
+
 def apply_one(session, run, media, effective, *, reviewed=False):
     artifact = save_receipt(session, run, media, effective, reviewed=reviewed)
-    media.parameters = {**media.parameters, **effective}
+    set_descriptions(media, effective)
     media.metadata_json = {
         **media.metadata_json,
         RECEIPT: {
@@ -797,7 +816,7 @@ def prepare_retry(session, source, retry, choice):
             ) from exc
         retry.metadata_json = {**retry.metadata_json, RECEIPT: receipt}
         return None
-    retry.parameters = {**retry.parameters, **receipt["original"]}
+    set_descriptions(retry, receipt["original"])
     options = recovery_options(receipt, choice)
     if choice == "retry":
         return retry, options, receipt["policy"]

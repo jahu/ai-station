@@ -43,3 +43,33 @@ def test_fixed_context_encodes_every_source_frame_including_the_tail(fps, frames
     indices = frame_indices(window, fps, 25)
     assert len(indices) == 200 and indices[-1] == frames - 1
     assert set(indices) == set(range(frames))
+
+
+@pytest.mark.parametrize("fps", [24, 25])
+def test_scene_boundaries_keep_every_frame_and_exact_samples_without_cross_scene_context(fps):
+    from ai_station_runner.effects_contract import SoundCue
+    from ai_station_runner.effects_timing import cue_cuts, window_prompt
+    from ai_station_runner.effects_video import frame_indices
+
+    cues = [SoundCue(start_frame=13, end_frame=fps * 9 + 1, prompt="Bells")]
+    frames = fps * 17 + 3
+    windows = effects_windows(frames, fps, cuts=cue_cuts(frames, cues))
+    assert sum(w.end_sample - w.first_sample - w.overlap_samples for w in windows) == frames * 44100 // fps
+    represented = set()
+    for w in windows:
+        indices = frame_indices(w, fps, 25)
+        assert min(indices) >= w.region_first_frame
+        assert max(indices) < w.region_end_frame
+        represented.update(indices)
+        if w.first_frame == w.region_first_frame:
+            assert w.overlap_samples == 0
+        assert window_prompt(w.first_frame, "Wind", cues) == (
+            "Bells" if 13 <= w.first_frame < fps * 9 + 1 else "Wind"
+        )
+    assert represented == set(range(frames))
+
+
+@pytest.mark.parametrize("cuts", [(True,), (0,), (24,), (10, 10), (10, 5)])
+def test_invalid_scene_boundaries_cannot_plan_work(cuts):
+    with pytest.raises(ValueError):
+        effects_windows(24, 24, cuts=cuts)

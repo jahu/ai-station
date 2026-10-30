@@ -64,7 +64,7 @@ def parse_line(line, run):
         match = re.fullmatch(r"effects\.window\.completed (\d{1,2})/(\d{1,2})", line)
         if match:
             completed, total = map(int, match.groups())
-            if 1 <= completed <= total <= 64:
+            if 1 <= completed <= total <= 96:
                 return {
                     "phase": "finishing" if completed == total else "generating",
                     "completed": completed,
@@ -212,7 +212,16 @@ def begin_timing(session, run, hardware):
             {
                 "video_geometry": {
                     key: parameters.get("video", {}).get(key) for key in ("frames", "fps", "width", "height")
-                }
+                },
+                **(
+                    {
+                        "sound_cue_timing": [
+                            {k: c[k] for k in ("start_frame", "end_frame")} for c in parameters["cues"]
+                        ]
+                    }
+                    if parameters.get("cues")
+                    else {}
+                ),
             }
             if run.executor_type == "mmaudio_effects"
             else {}

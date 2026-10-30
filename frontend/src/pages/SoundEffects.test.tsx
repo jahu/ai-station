@@ -80,6 +80,14 @@ it("chooses an owned film and keeps sound description, prompt preparation and ef
   fireEvent.change(screen.getByLabelText(/What should we hear/), {
     target: { value: "Gentle wind and birds" },
   });
+  fireEvent.click(screen.getByText(/Change sounds over time/));
+  fireEvent.click(screen.getByRole("button", { name: "Add scene direction" }));
+  fireEvent.change(screen.getByLabelText("Scene 1 end in seconds"), {
+    target: { value: "2.5" },
+  });
+  fireEvent.change(screen.getByLabelText("Scene 1 sound description"), {
+    target: { value: "A bicycle bell" },
+  });
   fireEvent.click(
     screen.getByRole("checkbox", { name: /Improve my prompt locally/ }),
   );
@@ -87,6 +95,7 @@ it("chooses an owned film and keeps sound description, prompt preparation and ef
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({
     video_artifact_id: "film",
+    cues: [{ start_frame: 0, end_frame: 60, prompt: "A bicycle bell" }],
     prompt: "Gentle wind and birds",
     negative_prompt: "speech, music",
     steps: 25,
