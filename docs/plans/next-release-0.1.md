@@ -313,7 +313,12 @@ Echo descriptions. Its 687-case affected backend families and 951-case frontend
 suite pass; final accessibility changes have 37 passing complete-family cases.
 Compiled desktop/mobile preparation, review/edit, effective generator input,
 receipts, retained history and private-user denial pass with synthetic inference.
-Workstation rollout and real-model quality acceptance remain separate gates.
+PRs #517 and #518 are deployed. Real local Qwen preparation followed by LUSTIFY
+generation succeeded with the exact prepared prompt and saved provenance. A final
+frontend follow-up verifies that checking enhancement alone submits it without
+requiring translation or review (40 component cases and compiled desktop/mobile
+flow). NR-04 functional acceptance is complete; this is not a broad model-quality
+benchmark. The remaining NR items stay in scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up
