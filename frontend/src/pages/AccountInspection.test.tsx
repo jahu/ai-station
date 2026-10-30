@@ -41,6 +41,7 @@ const counts = {
   approvals: 1,
   providers: 1,
   connectors: 1,
+  creative: 0,
 };
 const row = {
   id: "record-1",

@@ -37,6 +37,7 @@ const sections = [
   ["approvals", "Approvals", ShieldCheck],
   ["providers", "Model providers", Settings2],
   ["connectors", "Connections", Settings2],
+  ["creative", "Creative workspaces", Sparkles],
 ] as const;
 type Category = (typeof sections)[number][0];
 type RecordData = Record<string, unknown>;

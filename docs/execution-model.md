@@ -1,3 +1,8 @@
+Creative workspaces group existing generation Tasks into private version history.
+Atomic receipts prevent duplicate dispatch; full-film/avatar state and Stop follow
+the complete Task graph rather than only its initial Run. No new executor or
+native authority is introduced. [Contracts](creative-workspaces.md).
+
 The [Echo appearance recipe](plans/echo-continuation-quality.md) snapshots
 its fixed recipe in new full-avatar Tasks and agent workflows. Speech planning,
 segments, composition and retries preserve that snapshot. Resume refuses changed

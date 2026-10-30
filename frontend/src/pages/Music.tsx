@@ -1,4 +1,9 @@
 import { useRef, useState } from "react";
+import {
+  useCreative,
+  useCreativeDraft,
+  creativeRun,
+} from "../components/creative/creative-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Music2, Settings2, Sparkles } from "lucide-react";
@@ -23,30 +28,60 @@ type MusicCapabilities = {
 };
 
 export default function Music({ initialRun }: { initialRun?: Run }) {
+  const creative = useCreative();
+  return (
+    <MusicForm key={creative?.formKey ?? "legacy"} initialRun={initialRun} />
+  );
+}
+function MusicForm({ initialRun }: { initialRun?: Run }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const restored = (initial.formState ?? initial) as Record<string, unknown>;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const parameters = initialRun?.parameters ?? {};
+  const parameters = Object.keys(initial).length
+    ? restored
+    : (initialRun?.parameters ?? {});
   const savedTranslation = initialRun?.metadata?.prompt_translation as
     TranslationReceipt | undefined;
   const [caption, setCaption] = useState(
-    String(savedTranslation?.original.caption ?? parameters.caption ?? ""),
+    String(
+      Object.keys(initial).length
+        ? (parameters.caption ?? "")
+        : (savedTranslation?.original.caption ?? parameters.caption ?? ""),
+    ),
   );
-  const [translation, setTranslation] = useState<TranslationOptions>({
-    mode: "inherit",
-    review: false,
-    protected_terms: [],
-  });
+  const [translation, setTranslation] = useState<TranslationOptions>(
+    (parameters.translation as TranslationOptions | undefined) ?? {
+      mode: "inherit",
+      review: false,
+      protected_terms: [],
+    },
+  );
   const [lyrics, setLyrics] = useState(String(parameters.lyrics ?? ""));
   const [instrumental, setInstrumental] = useState(
     parameters.instrumental !== false,
   );
   const [duration, setDuration] = useState(
-    Number(parameters.duration_seconds ?? 30),
+    Number(parameters.duration ?? parameters.duration_seconds ?? 30),
   );
   const [seed, setSeed] = useState(
-    parameters.seed === undefined ? "" : String(parameters.seed),
+    parameters.seed == null ? "" : String(parameters.seed),
   );
-  const [gpu, setGpu] = useState(initialRun?.requested_gpu ?? "auto");
+  const [gpu, setGpu] = useState(
+    String(parameters.gpu ?? initialRun?.requested_gpu ?? "auto"),
+  );
+  useCreativeDraft({
+    formState: {
+      caption,
+      translation,
+      lyrics,
+      instrumental,
+      duration,
+      seed,
+      gpu,
+    },
+  });
   const receipt = useRef<{ payload: string; id: string } | null>(null);
   const hardware = useHardware();
   const profile = useQuery({
@@ -67,6 +102,12 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
         seed: seed.trim() ? Number(seed) : null,
         ...translationRequest(translation),
       });
+      if (creative)
+        return creativeRun(
+          await creative.generate(JSON.parse(payload), {
+            feedback: creative.draft._creative_parent_turn_id ? caption : "",
+          }),
+        );
       if (receipt.current?.payload !== payload) {
         receipt.current = {
           payload,
@@ -86,7 +127,12 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
       cache.setQueryData(["run", result.id], result);
       clearChatRequest("audio-music");
       receipt.current = null;
-      setSearch({ mode: "music", run: result.id });
+      setSearch((current) => {
+        const next = new URLSearchParams({ mode: "music", run: result.id });
+        if (current.has("session"))
+          next.set("session", current.get("session")!);
+        return next;
+      });
     },
   });
   const busy = generate.isPending || mediaBusy(run.data);
@@ -262,13 +308,15 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
             </p>
           </fieldset>
         </form>
-        <MediaResult
-          kind="audio"
-          audioMode="music"
-          runId={runId}
-          run={run.data}
-          error={run.error}
-        />
+        {!creative && (
+          <MediaResult
+            kind="audio"
+            audioMode="music"
+            runId={runId}
+            run={run.data}
+            error={run.error}
+          />
+        )}
       </div>
     </>
   );

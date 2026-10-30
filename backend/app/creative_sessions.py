@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.data_access import private_for_update
 from app.db import session_scope, utcnow
-from app.models import Artifact, CreativeSession, CreativeTurn, Run
+from app.models import Artifact, CreativeSession, CreativeTurn, Run, Task
 from app.runs import run_dict
 from app.serialize import artifact_dict
 
@@ -54,6 +54,7 @@ class Generate(Fields):
     parameters: dict[str, JsonValue]
     parent_turn_id: UUID | None = None
     feedback: str = Field(default="", max_length=4000)
+    request_kind: Literal["direct", "job"] = "direct"
 
     @field_validator("parameters")
     @classmethod
@@ -136,12 +137,27 @@ def update(session_id: UUID, body: Update, session: DB):
 
 def turn_dict(session, turn):
     run = session.get(Run, turn.run_id)
-    artifacts = session.scalars(
+    task = session.get(Task, turn.task_id)
+    runs = list(
+        session.scalars(select(Run).where(Run.task_id == turn.task_id).order_by(Run.created_at, Run.id))
+    )
+    job = None
+    if task is not None and task.metadata_json.get("media_plan"):
+        from app.media_jobs import job_view
+
+        job = job_view(session, task)
+    state = task_status(runs, stopped=bool(task and task.metadata_json.get("stop_requested_at")))
+    if job is not None:
+        state = job["status"]
+    artifacts_query = (
         select(Artifact)
         .join(Run, Artifact.run_id == Run.id)
         .where(Run.task_id == turn.task_id, Artifact.artifact_type.in_(["image", "video", "audio"]))
         .order_by(Artifact.created_at, Artifact.id)
     )
+    if job is not None:
+        artifacts_query = artifacts_query.where(Artifact.id == job.get("final_artifact_id"))
+    artifacts = session.scalars(artifacts_query)
     return {
         "id": turn.id,
         "position": turn.position,
@@ -149,11 +165,33 @@ def turn_dict(session, turn):
         "task_id": turn.task_id,
         "run_id": turn.run_id,
         "feedback": turn.feedback,
-        "parameters": turn.request_parameters,
+        "parameters": {
+            key: value for key, value in turn.request_parameters.items() if key != "_creative_request_kind"
+        },
+        "request_kind": turn.request_parameters.get("_creative_request_kind", "direct"),
         "created_at": turn.created_at,
         "run": run_dict(run) if run else None,
+        "status": state,
+        "runs": [run_dict(item) for item in runs] if job is None else [],
+        "job": job,
+        "error_message": next((item.error_message for item in runs if item.error_message), ""),
         "artifacts": [artifact_dict(row) for row in artifacts],
     }
+
+
+def task_status(runs, *, stopped=False):
+    from app.state import TERMINAL
+
+    active = [run for run in runs if run.status not in TERMINAL]
+    if stopped:
+        return "cancel_requested" if active else "canceled"
+    for state in ("running", "preparing", "claimed", "waiting_for_approval", "cancel_requested", "queued"):
+        if any(run.status == state for run in active):
+            return state
+    for state in ("failed", "interrupted", "canceled"):
+        if any(run.status == state for run in runs):
+            return state
+    return "succeeded" if runs else "queued"
 
 
 @router.get("/{session_id}")
@@ -164,6 +202,10 @@ def detail(
     limit: int = Query(30, ge=1, le=100),
 ):
     row = get_session(session, session_id)
+    return session_detail(session, row, before=before, limit=limit)
+
+
+def session_detail(session, row, *, before=None, limit=30):
     query = select(CreativeTurn).where(CreativeTurn.session_id == row.id)
     if before is not None:
         query = query.where(CreativeTurn.position < before)
@@ -195,15 +237,42 @@ def builder(capability):
     }[capability]
 
 
+def job_builder(capability):
+    from app.media_jobs import FullAvatarRequest, LongVideoRequest, publish_avatar, publish_video
+
+    if capability not in {"video", "avatars"}:
+        raise HTTPException(422, "Choose a full film or full-recording avatar for this request")
+    request_model, publish = (
+        (LongVideoRequest, publish_video) if capability == "video" else (FullAvatarRequest, publish_avatar)
+    )
+
+    def create_job(session, request):
+        if capability == "video":
+            from app.video import capabilities
+
+            if not capabilities().get("available"):
+                raise HTTPException(409, "Configure the existing local Wan runtime")
+        result = publish(session, request)
+        run = session.scalar(
+            select(Run).where(Run.task_id == result["task_id"]).order_by(Run.created_at, Run.id).limit(1)
+        )
+        if run is None:
+            raise HTTPException(409, "The media plan did not publish its initial Run")
+        return run
+
+    return request_model, create_job
+
+
 @router.post("/{session_id}/generate", status_code=202)
 def generate(session_id: UUID, body: Generate, session: DB):
     row = get_session(session, session_id, lock=True)
     if row.archived_at:
         raise HTTPException(409, "Restore this workspace before generating")
+    fingerprint = body.model_dump(mode="json", exclude={"client_request_id", "request_kind"})
+    if body.request_kind != "direct":
+        fingerprint["request_kind"] = body.request_kind
     digest = hashlib.sha256(
-        json.dumps(
-            body.model_dump(mode="json", exclude={"client_request_id"}), sort_keys=True, separators=(",", ":")
-        ).encode()
+        json.dumps(fingerprint, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
     prior = session.scalar(
         select(CreativeTurn).where(
@@ -218,7 +287,9 @@ def generate(session_id: UUID, body: Generate, session: DB):
         parent = session.get(CreativeTurn, str(body.parent_turn_id))
         if parent is None or parent.session_id != row.id:
             raise HTTPException(404, "Choose a previous version in this workspace")
-    request_model, create_run = builder(row.capability)
+    request_model, create_run = (
+        builder(row.capability) if body.request_kind == "direct" else job_builder(row.capability)
+    )
     parameters = dict(body.parameters)
     if "client_request_id" in request_model.model_fields:
         parameters["client_request_id"] = str(body.client_request_id)
@@ -252,7 +323,7 @@ def generate(session_id: UUID, body: Generate, session: DB):
         request_sha256=digest,
         position=position,
         feedback=body.feedback,
-        request_parameters=request.model_dump(mode="json"),
+        request_parameters={**request.model_dump(mode="json"), "_creative_request_kind": body.request_kind},
     )
     session.add(turn)
     session.flush()
@@ -267,5 +338,21 @@ def generate(session_id: UUID, body: Generate, session: DB):
     row.draft = turn.request_parameters
     row.version += 1
     row.updated_at = utcnow()
+    session.commit()
+    return turn_dict(session, turn)
+
+
+@router.post("/{session_id}/turns/{turn_id}/cancel")
+def stop(session_id: UUID, turn_id: UUID, session: DB):
+    from app.task_control import cancel_task
+
+    row = get_session(session, session_id)
+    turn = session.get(CreativeTurn, str(turn_id))
+    if turn is None or turn.session_id != row.id:
+        raise HTTPException(404, "Generation is not available in this workspace")
+    task = session.get(Task, turn.task_id)
+    if task is None:
+        raise HTTPException(404, "The generation Task is unavailable")
+    cancel_task(session, task)
     session.commit()
     return turn_dict(session, turn)

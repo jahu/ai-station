@@ -272,17 +272,26 @@ The actual 0036 → 0038 cutover preserved existing content, credentials and pri
 owners with a fresh backup, without restarting the native Runner or models.
 See [account contracts](../accounts.md) and the [surface review](../account-boundary-review.md).
 
-NR-01 is in progress on a new branch: migration 0039, private sessions, bounded
-versioned drafts, ordered append-only turns and atomic idempotent generation
-through the five existing typed direct-generation builders. Ten API/service cases pass,
-including restart/navigation history, paging, versions, A/B denial, concurrent
-duplicate submission, rollback and real image-adapter/fake-process execution.
-The five workspace UIs, chosen-source feedback flow and full qualification remain
-open, including the full MediaJob variants and complete Task progress/Stop. A new
-full 5,101-case normal Python/Runner check is running in four disjoint file cohorts;
-its final result is not yet claimed. The new history schema/API are not deployed.
-Other NR items remain open;
-these increments do not complete the full next-release scope.
+NR-01 now has migration 0039, private sessions, bounded versioned drafts,
+ordered append-only turns and atomic idempotent generation through all five
+existing typed builders. Shared history, exact selected-source editing,
+autosaved/restored forms, archive/restore and whole-Task Stop cover Images,
+Video, Music, Speech and Avatars. Full films and whole-recording Sonic avatars
+retain the existing MediaJob variants. Administrator inspection remains explicit
+and read-only. [Workspace contracts](../creative-workspaces.md).
+
+The frozen complete normal Python/Runner baseline passed: 5,092 cases with nine
+opt-in skips across four disjoint complete-file cohorts. The 28-case final
+creative/workflow/inspector families also pass after the subsequent backend
+changes. Compiled desktop/mobile checks pass against a real account API and a
+separate synthetic generation worker, including exact-source follow-up,
+navigation/reload and foreign-user denial. This is not real model inference.
+The complete 936-case UI baseline and final ten-case changed workspace family
+pass, with format/lint/typecheck/build and Compose checks. The real compiled
+UI check also caught and verified the fix for a fresh-cache submission conflict.
+Review and production rollout remain open; schema 0039 has not been applied to
+the live workstation. NR-02 and the other remaining NR
+items stay open; this increment does not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up

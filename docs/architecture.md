@@ -12,8 +12,11 @@ is explicit and cannot revert to operator access after activation.
 The creative-workspace candidate adds owner-scoped sessions and append-only turns
 through migration 0039. One atomic submission uses the existing typed generator
 builder, ordinary Task/Run and an idempotent receipt; no new executor is introduced.
-Its generation/draft/history API is under qualification; the five workspace UIs
-and follow-up UX remain in progress and are not deployed yet.
+Its generation/draft/history API and five workspace UIs reuse the existing typed
+generators, including full-film and whole-recording MediaJobs. Drafts, variations,
+Task-wide Stop and explicit administrator inspection share the existing private
+account boundaries. See [workspace contracts](creative-workspaces.md). Production
+rollout remains separate from qualification.
 
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
