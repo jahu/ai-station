@@ -30,7 +30,7 @@ function UserDialog({
   const [confirmation, setConfirmation] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [factor, setFactor] = useState("");
-  const [resetMfa, setResetMfa] = useState(false);
+  const [resetMfa, setResetMfa] = useState(!!user?.recovery_required);
   const [resetting, setResetting] = useState(false);
   const [enabled, setEnabled] = useState(user?.enabled ?? true);
   const [isAdmin, setAdmin] = useState(user?.is_admin ?? false);
@@ -166,7 +166,7 @@ function UserDialog({
                       <input
                         type="checkbox"
                         checked={enabled}
-                        disabled={lastAdmin}
+                        disabled={lastAdmin || !!user.recovery_required}
                         onChange={(e) => setEnabled(e.target.checked)}
                       />
                       Account enabled
@@ -187,6 +187,12 @@ function UserDialog({
                         does not restart paused work.
                       </p>
                     )}
+                  {user?.recovery_required && (
+                    <p className="notice">
+                      Reset this account’s password and unavailable two-factor
+                      authentication before enabling access.
+                    </p>
+                  )}
                 </>
               )}
               {(!user || resetting) && (
@@ -251,14 +257,17 @@ function UserDialog({
                       />
                     </label>
                   )}
-                  {user?.mfa_enabled && (
+                  {(user?.mfa_enabled || user?.recovery_required) && (
                     <label className="row">
                       <input
                         type="checkbox"
                         checked={resetMfa}
+                        disabled={!!user?.recovery_required}
                         onChange={(e) => setResetMfa(e.target.checked)}
                       />
-                      Also reset this user’s two-factor authentication
+                      {user?.recovery_required
+                        ? "Reset unavailable two-factor authentication"
+                        : "Also reset this user’s two-factor authentication"}
                     </label>
                   )}
                 </>
@@ -278,7 +287,7 @@ function UserDialog({
                     setConfirmation("");
                     setAdminPassword("");
                     setFactor("");
-                    setResetMfa(false);
+                    setResetMfa(!!user?.recovery_required);
                   }}
                 >
                   {resetting ? "Back to access settings" : "Reset password"}
@@ -374,10 +383,14 @@ export default function AccountUsers() {
                 </p>
               </div>
               <span
-                className={`account-user-factor ${row.mfa_enabled ? "enabled" : ""}`}
+                className={`account-user-factor ${row.mfa_enabled && !row.recovery_required ? "enabled" : ""}`}
               >
                 <ShieldCheck size={14} />
-                {row.mfa_enabled ? "2FA on" : "2FA off"}
+                {row.recovery_required
+                  ? "Reset required"
+                  : row.mfa_enabled
+                    ? "2FA on"
+                    : "2FA off"}
               </span>
               <Button
                 variant="secondary"

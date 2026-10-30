@@ -61,6 +61,7 @@ def public_user(user: User) -> dict:
         "is_admin": user.is_admin,
         "enabled": user.enabled,
         "mfa_enabled": user.totp_enabled_at is not None,
+        "recovery_required": not user.bootstrap_pending and not bool(user.password_record),
         "created_at": user.created_at,
     }
 

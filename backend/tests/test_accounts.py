@@ -145,6 +145,7 @@ def test_admin_creates_users_without_exposing_private_credential_fields(session,
         "is_admin",
         "enabled",
         "mfa_enabled",
+        "recovery_required",
         "created_at",
     }
     with pytest.raises(AccountError, match="already in use"):

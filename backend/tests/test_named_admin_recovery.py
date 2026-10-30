@@ -69,6 +69,7 @@ def test_named_recovery_requires_new_admin_authority_and_explicit_member_reenrol
             )
             member = session.get(User, member_id)
             assert not member.enabled and not member.is_admin and member.password_record == {}
+            assert accounts.public_user(member)["recovery_required"]
             assert session.get(Task, task_id).owner_id == owner_id
             assert all(row.revoked_at for row in session.scalars(select(UserSession)))
             actor = accounts.login(session, "Owner", RECOVERED).principal
@@ -83,6 +84,7 @@ def test_named_recovery_requires_new_admin_authority_and_explicit_member_reenrol
             )
             accounts.update_user(session, actor, member_id, enabled=True, is_admin=False)
             session.commit()
+            assert not accounts.public_user(member)["recovery_required"]
             assert accounts.login(session, "Member", MEMBER).principal.user_id == member_id
     finally:
         engine.dispose()

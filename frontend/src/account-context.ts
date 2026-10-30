@@ -7,6 +7,7 @@ export type AccountUser = {
   is_admin: boolean;
   enabled: boolean;
   mfa_enabled: boolean;
+  recovery_required?: boolean;
   created_at: string;
 };
 export type AccountStatus = {

@@ -123,6 +123,36 @@ it("protects the last enabled administrator in the UI as well as the server", as
       .hasAttribute("disabled"),
   ).toBe(true);
 });
+
+it("explains recovery quarantine and requires credential/MFA reset before enabling access", async () => {
+  mount(
+    vi.fn(async () =>
+      reply([
+        admin,
+        {
+          ...member,
+          enabled: false,
+          mfa_enabled: true,
+          recovery_required: true,
+        },
+      ]),
+    ),
+  );
+  expect(await screen.findByText("Reset required")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Manage Bob" }));
+  expect(
+    screen
+      .getByRole("checkbox", { name: "Account enabled" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(screen.getByText(/before enabling access/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Reset password" }));
+  const reset = screen.getByRole("checkbox", {
+    name: "Reset unavailable two-factor authentication",
+  }) as HTMLInputElement;
+  expect(reset.checked).toBe(true);
+  expect(reset.disabled).toBe(true);
+});
 it("requires the administrator's password and factor to reset another user's credentials", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => {
     if (options?.method === "POST") {
