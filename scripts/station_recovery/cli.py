@@ -60,6 +60,10 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--expected-sha256", help="The exact backup digest you reviewed before --apply")
     parser.add_argument(
+        "--legacy-owner",
+        help="Explicitly assign a pre-account backup's private data to this existing current username",
+    )
+    parser.add_argument(
         "--operator-password-file",
         type=Path,
         help="Private new-password file, required when current credentials cannot be read",
@@ -69,6 +73,8 @@ def main(argv=None) -> int:
         parser.error("--apply requires --backup-run and its reviewed --expected-sha256")
     if (args.expected_sha256 or args.operator_password_file) and not args.apply:
         parser.error("--expected-sha256 and --operator-password-file require --apply")
+    if args.legacy_owner and not args.apply:
+        parser.error("--legacy-owner requires --apply and the reviewed backup digest")
     sys.path[:0] = [str(ROOT / "backend"), str(ROOT / "host-runner")]
     configuration = {**dotenv_values(ROOT / ".env"), **os.environ}
     root = args.data_root or Path(configuration.get("AI_STATION_DATA_HOST_PATH") or ROOT / "data")
@@ -95,7 +101,10 @@ def main(argv=None) -> int:
                 password = getpass.getpass("New operator password (current credentials are unreadable): ")
                 if password != getpass.getpass("Confirm new operator password: "):
                     raise RecoveryError("New operator passwords did not match")
-            result = restore_database(root, args.backup_run, args.expected_sha256, password=password)
+            options = {"password": password}
+            if args.legacy_owner is not None:
+                options["legacy_owner"] = args.legacy_owner
+            result = restore_database(root, args.backup_run, args.expected_sha256, **options)
         print(json.dumps({"data_root": str(root), **result}, indent=2, ensure_ascii=False))
         return 0
     except RecoveryError as exc:

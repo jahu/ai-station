@@ -227,7 +227,12 @@ def resume_recovery(root: Path, recovery_id: str, *, abort=False) -> dict:
 
 
 def restore_database(
-    root: Path, backup_id: str, expected_sha256: str, *, password: str | None = None
+    root: Path,
+    backup_id: str,
+    expected_sha256: str,
+    *,
+    password: str | None = None,
+    legacy_owner: str | None = None,
 ) -> dict:
     from contextlib import closing
 
@@ -273,7 +278,10 @@ def restore_database(
                 with closing(sqlite3.connect(stage)) as staged:
                     source.backup(staged)
             migrate_copy(stage)
-            actions = normalize_copy(stage, security, backup_id, password=password)
+            options = {"password": password}
+            if legacy_owner is not None:
+                options["legacy_owner"] = legacy_owner
+            actions = normalize_copy(stage, security, backup_id, **options)
             checkpoint(stage)
             verify_standalone(stage, normalized=True)
             if current_fingerprint(root) != baseline:

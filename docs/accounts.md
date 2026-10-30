@@ -210,12 +210,20 @@ ordinary recovery receipt contains counts, never password hashes, setup keys or
 recovery hashes; the authority snapshot is held only in memory.
 
 Identity collisions and legacy backups whose newly migrated initial owner differs
-from the current identity fail before recovery is applied. Initial-owner mapping
-must be explicitly designed and verified before this case is enabled. Unreadable
-current authority cannot revive claimed accounts from a backup, even with the old
+from the current identity fail before recovery is applied unless an operator
+explicitly selects `--legacy-owner USERNAME` alongside `--apply` and the reviewed
+backup digest. The selected account must exist in current authority. Mapping is
+limited to one unambiguous pre-account/unused initial identity without account
+MFA; it cannot reassign a backup containing multiple private accounts or a known
+different current owner. Root UUIDs, dependent records, files and personal
+preferences are retained; only the explicitly reviewed ownership changes. The
+receipt records previous/current owner UUIDs. Bootstrap renaming and legitimate
+reuse of the old `admin` username do not conflate the identities.
+
+Unreadable current authority cannot revive claimed accounts from a backup, even with the old
 operator-password recovery flag. A named administrator recovery flow must be
 provided for that case; the operator flag cannot silently replace an account's
-password or bypass MFA. These remaining paths keep the overall account cutover
+password or bypass MFA. This remaining flow keeps the overall account cutover
 gate open. Missing authenticator files never turn off an enabled second factor.
 
 ## Remaining enablement gate

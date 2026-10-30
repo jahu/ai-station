@@ -229,7 +229,14 @@ def current_security(path: Path) -> dict | None:
         return None
 
 
-def normalize_copy(path: Path, security: dict | None, backup_id: str, *, password: str | None = None) -> dict:
+def normalize_copy(
+    path: Path,
+    security: dict | None,
+    backup_id: str,
+    *,
+    password: str | None = None,
+    legacy_owner: str | None = None,
+) -> dict:
     """A restored copy cannot resume work, schedules, sessions or invitation tokens."""
     from app.db import utcnow
     from app.events import append_event
@@ -265,7 +272,11 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             from station_recovery.accounts import preserve_authority
 
             account_actions = preserve_authority(
-                session, (security or {}).get("account_authority"), now, password=password
+                session,
+                (security or {}).get("account_authority"),
+                now,
+                password=password,
+                legacy_owner=legacy_owner,
             )
             for agent in session.scalars(select(Agent)):
                 actions["agents_paused"] += int(agent.enabled)
