@@ -421,6 +421,22 @@ preserved. Ambiguous multi-user ownership blocks activation rather than guessing
 Once a receipt exists, later ownerless records are never adopted automatically.
 Operator startup is refused for an activated or multi-user database.
 
+Maintenance reads fixed schema/journal metadata through its internal service;
+this does not allow raw SQL in an ordinary scoped session. Readiness reports only
+the aggregate count of machine activity, while backup/interruption histories stay
+owner-scoped. A full-station backup requires a current administrator and a
+standalone, permission-bound Run. The worker rechecks that role after copying,
+publishes owner-bound artifacts and derives the latest backup from owned Runs
+without granting a shared Setting write. Copies are created with mode 0600.
+
+Full-database artifacts require current administrator authority in addition to
+ordinary ownership. This predicate applies to ORM lists, file/input lookups,
+background tasks, inspection and cached object lookups. A demoted account cannot
+retrieve its old full-station copy after signing back in as a member. Role changes
+also cancel queued/active work; a canceled or rejected copy is not published.
+External CLI model catalogs, like external CLI execution, require administration;
+ordinary accounts retain shared local model selection and personal providers.
+
 Workers keep their heartbeat but do not claim/recover work before first-admin
 setup finishes. Afterwards, an ownerless queued Run fails without execution;
 uncertain dispatch/PID or active reservations instead require inspection and keep
@@ -509,22 +525,12 @@ GPUs. Queued, never-dispatched model cancellation retires only its exact owned
 plan, preventing stale queued runtimes without granting general shared-row writes.
 These are synthetic native-model/worker contracts, not real GPU revocation tests.
 
-The remaining profile gate includes the complete operation inventory, larger
-context/reload/handoff combinations and adversarial shared-resource qualification:
+The [operation and execution review](account-boundary-review.md) records the
+private/shared/administrator policies, test families and actual sandbox probe.
+The exact operation authentication/member-denial matrix complements the private
+root/reference/FTS tests and dedicated A/B/admin lifecycle tests. A copy of the
+actual live 0036 database passed preservation checks through migration 0038.
 
-- Add immutable owners/backfill to private roots and enforce them in repository
-  operations, inherited child access, FTS, files, SSE, previews and cross-references.
-- Bind workers/schedules/tools to the frozen owner while sharing only approved
-  physical resources/models. Disable host-owner credential paths for ordinary users.
-- Deliver bootstrap/login/admin/security UI, durable login/MFA attempt throttling,
-  admin recovery, account-aware cookies and safe per-device logout. The staged
-  UI, named offline recovery and service/browser checks above are implemented;
-  final profile enablement and the complete route/execution audit are pending.
-- Preserve current credentials/MFA while offline recovery revokes old sessions.
-- Namespace and clear browser queries, drafts, previews and object URLs between
-  accounts; never briefly render the previous account's cached data.
-- Execute the complete A/B/admin denial matrix from the recorded API inventory,
-  legacy data preservation, desktop/mobile authentication and recovery checks.
-
-Internal service tests prove only their stated credential/session/MFA contracts.
-They are not evidence that the remaining application routes are owner-isolated.
+Final source qualification and production activation remain separate steps.
+Do not infer a live switch from internal service tests or from this document;
+the deployment receipt must identify its actual image, profile and backup.

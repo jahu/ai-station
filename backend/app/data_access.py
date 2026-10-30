@@ -106,8 +106,14 @@ REFERENCES = {
 def _criterion(model, scope: DataScope):
     if model in ROOTS:
         if scope.inspection_owner_id:
-            return model.owner_id == scope.inspection_owner_id
-        return model.owner_id.is_not(None) if scope.inspect_all else model.owner_id == scope.user_id
+            owned = model.owner_id == scope.inspection_owner_id
+        else:
+            owned = model.owner_id.is_not(None) if scope.inspect_all else model.owner_id == scope.user_id
+        if model is m.Artifact:
+            from app.backup_access import artifact_access
+
+            return owned & artifact_access(scope.user_id)
+        return owned
     clauses = []
     for field, parent in PARENTS[model]:
         column = getattr(model, field)
@@ -132,6 +138,14 @@ class ScopedSession(Session):
         row = super().get(entity, ident, **kwargs)
         if row is None:
             return None
+        if isinstance(row, m.Artifact):
+            # Cached objects must also respect a subsequent administrator
+            # demotion; apply the same fixed predicate as ordinary ORM reads.
+            allowed = self.connection().scalar(
+                select(m.Artifact.id).where(m.Artifact.id == row.id, _criterion(m.Artifact, scope))
+            )
+            if allowed is None:
+                return None
         # Session.get may return from the identity map without executing SQL.
         # Do not let an externally attached instance bypass the read policy.
         if isinstance(row, m.Owned) or type(row) in PARENTS:

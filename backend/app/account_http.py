@@ -40,6 +40,10 @@ def administrator_operation(request: Request) -> bool:
         return True
     if path in {"/api/system/status", "/api/system/diagnostics", "/api/system/gpu-processes"}:
         return True
+    if path.startswith("/api/coding/models/"):
+        # This catalog invokes the workstation's authenticated external CLI,
+        # rather than an account-owned provider or a shared local model.
+        return True
     if method in {"GET", "HEAD", "OPTIONS"}:
         return False
     if path in {
