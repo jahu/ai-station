@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.db import utcnow
 from app.events import append_event
@@ -55,27 +55,20 @@ class RecordedChecks(BaseModel):
 
 def enqueue_check_rerun(session, source_id, expected_validation_id):
     from app.coding_sessions import PROPOSALS
+    from app.data_access import private_for_update
 
     # First DB statement: serialize stale/double requests before reading state.
-    accepted = session.execute(
-        update(Run)
-        .where(
-            Run.id == source_id,
-            Run.status == "succeeded",
-            Run.executor_type.in_(PROPOSALS),
-            Run.metadata_json["validation_run_id"].as_string() == expected_validation_id,
-        )
-        .values(summary=Run.summary),
-        execution_options={"synchronize_session": False},
-    )
-    if accepted.rowcount != 1:
+    source = private_for_update(session, Run, source_id)
+    if (
+        source is None
+        or source.status != "succeeded"
+        or source.executor_type not in PROPOSALS
+        or source.metadata_json.get("validation_run_id") != expected_validation_id
+    ):
         raise HTTPException(409, "The coding turn or its checks changed. Reload before repeating checks.")
-    source = session.get(Run, source_id)
-    session.refresh(source)
     # Serialize different turns for the same project as well (including future
     # row-locking database implementations), before the active-project guard.
-    session.execute(update(Project).where(Project.id == source.project_id).values(name=Project.name))
-    project = session.get(Project, source.project_id)
+    project = private_for_update(session, Project, source.project_id)
     task = source.task
     lock_task(session, task)
     previous = session.get(Run, expected_validation_id)

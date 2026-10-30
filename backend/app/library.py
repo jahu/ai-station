@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select, text, update
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
@@ -117,24 +117,18 @@ class EditArtifact(Version):
 
 
 def mutate(session, artifact_id, expected, values, event):
-    row = session.get(Artifact, str(artifact_id))
+    from app.data_access import private_for_update
+
+    row = private_for_update(session, Artifact, str(artifact_id))
     if row is None:
         raise HTTPException(404, "Artifact not found")
     if row.purged_at or row.purge_run_id:
         raise HTTPException(409, "This artifact is permanently deleted or deletion has already started")
-    changed = session.execute(
-        update(Artifact)
-        .where(
-            Artifact.id == row.id,
-            Artifact.library_updated_at == expected,
-            Artifact.purged_at.is_(None),
-            Artifact.purge_run_id.is_(None),
-        )
-        .values(**values, library_updated_at=utcnow())
-        .execution_options(synchronize_session=False)
-    )
-    if changed.rowcount != 1:
+    if row.library_updated_at != expected:
         raise HTTPException(409, "This artifact changed. Reload it before saving.")
+    for key, value in values.items():
+        setattr(row, key, value)
+    row.library_updated_at = utcnow()
     if row.run_id:
         append_event(session, row.run_id, event, {"artifact_id": row.id})
     session.commit()

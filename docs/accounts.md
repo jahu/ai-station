@@ -99,6 +99,21 @@ still validate ownership. Administrative inspection can read all owned private
 data; it cannot silently create a new execution referencing another owner.
 Worker execution uses a plain owner scope, without the admin inspection flag.
 
+Versioned private mutations select and refresh the exact owner-filtered row under
+a write lock before comparing the expected version. They change ordinary ORM
+fields, retaining immutable-owner/reference validation on flush. Conversation
+archive/context selection, Library edits/trash/restore, deletion intent and
+agent/check-repeat locks use this path. Cached stale objects cannot replace the
+locked snapshot, competing edits cannot both consume one version, and read-only
+administrative inspection cannot acquire a mutation lock. Raw SQL and bulk ORM
+writes remain denied to scoped requests and executors.
+
+Worker and scheduler entrypoints request trusted coordination sessions explicitly;
+their global claims, leases, due-agent enumeration and machine sampling do not
+depend on an ambient user session. Each owned workload still executes inside its
+frozen owner scope. Removing the remaining legacy unbound/ownerless paths is a
+separate final cutover gate.
+
 The explicit request-session factory rechecks the real account role and current
 device, rather than accepting a caller's administrative flag. The worker factory
 verifies the persisted Run against its frozen owner and rejects disabled accounts;

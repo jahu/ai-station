@@ -174,6 +174,23 @@ def data_session_for_run(run_id: str, expected_owner: str) -> ScopedSession:
     return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
 
 
+def private_for_update(session: Session, model, identity):
+    """Refresh and lock one private root through the ordinary owner filter.
+
+    Services compare the refreshed version before mutating ORM fields. Reference
+    and ownership validation still run at flush; raw SQL/bulk writes stay denied.
+    SQLite serializes the transaction with BEGIN IMMEDIATE; PostgreSQL uses the
+    row lock. A cached stale identity never substitutes for the locked snapshot.
+    """
+    if model not in ROOTS:
+        raise DataAccessError("Only a private root can be locked for mutation")
+    if isinstance(session, ScopedSession) and session.scope.read_only:
+        raise DataAccessError("Administrative inspection is read-only")
+    return session.scalar(
+        select(model).where(model.id == identity).with_for_update().execution_options(populate_existing=True)
+    )
+
+
 @event.listens_for(ScopedSession, "do_orm_execute")
 def _filter(execute):
     scope = execute.session.scope

@@ -11,7 +11,7 @@ import time
 import uuid
 
 from app.config import get_settings
-from app.db import migrate, session_factory, sqlite_busy
+from app.db import control_session_factory, migrate, sqlite_busy
 from app.engine import tick
 
 
@@ -22,7 +22,7 @@ def worker_id() -> str:
 def worker_loop(identity: str) -> None:
     """One slot owns its sessions and renews only its own Run leases."""
     settings = get_settings()
-    factory = session_factory()
+    factory = control_session_factory()
     while True:
         session = factory()
         try:

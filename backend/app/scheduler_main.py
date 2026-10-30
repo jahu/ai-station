@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from app.db import migrate, session_factory, utcnow
+from app.db import control_session_factory, migrate, utcnow
 from app.llama import reconcile
 from app.models import Setting
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -14,7 +14,7 @@ from app.telemetry_store import record_sample
 
 def main() -> None:
     migrate()
-    factory = session_factory()
+    factory = control_session_factory()
     runner = RunnerClient(timeout=8)
     while True:
         session = factory()
