@@ -301,14 +301,17 @@ after verification. Translation review/resource-wait controls retain their prior
 behavior; their final 32-case component families pass without unhandled errors.
 NR-01 is complete. NR-02 and the other remaining NR items stay open; this increment does not complete the full next-release scope.
 
-NR-02 has a qualified common progress/estimate candidate across creative history,
+NR-02 is reviewed, merged in PR #516 and deployed across creative history,
 direct results, full MediaJobs and Run details. It persists actual sampler/chunk
 observations and private comparable-job duration ranges, distinguishes final
 saving/checks from sampling completion and hides stale estimates. Existing Sonic
 global progress remains intact. The [progress contract](generation-progress.md)
-records baseline/final-family and real compiled browser evidence; review and
-workstation rollout remain separate. Optional prompt enhancement is staged on
-a separate dependent branch and is not yet deployed.
+records baseline/final-family, compiled browser and production rollout evidence.
+The preserved-data rollout left the native Runner/models running. NR-02 is
+complete. Optional prompt enhancement is staged on a separate branch and is not
+yet deployed: its initial image preparation/original-recovery cases and checkbox
+UI pass; all supported workflows, private-source, review, retry and real-model
+quality qualification still need completion.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up
