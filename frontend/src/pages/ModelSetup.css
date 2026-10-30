@@ -1,0 +1,150 @@
+.setup-machine {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+}
+.setup-machine > div {
+  flex: 1;
+  min-width: 0;
+}
+.setup-machine p {
+  margin: 0.3rem 0 0;
+  overflow-wrap: anywhere;
+}
+.setup-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.setup-layout h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+.setup-layout > section > p {
+  margin: 0 0 1.2rem;
+}
+.setup-options {
+  display: grid;
+  gap: 0.75rem;
+}
+.setup-option {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
+  padding: 1.15rem;
+  cursor: pointer;
+}
+.setup-option > input {
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+.setup-option.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.setup-option p {
+  margin: 0.4rem 0;
+}
+.setup-option .row {
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.setup-small {
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.setup-small svg {
+  vertical-align: -0.12rem;
+}
+.setup-size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.setup-fit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+.setup-confirm {
+  margin-top: 1rem;
+  padding: 1.25rem;
+}
+.setup-confirm h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0;
+  font-size: 1rem;
+}
+.setup-confirm details {
+  margin: 1rem 0;
+}
+.setup-confirm .model-path {
+  overflow-wrap: anywhere;
+}
+.setup-license {
+  display: flex;
+  gap: 0.65rem;
+  align-items: start;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+.setup-license input {
+  margin-top: 0.3rem;
+  accent-color: var(--accent);
+}
+.setup-download {
+  margin-top: 0.8rem;
+  padding: 1.1rem;
+  min-width: 0;
+}
+.setup-download > .row {
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.setup-download progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: var(--accent);
+}
+.setup-download .notice {
+  overflow-wrap: anywhere;
+}
+.setup-empty {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: var(--muted);
+}
+.setup-empty svg {
+  opacity: 0.7;
+}
+@media (max-width: 960px) {
+  .setup-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .setup-machine {
+    flex-wrap: wrap;
+  }
+  .setup-machine > .text-link {
+    width: 100%;
+    padding-left: 2.25rem;
+  }
+  .setup-confirm {
+    padding: 1rem;
+  }
+  .setup-download button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}

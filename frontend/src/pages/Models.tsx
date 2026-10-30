@@ -43,7 +43,8 @@ interface Definition {
   file: {
     id: string;
     filename: string;
-    host_path: string;
+    host_path: string | null;
+    relative_path?: string;
     format: string;
     category: string;
     availability: string;
@@ -53,7 +54,8 @@ interface Definition {
 interface ModelFile {
   id: string;
   filename: string;
-  host_path: string;
+  host_path: string | null;
+  relative_path?: string;
   root_label: string;
   category: string;
   format: string;
@@ -137,7 +139,9 @@ function ModelFileCards({ models }: { models: ModelFile[] }) {
                     : "Not checked"}
               </span>
             </div>
-            <p className="muted model-path">{model.host_path}</p>
+            <p className="muted model-path">
+              {model.relative_path ? "AI Station storage" : model.host_path}
+            </p>
             <small className="muted">
               {model.last_seen_at
                 ? `Last seen ${new Date(model.last_seen_at).toLocaleString()}`
@@ -261,10 +265,16 @@ export function Models() {
           )
         }
       >
-        Your existing model files, observed on the host. Discovery reads
-        metadata and leaves files in place. Definitions and installation never
-        download GGUFs or pull container images.
+        Your existing models and saved load presets. Discovery reads host
+        metadata and keeps files in place. Guided setup downloads new models
+        into AI Station storage.
       </PageTitle>
+      <p className="muted">
+        <Link className="text-link" to="/setup/models">
+          Set up a local model →
+        </Link>{" "}
+        · Guided downloads, hardware fit and saved progress.
+      </p>
       <ErrorNotice error={inventory.error ?? definitions.error ?? scan.error} />
       <section className="panel model-toolbar">
         <div className="row model-tabs">
@@ -530,7 +540,11 @@ export function ModelDetail() {
         <h2>File observation</h2>
         <dl className="model-properties">
           <dt>Host path</dt>
-          <dd className="model-path">{row.host_path}</dd>
+          <dd className="model-path">
+            {row.relative_path
+              ? `Application data / ${row.relative_path}`
+              : row.host_path}
+          </dd>
           <dt>Configured root</dt>
           <dd className="model-path">{row.root_label}</dd>
           <dt>Format / size</dt>

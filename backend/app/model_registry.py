@@ -35,6 +35,8 @@ def file_dict(row):
         for key in (
             "id",
             "host_path",
+            "relative_path",
+            "sha256",
             "filename",
             "size_bytes",
             "mtime",
@@ -230,7 +232,10 @@ class ModelDiscoveryExecutor:
             raise ValueError("Discovery report belongs to a different Run")
         now = utcnow()
         complete_roots = {root.path for root in report.roots if root.status == "scanned"}
-        existing = {row.host_path: row for row in session.scalars(select(ModelFile))}
+        existing = {
+            row.host_path: row
+            for row in session.scalars(select(ModelFile).where(ModelFile.relative_path.is_(None)))
+        }
         for row in existing.values():
             row.availability = "missing" if row.root_label in complete_roots else "unknown"
             row.last_scan_run_id = run.id

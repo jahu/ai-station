@@ -175,6 +175,13 @@ two-factor authentication and administrator management. They are an explicit
 access-profile cutover; see [accounts and migration](docs/accounts.md). This does
 not declare the remaining 0.1.0 work complete.
 
+Development builds offer **Models → Set up a local model** for reviewed local
+conversation-model downloads. See actual RAM/VRAM and free application storage,
+accept the model license, stop/resume preparation and open Chat after verification.
+This Linux route uses an already-installed llama.cpp runtime; cross-platform
+launchers and full media setup remain in progress.
+[Guided setup and measured qualification](docs/plans/guided-model-installation.md).
+
 Development builds also retain creative sessions across Images, Video, Music,
 Speech and Avatars. Measured generation stages and scoped time estimates use
 saved observations rather than a simulated countdown. See

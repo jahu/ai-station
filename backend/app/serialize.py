@@ -211,6 +211,7 @@ def model_dict(row: ModelFile) -> dict:
     return {
         "id": row.id,
         "host_path": row.host_path,
+        **({"relative_path": row.relative_path, "sha256": row.sha256} if row.relative_path else {}),
         "filename": row.filename,
         "size_bytes": row.size_bytes,
         "mtime": row.mtime,

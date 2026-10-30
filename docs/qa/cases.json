@@ -1,5 +1,5 @@
 {
-  "version": 17,
+  "version": 18,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -18,7 +18,8 @@
     "docs/plans/notification-delivery.md",
     "docs/plans/media-timeline.md",
     "docs/plans/synchronized-sound.md",
-    "docs/plans/next-release-0.1.md"
+    "docs/plans/next-release-0.1.md",
+    "docs/plans/guided-model-installation.md"
   ],
   "cases": [
     {
@@ -3853,6 +3854,72 @@
       "requirements": [
         "NR-07",
         "NR-08"
+      ]
+    },
+    {
+      "id": "SETUP-101",
+      "area": "Konfiguracja modeli",
+      "title": "Wybór modelu i pierwsza lokalna odpowiedź",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Jako administrator otwórz Models → Set up a local model. Porównaj RAM, GPU, wolne miejsce i wariant Q4_K_M z rzeczywistym sprzętem.",
+        "Przeczytaj źródło/licencję, zaakceptuj ją i pobierz wariant mieszczący się w pamięci. Obejrzyj postęp, szczegóły Run i Files verified.",
+        "Kliknij Open Chat with this model, wyślij krótką wiadomość i sprawdź rzeczywistą lokalną odpowiedź oraz użyty model."
+      ],
+      "expected": [
+        "Pobieranie wymaga zgody. Pliki i ich SHA-256 są zweryfikowane; same pobrane wagi nie oznaczają działającego runtime. Nowa rozmowa używa wybranego modelu; istniejące modele i dane pozostają. Brak runtime/sprzętu ma jawny komunikat zamiast pozornej gotowości."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-102",
+      "area": "Konfiguracja modeli",
+      "title": "Stop, powrót i wznowienie przygotowania modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Rozpocznij pobieranie nowego wariantu modelu i po pojawieniu się pobranych bajtów kliknij Stop.",
+        "Przejdź do Chat i wróć do konfiguracji, odśwież. Otwórz istniejące przygotowanie i wybierz Resume preparation.",
+        "Poczekaj na weryfikację; sprawdź nowy numer próby i to samo zadanie/model."
+      ],
+      "expected": [
+        "Historia i pobrane bajty pozostają po Stop/odświeżeniu; wznowienie zachowuje zweryfikowaną tożsamość pliku i nie podmienia źródła/modelu. Sam powrót do strony nie tworzy drugiego zadania."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-103",
+      "area": "Konfiguracja modeli",
+      "title": "Wspólne modele i prywatna historia przygotowań",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po przygotowaniu modelu przez administratora zaloguj się drugim zwykłym kontem.",
+        "Otwórz Set up a local model oraz Chat; sprawdź dostępny współdzielony model i własną pustą historię przygotowań.",
+        "Spróbuj wejść pod zapamiętany URL Run przygotowania administratora."
+      ],
+      "expected": [
+        "Zwykłe konto może rozmawiać ze współdzielonym modelem, ale nie pobiera nowych modeli ani nie widzi historii, Run lub JSON administratora. Brak obcego dostępu nie przeszkadza w normalnym korzystaniu z Chat."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
       ]
     }
   ]

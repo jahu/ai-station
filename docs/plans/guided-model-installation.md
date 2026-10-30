@@ -2,10 +2,9 @@
 
 This implements NR-13/14 of the [0.1.0 release contract](next-release-0.1.md).
 All three requested platforms and all creative capability families remain in
-scope. Current production still uses the documented Linux prerequisites. The
-first implementation branch contains an unpublished download primitive and
-reviewed starter-model metadata; it does not expose an installer or declare a
-model/runtime operational.
+scope. Current production still uses the documented Linux prerequisites. The current candidate adds a Linux guided conversation-model workflow, not
+the complete cross-platform launcher or a complete multimodal installation.
+Production release status is separate from the evidence below.
 
 ## User journey
 
@@ -72,9 +71,10 @@ No starter weights have been downloaded by the normal tests.
 `model_download_files.py` provides a bounded streaming primitive. Files live in
 application-owned `models/store/<sha256>`; intermediate bytes use the same hash
 plus `.part`. The API never persists a container-specific `/data` path into a
-model record. A future native adoption request resolves a typed relative model
-reference under its configured data root and verifies size/hash/GGUF metadata
-before the existing model definition/load machinery can use it. It cannot become
+model record. The worker checks the complete SHA-256 and byte length; typed native inspection
+resolves a relative reference under its configured data root, checks immutable
+regular-file identity, size/mtime and bounded GGUF metadata before the existing
+model definition/load machinery can use it. It cannot become
 an arbitrary host-path endpoint or unrestricted model-directory write.
 
 One per-object exclusive file lock fences concurrent workers. Public DNS is
@@ -125,3 +125,48 @@ Private source/check evidence lives under
 `data/acceptance/guided-model-setup-20261030/`. The normal file tests use temporary
 storage and mock HTTPS only; they consume no GPU, real model download or cloud
 inference. Remaining steps are required before NR-13/14 can be marked complete.
+
+### Registry and job implementation decision
+
+The install workflow will use the existing owned Task/Run/event records and
+idempotent submission receipts rather than a second job queue. Resume keeps the
+original catalog snapshot and publishes a new attempt under the same Task.
+Only an app administrator may create/resume these shared-model mutations.
+
+Migration 0042 adds an optional app-data-relative location and checksum to
+ModelFile, preserving external host paths as the other exclusive coordinate.
+App-owned files never inherit a guessed host path. Source helpers keep legacy
+host Run payloads unchanged, while typed Runner requests explicitly mark an
+app-owned `models/store/<sha256>` reference. The Runner resolves only this fixed
+namespace under its configured data root, checks regular/read-only file identity,
+size/mtime and bounded GGUF metadata, and never downloads or runs a caller URL.
+Full SHA verification belongs to the cancellable download worker; the native
+metadata inspection must not be described as an independent full-file hash.
+
+### Qualified Linux conversation-model candidate — 2026-10-30
+
+`Models → Set up a local model` (`/setup/models`) shows detected RAM/GPUs,
+application-volume free storage, Q4_K_M/Q8_0 choices, size, pinned source/license
+and an estimated fitted context with GPU headroom. An authenticated administrator
+accepts the license and starts an owned download Task. Ordinary members can use
+shared installed models but cannot mutate installations or inspect someone
+else's download Runs/receipts. Stopped attempts and worker loss require explicit
+Resume against the last attempt; the frozen recipe and cached bytes survive.
+Files-only preparation is explicit on hardware that cannot run this CUDA profile.
+
+A real isolated Linux qualification downloaded the pinned **2,497,281,312-byte
+Q4_K_M** through public HTTPS, stopped after **18,874,368 bytes**, resumed, verified
+SHA-256, inspected the actual GGUF with the native Runner, adopted a portable
+ModelFile/Definition, and opened an empty local conversation from the compiled
+UI. A separate worker then loaded the already-installed llama.cpp CUDA image on
+one detected RTX 3060 with **32,768-token Q8 KV context** and returned exactly
+`local setup works.`. The owned test runtime was stopped afterward. The complete
+journey took about 135 seconds on this workstation/network; this is not a general
+download/inference benchmark. Desktop/mobile screenshots and proofs are private.
+Production data, external roots and existing models were untouched.
+
+This qualifies that exact Linux/model/image route. Q8_0 has mocked contract
+coverage and pinned publisher metadata but no fresh full download/inference
+qualification. Required remaining NR-13/14 work includes runtime preparation for
+a clean installation, media/companion recipes, advanced model discovery, desktop
+packaging and actual Windows/macOS clean-install/update/uninstall qualification.
