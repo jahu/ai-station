@@ -427,7 +427,6 @@ def test_resume_failed_sound_reuses_completed_film_and_receipt_without_regenerat
     from uuid import uuid4
 
     from app.film_sound import FilmSoundExecutor
-
     from app.timelines import TimelineExecutor
 
     executor = FilmSoundExecutor if failure_stage == "prepare" else TimelineExecutor
