@@ -64,6 +64,34 @@ or ignoring the selected tool. Explicit incompatible action/media combinations
 remain rejected before enqueueing. Normal verification uses fake search, model
 and native jobs; real search-informed generation is recorded separately when run.
 
+## Automatic query preparation (0.1 candidate)
+
+An ordinary automatic search using the selected Chat model prepares a concise query
+before the first search request, including the first message in a conversation.
+It reuses the selected, admitted model with tools disabled, JSON output, a
+256-token budget and a 30-second preparation deadline. The preparation prompt
+contains the question and the existing bounded ordinary-text history; it does
+not inherit the conversation system prompt, attached file bodies, pinned memory
+or summary contents. A reported death or other claim is treated as something to
+verify, rather than an established fact.
+
+Preparation, the effective query and model identity are recorded on the ordinary
+Chat Run. The search JSON artifact, saved message and Sources panel retain the
+actual query, original question and preparation model/location. Failed, invalid
+or canceled preparation never falls back to sending the raw question or
+generating a factual answer. Stop closes the preparation stream. The existing
+one-attempt empty-result refinement remains bounded and auditable.
+
+A manually entered query retains its existing reviewed search/refinement path.
+Reviewed agent queries, image-research briefs and explicit page reading keep
+their existing scopes. This increment adds no hidden model load or automatic
+external provider choice. When the user explicitly selects an external Chat
+provider, preparation uses that same model and requires the Run's `external_ai`
+permission; both the events and Sources panel mark it external. This avoids an
+additional model/server setting or loading a hidden planner. Existing
+permission-bound follow-up resolution is preserved. Tests use synthetic
+model/search output; real-model relevance qualification remains a release gate.
+
 ## Real search-informed image acceptance
 
 On 2026-10-14 the deployed Assistant completed public search → a visual brief

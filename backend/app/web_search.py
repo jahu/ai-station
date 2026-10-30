@@ -177,7 +177,7 @@ async def rewrite_query(session, run, query, *, history=None):
             {
                 "role": "system",
                 "content": (
-                    "Rewrite an unsuccessful public web search into a concise search-engine query. "
+                    "Prepare a concise, relevant public search-engine query for the question. "
                     'Return only JSON {"query": "..."}. Preserve named subjects and the information requested; '
                     "correct obvious spelling mistakes and use English keywords when useful. "
                     "Do not answer the question, invent names, dates or facts, or assume a reported event is true. "
@@ -220,17 +220,30 @@ async def rewrite_query(session, run, query, *, history=None):
         await stream.aclose()
 
 
-async def retrieve(session, run, query, planner, query_context=None):
+async def retrieve(session, run, query, planner, query_context=None, *, prepare_query=False):
+    if prepare_query:
+        from app.chat_providers import require_external_permission
+
+        require_external_permission(run)
     original = query
     question = (run.parameters.get("web_search") or {}).get("question")
-    if (query_context or question) and planner is not None:
-        append_event(session, run.id, "tool.query_context_started", {"tool": "web_search"})
+    if (query_context or question or prepare_query) and planner is not None:
+        append_event(
+            session,
+            run.id,
+            "tool.query_preparation_started" if prepare_query else "tool.query_context_started",
+            {
+                "tool": "web_search",
+                "model": run.parameters.get("model"),
+                "location": run.parameters.get("location", "local"),
+            },
+        )
         session.commit()
         try:
             query = await rewrite_query(session, run, question or query, history=query_context)
         except (ProviderError, TimeoutError, ValueError) as exc:
             raise ProviderError(
-                "Could not resolve the follow-up search topic. Enter a specific Search query or try again."
+                "Could not prepare a public search query. Enter a specific Search query or try again."
             ) from exc
         session.refresh(run)
         canceled = run.status == "cancel_requested"
@@ -238,8 +251,28 @@ async def retrieve(session, run, query, planner, query_context=None):
         if canceled:
             return {"query": original, "sources": []}
         append_event(session, run.id, "tool.query_resolved", {"tool": "web_search", "query": query})
+        if prepare_query:
+            append_event(
+                session,
+                run.id,
+                "tool.query_prepared",
+                {
+                    "tool": "web_search",
+                    "query": query,
+                    "model": run.parameters.get("model"),
+                    "location": run.parameters.get("location", "local"),
+                },
+            )
         session.commit()
     result = await search(query)
+    if prepare_query and planner is not None:
+        result = {
+            **result,
+            "query_preparation": {
+                "location": run.parameters.get("location", "local"),
+                "model": run.parameters.get("model"),
+            },
+        }
     if query != original:
         result = {**result, "original_query": original}
     if result["sources"] or planner is None:
@@ -272,6 +305,7 @@ async def retrieve(session, run, query, planner, query_context=None):
         "query": query,
         "queries": [query, rewritten],
         **({"original_query": original} if original != query else {}),
+        **({"query_preparation": result["query_preparation"]} if "query_preparation" in result else {}),
     }
 
 
@@ -333,7 +367,9 @@ async def search(query):
         raise ProviderError("Web search could not complete. Check the search service and try again.") from exc
 
 
-async def execute_search(session, run, query, *, deadline=None, planner=None, query_context=None):
+async def execute_search(
+    session, run, query, *, deadline=None, planner=None, query_context=None, prepare_query=False
+):
     if "network_read" not in run.effective_permissions:
         raise ProviderError("Web search requires explicit network permission")
     if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500:
@@ -341,7 +377,9 @@ async def execute_search(session, run, query, *, deadline=None, planner=None, qu
     append_event(session, run.id, "tool.requested", {"tool": "web_search", "query": query})
     append_event(session, run.id, "tool.started", {"tool": "web_search", "provider": "searxng"})
     session.commit()
-    pending = asyncio.create_task(retrieve(session, run, query, planner, query_context))
+    pending = asyncio.create_task(
+        retrieve(session, run, query, planner, query_context, prepare_query=prepare_query)
+    )
     try:
         while True:
             if deadline is not None and time.monotonic() >= deadline:
@@ -413,6 +451,9 @@ async def context(session, run, message):
         query,
         planner=rewrite_query if not run.parameters.get("image_followup") else None,
         query_context=run.parameters.get("web_search_context") if options.get("contextual") else None,
+        # Reuse the selected/admitted model. External preparation requires that
+        # same explicitly selected provider and the Run's external_ai grant.
+        prepare_query=options.get("contextual") is True and not run.parameters.get("image_followup"),
     )
     if result is None:
         return None
