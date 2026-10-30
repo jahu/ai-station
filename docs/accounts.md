@@ -268,6 +268,25 @@ The complete account request/execution/tool boundary remains the enablement gate
 
 ## Remaining enablement gate
 
+Shared llama.cpp stop/restart, operation coalescing, context upgrades and idle
+eviction now check a fixed cross-account busy projection. It returns only a
+boolean for the selected managed model; it never loads another account's Run or
+returns its ID, prompt, task, logs or dependency graph. Owner-only ORM views must
+not make another account's active consumer look like an idle runtime.
+
+The remaining shared-runtime work must preserve both usability and privacy:
+
+- Bind ready model use to verified shared model observations, not a foreign
+  private startup Run lookup. Filter operation provenance from public runtime
+  projections when the requesting owner cannot inspect that Run.
+- When another owner is loading a selected model, create a bounded owner-local
+  waiting Run/dependency. Observe shared readiness/failure without attaching a
+  private cross-owner dependency or canceling the producer on local cancellation.
+- After confirmed managed-runtime shutdown, release only that exact physical
+  allocation through typed coordination. Do not grant arbitrary foreign Run,
+  resource, event or metadata writes. Test cross-owner load/use/stop/eviction,
+  cancellation and recovery before enabling the account profile.
+
 - Add immutable owners/backfill to private roots and enforce them in repository
   operations, inherited child access, FTS, files, SSE, previews and cross-references.
 - Bind workers/schedules/tools to the frozen owner while sharing only approved
