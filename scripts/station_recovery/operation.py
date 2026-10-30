@@ -233,6 +233,7 @@ def restore_database(
     *,
     password: str | None = None,
     legacy_owner: str | None = None,
+    admin_recovery=None,
 ) -> dict:
     from contextlib import closing
 
@@ -249,7 +250,7 @@ def restore_database(
         target = data_path(root, "db/ai-station.sqlite", required=False)
         security = current_security(target)
         baseline = current_fingerprint(root)
-        if security is None and password is None:
+        if security is None and password is None and admin_recovery is None:
             raise RecoveryError(
                 "Unreadable current credentials require a fresh operator password for recovery"
             )
@@ -281,6 +282,8 @@ def restore_database(
             options = {"password": password}
             if legacy_owner is not None:
                 options["legacy_owner"] = legacy_owner
+            if admin_recovery is not None:
+                options["admin_recovery"] = admin_recovery
             actions = normalize_copy(stage, security, backup_id, **options)
             checkpoint(stage)
             verify_standalone(stage, normalized=True)

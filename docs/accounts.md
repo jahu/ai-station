@@ -220,11 +220,33 @@ preferences are retained; only the explicitly reviewed ownership changes. The
 receipt records previous/current owner UUIDs. Bootstrap renaming and legitimate
 reuse of the old `admin` username do not conflate the identities.
 
-Unreadable current authority cannot revive claimed accounts from a backup, even with the old
-operator-password recovery flag. A named administrator recovery flow must be
-provided for that case; the operator flag cannot silently replace an account's
-password or bypass MFA. This remaining flow keeps the overall account cutover
-gate open. Missing authenticator files never turn off an enabled second factor.
+Unreadable current authority cannot revive claimed accounts from a backup, even
+with the old operator-password recovery flag. A separate offline recovery option
+requires the backup's existing administrator username, a new password and explicit
+MFA-reset acknowledgement:
+
+```bash
+./scripts/restore.sh --backup-run <uuid> --apply --expected-sha256 <reviewed-digest> \
+  --recover-admin <username> --reset-admin-mfa --admin-password-file <private-0600-file>
+```
+
+An interactive terminal can prompt securely instead of reading a password file.
+Passwords never go on the command line or into reports. This operation is limited
+to unreadable current account authority; it cannot replace readable current
+authority or promote an arbitrary backup member. It cannot combine with operator
+password replacement or legacy owner mapping. The selected administrator gets the
+fresh password, its historical sessions/recovery codes are invalidated and the
+explicitly acknowledged unavailable MFA is reset. Existing secret files remain
+untouched for forensics/rollback. Other backup accounts are quarantined: login is
+disabled, historical passwords are unusable, and an administrator must reset their
+credentials and MFA before re-enabling them. Device sessions and abandoned MFA
+enrollment are revoked for everyone. Data UUIDs and ownership are retained.
+Private access remains disabled until reviewed; a recovered administrator does
+not automatically reopen the network service. Normal recovery with readable
+authority still preserves enabled MFA and current recovery hashes.
+
+These are staged host-administration operations, outside HTTP and agent tools.
+The complete account request/execution/tool boundary remains the enablement gate.
 
 ## Remaining enablement gate
 
@@ -234,8 +256,8 @@ gate open. Missing authenticator files never turn off an enabled second factor.
   physical resources/models. Disable host-owner credential paths for ordinary users.
 - Deliver bootstrap/login/admin/security UI, durable login/MFA attempt throttling,
   admin recovery, account-aware cookies and safe per-device logout. The staged
-  UI and service/browser checks above are implemented; final profile enablement
-  and offline administrator recovery are still pending.
+  UI, named offline recovery and service/browser checks above are implemented;
+  final profile enablement and the complete route/execution audit are pending.
 - Preserve current credentials/MFA while offline recovery revokes old sessions.
 - Namespace and clear browser queries, drafts, previews and object URLs between
   accounts; never briefly render the previous account's cached data.

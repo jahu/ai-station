@@ -236,6 +236,7 @@ def normalize_copy(
     *,
     password: str | None = None,
     legacy_owner: str | None = None,
+    admin_recovery=None,
 ) -> dict:
     """A restored copy cannot resume work, schedules, sessions or invitation tokens."""
     from app.db import utcnow
@@ -256,7 +257,7 @@ def normalize_copy(
 
     if password is not None and not 12 <= len(password) <= 200:
         raise RecoveryError("A new operator password must contain 12 to 200 characters")
-    if security is None and password is None:
+    if security is None and password is None and admin_recovery is None:
         raise RecoveryError("Unreadable current credentials require a fresh operator password for recovery")
     engine = create_engine(URL.create("sqlite", database=str(path)))
     now = utcnow()
@@ -277,6 +278,7 @@ def normalize_copy(
                 now,
                 password=password,
                 legacy_owner=legacy_owner,
+                admin_recovery=admin_recovery,
             )
             for agent in session.scalars(select(Agent)):
                 actions["agents_paused"] += int(agent.enabled)
@@ -342,7 +344,15 @@ def normalize_copy(
             private_required = (
                 private_policy.get("enabled") is True or private_policy.get("password_required") is True
             )
-            if private_required and not (security or {}).get("operator_auth") and password is None:
+            account_ready = bool(
+                account_actions.get("accounts_preserved") or account_actions.get("administrator_recovered")
+            )
+            if (
+                private_required
+                and not (security or {}).get("operator_auth")
+                and password is None
+                and not account_ready
+            ):
                 raise RecoveryError(
                     "Private recovery requires a fresh operator password when current credentials are missing"
                 )
@@ -361,6 +371,8 @@ def normalize_copy(
             session.flush()
             for key, value in (security or {}).items():
                 if key in {"operator_auth", "operator_login_budget"} and value is not None:
+                    if key == "operator_auth" and admin_recovery is not None:
+                        continue
                     session.add(Setting(key=key, value=value))
             for key in ("account_attempts:login", "account_attempts:security", "account_attempts:admin"):
                 previous = session.get(Setting, key)

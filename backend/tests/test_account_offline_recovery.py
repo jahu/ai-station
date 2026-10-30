@@ -99,6 +99,24 @@ def test_restoring_older_data_preserves_current_password_mfa_roles_and_rate_budg
         engine.dispose()
 
 
+def test_current_account_authority_satisfies_private_recovery_without_restoring_operator_password(
+    private_backup,
+):
+    root, stage, owner_id, *_ = private_backup
+    security = current_security(root / "db/ai-station.sqlite")
+    security["private_ui_access"] = {"enabled": True, "revision": 3}
+    normalize_copy(stage, security, str(uuid4()))
+    engine = create_engine(f"sqlite:///{stage}")
+    try:
+        with Session(engine) as session:
+            assert session.get(User, owner_id).totp_enabled_at is not None
+            assert session.get(Setting, "operator_auth") is None
+            policy = session.get(Setting, "private_ui_access").value
+            assert not policy["enabled"] and policy["password_required"]
+    finally:
+        engine.dispose()
+
+
 def test_unreadable_current_authority_never_revives_backup_accounts_with_an_operator_password(private_backup):
     _, stage, *_ = private_backup
     original = stage.read_bytes()

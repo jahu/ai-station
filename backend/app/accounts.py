@@ -324,6 +324,10 @@ def update_user(session: Session, actor: Principal, user_id: str, *, enabled: bo
         raise AccountError(404, "Account not found")
     if user.bootstrap_pending:
         raise AccountError(409, "Complete local administrator setup first")
+    if enabled and not user.password_record:
+        raise AccountError(
+            409, "Reset this recovered account's password and two-factor authentication before enabling it"
+        )
     if (
         user.enabled
         and user.is_admin
@@ -421,6 +425,8 @@ def reset_user_credentials(
         raise AccountError(404, "Account not found")
     if user.bootstrap_pending:
         raise AccountError(409, "Complete local administrator setup first")
+    if not user.password_record and not reset_mfa:
+        raise AccountError(409, "Reset two-factor authentication when recovering this quarantined account")
     user.password_record = make_password_record(new_password)
     user.password_changed_at = utcnow()
     revoke_sessions(session, user.id)
