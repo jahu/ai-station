@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+import pytest
 from alembic import command
 from app.db import alembic_config
 from app.models import CreativeSession, CreativeTurn
@@ -8,7 +9,8 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session
 
 
-def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_path):
+@pytest.mark.parametrize("starting_revision", ["0039", "0040"])
+def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_path, starting_revision):
     engine = create_engine("sqlite:///" + str(tmp_path / "legacy.sqlite"))
 
     @event.listens_for(engine, "connect")
@@ -18,7 +20,7 @@ def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_
     with engine.begin() as connection:
         config = alembic_config()
         config.attributes["connection"] = connection
-        command.upgrade(config, "0039")
+        command.upgrade(config, starting_revision)
         with Session(bind=connection) as db:
             task = create_task(db, title="Retained", prompt="Retained prompt", capability="image.generate")
             run = create_run(db, task, run_type="image", capability="image.generate", executor_type="fake")
@@ -59,5 +61,5 @@ def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_
         db.commit()
     with engine.connect() as connection:
         assert connection.execute(text("PRAGMA foreign_keys")).scalar() == 1
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0040"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0041"
     engine.dispose()

@@ -67,6 +67,8 @@ from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecuto
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
+from app.timeline_waveforms import WaveformExecutor
+from app.timelines import TimelineExecutor
 from app.tools import get_tool
 from app.transcription import TranscriptionExecutor
 from app.validation_executor import ProjectValidationExecutor
@@ -339,6 +341,8 @@ EXECUTORS = {
     "chatterbox": AudioExecutor(),
     "fish_speech": FishSpeechExecutor(),
     EffectsExecutor.name: EffectsExecutor(),
+    TimelineExecutor.name: TimelineExecutor(),
+    WaveformExecutor.name: WaveformExecutor(),
     EffectsPreviewExecutor.name: EffectsPreviewExecutor(),
     "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),

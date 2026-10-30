@@ -1009,3 +1009,16 @@ The [recovery utility](operations.md#recovering-an-api-port-after-network-startu
 repairs a failed publish mapping only for the validated owned API and its existing
 image. It does not stop running workers, restart native executors or apply an
 upgrade.
+
+## Private saved media timelines
+
+Video editing extends CreativeSession with capability `timeline`; immutable
+TimelineRevision rows own no independent execution architecture. Each revision
+belongs to its private workspace and freezes source observations and a typed
+frame/sample manifest. Ordinary CreativeTurns enqueue `timeline_render` Runs;
+the worker reserves RAM and dispatches the native CPU renderer through the
+private Unix socket. Waveform analysis is a bounded ordinary container Run.
+The native renderer verifies source hashes, timing and output coverage before
+publishing a general video Artifact. Preview and export reuse the same verified
+result; changed drafts cannot export an earlier mix as their current edit.
+See [timeline plan](plans/media-timeline.md).

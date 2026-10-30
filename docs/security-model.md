@@ -1024,3 +1024,18 @@ private binds gate an API-only recreation pinned to its existing image. Active
 workers, native processes, other projects and deliberately stopped services are
 not taken over. Optional user-service installation cannot replace an unrelated
 unit.
+
+## Timeline revision and render boundaries
+
+TimelineRevision access inherits its CreativeSession owner. A revision parent
+must be in the same workspace; submitting another workspace's revision is
+rejected even for the same owner. Canonical app-owned MP4/PCM WAV observations
+are frozen at save and revalidated by the worker and native renderer. The typed
+Runner request accepts frame/sample edits, never shell commands or filter graphs.
+Rendering runs in an owned four-GiB/zero-swap CPU scope with a fixed deadline and
+existing process-group cancellation/recovery. It retains only one source's
+decoded PCM at a time. Waveform Runs expose only owned source measurements.
+Migration 0041 preserves populated creative history; downgrade refuses to delete
+any timeline workspace/revision. The added 4096-MiB memory-scope allowlist entry
+preserves existing GPU executors' limits; it changes their wrapper identity and
+does not constitute a fresh GPU inference qualification.

@@ -348,6 +348,8 @@ not assert that search snippets independently verify every factual claim.
 
 NR-07 basic effects generation and saved sound workspaces are deployed after
 reviewed PR #524. Actual eight-second and fifteen-second/two-window inference,
-linked previews and scoped Stop pass. Per-scene descriptions, assistant/agent
-exposure and perceptual acceptance remain; NR-08 multitrack editing is still
-open. [Deployment and remaining contracts](synchronized-sound.md).
+linked previews and scoped Stop pass. Per-scene descriptions are deployed in
+PR #526; assistant/agent exposure and perceptual acceptance remain.
+NR-08 multitrack editing is implemented on its feature branch and undergoing
+CPU scope, private API/worker and compiled desktop/mobile qualification; it is
+not deployed yet. See [timeline contracts](media-timeline.md). [Deployment and remaining contracts](synchronized-sound.md).

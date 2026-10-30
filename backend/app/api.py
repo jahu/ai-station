@@ -75,6 +75,8 @@ from app.site_preview import router as site_preview_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
+from app.timeline_waveforms import router as waveform_router
+from app.timelines import router as timeline_router
 from app.transcription import router as transcription_router
 from app.video import router as video_router
 
@@ -449,6 +451,8 @@ app.include_router(market_feed_router)
 app.include_router(audio_router)
 app.include_router(music_router)
 app.include_router(effects_router)
+app.include_router(timeline_router)
+app.include_router(waveform_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
 app.include_router(video_router)

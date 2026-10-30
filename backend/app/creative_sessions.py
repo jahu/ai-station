@@ -17,7 +17,7 @@ from app.models import Artifact, CreativeSession, CreativeTurn, Run, Task
 from app.runs import run_dict
 from app.serialize import artifact_dict
 
-Capability = Literal["images", "video", "music", "speech", "avatars", "effects"]
+Capability = Literal["images", "video", "music", "speech", "avatars", "effects", "timeline"]
 DB = Annotated[Session, Depends(session_scope)]
 router = APIRouter(prefix="/api/creative/sessions", tags=["creative workspaces"])
 
@@ -227,6 +227,7 @@ def builder(capability):
     from app.effects import EffectsRequest, create_effects_run
     from app.images import ImageRequest, create_image_run
     from app.music import MusicRequest, create_music_run
+    from app.timelines import RenderRequest, create_timeline_run
     from app.video import VideoRequest, create_video_run
 
     return {
@@ -234,6 +235,7 @@ def builder(capability):
         "video": (VideoRequest, create_video_run),
         "music": (MusicRequest, create_music_run),
         "effects": (EffectsRequest, create_effects_run),
+        "timeline": (RenderRequest, create_timeline_run),
         "speech": (SpeechRequest, create_audio_run),
         "avatars": (AvatarRequest, create_avatar_run),
     }[capability]
@@ -299,6 +301,12 @@ def generate(session_id: UUID, body: Generate, session: DB):
         request = request_model.model_validate(parameters)
     except ValidationError as exc:
         raise HTTPException(422, "Check generation settings: " + str(exc)) from exc
+    if row.capability == "timeline":
+        from app.models import TimelineRevision
+
+        revision = session.get(TimelineRevision, str(request.revision_id))
+        if revision is None or revision.session_id != row.id:
+            raise HTTPException(404, "Choose a saved edit in this workspace")
     if row.capability == "images" and request.video_prompt:
         from app.video import capabilities
 

@@ -1,5 +1,6 @@
 import ImageModelSelection from "../media/ImageModelSelection";
 import SpeechModelSelection from "../media/SpeechModelSelection";
+import EditTimelineLink from "../media/EditTimelineLink";
 import AddSoundLink from "../media/AddSoundLink";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -49,6 +50,7 @@ const names: Record<CreativeCapability, [string, string]> = {
   speech: ["Speech", "voiceover"],
   avatars: ["Avatars", "avatar"],
   effects: ["Sound effects", "soundtrack"],
+  timeline: ["Video editing", "edit"],
 };
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const status = (turn: CreativeTurn) =>
@@ -522,7 +524,7 @@ function SessionBody({
           }
         }
         receipt.current = null;
-        setEditorOpen(false);
+        setEditorOpen(row.capability === "timeline");
         setOlder((current) => [
           ...current,
           ...row.turns.filter(
@@ -530,18 +532,19 @@ function SessionBody({
           ),
         ]);
         onChanged();
-        setTimeout(
-          () =>
-            end.current?.scrollIntoView?.({
-              block: "nearest",
-              behavior:
-                typeof window.matchMedia === "function" &&
-                window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                  ? "auto"
-                  : "smooth",
-            }),
-          50,
-        );
+        if (row.capability !== "timeline")
+          setTimeout(
+            () =>
+              end.current?.scrollIntoView?.({
+                block: "nearest",
+                behavior:
+                  typeof window.matchMedia === "function" &&
+                  window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? "auto"
+                    : "smooth",
+              }),
+            50,
+          );
         return turn;
       });
     } finally {
@@ -690,6 +693,11 @@ function SessionBody({
           <ArrowUpRight size={14} /> Earlier versions
         </Button>
       )}
+      {row.capability === "timeline" && !row.archived_at && (
+        <section className="creative-editor" aria-label="Timeline editor">
+          {children}
+        </section>
+      )}
       <section className="creative-timeline" aria-label="Creation history">
         {turns.map((turn) => (
           <article key={turn.id} className="creative-turn">
@@ -817,6 +825,7 @@ function SessionBody({
                               Open in Library <ArrowUpRight size={12} />
                             </Link>
                             <AddSoundLink artifact={artifact} />
+                            <EditTimelineLink artifact={artifact} />
                             {artifact.type === "image" &&
                               row.capability === "images" &&
                               !row.archived_at && (
@@ -858,7 +867,7 @@ function SessionBody({
         </div>
       ) : (
         <>
-          {turns.length > 0 && (
+          {row.capability !== "timeline" && turns.length > 0 && (
             <div className="creative-next-version">
               <Button
                 variant={editorOpen ? "ghost" : "secondary"}
@@ -872,7 +881,7 @@ function SessionBody({
               <span>Every version stays in this workspace.</span>
             </div>
           )}
-          {editorOpen && (
+          {editorOpen && row.capability !== "timeline" && (
             <section
               className="creative-editor"
               aria-label="Generation settings"

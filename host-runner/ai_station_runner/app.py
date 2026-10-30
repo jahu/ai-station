@@ -76,6 +76,7 @@ from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
+from ai_station_runner.timeline_contract import TimelineRequest
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.video import VideoRequest, start_video
@@ -759,6 +760,25 @@ def effects_capabilities():
 @app.post("/v1/runs/effects")
 def effects_run(body: EffectsRequest):
     from ai_station_runner.effects_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/timeline/capabilities")
+def timeline_capabilities():
+    from ai_station_runner.timeline_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/timeline")
+def timeline_run(body: TimelineRequest):
+    from ai_station_runner.timeline_runtime import start
 
     try:
         return {**start(manager(), body), "runner_id": get_settings().runner_id}

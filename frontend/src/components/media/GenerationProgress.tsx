@@ -23,6 +23,7 @@ const labels: Record<string, string> = {
   "audio.music": "Music",
   "audio.effects": "Sound effects",
   "video.effects_preview": "Sound preview",
+  "video.timeline": "Film edit",
 };
 function duration(value: number) {
   const seconds = Math.max(1, Math.ceil(value));

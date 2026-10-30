@@ -312,3 +312,15 @@ separate permission needed for commercial licensing. Models and dependencies
 keep their own licenses. [Contribution guide](CONTRIBUTING.md) · [Required notice](NOTICE)
 
 **Build an AI workstation you want to come back to.** ✳
+
+### Saved film editing (release 0.1 candidate)
+
+Video → **Edit a film** opens a saved editing workspace. Add inspected films and
+WAV speech, music or effects from Library; trim, move and reorder clips, adjust
+volume, mute and fades, and inspect measured waveforms. Save immutable edits and
+return to them later. **Preview this edit** renders the actual saved mix;
+**Export film** downloads that same verified result. Changing the draft marks an
+older preview and requires a new render before export. Source files and earlier
+results remain in Library. CPU rendering uses an owned four-GiB/zero-swap scope
+and does not unload GPU models. See [timeline contracts](docs/plans/media-timeline.md)
+for supported timing, private ownership and qualification gates.

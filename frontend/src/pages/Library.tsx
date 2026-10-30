@@ -1,4 +1,5 @@
 import { copyText } from "../lib/clipboard";
+import EditTimelineLink from "../components/media/EditTimelineLink";
 import AddSoundLink from "../components/media/AddSoundLink";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
@@ -565,6 +566,7 @@ export function ArtifactDetail() {
               </p>
               <p className="muted">{time(a.created_at)}</p>
               <AddSoundLink artifact={a} />
+              <EditTimelineLink artifact={a} />
               {!a.purged_at && !a.purge_run_id && a.type === "image" && (
                 <div className="artifact-actions">
                   {[
