@@ -14,6 +14,7 @@ from app.task_control import cancel_task
 from sqlalchemy import select
 from test_account_private_api import accounts as accounts
 from test_account_private_api import private_app as private_app
+from test_account_runtime_coordination import runtime
 from test_llama import managed as managed
 
 
@@ -162,3 +163,64 @@ def test_stopping_original_task_retains_startup_needed_by_another_account(accoun
         assert queue.get(Run, loader).status == "queued"
         assert queue.get(Run, chat).status == queue.get(Run, waiter).status == "queued"
     assert alice.get("/api/runs/" + loader).status_code == 404
+
+
+def test_new_conversation_waits_privately_for_foreign_stop_before_reloading(accounts, managed, monkeypatch):
+    owner, alice, _ = accounts
+    old_instance, _ = runtime(owner, managed[0])
+    stop = owner.post(f"/api/llama/{old_instance}/stop")
+    assert stop.status_code == 202, stop.text
+
+    async def reply(self, **kwargs):
+        yield "Synthetic reply after safe shared model replacement"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", reply)
+    conversation = alice.post("/api/chat/conversations", json={"model": "llamacpp:" + managed[0]})
+    assert conversation.status_code == 201, conversation.text
+    response = alice.post(
+        f"/api/chat/conversations/{conversation.json()['id']}/messages",
+        json={"content": "Synthetic question during shared stop", "web_search": {"enabled": False}},
+    )
+    assert response.status_code == 202, response.text
+    chat_id = response.json()["id"]
+    with control_session_factory()() as queue:
+        waiter = queue.scalar(select(Run).where(Run.executor_type == "llama_wait"))
+        assert waiter.parameters["target"] == "stopped"
+        waiter_id = waiter.id
+        fresh_load = queue.scalar(
+            select(Run).where(Run.executor_type == "llama_load", Run.owner_id == waiter.owner_id)
+        )
+        assert tick(queue, "old-owner-stop") == stop.json()["id"]
+        assert tick(queue, "new-owner-stop-observation") == waiter_id
+        assert tick(queue, "new-owner-model-load") == fresh_load.id
+        assert tick(queue, "new-owner-chat") == chat_id
+    assert alice.get("/api/runs/" + chat_id).json()["status"] == "succeeded"
+    for suffix in ("", "/events"):
+        result = alice.get("/api/runs/" + waiter_id + suffix)
+        assert result.status_code == 200 and stop.json()["id"] not in result.text
+    assert len(managed[1]) == 2 and managed[1][old_instance]["status"] == "stopped"
+
+
+def test_failed_foreign_stop_keeps_gpu_reservations_and_prevents_replacement_dispatch(accounts, managed):
+    owner, alice, _ = accounts
+    old_instance, _ = runtime(owner, managed[0])
+    stop = owner.post(f"/api/llama/{old_instance}/stop")
+    assert stop.status_code == 202, stop.text
+    conversation = alice.post("/api/chat/conversations", json={"model": "llamacpp:" + managed[0]}).json()
+    response = alice.post(
+        f"/api/chat/conversations/{conversation['id']}/messages",
+        json={"content": "Synthetic question during uncertain stop", "web_search": {"enabled": False}},
+    )
+    assert response.status_code == 202, response.text
+    with control_session_factory()() as queue:
+        waiter = queue.scalar(select(Run).where(Run.executor_type == "llama_wait"))
+        fresh_load = queue.scalar(
+            select(Run).where(Run.executor_type == "llama_load", Run.owner_id == waiter.owner_id)
+        )
+        queue.get(Run, stop.json()["id"]).status = "failed"
+        queue.get(RuntimeInstance, old_instance).status = "unknown"
+        queue.commit()
+        assert tick(queue, "uncertain-stop-observation") == waiter.id
+        assert tick(queue, "replacement-refuses-uncertain-stop") == fresh_load.id
+        assert queue.get(Run, waiter.id).status == queue.get(Run, fresh_load.id).status == "failed"
+    assert len(managed[1]) == 1 and managed[1][old_instance]["alive"] is True

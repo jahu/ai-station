@@ -16,13 +16,16 @@ def runtime_ready_condition(now):
     return or_(Run.executor_type != "llama_wait", until.is_(None), until <= now.isoformat())
 
 
-def wait_for_runtime(session, consumer, instance):
+def wait_for_runtime(session, consumer, instance, *, target="ready"):
     """An owner-local prerequisite; never a foreign producer dependency."""
     from app.db import utcnow
     from app.models import Task
     from app.runs import create_run
 
+    if target not in {"ready", "stopped"}:
+        raise ValueError("Unknown managed model observation target")
     facts = runtime_load_facts(session, instance)
+    operation = runtime_stop_facts(session, instance) if target == "stopped" else None
     deadline = utcnow() + timedelta(seconds=600)
     for key in ("execution_deadline_at", "agent_coding_deadline"):
         raw = consumer.parameters.get(key)
@@ -41,6 +44,8 @@ def wait_for_runtime(session, consumer, instance):
             "instance_id": instance.id,
             "source": facts["source"],
             "startup_created_at": facts["created_at"].isoformat(),
+            "target": target,
+            **({"stop_created_at": operation["created_at"].isoformat()} if operation else {}),
             "execution_deadline_at": deadline.isoformat(),
         },
     )
@@ -72,30 +77,51 @@ class LlamaWaitExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         if datetime.fromisoformat(run.parameters["execution_deadline_at"]) <= utcnow():
-            mark_failed(session, run, "RuntimeWaitExpired", "The selected model did not become ready in time")
-            return "done"
-        instance = session.get(RuntimeInstance, run.parameters["instance_id"])
-        try:
-            facts = runtime_load_facts(session, instance) if instance else None
-        except ValueError:
-            facts = None
-        if (
-            not facts
-            or facts["source"] != run.parameters["source"]
-            or facts["created_at"].isoformat() != run.parameters["startup_created_at"]
-            or facts["status"] in TERMINAL - {"succeeded"} | {"cancel_requested"}
-            or instance.status not in {"queued", "loading", "ready"}
-        ):
             mark_failed(
-                session, run, "RuntimeUnavailable", "The selected model startup changed or did not succeed"
+                session, run, "RuntimeWaitExpired", "The model did not reach the requested state in time"
             )
             return "done"
-        if instance.status == "ready" and facts["status"] == "succeeded":
+        instance = session.get(RuntimeInstance, run.parameters["instance_id"])
+        target = run.parameters.get("target", "ready")
+        try:
+            facts = runtime_load_facts(session, instance) if instance else None
+            stop = runtime_stop_facts(session, instance) if instance and target == "stopped" else None
+        except ValueError:
+            facts = None
+            stop = None
+        valid_statuses = {"queued", "loading", "ready"} if target == "ready" else {"stopping", "stopped"}
+        if (
+            not facts
+            or target not in {"ready", "stopped"}
+            or facts["source"] != run.parameters["source"]
+            or facts["created_at"].isoformat() != run.parameters["startup_created_at"]
+            or target == "ready"
+            and facts["status"] in TERMINAL - {"succeeded"} | {"cancel_requested"}
+            or instance.status not in valid_statuses
+            or target == "stopped"
+            and (
+                not stop
+                or stop["created_at"].isoformat() != run.parameters["stop_created_at"]
+                or stop["status"] in TERMINAL - {"succeeded"} | {"cancel_requested"}
+            )
+        ):
+            mark_failed(
+                session, run, "RuntimeUnavailable", "The selected model operation changed or did not succeed"
+            )
+            return "done"
+        complete = (
+            instance.status == "ready" and facts["status"] == "succeeded"
+            if target == "ready"
+            else instance.status == "stopped"
+            and stop["status"] == "succeeded"
+            and instance.metadata_json.get("observation", {}).get("alive") is False
+        )
+        if complete:
             transition(
                 session,
                 run,
                 RunStatus.SUCCEEDED,
-                event_type="runtime.ready",
+                event_type="runtime." + target,
                 payload={"instance_id": instance.id},
             )
             return "done"
@@ -279,6 +305,29 @@ def runtime_load_facts(session, instance):
     ):
         raise ValueError("The managed model source observation is incomplete")
     return {"created_at": result["created_at"], "status": result["status"], "source": source}
+
+
+def runtime_stop_facts(session, instance):
+    """Only the lifecycle of this exact managed stop; no private operation ID."""
+    if isinstance(session, ScopedSession):
+        session.scope
+    if instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
+        raise ValueError("Stop observation requires a managed llama.cpp instance")
+    facts = (
+        session.connection()
+        .execute(
+            select(Run.created_at, Run.status).where(
+                Run.id == instance.metadata_json.get("operation_run_id"),
+                Run.executor_type == "llama_stop",
+                Run.parameters["instance_id"].as_string() == instance.id,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    if facts is None:
+        raise ValueError("The selected model has no verified stop operation")
+    return dict(facts)
 
 
 def foreign_runtime_work(session, instance, *, operations=None):

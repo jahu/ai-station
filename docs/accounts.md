@@ -299,6 +299,12 @@ startup. Waiter cancellation never signals the model process. Recovery resumes
 read-only observation without process inspection. Task Stop on the original
 producer retains startup needed by another account.
 
+A new load requested while another account stops the old instance uses the same
+private waiter with a stopped target, bound to that stop's source and creation
+observation. Reload dispatch requires successful confirmed shutdown; failed,
+canceled or uncertain stop retains the existing allocation and fails the private
+replacement prerequisite without leaking the stop Run ID.
+
 After confirmed managed-runtime shutdown (`alive: false` and stopped/failed),
 typed coordination releases only the exact loader's approved GPU and RAM
 reservations. Another account's loader, Task, events and unrelated reservations

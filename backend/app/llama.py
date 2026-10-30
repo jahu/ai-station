@@ -996,6 +996,10 @@ def prepare_consumer(session, run):
         for old in matching:
             if old.status == "stopping":
                 operation = session.get(Run, old.metadata_json["operation_run_id"])
+                if operation is None:
+                    from app.runtime_coordination import wait_for_runtime
+
+                    operation = wait_for_runtime(session, load_run, old, target="stopped")
                 depend_on(session, load_run, operation)
         instance = session.get(RuntimeInstance, load_run.parameters["instance_id"])
     if instance.status != "ready":
