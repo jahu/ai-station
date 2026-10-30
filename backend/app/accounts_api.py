@@ -33,6 +33,7 @@ class IdentityPassword(BaseModel):
 
 
 class Credentials(IdentityPassword):
+    remember_me: StrictBool = False
     second_factor: SecretStr | None = Field(default=None, min_length=1, max_length=64)
 
 
@@ -91,8 +92,12 @@ def _status(session, actor) -> dict:
         "authenticated": user is not None,
         "setup_required": pending,
         "user": accounts.public_user(user) if user else None,
-        "session_idle_seconds": 1800,
-        "session_max_age_seconds": 43200,
+        "session_idle_seconds": accounts.idle_seconds(device.token_record)
+        if device
+        else accounts.SESSION_IDLE_SECONDS,
+        "session_max_age_seconds": accounts.REMEMBERED_SESSION_SECONDS
+        if device and device.token_record.get("remember_me") is True
+        else accounts.SESSION_ABSOLUTE_SECONDS,
         "expires_at": device.token_record.get("expires_at") if device else None,
     }
 
@@ -147,6 +152,7 @@ def login(body: Credentials, request: Request, response: Response, session: DB):
         body.password.get_secret_value(),
         second_factor=body.second_factor.get_secret_value() if body.second_factor else None,
         label=request.headers.get("user-agent", "")[:160],
+        remember_me=body.remember_me,
     )
     # Issuing the new device can evict the previous one at the device limit.
     # An already expired/revoked old device must not roll back a valid login.

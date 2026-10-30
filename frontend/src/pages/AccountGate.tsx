@@ -75,6 +75,7 @@ function Credentials({
   const [confirmation, setConfirmation] = useState("");
   const [factor, setFactor] = useState("");
   const [needsFactor, setNeedsFactor] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [visible, setVisible] = useState(false);
   const [validation, setValidation] = useState<Error | null>(null);
   const submit = useMutation({
@@ -89,6 +90,7 @@ function Credentials({
             ? { local_setup_token: localSetupToken }
             : {}),
           ...(!setup && factor ? { second_factor: factor } : {}),
+          ...(!setup && rememberMe ? { remember_me: true } : {}),
         }),
       ),
     onSuccess: (status) => {
@@ -221,6 +223,20 @@ function Credentials({
               <span className="account-field-hint">
                 Enter a fresh code from your authenticator, or one unused
                 recovery code.
+              </span>
+            </label>
+          )}
+          {!setup && (
+            <label className="account-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+                disabled={pending}
+              />
+              <span>
+                <strong>Keep me logged in</strong>
+                <small>Stay signed in for 30 days on this device.</small>
               </span>
             </label>
           )}

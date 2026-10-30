@@ -23,6 +23,7 @@ from app.operator_auth import (
     SESSION_ABSOLUTE_SECONDS,
     SESSION_IDLE_SECONDS,
     cookie_max_age,
+    idle_seconds,
     parse_time,
     session_verdict,
 )
@@ -30,6 +31,7 @@ from app.operator_auth import (
 COOKIE = "ais_session"
 LEGACY_COOKIE = "ais_operator"
 MAX_DEVICES = 10
+REMEMBERED_SESSION_SECONDS = 30 * 24 * 3600
 
 
 class AccountError(ValueError):
@@ -158,7 +160,7 @@ def authenticate_cookies(session: Session, cookies: dict[str, str]) -> Principal
 
 
 def _issue_session(
-    session: Session, user: User, *, label: str = "", mfa_verified: bool = False
+    session: Session, user: User, *, label: str = "", mfa_verified: bool = False, remember_me: bool = False
 ) -> SessionGrant:
     if not user.enabled or user.bootstrap_pending or (user.totp_enabled_at is not None and not mfa_verified):
         raise AccountError(403, "Additional verification is required")
@@ -180,7 +182,7 @@ def _issue_session(
             expires is None
             or expires <= now
             or seen is None
-            or seen + timedelta(seconds=SESSION_IDLE_SECONDS) <= now
+            or seen + timedelta(seconds=idle_seconds(row.token_record)) <= now
         ):
             row.revoked_at = now
         else:
@@ -194,8 +196,11 @@ def _issue_session(
         "salt": salt.hex(),
         "issued_at": now.isoformat(),
         "last_seen_at": now.isoformat(),
-        "expires_at": (now + timedelta(seconds=SESSION_ABSOLUTE_SECONDS)).isoformat(),
-        "idle_timeout_seconds": SESSION_IDLE_SECONDS,
+        "expires_at": (
+            now + timedelta(seconds=REMEMBERED_SESSION_SECONDS if remember_me else SESSION_ABSOLUTE_SECONDS)
+        ).isoformat(),
+        "idle_timeout_seconds": REMEMBERED_SESSION_SECONDS if remember_me else SESSION_IDLE_SECONDS,
+        **({"remember_me": True} if remember_me else {}),
     }
     row = UserSession(
         user_id=user.id,
@@ -216,6 +221,7 @@ def login(
     *,
     label: str = "",
     second_factor: str | None = None,
+    remember_me: bool = False,
 ) -> SessionGrant:
     try:
         _, identity = username_identity(username)
@@ -244,7 +250,7 @@ def login(
             raise AccountError(403, "Additional verification is required")
         verify_second_factor(session, user, second_factor)
         verified = True
-    grant = _issue_session(session, user, label=label, mfa_verified=verified)
+    grant = _issue_session(session, user, label=label, mfa_verified=verified, remember_me=remember_me)
     _audit(session, "account.login", user, grant.principal)
     return grant
 
@@ -268,7 +274,7 @@ def _actor(session: Session, principal: Principal, *, admin: bool = False, lock:
         expires is None
         or expires <= now
         or seen is None
-        or seen + timedelta(seconds=SESSION_IDLE_SECONDS) <= now
+        or seen + timedelta(seconds=idle_seconds(device.token_record)) <= now
     ):
         raise AccountError(401, "Account login required")
     issued = parse_time(device.token_record.get("issued_at"))
@@ -458,7 +464,7 @@ def list_devices(session: Session, actor: Principal) -> list[dict]:
             expires is None
             or expires <= now
             or seen is None
-            or seen + timedelta(seconds=SESSION_IDLE_SECONDS) <= now
+            or seen + timedelta(seconds=idle_seconds(row.token_record)) <= now
         ):
             continue
         result.append(
