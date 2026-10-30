@@ -106,6 +106,8 @@ def save_preferences(body: PreferencesWrite, session: DB):
 
 def image_fields(run):
     params = run.parameters
+    if run.executor_type == "echomimic":
+        return {"prompt": params["prompt"]}
     if run.executor_type == "wan_video":
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
@@ -117,6 +119,19 @@ def image_fields(run):
 
 
 def source_hash(run, fields):
+    if run.executor_type == "echomimic":
+        return digest(
+            {
+                "executor": run.executor_type,
+                "fields": fields,
+                "gpu": run.requested_gpu,
+                "inputs": {
+                    key: value
+                    for key, value in run.parameters.items()
+                    if key not in {"prompt", "translation", "previous_video_run_id"}
+                },
+            }
+        )
     keys = {
         "wan_video": [
             "image_relative",
@@ -178,15 +193,30 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     policy = dict(policy or preferences(session))
     enabled = policy["enabled"] if options.mode == "inherit" else options.mode == "on"
     fields = image_fields(media)
-    if not enabled or not fields:
+    if not (enabled or options.enhance) or not fields:
         return None
-    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}:
+    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}:
         raise ValueError("Unsupported media translation consumer")
+    system = SYSTEM
+    template = None
+    if options.enhance:
+        from app.prompt_enhancement import recipe
+
+        template, system = recipe(media, translate=enabled)
+        frozen = policy.get("enhancement_template")
+        if frozen is not None and frozen != template:
+            raise ValueError("The saved enhancement template requires inspection")
+        policy.update(
+            operation="enhance",
+            enhancement_template=template,
+            translate_descriptions=enabled,
+            target_language="en" if enabled else "original",
+        )
     limits = {
         key: 512
         if key == "caption"
         else 2000
-        if media.executor_type == "wan_video"
+        if media.executor_type in {"wan_video", "echomimic"}
         else FIELD_LIMITS.get(key, 10000)
         for key in fields
     }
@@ -200,6 +230,8 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             or image_fields(item) != fields
         ):
             raise ValueError("Translation group has mismatched media consumers")
+        if template is not None and recipe(item, translate=enabled)[0] != template:
+            raise ValueError("Enhancement group has mismatched generator templates")
         targets.append({"run_id": item.id, "source_hash": source_hash(item, fields)})
     if len(targets) > 100 or len({item["run_id"] for item in targets}) != len(targets):
         raise ValueError("Translation group exceeds its unique consumer bound")
@@ -235,7 +267,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             "field_limits": limits,
             "options": options.model_dump(),
             "temperature": 0.0,
-            "system_prompt": SYSTEM,
+            "system_prompt": system,
             "max_tokens": 4096,
             "json_output": True,
             "require_complete": True,
@@ -267,7 +299,7 @@ def consumer(session, run):
         not media
         or media.status != "queued"
         or media.task_id != run.task_id
-        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}
+        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -455,7 +487,7 @@ class MediaTranslationExecutor:
                     if (
                         not item
                         or item.task_id != media.task_id
-                        or item.executor_type != "wan_video"
+                        or item.executor_type not in {"wan_video", "echomimic"}
                         or not item.parameters.get("internal_media")
                         or item.status != "queued"
                     ):
@@ -725,6 +757,15 @@ def enqueue_groups(session, entries):
     return primary_ids
 
 
+def recovery_options(receipt, choice):
+    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    if receipt.get("options", {}).get("enhance"):
+        options["mode"] = receipt["options"].get("mode", "inherit") if choice == "retry" else "off"
+        if choice != "retry":
+            options["enhance"] = False
+    return options
+
+
 def prepare_retry(session, source, retry, choice):
     receipt = source.metadata_json.get(RECEIPT)
     if not receipt:
@@ -739,7 +780,7 @@ def prepare_retry(session, source, retry, choice):
         retry.metadata_json = {**retry.metadata_json, RECEIPT: receipt}
         return None
     retry.parameters = {**retry.parameters, **receipt["original"]}
-    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    options = recovery_options(receipt, choice)
     if choice == "retry":
         return retry, options, receipt["policy"]
     retry.parameters = {**retry.parameters, "translation": {**options, "review": False}}
@@ -773,7 +814,7 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         from app.images import ImageRetry, retry_image
 
         return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
-    if not source or source.executor_type not in {"wan_video", "ace_step_music"}:
+    if not source or source.executor_type not in {"wan_video", "ace_step_music", "echomimic"}:
         raise HTTPException(404, "Media Run not found")
     if source.parameters.get("internal_media"):
         raise HTTPException(409, "Resume the whole film instead of an individual segment")

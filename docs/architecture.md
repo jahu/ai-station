@@ -18,7 +18,14 @@ Task-wide Stop and explicit administrator inspection share the existing private
 account boundaries. See [workspace contracts](creative-workspaces.md). Production
 rollout remains separate from qualification.
 
-The [common generation-progress candidate](plans/generation-progress.md) projects
+The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
+existing local translation preparation/apply executors. Fixed generator/operation
+templates, original/effective receipts, same-owner source bindings and normal
+dependencies cover images, Wan, ACE-Step and Echo motion prompts. Deferred speech
+and agent sources are frozen before preparation; narration/lyrics remain exact.
+No additional execution engine, permission, native endpoint or migration is added.
+
+The [common generation-progress implementation](plans/generation-progress.md) projects
 measured sampler/chunk observations and owner-scoped comparable-job timing through
 the existing Run DTO and MediaJob views. Counters cannot publish artifacts or
 change execution state. Queue, preparation, generation and final checks remain

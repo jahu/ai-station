@@ -135,6 +135,7 @@ class AudioExecutor(HostMediaExecutor):
             AvatarRequest(**definition, audio_artifact_id=artifact.id),
             task=run.task,
             parent_run_id=run.id,
+            preparation_policy=run.parameters.get("avatar_prompt_policy"),
         )
         child.effective_permissions = list(run.effective_permissions)
         child.triggered_by = run.triggered_by

@@ -12,12 +12,14 @@ export type TranslationOptions = {
   mode: "inherit" | "on" | "off";
   review: boolean;
   protected_terms: string[];
+  enhance?: boolean;
 };
 export type TranslationRecovery = "reuse" | "retry" | "original";
 
 export function translationRequest(value: TranslationOptions) {
   return value.mode !== "inherit" ||
     value.review ||
+    value.enhance ||
     value.protected_terms.length
     ? { translation: value }
     : {};
@@ -30,6 +32,7 @@ export type TranslationReceipt = {
   effective?: Record<string, string>;
   policy: { model: string; model_label?: string; target_language: string };
   artifact_id?: string;
+  options?: { enhance?: boolean };
 };
 
 export function PromptTranslationControl({
@@ -76,18 +79,43 @@ export function PromptTranslationControl({
           <option value="off">Keep original</option>
         </select>
       </label>
-      <details>
-        <summary>Translation options</summary>
+      <label className="image-workflow-option">
+        <input
+          type="checkbox"
+          checked={!!value.enhance}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange({ ...value, enhance: event.target.checked })
+          }
+        />
+        <span>
+          Improve my prompt locally
+          <small>
+            Prepare clearer instructions for this generator. Your original,
+            quoted text and lyrics are retained.
+          </small>
+        </span>
+      </label>
+      {value.enhance && (
         <p className="muted">
-          Only descriptive instructions are translated. The original is
-          retained; quoted text, lyrics, numbers and model tokens stay
+          Uses your <Link to="/settings/generation">local prompt model</Link>.
+          Review before generation is available below.
+        </p>
+      )}
+      <details>
+        <summary>
+          {value.enhance ? "Prompt preparation options" : "Translation options"}
+        </summary>
+        <p className="muted">
+          Only descriptive instructions are translated or improved. The original
+          is retained; quoted text, lyrics, numbers and model tokens stay
           unchanged.{" "}
-          <Link to="/settings/generation">Choose local translator</Link>
+          <Link to="/settings/generation">Choose local prompt model</Link>
         </p>
         <label className="image-workflow-option">
           <input
             type="checkbox"
-            disabled={disabled || !enabled}
+            disabled={disabled || (!enabled && !value.enhance)}
             checked={value.review}
             onChange={(event) =>
               onChange({ ...value, review: event.target.checked })
@@ -96,7 +124,7 @@ export function PromptTranslationControl({
           <span>
             Review before generation
             <small>
-              Pause after translating so you can inspect or edit the prompt.
+              Pause after preparation so you can inspect or edit the prompt.
             </small>
           </span>
         </label>
@@ -105,7 +133,7 @@ export function PromptTranslationControl({
           <textarea
             rows={2}
             maxLength={6432}
-            disabled={disabled || !enabled}
+            disabled={disabled || (!enabled && !value.enhance)}
             placeholder="One name or token per line"
             value={names}
             onChange={(event) => {
@@ -140,7 +168,7 @@ export function PromptReceipt({
       <p className="muted">
         {receipt.status === "original"
           ? "Original used by your choice"
-          : `Local translation · ${receipt.policy.model_label || receipt.policy.model} · ${receipt.policy.target_language.toUpperCase()}`}
+          : `${receipt.options?.enhance ? "Local prompt enhancement" : "Local translation"} · ${receipt.policy.model_label || receipt.policy.model} · ${receipt.policy.target_language.toUpperCase()}`}
       </p>
       {Object.entries(receipt.original).map(([key, original]) => (
         <div key={key}>
@@ -165,7 +193,7 @@ export function PromptReceipt({
       ))}
       {receipt.artifact_id && (
         <Link to={`/library/${receipt.artifact_id}`}>
-          Inspect translation receipt
+          Inspect prompt receipt
         </Link>
       )}
     </details>
@@ -204,6 +232,7 @@ export default function PromptTranslation({
 }) {
   const receipt = run.metadata?.prompt_translation as
     TranslationReceipt | undefined;
+  const enhancing = !!receipt?.options?.enhance;
   const prep = useMediaRun(receipt?.preparation_run_id ?? "");
   const review = useMediaRun(receipt?.review_run_id ?? "");
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
@@ -313,7 +342,9 @@ export default function PromptTranslation({
         <p role="status">
           {receipt.status === "waiting_for_review"
             ? "Applying your reviewed prompt before generation…"
-            : "Translating your prompt locally before generation…"}
+            : enhancing
+              ? "Improving your prompt locally before generation…"
+              : "Translating your prompt locally before generation…"}
         </p>
       )}
       <ErrorNotice
@@ -327,7 +358,9 @@ export default function PromptTranslation({
       {failed && !ready && (
         <>
           <p role="alert">
-            Translation did not complete.{" "}
+            {enhancing
+              ? "Prompt improvement did not complete."
+              : "Translation did not complete."}{" "}
             {prep.data?.error_message || review.data?.error_message}
           </p>
           <div className="row">
@@ -337,7 +370,7 @@ export default function PromptTranslation({
               disabled={resolve.isPending}
               onClick={() => resolve.mutate("retry")}
             >
-              Retry translation
+              {enhancing ? "Retry prompt improvement" : "Retry translation"}
             </Button>
             <Button
               type="button"
@@ -352,10 +385,15 @@ export default function PromptTranslation({
       )}
       {ready && canResolve && (
         <details>
-          <summary>Translation alternatives</summary>
+          <summary>
+            {enhancing
+              ? "Prompt preparation alternatives"
+              : "Translation alternatives"}
+          </summary>
           <p>
             The ordinary retry reuses the recorded effective prompt. Choose
-            explicitly to translate again or use your original wording.
+            explicitly to {enhancing ? "improve it again" : "translate again"}{" "}
+            or use your original wording.
           </p>
           <div className="row">
             {run.executor_type !== "photo_pipe" && (
@@ -374,7 +412,7 @@ export default function PromptTranslation({
               disabled={resolve.isPending}
               onClick={() => resolve.mutate("retry")}
             >
-              Translate again
+              {enhancing ? "Improve again" : "Translate again"}
             </Button>
             <Button
               type="button"
@@ -391,50 +429,64 @@ export default function PromptTranslation({
         <div className="translation-review">
           <h3>Review before generation</h3>
           <p>
-            Your source files and generation settings are unchanged. Check the
-            translated instructions, then continue.
+            Your source files and generation settings are unchanged. Check the{" "}
+            {enhancing ? "prepared" : "translated"} instructions, then continue.
           </p>
           {Object.entries(
             edited ??
               (review.data!.parameters.effective as Record<string, string>),
-          ).map(([key, text]) => (
-            <label key={key}>
-              {key === "negative" || key === "negative_prompt"
-                ? "Translated negative prompt"
+          ).map(([key, text]) => {
+            const fieldLabel =
+              key === "negative" || key === "negative_prompt"
+                ? enhancing
+                  ? "Prepared negative prompt"
+                  : "Translated negative prompt"
                 : key === "caption"
-                  ? "Translated music description"
+                  ? enhancing
+                    ? "Prepared music description"
+                    : "Translated music description"
                   : key === "edit_prompt"
-                    ? "Translated edit instruction"
-                    : "Translated prompt"}
-              <textarea
-                rows={3}
-                maxLength={Number(
-                  (
-                    review.data?.parameters.field_limits as
-                      Record<string, number> | undefined
-                  )?.[key] ?? 10000,
-                )}
-                value={text}
-                disabled={approve.isPending || resolve.isPending}
-                onChange={(event) =>
-                  setEdited({
-                    ...((edited ?? review.data!.parameters.effective) as Record<
-                      string,
-                      string
-                    >),
-                    [key]: event.target.value,
-                  })
-                }
-              />
-            </label>
-          ))}
+                    ? enhancing
+                      ? "Prepared edit instruction"
+                      : "Translated edit instruction"
+                    : enhancing
+                      ? "Prepared prompt"
+                      : "Translated prompt";
+            return (
+              <label key={key}>
+                {fieldLabel}
+                <textarea
+                  aria-label={fieldLabel}
+                  rows={3}
+                  maxLength={Number(
+                    (
+                      review.data?.parameters.field_limits as
+                        Record<string, number> | undefined
+                    )?.[key] ?? 10000,
+                  )}
+                  value={text}
+                  disabled={approve.isPending || resolve.isPending}
+                  onChange={(event) =>
+                    setEdited({
+                      ...((edited ??
+                        review.data!.parameters.effective) as Record<
+                        string,
+                        string
+                      >),
+                      [key]: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            );
+          })}
           <div className="row">
             <Button
               type="button"
               disabled={approve.isPending || resolve.isPending}
               onClick={() => approve.mutate()}
             >
-              Use translated prompt
+              {enhancing ? "Use prepared prompt" : "Use translated prompt"}
             </Button>
             <Button
               type="button"

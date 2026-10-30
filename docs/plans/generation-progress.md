@@ -50,4 +50,8 @@ navigation/reload, Task-wide Stop, fixed terminal elapsed time and foreign-user
 denial pass. Read-only parsing also recognizes numeric/stage formats from recorded
 local image/Wan/Echo/speech/music jobs; this does not claim new real inference.
 Private evidence: `data/acceptance/generation-progress-20261030/`.
-Review and controlled production rollout are separate from these checks.
+PR #516 was reviewed, squash merged to develop and deployed on the workstation.
+A fresh backup and full existing-table comparison preserved the 0039 database;
+the native Runner, private access and loaded models were not restarted. Actual
+production desktop/mobile account UI checks passed with a temporary audited
+device that was revoked afterward. Real model quality remains a separate gate.

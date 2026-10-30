@@ -382,6 +382,47 @@ it("retains translation review controls inside the saved workspace", async () =>
   expect(backend.submissions).toHaveLength(0);
 });
 
+it("shows avatar prompt review on the animation child after speech succeeds", async () => {
+  fixture({
+    capability: "avatars",
+    turns: [
+      {
+        ...result,
+        status: "waiting_for_approval",
+        artifacts: [],
+        run: { ...run, executor_type: "chatterbox", status: "succeeded" },
+        runs: [
+          {
+            ...run,
+            id: "animation",
+            executor_type: "echomimic",
+            status: "queued",
+            metadata: {
+              prompt_translation: {
+                status: "waiting_for_review",
+                options: { enhance: true },
+                preparation_run_id: "translation-prep",
+                review_run_id: "translation-review",
+                original: { prompt: "Natural motion" },
+                effective: { prompt: "A red bicycle" },
+                policy: {
+                  model: "local-translator",
+                  target_language: "original",
+                },
+              },
+            },
+          },
+        ],
+      },
+    ],
+  });
+  mount("avatars");
+  expect(await screen.findByLabelText("Prepared prompt")).not.toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Use prepared prompt" }),
+  ).not.toBeNull();
+});
+
 it("restores a generation prompt when canonical edit_prompt is empty", async () => {
   fixture({
     turns: [

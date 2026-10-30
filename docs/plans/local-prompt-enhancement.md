@@ -43,10 +43,18 @@ phrase that contradicts a requested pose/object change. Do not add content
 restrictions or promise to override the selected model's own behavior.
 
 Lyrics and spoken text are never enhancement fields. Echo's descriptive motion
-prompt can use the same boundary when its request/consumer checks are extended.
+prompt uses this boundary for direct clips and complete-recording segment jobs.
+When speech is generated first, the local model/policy is frozen before speech
+starts. Preparation follows the final portrait/audio and agent-source snapshots;
+grouped segments share preparation and review. Creative history exposes review
+on the actual animation child, including when the first Run generated speech.
 The current fixed whole-Sonic recipe has no free motion-prompt input: do not
 pretend enhancement affects it. Expressive TTS delivery instructions belong to
 NR-06 and must not rewrite the narration. Pure upscale has no descriptive prompt.
+
+Retry retains the original local model and translation choice. Choosing the
+original explicitly disables both enhancement and translation for that attempt.
+No migration, additional executor or native runtime change is required.
 
 ## Qualification
 

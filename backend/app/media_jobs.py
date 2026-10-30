@@ -801,6 +801,33 @@ class FullAvatarRequest(FullAvatarSettings):
     client_request_id: UUID
 
 
+def prepare_avatar_prompts(session, task):
+    plan = task.metadata_json["media_plan"]
+    if plan.get("version") != 1 or plan.get("kind") != "avatar" or plan.get("timing") is None:
+        return
+    body = FullAvatarRequest.model_validate(plan["request"])
+    if body.translation is None:
+        return
+    from app.media_translation import enqueue_groups
+
+    identifiers = enqueue_groups(
+        session,
+        [
+            (
+                session.get(Run, identity),
+                body.translation.model_dump(),
+                task.metadata_json.get("avatar_prompt_policy"),
+            )
+            for identity in plan["segment_run_ids"]
+        ],
+    )
+    if identifiers:
+        task.metadata_json = {
+            **task.metadata_json,
+            "media_plan": {**plan, "translation_consumer_run_ids": identifiers},
+        }
+
+
 def publish_avatar(
     session,
     body,
@@ -810,6 +837,7 @@ def publish_avatar(
     execution_deadline_at=None,
     observed_profile=None,
     appearance_snapshot=None,
+    _prepare_translation=True,
 ):
     if body.generation_profile is not None:
         from app.whole_avatar_jobs import publish
@@ -825,7 +853,7 @@ def publish_avatar(
         )
     import wave
 
-    from app.avatars import AvatarRequest, create_avatar_run
+    from app.avatars import AvatarRequest, create_avatar_run, freeze_prompt_policy
     from app.avatars import capabilities as avatar_capabilities
     from app.avatars import memory_reservation as avatar_memory
     from app.media_plan import audio_frames
@@ -895,6 +923,9 @@ def publish_avatar(
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
         raise HTTPException(422, "Choose an available PNG/JPEG portrait")
+    policy = freeze_prompt_policy(
+        session, body, task.metadata_json.get("avatar_prompt_policy") if task else None
+    )
     if body.speech_text is not None:
         from app.audio import SpeechRequest, create_audio_run
 
@@ -910,6 +941,8 @@ def publish_avatar(
             session.flush()
         lock_task(session, task)
         task.metadata_json = {**task.metadata_json, "media_request": request}
+        if policy is not None:
+            task.metadata_json = {**task.metadata_json, "avatar_prompt_policy": policy}
         speech = create_audio_run(
             session,
             SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
@@ -987,6 +1020,8 @@ def publish_avatar(
         session.add(task)
         session.flush()
     lock_task(session, task)
+    if policy is not None:
+        task.metadata_json = {**task.metadata_json, "avatar_prompt_policy": policy}
     revision = task.metadata_json.get("media_plan", {}).get("revision", 1)
     runs = []
     previous = None
@@ -1001,9 +1036,15 @@ def publish_avatar(
             gpu=body.gpu,
             frames=segment.generated_frames,
             memory_profile=body.memory_profile,
+            translation=body.translation,
         )
         run = create_avatar_run(
-            session, settings, task=task, parent_run_id=parent_run_id, observed_profile=avatar_profile
+            session,
+            settings,
+            task=task,
+            parent_run_id=parent_run_id,
+            observed_profile=avatar_profile,
+            _prepare_translation=False,
         )
         run.operation_key = f"media:{revision}:segment:{segment.index}:attempt:1"
         run.requested_resources = {"ram_mib": reservation}
@@ -1067,6 +1108,8 @@ def publish_avatar(
         },
     }
     session.flush()
+    if _prepare_translation:
+        prepare_avatar_prompts(session, task)
     return job_view(session, task)
 
 
@@ -1127,6 +1170,7 @@ class AvatarPlannerExecutor:
             task=run.task,
             parent_run_id=run.id,
             execution_deadline_at=run.parameters.get("execution_deadline_at"),
+            _prepare_translation=False,
         )
         if frozen_inputs:
             for stage in session.scalars(
@@ -1141,6 +1185,7 @@ class AvatarPlannerExecutor:
                     ],
                 }
                 stage.triggered_by = run.triggered_by
+        prepare_avatar_prompts(session, run.task)
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={})
         transition(
             session,

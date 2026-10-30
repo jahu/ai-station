@@ -701,13 +701,16 @@ function SessionBody({
                   Details and logs <ArrowUpRight size={12} />
                 </Link>
               </div>
-              {!turn.job && !!turn.run?.metadata?.prompt_translation && (
-                <PromptTranslation
-                  key={turn.run.id}
-                  run={turn.run}
-                  onRetried={(next) => navigate(`/runs/${next.id}`)}
-                />
-              )}
+              {!turn.job &&
+                progressRuns(turn)
+                  .filter((run) => !!run.metadata?.prompt_translation)
+                  .map((run) => (
+                    <PromptTranslation
+                      key={run.id}
+                      run={run}
+                      onRetried={(next) => navigate(`/runs/${next.id}`)}
+                    />
+                  ))}
               {!turn.job && turn.run?.status === "queued" && (
                 <ResourceWaitNotice wait={turn.run.resource_wait} />
               )}
