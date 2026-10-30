@@ -308,10 +308,12 @@ saving/checks from sampling completion and hides stale estimates. Existing Sonic
 global progress remains intact. The [progress contract](generation-progress.md)
 records baseline/final-family, compiled browser and production rollout evidence.
 The preserved-data rollout left the native Runner/models running. NR-02 is
-complete. Optional prompt enhancement is staged on a separate branch and is not
-yet deployed: its initial image preparation/original-recovery cases and checkbox
-UI pass; all supported workflows, private-source, review, retry and real-model
-quality qualification still need completion.
+complete. Optional prompt enhancement is implemented for image, Wan, music and
+Echo descriptions. Its 687-case affected backend families and 951-case frontend
+suite pass; final accessibility changes have 37 passing complete-family cases.
+Compiled desktop/mobile preparation, review/edit, effective generator input,
+receipts, retained history and private-user denial pass with synthetic inference.
+Workstation rollout and real-model quality acceptance remain separate gates.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up
