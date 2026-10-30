@@ -1766,6 +1766,9 @@ export default function AssistantActions({
               onChange={(event) =>
                 onChange({
                   ...value,
+                  effects: value.effects
+                    ? { ...value.effects, cues: [] }
+                    : value.effects,
                   media:
                     event.target.value === "preview"
                       ? null

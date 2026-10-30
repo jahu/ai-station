@@ -53,8 +53,9 @@ export default function ConversationEffectsScope({
             />
           ) : (
             <p className="muted">
-              Select a video length to set scene timings. Described sounds are
-              checked against the generated film.
+              Select a video length to set scene timings. Changing the length
+              clears scene timings. Described sounds are checked against the
+              generated film.
             </p>
           )}
         </>

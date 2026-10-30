@@ -1943,3 +1943,43 @@ it("does not keep an old failure alert after a sound retry succeeded", () => {
   });
   expect(screen.queryByRole("alert")).toBeNull();
 });
+
+it("clears old scene timings when a new film changes back to a short preview", () => {
+  let saved: AssistantOptions = {
+    ...emptyOptions,
+    action: "video.generate",
+    media: { duration_seconds: 15, composition_mode: "continuous" },
+    effects: {
+      video_artifact_id: null,
+      prompt: "Rain",
+      cues: [{ start_frame: 0, end_frame: 360, prompt: "Thunder" }],
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [] })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(saved);
+    saved = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Video length" }), {
+    target: { value: "preview" },
+  });
+  expect(saved.media).toBeNull();
+  expect(saved.effects?.cues).toEqual([]);
+  expect(saved.effects?.prompt).toBe("Rain");
+});
