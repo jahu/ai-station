@@ -53,6 +53,7 @@ from app.media_translation import router as generation_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
+from app.model_setup import router as model_setup_router
 from app.models import Run, Setting, WorkerRow
 from app.music import router as music_router
 from app.nodes import router as nodes_router
@@ -475,6 +476,7 @@ app.include_router(operator_auth_router)
 app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
+app.include_router(model_setup_router)
 app.include_router(document_router)
 app.include_router(agent_router)
 app.include_router(agent_draft_router)

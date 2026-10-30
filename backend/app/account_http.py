@@ -55,6 +55,8 @@ def administrator_operation(request: Request) -> bool:
         "/api/memory/embeddings/setup",
     }:
         return True
+    if path.startswith("/api/setup/downloads"):
+        return True
     if path.startswith("/api/models/definitions") and not path.endswith("/load"):
         return True
     if path.startswith("/api/llama/") and path.endswith(("/stop", "/restart")):

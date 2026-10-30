@@ -325,9 +325,12 @@ class LlamaResumeConsumerExecutor:
         if not loadable_model(model):
             raise ValueError("The selected model is no longer available")
         observation = p["model_observation"]
-        if {"model_path": model.host_path, "size_bytes": model.size_bytes, "mtime": model.mtime} != {
-            key: observation[key] for key in ("model_path", "size_bytes", "mtime")
-        }:
+        from app.model_sources import source_of
+
+        coordinate = source_of(model)
+        if coordinate != {key: observation.get(key) for key in coordinate} or bool(
+            observation.get("app_owned")
+        ) != bool(model.relative_path):
             raise ValueError("The selected model changed while its consumer was waiting")
         matching = [
             item

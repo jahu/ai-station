@@ -99,7 +99,8 @@ def select_coding_model(session):
             return (
                 params.get("instance_id") == instance.id
                 and params.get("gpus") == meta.get("gpus")
-                and params.get("model_path") == model.host_path
+                and params.get("model_path") == (model.relative_path or model.host_path)
+                and bool(params.get("app_owned")) == bool(model.relative_path)
                 and params.get("size_bytes") == model.size_bytes
                 and params.get("mtime") == model.mtime
             )

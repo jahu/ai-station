@@ -47,6 +47,7 @@ from app.market_watch import MarketExecutor
 from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.media_translation import MediaTranslationExecutor, TranslationApplyExecutor
 from app.model_definitions import ModelInstallExecutor
+from app.model_download_job import DownloadExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.music import MusicExecutor
@@ -331,6 +332,7 @@ EXECUTORS = {
     "agent_data_result": DataResultExecutor(),
     "agent_result_alert": ResultAlertExecutor(),
     "fake": FakeExecutor(),
+    DownloadExecutor.name: DownloadExecutor(),
     "orchestrator": AssistantExecutor(),
     "station_snapshot": StationSnapshotExecutor(),
     "llama_load": LlamaExecutor("load"),

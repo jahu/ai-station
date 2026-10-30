@@ -39,6 +39,7 @@ import { Empty, PageTitle } from "./components/common";
 import { Button } from "./components/ui/button";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
+import ModelSetup from "./pages/ModelSetup";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
 import CodingSession from "./pages/CodingSessions";
@@ -164,9 +165,11 @@ export default function App() {
   );
   const page = location.pathname.startsWith("/preview/")
     ? "Website preview"
-    : (destinations.find(
-        ([path]) => path !== "/" && location.pathname.startsWith(path),
-      )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
+    : location.pathname.startsWith("/setup/")
+      ? "Model setup"
+      : (destinations.find(
+          ([path]) => path !== "/" && location.pathname.startsWith(path),
+        )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (
@@ -416,6 +419,7 @@ export default function App() {
             />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/:section" element={<Settings />} />
+            <Route path="/setup/models" element={<ModelSetup />} />
             <Route path="/models" element={<Models />} />
             <Route path="/models/:id" element={<ModelDetail />} />
             <Route path="/agents" element={<Agents />} />

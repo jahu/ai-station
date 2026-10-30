@@ -13,7 +13,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_serializer, model_validator
 
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.local_model import CodingCompletion, forward_completion
@@ -36,6 +36,8 @@ class Load(BaseModel):
     instance_id: UUID
     run_id: UUID
     model_path: str = Field(min_length=1, max_length=1200)
+    app_owned: StrictBool = False
+    model_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     size_bytes: int = Field(gt=0)
     mtime: float = Field(gt=0, allow_inf_nan=False)
     gpus: list[int] = Field(max_length=16)
@@ -43,6 +45,21 @@ class Load(BaseModel):
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector: Projector | None = None
     permissions: list[str]
+
+    @model_validator(mode="after")
+    def coordinate(self):
+        from ai_station_runner.owned_models import validate_reference
+
+        validate_reference(self.model_path, self.model_sha256, self.app_owned)
+        return self
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        value = handler(self)
+        if not self.app_owned:
+            value.pop("app_owned", None)
+            value.pop("model_sha256", None)
+        return value
 
 
 def docker(*args, missing_ok=False):
@@ -249,11 +266,20 @@ def load(body: Load):
                 raise HTTPException(409, "Runtime identity is immutable")
         else:
             settings = get_settings()
-            try:
-                model = ensure_within(Path(body.model_path), _split(settings.model_roots))
-            except (PathBoundaryError, OSError) as exc:
-                raise HTTPException(422, "Model is outside configured roots") from exc
-            if model.suffix.lower() != ".gguf" or not model.is_file() or "," in str(model):
+            if body.app_owned:
+                from ai_station_runner.owned_models import owned_model
+
+                model = owned_model(body.model_path, body.model_sha256)
+            else:
+                try:
+                    model = ensure_within(Path(body.model_path), _split(settings.model_roots))
+                except (PathBoundaryError, OSError) as exc:
+                    raise HTTPException(422, "Model is outside configured roots") from exc
+            if (
+                (not body.app_owned and model.suffix.lower() != ".gguf")
+                or not model.is_file()
+                or "," in str(model)
+            ):
                 raise HTTPException(422, "Choose a GGUF inside configured model roots")
             stat = model.stat()
             if stat.st_size != body.size_bytes or abs(stat.st_mtime - body.mtime) > 0.001:
@@ -299,6 +325,17 @@ def load(body: Load):
             save(folder, record)
         item = inspected(record)
         if item is None:
+            if record.get("request", {}).get("app_owned"):
+                from ai_station_runner.owned_models import owned_model
+
+                current = owned_model(body.model_path, body.model_sha256)
+                observed = current.stat()
+                if (
+                    str(current) != record["model"]
+                    or observed.st_size != body.size_bytes
+                    or abs(observed.st_mtime - body.mtime) > 0.001
+                ):
+                    raise HTTPException(422, "App-owned model changed before container creation")
             if record.get("container_id"):
                 raise HTTPException(409, "Owned container disappeared; create a new runtime")
             args = [

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
+from app.model_sources import label_of, source_of, verify_source
 from app.models import ModelDefinition, ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
@@ -54,6 +55,15 @@ def q8_kv_bytes_per_token(size_bytes: int) -> int:
     return int(max(24.0, min(160.0, 8 + 7.5 * gib)) * 1024)
 
 
+def kv_budget_mib(gpu_memory_mib, size_bytes, state_reserve_mib=0):
+    return (
+        _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
+        - size_bytes / (1024 * 1024)
+        - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpu_memory_mib)
+        - state_reserve_mib
+    )
+
+
 def fit_coding_context(
     *,
     gpus: list[int],
@@ -79,11 +89,8 @@ def fit_coding_context(
     if missing_vram:
         computed = proven_success or CODING_CONTEXT_FALLBACK
     else:
-        kv_mib = (
-            _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
-            - size_bytes / (1024 * 1024)
-            - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpus)
-            - (context_profile or {}).get("state_reserve_mib", 0)
+        kv_mib = kv_budget_mib(
+            gpu_memory_mib, size_bytes, (context_profile or {}).get("state_reserve_mib", 0)
         )
         if kv_mib <= 0:
             computed = CODING_CONTEXT_FLOOR
@@ -230,6 +237,8 @@ def vision_projector(session, model, companions=None):
             )
         )
         if row.filename.lower().startswith("mmproj")
+        and row.host_path is not None
+        and model.host_path is not None
         and PurePosixPath(row.host_path).parent == PurePosixPath(model.host_path).parent
     ]
     return matches[0] if len(matches) == 1 else None
@@ -250,7 +259,7 @@ def catalog(session: DB):
         "models": [
             {
                 "id": row.id,
-                "name": f"{PurePosixPath(row.host_path).parent.name} · {row.filename}",
+                "name": label_of(row),
                 "size_bytes": row.size_bytes,
                 "model_key": "llamacpp:" + row.id,
                 "vision_available": vision_projector(session, row, companions) is not None,
@@ -341,9 +350,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         requested_resources={"gpus": body.gpus},
         parameters={
             "instance_id": instance.id,
-            "model_path": model.host_path,
-            "size_bytes": model.size_bytes,
-            "mtime": model.mtime,
+            **source_of(model),
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
@@ -578,9 +585,7 @@ class LlamaExecutor:
             report = runner.verify_model(
                 {
                     "run_id": run.id,
-                    "host_path": run.parameters["model_path"],
-                    "size_bytes": run.parameters["size_bytes"],
-                    "mtime": run.parameters["mtime"],
+                    **verify_source(run.parameters),
                     "check_context": True,
                     "permissions": run.effective_permissions,
                 }
@@ -687,6 +692,8 @@ class LlamaExecutor:
             for key in (
                 "instance_id",
                 "model_path",
+                "app_owned",
+                "model_sha256",
                 "size_bytes",
                 "mtime",
                 "gpus",

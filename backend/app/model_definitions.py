@@ -18,6 +18,7 @@ from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
 from app.llama import LoadModel, enqueue_load, loadable_model
+from app.model_sources import source_of, verify_source
 from app.models import ModelDefinition, ModelFile, Run, RuntimeInstance
 from app.permissions import require
 from app.runner_client import RunnerClient, RunnerError
@@ -189,6 +190,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
                 "id": file.id,
                 "filename": file.filename,
                 "host_path": file.host_path,
+                **({"relative_path": file.relative_path} if file.relative_path else {}),
                 "format": file.format,
                 "category": file.category,
                 "availability": file.availability,
@@ -337,9 +339,7 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         parameters={
             "definition_id": row.id,
             "file_id": file.id,
-            "host_path": file.host_path,
-            "size_bytes": file.size_bytes,
-            "mtime": file.mtime,
+            **verify_source(source_of(file)),
             "check_image": check_image,
         },
     )
@@ -405,6 +405,11 @@ class ModelInstallExecutor:
                 {
                     "run_id": run.id,
                     "host_path": run.parameters["host_path"],
+                    **(
+                        {"app_owned": True, "model_sha256": run.parameters["model_sha256"]}
+                        if run.parameters.get("app_owned")
+                        else {}
+                    ),
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),

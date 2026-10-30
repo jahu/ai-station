@@ -1,3 +1,5 @@
+Guided conversation-model setup uses the [reviewed installation catalog](plans/guided-model-installation.md), ordinary owned download Tasks/Runs and private JSON receipts. Migration 0042 adds an exclusive app-data-relative ModelFile coordinate alongside existing external host paths. Workers stream and hash pinned public weights; the native Runner inspects only fixed immutable references before the existing llama.cpp adapter loads them. Models remain shared infrastructure; download histories remain account scoped.
+
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
 container coordinator waits for the verified final film before publishing sound;

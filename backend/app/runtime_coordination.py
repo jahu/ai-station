@@ -281,9 +281,11 @@ def runtime_load_facts(session, instance):
         Run.created_at,
         Run.status,
         Run.metadata_json["shared_model_retained"].as_boolean().label("retained"),
+        Run.parameters["app_owned"].as_boolean().label("app_owned"),
     ]
     fields.extend(
-        Run.parameters[key].label(key) for key in ("model_path", "size_bytes", "mtime", "projector", "gpus")
+        Run.parameters[key].label(key)
+        for key in ("model_path", "size_bytes", "mtime", "projector", "gpus", "model_sha256")
     )
     result = (
         session.connection()
@@ -300,6 +302,8 @@ def runtime_load_facts(session, instance):
     if result is None:
         raise ValueError("The managed model has no verified startup observation")
     source = {key: result[key] for key in ("model_path", "size_bytes", "mtime", "projector")}
+    if result.get("app_owned") is True:
+        source.update(app_owned=True, model_sha256=result["model_sha256"])
     if (
         not isinstance(source["model_path"], str)
         or not source["model_path"]

@@ -489,9 +489,19 @@ class ResourceLock(Base):
 
 class ModelFile(Base):
     __tablename__ = "model_files"
+    __table_args__ = (
+        UniqueConstraint("relative_path", name="uq_model_files_relative_path"),
+        CheckConstraint(
+            "(host_path IS NOT NULL AND relative_path IS NULL) OR "
+            "(host_path IS NULL AND relative_path IS NOT NULL AND sha256 IS NOT NULL)",
+            name="ck_model_file_location",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    host_path: Mapped[str] = mapped_column(String(1200), unique=True)
+    host_path: Mapped[str | None] = mapped_column(String(1200), unique=True, nullable=True)
+    relative_path: Mapped[str | None] = mapped_column(String(1200), nullable=True)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     filename: Mapped[str] = mapped_column(String(400))
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     mtime: Mapped[float] = mapped_column(Float, default=0)
