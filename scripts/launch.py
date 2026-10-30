@@ -101,6 +101,30 @@ def stop_runner(proc: subprocess.Popen | None) -> None:
             proc.wait()
 
 
+def local_entry_url(client, run, url: str, api_url: str) -> str:
+    """Ask only the owned container console for pending first-admin setup."""
+    auth = client.get(api_url + "/api/auth")
+    if auth.status_code != 200 or not auth.headers.get("content-type", "").startswith("application/json"):
+        return url
+    body = auth.json()
+    if not isinstance(body, dict) or body.get("setup_required") is not True:
+        return url
+    # A URL fragment is not sent to HTTP servers or in referrers. No HTTP
+    # endpoint exposes this proof, and application/agents gain no Docker API.
+    return run(
+        "exec",
+        "-T",
+        "ai-station",
+        "python",
+        "-m",
+        "app.bootstrap_setup",
+        "--url",
+        url,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dev", action="store_true")
@@ -169,6 +193,8 @@ def main() -> None:
             url = f"http://127.0.0.1:{port}"
             with httpx.Client(timeout=3) as client:
                 client.get(url).raise_for_status()
+                api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
+                url = local_entry_url(client, run, url, api_url)
             print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
             if env.get("AI_STATION_LAN_HOST"):
                 print(f"Private LAN: http://{env['AI_STATION_LAN_HOST']}:{port}", flush=True)

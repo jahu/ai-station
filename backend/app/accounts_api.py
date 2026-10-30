@@ -40,6 +40,10 @@ class Setup(IdentityPassword):
     password: SecretStr = Field(min_length=12, max_length=200)
 
 
+class FirstAdminSetup(Setup):
+    local_setup_token: SecretStr | None = Field(default=None, min_length=1, max_length=128)
+
+
 class CreateUser(Setup):
     is_admin: StrictBool = False
 
@@ -96,23 +100,34 @@ def _status(session, actor) -> dict:
 @router.get("/auth")
 def status(request: Request, response: Response, session: DB):
     response.headers["Cache-Control"] = "no-store"
-    return _status(session, getattr(request.state, "account_principal", None))
+    result = _status(session, getattr(request.state, "account_principal", None))
+    peer = request.client.host if request.client else ""
+    result["setup_link_required"] = result["setup_required"] and (
+        peer not in {"127.0.0.1", "::1"} or request.url.hostname not in {"127.0.0.1", "::1", "localhost"}
+    )
+    return result
 
 
 @router.post("/auth/setup", status_code=201)
-def setup(body: Setup, request: Request, response: Response, session: DB):
+def setup(body: FirstAdminSetup, request: Request, response: Response, session: DB):
+    from app.bootstrap_setup import discard_setup_proof, valid_setup_proof
+
+    attempt_budget(session, purpose="admin", identity="bootstrap")
     peer = request.client.host if request.client else ""
     host = request.url.hostname or ""
-    local = peer in {"127.0.0.1", "::1"} and host in {"127.0.0.1", "::1", "localhost"}
+    proof = body.local_setup_token.get_secret_value() if body.local_setup_token else None
+    local = host in {"127.0.0.1", "::1", "localhost"} and (
+        peer in {"127.0.0.1", "::1"} or valid_setup_proof(session, proof)
+    )
     # Fresh setup must finish on loopback before enabling any reverse proxy/LAN
     # service; a proxy's loopback peer is not authority to claim an administrator.
     local = local and not private_access_enabled(session)
-    attempt_budget(session, purpose="admin", identity="bootstrap")
     user = accounts.bootstrap_admin(
         session, body.username, body.password.get_secret_value(), local_setup=local
     )
     grant = accounts.login(session, user.username, body.password.get_secret_value(), label="Initial setup")
     session.commit()
+    discard_setup_proof()
     attach_cookie(
         response, grant.token, grant.max_age, secure=secure_cookie(request.headers.get("host", ""), session)
     )

@@ -23,6 +23,23 @@ filesystem paths. Passwords use a random 16-byte salt and PBKDF2-SHA256 with
 representations explicitly omit credential records, MFA references and recovery
 hashes; secret-bearing result objects do not expose their fields through repr.
 
+The staged first-start flow also supports a local browser whose connection
+crosses Docker's bridge. At API startup, pending setup creates an owner-only
+proof at `secrets/bootstrap/local-setup` beneath application data. The local
+launcher obtains a private URL through the owned container console; no HTTP
+endpoint returns this proof. Open that URL on the workstation to create the
+administrator. Its fragment is removed immediately by the account screen and
+kept only in memory until setup; it is never browser storage or an HTTP query.
+An already-open setup screen can receive the link without losing its form.
+
+Loopback Host validation and the existing private-access prohibition still apply.
+A Docker/private source address or forwarding header never grants setup access.
+The committed initial identity closes setup permanently; the proof file is
+removed after success, and leftover files cannot reopen a configured or recovery
+installation. Native loopback development retains its direct setup path. These
+contracts are qualified on a disposable real Docker bridge and the compiled
+desktop/mobile account screen; they do not enable accounts in the live profile.
+
 Services leave commit/rollback to their caller. Account audit events commit with
 the successful operation. A downgrade refuses to discard identities after use;
 restore a reviewed, stopped-service backup rather than erasing live accounts.

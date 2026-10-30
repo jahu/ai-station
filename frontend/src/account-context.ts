@@ -13,6 +13,7 @@ export type AccountUser = {
 export type AccountStatus = {
   authenticated: boolean;
   setup_required: boolean;
+  setup_link_required?: boolean;
   user: AccountUser | null;
   expires_at?: string | null;
 };

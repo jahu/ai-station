@@ -33,13 +33,39 @@ const signedOut: AccountStatus = {
   user: null,
 };
 
+function initialSetupToken() {
+  const marker = window.location.hash.indexOf("?");
+  return marker < 0
+    ? null
+    : new URLSearchParams(window.location.hash.slice(marker + 1)).get(
+        "setup_token",
+      );
+}
+
+function clearSetupFragment() {
+  const marker = window.location.hash.indexOf("?");
+  if (marker < 0) return;
+  const params = new URLSearchParams(window.location.hash.slice(marker + 1));
+  if (!params.has("setup_token")) return;
+  params.delete("setup_token");
+  const url = new URL(window.location.href);
+  url.hash =
+    window.location.hash.slice(0, marker) +
+    (params.size ? "?" + params.toString() : "");
+  window.history.replaceState(window.history.state, "", url);
+}
+
 function Credentials({
   setup,
+  setupLinkRequired,
+  localSetupToken,
   busy,
   error,
   onAuthenticated,
 }: {
   setup: boolean;
+  setupLinkRequired: boolean;
+  localSetupToken: string | null;
   busy: boolean;
   error: Error | null;
   onAuthenticated: (status: AccountStatus) => void;
@@ -59,6 +85,9 @@ function Credentials({
         json({
           username,
           password,
+          ...(setup && localSetupToken
+            ? { local_setup_token: localSetupToken }
+            : {}),
           ...(!setup && factor ? { second_factor: factor } : {}),
         }),
       ),
@@ -78,6 +107,7 @@ function Credentials({
     },
   });
   const pending = busy || submit.isPending;
+  const needsLocalLink = setup && setupLinkRequired && !localSetupToken;
   return (
     <main id="main" tabIndex={-1} className="account-entry">
       <div className="account-entry-brand">
@@ -100,6 +130,12 @@ function Credentials({
             : "Sign in to your private conversations, creations and agents."}
         </p>
         <ErrorNotice error={validation ?? submit.error ?? error} />
+        {needsLocalLink && (
+          <p className="notice">
+            Open the private setup link shown when AI Station starts on this
+            computer. It lets you create the first account securely.
+          </p>
+        )}
         <form
           className="account-form"
           onSubmit={(event) => {
@@ -109,7 +145,7 @@ function Credentials({
               setValidation(new Error("Passwords do not match."));
               return;
             }
-            if (!pending) submit.mutate();
+            if (!pending && !needsLocalLink) submit.mutate();
           }}
         >
           <label>
@@ -123,7 +159,7 @@ function Credentials({
               minLength={2}
               maxLength={64}
               required
-              disabled={pending}
+              disabled={pending || needsLocalLink}
               autoFocus
             />
           </label>
@@ -138,7 +174,7 @@ function Credentials({
                 minLength={setup ? 12 : 1}
                 maxLength={200}
                 required
-                disabled={pending}
+                disabled={pending || needsLocalLink}
               />
               <button
                 type="button"
@@ -165,7 +201,7 @@ function Credentials({
                   minLength={12}
                   maxLength={200}
                   required
-                  disabled={pending}
+                  disabled={pending || needsLocalLink}
                 />
               </label>
             </>
@@ -190,7 +226,9 @@ function Credentials({
           )}
           <Button
             type="submit"
-            disabled={pending || username.length < 2 || !password}
+            disabled={
+              pending || needsLocalLink || username.length < 2 || !password
+            }
           >
             {pending
               ? "Please wait…"
@@ -217,6 +255,17 @@ function Credentials({
 
 export default function AccountGate({ children }: { children: ReactNode }) {
   const cache = useQueryClient();
+  const [localSetupToken, setLocalSetupToken] = useState(initialSetupToken);
+  useEffect(() => {
+    function receiveSetupLink() {
+      const value = initialSetupToken();
+      if (value) setLocalSetupToken(value);
+      clearSetupFragment();
+    }
+    receiveSetupLink();
+    window.addEventListener("hashchange", receiveSetupLink);
+    return () => window.removeEventListener("hashchange", receiveSetupLink);
+  }, []);
   const [locked, setLocked] = useState(false);
   const [closing, setClosing] = useState(false);
   const prepared = useSyncExternalStore(
@@ -246,6 +295,7 @@ export default function AccountGate({ children }: { children: ReactNode }) {
   }, [cache]);
   const authenticated = useCallback(
     (value: AccountStatus) => {
+      setLocalSetupToken(null);
       purge();
       cache.setQueryData(KEY, value);
       setLocked(false);
@@ -331,6 +381,8 @@ export default function AccountGate({ children }: { children: ReactNode }) {
     return (
       <Credentials
         setup={status.data?.setup_required ?? false}
+        setupLinkRequired={status.data?.setup_link_required ?? false}
+        localSetupToken={localSetupToken}
         busy={closing}
         error={logoutError}
         onAuthenticated={authenticated}

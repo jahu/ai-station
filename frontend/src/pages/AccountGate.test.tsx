@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { StrictMode } from "react";
 import {
   cleanup,
   fireEvent,
@@ -52,6 +53,49 @@ const response = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+it("guides a bridge browser to the private link and accepts it in the existing tab", async () => {
+  const proof = "b".repeat(43);
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/auth")
+      return response({
+        ...signedOut,
+        setup_required: true,
+        setup_link_required: true,
+      });
+    expect(path).toBe("/api/auth/setup");
+    expect(JSON.parse(String(options?.body)).local_setup_token).toBe(proof);
+    return response(signedIn);
+  });
+  mount(fetch);
+  await screen.findByText(/Open the private setup link/);
+  expect((screen.getByLabelText("Username") as HTMLInputElement).disabled).toBe(
+    true,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Create your account" }));
+  expect(fetch.mock.calls.every(([path]) => path === "/api/auth")).toBe(true);
+  try {
+    window.history.replaceState(null, "", "/#/?setup_token=" + proof);
+    fireEvent(window, new HashChangeEvent("hashchange"));
+    await waitFor(() => {
+      expect(screen.queryByText(/Open the private setup link/)).toBeNull();
+      expect(
+        (screen.getByLabelText("Username") as HTMLInputElement).disabled,
+      ).toBe(false);
+    });
+    expect(window.location.hash).not.toContain(proof);
+    credentials();
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "synthetic password" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create your account" }),
+    );
+    await screen.findByRole("heading", { name: "Private workspace for Alice" });
+  } finally {
+    window.history.replaceState(null, "", "/");
+  }
+});
+
 function Workspace() {
   const account = useAccount();
   return (
@@ -83,6 +127,71 @@ function credentials() {
     target: { value: "synthetic password" },
   });
 }
+
+it.each([true, false])(
+  "keeps a console setup proof off URLs/storage and sends it only for setup (%s)",
+  async (setup) => {
+    const proof = "a".repeat(43);
+    window.history.replaceState(
+      null,
+      "",
+      "/#/?setup_token=" + proof + "&keep=present",
+    );
+    const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === "/api/auth")
+        return response({ ...signedOut, setup_required: setup });
+      expect(path).toBe(setup ? "/api/auth/setup" : "/api/auth/login");
+      expect(JSON.parse(String(options?.body))).toEqual({
+        username: "Alice",
+        password: "synthetic password",
+        ...(setup ? { local_setup_token: proof } : {}),
+      });
+      return response(signedIn);
+    });
+    vi.stubGlobal("fetch", fetch);
+    const cache = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    try {
+      render(
+        <StrictMode>
+          <QueryClientProvider client={cache}>
+            <AccountGate>
+              <Workspace />
+            </AccountGate>
+          </QueryClientProvider>
+        </StrictMode>,
+      );
+      await screen.findByRole("heading", {
+        name: setup ? "Make this station yours." : "Welcome back.",
+      });
+      expect(window.location.hash).not.toContain(proof);
+      expect(window.location.hash).toContain("keep=present");
+      expect(document.body.textContent).not.toContain(proof);
+      credentials();
+      if (setup)
+        fireEvent.change(screen.getByLabelText("Confirm password"), {
+          target: { value: "synthetic password" },
+        });
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: setup ? "Create your account" : "Sign in",
+        }),
+      );
+      await screen.findByRole("heading", {
+        name: "Private workspace for Alice",
+      });
+      expect(
+        JSON.stringify({ ...sessionStorage, ...localStorage }),
+      ).not.toContain(proof);
+      expect(fetch.mock.calls.every(([path]) => !path.includes(proof))).toBe(
+        true,
+      );
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  },
+);
 
 it("keeps private work hidden until sign-in and never stores the password", async () => {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {

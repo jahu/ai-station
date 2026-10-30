@@ -35,7 +35,7 @@ from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
-from app.db import get_engine, migrate, session_factory, session_scope, utcnow
+from app.db import control_session_factory, get_engine, migrate, session_factory, session_scope, utcnow
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
@@ -82,8 +82,12 @@ DB = Annotated[Session, Depends(session_scope)]
 @asynccontextmanager
 async def lifespan(_app):
     migrate()
-    with session_factory()() as session:
+    with control_session_factory()() as session:
         refuse_non_loopback_bind(session)
+        if getattr(_app.state, "account_access_enabled", False):
+            from app.bootstrap_setup import ensure_setup_proof
+
+            ensure_setup_proof(session)
     yield
 
 
