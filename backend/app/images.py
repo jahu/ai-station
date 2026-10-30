@@ -125,6 +125,11 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         parent_run_id=original.id if task.id == original.task_id else None,
         metadata={
             "image_retry_request": identity,
+            **(
+                {"image_model_selection": original.metadata_json["image_model_selection"]}
+                if original.metadata_json.get("image_model_selection")
+                else {}
+            ),
             **({"prompt_translation": receipt} if receipt and body.translation == "reuse" else {}),
         },
     )
@@ -259,7 +264,12 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         permissions=permissions_for("image_generation"),
         retry_class="safe",
         parent_run_id=parent_run_id,
+        metadata={"image_model_selection": body._selection} if body._selection else None,
     )
+    if body._selection:
+        from app.events import append_event
+
+        append_event(session, run.id, "image.model.selected", body._selection)
     from app.media_translation import enqueue_translation
 
     enqueue_translation(session, run, body.translation)
