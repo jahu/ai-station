@@ -40,7 +40,7 @@ records belong under `data/acceptance/synchronized-sound-20261030/`.
 
 Use a neutral short film already owned by QA, plus a repeatable moving-object
 fixture with a visible timed action. Check real video+text conditioning, complete
-finite stereo PCM, source frame coverage, sample count and actual peak VRAM/RAM.
+finite PCM, source frame coverage, sample count and actual peak VRAM/RAM.
 Compare appropriate prompts (e.g. water, footsteps, wind) without claiming that
 successful decoding proves perceptual synchronization. Use a real zero-swap owned
 memory scope, and measure the profile before selecting its RAM/VRAM admission
@@ -106,3 +106,43 @@ never supply FFmpeg graphs/argv. Preview and export follow the same manifest.
 Check clipping, audio coverage, FPS/sample timing and cancellation; retain each
 render, source lineage and prior revision. NR-07 effects must remain useful as
 ordinary stems before the full editor is available.
+
+
+## Initial local qualification, 2026-10-30
+
+The isolated inference-only Python 3.12 environment uses Torch/torchvision/
+torchaudio 2.8/0.23/2.8 with CUDA 12.6, prebuilt PyAV 16.1 and NumPy 2.0.2.
+PyAV 14 resolved to a source build requiring host FFmpeg development libraries;
+that attempt was rejected and replaced with a prebuilt wheel, without OS changes.
+All seven required inference assets passed publisher identity/size verification.
+
+A real video-conditioned, 25-step BF16 sample from a 33-frame/24-FPS neutral
+bicycle fixture produced mono 44.1-kHz PCM in 4.40 seconds after 30.52 seconds of
+loading. Measured peak allocations were 4834 MiB GPU and 10.26 GiB scoped host
+memory under a real 24-GiB/zero-swap bound; all model parameters stayed on the
+allocated GPU. The upstream loader shortened conditioning from 1.375 to 1.36s;
+the report preserves this observation and the explicit sample adjustment. The
+production wrapper must sample/hold the complete inspected video timeline and
+record exact final PCM timing, rather than repeat that implicit shortening.
+Eight-second maximum-window qualification remains separate. These are standalone
+measurements, not an available AI Station SFX adapter or perceptual acceptance.
+
+The pure frame/sample window planner has 21 passing cases across 24/25 FPS,
+short tails, overlapping windows, 44.1-kHz half-sample frame boundaries and
+five-minute bounds. Absolute endpoints prevent per-window rounding drift; the
+future renderer must verify the final output against those same endpoints.
+
+The full-window test also passed: 192 frames at 24 FPS, exact 352800-sample
+8-second mono output, 25 steps, 10.25 seconds generation after 35.20 seconds
+loading. Peak allocations were 5067 MiB GPU (5238 MiB reserved) and 12.95 GiB
+scoped host memory, with GPU-only weights. The upstream helper again shortened
+conditioning, this time to 7.96s; exact source frame sampling/hold is required in
+the adapter. Final timing correction was explicit and recorded in the private
+report, not hidden as model synchronization acceptance.
+
+These measurements support starting qualification of a conservative 8-GiB VRAM /
+18-GiB RAM profile. Do not select a 12-GiB host-RAM limit: the eight-second run
+actually exceeded it. Actual scoped generation/cancellation/recovery for that
+final profile and private API/worker/UI integration still precede availability.
+Private reports: `qualification.private.json` and `qualification-eight.private.json`
+in the acceptance directory above; both native processes completed successfully.
