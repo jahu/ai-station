@@ -217,11 +217,12 @@ export default function TailnetAccess({ configured }: { configured: boolean }) {
             ) : null}
             {needsInspection ? (
               <p>
-                The previous operation needs inspection. Disable the connection
-                before setting it up again.
+                {busy
+                  ? "The previous setup is still stopping. Changes are paused until cleanup is confirmed."
+                  : "The previous operation needs inspection. Disable the connection before setting it up again."}
               </p>
             ) : null}
-            {value?.busy && !run ? (
+            {value?.busy && !run && !needsInspection ? (
               <p role="status">
                 Another administrator is updating the private connection. Wait
                 for that operation to finish before making changes.

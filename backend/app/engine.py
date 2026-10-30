@@ -44,6 +44,13 @@ def tick(
         return None
     session.commit()
     if run.owner_id is not None:
+        from app.revoked_private_access import cleanup_revoked_private_access
+
+        if cleanup_revoked_private_access(session, run, worker_id):
+            return run.id
+        # The role projection may open a coordination transaction. Release it
+        # before the separate owner factory rechecks its own account/Run rows.
+        session.commit()
         from app.data_access import DataAccessError, data_session_for_run
         from app.data_context import bind_data_scope
 
@@ -53,6 +60,11 @@ def tick(
                     _execute_claimed(owned, owned.get(type(run), run.id), worker_id, executors)
         except DataAccessError as exc:
             session.rollback()
+            # Account authority may change between the first projection and
+            # opening/checking the owner session. Never fail past owned cleanup.
+            if cleanup_revoked_private_access(session, run, worker_id):
+                return run.id
+            session.commit()
             mark_failed(session, run, "AccountUnavailable", str(exc))
             release_run_locks(session, run.id)
             session.commit()
@@ -89,6 +101,10 @@ def _execute_claimed(session, run, worker_id, executors):
             and run.capability == "memory.embed.prepare"
             and not user.is_admin
         ):
+            if run.executor_type == "private_access" and run.metadata_json.get("dispatch_attempted"):
+                from app.data_access import DataAccessError
+
+                raise DataAccessError("The private operation account authority changed")
             mark_failed(
                 session,
                 run,

@@ -16,12 +16,17 @@ OPERATIONS = {"install", "start", "login", "enable", "disable"}
 
 
 def check_run(session, run):
-    scope = session.scope
+    if inspect(run).session is not session or not inspect(run).persistent:
+        raise ValueError("Private access requires its owned standalone operation")
+    validate_owned_operation(run, session.scope.user_id)
+
+
+def validate_owned_operation(run, owner_id):
+    """Validate the frozen native identity; this grants no execution authority."""
     task = run.task
     if (
-        inspect(run).session is not session
-        or not inspect(run).persistent
-        or run.owner_id != scope.user_id
+        not owner_id
+        or run.owner_id != owner_id
         or run.run_type != "system"
         or run.executor_type != "private_access"
         or run.capability != "system.private_access"
@@ -32,11 +37,12 @@ def check_run(session, run):
         or run.conversation_id
         or run.parent_run_id
         or task is None
-        or task.owner_id != scope.user_id
+        or task.owner_id != owner_id
         or task.intent != "operator.private_access"
         or task.agent_id
         or task.project_id
         or task.conversation_id
+        or not isinstance(run.parameters, dict)
         or run.parameters.get("operation") not in OPERATIONS
     ):
         raise ValueError("Private access requires its owned standalone operation")

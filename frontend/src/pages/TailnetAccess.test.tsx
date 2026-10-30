@@ -87,6 +87,26 @@ it("offers safe cleanup for a shared inspection flag without needing a private R
   );
 });
 
+it("explains pending cleanup without offering a conflicting private-connection change", async () => {
+  const { fetch } = mount({
+    ...base,
+    busy: true,
+    needs_inspection: true,
+    run: null,
+  });
+  await screen.findByText(/previous setup is still stopping/);
+  expect(screen.queryByText(/Disable the connection before/)).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Disable private connection" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Start private connection" }),
+  ).toBeNull();
+  expect(
+    fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
+  ).toBe(true);
+});
+
 it("offers explicit verified installation with a visible download size", async () => {
   const { fetch } = mount({
     ...base,

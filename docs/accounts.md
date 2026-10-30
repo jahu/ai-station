@@ -66,6 +66,26 @@ offers an explicit Disable after an uncertain terminal operation without exposin
 its originating account. Synthetic native transports qualify these contracts;
 live account-profile Tailscale enrollment is not claimed.
 
+If an account is disabled or demoted before a crashed private-access worker
+recovers, trusted queue coordination can only cancel its already-dispatched,
+structurally verified native action. It cannot issue an execution session, start
+another action or change the shared connection policy. Cancellation uses the
+frozen Run identity/operation and rechecks the claiming worker before recording
+completion. Missing or mismatched proof retains cancellation state, leases and
+reservations for later cleanup; raw native errors never enter account history.
+An unknown action shape stays interrupted for inspection. Ordinary scoped and
+read-only inspection sessions cannot borrow this cleanup authority. The UI
+distinguishes cleanup still in progress from terminal work needing an explicit
+Disable. Other executor families retain their own separate recovery contracts.
+
+The real 0036 → current ownership-upgrade fixture also preserves private-action
+and Task IDs, frozen parameters and shared connection policy. A historical
+operator approval is not silently promoted into new account authority: work
+which had not dispatched fails for renewed review; dispatched work is inspected
+and its owned action canceled without another start. Completed connection
+configuration/history is not rewritten. Request a new account-authorized action
+after reviewing that interrupted upgrade work.
+
 Services leave commit/rollback to their caller. Account audit events commit with
 the successful operation. A downgrade refuses to discard identities after use;
 restore a reviewed, stopped-service backup rather than erasing live accounts.
