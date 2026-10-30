@@ -4,14 +4,14 @@ import {
 } from "../../recording-formats";
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AudioLines, ImagePlus, Library, Upload, X } from "lucide-react";
+import { AudioLines, Film, ImagePlus, Library, Upload, X } from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { ErrorNotice } from "../common";
 import { Button } from "../ui/button";
 import { useListKeyboard } from "../../pages/useListKeyboard";
 
 type Props = {
-  kind: "image" | "audio";
+  kind: "image" | "audio" | "video";
   uploadEndpoint?: string;
   maxAudioSeconds?: number;
   audioMode?: "voice" | "transcription";
@@ -66,7 +66,8 @@ export default function MediaInput({
     },
     onSettled: () => onBusy(false),
   });
-  const Icon = kind === "image" ? ImagePlus : AudioLines;
+  const Icon =
+    kind === "image" ? ImagePlus : kind === "video" ? Film : AudioLines;
   const headingId = useId();
   const labelId = useId();
   const audioTypes =
@@ -77,8 +78,14 @@ export default function MediaInput({
         a.type === kind &&
         (kind !== "image" ||
           ["image/png", "image/jpeg"].includes(a.mime_type)) &&
+        (kind !== "video" ||
+          (a.mime_type === "video/mp4" &&
+            !!a.metadata?.frames &&
+            [24, 25].includes(Number(a.metadata?.fps)))) &&
         (kind !== "audio" ||
-          (audioTypes.includes(a.mime_type) &&
+          ((audioMode === "transcription" ||
+            a.metadata?.capability !== "audio.effects") &&
+            audioTypes.includes(a.mime_type) &&
             (a.metadata?.duration_seconds === undefined ||
               a.metadata.duration_seconds <= maxAudioSeconds))) &&
         `${a.title ?? ""} ${a.original_filename}`
@@ -112,6 +119,13 @@ export default function MediaInput({
               src={`/api/artifacts/${value}/thumbnail`}
               alt="Portrait preview"
             />
+          ) : kind === "video" ? (
+            <video
+              controls
+              preload="metadata"
+              src={`/api/artifacts/${value}/file`}
+              aria-label={`${label} preview`}
+            />
           ) : (
             <>
               <AudioLines size={23} />
@@ -128,6 +142,28 @@ export default function MediaInput({
               source.data?.original_filename ||
               "Loading reference…"}
           </span>
+          {kind === "video" &&
+            !!source.data?.metadata?.frames &&
+            !!source.data.metadata.fps && (
+              <small className="muted">
+                {new Intl.NumberFormat(undefined, {
+                  maximumFractionDigits: 2,
+                }).format(
+                  Number(source.data.metadata.frames) /
+                    Number(source.data.metadata.fps),
+                )}{" "}
+                s
+                {source.data.metadata.width && source.data.metadata.height
+                  ? ` · ${source.data.metadata.width} × ${source.data.metadata.height}`
+                  : ""}
+              </small>
+            )}
+        </div>
+      ) : kind === "video" ? (
+        <div className="media-upload">
+          <Film size={27} />
+          <strong>Choose your film</strong>
+          <span>{hint}</span>
         </div>
       ) : (
         <label
@@ -208,15 +244,25 @@ export default function MediaInput({
               No matching{" "}
               {kind === "image"
                 ? "portraits"
-                : audioMode === "transcription"
-                  ? "recordings"
-                  : "WAV recordings"}
-              . Upload one above.
+                : kind === "video"
+                  ? "completed films"
+                  : audioMode === "transcription"
+                    ? "recordings"
+                    : "WAV recordings"}
+              .{" "}
+              {kind === "video"
+                ? "Create a film in Video, then choose it here."
+                : "Upload one above."}
             </p>
           ) : (
             <section aria-labelledby={headingId}>
               <h3 id={headingId} className="sr-only">
-                Reusable {kind === "image" ? "portraits" : "recordings"}
+                Reusable{" "}
+                {kind === "image"
+                  ? "portraits"
+                  : kind === "video"
+                    ? "films"
+                    : "recordings"}
               </h3>
               <p id={labelId} className="dashboard-note">
                 Arrow keys choose a file while the list is focused. Enter
@@ -246,6 +292,8 @@ export default function MediaInput({
                     >
                       {kind === "image" ? (
                         <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
+                      ) : kind === "video" ? (
+                        <Film size={18} />
                       ) : (
                         <AudioLines size={18} />
                       )}

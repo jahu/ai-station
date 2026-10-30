@@ -101,7 +101,8 @@ class CreativeSession(Owned, Base):
     __tablename__ = "creative_sessions"
     __table_args__ = (
         CheckConstraint(
-            "capability IN ('images','video','music','speech','avatars')", name="ck_creative_capability"
+            "capability IN ('images','video','music','speech','avatars','effects')",
+            name="ck_creative_capability",
         ),
     )
 

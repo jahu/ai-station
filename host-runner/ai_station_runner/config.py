@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     fish_speech_python: str = ""
     fish_speech_dir: str = ""
     fish_speech_models: str = ""
+    mmaudio_enabled: bool = False
+    mmaudio_python: str = ""
+    mmaudio_dir: str = ""
+    mmaudio_models: str = ""
     music_python: str = ""
     music_source_dir: str = ""
     music_model_dir: str = ""

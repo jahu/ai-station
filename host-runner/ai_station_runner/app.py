@@ -28,6 +28,7 @@ from ai_station_runner.cursor_runs import CursorRequest, cursor_report, start_cu
 from ai_station_runner.dependencies import DependencyRequest, dependency_report, start_dependencies
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
+from ai_station_runner.effects_contract import EffectsRequest
 from ai_station_runner.fish_contract import FishRequest
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
 from ai_station_runner.github_read import GithubReadRequest
@@ -748,6 +749,25 @@ def fish_speech_run(body: FishRequest):
         raise HTTPException(409, str(exc)) from exc
 
 
+@app.get("/v1/audio/effects/capabilities")
+def effects_capabilities():
+    from ai_station_runner.effects_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/effects")
+def effects_run(body: EffectsRequest):
+    from ai_station_runner.effects_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
 @app.get("/v1/music/capabilities")
 def local_music_capabilities():
     return music_capabilities()
@@ -1000,6 +1020,19 @@ def video_available():
 def video_run(body: VideoRequest):
     try:
         return {**start_video(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/v1/runs/effects-preview")
+def compose_effects_preview(body: ComposeRequest):
+    try:
+        return {
+            **start_composition(manager(), body, effects_preview=True),
+            "runner_id": get_settings().runner_id,
+        }
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
     except ValueError as exc:

@@ -121,3 +121,56 @@ it("offers compressed recordings only in transcription mode", async () => {
   fireEvent.click(compressed);
   expect(onChange).toHaveBeenCalledWith("compressed");
 });
+
+it("keeps effect tracks out of voice references without hiding them from transcription", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "effects-track",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "wind.wav",
+          metadata: { capability: "audio.effects", duration_seconds: 8 },
+        },
+        {
+          id: "speech-track",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "voice.wav",
+          metadata: { duration_seconds: 8 },
+        },
+      ],
+    })),
+  );
+  const client = new QueryClient();
+  const props = {
+    kind: "audio" as const,
+    label: "Recording",
+    hint: "WAV",
+    value: "",
+    onChange: vi.fn(),
+    disabled: false,
+    onBusy: vi.fn(),
+  };
+  const { rerender } = render(
+    <QueryClientProvider client={client}>
+      <MediaInput {...props} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  await screen.findByRole("button", { name: "Choose voice.wav speech-t" });
+  expect(
+    screen.queryByRole("button", { name: "Choose wind.wav effects-" }),
+  ).toBeNull();
+  rerender(
+    <QueryClientProvider client={client}>
+      <MediaInput {...props} audioMode="transcription" />
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("button", { name: "Choose wind.wav effects-" }),
+  ).toBeTruthy();
+});

@@ -1,5 +1,6 @@
 import ImageModelSelection from "../media/ImageModelSelection";
 import SpeechModelSelection from "../media/SpeechModelSelection";
+import AddSoundLink from "../media/AddSoundLink";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useInfiniteQuery,
@@ -47,6 +48,7 @@ const names: Record<CreativeCapability, [string, string]> = {
   music: ["Music", "track"],
   speech: ["Speech", "voiceover"],
   avatars: ["Avatars", "avatar"],
+  effects: ["Sound effects", "soundtrack"],
 };
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const status = (turn: CreativeTurn) =>
@@ -776,7 +778,14 @@ function SessionBody({
                 />
               ) : (
                 <div className="creative-artifacts">
-                  {turn.artifacts.map((artifact) => (
+                  {(row.capability === "effects"
+                    ? [...turn.artifacts].sort(
+                        (a, b) =>
+                          Number(b.type === "video") -
+                          Number(a.type === "video"),
+                      )
+                    : turn.artifacts
+                  ).map((artifact) => (
                     <div key={artifact.id} className="creative-artifact">
                       {artifact.purged_at || artifact.purge_run_id ? (
                         <p className="muted">
@@ -807,6 +816,7 @@ function SessionBody({
                             <Link to={`/library/${artifact.id}`}>
                               Open in Library <ArrowUpRight size={12} />
                             </Link>
+                            <AddSoundLink artifact={artifact} />
                             {artifact.type === "image" &&
                               row.capability === "images" &&
                               !row.archived_at && (

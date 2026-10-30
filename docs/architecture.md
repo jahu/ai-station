@@ -3,6 +3,15 @@ The [next-release contract](plans/next-release-0.1.md), owner direction
 creative sessions, local prompt/search preparation, expressive sound/editing and
 guided cross-platform installation. It preserves the existing execution engine.
 
+The optional [MMAudio effects adapter](plans/synchronized-sound.md) uses ordinary
+audio.effects Runs and a separate owned CPU preview Run. It freezes an owned
+video's timing/content and the pinned runtime observation, reserves one GPU and
+load RAM, and publishes a separate WAV plus a source-linked film preview. A fixed
+native wrapper samples the complete frame timeline into overlapping eight-second
+contexts; exact absolute sample endpoints prevent cumulative drift. Audio's saved
+Sound effects workspace reuses private creative history through preserving
+migration 0040. It does not introduce another execution engine.
+
 The [account services](accounts.md), qualified and deployed after PR #512, provide
 private ownership, username/password/device sessions, optional TOTP, administrator
 management/inspection and owner-bound workers and browser state. Shared physical

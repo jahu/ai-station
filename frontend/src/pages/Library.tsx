@@ -1,4 +1,5 @@
 import { copyText } from "../lib/clipboard";
+import AddSoundLink from "../components/media/AddSoundLink";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   useQuery,
@@ -563,6 +564,7 @@ export function ArtifactDetail() {
                 {(a.size_bytes / 1024).toFixed(0)} KiB
               </p>
               <p className="muted">{time(a.created_at)}</p>
+              <AddSoundLink artifact={a} />
               {!a.purged_at && !a.purge_run_id && a.type === "image" && (
                 <div className="artifact-actions">
                   {[
@@ -589,26 +591,35 @@ export function ArtifactDetail() {
                   </Button>
                 </div>
               )}
-              {!a.purged_at && !a.purge_run_id && a.type === "audio" && (
-                <div className="artifact-actions">
-                  <Button asChild variant="secondary">
-                    <Link to={`/audio?input=${a.id}`}>
-                      Use as voice reference
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link
-                      to={`/avatars?audio=${a.id}`}
-                      aria-label={`Use as speech ${a.id.slice(0, 8)}`}
-                    >
-                      Use as speech
-                    </Link>
-                  </Button>
-                </div>
-              )}
+              {!a.purged_at &&
+                !a.purge_run_id &&
+                a.type === "audio" &&
+                a.metadata?.capability !== "audio.effects" && (
+                  <div className="artifact-actions">
+                    <Button asChild variant="secondary">
+                      <Link to={`/audio?input=${a.id}`}>
+                        Use as voice reference
+                      </Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/avatars?audio=${a.id}`}
+                        aria-label={`Use as speech ${a.id.slice(0, 8)}`}
+                      >
+                        Use as speech
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               {prompt && (
                 <>
-                  <h3>{a.type === "audio" ? "Spoken text" : "Prompt"}</h3>
+                  <h3>
+                    {a.metadata?.capability === "audio.effects"
+                      ? "Sound description"
+                      : a.type === "audio"
+                        ? "Spoken text"
+                        : "Prompt"}
+                  </h3>
                   <p className="prompt-text">{prompt}</p>
                   <Button
                     variant="ghost"

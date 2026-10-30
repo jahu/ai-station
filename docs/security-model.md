@@ -5,6 +5,15 @@ are qualified and active on the workstation after PR #512's preserved-data
 cutover. Shared models/GPUs never imply shared
 prompts, memory, files, credentials or execution logs.
 
+[Sound effects](plans/synchronized-sound.md) accept an owned completed video ID,
+bounded descriptions/sampling settings and a GPU choice. Native dispatch accepts
+only frozen media observations and fixed configured model files, inside an
+18-GiB zero-swap owned scope. Offline constructors resolve verified local CLIP and
+vocoder files; no caller can supply commands, imports, paths, downloads or filter
+graphs. Sources and generated stems are rechecked before preview publication;
+account scope covers sessions, Runs, file/Range access and lineage. A separate
+typed preview operation retains process identity through lost acknowledgements.
+
 [Account services](accounts.md) preserve legacy credential/session material,
 isolate device revocation and validate optional TOTP with replay protection and
 one-use recovery codes. Authentication routes are registered by the explicit

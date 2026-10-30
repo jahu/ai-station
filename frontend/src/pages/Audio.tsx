@@ -17,6 +17,7 @@ import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import Transcription from "./Transcription";
 import Music from "./Music";
+import SoundEffects from "./SoundEffects";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import SpeechDeliveryControls from "../components/media/SpeechDeliveryControls";
 import SpeechEngineFields from "../components/media/SpeechEngineFields";
@@ -36,11 +37,14 @@ export default function Audio({
   // when a generation Run is recorded in the URL.
   const current = useMediaRun(search.get("run") ?? "");
   const busy = mediaBusy(current.data);
+  const effects =
+    search.get("mode") === "effects" ||
+    current.data?.capability === "audio.effects";
   const music =
     search.get("mode") === "music" ||
     current.data?.capability === "audio.music";
-  const speech = search.get("mode") !== "transcribe" && !music;
-  function wrap(capability: "music" | "speech", child: ReactNode) {
+  const speech = search.get("mode") !== "transcribe" && !music && !effects;
+  function wrap(capability: "music" | "speech" | "effects", child: ReactNode) {
     return withCreativeSessions ? (
       <CreativeWorkspace capability={capability}>{child}</CreativeWorkspace>
     ) : (
@@ -58,7 +62,8 @@ export default function Audio({
           aria-pressed={speech}
           onClick={() => {
             const next = new URLSearchParams();
-            if (search.get("input")) next.set("input", search.get("input")!);
+            if (!effects && search.get("input"))
+              next.set("input", search.get("input")!);
             setSearch(next);
           }}
         >
@@ -86,8 +91,19 @@ export default function Audio({
         >
           Transcription
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          className={effects ? "active" : ""}
+          aria-pressed={effects}
+          onClick={() => setSearch({ mode: "effects" })}
+        >
+          Sound effects
+        </button>
       </nav>
-      {music ? (
+      {effects ? (
+        wrap("effects", <SoundEffects key={search.get("input") ?? ""} />)
+      ) : music ? (
         wrap(
           "music",
           <Music

@@ -55,7 +55,7 @@ satisfy the corresponding requirement. Unfinished adapters remain unavailable.
 4. **Prompt and search quality, NR-03/04/12:** extend existing local translation
    preparation rather than adding a second job engine. Add model-specific prompt
    improvement, source-aware image routing and local search-query preparation.
-5. **Sound and editing, NR-06/07/08:** short real model/style auditions, qualified
+5. **Sound and editing, NR-06/07/08:** follow the [synchronized sound/editor contract](synchronized-sound.md); short real model/style auditions, qualified
    typed TTS/SFX adapters, then saved multi-track timeline/rendering. Integrate
    workspace feedback, cancellation, resource scheduling and artifact lineage.
 6. **Consumer setup, NR-13/14:** curated catalog/download service, capability

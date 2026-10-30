@@ -1,0 +1,42 @@
+.effects-workspace .media-source-video video {
+  width: 100%;
+  max-height: 260px;
+  border-radius: 10px;
+  background: #080b0a;
+}
+.effects-note {
+  font-size: 12px;
+  line-height: 1.65;
+}
+.effects-license {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.effects-license a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.effects-results {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+.effects-add-sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+.audio-mode-tabs {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .mode-tabs.audio-mode-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+}

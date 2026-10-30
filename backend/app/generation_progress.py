@@ -19,6 +19,8 @@ EXECUTORS = {
     "echomimic",
     "chatterbox",
     "fish_speech",
+    "mmaudio_effects",
+    "effects_preview",
     "ace_step_music",
     "media_compose",
 }
@@ -54,6 +56,21 @@ def positive(value):
 
 def parse_line(line, run):
     line = ANSI.sub("", line).strip()
+    if run.executor_type == "mmaudio_effects":
+        if line == "effects.model.loading":
+            return {"phase": "preparing"}
+        if re.fullmatch(r"effects\.window\.started \d{1,2}/\d{1,2}", line):
+            return {"phase": "generating"}
+        match = re.fullmatch(r"effects\.window\.completed (\d{1,2})/(\d{1,2})", line)
+        if match:
+            completed, total = map(int, match.groups())
+            if 1 <= completed <= total <= 64:
+                return {
+                    "phase": "finishing" if completed == total else "generating",
+                    "completed": completed,
+                    "total": total,
+                    "unit": "windows",
+                }
     prefixes = {"photo_pipe": ("image.stage: ",), "wan_video": ("video.stage: ",)}
     for prefix in prefixes.get(run.executor_type, ()):
         if line.startswith(prefix) and line[len(prefix) :] in STAGES:
@@ -191,6 +208,15 @@ def begin_timing(session, run, hardware):
         "executor": run.executor_type,
         "capability": run.capability,
         "parameters": {key: parameters.get(key) for key in fields},
+        **(
+            {
+                "video_geometry": {
+                    key: parameters.get("video", {}).get(key) for key in ("frames", "fps", "width", "height")
+                }
+            }
+            if run.executor_type == "mmaudio_effects"
+            else {}
+        ),
         "reference_count": len(parameters.get("parent_artifact_ids", [])),
         "text_bucket": math.ceil(len(str(parameters.get("text", ""))) / 50),
         "devices": devices,
@@ -243,7 +269,9 @@ def projection(run, *, now=None):
     estimate = None
     fraction = None
     if phase == "running":
-        phase = observation.get("phase", "finishing" if run.executor_type == "media_compose" else "preparing")
+        phase = observation.get(
+            "phase", "finishing" if run.executor_type in {"media_compose", "effects_preview"} else "preparing"
+        )
         stamp = observation.get("observed_at")
         try:
             age = (now - datetime.fromisoformat(stamp)).total_seconds() if stamp else math.inf

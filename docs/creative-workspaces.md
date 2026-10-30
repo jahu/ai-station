@@ -1,6 +1,6 @@
 # Persistent creative workspaces
 
-Images, Video, Music, Speech and Avatars retain private workspaces rather than
+Images, Video, Music, Speech, Avatars and Sound effects retain private workspaces rather than
 discarding the current form when navigating away. Select an existing workspace
 from **Your workspaces**, or use **New** to start another idea. The workspace URL
 can be bookmarked. Existing Run/MediaJob links retain their previous behavior.
@@ -40,6 +40,11 @@ Account-scoped browser recovery supplements server persistence; account switches
 invalidate pending saves. Conflicts show a recovery action instead of silently
 overwriting another device's changes. After submission the UI fetches fresh
 server state even when the application's normal query cache is still fresh.
+
+Migration 0040 extends the capability constraint for Sound effects while
+preserving existing sessions, turns and foreign keys. Effects versions retain
+the exact source film, sound description, reusable WAV and linked preview.
+A preview is a separate ordinary CPU Run in the same Task; Stop covers both.
 
 ## Qualification and rollout
 
