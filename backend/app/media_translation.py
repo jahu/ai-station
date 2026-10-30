@@ -178,10 +178,25 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     policy = dict(policy or preferences(session))
     enabled = policy["enabled"] if options.mode == "inherit" else options.mode == "on"
     fields = image_fields(media)
-    if not enabled or not fields:
+    if not (enabled or options.enhance) or not fields:
         return None
     if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}:
         raise ValueError("Unsupported media translation consumer")
+    system = SYSTEM
+    template = None
+    if options.enhance:
+        from app.prompt_enhancement import recipe
+
+        template, system = recipe(media, translate=enabled)
+        frozen = policy.get("enhancement_template")
+        if frozen is not None and frozen != template:
+            raise ValueError("The saved enhancement template requires inspection")
+        policy.update(
+            operation="enhance",
+            enhancement_template=template,
+            translate_descriptions=enabled,
+            target_language="en" if enabled else "original",
+        )
     limits = {
         key: 512
         if key == "caption"
@@ -200,6 +215,8 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             or image_fields(item) != fields
         ):
             raise ValueError("Translation group has mismatched media consumers")
+        if template is not None and recipe(item, translate=enabled)[0] != template:
+            raise ValueError("Enhancement group has mismatched generator templates")
         targets.append({"run_id": item.id, "source_hash": source_hash(item, fields)})
     if len(targets) > 100 or len({item["run_id"] for item in targets}) != len(targets):
         raise ValueError("Translation group exceeds its unique consumer bound")
@@ -235,7 +252,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             "field_limits": limits,
             "options": options.model_dump(),
             "temperature": 0.0,
-            "system_prompt": SYSTEM,
+            "system_prompt": system,
             "max_tokens": 4096,
             "json_output": True,
             "require_complete": True,
@@ -740,6 +757,10 @@ def prepare_retry(session, source, retry, choice):
         return None
     retry.parameters = {**retry.parameters, **receipt["original"]}
     options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    if receipt.get("options", {}).get("enhance"):
+        options["mode"] = receipt["options"].get("mode", "inherit") if choice == "retry" else "off"
+        if choice != "retry":
+            options["enhance"] = False
     if choice == "retry":
         return retry, options, receipt["policy"]
     retry.parameters = {**retry.parameters, "translation": {**options, "review": False}}

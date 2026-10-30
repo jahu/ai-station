@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_serializer
 
 SYSTEM = (
     "Translate the descriptive media instructions in the supplied JSON fields into English. "
@@ -37,9 +37,17 @@ class TranslationOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
     mode: str = Field(default="inherit", pattern=r"^(inherit|on|off)$")
     review: StrictBool = False
+    enhance: StrictBool = False
     protected_terms: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(
         default_factory=list, max_length=32
     )
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_identity(self, handler):
+        values = handler(self)
+        if not self.enhance:
+            values.pop("enhance", None)
+        return values
 
 
 def digest(value):
