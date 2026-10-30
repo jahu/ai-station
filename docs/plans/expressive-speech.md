@@ -48,3 +48,51 @@ VRAM was 3.39 GiB in all three. Every WAV decoded; offline CPU Whisper recognize
 the passages with minor deviations. These are intelligibility observations, not
 human listening acceptance or proof of specific emotions. Defaults remain unchanged.
 Private evidence is under `data/acceptance/expressive-speech-20261030/`.
+
+## Fish candidate: measured profile and remaining integration
+
+The complete S2 Pro download is verified against the publisher's SHA-256 values,
+revision `1de9996b6be38b745688de084d87a5633f714e4e`. The isolated runtime uses
+Fish Speech code `0f8a12e8a651062fdee9c33a894bdccd3a8513f1`, Torch 2.8/CUDA 12.6
+and a reproducible dependency record. TensorBoard 2.19 is needed alongside the
+upstream protobuf constraint; the newer resolved version failed codec import.
+No external application's environment, source or model was modified.
+
+A real one-GPU BF16 load ran out of VRAM when transferring codec buffers. The
+accepted execution candidate instead places the semantic model on one GPU and
+the codec on another: about **9.18 GiB** and **4.16 GiB** peak allocations on the
+two RTX 3060 cards. All model/codec parameters stay on GPUs; there is no CPU
+offload. The upstream loader's existing `max_length=4096` bounds the context/cache,
+and a 512-semantic-frame limit bounds this short qualification. These are profile
+requirements, not a claim that an 11-GB file fits an arbitrary 12-GB device.
+
+Using the same synthetic Polish reference and exact recorded reference text,
+neutral, `[whispering]` and `[happy]` passages produced complete decoded WAVs in
+about 11 seconds each after loading. Offline CPU Whisper recognized their wording
+with minor deviations. This is standalone GPU qualification, not a working AI
+Station adapter, human listening acceptance or long-form qualification.
+
+The next implementation must reuse the existing media executor lifecycle:
+
+- Add an optional typed speech-engine/direction choice; keep legacy Chatterbox
+  request serialization and ordinary narration unchanged.
+- Use the owned reference's verified spoken text when available. For an uploaded
+  voice, prepare its transcript with the existing offline transcription Run;
+  never ask users to transcribe a reference manually or invent reference words.
+- Freeze the verified runtime/weight profile, reference bytes/text and direction
+  before the normal Fish Run. Native code accepts fixed data and configured
+  paths, never caller-selected Python, flags, model repositories or commands.
+- Reserve both discovered GPUs and bounded load RAM through existing admission,
+  retaining the fixed zero-swap process scope. Allow arbitrary discovered GPU IDs;
+  do not assume the workstation's indices in application code.
+- Generate bounded complete passages, verify EOS/PCM/duration and retain stems
+  before publishing a complete result. Preserve Stop, owned process inspection,
+  deadlines and inspect-before-retry recovery; do not silently truncate a script.
+- Show the model license and Built with Fish Audio attribution for this optional
+  engine. Keep it unavailable until configured and its permission, cancellation,
+  recovery, private history and fake/real integration contracts pass.
+
+The public workspace should offer a model choice and plain-language delivery
+directions. A per-version advanced panel can hold sampling controls; a user
+should not need paths, GPU topology or inline model syntax to request a whisper.
+Longer speech, sadness/fear and actual audible delivery remain qualification work.
