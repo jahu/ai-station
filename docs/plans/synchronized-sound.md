@@ -107,7 +107,6 @@ Check clipping, audio coverage, FPS/sample timing and cancellation; retain each
 render, source lineage and prior revision. NR-07 effects must remain useful as
 ordinary stems before the full editor is available.
 
-
 ## Initial local qualification, 2026-10-30
 
 The isolated inference-only Python 3.12 environment uses Torch/torchvision/
@@ -146,7 +145,6 @@ actually exceeded it. Actual scoped generation/cancellation/recovery for that
 final profile and private API/worker/UI integration still precede availability.
 Private reports: `qualification.private.json` and `qualification-eight.private.json`
 in the acceptance directory above; both native processes completed successfully.
-
 
 ## Integrated adapter and saved workspace
 
@@ -199,3 +197,21 @@ The full NR-07/08 scope remains open: per-scene instruction editing, agent/assis
 exposure, perceptual synchronization acceptance and the saved multitrack editor
 still require implementation/qualification. An available basic effects generator
 is not a claim that the entire release or timeline editor is complete.
+
+## Development deployment, 2026-10-30
+
+PR #524 is reviewed, squash merged to `develop` and deployed on the development
+workstation. Final qualification includes 198 affected Python cases across 20
+complete families, 59 UI cases across eight families, Python/frontend static
+checks, production/development/LAN Compose validation, the application image and
+all 229 packaged Python source identities. The packaged fake API/worker/SSE
+exercise and compiled private desktop/mobile workflow pass; GPU inference alone
+is substituted in that browser test, while preview composition is real.
+
+The production upgrade preserved all 37 existing domain tables across 0039 →
+0040, with foreign keys intact and a pre-upgrade backup. The updated native
+Runner retained the private access node and existing model observations. Actual
+production desktop/mobile readiness/form checks pass; the four Audio tabs use
+a readable two-column mobile layout. The trusted QA device was revoked. Private
+rollout and source-review evidence is in the acceptance directory above. These
+checks do not close the per-scene, perceptual or timeline work listed earlier.
