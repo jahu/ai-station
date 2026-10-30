@@ -19,6 +19,17 @@ from app.runner_client import RunnerClient
 from app.runs import claim_next, mark_failed
 
 
+def cleanup_owned_cancellation(session, run, worker_id):
+    from app.model_cancellation import cleanup_revoked_load, cleanup_revoked_stop
+    from app.revoked_private_access import cleanup_revoked_private_access
+
+    return (
+        cleanup_revoked_load(session, run, worker_id)
+        or cleanup_revoked_stop(session, run, worker_id)
+        or cleanup_revoked_private_access(session, run, worker_id)
+    )
+
+
 def ensure_worker(session: Session, worker_id: str) -> None:
     row = session.get(WorkerRow, worker_id)
     now = utcnow()
@@ -44,9 +55,7 @@ def tick(
         return None
     session.commit()
     if run.owner_id is not None:
-        from app.revoked_private_access import cleanup_revoked_private_access
-
-        if cleanup_revoked_private_access(session, run, worker_id):
+        if cleanup_owned_cancellation(session, run, worker_id):
             return run.id
         # The role projection may open a coordination transaction. Release it
         # before the separate owner factory rechecks its own account/Run rows.
@@ -62,11 +71,26 @@ def tick(
             session.rollback()
             # Account authority may change between the first projection and
             # opening/checking the owner session. Never fail past owned cleanup.
-            if cleanup_revoked_private_access(session, run, worker_id):
+            if cleanup_owned_cancellation(session, run, worker_id):
                 return run.id
             session.commit()
-            mark_failed(session, run, "AccountUnavailable", str(exc))
-            release_run_locks(session, run.id)
+            if run.metadata_json.get("dispatch_attempted") and not run.metadata_json.get(
+                "process_confirmed_gone"
+            ):
+                from app.runs import transition
+                from app.state import RunStatus
+
+                run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+                transition(
+                    session,
+                    run,
+                    RunStatus.INTERRUPTED,
+                    event_type="recovery.inspection_required",
+                    payload={"reason": "Account authority changed before cleanup was confirmed"},
+                )
+            else:
+                mark_failed(session, run, "AccountUnavailable", str(exc))
+                release_run_locks(session, run.id)
             session.commit()
         finally:
             session.expire_all()
@@ -101,10 +125,12 @@ def _execute_claimed(session, run, worker_id, executors):
             and run.capability == "memory.embed.prepare"
             and not user.is_admin
         ):
-            if run.executor_type == "private_access" and run.metadata_json.get("dispatch_attempted"):
+            if run.metadata_json.get("dispatch_attempted") and not run.metadata_json.get(
+                "process_confirmed_gone"
+            ):
                 from app.data_access import DataAccessError
 
-                raise DataAccessError("The private operation account authority changed")
+                raise DataAccessError("The execution account authority changed before cleanup")
             mark_failed(
                 session,
                 run,

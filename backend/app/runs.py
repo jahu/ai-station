@@ -315,7 +315,12 @@ def request_cancel(session: Session, run: Run) -> Run:
         session.flush()
         return run
     if run.status in {RunStatus.QUEUED.value}:
-        return transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+        transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+        if run.executor_type == "llama_load":
+            from app.model_cancellation import retire_unstarted_load
+
+            retire_unstarted_load(session, run)
+        return run
     if run.status in {RunStatus.CLAIMED.value, RunStatus.PREPARING.value, RunStatus.RUNNING.value}:
         return transition(
             session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested", payload={}

@@ -412,6 +412,28 @@ account/worker tests cover ready and pending shared-model consumption, server-lo
 redaction, cancellation/backoff/recovery/deadlines, Task retention and physical
 release. This is not real multi-account GPU inference qualification.
 
+Account revocation and model allocation have separate lifetimes. Trusted worker
+coordination may inspect or shut down the exact already-dispatched managed model,
+without restoring the disabled user's execution authority or launching it again.
+If another enabled account still needs that model, loading is observed within
+the original deadline; verified readiness cancels the initiating request while
+retaining the shared model and its GPU/RAM reservations. A private readiness event
+and an explicit retained marker provide only public source/device/context facts
+to that account's waiter and Auto model selection. The initiating history stays
+private. Normal in-flight cancellation follows the same shared-demand rule.
+
+An unused model retains its reservations until native shutdown is confirmed.
+The controller commits its stopping state before native I/O, so a concurrent new
+request waits for actual shutdown before loading a replacement. Waiters recognize
+confirmed physical shutdown even when the initiating request was canceled. A
+revoked stop only observes the existing operation; it cannot issue a new stop.
+Uncertain observations or changed model/worker bindings retain reservations and
+require continued cleanup or inspection. Unknown dispatched executor families
+also keep their allocations instead of becoming failed jobs with falsely free
+GPUs. Queued, never-dispatched model cancellation retires only its exact owned
+plan, preventing stale queued runtimes without granting general shared-row writes.
+These are synthetic native-model/worker contracts, not real GPU revocation tests.
+
 The remaining profile gate includes the complete operation inventory, larger
 context/reload/handoff combinations and adversarial shared-resource qualification:
 

@@ -3,7 +3,7 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 
-from sqlalchemy import inspect, literal, or_, select, update
+from sqlalchemy import and_, inspect, literal, or_, select, update
 
 from app.data_access import ScopedSession
 from app.models import Run
@@ -97,12 +97,14 @@ class LlamaWaitExecutor:
             or facts["created_at"].isoformat() != run.parameters["startup_created_at"]
             or target == "ready"
             and facts["status"] in TERMINAL - {"succeeded"} | {"cancel_requested"}
+            and not facts["retained"]
             or instance.status not in valid_statuses
             or target == "stopped"
             and (
                 not stop
                 or stop["created_at"].isoformat() != run.parameters["stop_created_at"]
                 or stop["status"] in TERMINAL - {"succeeded"} | {"cancel_requested"}
+                and not stop["confirmed_stopped"]
             )
         ):
             mark_failed(
@@ -110,10 +112,10 @@ class LlamaWaitExecutor:
             )
             return "done"
         complete = (
-            instance.status == "ready" and facts["status"] == "succeeded"
+            instance.status == "ready" and (facts["status"] == "succeeded" or facts["retained"])
             if target == "ready"
             else instance.status == "stopped"
-            and stop["status"] == "succeeded"
+            and (stop["status"] == "succeeded" or stop["confirmed_stopped"])
             and instance.metadata_json.get("observation", {}).get("alive") is False
         )
         if complete:
@@ -275,7 +277,11 @@ def runtime_load_facts(session, instance):
         session.scope
     if instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
         raise ValueError("Model source requires a managed llama.cpp instance")
-    fields = [Run.created_at, Run.status]
+    fields = [
+        Run.created_at,
+        Run.status,
+        Run.metadata_json["shared_model_retained"].as_boolean().label("retained"),
+    ]
     fields.extend(
         Run.parameters[key].label(key) for key in ("model_path", "size_bytes", "mtime", "projector", "gpus")
     )
@@ -304,11 +310,29 @@ def runtime_load_facts(session, instance):
         and not isinstance(source["projector"], dict)
     ):
         raise ValueError("The managed model source observation is incomplete")
+    from app.models import RunEvent
+
+    retained = (
+        result["retained"] is True
+        and result["status"] == "canceled"
+        and session.connection().scalar(
+            select(literal(1))
+            .select_from(RunEvent.__table__)
+            .where(
+                RunEvent.run_id == instance.metadata_json.get("load_run_id"),
+                RunEvent.event_type == "runtime.ready",
+                RunEvent.payload["instance_id"].as_string() == instance.id,
+            )
+            .limit(1)
+        )
+        is not None
+    )
     return {
         "created_at": result["created_at"],
         "status": result["status"],
         "source": source,
         "gpus": result["gpus"],
+        "retained": retained,
     }
 
 
@@ -349,9 +373,19 @@ def runtime_stop_facts(session, instance):
     facts = (
         session.connection()
         .execute(
-            select(Run.created_at, Run.status).where(
+            select(
+                Run.created_at,
+                Run.status,
+                Run.metadata_json["process_confirmed_gone"].as_boolean().label("confirmed_stopped"),
+            ).where(
                 Run.id == instance.metadata_json.get("operation_run_id"),
-                Run.executor_type == "llama_stop",
+                or_(
+                    Run.executor_type == "llama_stop",
+                    and_(
+                        Run.executor_type == "llama_load",
+                        Run.metadata_json["load_shutdown_requested"].as_boolean().is_(True),
+                    ),
+                ),
                 Run.parameters["instance_id"].as_string() == instance.id,
             )
         )

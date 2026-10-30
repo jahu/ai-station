@@ -63,7 +63,7 @@ def select_coding_model(session):
     if isinstance(session, ScopedSession):
         for instance in history:
             loader_id = instance.metadata_json.get("load_run_id")
-            if loader_id is None or loader_id in loads:
+            if loader_id is None or loader_id in loads and loads[loader_id][1] == "succeeded":
                 continue
             try:
                 facts = runtime_coding_facts(session, instance)
@@ -71,7 +71,7 @@ def select_coding_model(session):
                 continue
             loads[loader_id] = (
                 facts["created_at"],
-                facts["status"],
+                "succeeded" if facts["retained"] else facts["status"],
                 {"instance_id": instance.id, "gpus": facts["gpus"], **facts["source"]},
                 "llama_load",
             )

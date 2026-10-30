@@ -716,9 +716,19 @@ class LlamaExecutor:
                     cancel_abandoned_restore(session, run)
                 canceled = run.status == "cancel_requested"
                 session.commit()
-                if canceled or time.monotonic() >= deadline:
+                from app.model_cancellation import foreign_demand, retain_ready
+
+                retained = (
+                    canceled
+                    and self.operation == "load"
+                    and time.monotonic() < deadline
+                    and foreign_demand(session, run, instance)
+                )
+                if (canceled and not retained) or time.monotonic() >= deadline:
                     info = runner.stop_llama(instance.id)
                 update_instance(session, instance, info)
+                if retained and retain_ready(session, run, instance, info):
+                    return "done"
                 if not info.get("alive") and info["status"] in {"stopped", "failed"}:
                     run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
                     if canceled:
