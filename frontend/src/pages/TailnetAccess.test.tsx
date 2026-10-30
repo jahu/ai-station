@@ -56,6 +56,37 @@ it("requires the existing password without starting or inspecting a service", ()
   expect(fetch).not.toHaveBeenCalled();
 });
 
+it("explains shared administrator activity without showing another account's Run", async () => {
+  const { fetch } = mount({ ...base, busy: true, run: null });
+  await screen.findByText(/Another administrator is updating/);
+  expect(
+    screen.queryByRole("button", { name: "Start private connection" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Disable private connection" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Stop setup" })).toBeNull();
+  expect(
+    fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
+  ).toBe(true);
+});
+
+it("offers safe cleanup for a shared inspection flag without needing a private Run", async () => {
+  const { fetch } = mount({ ...base, needs_inspection: true, run: null });
+  await screen.findByText(/previous operation needs inspection/);
+  expect(
+    screen.queryByRole("button", { name: "Start private connection" }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Disable private connection" }),
+  );
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+    ).toBe(true),
+  );
+});
+
 it("offers explicit verified installation with a visible download size", async () => {
   const { fetch } = mount({
     ...base,

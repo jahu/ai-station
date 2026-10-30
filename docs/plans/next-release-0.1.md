@@ -247,7 +247,14 @@ passes: 4757 Python/Runner cases and nine opt-in skips, 891 frontend tests, glob
 format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
 compiled desktop/mobile browser checks. Private evidence:
 `data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
-All other items remain planned; research candidates are unqualified. The account
-inventory covers 197 HTTP operations (193 API) and 31 ORM tables, without claiming
-ownership enforcement. Planning, a route list or this first increment does not
-complete the full next-release scope.
+NR-10's model-freedom/responsibility README update is also merged to `develop`.
+NR-11 is in active implementation: staged ownership, private request/execution
+sessions, account/security UI, recovery, shared-model coordination, Docker-local
+first-admin setup and account-aware private-connection operations have separate
+synthetic/local qualifications. The shipped application still uses its existing
+operator profile. The complete operation audit, administrator all-data inspection,
+remaining legacy execution-path removal and final preserved-data cutover remain
+enablement gates; see [account contracts](../accounts.md). The latest inventory
+contains 217 HTTP operations (209 API) and 35 ORM tables; enumeration alone is
+not an isolation pass. Other NR items remain open and research candidates remain
+unqualified. These increments do not complete the full next-release scope.

@@ -48,6 +48,24 @@ The dormant shipped profile retains its existing operator check, explicit origin
 allowlist and loopback publish default; account readiness never grants a public
 bind or configures a network service.
 
+Staged private-connection operations use the current administrator's account
+authority and an owner-bound standalone Run. Password/MFA changes invalidate
+that approval; device sign-out alone does not cancel durable work. The worker
+rechecks authority before dispatch and publication, inspects stale dispatched
+actions instead of replaying them, and requests owned cancellation if authority
+changes during execution. The existing native Tailscale ownership protocol stays
+unchanged.
+
+Only the fixed `private_ui_access` policy participates in this machine transaction.
+Its versioned write is atomic with the owner's Run/events and cannot become a
+general Setting/SQL grant. Ordinary scoped bulk SQL and read-only inspection
+remain denied. Other administrators see only service health, policy revision and
+busy/inspection facts; another account's Run, native daemon provenance, logs and
+interactive sign-in links remain private. The UI explains shared activity and
+offers an explicit Disable after an uncertain terminal operation without exposing
+its originating account. Synthetic native transports qualify these contracts;
+live account-profile Tailscale enrollment is not claimed.
+
 Services leave commit/rollback to their caller. Account audit events commit with
 the successful operation. A downgrade refuses to discard identities after use;
 restore a reviewed, stopped-service backup rather than erasing live accounts.
