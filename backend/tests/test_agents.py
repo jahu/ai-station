@@ -639,13 +639,13 @@ def test_agent_fetch_requires_explicit_review_before_activation():
         )
 
 
-def test_agent_search_migration_preserves_existing_definitions():
+def test_agent_search_migration_preserves_existing_definitions(legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
     with TestClient(app) as api:
         agent = create(api, tools=["memory_search"])
-        command.downgrade(alembic_config(), "0005")
+        legacy_schema("0005")
         command.upgrade(alembic_config(), "head")
         saved = api.get("/api/agents/" + agent["id"]).json()
         assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]

@@ -359,7 +359,7 @@ def test_account_settings_cannot_change_while_a_scoped_quote_is_queued(session, 
     assert api.get("/api/runs/" + rid).json()["status"] == "succeeded"
 
 
-def test_stock_migration_preserves_legacy_crypto_observation_and_baseline_hash(session):
+def test_stock_migration_preserves_legacy_crypto_observation_and_baseline_hash(session, legacy_schema):
     from alembic import command
     from app.db import alembic_config
     from test_market_watch import setup_agent
@@ -380,7 +380,7 @@ def test_stock_migration_preserves_legacy_crypto_observation_and_baseline_hash(s
     session.flush()
     identity, source_time, baseline = row.id, row.source_at, row.policy_key
     session.commit()
-    command.downgrade(alembic_config(), "0030")
+    legacy_schema("0030")
     command.upgrade(alembic_config(), "head")
     session.expire_all()
     saved = session.get(MarketObservation, identity)

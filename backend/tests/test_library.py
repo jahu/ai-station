@@ -99,13 +99,13 @@ def test_library_search_filters_and_pagination():
         assert client.get("/api/artifacts", params={"offset": -1}).status_code == 422
 
 
-def test_library_migration_preserves_existing_artifacts():
+def test_library_migration_preserves_existing_artifacts(legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
     with TestClient(app) as client:
         source = upload(client)
-        command.downgrade(alembic_config(), "0004")
+        legacy_schema("0004")
         command.upgrade(alembic_config(), "head")
         migrated = client.get(f"/api/artifacts/{source['id']}").json()
         assert migrated["metadata"] == source["metadata"]
