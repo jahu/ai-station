@@ -391,3 +391,50 @@ def test_worker_scope_is_frozen_to_the_run_owner_and_never_inherits_admin_inspec
     session.commit()
     with pytest.raises(DataAccessError, match="disabled"):
         data_session_for_run(run_id, admin)
+
+
+def test_repeated_worker_refresh_keeps_owner_query_size_bounded(users):
+    from sqlalchemy import event
+
+    _, alice, bob = users
+    first, second = records(alice), records(bob)
+    queries = []
+
+    def capture(_connection, _cursor, statement, _parameters, _context, _many):
+        if statement.startswith("SELECT") and "FROM runs" in statement:
+            queries.append(len(statement))
+
+    engine = get_engine()
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        with scoped(alice) as current:
+            owned = current.get(Run, first[2])
+            current.commit()
+            for _ in range(12):
+                current.refresh(owned)
+                current.refresh(owned.task, ["metadata_json"])
+                current.commit()
+                assert queries[-1] <= queries[0] * 2, "Owner filters accumulate during polling"
+                assert current.get(Run, second[2]) is None
+                current.commit()
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+
+
+@pytest.mark.parametrize("loader", ["lazy", "joined", "selectin"])
+def test_relationship_loads_independently_filter_every_private_parent(session, users, loader):
+    from sqlalchemy.orm import joinedload, selectinload
+
+    _, alice, bob = users
+    first, second = records(alice), records(bob)
+    # A deliberately inconsistent historical child must not borrow its visible
+    # conversation's authority to expose a different account's Run/content.
+    session.add(Message(conversation_id=first[0], run_id=second[2], role="user", content="Bob secret"))
+    session.commit()
+    with scoped(alice) as current:
+        query = select(Conversation).where(Conversation.id == first[0])
+        if loader != "lazy":
+            factory = joinedload if loader == "joined" else selectinload
+            query = query.options(factory(Conversation.messages))
+        conversation = current.execute(query).unique().scalar_one()
+        assert [message.content for message in conversation.messages] == ["Private prompt"]
