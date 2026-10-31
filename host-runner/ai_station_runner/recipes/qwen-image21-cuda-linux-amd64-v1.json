@@ -1,0 +1,91 @@
+{
+  "profile": "qwen-image21-cuda-linux-amd64-v1",
+  "name": "Qwen Image 2.1 \u00b7 Q4_K_M",
+  "qualified": false,
+  "qualification_notice": "Runtime CLI and CUDA enumeration inspected; generation, lifecycle and guided setup still require qualification.",
+  "runtime": {
+    "image_reference": "ghcr.io/leejet/stable-diffusion.cpp@sha256:800ba95bf36cbb24dd6c4cf116bd0c9a319b7b0ff00e1111ad1a6ea76944c33d",
+    "source_revision": "e239e4b0fd3de49834cec67031a44796ca465abc",
+    "platform": "linux/amd64",
+    "download_bytes": 1863360483,
+    "layers": {
+      "afad30e59d72d5c8df4023014c983e457f21818971775c4224163595ec20b69f": 29751784,
+      "bd06d3ff253296357a1a441787d5026e6f69aadadf9296fd6ae3fc3b11fd1cbc": 4543672,
+      "8c0575e6ec2e0dccea3445e36b0cd99d4c237c136d86e2400b710de22f1e6460": 57372294,
+      "95c4042ee7b43d473bcc80f264a4d7c6e8634d18cb2e3dba58277b7b5645840f": 186,
+      "150ae9de14cf67d192ab855eb94172865ba70f5b4b2e832ffed3e8f1df6307f5": 6886,
+      "9cccfd001630953db088596f7925cc5a4d0a4f7d973b73cf5b4a152bc6b336c0": 1438296647,
+      "77b0ceda29ac0c8b985431cc5a073a2e45f89103d83877451694b5e13be7c794": 59362,
+      "6fd18a5204307c56c8849e2653f9b154d15c95c565e05d93d2b407af98b620aa": 1683,
+      "3b176c2fc716d64847e7a75a3572297f05a2f4d7f8d649ce1dd1c687350f9ef4": 1521,
+      "968382d2087be4a91dc8b958b9942bca8454706e285f1c67eb69115281229961": 42229717,
+      "38335de313cbee8c162b6c40a86ab07325daba355bfd90c00eb587ecf52d3516": 291095512,
+      "9888f14b5189a5a30bcbf47703838e01863a3535f90812de79c5186b818e2ba6": 1018,
+      "83f2d4152def83b24e86420b4a39447670f8ab1eb784c4e26b7b482b87613858": 169,
+      "4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1": 32
+    },
+    "source_url": "https://github.com/leejet/stable-diffusion.cpp/tree/e239e4b0fd3de49834cec67031a44796ca465abc",
+    "license": "MIT runtime source; separate CUDA and base-image component licenses"
+  },
+  "licenses": [
+    {
+      "name": "Qwen Research License",
+      "url": "https://huggingface.co/Qwen/Qwen-Image-2.1/blob/b3179ad355be050328e483a9dfdd9e60cd62adfa/LICENSE"
+    },
+    {
+      "name": "Apache 2.0 encoder/projector",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0",
+      "source_url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/blob/f982a07559d4a2f6c8744d840bf6fccab30eea96/README.md"
+    },
+    {
+      "name": "Runtime MIT source",
+      "url": "https://github.com/leejet/stable-diffusion.cpp/blob/e239e4b0fd3de49834cec67031a44796ca465abc/LICENSE"
+    },
+    {
+      "name": "CUDA components",
+      "url": "https://docs.nvidia.com/cuda/eula/index.html"
+    }
+  ],
+  "files": [
+    {
+      "role": "diffusion",
+      "filename": "qwen-image-2.1-Q4_K_M.gguf",
+      "repository": "0xSojalSec/Qwen-Image-2.1-Uncensored-GGUF",
+      "revision": "242be4d1f70cc26fa45773c452f81980ed656e2e",
+      "url": "https://huggingface.co/0xSojalSec/Qwen-Image-2.1-Uncensored-GGUF/resolve/242be4d1f70cc26fa45773c452f81980ed656e2e/qwen-image-2.1-Q4_K_M.gguf",
+      "size_bytes": 4604557984,
+      "sha256": "833439e91bc1152d28f37aa198c7f6f4218b7de95754c2f7a318a2422ab4b2f8",
+      "license": "Qwen Research"
+    },
+    {
+      "role": "text_encoder",
+      "filename": "Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+      "repository": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
+      "revision": "f982a07559d4a2f6c8744d840bf6fccab30eea96",
+      "url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/f982a07559d4a2f6c8744d840bf6fccab30eea96/Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+      "size_bytes": 5027784800,
+      "sha256": "67d1659bfe71b89d50b45a4ad1a9e5b997e5bb16ce5da66a6a6167abd569e9e2",
+      "license": "Apache-2.0"
+    },
+    {
+      "role": "vision_projector",
+      "filename": "mmproj-Qwen3VL-8B-Instruct-F16.gguf",
+      "repository": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
+      "revision": "f982a07559d4a2f6c8744d840bf6fccab30eea96",
+      "url": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct-GGUF/resolve/f982a07559d4a2f6c8744d840bf6fccab30eea96/mmproj-Qwen3VL-8B-Instruct-F16.gguf",
+      "size_bytes": 1159029824,
+      "sha256": "ca524100ebf825c9a870db1c580d03879e0da0ab2541697e2458e64891cf9d38",
+      "license": "Apache-2.0"
+    },
+    {
+      "role": "vae",
+      "filename": "diffusion_pytorch_model.safetensors",
+      "repository": "Qwen/Qwen-Image-2.1",
+      "revision": "b3179ad355be050328e483a9dfdd9e60cd62adfa",
+      "url": "https://huggingface.co/Qwen/Qwen-Image-2.1/resolve/b3179ad355be050328e483a9dfdd9e60cd62adfa/vae/diffusion_pytorch_model.safetensors",
+      "size_bytes": 1350989512,
+      "sha256": "a07a1b7c4ee2966a1b3bdc37de9b4f983d56937e46619f709a80b6e490675417",
+      "license": "Qwen Research"
+    }
+  ]
+}
