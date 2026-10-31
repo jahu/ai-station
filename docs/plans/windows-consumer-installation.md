@@ -93,3 +93,20 @@ cases SETUP-149–152; all operator answers remain untested. Offline QA tools pa
 26 tests. The native Windows shell, owned registration/import/recovery, actual
 platform acceptance and signing remain required next steps. Private build/layer
 proofs are in `data/acceptance/windows-consumer-install-20261031/`.
+
+## Windows ownership state increment
+
+The native shell uses a pure PowerShell state/command module before wiring OS
+operations. A random installation UUID fixes the private distribution name,
+local directory, accepted package hash, phase and later registry identity.
+Reconciliation compares both registration name and canonical private path,
+requires WSL2, and verifies the guest build receipt before marking readiness.
+A missing previously registered distro, reused name, foreign folder, duplicate
+registration or changed registry ID requires inspection instead of adoption.
+An unregistered leftover disk is preserved for recovery rather than overwritten.
+Only start/status/open/stop can produce fixed ordinary-user bridge arguments;
+there is no shell, global shutdown, terminate or unregister plan.
+
+This module alone is not an installer. Windows ACL/reparse validation, immutable
+archive transfer, registry/WSL execution, native UI and actual WSL acceptance
+must still be implemented/tested before exposing a consumer installation flow.
