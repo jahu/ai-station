@@ -298,7 +298,13 @@ def test_catalog_candidates_freeze_source_size_hash_license_without_loading_a_ru
     for item in CANDIDATES:
         assert candidate(item.id) is item
         assert item.license == "Apache-2.0" and item.format == "gguf"
-        assert item.revision == REVISION and REVISION in item.file.urls[0]
+        assert item.file.urls == (
+            f"https://huggingface.co/{item.repository}/resolve/{item.revision}/{item.filename}",
+        )
+        assert item.source_url == f"https://huggingface.co/{item.repository}/tree/{item.revision}"
+        assert len(item.revision) == 40
+        if item.id.startswith("huihui-qwen3-4b-"):
+            assert item.revision == REVISION
         assert item.file.size_bytes > 1024**3
         assert "main" not in item.file.urls[0]
         assert "installed" not in item.model_dump() and "available" not in item.model_dump()
