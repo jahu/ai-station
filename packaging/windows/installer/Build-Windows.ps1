@@ -42,6 +42,10 @@ try {
  # Windows PowerShell 5.1 forbids mixing CompilerParameters with the separate
  # output/reference flags. Keep the complete native build in one configuration.
  Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Bootstrap.cs'))) -Language CSharp -CompilerParameters $parameters
+ $binary=[IO.File]::ReadAllBytes($parameters.OutputAssembly)
+ if ($binary.Length -lt 256 -or $binary.Length -gt 1048576 -or [BitConverter]::ToUInt16($binary,0) -ne 0x5a4d) { throw 'The native launcher did not produce a valid executable.' }
+ $pe=[BitConverter]::ToInt32($binary,0x3c)
+ if ($pe -lt 0 -or $pe -gt $binary.Length-128 -or [BitConverter]::ToUInt32($binary,$pe) -ne 0x4550 -or [BitConverter]::ToUInt16($binary,$pe+4) -ne 0x8664 -or [BitConverter]::ToUInt16($binary,$pe+24) -ne 0x20b -or [BitConverter]::ToUInt16($binary,$pe+24+68) -ne 2) { throw 'The native launcher must be an actual x64 GUI executable.' }
  $hashes=[ordered]@{}
  foreach ($file in [IO.Directory]::EnumerateFiles($stage)) { $hashes[[IO.Path]::GetFileName($file)]=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() }
  if ((Get-StationPublisherSource) -cne $sourceHead) { throw 'The publisher source changed during packaging; no payload was published.' }

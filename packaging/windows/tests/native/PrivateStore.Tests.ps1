@@ -17,6 +17,7 @@ function New-FixtureAcl($Sid) {
  return $control
 }
 $root=Join-Path ([IO.Path]::GetTempPath()) ('ai-station-boundary-'+[guid]::NewGuid().ToString('N'))
+$unsafeRoot=$root+'-unsafe'
 $target=Join-Path $root 'target';$link=Join-Path $root 'junction'
 [void][IO.Directory]::CreateDirectory($target)
 try {
@@ -45,13 +46,16 @@ try {
  Assert-StationPrivateAcl $root
  Check $true 'A genuinely owner/SYSTEM-only native ACL must pass.'
  $extra=[Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-11'),[Security.AccessControl.FileSystemRights]::Read,[Security.AccessControl.AccessControlType]::Allow)
- # Set-Acl mutates a persisted descriptor on Windows PowerShell 5.1. Use a
- # fresh DACL for this separate write; never request audit/SACL privileges.
+ # Set-Acl can request SACL privileges when rewriting an already protected
+ # folder on Windows PowerShell 5.1. This fixture needs only initial creation,
+ # just like the factory. Do not rewrite an existing private directory.
+ [void][IO.Directory]::CreateDirectory($unsafeRoot)
  $acl=New-FixtureAcl $sid
- $acl.AddAccessRule($extra);Set-Acl -LiteralPath $root -AclObject $acl
- Refuses {Assert-StationPrivateAcl $root}
+ $acl.AddAccessRule($extra);Set-Acl -LiteralPath $unsafeRoot -AclObject $acl
+ Refuses {Assert-StationPrivateAcl $unsafeRoot}
  Write-Output ('PASS '+$script:Cases+' actual Windows ACL/existing/dangling-junction assertions')
 } finally {
  try {if(([IO.File]::GetAttributes($link) -band [IO.FileAttributes]::ReparsePoint) -ne 0){[IO.Directory]::Delete($link)}} catch [IO.FileNotFoundException] {} catch [IO.DirectoryNotFoundException] {}
  if([IO.Directory]::Exists($root)){[IO.Directory]::Delete($root,$true)}
+ if([IO.Directory]::Exists($unsafeRoot)){[IO.Directory]::Delete($unsafeRoot,$true)}
 }
