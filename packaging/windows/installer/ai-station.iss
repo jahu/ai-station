@@ -1,4 +1,4 @@
-; Publisher build input. Native Windows signing/installation qualification is required.
+; Inno Setup 7 publisher input. Native signing/installation qualification is required.
 #ifndef Payload
   #error Payload directory is required
 #endif
@@ -13,12 +13,16 @@ AppId={{556C5DB1-CA40-4920-A26F-6140E96D407C}
 AppName=AI Station
 AppVersion={#InstallerVersion}
 AppPublisher=AI Station contributors
+SetupArchitecture=x64
+ArchitecturesAllowed=x64os
+ArchitecturesInstallIn64BitMode=x64os
 DefaultDirName={localappdata}\Programs\AI Station
 PrivilegesRequired=lowest
 MinVersion=10.0.22000
 DisableProgramGroupPage=yes
 LicenseFile={#Payload}\LICENSE
 OutputBaseFilename=AI-Station-{#VersionId}-Setup
+OutputDir={#Payload}.installer
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -27,7 +31,8 @@ RestartApplications=no
 UninstallDisplayName=AI Station
 UninstallDisplayIcon={app}\versions\{#VersionId}\AIStation.exe
 [Files]
-Source: "{#Payload}\*"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Payload}\*"; Excludes: "ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Payload}\ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion nocompression
 [Icons]
 Name: "{userprograms}\AI Station"; Filename: "{app}\versions\{#VersionId}\AIStation.exe"
 [Run]

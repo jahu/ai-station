@@ -33,4 +33,18 @@ function Get-StationWslRegistrations {
     } finally { $registry.Dispose() }
 }
 
-Export-ModuleMember -Function Assert-StationWindowsHost,Get-StationWslExecutable,Get-StationWslRegistrations
+function Assert-StationWindowsPreparationReady {
+    Assert-StationWindowsHost
+    foreach($path in @('SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending','SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')) {
+        $key=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($path,$false)
+        try {
+            if($null -ne $key) {
+                $failure=[InvalidOperationException]::new('Restart Windows to finish preparing its local environment, then reopen AI Station.')
+                $failure.Data['AIStationRestartRequired']=$true
+                throw $failure
+            }
+        } finally { if($null -ne $key){$key.Dispose()} }
+    }
+}
+
+Export-ModuleMember -Function Assert-StationWindowsHost,Get-StationWslExecutable,Get-StationWslRegistrations,Assert-StationWindowsPreparationReady

@@ -8,7 +8,11 @@ function Assert-StationNoReparsePath {
     Assert-StationWindowsHost
     $item=[IO.Path]::GetFullPath($Path)
     while ($item) {
-        if (([IO.File]::Exists($item) -or [IO.Directory]::Exists($item)) -and ([IO.File]::GetAttributes($item) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Private installation storage must not cross a Windows link or junction.' }
+        # Exists follows a link and returns false for a dangling target. Inspect
+        # the directory entry itself before deciding a new path is safe.
+        try {
+            if (([IO.File]::GetAttributes($item) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Private installation storage must not cross a Windows link or junction.' }
+        } catch [IO.FileNotFoundException] { } catch [IO.DirectoryNotFoundException] { }
         $item=[IO.Path]::GetDirectoryName($item)
     }
 }
