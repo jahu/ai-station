@@ -11,6 +11,13 @@ function Child([string]$Script) {
  $info.RedirectStandardInput=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
  $p=[Diagnostics.Process]::Start($info);$p.StandardInput.Close();return $p
 }
+Check ((Format-StationWslArguments @('--version')) -ceq '--version') 'A WSL switch must not be quoted and interpreted as a default-distribution command.'
+$command=Format-StationWslArguments @('--import','AIStation-fixture','C:\Private folder\guest','C:\Package Łódź\rootfs.tar.gz','--version','2')
+Check ($command -ceq '--import AIStation-fixture "C:\Private folder\guest" "C:\Package Łódź\rootfs.tar.gz" --version 2') 'Whitespace-bearing data must stay one argument without quoting native switches.'
+foreach($bad in @('path"value',"line`nbreak",'C:\trailing\')) {
+ $failed=$false;try{Format-StationWslArguments @('--import',$bad)|Out-Null}catch{$failed=$true}
+ Check $failed 'An ambiguous native argument was accepted.'
+}
 Check ((Wait-StationWslProcess (Child 'Write-Output ''ready''') -KeepOutput $true).Trim() -ceq 'ready') 'The actual native process output was lost.'
 foreach($script in @('exit 7','Write-Output (''x''*17000)')) {
  $failed=$false

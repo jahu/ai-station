@@ -16,13 +16,8 @@ function Read-StationInstallRecord {
 function Start-StationWslProcess {
     param([string]$Executable,[string[]]$Arguments,[string]$Directory)
     # Only callers inside this module provide the typed planner's fixed operations.
-    $quoted=@()
-    foreach ($value in $Arguments) {
-        if ($value -match '["\x00-\x1f]' -or $value.EndsWith('\')) { throw 'Invalid argument in the fixed WSL operation.' }
-        $quoted+=('"'+$value+'"')
-    }
     $info=[Diagnostics.ProcessStartInfo]::new()
-    $info.FileName=$Executable; $info.Arguments=($quoted -join ' '); $info.WorkingDirectory=$Directory
+    $info.FileName=$Executable; $info.Arguments=Format-StationWslArguments $Arguments; $info.WorkingDirectory=$Directory
     $info.UseShellExecute=$false; $info.CreateNoWindow=$true
     $info.RedirectStandardInput=$true; $info.RedirectStandardOutput=$true; $info.RedirectStandardError=$true
     $info.StandardOutputEncoding=[Text.UTF8Encoding]::new($false,$true)

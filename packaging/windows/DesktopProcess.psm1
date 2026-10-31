@@ -1,4 +1,16 @@
 # Private native installer subprocess supervision, never a workload command API.
+function Format-StationWslArguments {
+    param([Parameter(Mandatory=$true)][string[]]$Arguments)
+    $parts=@()
+    foreach($value in $Arguments) {
+        if ([string]::IsNullOrEmpty($value) -or $value -match '["\x00-\x1f]' -or $value.EndsWith('\')) { throw 'Invalid argument in the fixed WSL operation.' }
+        # WSL's Windows parser does not recognize quoted switches as options.
+        # Quote only whitespace-bearing data (such as the private archive path).
+        if($value -match '\s') { $parts+=('"'+$value+'"') } else { $parts+=$value }
+    }
+    return ($parts -join ' ')
+}
+
 function Wait-StationWslProcess {
     param($Process,[bool]$KeepOutput=$false,
           [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
@@ -25,4 +37,4 @@ function Wait-StationWslProcess {
         throw
     } finally { $Process.Dispose() }
 }
-Export-ModuleMember -Function Wait-StationWslProcess
+Export-ModuleMember -Function Wait-StationWslProcess,Format-StationWslArguments
