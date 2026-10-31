@@ -1,5 +1,5 @@
 {
-  "version": 27,
+  "version": 28,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -25,7 +25,8 @@
     "docs/plans/managed-image-setup.md",
     "docs/plans/managed-music-setup.md",
     "docs/plans/managed-video-setup.md",
-    "docs/plans/managed-avatar-setup.md"
+    "docs/plans/managed-avatar-setup.md",
+    "docs/plans/managed-effects-setup.md"
   ],
   "cases": [
     {
@@ -4537,6 +4538,113 @@
       ],
       "resources": "Bez nowej generacji/pobierania; konta i oddzielne profile QA",
       "minutes": 8
+    },
+    {
+      "id": "SETUP-131",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: instalacja i pierwszy wynik",
+      "prerequisites": [
+        "Oddzielny profil QA Linux x86-64; zgodna karta NVIDIA BF16 z co najmniej 8 GiB VRAM, 24 GiB RAM, odpowiedni sterownik i miejsce wskazane przez UI; administrator; własny krótki film z Library."
+      ],
+      "steps": [
+        "W Models wybierz Set up sound effects. Sprawdź rzeczywisty sprzęt, miejsce, źródła oraz osobne warunki MMAudio i Apple CLIP research profile.",
+        "Jeżeli warunki odpowiadają testowi, zaakceptuj je i przygotuj silnik. Po zakończeniu wybierz Open Sound effects.",
+        "Wybierz film z Library, opisz dźwięk i dwie sceny. Wygeneruj i odtwórz WAV oraz wynikowy film na komputerze i telefonie."
+      ],
+      "expected": [
+        "Instalacja nie wymaga ręcznego Pythona ani plików modeli. Wynik obejmuje cały film, zachowuje źródło i historię. Odsłuchaj zgodność opisów/scen; samo poprawne odtwarzanie nie oznacza akceptacji jakości."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-132",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: zatrzymanie i wznowienie instalacji",
+      "prerequisites": [
+        "Dostępny profil MMAudio, konto administratora; instalacja jeszcze nieukończona."
+      ],
+      "steps": [
+        "Uruchom przygotowanie i wybierz Stop sound effects setup. Opuść zakładkę i wróć.",
+        "Wybierz Resume sound effects setup. Sprawdź wcześniejszą próbę i zakończenie nowej."
+      ],
+      "expected": [
+        "Zatrzymanie jest potwierdzone; historia pozostaje w tym samym zadaniu. Zweryfikowane pobrane pliki są używane ponownie. Przerwana próba nie udaje gotowego silnika."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-133",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: anulowanie i odzyskiwanie procesu",
+      "prerequisites": [
+        "Przygotowany profil MMAudio; własny film i trwające generowanie; osobne środowisko QA do restartu Runnera."
+      ],
+      "steps": [
+        "Uruchom dźwięk, sprawdź postęp i odśwież widok. W środowisku QA zrestartuj Runnera i sprawdź to samo zadanie.",
+        "Anuluj zadanie i sprawdź Runs, Library oraz dostępne zasoby."
+      ],
+      "expected": [
+        "Po restarcie odzyskany jest ten sam zarządzany proces; nie pojawia się druga generacja. Stop zwalnia zasoby dopiero po potwierdzeniu zakończenia procesu. Nie ma opublikowanego częściowego dźwięku ani filmu."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-134",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: gotowość współdzielona, wyniki prywatne",
+      "prerequisites": [
+        "Dwa konta A i B; administrator A przygotował silnik i wygenerował dźwięk."
+      ],
+      "steps": [
+        "Na B sprawdź gotowość Sound effects. Sprawdź historię instalacji i bezpośrednie odnośniki do zadań, plików wejściowych i wyników A.",
+        "Jako zwykły użytkownik spróbuj rozpocząć instalację wspólnego silnika."
+      ],
+      "expected": [
+        "B widzi wyłącznie współdzieloną gotowość i własne dane; nie może odczytać historii, promptów, źródeł ani wyników A. Instalacja wymaga administratora. Publiczna gotowość nie ujawnia identyfikatora prywatnej instalacji A."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-135",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: istniejący silnik i eksport bez instalacji wideo",
+      "prerequisites": [
+        "Osobne profile QA: istniejąca jawna konfiguracja MMAudio oraz świeża instalacja tylko Sound effects; własny film."
+      ],
+      "steps": [
+        "Sprawdź zachowanie istniejącego MMAudio po aktualizacji. Niekompletna konfiguracja powinna wskazać problem bez cichego zastąpienia jej.",
+        "W świeżym profilu przygotuj wyłącznie Sound effects i utwórz dźwięk oraz podgląd filmu. Otwórz edytor, zapisz miks i wyeksportuj.",
+        "Na niezgodnym sprzęcie sprawdź komunikat i listę dostępnych GPU."
+      ],
+      "expected": [
+        "Jawna konfiguracja zachowuje pierwszeństwo. Podgląd i eksport używają przygotowanych kodeków bez ręcznego środowiska wideo. Niezgodna karta lub sterownik nie dają fałszywej gotowości."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
     }
   ]
 }

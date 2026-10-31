@@ -1170,3 +1170,14 @@ checks the opaque environment, its own interpreter, model links, finishing codec
 GPU admission and source observation before starting owned inference. Setup
 receipts, histories, portraits, recordings and generated movies retain ordinary
 account ownership; only verified runtime readiness and models are shared.
+
+
+Managed film-sound preparation accepts only its built-in reviewed profile and
+uses the existing source/hash/permission/deadline and Stop/adoption fences. The
+single reviewed source-build exception accepts only two qualified interpreters,
+fixed tools and an exact reproduced wheel; build-only inputs never enter the
+runtime hash lock. Inference validates its opaque environment, fixed local model
+view, real BF16 GPU/driver and owned process scope. Sound previews freeze that
+same environment, verify their own Python and run in a separate four-GiB CPU
+scope. Shared readiness and model infrastructure confer no access to another
+account's setup, inputs, prompts, workspace, sound stems or films.

@@ -38,6 +38,9 @@ class ComposeRequest(BaseModel):
     run_id: UUID
     deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     managed_runtime: ManagedRuntime | None = None
+    effects_environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
     clips: list[ClipInput] = Field(min_length=1, max_length=256)
     fps: Literal[24, 25]
     width: StrictInt = Field(ge=128, le=1280, multiple_of=32)
@@ -55,8 +58,12 @@ class ComposeRequest(BaseModel):
 
     @model_validator(mode="after")
     def bounds(self):
-        if self.managed_runtime is not None and self.deadline_at is None:
+        if (
+            self.managed_runtime is not None or self.effects_environment_id is not None
+        ) and self.deadline_at is None:
             raise ValueError("Managed composition requires its absolute execution deadline")
+        if self.managed_runtime is not None and self.effects_environment_id is not None:
+            raise ValueError("Choose exactly one prepared composition environment")
         if (
             sum(clip.expected_frames for clip in self.clips) > 20000
             or sum(clip.size_bytes for clip in self.clips) > 8 * 1024**3
@@ -93,6 +100,13 @@ def start_composition(manager, body, *, effects_preview=False):
         raise HTTPException(403, "Media read/write permissions are required")
     settings = get_settings()
     managed = None
+    managed_effects = None
+    if body.effects_environment_id:
+        from ai_station_runner.effects_selection import selection as effects_selection
+
+        managed_effects = effects_selection(settings, body.effects_environment_id)
+        if not effects_preview or not managed_effects or not managed_effects.get("managed"):
+            raise HTTPException(409, "The exact managed sound preview environment is unavailable")
     if body.managed_runtime is not None:
         from ai_station_runner.video_selection import selection
 
@@ -102,6 +116,8 @@ def start_composition(manager, body, *, effects_preview=False):
     configured_python = settings.video_python or (settings.mmaudio_python if settings.mmaudio_enabled else "")
     if managed:
         configured_python = managed["video_python"]
+    if managed_effects:
+        configured_python = managed_effects["mmaudio_python"]
     if not configured_python:
         raise HTTPException(409, "Configure the existing video Python environment with PyAV")
     python = Path(configured_python).expanduser().absolute()
@@ -139,7 +155,7 @@ def start_composition(manager, body, *, effects_preview=False):
         CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1", PYTHONUNBUFFERED="1", TMPDIR=str(work)
     )
     prefix = []
-    if managed:
+    if managed or managed_effects:
         from ai_station_runner.memory_scope import scope_environment, scope_prefix
 
         prefix = scope_prefix(run_id, 4096)

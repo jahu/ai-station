@@ -15,7 +15,7 @@ def test_cpu_timeline_uses_ready_managed_video_when_external_configuration_is_ab
 
     from ai_station_runner import video_selection
 
-    settings = SimpleNamespace(mmaudio_enabled=False, video_python="")
+    settings = SimpleNamespace(mmaudio_enabled=False, video_python="", host_data_dir=lambda: tmp_path)
     monkeypatch.setattr(runtime, "get_settings", lambda: settings)
     monkeypatch.setattr(runtime, "available", lambda: True)
     monkeypatch.setattr(

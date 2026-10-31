@@ -34,6 +34,7 @@ from app.cursor_executor import CursorProposalExecutor
 from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
 from app.effects import EffectsExecutor, EffectsPreviewExecutor
+from app.effects_setup_job import EffectsSetupExecutor
 from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
@@ -329,6 +330,7 @@ EXECUTORS = {
     "music_setup": MusicSetupExecutor(),
     "video_setup": VideoSetupExecutor(),
     "avatar_setup": AvatarSetupExecutor(),
+    "effects_setup": EffectsSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),

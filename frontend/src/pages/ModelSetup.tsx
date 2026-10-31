@@ -23,6 +23,7 @@ import MemorySetupPanel from "./MemorySetupPanel";
 import MusicSetupPanel from "./MusicSetupPanel";
 import VideoSetupPanel from "./VideoSetupPanel";
 import AvatarSetupPanel from "./AvatarSetupPanel";
+import EffectsSetupPanel from "./EffectsSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -373,6 +374,7 @@ export default function ModelSetup() {
       <ImageSetupPanel />
       <VideoSetupPanel />
       <AvatarSetupPanel />
+      <EffectsSetupPanel />
       <MusicSetupPanel />
       <MemorySetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
@@ -723,8 +725,8 @@ export default function ModelSetup() {
                   <Download size={24} />
                   <p>Your downloads will appear here.</p>
                   <small className="muted">
-                    Conversation model downloads are saved here. Speech setup
-                    keeps its own progress above.
+                    Conversation model downloads are saved here. Other
+                    installations keep their progress in the cards above.
                   </small>
                 </div>
               )

@@ -230,6 +230,14 @@ Python and finishing codec. Existing Sonic and EchoMimic configurations are
 preserved; installing Sonic does not install EchoMimic. Output is up to 768 px,
 rather than native HD. [Avatar setup and qualification](docs/plans/managed-avatar-setup.md).
 
+**Set up sound effects** prepares the existing MMAudio film-sound engine,
+companions and CPU finishing tools on supported Linux BF16-capable NVIDIA
+workstations. Review hardware, space and component terms, install with saved
+Stop/Resume, then add scene sounds to a film in Audio. This is a **research
+profile**: the Apple CLIP component has a research-only license and MMAudio
+checkpoints have separate noncommercial terms. Existing configured engines stay
+selected. [Sound setup and measured qualification](docs/plans/managed-effects-setup.md).
+
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
 in your browser, and keeps data outside the installed package. Docker/Compose

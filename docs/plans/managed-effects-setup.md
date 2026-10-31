@@ -24,9 +24,14 @@ existing direct-file contract remains authoritative for configured installations
 Source/model contents match the existing native profile; names alone are not
 proof. MMAudio code is MIT; its checkpoints are separately CC BY-NC 4.0. Keep
 CLIP, BigVGAN, Python, CUDA and dependency notices visible under their own terms.
+The pinned Apple CLIP weights have an Apple research model license restricted to
+noncommercial scientific research and academic development. The setup card labels
+this as a research profile and displays the exact component license; do not
+represent the bundle as generally permissive. BigVGAN retains its MIT notice.
 
-The inference dependency closure contains 71 distributions. All 99 applicable
-requirements pass and all 21,346 selected installed payload files match their
+The initial inference-only closure was expanded with the native schema/CPU
+renderer dependencies: 75 distributions and 105 applicable requirements pass.
+All 21,467 selected installed payload files match their
 RECORD hashes. This deliberately excludes unrelated demo/training dependencies
 from the upstream project's optional operational surface. Actual independent
 SDK imports and generation, rather than metadata alone, must prove sufficiency.
@@ -34,13 +39,15 @@ The current native wrapper requires Torch 2.8.0+cu126, torchvision 0.23.0+cu126,
 torchaudio 2.8.0+cu126, open_clip_torch 2.32.0, timm 1.0.30, PyAV 16.1.0 and
 NumPy 2.0.2; preserve those exact versions.
 
-Seventy compatible public wheels resolve to 3,586,720,579 bytes. CUDA Torch
+Seventy-four compatible runtime wheels are pinned, plus two build-only wheels. CUDA Torch
 wheels come from the official PyTorch cu126 index with published SHA-256 and
 exact lengths; other wheels come from exact PyPI release metadata. The remaining
 ANTLR 4.9.3 distribution has only a source release. Reuse the reviewed fixed
-offline source-build strategy introduced for Sonic, with Python 3.12 reproducibility now checked: two offline builds on the pinned
+offline source-build strategy introduced for Sonic. Python 3.12 reproducibility
+is checked: two offline builds on the pinned
 3.12.14 interpreter produced the exact existing 144,590-byte wheel, SHA-256
-`e403b2aa433c161c3ed3dc04e9176db63aef53c6dc0af5bb9617748e9c0dd1ba`. The selected runtime uses setuptools 78.1.0 whereas
+`e403b2aa433c161c3ed3dc04e9176db63aef53c6dc0af5bb9617748e9c0dd1ba`.
+The selected runtime uses setuptools 78.1.0 whereas
 the reviewed builder uses 79.0.1. Build-only inputs must not introduce conflicting
 runtime requirements or silently replace the selected runtime dependency set.
 Keep that distinction explicit in the fixed manifest and normal tests; do not
@@ -116,3 +123,43 @@ Without a fixed callback, build-only inputs are rejected. This permits the known
 All 94 cases across the complete affected source-build and speech/music/video/
 avatar environment families pass. These are reusable preparation changes, not
 completed managed-effects assembly, dispatch or UI qualification.
+
+
+## Implemented and locally qualified profile
+
+The fixed recipe contains 86 verified public objects (14,365,297,264 bytes),
+including the independent Python 3.12.14, pinned SDK, coherent dependencies,
+source-build exception and seven companions. An actual owned four-GiB zero-swap
+assembly passed its offline SDK/schema/codec probe. A fresh private account then
+prepared the engine through the compiled UI, stopped native verification and
+resumed the same Task. Setup history and desktop/390-px phone controls passed.
+
+A real ordinary UI/API/separate-worker/native request used a retained, explicitly
+imported prior neutral Wan qualification film, rather than repeating video
+inference. Two timed descriptions cover frames 0–48 and 48–96. It produced the
+complete four-second, 176,400-sample mono 44.1-kHz WAV and the 96-frame synchronized
+MP4. The preview freezes the same opaque environment and has a separate four-GiB
+CPU reservation/scope. Library decoding, seeking and desktop/phone layout passed.
+The same prepared environment also rendered a complete saved CPU timeline/export,
+without a configured video Python or installed video engine. Existing explicit
+MMAudio/video integrations keep priority.
+
+An idempotent follow-up in that same creative workspace verified Runner restart
+retaining the exact PID/start time, Task-wide Stop, no partial publication and
+confirmed resource release. Its first finished result and history remained
+available. A second actual account could inspect opaque shared engine readiness,
+but was denied owner setup history, Runs, workspace, input film, WAV and movie;
+installation remained administrator-only.
+
+Normal checks include all 1,637 native cases (two expensive opt-in skips), 92
+complete backend regression cases plus the managed inference/preview flow case,
+274 additional backend regression cases across 13 complete families, and all
+1,054 frontend cases. The default-policy compiled setup/history/complete playback/
+seek/editor/phone and fake API/separate-worker/SSE checks passed. The final image
+matches all 601 application/UI files; the native wheel matches all 186 source/
+recipe assets. Lint, types, formatting, production UI/Docker builds, three Compose
+variants and 26 QA catalog checks pass. Review and production rollout remain
+separate recorded gates. Private evidence is under the
+acceptance directory named above, outside Git. Native inference mathematics and
+original source/model/environment files were preserved. These results demonstrate
+complete execution and timing; perceptual sound/scene acceptance remains in NR-07.

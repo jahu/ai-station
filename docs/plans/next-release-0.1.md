@@ -54,9 +54,10 @@ CPU editor export, native recovery/Stop and private shared-engine checks.
 [Guided avatars](managed-avatar-setup.md) are reviewed, merged and deployed
 (PR #543): independent preparation, complete two-second generation,
 recovery/Stop, private outputs and final packaged/default-policy checks passed.
-[Guided film sound](managed-effects-setup.md) is the next NR-14 increment; its
-existing source, seven companions and inference dependency payloads are audited,
-while independent assembly and application qualification remain to implement.
+[Guided film sound](managed-effects-setup.md) is locally qualified: independent
+offline assembly, fresh-account Stop/Resume, complete two-cue sound/preview,
+CPU editor/export, native recovery/Stop and account privacy passed. Final
+packaging, review and rollout remain separate gates for this increment.
 Consumer installation on all three operating systems, remaining sound setup,
 broader model selection and NR-06/07 quality acceptance remain in scope.
 

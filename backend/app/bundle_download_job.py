@@ -60,7 +60,7 @@ def publish_verified_models(session, entry, objects):
                 mtime=mtime,
                 format=Path(item.filename).suffix.lstrip("."),
                 category="audio"
-                if entry.capability in {"speech", "music"}
+                if entry.capability in {"speech", "music", "effects"}
                 else "video"
                 if entry.capability in {"video", "avatar"}
                 else "image",

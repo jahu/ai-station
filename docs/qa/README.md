@@ -1,10 +1,12 @@
 # Operator QA catalog and workbook
 
-The developing v27 catalog contains 199 cases and adds SETUP-126–130 for guided
-avatar preparation, complete recordings, Stop/Resume, private readiness and
-existing Sonic/Echo preservation. These are untested operator cases; see the
-[avatar setup plan](../plans/managed-avatar-setup.md). It retains SETUP-121–125
-for guided video preparation and [its qualification](../plans/managed-video-setup.md).
+The developing v28 catalog contains 204 cases and adds SETUP-131–135 for guided
+film-sound preparation, research/component notices, complete sound/preview output,
+Stop/Resume, native recovery, private shared readiness and CPU editing without a
+separate video environment. These remain untested operator cases; see the
+[effects setup plan](../plans/managed-effects-setup.md). It retains SETUP-126–130
+for [guided avatars](../plans/managed-avatar-setup.md) and SETUP-121–125
+for [guided video](../plans/managed-video-setup.md).
 It retains SETUP-117–120 for guided
 music installation, first-track playback, Stop/Resume, native recovery and
 account privacy. Internal qualification is recorded in the

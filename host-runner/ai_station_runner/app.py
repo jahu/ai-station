@@ -30,6 +30,7 @@ from ai_station_runner.dependencies import DependencyRequest, dependency_report,
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
 from ai_station_runner.effects_contract import EffectsRequest
+from ai_station_runner.effects_prepare import router as effects_setup_router
 from ai_station_runner.fish_contract import FishRequest
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
 from ai_station_runner.github_read import GithubReadRequest
@@ -752,6 +753,7 @@ app.include_router(image_setup_router)
 app.include_router(music_setup_router)
 app.include_router(video_setup_router)
 app.include_router(avatar_setup_router)
+app.include_router(effects_setup_router)
 app.include_router(image_jobs_router)
 
 
