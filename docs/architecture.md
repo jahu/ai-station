@@ -26,6 +26,16 @@ publication creates shared ModelFile observations and a private receipt only
 after every object verifies. This file-preparation operation does not install
 Python dependencies, activate a model definition or claim speech readiness.
 
+The [managed video environment](plans/managed-video-setup.md) reuses verified
+downloads, the shared offline preparation lifecycle and the existing headless Wan
+executor. Each generation freezes an opaque shared environment identity; its
+private native mapping is published before activation and never exposes another
+account's setup Run. Image animation and whole-film continuation use the same
+profile. CPU composition uses that exact environment and a separate four-GiB
+reservation; explicit Resume retains verified segments. Existing external video
+configuration, including incomplete settings, keeps priority. No ComfyUI server,
+custom-node service or second execution engine is introduced.
+
 The [managed music environment](plans/managed-music-setup.md) reuses verified
 downloads, the owned offline preparation lifecycle and the existing ACE-Step
 executor. A fixed recipe owns independent Python/SDK/dependencies and exact

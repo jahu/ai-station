@@ -3,18 +3,17 @@
 import json
 import os
 import platform
-import re
-import stat
-import subprocess
 import sys
 from pathlib import Path
 from uuid import UUID
 
 from ai_station_runner import music_protocol
+from ai_station_runner.environment_files import command as command
+from ai_station_runner.environment_files import install_python
+from ai_station_runner.environment_files import read_json as read_json
 from ai_station_runner.speech_environment import (
     directory,
     fingerprint,
-    offline_environment,
     unpack_python,
     unpack_tar,
     verified_object,
@@ -40,20 +39,6 @@ def recipe():
     ):
         raise ValueError("The complete fixed music recipe is required")
     return value
-
-
-def command(argv, *, folder, check):
-    check()
-    environment = {
-        **offline_environment(folder),
-        "CUDA_VISIBLE_DEVICES": "",
-        "NUMBA_CACHE_DIR": str(folder / "cache/numba"),
-        "PYTHONDONTWRITEBYTECODE": "1",
-        "TOKENIZERS_PARALLELISM": "false",
-    }
-    # Every child inherits the owned preparation group/scope and deadline.
-    subprocess.run(argv, cwd=folder, env=environment, check=True)
-    check()
 
 
 def prepare(root, operation_id, *, check=lambda: None, progress=lambda value: None):
@@ -87,46 +72,9 @@ def prepare(root, operation_id, *, check=lambda: None, progress=lambda value: No
     folder.mkdir(mode=0o700)
     for name in ("home", "cache", "wheels", "sources", "models"):
         directory(folder, name)
-    standalone = next(v for v in frozen["inputs"] if v["kind"] == "python")
-    progress({"phase": "creating_environment"})
-    bootstrap = unpack_python(objects[standalone["filename"]], folder, check)
-    command([str(bootstrap), "-m", "venv", "--without-pip", str(folder / "venv")], folder=folder, check=check)
-    python = str(folder / "venv/bin/python")
-    command([python, "-m", "ensurepip"], folder=folder, check=check)
-    wheels = [v for v in frozen["inputs"] if v["kind"] == "wheel"]
-    for item in wheels:
-        if Path(item["filename"]).name != item["filename"] or not re.fullmatch(
-            r"[a-zA-Z0-9_.-]+", item["name"]
-        ):
-            raise ValueError("Music dependencies require fixed wheel names")
-        (folder / "wheels" / item["filename"]).symlink_to(
-            os.path.relpath(objects[item["filename"]], folder / "wheels")
-        )
-    lock = folder / "requirements.lock"
-    lock.write_text(
-        "\n".join(f"{v['name']}=={v['version']} --hash=sha256:{v['sha256']}" for v in wheels) + "\n"
+    python = install_python(
+        folder, frozen, objects, check=check, progress=progress, run_command=command, unpack=unpack_python
     )
-    progress({"phase": "installing_dependencies"})
-    command(
-        [
-            python,
-            "-m",
-            "pip",
-            "install",
-            "--no-index",
-            "--no-deps",
-            "--require-hashes",
-            "--only-binary",
-            ":all:",
-            "--find-links",
-            str(folder / "wheels"),
-            "-r",
-            str(lock),
-        ],
-        folder=folder,
-        check=check,
-    )
-    command([python, "-m", "pip", "check"], folder=folder, check=check)
     progress({"phase": "preparing_sdk"})
     sdk = next(v for v in frozen["inputs"] if v["kind"] == "sdk")
     source = unpack_tar(objects[sdk["filename"]], folder / "sources", check)
@@ -162,30 +110,6 @@ def prepare(root, operation_id, *, check=lambda: None, progress=lambda value: No
     os.replace(temporary, folder / "ready.json")
     progress({"phase": "environment_prepared", "music_inference_tested": False})
     return receipt
-
-
-def read_json(path):
-    path = Path(path)
-    if path.resolve() != path:
-        raise ValueError("Music environment metadata cannot cross symlinks")
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(fd, "r") as source:
-        info = os.fstat(source.fileno())
-        if (
-            not stat.S_ISREG(info.st_mode)
-            or info.st_uid != os.geteuid()
-            or info.st_nlink != 1
-            or info.st_mode & 0o022
-            or info.st_size > 32768
-        ):
-            raise ValueError("Music environment metadata must be a bounded owned regular file")
-        text = source.read(32769)
-        if len(text) > 32768:
-            raise ValueError("Music environment metadata exceeds its size limit")
-        value = json.loads(text)
-        if not isinstance(value, dict):
-            raise ValueError("Music environment metadata must be an object")
-        return value
 
 
 def resolve(root, observation):

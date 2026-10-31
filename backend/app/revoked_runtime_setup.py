@@ -24,15 +24,20 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         run.parameters.get("managed_image_runtime"), dict
     )
     if (
-        run.executor_type not in {"runtime_setup", "speech_setup", "image_setup", "music_setup"}
+        run.executor_type
+        not in {"runtime_setup", "speech_setup", "image_setup", "music_setup", "video_setup"}
         and not image_job
     ) or run.owner_id is None:
         return False
-    inputs = run.executor_type in {"speech_setup", "image_setup", "music_setup"}
+    inputs = run.executor_type in {"speech_setup", "image_setup", "music_setup", "video_setup"}
     if inputs:
         from app.speech_setup_job import SpeechSetupExecutor
 
-        if run.executor_type == "music_setup":
+        if run.executor_type == "video_setup":
+            from app.video_setup_job import VideoSetupExecutor
+
+            input_contract = VideoSetupExecutor()
+        elif run.executor_type == "music_setup":
             from app.music_setup_job import MusicSetupExecutor
 
             input_contract = MusicSetupExecutor()

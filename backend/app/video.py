@@ -1,12 +1,15 @@
 """Queued local Wan text/image video generation through the native Runner."""
 
 import math
+import re
+import time
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db import session_scope
+from app.db import session_scope, utcnow
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
 from app.motion_artifacts import MotionArtifacts
@@ -31,6 +34,8 @@ def valid_guidance_observation(value):
 
 
 def recommended_profile(profile, available_mib):
+    if profile.get("configuration_source") == "managed":
+        return "bounded_11g"
     standard = profile.get("memory_estimate_mib")
     bounded = any(
         row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
@@ -73,6 +78,8 @@ def capabilities():
 
 
 def memory_reservation(body, observed_profile):
+    if managed_parameters(body, observed_profile):
+        return 11264
     if body.memory_profile == "default":
         return observed_profile.get("memory_estimate_mib", 16384)
     selected = next(
@@ -93,12 +100,58 @@ def memory_reservation(body, observed_profile):
     return selected["ram_mib"]
 
 
+def managed_parameters(body, profile):
+    if profile.get("configuration_source") != "managed":
+        return {}
+    observed, eligible = profile.get("managed_runtime"), profile.get("eligible_gpu_indices")
+    valid = isinstance(observed, dict) and set(observed) == {"profile", "manifest_sha256", "environment_id"}
+    try:
+        valid = (
+            valid
+            and observed["profile"] == "wan22-5b-linux-x86-64-python312-v1"
+            and bool(re.fullmatch(r"[a-f0-9]{64}", observed["manifest_sha256"]))
+            and bool(re.fullmatch(r"[a-f0-9]{64}", observed["environment_id"]))
+        )
+    except (TypeError, ValueError, KeyError):
+        valid = False
+    if (
+        not valid
+        or not isinstance(eligible, list)
+        or not eligible
+        or any(type(i) is not int or i < 0 for i in eligible)
+    ):
+        raise HTTPException(
+            409, "The managed video profile requires its frozen environment and compatible GPUs"
+        )
+    if body.width != 1280 or body.height != 704 or body.steps < 20:
+        raise HTTPException(422, "This managed video profile uses 1280×704 and at least 20 steps")
+    if body.gpu != "auto" and int(body.gpu) not in eligible:
+        raise HTTPException(422, "Choose a GPU compatible with the prepared video profile")
+    return {
+        "managed_runtime": dict(observed),
+        "managed_video_gpu_indices": list(eligible),
+        "memory_profile": "bounded_11g",
+    }
+
+
+def managed_native_budget(run):
+    budget = HostMediaExecutor.native_budget(run)
+    if run.parameters.get("managed_runtime"):
+        if "deadline_at" not in budget:
+            raise ValueError("Managed video requires its frozen workflow expiry")
+        # A film may span many clips; every individual owned native process
+        # retains the established one-hour ceiling and its persisted deadline.
+        budget["deadline_at"] = min(budget["deadline_at"], time.time() + 3600)
+    return budget
+
+
 def create_video_run(
     session, body, *, task=None, parent_run_id=None, observed_profile=None, _prepare_translation=True
 ):
+    observed_profile = capabilities() if observed_profile is None else observed_profile
+    managed = managed_parameters(body, observed_profile)
     reservation = None
-    if body.memory_profile != "default":
-        observed_profile = capabilities() if observed_profile is None else observed_profile
+    if body.memory_profile != "default" or managed:
         reservation = memory_reservation(body, observed_profile)
     source = None
     if body.image_artifact_id:
@@ -115,6 +168,8 @@ def create_video_run(
     )
     parameters = {
         **body.model_dump(mode="json", exclude={"gpu", "image_artifact_id"}),
+        **managed,
+        **({"execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat()} if managed else {}),
         "image_relative": source.relative_path if source else None,
         "parent_artifact_ids": [source.id] if source else [],
         "backend": "wan2.2-5b",
@@ -163,6 +218,18 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
     suffix = ".mp4"
     artifact_type = "video"
     mime_type = "video/mp4"
+
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("managed_runtime"):
+            hardware = {
+                **hardware,
+                "gpus": [
+                    g
+                    for g in hardware.get("gpus", [])
+                    if int(g["index"]) in run.parameters.get("managed_video_gpu_indices", [])
+                ],
+            }
+        return super().reserve_devices_from_hardware(session, run, hardware)
 
     def validate_inputs(self, session, run):
         from app.media_translation import validate_media_translation
@@ -231,7 +298,12 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
             "/v1/runs/video",
             {
                 "run_id": run.id,
-                **self.native_budget(run),
+                **(
+                    {"managed_runtime": run.parameters["managed_runtime"]}
+                    if run.parameters.get("managed_runtime")
+                    else {}
+                ),
+                **managed_native_budget(run),
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **({"continuation": continuation} if continuation else {}),

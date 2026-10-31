@@ -13,6 +13,7 @@ import { useListKeyboard } from "../../pages/useListKeyboard";
 type Props = {
   kind: "image" | "audio" | "video";
   uploadEndpoint?: string;
+  uploadLabel?: string;
   maxAudioSeconds?: number;
   audioMode?: "voice" | "transcription";
   label: string;
@@ -25,6 +26,7 @@ type Props = {
 export default function MediaInput({
   kind,
   uploadEndpoint,
+  uploadLabel,
   maxAudioSeconds = 60,
   audioMode = "voice",
   label,
@@ -117,7 +119,7 @@ export default function MediaInput({
           {kind === "image" ? (
             <img
               src={`/api/artifacts/${value}/thumbnail`}
-              alt="Portrait preview"
+              alt={`${label} preview`}
             />
           ) : kind === "video" ? (
             <video
@@ -195,7 +197,10 @@ export default function MediaInput({
           <input
             className="sr-only"
             type="file"
-            aria-label={kind === "image" ? "Upload portrait" : "Upload speech"}
+            aria-label={
+              uploadLabel ??
+              (kind === "image" ? "Upload portrait" : "Upload speech")
+            }
             accept={
               kind === "image"
                 ? "image/png,image/jpeg"

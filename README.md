@@ -212,6 +212,14 @@ instrumental or use your own lyrics in Music. This profile uses CPU offload;
 existing configured ACE-Step environments keep priority.
 [Music setup and measured qualification](docs/plans/managed-music-setup.md).
 
+**Set up video** prepares Wan 2.2 5B on supported Linux NVIDIA workstations
+with at least 12 GiB VRAM, 24 GiB system RAM and a compatible driver. Review
+sources, component licenses and storage, then install with saved progress and
+Stop/Resume. Create a scene, animate an image or continue a longer film in Video;
+the prepared environment also handles final composition and CPU timeline export.
+Existing configured video integrations keep priority.
+[Video setup and measured qualification](docs/plans/managed-video-setup.md).
+
 
 
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.

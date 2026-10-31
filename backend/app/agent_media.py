@@ -83,7 +83,9 @@ def require_profile(scope):
         ready = profile.get("available") and scope.request.mode in profile.get("modes", [])
     if not ready:
         raise ValueError("This local media engine is unavailable; inspect its dedicated workspace setup")
-    if scope.kind == "video" and scope.request.memory_profile != "default":
+    if scope.kind == "video" and (
+        scope.request.memory_profile != "default" or profile.get("configuration_source") == "managed"
+    ):
         from fastapi import HTTPException
 
         from app.video import memory_reservation

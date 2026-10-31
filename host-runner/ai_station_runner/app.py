@@ -86,6 +86,7 @@ from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.video import VideoRequest, start_video
 from ai_station_runner.video import capabilities as video_capabilities
+from ai_station_runner.video_prepare import router as video_setup_router
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
@@ -748,6 +749,7 @@ app.include_router(runtime_setup_router)
 app.include_router(speech_setup_router)
 app.include_router(image_setup_router)
 app.include_router(music_setup_router)
+app.include_router(video_setup_router)
 app.include_router(image_jobs_router)
 
 
