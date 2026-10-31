@@ -56,6 +56,23 @@ dependencies, or reuse an already configured compatible transcription runtime.
 The old Fish-only environment lacks PyAV; copying it alone cannot satisfy a
 fresh installation.
 
+Read-only source qualification now rechecks all nine Fish files (11,008,068,049
+bytes) against the retained publisher receipt, including Git blob verification
+for non-LFS files, and all 32 SDK source/config files against the qualified
+source digest. The separate ASR selection has 23 distributions satisfying 31
+active requirements. Public binary-wheel metadata resolves 130 Fish and all 23
+ASR wheels; these are source/hash selections, not a downloaded/installed runtime.
+
+The remaining three Fish dependencies require reviewed source builds:
+ANTLR 4.9.3, ArgBind 0.3.9 and RandomName 0.2.1. The latter two fixed PyPI sdists
+were inspected before execution and each wheel reproduced twice with the pinned
+Python 3.12.14/setuptools 79.0.1/wheel 0.45.1, fixed build epoch and disabled
+Python network access. The narrow native `fish_source_wheels` helper builds only
+these exact source/version/hash combinations and rejects changed wheel outputs;
+its actual three-wheel offline reproduction passes. It reuses the existing
+qualified ANTLR build without changing Avatar or Effects preparation. This helper
+is unregistered: no guided Fish profile is available from this work alone.
+
 Phone recordings may be M4A, MP3, WebM or another supported audio format. Extend
 the existing bounded transcription decoder to optionally save its complete mono
 16-kHz PCM as a WAV. Publish that derivative only after successful owned-process
