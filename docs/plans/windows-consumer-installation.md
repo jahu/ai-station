@@ -107,9 +107,10 @@ An unregistered leftover disk is preserved for recovery rather than overwritten.
 Only start/status/open/stop can produce fixed ordinary-user bridge arguments;
 there is no shell, global shutdown, terminate or unregister plan.
 
-This module alone is not an installer. Windows ACL/reparse validation, immutable
-archive transfer, registry/WSL execution, native UI and actual WSL acceptance
-must still be implemented/tested before exposing a consumer installation flow.
+This module alone is not an installer. Private ACL/archive/import and native UI
+implementations are described below. Actual WSL execution, preserving updates
+and the complete first-result journey remain required before publishing a
+consumer installation flow.
 
 ## Private import controller — implementation in progress
 
@@ -130,7 +131,7 @@ and exact guest source receipt before advancing readiness. Windows environment
 forwarding is cleared. A lost/unknown import is inspected instead of repeated;
 existing disks and replaced/foreign registrations are preserved. Desktop start
 returns its private process pipe; status/open/stop retain fixed guest operations.
-These Windows-specific APIs have not yet been exercised on Windows.
+Ordinary-user NTFS/file contracts and package/UI construction now have actual Windows coverage described below. Imported WSL guest boot, workload execution and preserving guest updates remain separate gates.
 
 The portable checks passed 33 ownership assertions, three non-Windows guard
 refusals, 15 real .NET file assertions and 20 manifest/imported-source assertions,
@@ -210,3 +211,49 @@ never triggers application startup. Stop and exit can cancel preparation and
 wait for that safe boundary. Seven real portable process/runspace cases prove
 output/error bounds, cancellation delivery, own-client exit and preservation of
 an unrelated process. Genuine WSL cancellation/recovery remains a native gate.
+
+
+## Actual Windows qualification — private evaluation, 2026-11-01
+
+An owned Windows 11 x64 evaluation VM (build 26300) now runs the actual built-in
+PowerShell 5.1.26100.9444 with a limited, non-elevated user token. Its official
+Microsoft ISO matches the publisher's published SHA-256. UEFI/vTPM and nested
+virtualization use project-local tools; no host OS, driver, GPU passthrough or
+host filesystem mounts were changed. Evaluation media is never redistributed.
+
+The native checks pass 38 ownership, 15 file/hash/sharing, 20 manifest, six
+runspace and 15 browser-protocol assertions, plus actual occupied-port selection.
+Five further real Windows cases verify private/public ACL rejection and existing
+and dangling junction boundaries. Seven real process/runspace cases verify
+cancellation, bounded replies and preservation of another process. Tests remain
+separate from the operator QA workbook; no operator answers were prefilled.
+
+Actual native compilation exposed PowerShell 5.1 parameter conflicts and the
+Add-Type name cache. The publisher now uses a non-loading CodeDOM compiler,
+checks the emitted PE as x64/GUI, deletes its compiler temporary files and emits
+only to fresh payload/installer folders. Repeated same-session native Inno 7.1.1
+builds pass. Keeping the already compressed guest archive uncompressed in the
+outer installer reduced measured compiler time from 88.031 to 8.422 seconds in
+this test VM; it does not change guest bytes or remove checksum verification.
+
+The actual per-user installer exits successfully without elevation, creates its
+Start menu shortcut and opens its installed native controls. The startup screen
+has one primary setup action. Interactive cancellation returns to a resumable
+screen. Both application-consent denial and Windows UAC denial preserve an empty
+registration inventory and create neither a guest folder nor an import receipt.
+The confirmed x64 GUI executable and real screenshots are private evidence under
+`data/acceptance/windows-native-qualification-20261031/`.
+
+The actual Microsoft WSL installer requires a Windows restart. WSL 3.0.3 even
+returned exit code zero from `--status` while explicitly reporting unavailable
+virtualization before that restart. Initial preparation now rejects a pending
+system restart **before** reserving/importing a guest, with a typed restart reason
+for the native UI. Existing node status/open/stop remain usable during a pending
+Windows update. Controls allow ordinary OS shutdown/logoff rather than hiding
+and canceling Windows shutdown. Native prereq restart, imported guest startup,
+first actual CPU reply, resource accounting, recovery, preserving guest update,
+removal/reinstall, native accessibility/DPI and signing remain open acceptance
+gates. No public Windows installer or Windows support claim is added.
+
+The full original NR-01–NR-14 release scope, including macOS, broader hardware
+and model profiles, media quality, naming and final operator QA, is unchanged.
