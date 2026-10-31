@@ -18,6 +18,7 @@ const profile = "chatterbox-v3-linux-x86-64-python312-v1";
 function attempt(status: string, phase = "downloading_files") {
   return {
     id: "speech-task",
+    manifest_sha256: "a".repeat(64),
     attempt: 1,
     run: { id: "speech-run", status, created_at: "2026-10-31T00:00:00Z" },
     resume_allowed: status === "canceled",

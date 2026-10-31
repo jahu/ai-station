@@ -5,6 +5,8 @@ This module does not activate a native endpoint or import an inference runtime.
 
 import hashlib
 import json
+import os
+import stat
 import wave
 from pathlib import Path
 
@@ -25,7 +27,34 @@ def no_symlink(path):
     return path.resolve(strict=True)
 
 
-def model_manifest(model_root, *, verify_weights=False):
+def model_file(model_root, item, *, immutable_root=None):
+    candidate = Path(model_root) / item["path"]
+    if immutable_root is None:
+        return no_symlink(candidate)
+    store = no_symlink(immutable_root)
+    expected = store / item["sha256"]
+    if (
+        not candidate.is_symlink()
+        or candidate.resolve(strict=True) != expected
+        or no_symlink(expected) != expected
+        or candidate.parent.resolve(strict=True) != candidate.parent
+        or ".." in Path(item["path"]).parts
+        or Path(item["path"]).is_absolute()
+    ):
+        raise ValueError("Managed music links must bind their exact immutable object")
+    info = expected.stat()
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or info.st_uid != os.geteuid()
+        or info.st_nlink != 1
+        or info.st_mode & 0o222
+        or info.st_size != item["size"]
+    ):
+        raise ValueError("Managed music model objects changed")
+    return expected
+
+
+def model_manifest(model_root, *, verify_weights=False, immutable_root=None):
     root = no_symlink(model_root)
     receipt = no_symlink(root / "ai-station-model.json")
     if receipt.stat().st_size > 16384:
@@ -35,8 +64,8 @@ def model_manifest(model_root, *, verify_weights=False):
     if hashlib.sha256(canonical).hexdigest() != MANIFEST_SHA256:
         raise ValueError("Music checkpoint is not the approved pinned preset")
     for item in manifest["files"]:
-        path = no_symlink(root / item["path"])
-        if path != resolve_child(root, item["path"]):
+        path = model_file(root, item, immutable_root=immutable_root)
+        if immutable_root is None and path != resolve_child(root, item["path"]):
             raise ValueError("Music model file escaped its root")
         if not path.is_file() or path.stat().st_size != item["size"]:
             raise ValueError(f"Music file is missing or changed: {item['path']}")
@@ -73,11 +102,11 @@ def verify_source(source_root):
     return root
 
 
-def checkpoint_view(model_root, source_root, destination):
+def checkpoint_view(model_root, source_root, destination, *, immutable_root=None):
     """Create an owned per-Run view; upstream code sync never touches weights."""
     import shutil
 
-    manifest = model_manifest(model_root, verify_weights=True)
+    manifest = model_manifest(model_root, verify_weights=True, immutable_root=immutable_root)
     source = verify_source(source_root)
     destination = Path(destination)
     destination.mkdir(mode=0o700, exist_ok=False)
@@ -89,7 +118,7 @@ def checkpoint_view(model_root, source_root, destination):
             # authoritative. Its initializer would otherwise rewrite model code.
             shutil.copyfile(source / "models/turbo" / target.name, target)
         else:
-            target.symlink_to(no_symlink(Path(model_root) / item["path"]))
+            target.symlink_to(model_file(model_root, item, immutable_root=immutable_root))
     return destination
 
 

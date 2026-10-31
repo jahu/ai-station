@@ -90,6 +90,16 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
     ready = capabilities() if observed_profile is None else observed_profile
     if not ready.get("available") or ready.get("profile_sha256") != PROFILE_SHA256:
         raise HTTPException(409, ready.get("reason", "The approved local music preset is unavailable"))
+    managed = ready.get("configuration_source") == "managed"
+    eligible = ready.get("eligible_gpu_indices", [])
+    if managed and (
+        not ready.get("runtime_manifest_sha256")
+        or not eligible
+        or any(type(i) is not int or i < 0 for i in eligible)
+    ):
+        raise HTTPException(409, "The managed music profile needs its frozen runtime and eligible GPUs")
+    if managed and body.gpu != "auto" and int(body.gpu) not in eligible:
+        raise HTTPException(422, "Choose a GPU compatible with the prepared music profile")
     maximum = ready.get("max_seconds", 0)
     if type(maximum) is not int or not 10 <= body.duration_seconds <= min(600, maximum):
         raise HTTPException(422, "Duration exceeds this music runtime's supported limit")
@@ -114,10 +124,22 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         requested_gpu=body.gpu,
         # Qualified 10/30 s CPU-offloaded Runs peaked below 8 GiB RSS.
         # Keep 4 GiB headroom for short clips and a larger long-clip budget.
-        requested_resources={"ram_mib": 12288 if body.duration_seconds <= 60 else 16384},
+        requested_resources={
+            "ram_mib": 12288
+            if body.duration_seconds <= 60
+            else 18432
+            if ready.get("runtime_manifest_sha256")
+            else 16384
+        },
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
+            **({"managed_music_gpu_indices": eligible} if managed else {}),
+            **(
+                {"runtime_manifest_sha256": ready["runtime_manifest_sha256"]}
+                if ready.get("configuration_source") == "managed" and ready.get("runtime_manifest_sha256")
+                else {}
+            ),
             **({"translation": body.translation.model_dump()} if body.translation is not None else {}),
             "caption": body.caption,
             "lyrics": body.lyrics,
@@ -167,6 +189,15 @@ class MusicExecutor(HostMediaExecutor):
     artifact_type = "audio"
     mime_type = "audio/wav"
 
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("runtime_manifest_sha256"):
+            eligible = run.parameters.get("managed_music_gpu_indices", [])
+            hardware = {
+                **hardware,
+                "gpus": [g for g in hardware.get("gpus", []) if int(g["index"]) in eligible],
+            }
+        return super().reserve_devices_from_hardware(session, run, hardware)
+
     def validate_inputs(self, session, run):
         from app.media_translation import validate_media_translation
 
@@ -184,6 +215,11 @@ class MusicExecutor(HostMediaExecutor):
                 },
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {"runtime_manifest_sha256": run.parameters["runtime_manifest_sha256"]}
+                    if run.parameters.get("runtime_manifest_sha256")
+                    else {}
+                ),
                 **self.native_budget(run),
             },
         )

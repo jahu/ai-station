@@ -26,6 +26,14 @@ publication creates shared ModelFile observations and a private receipt only
 after every object verifies. This file-preparation operation does not install
 Python dependencies, activate a model definition or claim speech readiness.
 
+The [managed music environment](plans/managed-music-setup.md) reuses verified
+downloads, the owned offline preparation lifecycle and the existing ACE-Step
+executor. A fixed recipe owns independent Python/SDK/dependencies and exact
+immutable model links. Ordinary music Runs freeze that runtime observation,
+eligible GPUs, deadline and CPU-offload RAM budget. Existing explicit music
+settings keep priority. Models are shared; setup histories, lyrics and results
+remain private. This qualifies one Linux NVIDIA profile, not other platforms.
+
 The [managed speech environment](plans/managed-speech-setup.md#qualified-managed-speech-flow)
 uses the existing runtime-preparation API/supervisor and a fixed typed native
 journal. Its normal worker verifies the pinned SDK, dependency, interpreter and

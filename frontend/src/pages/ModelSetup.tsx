@@ -20,6 +20,7 @@ import RuntimeSetupPanel from "./RuntimeSetupPanel";
 import SpeechSetupPanel from "./SpeechSetupPanel";
 import ImageSetupPanel from "./ImageSetupPanel";
 import MemorySetupPanel from "./MemorySetupPanel";
+import MusicSetupPanel from "./MusicSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -362,12 +363,13 @@ export default function ModelSetup() {
   return (
     <>
       <PageTitle eyebrow="GET STARTED / MODELS" title="Set up your models">
-        Start with a local conversation model, images, a voice or memory. AI
-        Station downloads, checks and prepares the files for you.
+        Start with a local conversation model, images, speech, music or memory.
+        AI Station downloads, checks and prepares the files for you.
       </PageTitle>
       <RuntimeSetupPanel onReadiness={setRuntimeReady} />
       <SpeechSetupPanel />
       <ImageSetupPanel />
+      <MusicSetupPanel />
       <MemorySetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
