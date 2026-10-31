@@ -148,6 +148,7 @@ def _execute_claimed(session, run, worker_id, executors):
             "model_download",
             "model_bundle_download",
             "runtime_setup",
+            "speech_setup",
             "cursor_proposal",
             "codex_proposal",
             "github_publication",

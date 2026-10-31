@@ -7,7 +7,7 @@ import {
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AudioLines, Settings2, Sparkles } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
@@ -269,6 +269,20 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
               onDirection={setDirection}
               onPace={setPace}
             />
+            {!fish && capabilities.data?.available === false && (
+              <div className="notice" role="status">
+                <strong>Set up local speech to get started.</strong>
+                <p>
+                  AI Station can download and prepare the speech model for this
+                  workstation.
+                </p>
+                <Button asChild variant="secondary">
+                  <Link to="/setup/models?capability=speech">
+                    Set up speech
+                  </Link>
+                </Button>
+              </div>
+            )}
             <MediaInput
               kind="audio"
               label="Voice reference"
@@ -336,6 +350,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 !text.trim() ||
                 uploading ||
                 busy ||
+                (!fish && capabilities.data?.available === false) ||
                 (fish ? !fishReady : shapeDelivery && !supportsDelivery)
               }
             >

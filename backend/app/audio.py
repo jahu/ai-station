@@ -122,6 +122,46 @@ class AudioExecutor(HostMediaExecutor):
     artifact_type = "audio"
     mime_type = "audio/wav"
 
+    def execute(self, session, run):
+        from app.runner_client import RunnerClient
+        from app.task_control import lock_task
+
+        session.refresh(run)
+        if self._cancel_before_dispatch(session, run):
+            return "done"
+        worker, claim = run.worker_id, run.claimed_at
+        session.commit()
+        capabilities = RunnerClient().request("GET", "/v1/audio/capabilities")
+        if capabilities.get("configuration_source") == "managed":
+            lock_task(session, run.task)
+            session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                session.rollback()
+                return "done"
+            manifest = capabilities.get("runtime_manifest_sha256")
+            if not manifest or run.parameters.get("speech_runtime_manifest_sha256", manifest) != manifest:
+                raise ValueError("The selected managed speech runtime changed before execution")
+            run.requested_resources = {
+                **run.requested_resources,
+                "ram_mib": max(4096, run.requested_resources.get("ram_mib", 0)),
+            }
+            run.parameters = {
+                **run.parameters,
+                "speech_runtime_manifest_sha256": manifest,
+                "speech_runtime_eligible_gpus": capabilities.get("eligible_gpu_indices") or [],
+            }
+            session.commit()
+        return super().execute(session, run)
+
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("speech_runtime_manifest_sha256"):
+            eligible = run.parameters.get("speech_runtime_eligible_gpus") or []
+            gpus = [gpu for gpu in hardware.get("gpus", []) if int(gpu["index"]) in eligible]
+            if not gpus:
+                raise ValueError("Managed speech needs an NVIDIA GPU with at least 6 GiB VRAM")
+            hardware = {**hardware, "gpus": gpus}
+        return super().reserve_devices_from_hardware(session, run, hardware)
+
     def validate_inputs(self, session, run):
         if run.parameters.get("delivery") is not None and not run.parameters.get("delivery_source_sha256"):
             from app.runner_client import RunnerClient
@@ -184,6 +224,11 @@ class AudioExecutor(HostMediaExecutor):
                 "reference_relative": run.parameters["reference_relative"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {"runtime_manifest_sha256": run.parameters["speech_runtime_manifest_sha256"]}
+                    if run.parameters.get("speech_runtime_manifest_sha256")
+                    else {}
+                ),
                 **(
                     {
                         "delivery": run.parameters["delivery"],

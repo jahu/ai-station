@@ -26,6 +26,16 @@ publication creates shared ModelFile observations and a private receipt only
 after every object verifies. This file-preparation operation does not install
 Python dependencies, activate a model definition or claim speech readiness.
 
+The [managed speech environment](plans/managed-speech-setup.md#qualified-managed-speech-flow)
+uses the existing runtime-preparation API/supervisor and a fixed typed native
+journal. Its normal worker verifies the pinned SDK, dependency, interpreter and
+model inputs before offline assembly in an owned memory scope. The guided card
+restores private history/progress and supports Stop/Resume. Successful adoption
+makes the exact prepared recipe available to ordinary Audio Runs; existing
+explicit external speech settings retain priority. Each environment owns its
+Python and stdlib independently of application versions. Model files are shared;
+preparation receipts, voice recordings and generated speech remain account scoped.
+
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
 container coordinator waits for the verified final film before publishing sound;

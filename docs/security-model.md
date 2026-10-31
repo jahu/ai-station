@@ -37,6 +37,21 @@ Downloaded PT/safetensors/JSON bytes are not imported or deserialized as model
 code. Runtime activation remains a separate qualified operation. Histories and
 receipts remain private even though model files are shared infrastructure.
 
+Managed speech assembly verifies every fixed source/wheel/model object before
+executing a separate offline venv install with its own pinned Python. SDK archives
+reject links/traversal/special files; the standalone Python's legitimate links
+must remain inside its owned tree. Incomplete operations cannot create readiness.
+The private typed Runner route accepts only the built-in profile, fingerprint and
+absolute deadline, never caller-selected packages, code, commands or paths.
+Existing process ownership and four-GiB/zero-swap setup scopes enforce cancellation
+and recovery. Durable pre-dispatch Stop and locked adoption prevent late activation.
+Account administrator authority, effective permissions and worker/claim identity
+fence download and receipt publication. Revoked accounts receive only trusted
+cleanup of their existing native action. Ordinary speech Runs freeze the selected
+manifest and use an eleven-GiB/zero-swap child with Python network connections
+blocked. Existing configured external Chatterbox remains authoritative. See the
+[managed speech contract](plans/managed-speech-setup.md).
+
 Conversation sound scopes never grant Library browsing to a model. Current-turn
 commands bind a manually selected owned film or the single completed film visibly
 linked to that conversation; ambiguous, partial and latest unfinished results are

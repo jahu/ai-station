@@ -26,11 +26,11 @@ class LostClaim(Exception):
     pass
 
 
-def validate_operation(run):
+def validate_operation(run, *, executor_type="runtime_setup"):
     saved = run.task.metadata_json.get("runtime_preparation") or {}
     parameters = run.parameters
     if (
-        run.executor_type != "runtime_setup"
+        run.executor_type != executor_type
         or run.task.owner_id != run.owner_id
         or run.task.intent != INTENT
         or saved.get("license_accepted") is not True
@@ -80,15 +80,93 @@ def authorized(session, run):
     return bool(user and user.enabled and user.is_admin and not user.bootstrap_pending)
 
 
+def publish_image_receipt(session, run, result):
+    image = result.get("image") or {}
+    if (
+        image.get("reference") != run.parameters["recipe"]["image_reference"]
+        or image.get("platform") != "linux/amd64"
+        or not re.fullmatch(r"sha256:[a-f0-9]{64}", str(image.get("id", "")))
+    ):
+        raise ValueError("Prepared runtime image does not match its reviewed source")
+    receipt = {
+        "profile": run.parameters["profile"],
+        "manifest_sha256": run.parameters["manifest_sha256"],
+        "image": image,
+        "inference_tested": False,
+    }
+    with tempfile.NamedTemporaryFile("w", suffix=".json") as file:
+        json.dump(receipt, file)
+        file.flush()
+        register_file(
+            session,
+            source=Path(file.name),
+            artifact_type="json",
+            mime_type="application/json",
+            original_filename="runtime-preparation.json",
+            run_id=run.id,
+            metadata={"runtime_preparation": True},
+        )
+    run.metadata_json = {
+        **run.metadata_json,
+        "runtime_preparation": {
+            "phase": "image_verified",
+            "received_bytes": run.parameters["recipe"]["download_bytes"],
+            "expected_bytes": run.parameters["recipe"]["download_bytes"],
+            "image_id": image["id"],
+        },
+    }
+    run.summary = "Runtime image verified. Local model loading and first inference are checked separately."
+    transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+    return "done"
+
+
 class RuntimeSetupExecutor:
     name = "runtime_setup"
+    ram_mib = 1024
+    required_permissions = PERMISSIONS
+
+    def validate(self, run):
+        validate_operation(run, executor_type=self.name)
+
+    def runner(self):
+        return RunnerClient(timeout=30)
+
+    def payload(self, run):
+        return payload(run)
+
+    def before_native(self, session, run, check):
+        return False
+
+    def progress(self, run, value):
+        if not isinstance(value, dict) or value.get("type") not in {
+            "runtime.prepare.progress",
+            "runtime.prepare.started",
+            "runtime.prepare.verifying",
+        }:
+            return None
+        expected = run.parameters["recipe"]["download_bytes"]
+        received = value.get(
+            "received_bytes", (run.metadata_json.get("runtime_preparation") or {}).get("received_bytes", 0)
+        )
+        if type(received) is not int or not 0 <= received <= expected:
+            return None
+        return {
+            "phase": "verifying"
+            if value["type"] == "runtime.prepare.verifying"
+            else value.get("stage", "preparing"),
+            "received_bytes": received,
+            "expected_bytes": expected,
+        }
+
+    def complete(self, session, run, result, runner):
+        return publish_image_receipt(session, run, result)
 
     def execute(self, session, run):
-        for permission in PERMISSIONS:
+        for permission in self.required_permissions:
             require(run.effective_permissions, permission)
-        validate_operation(run)
+        self.validate(run)
         owner, claim = run.worker_id, run.claimed_at
-        runner = RunnerClient(timeout=30)
+        runner = self.runner()
         release = False
 
         def check(*, commit=True):
@@ -114,7 +192,7 @@ class RuntimeSetupExecutor:
                 hardware = runner.hardware()
                 stopped = check() or stopped
                 if not stopped and not reserve_memory(
-                    session, run, (hardware.get("memory") or {}).get("available_mib"), 1024
+                    session, run, (hardware.get("memory") or {}).get("available_mib"), self.ram_mib
                 ):
                     run.task.metadata_json = {
                         **run.task.metadata_json,
@@ -129,6 +207,12 @@ class RuntimeSetupExecutor:
             if run.status == "claimed":
                 transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             session.commit()
+            if not stopped and not run.metadata_json.get("dispatch_attempted"):
+                prepared = self.before_native(session, run, check)
+                if prepared == "requeued":
+                    release = True
+                    return "requeued"
+                stopped = bool(prepared) or check() or stopped
             # This flag precedes the native request. A lost response reattaches
             # to the same immutable Run; a late Stop can fence an unsent request.
             run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
@@ -137,7 +221,7 @@ class RuntimeSetupExecutor:
                 result = (
                     runner.cancel_runtime_preparation(run.id, cancel_payload(run))
                     if stopped
-                    else runner.prepare_runtime(payload(run))
+                    else runner.prepare_runtime(self.payload(run))
                 )
             except RunnerError as exc:
                 if 400 <= exc.status_code < 500:
@@ -196,26 +280,9 @@ class RuntimeSetupExecutor:
                         value = json.loads(line)
                     except ValueError:
                         continue
-                    if not isinstance(value, dict) or value.get("type") not in {
-                        "runtime.prepare.progress",
-                        "runtime.prepare.started",
-                        "runtime.prepare.verifying",
-                    }:
+                    progress = self.progress(run, value)
+                    if progress is None:
                         continue
-                    expected = run.parameters["recipe"]["download_bytes"]
-                    received = value.get(
-                        "received_bytes",
-                        (run.metadata_json.get("runtime_preparation") or {}).get("received_bytes", 0),
-                    )
-                    if type(received) is not int or not 0 <= received <= expected:
-                        continue
-                    progress = {
-                        "phase": "verifying"
-                        if value["type"] == "runtime.prepare.verifying"
-                        else value.get("stage", "preparing"),
-                        "received_bytes": received,
-                        "expected_bytes": expected,
-                    }
                     run.metadata_json = {**run.metadata_json, "runtime_preparation": progress}
                     append_event(session, run.id, "runtime.prepare.progress", progress)
                 if len(pending) > 128 * 1024:
@@ -274,45 +341,7 @@ class RuntimeSetupExecutor:
                     "Inspect runtime preparation and resume explicitly",
                 )
                 return "done"
-            image = result.get("image") or {}
-            if (
-                image.get("reference") != run.parameters["recipe"]["image_reference"]
-                or image.get("platform") != "linux/amd64"
-                or not re.fullmatch(r"sha256:[a-f0-9]{64}", str(image.get("id", "")))
-            ):
-                raise ValueError("Prepared runtime image does not match its reviewed source")
-            receipt = {
-                "profile": run.parameters["profile"],
-                "manifest_sha256": run.parameters["manifest_sha256"],
-                "image": image,
-                "inference_tested": False,
-            }
-            with tempfile.NamedTemporaryFile("w", suffix=".json") as file:
-                json.dump(receipt, file)
-                file.flush()
-                register_file(
-                    session,
-                    source=Path(file.name),
-                    artifact_type="json",
-                    mime_type="application/json",
-                    original_filename="runtime-preparation.json",
-                    run_id=run.id,
-                    metadata={"runtime_preparation": True},
-                )
-            run.metadata_json = {
-                **run.metadata_json,
-                "runtime_preparation": {
-                    "phase": "image_verified",
-                    "received_bytes": run.parameters["recipe"]["download_bytes"],
-                    "expected_bytes": run.parameters["recipe"]["download_bytes"],
-                    "image_id": image["id"],
-                },
-            }
-            run.summary = (
-                "Runtime image verified. Local model loading and first inference are checked separately."
-            )
-            transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
-            return "done"
+            return self.complete(session, run, result, runner)
         except LostClaim:
             release = False
             session.rollback()

@@ -68,6 +68,7 @@ from app.runtime_coordination import LlamaWaitExecutor
 from app.runtime_registry import RuntimeObservationExecutor
 from app.runtime_setup_job import RuntimeSetupExecutor
 from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecutor, PreviewExecutor
+from app.speech_setup_job import SpeechSetupExecutor
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
@@ -319,6 +320,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "speech_setup": SpeechSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),

@@ -23,5 +23,8 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["ai_station_runner*"]
 
+[tool.setuptools.package-data]
+ai_station_runner = ["recipes/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
