@@ -1,5 +1,5 @@
 {
-  "version": 33,
+  "version": 34,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -29,7 +29,8 @@
     "docs/plans/managed-effects-setup.md",
     "docs/plans/managed-fish-setup.md",
     "docs/plans/guided-cpu-conversation.md",
-    "docs/plans/linux-consumer-qualification.md"
+    "docs/plans/linux-consumer-qualification.md",
+    "docs/plans/windows-consumer-installation.md"
   ],
   "cases": [
     {
@@ -5006,6 +5007,98 @@
       ],
       "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
       "minutes": 15
+    },
+    {
+      "id": "SETUP-149",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: osobne WSL i przerwana konfiguracja",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Na osobnym Windows 11 x64 otwórz instalator. Przeczytaj wymagania i anuluj zgodę na brakujące WSL.",
+        "Po osobnej zgodzie systemowej przygotuj WSL, ponów instalację i przerwij tworzenie środowiska AI Station. Otwórz ponownie."
+      ],
+      "expected": [
+        "Odmowa nie zmienia funkcji Windows, sterowników ani istniejących dystrybucji.",
+        "Wznowienie rozpoznaje wyłącznie własną instalację; kolizja z obcą dystrybucją nie powoduje jej przejęcia ani usunięcia."
+      ],
+      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-150",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: pierwszy model i odpowiedź w przeglądarce",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Utwórz pierwsze konto, wybierz pasujący profil CPU i zatwierdź widoczne pobieranie silnika oraz modelu.",
+        "Wyślij wiadomość w przeglądarce Windows i odśwież rozmowę."
+      ],
+      "expected": [
+        "Pobranie jest jawne, weryfikowane i zachowane; odpowiedź pochodzi z wybranego lokalnego modelu.",
+        "Adres jest dostępny z Windows przez loopback, a nie z obcego hosta. Klucz konfiguracji nie trafia do zwykłych logów."
+      ],
+      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-151",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: tło, ponowne otwarcie i bezpieczny Stop",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "W czasie pracy zamknij okno sterowania, otwórz ikonę ponownie i wróć do tej samej rozmowy.",
+        "Wybierz Stop i sprawdź, że inne dystrybucje WSL i programy pracują dalej."
+      ],
+      "expected": [
+        "Jedna instalacja ma jednego właściciela; zamknięcie okna nie zatrzymuje generacji.",
+        "Stop dotyczy tylko własnej stacji, bez globalnego zamykania WSL i utraty danych."
+      ],
+      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "minutes": 10
+    },
+    {
+      "id": "SETUP-152",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: aktualizacja i reinstalacja z zachowaniem danych",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Zapisz rozmowę, plik i pamięć; zainstaluj nowszą wersję w czasie działania aplikacji.",
+        "Po świadomym zatrzymaniu otwórz nową wersję. Usuń sam program bez kasowania danych i zainstaluj go ponownie."
+      ],
+      "expected": [
+        "Aktualizacja nie przerywa pracy ani nie usuwa aktywnego kodu.",
+        "Konto, sesja, modele, historia, Library i pamięć pozostają dostępne; usunięcie danych wymaga osobnej jawnej decyzji."
+      ],
+      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "minutes": 20
     }
   ]
 }

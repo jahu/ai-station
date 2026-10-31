@@ -302,11 +302,14 @@ def ready_url(root):
     return browser_url(value["url"])
 
 
-def reopen(root):
+def reopen(root, *, console=False):
     url = ready_url(root)
     if url is None:
         return False
-    webbrowser.open(url)
+    if console:
+        print(READY + json.dumps({"url": url}), flush=True)
+    else:
+        webbrowser.open(url)
     return True
 
 
@@ -533,7 +536,7 @@ def main():
                     status = control_request(root, "stop", instance_id=status["instance_id"])
                 print(json.dumps({"running": True, **status}), flush=True)
                 return
-            if not reopen(root):
+            if not reopen(root, console=args.console):
                 message = (
                     "AI Station is still starting. Its existing progress window will open the app when ready."
                 )

@@ -54,15 +54,24 @@ def live_owner(root):
         assert proc.returncode == 0
 
 
-def test_second_desktop_click_reopens_live_owner_without_starting_or_stopping_services(shell):
+@pytest.mark.parametrize("console", [False, True])
+def test_second_desktop_click_reopens_live_owner_without_starting_or_stopping_services(
+    shell, monkeypatch, capsys, console
+):
     root, browser, prerequisites, supervise = shell
+    monkeypatch.setattr(sys, "argv", ["desktop.py", *(["--console"] if console else [])])
+    monkeypatch.setattr(desktop.shutil, "which", lambda _: "/usr/bin/zenity")
     original = "http://127.0.0.1:8766/#/?setup_token=" + "a" * 43
     expected = original.replace("/#/?", "/#/setup/models?")
     with live_owner(root) as proc:
         desktop.publish_ready(root, original)
         before = (root / desktop.READY_FILE).read_bytes()
         desktop.main()
-        browser.assert_called_once_with(expected)
+        if console:
+            browser.assert_not_called()
+            assert capsys.readouterr().out == desktop.READY + json.dumps({"url": expected}) + "\n"
+        else:
+            browser.assert_called_once_with(expected)
         assert proc.poll() is None
         assert (root / desktop.READY_FILE).read_bytes() == before
     prerequisites.assert_not_called()
