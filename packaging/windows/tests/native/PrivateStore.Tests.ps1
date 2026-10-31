@@ -8,6 +8,14 @@ function Refuses([scriptblock]$Action) {
  $failed=$false;try { & $Action } catch { $failed=$true }
  Check $failed 'An unsafe native path or ACL was accepted.'
 }
+function New-FixtureAcl($Sid) {
+ $control=[Security.AccessControl.DirectorySecurity]::new()
+ $control.SetOwner($Sid);$control.SetAccessRuleProtection($true,$false)
+ foreach($identity in @($Sid,[Security.Principal.SecurityIdentifier]::new('S-1-5-18'))) {
+  $control.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($identity,[Security.AccessControl.FileSystemRights]::FullControl,[Security.AccessControl.AccessControlType]::Allow))
+ }
+ return $control
+}
 $root=Join-Path ([IO.Path]::GetTempPath()) ('ai-station-boundary-'+[guid]::NewGuid().ToString('N'))
 $target=Join-Path $root 'target';$link=Join-Path $root 'junction'
 [void][IO.Directory]::CreateDirectory($target)
@@ -32,15 +40,14 @@ try {
  # Build only a DACL/owner fixture. Copying Get-Acl wholesale can also request
  # SACL privileges that an ordinary desktop account deliberately does not have.
  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
- $acl=[Security.AccessControl.DirectorySecurity]::new()
- $acl.SetOwner($sid);$acl.SetAccessRuleProtection($true,$false)
- foreach($identity in @($sid,[Security.Principal.SecurityIdentifier]::new('S-1-5-18'))) {
-  $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($identity,[Security.AccessControl.FileSystemRights]::FullControl,[Security.AccessControl.AccessControlType]::Allow))
- }
+ $acl=New-FixtureAcl $sid
  Set-Acl -LiteralPath $root -AclObject $acl
  Assert-StationPrivateAcl $root
  Check $true 'A genuinely owner/SYSTEM-only native ACL must pass.'
  $extra=[Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-5-11'),[Security.AccessControl.FileSystemRights]::Read,[Security.AccessControl.AccessControlType]::Allow)
+ # Set-Acl mutates a persisted descriptor on Windows PowerShell 5.1. Use a
+ # fresh DACL for this separate write; never request audit/SACL privileges.
+ $acl=New-FixtureAcl $sid
  $acl.AddAccessRule($extra);Set-Acl -LiteralPath $root -AclObject $acl
  Refuses {Assert-StationPrivateAcl $root}
  Write-Output ('PASS '+$script:Cases+' actual Windows ACL/existing/dangling-junction assertions')

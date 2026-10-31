@@ -22,6 +22,7 @@ MinVersion=10.0.22000
 DisableProgramGroupPage=yes
 LicenseFile={#Payload}\LICENSE
 OutputBaseFilename=AI-Station-{#VersionId}-Setup
+OutputDir={#Payload}.installer
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

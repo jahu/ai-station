@@ -17,6 +17,7 @@ function Get-StationPublisherSource {
 }
 $sourceHead=Get-StationPublisherSource
 if ([IO.Directory]::Exists($Output) -or [IO.File]::Exists($Output)) { throw 'Choose a new output directory. Existing files are never overwritten.' }
+if ($InnoCompiler -and ([IO.Directory]::Exists($Output+'.installer') -or [IO.File]::Exists($Output+'.installer'))) { throw 'Choose a fresh installer output directory. Existing installers are preserved.' }
 $manifest=[IO.File]::ReadAllText((Join-Path $GuestPackage 'windows-guest-manifest.json'),[Text.UTF8Encoding]::new($false,$true)) | ConvertFrom-Json -ErrorAction Stop
 Assert-StationGuestManifest $manifest
 $archive=Open-StationVerifiedArchive (Join-Path $GuestPackage 'ai-station-wsl-rootfs.tar.gz') $manifest.rootfs_sha256 $manifest.rootfs_bytes

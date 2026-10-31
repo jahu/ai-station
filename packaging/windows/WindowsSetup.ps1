@@ -55,7 +55,7 @@ $progress.SetBounds(32,257,550,5);$form.Controls.Add($progress)
 function Button([string]$Text,[int]$X,[int]$Width) {
  $button=[Windows.Forms.Button]::new();$button.Text=$Text;$button.SetBounds($X,284,$Width,42)
  $button.FlatStyle='Flat';$button.FlatAppearance.BorderColor=[Drawing.ColorTranslator]::FromHtml('#3B5142')
- $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$form.Controls.Add($button);return $button
+ $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$button.ForeColor=$form.ForeColor;$form.Controls.Add($button);return $button
 }
 $prepare=Button 'Prepare AI Station' 32 190
 $start=Button 'Start' 234 106;$open=Button 'Open app' 352 106;$stop=Button 'Stop' 470 112
@@ -80,11 +80,20 @@ function Sync-Buttons {
  $start.Text=$(if ($checkOnly) {'Check status'} else {'Start'})
  $start.Enabled=($null -eq $script:worker) -and ($checkOnly -or ($script:prepared -and -not $busy -and -not $script:running))
  $prepare.Text=$(if ($script:prepared) {'Check setup'} else {'Prepare AI Station'})
- $form.AcceptButton=$(if ($open.Enabled) {$open} elseif ($start.Enabled) {$start} else {$prepare})
  $open.Enabled=-not $busy -and $script:running
  $stop.Text=$(if ($preparing) {'Cancel setup'} else {'Stop'})
  $stop.Enabled=($preparing -and -not $script:worker.Cancellation.IsCancellationRequested) -or ($null -eq $script:worker -and $script:running -and -not $script:stopPending)
  $support.Enabled=-not $busy -and -not $script:running
+ $known=$script:prepared -or $script:running
+ $start.Visible=$known;$open.Visible=$known;$stop.Visible=$known -or $preparing
+ $prepare.Width=$(if ($known) {190} elseif ($preparing) {426} else {550})
+ foreach($button in @($prepare,$start,$open,$stop)) {
+  $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$button.ForeColor=$form.ForeColor
+ }
+ $primary=$(if ($open.Enabled) {$open} elseif ($start.Enabled) {$start} else {$prepare})
+ $primary.BackColor=[Drawing.ColorTranslator]::FromHtml('#B9ED98');$primary.ForeColor=[Drawing.ColorTranslator]::FromHtml('#142015')
+ $form.AcceptButton=$primary
+ $background.Visible=$script:running -or $preparing
 }
 function Show-Failure([string]$Message) {
 $script:lastError=$Message;$script:attention=$true;$details.Visible=$true;$status.Text='Needs attention'
@@ -208,6 +217,7 @@ $timer.Add_Tick({
  } catch { Show-Failure $_.Exception.Message;Sync-Buttons }
 })
 try {
+ Sync-Buttons
  $timer.Start()
  $form.Add_Shown({
   $statePath=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'AIStation-Desktop\install-state.json'
