@@ -20,12 +20,15 @@ The working Python is 3.10.21. It imports six local dependency overrides plus a
 shared base environment; 195 visible distribution entries are not an installation
 recipe. The headless inference imports select a 75-package closure whose 120
 dependency requirements pass, including the local Transformers 4.43.2,
-Diffusers 0.29.0 and Accelerate 0.33.0 overrides. RECORD payload verification,
-public wheel source/hash resolution, independent offline assembly and actual
-inference remain required. Do not install the unrelated base training/UI stack
-or copy its `.pth` file into a prepared environment.
+Diffusers 0.29.0 and Accelerate 0.33.0 overrides. RECORD verification now matches
+23,673 payload files across all 75 selected distributions. The base exposes both
+GUI and headless OpenCV 4.11 metadata; actual shared `cv2` bytes match the headless
+distribution. Freeze that coherent headless provider, rather than installing
+both. Do not install the unrelated base training/UI stack or copy its `.pth` file
+into a prepared environment. Independent offline assembly and actual inference
+remain required.
 
-The public-package audit resolved 74 compatible exact wheels (3,305,285,178
+The public-package audit resolved 74 compatible exact wheels (3,292,268,437
 bytes). ANTLR 4.9.3, required by the unchanged OmegaConf profile, is published
 only as a 117,034-byte source archive. Its exact PyPI hash is verified and its
 small reviewed setup declares no compiled extensions. Preserve the known runtime
@@ -33,8 +36,13 @@ versions: build this one pinned pure-Python wheel offline with pinned build tool
 inside the new owned environment, then verify its deterministic output before
 installing. Do not enable arbitrary source packages, invoke a network resolver
 during preparation or substitute an unreviewed wheel mirror. This explicit source
-exception must appear in the fixed recipe and get its own normal boundary and
-real offline-build checks. No avatar preparation is qualified by this audit.
+exception must appear in the fixed recipe and get its own normal boundary checks.
+A separate clean Python 3.10.21 build environment with setuptools 79.0.1 and wheel
+0.45.1 reproduced this wheel twice with network denied and a fixed epoch. Both
+144,590-byte outputs have SHA-256
+`e403b2aa433c161c3ed3dc04e9176db63aef53c6dc0af5bb9617748e9c0dd1ba`.
+Neither build changed the original environments. This proves the source-build
+input strategy; no complete avatar preparation is qualified by this audit.
 
 Sonic's checked source carries CC BY-NC-SA 4.0. Its weights, SVD, Whisper, RIFE,
 face detector, Python and dependencies require separately inspected component
