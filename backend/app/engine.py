@@ -139,6 +139,7 @@ def tick(
 
 
 def _execute_claimed(session, run, worker_id, executors):
+    claim = run.claimed_at
     if run.owner_id is not None:
         from app.models import User
 
@@ -207,8 +208,15 @@ def _execute_claimed(session, run, worker_id, executors):
                 raise
     except Exception as exc:
         session.rollback()
-        failed = session.get(type(run), run.id)
-        if failed is not None and failed.status not in {"succeeded", "failed", "canceled", "interrupted"}:
+        # An executor may commit before losing its claim. A rollback without
+        # an active transaction does not expire that stale ORM instance.
+        failed = session.get(type(run), run.id, populate_existing=True)
+        if (
+            failed is not None
+            and failed.worker_id == worker_id
+            and failed.claimed_at == claim
+            and failed.status not in {"succeeded", "failed", "canceled", "interrupted"}
+        ):
             if failed.metadata_json.get("dispatch_attempted") and not failed.metadata_json.get(
                 "process_confirmed_gone"
             ):
