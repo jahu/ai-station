@@ -110,3 +110,40 @@ there is no shell, global shutdown, terminate or unregister plan.
 This module alone is not an installer. Windows ACL/reparse validation, immutable
 archive transfer, registry/WSL execution, native UI and actual WSL acceptance
 must still be implemented/tested before exposing a consumer installation flow.
+
+## Private import controller — implementation in progress
+
+`InstallFiles.psm1` holds an exclusive installation lease, writes bounded strict
+UTF-8 state through a flushed atomic replacement, and verifies archive size/SHA
+while retaining its read handle for the import. The real portable .NET file
+checks found and fixed PowerShell's empty-string conversion for a null backup
+argument. Mandatory Windows sharing/deletion semantics remain a Windows gate;
+Linux file tests do not establish them.
+
+`PrivateStore.psm1` limits storage to the current user's LocalAppData leaf, creates
+an owner/SYSTEM-only protected ACL, rejects junction/reparse paths and unsafe
+existing ownership/access, and refuses unmarked existing data. It does not
+repair parent/profile permissions. `Setup.psm1` snapshots the accepted manifest
+and state atomically, probes Windows prerequisites with stdin closed, imports
+only the recorded private distro, and verifies both the registration identity
+and exact guest source receipt before advancing readiness. Windows environment
+forwarding is cleared. A lost/unknown import is inspected instead of repeated;
+existing disks and replaced/foreign registrations are preserved. Desktop start
+returns its private process pipe; status/open/stop retain fixed guest operations.
+These Windows-specific APIs have not yet been exercised on Windows.
+
+The portable checks passed 33 ownership assertions, three non-Windows guard
+refusals, 15 real .NET file assertions and 20 manifest/imported-source assertions,
+including language-independent source comparison. Browser binding is separately
+qualified in [desktop installation](desktop-installation.md#bind-browser-readiness-to-the-running-station).
+The compiled accounts API and real PowerShell HTTP probe passed without sending
+bootstrap authority in HTTP or logs. This does not qualify Windows native UI.
+
+Next: native onboarding/status/background controls; automatic Windows-side port
+selection with a typed guest handoff; preserved updates/removal; and clean
+Windows first-result acceptance. Account for the physical Windows volume's
+remaining capacity rather than advertising the WSL VHD's virtual maximum as free
+model storage. Package the reviewed current browser-identity protocol together;
+the earlier private guest archive is a historical fixture, not the new UI's
+qualified payload. Signing and macOS/full catalog/quality requirements remain
+part of the original release scope.
