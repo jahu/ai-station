@@ -173,3 +173,28 @@ acquisition, signing/distribution and actual cross-platform installations remain
 consumer-setup work.
 
 The next Windows increment follows the [dedicated WSL2 consumer contract](windows-consumer-installation.md). It keeps the Linux native boundary in a private guest rather than adopting existing Windows/WSL environments. Windows remains unqualified until its real platform acceptance passes.
+
+## Bind browser readiness to the running station
+
+Desktop startup creates a fresh nonsecret instance UUID, distinct from the private
+stop-channel identity. The explicit child environment passes it through Compose
+to the API; public `/api/health` echoes it with `Cache-Control: no-store`. The
+launcher checks that value before requesting any first-admin authority. A missing
+or different value stops startup rather than opening another local service.
+
+The private parent pipe and mode-0600 readiness handoff retain URL and instance
+identity together. Console reopen returns that same pair. Linux graphical reopen
+can read an older URL-only handoff, but the Windows bridge requires the new
+identity protocol. Its native browser helper validates the address and matches
+the Windows-side loopback health response before handing the URI to the OS
+browser. It uses no proxy/redirect/cache and sends neither URL fragments nor
+bootstrap proof in the HTTP probe. Normal installer, WSL and diagnostic arguments
+do not carry setup authority; the chosen browser necessarily receives its own
+private setup URI through the trusted OS URI handler. The public instance UUID
+is a routing check, not authentication, a user identifier or a stop capability.
+
+Normal tests cover mismatched/missing identity, proof ordering, private handoff
+validation and child identity. Real .NET HTTP tests on Linux cover correct/wrong
+instances, redirects, missing identity and oversized responses; these do not
+qualify Windows forwarding or native rendering. Those platform gates remain in
+the [Windows contract](windows-consumer-installation.md).

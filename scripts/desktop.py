@@ -21,6 +21,7 @@ import time
 import webbrowser
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 READY = "AI_STATION_READY "
@@ -266,13 +267,22 @@ def browser_url(value):
     return urlunsplit(parsed._replace(fragment=fragment))
 
 
-def publish_ready(root, url):
+def readiness(url, instance_id=None):
+    value = {"url": browser_url(url)}
+    if instance_id is not None:
+        if not isinstance(instance_id, str) or not re.fullmatch(r"[a-f0-9]{32}", instance_id):
+            raise ValueError("Invalid desktop readiness identity")
+        value["instance_id"] = instance_id
+    return value
+
+
+def publish_ready(root, url, *, instance_id=None):
     """Private handoff to later desktop clicks; never an ordinary log entry."""
-    url = browser_url(url)
+    value = readiness(url, instance_id)
     descriptor, temporary = tempfile.mkstemp(prefix=".desktop-ready-", dir=root)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as target:
-            json.dump({"url": url}, target)
+            json.dump(value, target)
             target.flush()
             os.fsync(target.fileno())
         os.replace(temporary, root / READY_FILE)
@@ -280,7 +290,7 @@ def publish_ready(root, url):
         Path(temporary).unlink(missing_ok=True)
 
 
-def ready_url(root):
+def ready_info(root):
     """Read only after the owning desktop process's lock is observed held."""
     try:
         descriptor = os.open(root / READY_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -297,19 +307,30 @@ def ready_url(root):
         ):
             raise ValueError("The desktop readiness link must remain a private owned file")
         value = json.load(source)
-    if not isinstance(value, dict) or set(value) != {"url"} or not isinstance(value["url"], str):
+    if (
+        not isinstance(value, dict)
+        or set(value) not in ({"url"}, {"url", "instance_id"})
+        or not isinstance(value["url"], str)
+    ):
         raise ValueError("The desktop readiness link is invalid")
-    return browser_url(value["url"])
+    if "instance_id" in value and value["instance_id"] is None:
+        raise ValueError("Invalid desktop readiness identity")
+    return readiness(value["url"], value.get("instance_id"))
+
+
+def ready_url(root):
+    value = ready_info(root)
+    return value["url"] if value else None
 
 
 def reopen(root, *, console=False):
-    url = ready_url(root)
-    if url is None:
+    value = ready_info(root)
+    if value is None:
         return False
     if console:
-        print(READY + json.dumps({"url": url}), flush=True)
+        print(READY + json.dumps(value), flush=True)
     else:
-        webbrowser.open(url)
+        webbrowser.open(value["url"])
     return True
 
 
@@ -335,8 +356,16 @@ def supervise(
     control=None,
     on_ready=lambda: None,
     on_ready_url=lambda url: None,
+    instance_id=None,
 ):
-    env = {**launch_environment(), "AI_STATION_APP_IMAGE": value["image_tag"], "PYTHONNOUSERSITE": "1"}
+    instance_id = instance_id or uuid4().hex
+    readiness("http://127.0.0.1:8765", instance_id)
+    env = {
+        **launch_environment(),
+        "AI_STATION_APP_IMAGE": value["image_tag"],
+        "PYTHONNOUSERSITE": "1",
+        "AI_STATION_DESKTOP_INSTANCE_ID": instance_id,
+    }
     proc = subprocess.Popen(
         [
             str(root / "python/bin/python3"),
@@ -360,8 +389,12 @@ def supervise(
         for line in proc.stdout:
             if line.startswith(READY):
                 try:
-                    ready.put(browser_url(json.loads(line[len(READY) :])["url"]))
-                except (ValueError, TypeError, KeyError):
+                    frame = json.loads(line[len(READY) :])
+                    if frame.get("instance_id") != instance_id:
+                        ready.put(None)
+                    else:
+                        ready.put(browser_url(frame["url"]))
+                except (ValueError, TypeError, KeyError, AttributeError):
                     ready.put(None)
             else:
                 log.write(line)
@@ -391,7 +424,7 @@ def supervise(
         if control is not None:
             control.ready.set()
         if console:
-            print(READY + json.dumps({"url": url}), flush=True)
+            print(READY + json.dumps(readiness(url, instance_id)), flush=True)
         else:
             webbrowser.open(url)
 
@@ -588,6 +621,7 @@ def main():
                 if control.stop_requested.is_set():
                     return
                 progress.stage("Starting your local AI Station…")
+                instance_id = uuid4().hex
                 supervise(
                     installed,
                     config,
@@ -597,7 +631,8 @@ def main():
                     background=args.background,
                     control=control,
                     on_ready=progress.close,
-                    on_ready_url=lambda url: publish_ready(root, url),
+                    on_ready_url=lambda url: publish_ready(root, url, instance_id=instance_id),
+                    instance_id=instance_id,
                 )
         finally:
             progress.close()

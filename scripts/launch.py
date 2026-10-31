@@ -7,12 +7,14 @@ import fcntl
 import ipaddress
 import json
 import os
+import re
 import runpy
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 from ai_station_runner.unix_sockets import unix_address
@@ -106,8 +108,25 @@ def stop_runner(proc: subprocess.Popen | None) -> None:
             proc.wait()
 
 
-def local_entry_url(client, run, url: str, api_url: str) -> str:
+def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "") -> str:
     """Ask only the owned container console for pending first-admin setup."""
+    if instance_id:
+        if not re.fullmatch(r"[a-f0-9]{32}", instance_id):
+            raise RuntimeError("Invalid desktop readiness identity")
+        response = client.get(api_url + "/api/health")
+        response.raise_for_status()
+        try:
+            body = response.json()
+        except ValueError:
+            raise RuntimeError(
+                "An unexpected local response answered. No setup link was requested."
+            ) from None
+        if (
+            not isinstance(body, dict)
+            or body.get("status") != "ok"
+            or body.get("desktop_instance_id") != instance_id
+        ):
+            raise RuntimeError("A different local service answered. No setup link was requested or opened.")
     auth = client.get(api_url + "/api/auth")
     if auth.status_code != 200 or not auth.headers.get("content-type", "").startswith("application/json"):
         return url
@@ -139,6 +158,8 @@ def main() -> None:
     args = parser.parse_args()
     os.chdir(ROOT)
     env = configuration(args.config) if args.config else configuration()
+    if args.desktop and not env.get("AI_STATION_DESKTOP_INSTANCE_ID"):
+        env["AI_STATION_DESKTOP_INSTANCE_ID"] = uuid4().hex
     if env.get("AI_STATION_LAN_HOST"):
         try:
             address = ipaddress.IPv4Address(env["AI_STATION_LAN_HOST"])
@@ -205,14 +226,20 @@ def main() -> None:
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
             url = f"http://127.0.0.1:{port}"
-            with httpx.Client(timeout=3) as client:
+            with httpx.Client(timeout=3, trust_env=False, follow_redirects=False) as client:
                 client.get(url).raise_for_status()
                 api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
-                url = local_entry_url(client, run, url, api_url)
+                url = local_entry_url(
+                    client, run, url, api_url, instance_id=env.get("AI_STATION_DESKTOP_INSTANCE_ID", "")
+                )
             if args.desktop:
                 # Private pipe to the owning desktop process. The parent consumes
                 # this setup authority without persisting it in ordinary logs.
-                print("AI_STATION_READY " + json.dumps({"url": url}), flush=True)
+                print(
+                    "AI_STATION_READY "
+                    + json.dumps({"url": url, "instance_id": env["AI_STATION_DESKTOP_INSTANCE_ID"]}),
+                    flush=True,
+                )
             else:
                 print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
             if env.get("AI_STATION_LAN_HOST"):
