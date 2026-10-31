@@ -129,6 +129,11 @@ def available_profile(ready):
         and ready.get("vram_mib") == VRAM_MIB
         and isinstance(ready.get("observation"), str)
         and re.fullmatch(r"[a-f0-9]{64}", ready["observation"])
+        and (
+            ready.get("configuration_source") != "managed"
+            or isinstance(ready.get("environment_id"), str)
+            and re.fullmatch(r"[a-f0-9]{64}", ready["environment_id"])
+        )
     )
 
 
@@ -138,6 +143,18 @@ def create_effects_run(session, body, *, task=None, parent_run_id=None, observed
         raise HTTPException(
             409, ready.get("reason", "Sound effects is not configured or still being verified")
         )
+    managed = {}
+    if ready.get("environment_id"):
+        eligible = ready.get("eligible_gpu_indices")
+        if (
+            not isinstance(eligible, list)
+            or not eligible
+            or any(type(i) is not int or i < 0 for i in eligible)
+        ):
+            raise HTTPException(409, "The managed sound profile requires compatible GPU observations")
+        if body.gpu != "auto" and int(body.gpu) not in eligible:
+            raise HTTPException(422, "Choose a GPU compatible with the installed sound profile")
+        managed = {"environment_id": ready["environment_id"], "managed_effects_gpu_indices": list(eligible)}
     try:
         video = video_snapshot(session, body.video_artifact_id)
         if any(cue.end_frame > video["frames"] for cue in body.cues):
@@ -159,6 +176,7 @@ def create_effects_run(session, body, *, task=None, parent_run_id=None, observed
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
+            **managed,
             **body.model_dump(mode="json", exclude={"gpu", "seed", "translation"}),
             "video": video,
             "backend": "mmaudio",
@@ -192,6 +210,10 @@ class EffectsExecutor(HostMediaExecutor):
 
     def reserve_devices_from_hardware(self, session, run, hardware):
         devices = {int(g["index"]): g for g in hardware.get("gpus", [])}
+        if run.parameters.get("environment_id"):
+            devices = {
+                i: g for i, g in devices.items() if i in run.parameters.get("managed_effects_gpu_indices", [])
+            }
         eligible = []
         for idx, gpu in devices.items():
             total, used = gpu.get("memory_total_mib"), gpu.get("memory_used_mib")
@@ -234,6 +256,11 @@ class EffectsExecutor(HostMediaExecutor):
                     for k in ("video", "prompt", "negative_prompt", "steps", "cfg", "seed", "observation")
                 },
                 **({"cues": run.parameters["cues"]} if run.parameters.get("cues") else {}),
+                **(
+                    {"environment_id": run.parameters["environment_id"]}
+                    if run.parameters.get("environment_id")
+                    else {}
+                ),
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **self.native_budget(run),
@@ -273,9 +300,15 @@ class EffectsExecutor(HostMediaExecutor):
             executor_type="effects_preview",
             permissions=list(run.effective_permissions),
             requested_gpu="none",
+            requested_resources={"ram_mib": 4096} if run.parameters.get("environment_id") else {},
             retry_class="inspect",
             parent_run_id=run.id,
             parameters={
+                **(
+                    {"effects_environment_id": run.parameters["environment_id"]}
+                    if run.parameters.get("environment_id")
+                    else {}
+                ),
                 "video": video,
                 "video_artifact_id": run.parameters["video_artifact_id"],
                 "audio_artifact_id": artifact.id,
@@ -326,6 +359,11 @@ class EffectsPreviewExecutor(HostMediaExecutor):
             "/v1/runs/effects-preview",
             {
                 "run_id": run.id,
+                **(
+                    {"effects_environment_id": run.parameters["effects_environment_id"]}
+                    if run.parameters.get("effects_environment_id")
+                    else {}
+                ),
                 "clips": [{**clip, "expected_frames": v["frames"], "frames": v["frames"], "first_frame": 0}],
                 "fps": v["fps"],
                 "width": v["width"],

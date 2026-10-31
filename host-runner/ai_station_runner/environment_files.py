@@ -78,7 +78,11 @@ def install_python(
             os.path.relpath(objects[item["filename"]], folder / "wheels")
         )
     if prepare_wheels is not None:
-        wheels = [*wheels, *prepare_wheels(python)]
+        prepared = prepare_wheels(python)
+        wheels = [v for v in wheels if v.get("build_only") is not True]
+        wheels = [*wheels, *prepared]
+    elif any(v.get("build_only") is True for v in wheels):
+        raise ValueError("Build-only wheels require a fixed preparation callback")
     lock = folder / "requirements.lock"
     lock.write_text(
         "\n".join(f"{v['name']}=={v['version']} --hash=sha256:{v['sha256']}" for v in wheels) + "\n"

@@ -24,6 +24,12 @@ def installation():
     cfg = get_settings()
     configured = (cfg.mmaudio_python if cfg.mmaudio_enabled else "") or cfg.video_python
     if not configured:
+        from ai_station_runner.effects_selection import selection as effects_selection
+
+        effects = effects_selection(cfg) or {}
+        if effects.get("managed"):
+            configured = effects["mmaudio_python"]
+    if not configured:
         from ai_station_runner.video_selection import selection
 
         managed = selection(cfg) or {}

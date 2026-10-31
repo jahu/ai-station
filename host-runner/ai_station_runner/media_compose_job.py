@@ -136,6 +136,21 @@ def verify(av, path, request):
 
 
 def compose(config):
+    if config["request"].get("effects_environment_id"):
+        from ai_station_runner.effects_environment import resolve_id
+        from ai_station_runner.memory_scope import require_scope
+        from ai_station_runner.video_job import deny_network
+
+        request = config["request"]
+        frozen = resolve_id(config["root"], request["effects_environment_id"])
+        if Path(sys.base_prefix).resolve() != frozen["environment"] / "python":
+            raise ValueError("Sound preview must execute its exact prepared environment")
+        require_scope(request["run_id"], 4096)
+        remaining = min(1800, request["deadline_at"] - time.time())
+        if remaining <= 0:
+            raise TimeoutError("Sound preview deadline expired")
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        sys.addaudithook(deny_network)
     if config["request"].get("managed_runtime"):
         from ai_station_runner import video_environment
         from ai_station_runner.memory_scope import require_scope

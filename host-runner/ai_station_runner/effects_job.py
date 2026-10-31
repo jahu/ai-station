@@ -2,6 +2,7 @@
 
 import json
 import os
+import signal
 import sys
 import time
 import wave
@@ -205,6 +206,17 @@ def run(receipt):
     if time.time() >= request.deadline_at:
         raise ValueError("Effects deadline elapsed")
     runtime, weights = Path(record["runtime"]), Path(record["models"])
+    if request.environment_id:
+        from ai_station_runner.effects_environment import resolve_id
+
+        selected = resolve_id(root, request.environment_id)
+        if (
+            Path(sys.base_prefix).resolve() != selected["environment"] / "python"
+            or runtime != selected["mmaudio_dir"]
+            or weights != selected["mmaudio_models"]
+        ):
+            raise ValueError("Sound must execute its exact frozen environment")
+        signal.setitimer(signal.ITIMER_REAL, min(1800, request.deadline_at - time.time()))
     if installation_observation(runtime, weights) != request.observation:
         raise ValueError("Effects implementation/model changed since queuing")
     source = video_path(root, request.video)

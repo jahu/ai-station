@@ -38,15 +38,20 @@ def devices(root, *, free=False):
     return result
 
 
-def installation():
+def installation(identity=None):
     settings = get_settings()
-    if not settings.mmaudio_enabled:
+    from ai_station_runner.effects_selection import selection
+
+    chosen = selection(settings, identity) or {}
+    if identity is not None and not chosen.get("managed"):
+        raise ValueError("The exact managed sound environment is no longer selected")
+    if not settings.mmaudio_enabled and not chosen.get("managed"):
         raise ValueError("Sound effects is not enabled")
-    if not all((settings.mmaudio_python, settings.mmaudio_dir, settings.mmaudio_models)):
+    if not all(chosen.get(k) for k in ("mmaudio_python", "mmaudio_dir", "mmaudio_models")):
         raise ValueError("Configure the offline MMAudio Python, source and model directory")
-    python = Path(settings.mmaudio_python).expanduser().absolute()
-    runtime = Path(settings.mmaudio_dir).expanduser().absolute()
-    models = Path(settings.mmaudio_models).expanduser().absolute()
+    python = chosen["mmaudio_python"].absolute()
+    runtime = chosen["mmaudio_dir"].absolute()
+    models = chosen["mmaudio_models"].absolute()
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Configured MMAudio Python is unavailable")
     if any(path.resolve() != path or not path.is_dir() for path in (runtime, models)):
@@ -78,6 +83,10 @@ def capabilities():
         "license_url": "https://huggingface.co/hkchengrex/MMAudio",
         "commercial_license_required": True,
     }
+    from ai_station_runner.effects_selection import selection
+
+    chosen = selection(get_settings()) or {}
+    managed = chosen.get("managed") is True
     try:
         _, runtime, models = installation()
         if not any(v >= VRAM_MIB for v in devices(get_settings().host_data_dir()).values()):
@@ -101,16 +110,60 @@ def capabilities():
                 "readiness": "checking",
                 "reason": "Verifying installed sound model",
             }
-        return {**base, "available": True, "readiness": "ready", "observation": future.result()}
-    except (OSError, ValueError) as exc:
-        return {**base, "available": False, "readiness": "unavailable", "reason": str(exc)}
+        extra = {}
+        if managed:
+            from ai_station_runner.effects_environment import environment_id, read_json, resolve
+            from ai_station_runner.effects_prepare import compatible_devices, driver_supported
+
+            ready = read_json(models.parent / "ready.json")
+            observed = {k: ready[k] for k in ("profile", "manifest_sha256", "operation_id")}
+            selected = resolve(get_settings().host_data_dir(), observed)
+            if selected["mmaudio_models"] != models or selected["mmaudio_dir"] != runtime:
+                raise ValueError("The observed sound environment changed")
+            eligible = compatible_devices(collect(get_settings().host_data_dir()).get("gpus", []))
+            if not eligible or not driver_supported("580.126.20"):
+                raise ValueError("The installed sound profile needs compatible BF16 GPUs and driver")
+            extra = {
+                "environment_id": environment_id(observed),
+                "eligible_gpu_indices": [int(g["index"]) for g in eligible],
+            }
+        return {
+            **base,
+            **extra,
+            "available": True,
+            "readiness": "ready",
+            "configuration_source": "managed" if managed else "configured",
+            "observation": future.result(),
+        }
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {
+            **base,
+            "available": False,
+            "readiness": "unavailable",
+            "reason": "The installed sound files changed or are unavailable; inspect model setup"
+            if managed
+            else str(exc),
+        }
 
 
 def start(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise PermissionError("Effects requires artifact read/write permissions")
-    python, runtime, models = installation()
+    from ai_station_runner.effects_selection import selection
+
+    if body.environment_id is None and (selection(get_settings()) or {}).get("managed"):
+        raise ValueError("Managed sound requires its frozen environment identity")
+    python, runtime, models = installation(body.environment_id) if body.environment_id else installation()
     root = manager.data_dir.resolve()
+    managed = None
+    if body.environment_id:
+        from ai_station_runner.effects_environment import resolve_id
+
+        managed = resolve_id(root, body.environment_id)
+        if (python, runtime, models) != tuple(
+            managed[k] for k in ("mmaudio_python", "mmaudio_dir", "mmaudio_models")
+        ):
+            raise ValueError("Sound launch must use its exact frozen environment")
     run_id = str(body.run_id)
     launch = resolve_child(root, f"runs/{run_id}/effects-launch")
     if launch != root / f"runs/{run_id}/effects-launch":
@@ -143,6 +196,13 @@ def start(manager, body):
     free = devices(root, free=True)
     if free.get(body.gpu, 0) < VRAM_MIB:
         raise ValueError("Allocated effects GPUs lack the required free VRAM")
+    if managed:
+        from ai_station_runner.effects_prepare import compatible_devices, driver_supported
+
+        if not driver_supported("580.126.20") or body.gpu not in {
+            int(g["index"]) for g in compatible_devices(collect(root).get("gpus", []))
+        }:
+            raise ValueError("The allocated sound GPU or driver does not fit its prepared profile")
     video_path(root, body.video, verify=False)
     output = resolve_child(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav")
     if output.exists() or output.is_symlink():
@@ -161,6 +221,28 @@ def start(manager, body):
         "PYTHONPATH": str(Path(__file__).parent.parent) + os.pathsep + str(runtime),
         "PYTHONUNBUFFERED": "1",
     }
+    if managed:
+        home = launch / "home"
+        home.mkdir(mode=0o700)
+        environment = {
+            **scope_environment(),
+            **{
+                k: environment[k]
+                for k in (
+                    "HF_HUB_OFFLINE",
+                    "TRANSFORMERS_OFFLINE",
+                    "HF_HUB_DISABLE_TELEMETRY",
+                    "CUDA_VISIBLE_DEVICES",
+                    "PYTHONPATH",
+                    "PYTHONUNBUFFERED",
+                )
+            },
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(home),
+            "LANG": "C.UTF-8",
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
     # Hashing and all model work occur in the owned child after PID journaling.
     return manager.start(
         run_id=run_id,

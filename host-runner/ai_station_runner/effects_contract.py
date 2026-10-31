@@ -53,6 +53,9 @@ WRAPPERS = (
     "memory_scope.py",
     "media_inputs.py",
     "security.py",
+    "effects_environment.py",
+    "effects_selection.py",
+    "environment_files.py",
 )
 
 
@@ -94,6 +97,9 @@ class EffectsRequest(BaseModel):
     seed: StrictInt = Field(default=42, ge=0, le=2147483647)
     gpu: StrictInt = Field(ge=0)
     observation: str = Field(pattern=r"^[a-f0-9]{64}$")
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
     deadline_at: float = Field(gt=0, strict=True, allow_inf_nan=False)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
 
@@ -119,6 +125,11 @@ def digest(path):
 
 def direct(root, relative):
     root = Path(root)
+    from ai_station_runner.effects_environment import model_reference
+
+    managed = model_reference(root, relative)
+    if managed is not None:
+        return managed
     p = resolve_child(root, relative)
     if p != root / relative or not p.is_file():
         raise ValueError("Effects files must be direct configured files")

@@ -1124,3 +1124,23 @@ including partial configuration; EchoMimic remains independent. The prepared
 finishing codec is checked before dispatch so an unavailable codec cannot fall
 back to unrelated host software after a long render. See
 [the profile, admission and qualification gates](plans/managed-avatar-setup.md).
+
+
+## Guided film-sound preparation
+
+The fixed MMAudio profile extends the ordinary private setup Task/Run and shared
+owned offline environment services. Hash-verified Python, source, binary wheels,
+one fixed source-wheel exception and seven companions prepare an independent
+runtime in a four-GiB zero-swap native process. Build-only tools remain separate
+from the exact runtime dependency lock. Model references cross symlinks only in
+the closed-world immutable managed namespace; explicit/partial external settings
+retain priority. No caller selects a command, package, model URL or path.
+
+Ordinary effects Runs freeze opaque environment/GPU observations and retain the
+existing 18-GiB owned inference scope, conditioning, window/cue timing and complete
+publication. Their separate sound-preview Run freezes the same codec environment
+and reserves four GiB for CPU work. The saved timeline renderer may also use this
+prepared Python when no explicit CPU/video configuration exists, so installing
+film sound does not silently require a second video engine. Public readiness
+shares no private setup UUID or logs. See [profile qualification and component
+licenses](plans/managed-effects-setup.md).

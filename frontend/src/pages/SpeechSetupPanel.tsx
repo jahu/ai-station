@@ -16,22 +16,35 @@ import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-type Family = "speech" | "music" | "video" | "avatar";
+type Family = "speech" | "music" | "video" | "avatar" | "effects";
 const profiles = {
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
   video: "wan22-5b-linux-x86-64-python312-v1",
   avatar: "sonic-whole-linux-x86-64-python310-v1",
+  effects: "mmaudio-large44-linux-x86-64-python312-v1",
 };
 const destination = (family: Family) =>
-  family === "avatar"
-    ? "/avatars"
-    : family === "video"
-      ? "/video"
-      : family === "music"
-        ? "/audio?mode=music"
-        : "/audio";
+  family === "effects"
+    ? "/audio?mode=effects"
+    : family === "avatar"
+      ? "/avatars"
+      : family === "video"
+        ? "/video"
+        : family === "music"
+          ? "/audio?mode=music"
+          : "/audio";
 const content = {
+  effects: {
+    title: "Sound effects",
+    heading: "Film sound & ambience",
+    description:
+      "Describe what should be heard in a film. Create a separate sound track and keep the finished mix in your workspace.",
+    ready:
+      "Choose a completed film from Library in Sound effects. Add sounds, keep the original audio and refine the mix in the editor.",
+    model: "MMAudio · research profile",
+    open: "Open Sound effects",
+  },
   avatar: {
     title: "Avatar",
     heading: "Avatars & talking portraits",
@@ -99,6 +112,7 @@ type Catalog = {
   existing_music?: { available: boolean; source: string };
   existing_video?: { available: boolean; source: string };
   existing_avatar?: { available: boolean; source: string; readiness?: string };
+  existing_effects?: { available: boolean; source: string; readiness?: string };
   recommendation?: { fits: boolean; reason: string };
   storage?: {
     free_bytes: number;
@@ -153,6 +167,7 @@ function Attempt({
   manifest?: string;
 }) {
   const title = content[family].title;
+  const familyLabel = family === "effects" ? "sound effects" : family;
   const Icon =
     family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const familyPhases =
@@ -160,11 +175,11 @@ function Attempt({
       ? phases
       : {
           ...phases,
-          downloading_files: `Downloading ${family} files`,
-          files_verified: `Files verified · preparing the ${family} engine`,
+          downloading_files: `Downloading ${familyLabel} files`,
+          files_verified: `Files verified · preparing the ${familyLabel} engine`,
           creating_environment: `Preparing the local ${family} engine`,
-          installing_dependencies: `Installing the ${family} engine`,
-          preparing_sdk: `Preparing the ${family} SDK`,
+          installing_dependencies: `Installing the ${familyLabel} engine`,
+          preparing_sdk: `Preparing the ${familyLabel} SDK`,
           environment_prepared: `${title} engine prepared`,
         };
   const receipt = useRef<{ run: string; id: string } | null>(null);
@@ -198,13 +213,15 @@ function Attempt({
   const label =
     value.run.status === "succeeded"
       ? ready
-        ? family === "avatar"
-          ? "Ready for your first avatar"
-          : family === "video"
-            ? "Ready for your first film"
-            : family === "music"
-              ? "Ready for your first track"
-              : "Ready for your first recording"
+        ? family === "effects"
+          ? "Ready to add film sound"
+          : family === "avatar"
+            ? "Ready for your first avatar"
+            : family === "video"
+              ? "Ready for your first film"
+              : family === "music"
+                ? "Ready for your first track"
+                : "Ready for your first recording"
         : "Installation prepared"
       : value.run.status === "queued"
         ? "Waiting for available resources"
@@ -214,7 +231,7 @@ function Attempt({
             ? "Stopped · downloaded files are kept"
             : active
               ? (familyPhases[value.progress.phase ?? ""] ??
-                `Preparing ${family}`)
+                `Preparing ${familyLabel}`)
               : "Preparation needs attention";
   return (
     <article
@@ -256,7 +273,7 @@ function Attempt({
             }
             onClick={() => action.mutate("cancel")}
           >
-            <Square size={14} /> Stop {family} setup
+            <Square size={14} /> Stop {familyLabel} setup
           </Button>
         )}
         {canPrepare && value.resume_allowed && (
@@ -269,13 +286,13 @@ function Attempt({
             }
             onClick={() => action.mutate("resume")}
           >
-            <RotateCcw size={15} /> Resume {family} setup
+            <RotateCcw size={15} /> Resume {familyLabel} setup
           </Button>
         )}
         {value.run.status === "succeeded" && ready && (
           <Button asChild>
             <Link to={destination(family)}>
-              <Icon size={16} /> Create {family}
+              <Icon size={16} /> Create {familyLabel}
             </Link>
           </Button>
         )}
@@ -298,6 +315,7 @@ export default function SpeechSetupPanel() {
 export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const profile = profiles[family];
   const title = content[family].title;
+  const familyLabel = family === "effects" ? "sound effects" : family;
   const Icon =
     family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const [search] = useSearchParams();
@@ -309,8 +327,10 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     queryFn: () => api<Catalog>(`/setup/runtimes?profile=${profile}`),
     enabled: expanded,
     refetchInterval: (query) =>
-      family === "avatar" &&
-      query.state.data?.existing_avatar?.readiness === "checking"
+      (family === "avatar" &&
+        query.state.data?.existing_avatar?.readiness === "checking") ||
+      (family === "effects" &&
+        query.state.data?.existing_effects?.readiness === "checking")
         ? 1000
         : false,
   });
@@ -381,16 +401,19 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "avatar"
-      ? data?.existing_avatar
-      : family === "video"
-        ? data?.existing_video
-        : family === "music"
-          ? data?.existing_music
-          : data?.existing_speech;
+    family === "effects"
+      ? data?.existing_effects
+      : family === "avatar"
+        ? data?.existing_avatar
+        : family === "video"
+          ? data?.existing_video
+          : family === "music"
+            ? data?.existing_music
+            : data?.existing_speech;
   const ready = existingRuntime?.available === true;
   const checkingRuntime =
-    family === "avatar" && data?.existing_avatar?.readiness === "checking";
+    (family === "avatar" && data?.existing_avatar?.readiness === "checking") ||
+    (family === "effects" && data?.existing_effects?.readiness === "checking");
   const storageFits =
     !data?.storage || data.storage.free_bytes >= data.storage.required_bytes;
   return (
@@ -415,7 +438,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       </div>
       {!expanded ? (
         <Button variant="secondary" onClick={() => setExpanded(true)}>
-          Set up {family} <ArrowRight size={15} />
+          Set up {familyLabel} <ArrowRight size={15} />
         </Button>
       ) : (
         <>
@@ -434,7 +457,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
               {ready && (
                 <div className="speech-setup-ready">
                   <p>
-                    <strong>Your {family} engine is ready.</strong>{" "}
+                    <strong>Your {familyLabel} engine is ready.</strong>{" "}
                     {content[family].ready}
                   </p>
                   <Button asChild>
@@ -457,8 +480,9 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
               )}
               {checkingRuntime && (
                 <p className="notice" role="status">
-                  Checking the installed avatar files. Your setup and saved work
-                  are retained.
+                  Checking the installed{" "}
+                  {family === "avatar" ? "avatar" : "sound"} files. Your setup
+                  and saved work are retained.
                 </p>
               )}
               {(!ready || showManaged) && !checkingRuntime && (
@@ -519,8 +543,8 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                   )}
                   {ready && (
                     <p className="notice">
-                      Your configured {family} integration keeps its settings.
-                      This prepares an additional managed copy.
+                      Your configured {familyLabel} integration keeps its
+                      settings. This prepares an additional managed copy.
                     </p>
                   )}
                   <details className="speech-setup-sources">
@@ -563,14 +587,14 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                         {!data.installation_available && (
                           <p className="notice">
                             {data.installation_notice ??
-                              `This ${family} profile is not available on this workstation.`}{" "}
+                              `This ${familyLabel} profile is not available on this workstation.`}{" "}
                             <Link to="/system">View Diagnostics</Link>
                           </p>
                         )}
                         {!storageFits && (
                           <p className="notice">
-                            More free storage is needed before {family} setup
-                            can begin.
+                            More free storage is needed before {familyLabel}{" "}
+                            setup can begin.
                           </p>
                         )}
                         <label className="setup-license">
@@ -589,7 +613,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                             }
                           />
                           <span>
-                            I have reviewed the {family} model and bundled
+                            I have reviewed the {familyLabel} model and bundled
                             component licenses.
                           </span>
                         </label>
@@ -604,8 +628,8 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                         >
                           <Download size={16} />{" "}
                           {prepare.isPending
-                            ? `Starting ${family} setup…`
-                            : `Download & set up ${family}`}
+                            ? `Starting ${familyLabel} setup…`
+                            : `Download & set up ${familyLabel}`}
                         </Button>
                       </>
                     )

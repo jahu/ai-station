@@ -21,7 +21,16 @@ build_wheel(sys.argv[1])
 """
 
 
-def build(python, folder, frozen, objects, *, check, run_command):
+def build_program(python_version=(3, 10, 21)):
+    # The source wheel was reproduced on both fixed preparation interpreters.
+    # Native profile code chooses one; requests cannot choose a Python version.
+    if python_version not in ((3, 10, 21), (3, 12, 14)):
+        raise ValueError("Use a qualified fixed source-build Python")
+    return BUILD.replace("(3, 10, 21)", repr(python_version))
+
+
+def build(python, folder, frozen, objects, *, check, run_command, python_version=(3, 10, 21)):
+    program = build_program(python_version)
     source = next(v for v in frozen["inputs"] if v["kind"] == "sdist")
     expected = frozen["derived_wheel"]
     if (
@@ -62,7 +71,7 @@ def build(python, folder, frozen, objects, *, check, run_command):
     destination = folder / "source-build"
     destination.mkdir(mode=0o700)
     extracted = unpack_tar(objects[source["filename"]], destination, check)
-    run_command([python, "-I", "-c", BUILD, str(folder / "wheels")], folder=extracted, check=check)
+    run_command([python, "-I", "-c", program, str(folder / "wheels")], folder=extracted, check=check)
     path = folder / "wheels" / expected["filename"]
     if path.resolve() != path or not path.is_file() or path.stat().st_size != expected["size_bytes"]:
         raise ValueError("The fixed derived wheel changed its path or size")

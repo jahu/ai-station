@@ -25,7 +25,15 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
     )
     if (
         run.executor_type
-        not in {"runtime_setup", "speech_setup", "image_setup", "music_setup", "video_setup", "avatar_setup"}
+        not in {
+            "runtime_setup",
+            "speech_setup",
+            "image_setup",
+            "music_setup",
+            "video_setup",
+            "avatar_setup",
+            "effects_setup",
+        }
         and not image_job
     ) or run.owner_id is None:
         return False
@@ -35,11 +43,16 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         "music_setup",
         "video_setup",
         "avatar_setup",
+        "effects_setup",
     }
     if inputs:
         from app.speech_setup_job import SpeechSetupExecutor
 
-        if run.executor_type == "avatar_setup":
+        if run.executor_type == "effects_setup":
+            from app.effects_setup_job import EffectsSetupExecutor
+
+            input_contract = EffectsSetupExecutor()
+        elif run.executor_type == "avatar_setup":
             from app.avatar_setup_job import AvatarSetupExecutor
 
             input_contract = AvatarSetupExecutor()

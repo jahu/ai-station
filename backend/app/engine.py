@@ -153,6 +153,7 @@ def _execute_claimed(session, run, worker_id, executors):
             "music_setup",
             "video_setup",
             "avatar_setup",
+            "effects_setup",
             "cursor_proposal",
             "codex_proposal",
             "github_publication",

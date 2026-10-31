@@ -115,8 +115,9 @@ class FilmSoundExecutor:
         from app.effects import capabilities
 
         current = preflight(session, run, capabilities)
-        if not available_profile(current) or current.get("observation") != run.parameters["profile"].get(
-            "observation"
+        if not available_profile(current) or any(
+            current.get(key) != run.parameters["profile"].get(key)
+            for key in ("observation", "environment_id")
         ):
             raise ValueError("The admitted sound runtime changed; inspect setup before retrying")
         scope = EffectsScope.model_validate(run.parameters["scope"])

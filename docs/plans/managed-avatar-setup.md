@@ -4,8 +4,8 @@ NR-14 continues after guided video PR #542. That PR is reviewed, merged into
 `develop` and deployed, preserving 38 tables, configured media/models, credentials,
 memory/index and the same private-access node. Its final compiled desktop/phone
 and real setup/generation/composition/editor/recovery/Stop/privacy checks pass.
-The full release goal remains active. This avatar increment is qualified locally;
-review, merge and deployment remain separate final gates.
+The full release goal remains active. This avatar increment is reviewed, squash
+merged into `develop` as PR #543 and deployed.
 
 ## Inspected starting point
 
@@ -137,3 +137,16 @@ acceptance storage and is not part of the public repository.
 The actual probe is a runtime integration check, not a new 40-second HD or
 perceptual lip-sync acceptance. Original source/models/environments are retained;
 no larger speech, sound, catalog or installer requirement is marked complete.
+
+
+## Deployment
+
+PR #543 was squash merged to `develop` at
+`d1f533d64821777ea6fdb60626f5023be1616d82`. The complete merged tree matches the
+reviewed/tested head. An idle-only rollout backed up the database and verified
+preservation of all 38 existing tables, accounts, configured Sonic/Echo and other
+media, managed models, memory/index and the same private-access node. Actual
+production compiled desktop/phone setup and Avatar workspace checks passed; the
+temporary audited browser device was revoked. Only the exact idle private QA
+services were removed; downloaded inputs, prepared environments, completed media
+and evidence were retained. No real inference was repeated on production.

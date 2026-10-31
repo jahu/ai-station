@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Waves, Settings2, Sparkles } from "lucide-react";
 import { api, useHardware, type Run, type Artifact } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
@@ -23,7 +23,13 @@ import SoundCueEditor from "../components/media/SoundCueEditor";
 import { cuesValid, type SoundCue } from "../components/media/sound-cues";
 import "./SoundEffects.css";
 
-type Ready = { available: boolean; readiness: string; reason?: string };
+type Ready = {
+  available: boolean;
+  readiness: string;
+  reason?: string;
+  configuration_source?: "managed" | "configured";
+  eligible_gpu_indices?: number[];
+};
 export default function SoundEffects() {
   const creative = useCreative();
   const [search, setSearch] = useSearchParams();
@@ -227,7 +233,13 @@ export default function SoundEffects() {
                 </label>
                 <GpuTargetChoiceList
                   value={gpu}
-                  gpus={hardware.data?.gpus ?? []}
+                  gpus={
+                    hardware.data?.gpus.filter(
+                      (device) =>
+                        ready.data?.configuration_source !== "managed" ||
+                        ready.data.eligible_gpu_indices?.includes(device.index),
+                    ) ?? []
+                  }
                   disabled={busy}
                   onChange={setGpu}
                 />
@@ -235,7 +247,10 @@ export default function SoundEffects() {
             </details>
             {!ready.data?.available && (
               <p className="muted" role="status">
-                {ready.data?.reason ?? "Checking local sound effects setup…"}
+                {ready.data?.reason ?? "Checking local sound effects setup…"}{" "}
+                <Link to="/setup/models?capability=effects">
+                  Set up sound effects
+                </Link>
               </p>
             )}
             <ErrorNotice error={generate.error ?? ready.error} />
