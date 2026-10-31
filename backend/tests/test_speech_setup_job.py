@@ -319,3 +319,55 @@ def test_revoked_speech_setup_authority_only_cancels_owned_native_action(account
         assert not list(session.scalars(select(ResourceLock).where(ResourceLock.released_at.is_(None))))
     assert speech_source["cancels"] and not speech_source["adoptions"]
     assert len(speech_source["starts"]) == 1
+
+
+@pytest.mark.parametrize("stop", [False, True])
+def test_expired_worker_reattaches_frozen_speech_operation_without_downloading_again(speech_source, stop):
+    from app.engine import claim_next
+    from app.recovery import recover_stale
+    from app.runs import request_cancel, transition
+    from app.speech_setup_job import SpeechSetupExecutor
+    from app.state import RunStatus
+
+    with TestClient(app) as api:
+        created = api.post("/api/setup/runtimes", json=body(speech_source)).json()
+        identity = created["run"]["id"]
+        with control_session_factory()() as session:
+            run = claim_next(session, "expired-speech-worker")
+            assert run.id == identity
+            transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
+            contract = SpeechSetupExecutor()
+            assert contract.before_native(session, run, lambda: False) is False
+            run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
+            contract.runner().prepare_runtime(contract.payload(run))
+            transition(session, run, RunStatus.RUNNING, event_type="executor.started")
+            run.lease_expires_at = utcnow() - timedelta(seconds=2)
+            session.add(ResourceLock(resource_key="ram:" + identity, run_id=identity))
+            session.commit()
+            assert identity in recover_stale(session)
+            session.commit()
+            run = session.get(Run, identity, populate_existing=True)
+            assert run.status == "queued"
+            assert (
+                session.scalar(select(ResourceLock).where(ResourceLock.run_id == identity)).released_at
+                is None
+            )
+            if stop:
+                request_cancel(session, run)
+                session.commit()
+        downloads = list(speech_source["source"]["calls"])
+        assert work() == identity
+        current = api.get("/api/runs/" + identity).json()
+        assert current["status"] == ("canceled" if stop else "succeeded"), current
+        assert speech_source["source"]["calls"] == downloads
+        if stop:
+            assert len(speech_source["starts"]) == 1 and speech_source["cancels"]
+            assert not speech_source["adoptions"]
+        else:
+            assert len(speech_source["starts"]) == 2
+            assert speech_source["starts"][0] == speech_source["starts"][1]
+        with control_session_factory()() as session:
+            assert all(
+                row.released_at is not None
+                for row in session.scalars(select(ResourceLock).where(ResourceLock.run_id == identity))
+            )
