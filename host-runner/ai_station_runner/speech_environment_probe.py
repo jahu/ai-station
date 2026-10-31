@@ -16,6 +16,8 @@ def main():
     socket.socket.connect = denied
     socket.create_connection = denied
     folder = Path(sys.argv[1])
+    if Path(sys.base_prefix).resolve() != folder / "python":
+        raise RuntimeError("Speech Python must remain inside the app-owned runtime across updates")
     import perth
     from chatterbox.models.tokenizers.tokenizer import MTLTokenizer
     from chatterbox.mtl_tts import _resolve_multilingual_t3_model

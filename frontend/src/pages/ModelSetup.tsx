@@ -17,6 +17,7 @@ import { ErrorNotice, Loading, PageTitle, Badge } from "../components/common";
 import { randomId } from "../lib/random-id";
 import type { Run } from "../api";
 import RuntimeSetupPanel from "./RuntimeSetupPanel";
+import SpeechSetupPanel from "./SpeechSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -359,18 +360,21 @@ export default function ModelSetup() {
   return (
     <>
       <PageTitle eyebrow="GET STARTED / MODELS" title="Set up your models">
-        Choose a local conversation model. AI Station downloads and checks the
-        files for you.
+        Start with a local conversation model or add a voice. AI Station
+        downloads, checks and prepares the files for you.
       </PageTitle>
       <RuntimeSetupPanel onReadiness={setRuntimeReady} />
+      <SpeechSetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>
           <strong>Your workstation</strong>
           <p className="muted">
-            {catalog.data?.hardware.memory?.total_mib
-              ? `${Math.round(catalog.data.hardware.memory.total_mib / 1024)} GiB RAM`
-              : "Hardware inspection unavailable"}
+            {catalog.isPending
+              ? "Detecting your workstation…"
+              : catalog.data?.hardware.memory?.total_mib
+                ? `${Math.round(catalog.data.hardware.memory.total_mib / 1024)} GiB RAM`
+                : "Hardware inspection unavailable"}
             {catalog.data?.hardware.gpus.map((gpu) => (
               <span key={gpu.index}>
                 {" "}
@@ -709,8 +713,8 @@ export default function ModelSetup() {
                   <Download size={24} />
                   <p>Your downloads will appear here.</p>
                   <small className="muted">
-                    Images, video, voice and other runtime setup will use
-                    separately qualified installation recipes.
+                    Conversation model downloads are saved here. Speech setup
+                    keeps its own progress above.
                   </small>
                 </div>
               )

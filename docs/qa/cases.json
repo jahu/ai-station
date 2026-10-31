@@ -1,5 +1,5 @@
 {
-  "version": 21,
+  "version": 22,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -20,7 +20,8 @@
     "docs/plans/synchronized-sound.md",
     "docs/plans/next-release-0.1.md",
     "docs/plans/guided-model-installation.md",
-    "docs/plans/desktop-installation.md"
+    "docs/plans/desktop-installation.md",
+    "docs/plans/managed-speech-setup.md"
   ],
   "cases": [
     {
@@ -3989,6 +3990,92 @@
       "minutes": 20,
       "requirements": [
         "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-106",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: sprzęt, zgoda i pierwsze nagranie",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny profil QA Linux x86-64 z NVIDIA ≥6 GiB VRAM i dostępnym zarządzaniem zasobami; administrator; referencyjny WAV. Wymagane do 6,49 GB pobrania oraz dodatkowe 8 GiB miejsca."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model → Set up local speech. Sprawdź wykryty sprzęt, rozmiar, źródła oraz licencje.",
+        "Potwierdź licencje i rozpocznij przygotowanie. Przejdź do Chat i wróć; poczekaj na zakończenie etapów pobierania i instalacji.",
+        "Otwórz Audio, dodaj własny referencyjny WAV i krótki polski tekst. Wygeneruj, odsłuchaj i znajdź wynik w Library."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie instaluje. Wyświetlane są rzeczywiste etapy i zapisana historia. Gotowość instalacji nie udaje wykonanego testu mowy. Zwykły Run tworzy prywatne, odtwarzalne nagranie; ocena naturalności wymaga odsłuchu."
+      ],
+      "resources": "Świadome pobranie do 6,49 GB i jedna lokalna GPU; brak płatnego API",
+      "minutes": 20,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-107",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: Stop, wznowienie i zachowany postęp",
+      "priority": "P1",
+      "prerequisites": [
+        "Profil QA jak SETUP-106; przygotowanie w toku."
+      ],
+      "steps": [
+        "Zatrzymaj przygotowanie podczas pobierania lub instalacji. Odśwież stronę, następnie sprawdź zapisaną próbę.",
+        "Kliknij Resume, przejdź do innej zakładki i wróć. Sprawdź zakończenie lub widoczny błąd wymagający naprawy."
+      ],
+      "expected": [
+        "Stop nie zatrzymuje innych usług. Zweryfikowane pliki pozostają i są ponownie sprawdzane. Resume zachowuje zaakceptowaną receptę; nie tworzy fikcyjnej gotowości ani podwójnej instalacji. Zmiana zakładki nie gubi postępu."
+      ],
+      "resources": "Lokalne pliki, opcjonalne dalsze pobieranie; bez generowania mowy",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-108",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: prywatna historia i wspólne modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Dwa osobne konta administratorów A/B w profilu QA; przygotowanie i nagranie A; zwykłe konto członka C."
+      ],
+      "steps": [
+        "Na A skopiuj URL próby przygotowania oraz wynikowego Run i artefaktu.",
+        "Zaloguj B w osobnej przeglądarce: sprawdź własną historię i spróbuj otworzyć linki A. Obejrzyj stan gotowości mowy.",
+        "Na C spróbuj uruchomić przygotowanie środowiska."
+      ],
+      "expected": [
+        "B widzi gotowy współdzielony runtime, ale nie historię, prompty, logi, nagrania ani JSON A. C nie może przygotowywać runtime bez praw administratora. Nie należy zmieniać praw istniejących kont produkcyjnych na potrzeby testu."
+      ],
+      "resources": "Bez pobierania i GPU; osobne konta QA",
+      "minutes": 7,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-109",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: zachowanie istniejącego runtime i brak dopasowania GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobne profile QA z jawnie skonfigurowanym Chatterbox oraz ze sprzętem bez obsługi tego profilu; nie zmieniaj środowiska roboczego."
+      ],
+      "steps": [
+        "W profilu z istniejącą konfiguracją otwórz kartę konfiguracji mowy i sprawdź informację o używanym runtime.",
+        "W profilu bez odpowiedniego GPU sprawdź zalecenie i możliwość rozpoczęcia instalacji."
+      ],
+      "expected": [
+        "Istniejące ustawienia pozostają wybrane; dodatkowa instalacja wymaga świadomego rozwinięcia opcji. Sprzęt bez zgodnego GPU nie otrzymuje zielonej gotowości ani aktywnego przycisku instalacji."
+      ],
+      "resources": "Tylko przegląd konfiguracji i sprzętu, bez pobierania",
+      "minutes": 5,
+      "requirements": [
         "NR-14"
       ]
     }

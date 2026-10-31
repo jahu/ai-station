@@ -85,14 +85,22 @@ def _sonic() -> dict:
 
 
 def collect_diagnostics(settings) -> dict:
+    from ai_station_runner.speech_selection import selection
+
+    speech = selection(settings) or {}
+    speech_checks = [
+        file_check("chatterbox_script", str(speech.get("script") or "")),
+        file_check("chatterbox_python", str(speech.get("python") or "")),
+    ]
+    if speech.get("managed"):
+        speech_checks = [{**value, "detail": "AI Station managed speech runtime"} for value in speech_checks]
     checks = [
         command_version("docker"),
         command_version("docker", ["compose", "version"]) | {"name": "docker compose"},
         _nvidia_toolkit(),
         command_version("nvidia-smi"),
         file_check("photo_pipe", settings.photo_script),
-        file_check("chatterbox_script", settings.chatterbox_script),
-        file_check("chatterbox_python", settings.chatterbox_python),
+        *speech_checks,
         file_check("echomimic_python", settings.echomimic_python),
         file_check(
             "echomimic_entry",

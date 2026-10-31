@@ -74,6 +74,7 @@ from ai_station_runner.security import PathBoundaryError, ensure_within, resolve
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.sonic_jobs import WholeAvatarRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
+from ai_station_runner.speech_prepare import router as speech_setup_router
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
@@ -707,6 +708,7 @@ app.include_router(local_model_router)
 
 app.include_router(llama_router)
 app.include_router(runtime_setup_router)
+app.include_router(speech_setup_router)
 
 
 @app.get("/v1/krea2/capabilities")

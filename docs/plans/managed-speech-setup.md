@@ -2,9 +2,9 @@
 
 This is the first multimodal bundle in NR-14, within the complete
 [guided setup contract](guided-model-installation.md). It does not replace the
-working configured Chatterbox or optional Fish adapters. Fresh installations
-must eventually obtain both a qualified runtime and all companion files through
-the guided flow; downloading weights alone does not complete that requirement.
+working configured Chatterbox or optional Fish adapters. The Linux x86-64 guided flow now prepares both the qualified runtime and its
+companion files. Downloading weights alone remains a separate operation and
+does not enable speech.
 
 ## Inspected source and files
 
@@ -34,7 +34,7 @@ substitute its newer S3Gen files. Every selected object has its own SHA-256 and
 length. Small Git objects were fetched at that exact revision and hashed, not
 mistaken for Git SHA-1 values. Publisher metadata was checked on 2026-10-31.
 
-## Implementation sequence
+## Delivery contract
 
 1. Add a reviewed multi-file manifest and durable owner-bound bundle download
    using the existing immutable file primitive and Task/Run queue. Files share
@@ -91,8 +91,8 @@ manifest fingerprint, idempotency UUID and license confirmation. HTTP requests
 only enqueue. The worker reuses the existing verified file primitive, RAM
 admission, task/claim fences, shared ModelFile registry and private artifacts.
 It creates no model definition and always reports `runtime_prepared=false` and
-`ready_to_try=false`. The normal guided conversation-model UI is unchanged;
-the speech wizard and qualified runtime remain required implementation work.
+`ready_to_try=false`. The guided speech runtime described below is a separate
+explicit action, reusing those verified objects.
 
 An opt-in real-object check in isolated storage verified all six actual files,
 stopped during full-weight hashing, resumed against the original manifest and
@@ -103,64 +103,112 @@ source. This is not a full new weight-network-transfer or speech-inference
 claim. Existing caches, runtimes and production records were unchanged. Evidence
 is private under `data/acceptance/guided-media-model-setup-20261031/`.
 
-## Managed environment implementation
+## Qualified managed speech flow
 
-The native package now contains a fixed Linux x86-64 / CPython 3.12 / CUDA 12.6
-recipe, an offline assembler, a preparation probe and an internal Polish speech
-CLI. These remain internal helpers, with no HTTP route, executor registration,
-automatic activation or replacement of configured external Chatterbox settings.
-Account-bound download/dispatch, cancellation/recovery and the guided speech
-card must be completed before this becomes a selectable managed runtime.
+Models → Set up a local model offers **Set up speech**. The optional card
+opens automatically from Audio's setup link. Hardware, required storage, exact
+sources and licenses are shown before consent. A new installation needs Linux
+x86-64, glibc 2.28+, the packaged CPython 3.12 Runner, user-level memory scopes
+and an NVIDIA GPU with at least 6 GiB VRAM. This is a measured speech profile,
+not a claim that every platform or other media runtime is ready.
 
-The recipe binds 126 exact binary wheels, the two immutable SDK archives, the
-six model objects and the upstream segmentation archive: 135 objects totaling
-6,455,407,333 bytes before installation. Every object has a public HTTPS source,
-exact byte length and SHA-256. Dependencies retain their separate licenses;
-the MIT speech model license is not a license for bundled NVIDIA components.
-Source SDKs are built offline with pinned setuptools/wheel/uv_build and no
-dependency resolution or Git invocation. No system compiler is needed for these
-two Python packages. The complete installed graph is checked with `pip check`.
+One administrator submission creates an ordinary private runtime-preparation
+Task/Run. The worker downloads or rehashes the frozen inputs, records aggregate
+file progress and then dispatches the fixed native operation. Setup history and
+progress survive changing tabs or reopening the application. Native assembly is
+reported by its real phase rather than a fabricated percentage. Stop retains
+verified objects; explicit Resume creates a new attempt against the original
+manifest. Successful preparation opens Audio, where a reference WAV and a script
+create a normal private speech Run and Library artifact. Preparation alone never
+claims that inference has run.
 
-The assembler requires all inputs in the immutable app-owned store and hashes
-them before executing any package. It uses the native packaged interpreter to
-create a separate venv, preserves incomplete operation directories, never
-overwrites another attempt and writes readiness only after its offline probe
-passes. Its subprocesses inherit the dispatcher's owned process group/deadline;
-this is not an independent process supervisor or a background shell service.
-The future native dispatch must supply that supervisor and claim/account fences.
+The fixed Linux x86-64 / CPython 3.12 / CUDA 12.6 recipe binds 126 binary wheels,
+the two immutable SDK archives, six model objects, segmentation archive and
+standalone Python: **136 objects, 6,489,550,701 bytes** before installation. Each
+input has a public HTTPS source, exact length and SHA-256. Eight GiB of additional
+assembly space is reserved in the estimate. Components retain their separate
+licenses; the MIT model license does not license the bundled NVIDIA components.
 
-Model and wheel aliases stay inside the new environment and point only to its
-verified immutable objects; large weights are not duplicated or hard-linked.
-SDK/segmenter archives reject traversal, links, special files and oversized
-contents. The Chinese mapping has the precise HF snapshot/ref layout required
-by the inspected tokenizer. The separate `spacy_ontonotes.zip` is verified and
-extracted before inference, so its default initializer does not download it.
-The probe disables Python network connections and checks the v3 selector,
-complete mapping/segmenter and the real packaged Perth watermark checkpoint.
-The speech CLI also blocks Python network access and loads only `from_local`.
-This guard supplements the future native execution boundary; it does not claim
-to sandbox arbitrary third-party code or expose a browser/network tool.
+All inputs live in the immutable app-owned store and are hashed before any
+package executes. Preparation extracts its own pinned CPython and stdlib, then
+creates a private venv, so removing an old application version cannot remove its
+interpreter. Source SDKs build offline with pinned setuptools/wheel/uv_build,
+without online dependency resolution, Git or a system compiler. `pip check` and
+the offline probe must succeed before readiness is written. Incomplete operation
+directories are retained and never reused as a completed environment.
 
-Normal boundary tests require no models, installer execution, GPU or network.
-Real preparation/speech qualification is opt-in and private under
-`data/acceptance/managed-speech-runtime-20261031/`. A successful environment probe
-proves import/tokenizer prerequisites, not successful speech inference, clean-OS
-installation or completion of NR-13/14 on any platform.
+SDK and segmenter extraction rejects traversal, links, special files and oversized
+contents. Standalone Python permits its legitimate in-tree links through the
+standard safe extraction filter and verifies their final targets remain inside
+its owned Python tree. Model/wheel aliases point only to verified immutable
+objects; large weights are not copied. The probe verifies the v3 selector,
+Chinese mapping/snapshot layout, offline segmenter, owned base Python and actual
+Perth watermark checkpoint. The fixed speech CLI blocks Python network
+connections and loads `from_local`; this does not claim to sandbox arbitrary
+third-party code or provide an internet tool.
 
-The actual isolated assembler passed with the packaged CPython 3.12 interpreter,
-all 135 real inputs and no online install resolution. Its built native wheel was
-also inspected to ensure the complete recipe and helper sources are included.
-Real Polish CUDA samples produced 10.28-second and 27.4-second PCM results; the
-longer result used two existing 220-character chunks with the model loaded once.
-Observed allocated GPU peaks were about 3.5–3.6 GiB. The actual child verified an
-11-GiB RAM, zero-swap kernel scope. Stop during actual model execution ended the
-owned group and published no partial final WAV. This is internal model/runtime
-qualification, not an account/API/wizard or clean-OS installation claim.
+## Native, worker and account boundaries
 
-The first unchunked long experiment continued with unrelated speech until the
-model token limit. It is superseded: the helper now uses the established text
-chunk policy, rejects invalid/token-limit-length parts and publishes the whole
-PCM result without overwriting an existing file. Offline Whisper-tiny checks
-provide intelligibility evidence, with recognition errors still visible in the
-private transcript; they do not replace listening/style acceptance. The normal
-external Chatterbox adapter and its existing chunk wrapper were unchanged.
+`/v1/setup/speech` exposes typed catalog, prepare, inspect, cancel and adopt
+operations over the existing private Runner socket. Only the built-in profile,
+manifest and absolute deadline are accepted. A private immutable journal and the
+existing ProcessManager own the four-GiB/zero-swap preparation group. Repeated or
+lost-acknowledgement dispatches inspect the same operation. Stop is durable before
+dispatch; Stop/adoption serialize against the same native lock. Missing process
+or completion evidence requires inspection and never silently repeats setup.
+
+The control plane reuses `/api/setup/runtimes` with the speech profile and the
+existing runtime supervisor. Live administrator authority, effective permissions,
+Task Stop, worker identity and claim timestamp fence progress and publication.
+Revocation uses trusted worker-only cancellation of the exact existing action,
+without impersonating the disabled account. Shared ModelFile rows and private
+JSON receipts publish only after all files, native completion and activation
+receipts verify. Account A cannot read B's history, logs or receipts; shared model
+files do not expose voice references or generated speech.
+
+Existing explicit Chatterbox settings always retain priority, including partial
+configurations that need repair. Managed setup cannot silently replace them.
+Otherwise Audio resolves the activated, exact prepared recipe. Normal speech
+Runs freeze that manifest, reserve load RAM and one eligible GPU, and recheck the
+selected runtime before launch. The fixed inference child verifies an eleven-GiB,
+zero-swap kernel scope and uses the existing 220-character chunk policy with the
+model loaded once. Invalid, partial or token-limit-length parts never publish a
+final WAV. All parts publish together without overwriting an existing result.
+
+## Qualification and remaining release scope
+
+Normal temporary-database/fake-executor cases cover the preparation lifecycle,
+manifest/path/hash rejection, cancellation before/during dispatch, immutable
+lost acknowledgements, Stop/adopt serialization, lease-epoch races, account
+revocation/isolation, registry publication, configured-runtime preservation and
+managed Audio dispatch. Frontend cases cover consent, setup, Stop/Resume,
+history restoration and unavailable hardware. No normal test downloads models
+or launches real inference.
+
+Explicit real qualification is retained privately under
+`data/acceptance/managed-speech-runtime-20261031/`:
+
+- The complete actual account/API/container worker/private Runner/UI journey
+  prepared all 136 inputs, installed the SDK with its own Python and generated a
+  first recording through an ordinary Audio Run on CUDA. Desktop and phone
+  layouts, navigation restoration, private receipt and SSE passed. That journey
+  reused isolated cached inputs and rehashed every object; it did not download
+  another 6.49 GB from the network.
+- A separate cold-source check used the actual application downloader for both
+  SDK archives, Python and segmentation archives, plus a real wheel from each
+  distinct wheel host. Exact lengths/hashes passed. This proves those selected
+  public transfers, not a new network transfer of every full weight.
+- Short and longer Polish CUDA recordings completed; the longer current sample
+  was 28.48 seconds. Earlier measured peak allocated GPU memory was approximately
+  3.5–3.6 GiB. Actual Stop during generation ended only the owned group and
+  published no partial final WAV. Offline Whisper checks retain recognition
+  errors and do not replace human listening/style acceptance.
+- A native lifecycle check verified setup, repeated dispatch with the same PID,
+  inspection and activation under its actual four-GiB/zero-swap scope. The full
+  native test suite passed 1,314 cases (two optional skips).
+
+The separate file-only qualification is retained under
+`data/acceptance/guided-media-model-setup-20261031/`. Production rollout remains a
+separate reviewed operation. Image/video/music/avatar recipes, clean consumer OS
+installation, Windows/macOS qualification and the remaining NR-01–NR-14 release
+requirements remain in scope; this speech delivery does not complete them.

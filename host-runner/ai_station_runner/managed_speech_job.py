@@ -1,7 +1,7 @@
 """Repository-owned offline Chatterbox v3 CLI for prepared speech environments.
 
-This internal worker helper is not selectable by HTTP clients. It preserves the
-existing configured external adapter until managed dispatch has been qualified.
+The native adapter selects this fixed helper only for an activated managed
+environment. Existing explicitly configured external adapters keep priority.
 """
 
 import argparse

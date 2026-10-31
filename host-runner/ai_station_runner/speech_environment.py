@@ -1,7 +1,7 @@
 """Offline assembly of the built-in speech environment from verified objects.
 
-Not an HTTP endpoint or an enabled executor. Downloads, account-bound dispatch
-and native recovery must qualify before the guided installer can use this.
+The fixed native preparation operation owns this assembler; downloads, account
+authority, cancellation and recovery use the existing Run and process lifecycle.
 """
 
 import hashlib
@@ -113,6 +113,27 @@ def unpack_segmenter(source, destination, check):
             archive.extract(item, destination)
 
 
+def unpack_python(source, destination, check):
+    """Pinned standalone Python includes legitimate in-tree binary/library links."""
+    with tarfile.open(source) as archive:
+        members = archive.getmembers()
+        if len(members) > 20000 or sum(v.size for v in members) > 250 * 1024**2:
+            raise ValueError("The standalone Python archive exceeded its bound")
+        for item in members:
+            path = archive_path(item.name)
+            if path.parts[0] != "python" or not (
+                item.isfile() or item.isdir() or item.issym() or item.islnk()
+            ):
+                raise ValueError("The standalone Python archive has an unexpected member")
+            check()
+            archive.extract(item, destination, filter="data")
+    folder = destination / "python"
+    for path in folder.rglob("*"):
+        if not path.resolve().is_relative_to(folder.resolve()):
+            raise ValueError("Standalone Python links must stay inside its owned directory")
+    return folder / "bin/python3.12"
+
+
 def offline_environment(folder):
     return {
         "PATH": str(folder / "venv/bin") + os.pathsep + "/usr/bin:/bin",
@@ -180,7 +201,9 @@ def prepare(root, operation_id, *, check=lambda: None, progress=lambda value: No
         directory(folder, name)
     (folder / "preparing.json").write_text(json.dumps({"profile": PROFILE, "manifest_sha256": identity}))
     progress({"phase": "creating_environment"})
-    command([sys.executable, "-m", "venv", "--without-pip", str(folder / "venv")], folder=folder, check=check)
+    standalone = next(v for v in frozen["inputs"] if v["kind"] == "python")
+    bootstrap = unpack_python(objects[standalone["filename"]], folder, check)
+    command([str(bootstrap), "-m", "venv", "--without-pip", str(folder / "venv")], folder=folder, check=check)
     python = str(folder / "venv/bin/python")
     command([python, "-m", "ensurepip"], folder=folder, check=check)
     wheels = [v for v in frozen["inputs"] if v["kind"] == "wheel"]

@@ -183,6 +183,15 @@ your selected model. Existing configured images stay available. Cross-platform
 launchers and full media setup remain in progress.
 [Guided setup and measured qualification](docs/plans/guided-model-installation.md).
 
+On supported Linux NVIDIA workstations, the same page offers **Set up local
+speech**: review hardware, storage and component licenses, prepare Chatterbox,
+then open Audio with your reference recording. Setup history and Stop/Resume are
+saved; an existing configured speech runtime keeps priority. This development
+flow prepares its own Python and offline dependencies, rather than asking you to
+wire up a separate environment.
+[Speech setup and qualification](docs/plans/managed-speech-setup.md).
+
+
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
 in your browser, and keeps data outside the installed package. Docker/Compose

@@ -33,7 +33,7 @@ def test_complete_builtin_recipe_pins_executable_sources_and_weights():
     value = environment.recipe()
     assert value["profile"] == environment.PROFILE
     assert value["python"] == "3.12" and value["glibc_minimum"] == "2.28"
-    assert len(value["inputs"]) == 135
+    assert len(value["inputs"]) == 136
     assert len({v["filename"] for v in value["inputs"]}) == len(value["inputs"])
     assert all(len(v["sha256"]) == 64 and v["size_bytes"] > 0 for v in value["inputs"])
     assert all(v["url"].startswith("https://") for v in value["inputs"])
@@ -188,7 +188,9 @@ def test_missing_or_canceled_inputs_never_execute_installer(tmp_path, monkeypatc
 
 def test_failed_installation_retains_partial_operation_without_claiming_readiness(tmp_path, monkeypatch):
     item, _ = object_file(tmp_path)
+    item["kind"] = "python"
     monkeypatch.setattr(environment, "recipe", lambda: {"inputs": [item]})
+    monkeypatch.setattr(environment, "unpack_python", lambda *args: tmp_path / "fixed-python")
 
     def fail(*args, **kwargs):
         raise RuntimeError("Synthetic installer failure")
@@ -279,3 +281,25 @@ def test_speech_cli_requires_actual_scope_before_importing_models(tmp_path, monk
     with pytest.raises(ValueError, match="outside its owned memory scope"):
         managed_speech_job.main()
     assert not (tmp_path / "result.wav").exists()
+
+
+@pytest.mark.parametrize("outside", [False, True])
+def test_standalone_python_allows_only_links_inside_its_own_tree(tmp_path, outside):
+    source = tmp_path / "python.tar"
+    with tarfile.open(source, "w") as archive:
+        binary = tarfile.TarInfo("python/bin/python3.12")
+        binary.size = 5
+        archive.addfile(binary, io.BytesIO(b"fixed"))
+        alias = tarfile.TarInfo("python/bin/python")
+        alias.type = tarfile.SYMTYPE
+        alias.linkname = "../../../../escape" if outside else "python3.12"
+        archive.addfile(alias)
+    output = tmp_path / "extracted"
+    if outside:
+        with pytest.raises((ValueError, tarfile.FilterError)):
+            environment.unpack_python(source, output, lambda: None)
+    else:
+        binary = environment.unpack_python(source, output, lambda: None)
+        assert binary.read_bytes() == b"fixed"
+        assert (output / "python/bin/python").resolve() == binary
+    assert not (tmp_path / "escape").exists()

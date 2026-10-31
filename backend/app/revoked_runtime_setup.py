@@ -18,8 +18,13 @@ from app.state import RunStatus
 def cleanup_revoked_runtime_setup(session, run, worker_id):
     if isinstance(session, ScopedSession):
         raise DataAccessError("Revoked operation cleanup requires trusted worker coordination")
-    if run.executor_type != "runtime_setup" or run.owner_id is None:
+    if run.executor_type not in {"runtime_setup", "speech_setup"} or run.owner_id is None:
         return False
+    speech = run.executor_type == "speech_setup"
+    if speech:
+        from app.speech_setup_job import SpeechSetupExecutor
+
+        speech_contract = SpeechSetupExecutor()
     user = session.get(User, run.owner_id, populate_existing=True)
     if user is not None and user.enabled and user.is_admin and not user.bootstrap_pending:
         return False
@@ -37,7 +42,10 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         session.commit()
         return True
     try:
-        validate_operation(run)
+        if speech:
+            speech_contract.validate(run)
+        else:
+            validate_operation(run)
     except ValueError:
         run.metadata_json = {
             **run.metadata_json,
@@ -58,7 +66,8 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
     session.commit()  # Native I/O must not hold the database transaction.
     if not confirmed:
         try:
-            result = RunnerClient(timeout=10).cancel_runtime_preparation(identity, payload)
+            client = speech_contract.runner() if speech else RunnerClient(timeout=10)
+            result = client.cancel_runtime_preparation(identity, payload)
             confirmed = confirmed_gone(result, run)
         except (RunnerError, RunnerUnavailable, ValueError):
             confirmed = False  # Never persist a native daemon/configuration details or raw error.

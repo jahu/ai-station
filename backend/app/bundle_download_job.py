@@ -42,6 +42,52 @@ def observation(path, expected):
     return info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size
 
 
+def publish_verified_models(session, entry, objects):
+    files = []
+    for item, path, observed in objects:
+        if observation(path, item.file) != observed:
+            raise ValueError("A verified bundle object changed before publication")
+        relative = "models/store/" + item.file.sha256
+        record = session.scalar(select(ModelFile).where(ModelFile.relative_path == relative))
+        mtime = observed[2] / 1_000_000_000
+        if record is None:
+            record = ModelFile(
+                host_path=None,
+                relative_path=relative,
+                sha256=item.file.sha256,
+                filename=item.filename,
+                size_bytes=item.file.size_bytes,
+                mtime=mtime,
+                format=Path(item.filename).suffix.lstrip("."),
+                category="audio",
+                family=entry.family,
+                capabilities=[entry.capability],
+                root_label="AI Station storage",
+                availability="present",
+                last_seen_at=utcnow(),
+            )
+            session.add(record)
+            session.flush()
+        elif (
+            record.sha256 != item.file.sha256
+            or record.size_bytes != item.file.size_bytes
+            or abs(record.mtime - mtime) > 0.001
+        ):
+            raise ValueError("The registered bundle object changed; inspect it before preparing again")
+        record.availability = "present"
+        record.last_seen_at = utcnow()
+        files.append(
+            {
+                "filename": item.filename,
+                "model_file_id": record.id,
+                "relative_path": relative,
+                "sha256": item.file.sha256,
+                "size_bytes": item.file.size_bytes,
+            }
+        )
+    return files
+
+
 class BundleDownloadExecutor:
     name = "model_bundle_download"
 
@@ -152,50 +198,7 @@ class BundleDownloadExecutor:
             check(commit=False)
             if run.task.metadata_json.get("stop_requested_at") or run.status != "running":
                 raise Stopped("Bundle preparation stopped before publication")
-            files = []
-            for item, path, observed in objects:
-                if observation(path, item.file) != observed:
-                    raise ValueError("A verified bundle object changed before publication")
-                relative = "models/store/" + item.file.sha256
-                record = session.scalar(select(ModelFile).where(ModelFile.relative_path == relative))
-                mtime = observed[2] / 1_000_000_000
-                if record is None:
-                    record = ModelFile(
-                        host_path=None,
-                        relative_path=relative,
-                        sha256=item.file.sha256,
-                        filename=item.filename,
-                        size_bytes=item.file.size_bytes,
-                        mtime=mtime,
-                        format=Path(item.filename).suffix.lstrip("."),
-                        category="audio",
-                        family=entry.family,
-                        capabilities=[entry.capability],
-                        root_label="AI Station storage",
-                        availability="present",
-                        last_seen_at=utcnow(),
-                    )
-                    session.add(record)
-                    session.flush()
-                elif (
-                    record.sha256 != item.file.sha256
-                    or record.size_bytes != item.file.size_bytes
-                    or abs(record.mtime - mtime) > 0.001
-                ):
-                    raise ValueError(
-                        "The registered bundle object changed; inspect it before preparing again"
-                    )
-                record.availability = "present"
-                record.last_seen_at = utcnow()
-                files.append(
-                    {
-                        "filename": item.filename,
-                        "model_file_id": record.id,
-                        "relative_path": relative,
-                        "sha256": item.file.sha256,
-                        "size_bytes": item.file.size_bytes,
-                    }
-                )
+            files = publish_verified_models(session, entry, objects)
             result = {
                 "catalog_id": entry.id,
                 "manifest_sha256": run.parameters["manifest_sha256"],
