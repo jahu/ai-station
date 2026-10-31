@@ -21,6 +21,7 @@ SOURCE = (
     "host-runner/ai_station_runner",
     "scripts/launch.py",
     "scripts/desktop.py",
+    "scripts/desktop_control.py",
     "compose.yaml",
     "config/search/settings.yml",
     "LICENSE",

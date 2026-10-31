@@ -133,7 +133,7 @@ def test_private_setup_link_is_consumed_without_ordinary_log_persistence(tmp_pat
     monkeypatch.setattr(desktop.subprocess, "Popen", spawn)
     browser = Mock()
     monkeypatch.setattr(desktop.webbrowser, "open", browser)
-    monkeypatch.setattr(desktop, "dialog", lambda *args: 1)
+    monkeypatch.setattr(desktop, "running_window", lambda *args, **kwargs: "stop")
     log = io.StringIO()
     desktop.supervise(tmp_path, tmp_path / "desktop.env", {"image_tag": "ai-station:desktop-test"}, log)
     browser.assert_called_once_with(proof.replace("/#/?", "/#/setup/models?"))
