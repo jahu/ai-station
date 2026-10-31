@@ -51,10 +51,12 @@ other media catalogs or the NR-13 cross-platform consumer installation contract.
 Guided video is reviewed, merged and deployed (PR #542), including actual
 installation, first scene/image animation, a continuous film, final composition,
 CPU editor export, native recovery/Stop and private shared-engine checks.
-[Guided avatars](managed-avatar-setup.md) are the current NR-14 increment:
-independent preparation, complete two-second generation, recovery/Stop, privacy
-and final packaged/default-policy checks have passed. Review, merge and deployment
-are the remaining gates for this profile.
+[Guided avatars](managed-avatar-setup.md) are reviewed, merged and deployed
+(PR #543): independent preparation, complete two-second generation,
+recovery/Stop, private outputs and final packaged/default-policy checks passed.
+[Guided film sound](managed-effects-setup.md) is the next NR-14 increment; its
+existing source, seven companions and inference dependency payloads are audited,
+while independent assembly and application qualification remain to implement.
 Consumer installation on all three operating systems, remaining sound setup,
 broader model selection and NR-06/07 quality acceptance remain in scope.
 
