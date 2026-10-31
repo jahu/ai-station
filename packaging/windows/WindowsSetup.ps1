@@ -2,6 +2,7 @@
 param([string]$PackageFolder=$PSScriptRoot)
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'NativeWsl.psm1')
+Import-Module (Join-Path $PSScriptRoot 'DesktopResult.psm1')
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'The native Windows setup requires Windows.' }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -138,9 +139,7 @@ $timer.Add_Tick({
   if ($null -ne $script:worker -and $script:worker.Handle.IsCompleted) {
    $job=$script:worker;$script:worker=$null
    try {
-    $values=$job.Engine.EndInvoke($job.Handle)
-    if ($job.Engine.Streams.Error.Count -gt 0) { throw $job.Engine.Streams.Error[0] }
-    $value=$(if ($values.Count -gt 0) {$values[0].BaseObject} else {$null})
+    $value=Receive-StationActionResult $job.Engine $job.Handle
     switch ($job.Action) {
      'prepare' { $script:prepared=$true;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
      'start' {

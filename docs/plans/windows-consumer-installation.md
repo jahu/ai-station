@@ -147,3 +147,40 @@ model storage. Package the reviewed current browser-identity protocol together;
 the earlier private guest archive is a historical fixture, not the new UI's
 qualified payload. Signing and macOS/full catalog/quality requirements remain
 part of the original release scope.
+
+## Native shell and protocol 2 — private candidate
+
+The WinForms shell now implements preparation, Start/Open/Stop, status, tray and
+single-window controls. Import runs in a background PowerShell runspace. Closing
+its window keeps the owner alive; Stop and exit waits for a confirmed shutdown.
+An owner-only lifetime file spans Windows sessions and fences uninstallation.
+The Inno definition retains host versions separately and preserves guest data.
+These are implemented sources, **not a Windows-qualified or published installer**.
+Guest-version update still deliberately refuses a different package; its reviewed
+preserving update flow, physical host-volume admission, native accessibility,
+signing and all genuine Windows acceptance remain required.
+
+Windows selects a free loopback port in 8765–8864. The bounded ordinary-user
+bridge passes it to the owned launcher's child environment without changing
+saved configuration. Protocol 2 is declared in Debian metadata and both guest
+receipts; legacy guests are rejected before use. If the desktop owner is gone
+but the actual launcher lock is held, status/Stop report inspection required
+rather than falsely claiming shutdown or signaling an unverified process.
+
+Verification at source `31af665` passes 182 complete affected Python cases and
+whole-source lint/format (942 files). The real exported protocol-2 archive was
+audited across 29,023 entries, 5,935 package files and 1,048 package links.
+Exact-image offline/no-host-mount probes verify ordinary-user protocol/status
+and root/foreign-account rejection. Portable PowerShell checks include 38
+ownership, 15 file, 20 manifest, 16 browser and three platform-guard assertions,
+plus real occupied-port selection. Review reproduced and fixed a background
+result bug: accessing `.BaseObject` directly lost native process/string results.
+Six actual runspace regression cases cover object/string/process preservation
+and rejection of errors, null or multiple results. None of these checks claims
+NTFS ACL/mandatory sharing, WSL boot or rendered Windows UI qualification.
+
+Publisher packaging requires a clean identified checkout before and after
+staging, snapshots the validated guest manifest, and hashes the staged host
+payload. Keep only the current private guest/archive and compact evidence after
+audit; remove superseded build trees/images without touching production or its
+models. The full NR-01–NR-14 goal, including macOS, remains open.
