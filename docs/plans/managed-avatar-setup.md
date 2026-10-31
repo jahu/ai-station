@@ -25,6 +25,17 @@ public wheel source/hash resolution, independent offline assembly and actual
 inference remain required. Do not install the unrelated base training/UI stack
 or copy its `.pth` file into a prepared environment.
 
+The public-package audit resolved 74 compatible exact wheels (3,305,285,178
+bytes). ANTLR 4.9.3, required by the unchanged OmegaConf profile, is published
+only as a 117,034-byte source archive. Its exact PyPI hash is verified and its
+small reviewed setup declares no compiled extensions. Preserve the known runtime
+versions: build this one pinned pure-Python wheel offline with pinned build tools
+inside the new owned environment, then verify its deterministic output before
+installing. Do not enable arbitrary source packages, invoke a network resolver
+during preparation or substitute an unreviewed wheel mirror. This explicit source
+exception must appear in the fixed recipe and get its own normal boundary and
+real offline-build checks. No avatar preparation is qualified by this audit.
+
 Sonic's checked source carries CC BY-NC-SA 4.0. Its weights, SVD, Whisper, RIFE,
 face detector, Python and dependencies require separately inspected component
 notices; never label the entire bundle permissively licensed. Review pinned
