@@ -226,7 +226,7 @@ def main() -> None:
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
             url = f"http://127.0.0.1:{port}"
-            with httpx.Client(timeout=3) as client:
+            with httpx.Client(timeout=3, trust_env=False, follow_redirects=False) as client:
                 client.get(url).raise_for_status()
                 api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
                 url = local_entry_url(
