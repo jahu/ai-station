@@ -26,6 +26,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parent.parent
 READY = "AI_STATION_READY "
 READY_FILE = "desktop-ready.json"
+DESKTOP_PROTOCOL = 2
 # Isolated packaged Python deliberately ignores ambient Python module paths.
 sys.path.insert(0, str(ROOT / "scripts"))
 from desktop_control import DesktopControl  # noqa: E402
@@ -357,6 +358,7 @@ def supervise(
     on_ready=lambda: None,
     on_ready_url=lambda url: None,
     instance_id=None,
+    host_port=None,
 ):
     instance_id = instance_id or uuid4().hex
     readiness("http://127.0.0.1:8765", instance_id)
@@ -366,6 +368,10 @@ def supervise(
         "PYTHONNOUSERSITE": "1",
         "AI_STATION_DESKTOP_INSTANCE_ID": instance_id,
     }
+    if host_port is not None:
+        if type(host_port) is not int or not 8765 <= host_port < 8865:
+            raise ValueError("Choose a local desktop port between 8765 and 8864")
+        env["AI_STATION_PORT"] = str(host_port)
     proc = subprocess.Popen(
         [
             str(root / "python/bin/python3"),
@@ -537,16 +543,45 @@ class Preparation:
             self.proc.wait(timeout=5)
 
 
+def unowned_supervisor_active(root):
+    """A lost desktop owner must not hide its still-live foreground supervisor."""
+    path = root / "data/runtime/launcher.lock"
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return False
+    try:
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_nlink != 1:
+            raise ValueError("Inspect the unexpected desktop supervisor ownership file")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        return False
+    finally:
+        os.close(descriptor)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--console", action="store_true", help="Explicit terminal supervision instead of desktop dialogs"
     )
     parser.add_argument("--background", action="store_true", help="Run without a native status window")
+    parser.add_argument("--host-port", type=int, help="Private desktop-parent loopback port, 8765–8864")
     operation = parser.add_mutually_exclusive_group()
     operation.add_argument("--status", action="store_true", help="Inspect this desktop installation")
     operation.add_argument("--stop", action="store_true", help="Request this desktop installation to stop")
     args = parser.parse_args()
+    if args.host_port is not None and (
+        not args.console
+        or not args.background
+        or args.status
+        or args.stop
+        or not 8765 <= args.host_port < 8865
+    ):
+        parser.error("--host-port requires console background startup and a port between 8765 and 8864")
     os.umask(0o077)
 
     def terminate(_signum, _frame):
@@ -582,7 +617,10 @@ def main():
             return
         acquired = True
         if args.status or args.stop:
-            print(json.dumps({"running": False}), flush=True)
+            state = {"running": False}
+            if unowned_supervisor_active(root):
+                state = {"running": True, "inspection_required": True}
+            print(json.dumps(state), flush=True)
             return
         # A new owner must never reuse the previous process's readiness link.
         (root / READY_FILE).unlink(missing_ok=True)
@@ -633,6 +671,7 @@ def main():
                     on_ready=progress.close,
                     on_ready_url=lambda url: publish_ready(root, url, instance_id=instance_id),
                     instance_id=instance_id,
+                    host_port=args.host_port,
                 )
         finally:
             progress.close()

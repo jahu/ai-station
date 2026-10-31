@@ -13,7 +13,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from desktop import digest
+from desktop import DESKTOP_PROTOCOL, digest
 
 ROOT = Path(__file__).resolve().parent.parent
 PYTHON_URL = "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
@@ -162,6 +162,7 @@ def build(output, *, allow_dirty=False, python_tar=None):
                 shutil.rmtree(cache)
         metadata = {
             "schema": 1,
+            "desktop_protocol": DESKTOP_PROTOCOL,
             "bundle_id": identity,
             "source_head": head,
             "source_epoch": int(
@@ -219,6 +220,7 @@ def deb(bundle, metadata):
         control.mkdir()
         (control / "control").write_text(
             "Package: ai-station\nVersion: " + debian_version(metadata) + "\nArchitecture: amd64\n"
+            "X-AI-Station-Desktop-Protocol: " + str(DESKTOP_PROTOCOL) + "\n"
             "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
             "Depends: zenity, pkexec, passwd, login, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
             "Description: Local AI workstation with a bundled native Python runner\n"

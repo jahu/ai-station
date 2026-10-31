@@ -182,3 +182,55 @@ def test_non_json_listener_is_rejected_before_requesting_setup_authority():
             )
     assert paths == ["/api/health"]
     run.assert_not_called()
+
+
+@pytest.mark.parametrize("port", [0, 80, 8865, 65535, True, "8766"])
+def test_invalid_host_port_cannot_start_a_desktop_child(tmp_path, monkeypatch, port):
+    spawn = Mock()
+    monkeypatch.setattr(desktop.subprocess, "Popen", spawn)
+    with pytest.raises(ValueError, match="port"):
+        desktop.supervise(
+            tmp_path, tmp_path / "config", {"image_tag": "owned"}, io.StringIO(), host_port=port
+        )
+    spawn.assert_not_called()
+
+
+def test_host_selected_port_overrides_only_the_owned_child_environment(tmp_path, monkeypatch):
+    proc = Mock()
+    proc.stdout = io.StringIO()
+    proc.poll.return_value = None
+    spawn = Mock(return_value=proc)
+    monkeypatch.setattr(desktop.subprocess, "Popen", spawn)
+    monkeypatch.setenv("AI_STATION_PORT", "9999")
+    config = tmp_path / "config"
+    config.write_text("AI_STATION_PORT=8765\n")
+    with pytest.raises(RuntimeError, match="could not start"):
+        desktop.supervise(tmp_path, config, {"image_tag": "owned"}, io.StringIO(), host_port=8789)
+    assert spawn.call_args.kwargs["env"]["AI_STATION_PORT"] == "8789"
+    assert config.read_text() == "AI_STATION_PORT=8765\n"
+    proc.terminate.assert_called_once()
+
+
+def test_lost_desktop_owner_does_not_hide_a_live_supervisor(tmp_path, monkeypatch, capsys):
+    import sys
+
+    from test_desktop_package import fixture_bundle
+    from test_desktop_reopen import live_owner
+
+    package = tmp_path / "package"
+    fixture_bundle(package)
+    root = tmp_path / "state"
+    runtime = root / "data/runtime"
+    runtime.mkdir(parents=True)
+    monkeypatch.setattr(desktop, "ROOT", package)
+    monkeypatch.setattr(desktop, "state_root", lambda: root)
+    monkeypatch.setattr(desktop.signal, "signal", lambda *args: None)
+    # Independent actual OS-held launcher lock; no Docker or signals to that owner.
+    with live_owner(runtime) as owner:
+        (runtime / "desktop.lock").rename(runtime / "launcher.lock")
+        for action in ["--status", "--stop"]:
+            monkeypatch.setattr(sys, "argv", ["desktop.py", action])
+            desktop.main()
+            assert json.loads(capsys.readouterr().out) == {"running": True, "inspection_required": True}
+            assert owner.poll() is None
+    assert desktop.unowned_supervisor_active(root) is False

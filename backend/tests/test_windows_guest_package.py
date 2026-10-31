@@ -24,7 +24,7 @@ SPEC.loader.exec_module(guest)
 def test_bridge_has_no_command_path_pid_or_arbitrary_argument_surface(args, monkeypatch):
     check = Mock()
     monkeypatch.setattr(guest, "identity", check)
-    with pytest.raises(ValueError, match="only start"):
+    with pytest.raises(ValueError):
         guest.main(args)
     check.assert_not_called()
 
@@ -72,9 +72,11 @@ def test_only_the_installed_ordinary_user_launcher_and_fixed_options_are_execute
     monkeypatch.setattr(guest.os, "environ", {})
     execute = Mock()
     monkeypatch.setattr(guest.os, "execve", execute)
-    guest.main([action])
+    guest.main([action, "8766"] if action == "start" else [action])
     execute.assert_called_once_with(
-        "/usr/lib/ai-station/station", ["/usr/lib/ai-station/station", *options], guest.environment()
+        "/usr/lib/ai-station/station",
+        ["/usr/lib/ai-station/station", *options, *(["--host-port", "8766"] if action == "start" else [])],
+        guest.environment(),
     )
 
 
@@ -151,7 +153,7 @@ def fake_build(tmp_path, monkeypatch):
         calls.append(argv)
         if argv[0] == "dpkg-deb":
             return SimpleNamespace(
-                stdout="Package: ai-station\nVersion: 0.1.0~preview.42\nArchitecture: amd64\n"
+                stdout="Package: ai-station\nVersion: 0.1.0~preview.42\nArchitecture: amd64\nX-AI-Station-Desktop-Protocol: 2\n"
             )
         return SimpleNamespace(returncode=0)
 
@@ -268,7 +270,7 @@ def test_failed_export_removes_only_its_stopped_container_and_never_publishes(
 @pytest.mark.parametrize(
     "fields",
     [
-        "Package: unrelated\nVersion: 1\nArchitecture: amd64\n",
+        "Package: unrelated\nVersion: 1\nArchitecture: amd64\nX-AI-Station-Desktop-Protocol: 2\n",
         "Package: ai-station\nVersion: 1\nArchitecture: arm64\n",
     ],
 )
@@ -298,3 +300,45 @@ def test_changed_package_during_staging_cannot_build_under_an_earlier_hash(fake_
     assert not any(command[0] == "docker" for command in calls)
     assert not (tmp_path / "out").exists()
     assert package.read_bytes() == b"audited private package fixture"
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["start"],
+        ["start", "80"],
+        ["start", "8865"],
+        ["start", "0"],
+        ["start", "8766;echo"],
+        ["start", "８７６６"],
+        ["stop", "8766"],
+    ],
+)
+def test_start_port_is_bounded_and_validated_before_any_guest_effect(monkeypatch, args):
+    identity = Mock()
+    monkeypatch.setattr(guest, "identity", identity)
+    with pytest.raises(ValueError):
+        guest.main(args)
+    identity.assert_not_called()
+
+
+def test_guest_can_describe_its_installed_protocol_without_starting_services(monkeypatch, capsys):
+    monkeypatch.setattr(guest, "identity", lambda: None)
+    monkeypatch.setattr(guest.os, "environ", {})
+    execute = Mock()
+    monkeypatch.setattr(guest.os, "execve", execute)
+    guest.main(["describe"])
+    assert json.loads(capsys.readouterr().out) == {"desktop_protocol": 2}
+    execute.assert_not_called()
+
+
+def test_old_package_without_required_desktop_protocol_is_rejected(fake_build, monkeypatch):
+    package, calls = fake_build
+    monkeypatch.setattr(
+        builder.subprocess,
+        "run",
+        Mock(return_value=SimpleNamespace(stdout="Package: ai-station\nVersion: old\nArchitecture: amd64\n")),
+    )
+    with pytest.raises(ValueError, match="protocol 2"):
+        builder.package_identity(package, desktop.digest(package))
+    assert not calls

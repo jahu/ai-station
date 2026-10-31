@@ -93,3 +93,94 @@ cases SETUP-149–152; all operator answers remain untested. Offline QA tools pa
 26 tests. The native Windows shell, owned registration/import/recovery, actual
 platform acceptance and signing remain required next steps. Private build/layer
 proofs are in `data/acceptance/windows-consumer-install-20261031/`.
+
+## Windows ownership state increment
+
+The native shell uses a pure PowerShell state/command module before wiring OS
+operations. A random installation UUID fixes the private distribution name,
+local directory, accepted package hash, phase and later registry identity.
+Reconciliation compares both registration name and canonical private path,
+requires WSL2, and verifies the guest build receipt before marking readiness.
+A missing previously registered distro, reused name, foreign folder, duplicate
+registration or changed registry ID requires inspection instead of adoption.
+An unregistered leftover disk is preserved for recovery rather than overwritten.
+Only start/status/open/stop can produce fixed ordinary-user bridge arguments;
+there is no shell, global shutdown, terminate or unregister plan.
+
+This module alone is not an installer. Windows ACL/reparse validation, immutable
+archive transfer, registry/WSL execution, native UI and actual WSL acceptance
+must still be implemented/tested before exposing a consumer installation flow.
+
+## Private import controller — implementation in progress
+
+`InstallFiles.psm1` holds an exclusive installation lease, writes bounded strict
+UTF-8 state through a flushed atomic replacement, and verifies archive size/SHA
+while retaining its read handle for the import. The real portable .NET file
+checks found and fixed PowerShell's empty-string conversion for a null backup
+argument. Mandatory Windows sharing/deletion semantics remain a Windows gate;
+Linux file tests do not establish them.
+
+`PrivateStore.psm1` limits storage to the current user's LocalAppData leaf, creates
+an owner/SYSTEM-only protected ACL, rejects junction/reparse paths and unsafe
+existing ownership/access, and refuses unmarked existing data. It does not
+repair parent/profile permissions. `Setup.psm1` snapshots the accepted manifest
+and state atomically, probes Windows prerequisites with stdin closed, imports
+only the recorded private distro, and verifies both the registration identity
+and exact guest source receipt before advancing readiness. Windows environment
+forwarding is cleared. A lost/unknown import is inspected instead of repeated;
+existing disks and replaced/foreign registrations are preserved. Desktop start
+returns its private process pipe; status/open/stop retain fixed guest operations.
+These Windows-specific APIs have not yet been exercised on Windows.
+
+The portable checks passed 33 ownership assertions, three non-Windows guard
+refusals, 15 real .NET file assertions and 20 manifest/imported-source assertions,
+including language-independent source comparison. Browser binding is separately
+qualified in [desktop installation](desktop-installation.md#bind-browser-readiness-to-the-running-station).
+The compiled accounts API and real PowerShell HTTP probe passed without sending
+bootstrap authority in HTTP or logs. This does not qualify Windows native UI.
+
+Next: native onboarding/status/background controls; automatic Windows-side port
+selection with a typed guest handoff; preserved updates/removal; and clean
+Windows first-result acceptance. Account for the physical Windows volume's
+remaining capacity rather than advertising the WSL VHD's virtual maximum as free
+model storage. Package the reviewed current browser-identity protocol together;
+the earlier private guest archive is a historical fixture, not the new UI's
+qualified payload. Signing and macOS/full catalog/quality requirements remain
+part of the original release scope.
+
+## Native shell and protocol 2 — private candidate
+
+The WinForms shell now implements preparation, Start/Open/Stop, status, tray and
+single-window controls. Import runs in a background PowerShell runspace. Closing
+its window keeps the owner alive; Stop and exit waits for a confirmed shutdown.
+An owner-only lifetime file spans Windows sessions and fences uninstallation.
+The Inno definition retains host versions separately and preserves guest data.
+These are implemented sources, **not a Windows-qualified or published installer**.
+Guest-version update still deliberately refuses a different package; its reviewed
+preserving update flow, physical host-volume admission, native accessibility,
+signing and all genuine Windows acceptance remain required.
+
+Windows selects a free loopback port in 8765–8864. The bounded ordinary-user
+bridge passes it to the owned launcher's child environment without changing
+saved configuration. Protocol 2 is declared in Debian metadata and both guest
+receipts; legacy guests are rejected before use. If the desktop owner is gone
+but the actual launcher lock is held, status/Stop report inspection required
+rather than falsely claiming shutdown or signaling an unverified process.
+
+Verification at source `31af665` passes 182 complete affected Python cases and
+whole-source lint/format (942 files). The real exported protocol-2 archive was
+audited across 29,023 entries, 5,935 package files and 1,048 package links.
+Exact-image offline/no-host-mount probes verify ordinary-user protocol/status
+and root/foreign-account rejection. Portable PowerShell checks include 38
+ownership, 15 file, 20 manifest, 16 browser and three platform-guard assertions,
+plus real occupied-port selection. Review reproduced and fixed a background
+result bug: accessing `.BaseObject` directly lost native process/string results.
+Six actual runspace regression cases cover object/string/process preservation
+and rejection of errors, null or multiple results. None of these checks claims
+NTFS ACL/mandatory sharing, WSL boot or rendered Windows UI qualification.
+
+Publisher packaging requires a clean identified checkout before and after
+staging, snapshots the validated guest manifest, and hashes the staged host
+payload. Keep only the current private guest/archive and compact evidence after
+audit; remove superseded build trees/images without touching production or its
+models. The full NR-01–NR-14 goal, including macOS, remains open.

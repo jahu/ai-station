@@ -12,7 +12,7 @@ from pathlib import Path
 APP = Path("/usr/lib/ai-station")
 USER = "station"
 HOME = Path("/home/station")
-ACTIONS = frozenset({"start", "status", "open", "stop"})
+ACTIONS = frozenset({"start", "status", "open", "stop", "describe"})
 
 
 def trusted(path):
@@ -77,8 +77,15 @@ def open_existing(desktop):
 
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1 or args[0] not in ACTIONS:
-        raise ValueError("Choose only start, status, open or stop")
+    port = None
+    if args and args[0] == "start":
+        if len(args) != 2 or not isinstance(args[1], str) or not args[1].isascii() or not args[1].isdigit():
+            raise ValueError("Windows startup requires its selected loopback port")
+        port = int(args[1])
+        if not 8765 <= port < 8865:
+            raise ValueError("Choose a desktop loopback port between 8765 and 8864")
+    elif len(args) != 1 or args[0] not in ACTIONS:
+        raise ValueError("Choose only start, status, open, stop or describe")
     identity()
     os.umask(0o077)
     os.environ.clear()
@@ -87,11 +94,18 @@ def main(argv=None):
     import desktop
 
     action = args[0]
+    if action == "describe":
+        print(json.dumps({"desktop_protocol": getattr(desktop, "DESKTOP_PROTOCOL", 0)}), flush=True)
+        return
+    if action == "start" and getattr(desktop, "DESKTOP_PROTOCOL", 0) != 2:
+        raise RuntimeError("The guest desktop does not support this Windows launcher")
     if action in {"start", "open"} and open_existing(desktop):
         return
     if action == "open":
         raise RuntimeError("AI Station is stopped; start it before opening")
     options = ["--console", "--background"] if action == "start" else ["--" + action]
+    if port is not None:
+        options += ["--host-port", str(port)]
     launcher = APP / "station"
     os.execve(str(launcher), [str(launcher), *options], environment())
 
