@@ -52,7 +52,7 @@ manifest and use an eleven-GiB/zero-swap child with Python network connections
 blocked. Existing configured external Chatterbox remains authoritative. See the
 [managed speech contract](plans/managed-speech-setup.md).
 
-The unregistered [image-container candidate](plans/managed-image-setup.md#owned-container-candidate)
+The qualification-gated [image-container candidate](plans/managed-image-setup.md#owned-container-candidate)
 reconstructs the allowed create/start policy from native code and a pinned recipe;
 shared journal JSON cannot choose Docker commands, images, mounts or contexts.
 Station/request labels and exact container/image identities precede inspection
@@ -60,7 +60,17 @@ and Stop. Its fixed deadline script is outside shared application storage, check
 actual kernel memory/zero-swap limits, and runs inside the bounded container.
 An uncertain late start is fenced by deleting only its verified owned container,
 without removing bind data. Only complete confirmed PNG publication produces a
-file receipt; no HTTP route or operational setup capability is registered yet.
+file receipt. Typed private Runner routes now support start, inspection and Stop;
+the generic process routes delegate only an existing owned journal and never
+create image storage for unrelated process IDs. New dispatch and preparation
+remain unavailable while the native qualification flag is false. That policy is
+outside the immutable source recipe, keeping parent/child source hashes stable.
+The ordinary worker freezes the effective prompt, owned reference observations,
+GPU bundle, RAM reservation and deadline. Uncertain missing dispatch is fenced
+before release; unavailable cleanup retains reservations. A revoked account's
+trusted cleanup can only Stop its exact managed job, never restart inference or
+publish its output. Models are shared infrastructure; references, logs and
+generated images retain the existing private Run/artifact boundaries.
 
 Conversation sound scopes never grant Library browsing to a model. Current-turn
 commands bind a manually selected owned film or the single completed film visibly

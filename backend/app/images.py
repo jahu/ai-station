@@ -115,7 +115,11 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         executor_type="photo_pipe",
         execution_target="host",
         parameters={
-            **original.parameters,
+            **{
+                key: value
+                for key, value in original.parameters.items()
+                if key != "managed_image_native_deadline_at"
+            },
             **(receipt["original"] if receipt and body.translation != "reuse" else {}),
         },
         requested_gpu=original.requested_gpu,

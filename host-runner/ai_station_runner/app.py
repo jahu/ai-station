@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
-from ai_station_runner import __version__
+from ai_station_runner import __version__, managed_image_job
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.audio import capabilities as speech_capabilities
 from ai_station_runner.avatars import AvatarRequest, start_avatar
@@ -43,6 +43,8 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.gpu_processes import collect as collect_gpu_processes
+from ai_station_runner.image_jobs_api import router as image_jobs_router
+from ai_station_runner.image_setup import router as image_setup_router
 from ai_station_runner.krea2 import KreaFile
 from ai_station_runner.krea2_native import KreaRunRequest
 from ai_station_runner.krea2_native import capabilities as krea_capabilities
@@ -406,6 +408,33 @@ def models_scan():
 @app.get("/v1/photo/capabilities")
 def photo_capabilities():
     settings = get_settings()
+    if not any((settings.photo_python, settings.photo_script)):
+        from ai_station_runner.image_setup import catalog
+
+        report = catalog()
+        source = report["recipe"]
+        diffusion = next(item for item in source["inputs"] if item["role"] == "diffusion")
+        return {
+            "available": report["existing_images"]["available"],
+            "configuration_present": False,
+            "configuration_source": "managed",
+            "backend": "photo_pipe",
+            "modes": ["t2i", "img2img", "recompose"],
+            "backends": ["qwen"],
+            "requires_gpu": True,
+            "managed_image": {
+                "profile": source["profile"],
+                "manifest_sha256": source["model_manifest_sha256"],
+                "gpu_count": 2,
+                "eligible_gpu_indices": [
+                    int(gpu["index"])
+                    for gpu in (report["hardware"].get("gpus") or [])
+                    if (gpu.get("memory_total_mib") or 0) >= 12288
+                ],
+                "diffusion_sha256": diffusion["sha256"],
+                "diffusion_size_bytes": diffusion["size_bytes"],
+            },
+        }
     python = Path(settings.photo_python).expanduser() if settings.photo_python else None
     script = Path(settings.photo_script).expanduser() if settings.photo_script else None
     configured = bool(
@@ -414,6 +443,7 @@ def photo_capabilities():
     return {
         "available": configured and bool(collect(_data()).get("gpus")),
         "configuration_present": configured,
+        "configuration_source": "configured",
         "backend": "photo_pipe",
         "modes": ["t2i", "img2img", "recompose", "upscale"],
         "backends": ["qwen", "juggernaut"],
@@ -537,6 +567,10 @@ def inspect_process(
     stdout_offset: Annotated[int | None, Query(ge=0)] = None,
     stderr_offset: Annotated[int | None, Query(ge=0)] = None,
 ):
+    if managed_image_job.owns(run_id):
+        return managed_image_job.inspect(
+            run_id, stdout_offset=stdout_offset or 0, stderr_offset=stderr_offset or 0
+        )
     try:
         return manager().inspect(run_id, stdout_offset=stdout_offset, stderr_offset=stderr_offset)
     except ProcessNotOwned as exc:
@@ -545,6 +579,8 @@ def inspect_process(
 
 @app.post("/v1/process/cancel")
 def cancel(body: CancelBody):
+    if managed_image_job.owns(body.run_id):
+        return managed_image_job.cancel(body.run_id, permissions=sorted(managed_image_job.PERMISSIONS))
     try:
         return manager().cancel(body.run_id)
     except ProcessNotOwned as exc:
@@ -709,6 +745,8 @@ app.include_router(local_model_router)
 app.include_router(llama_router)
 app.include_router(runtime_setup_router)
 app.include_router(speech_setup_router)
+app.include_router(image_setup_router)
+app.include_router(image_jobs_router)
 
 
 @app.get("/v1/krea2/capabilities")

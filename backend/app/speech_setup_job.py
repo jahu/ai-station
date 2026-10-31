@@ -45,6 +45,9 @@ def model_bundle(recipe):
 class SpeechSetupExecutor(RuntimeSetupExecutor):
     name = "speech_setup"
     ram_mib = 4096
+    metadata_prefix = "speech"
+    setup_label = "speech"
+    storage_headroom_bytes = 8 * 1024**3
     required_permissions = [*PERMISSIONS, "filesystem_read"]
 
     def validate(self, run):
@@ -78,14 +81,16 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
         inputs = [(item, file_spec(item)) for item in recipe["inputs"]]
         total = sum(spec.size_bytes for _, spec in inputs)
         needed = sum(spec.size_bytes for _, spec in inputs if not (folder / spec.sha256).exists())
-        if shutil.disk_usage(folder).free < needed + 8 * 1024**3:
-            raise ValueError("More free application storage is needed for speech files and runtime assembly")
+        if shutil.disk_usage(folder).free < needed + self.storage_headroom_bytes:
+            raise ValueError(
+                f"More free application storage is needed for {self.setup_label} files and runtime assembly"
+            )
         completed = 0
         observed_models = {}
 
         def alive():
             if check():
-                raise Stopped("Speech preparation was stopped")
+                raise Stopped(f"{self.setup_label.capitalize()} preparation was stopped")
 
         try:
             for index, (item, spec) in enumerate(inputs):
@@ -115,8 +120,8 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                 completed += spec.size_bytes
             run.metadata_json = {
                 **run.metadata_json,
-                "speech_model_observations": observed_models,
-                "speech_native_deadline_at": (utcnow() + timedelta(hours=1)).isoformat(),
+                f"{self.metadata_prefix}_model_observations": observed_models,
+                f"{self.metadata_prefix}_native_deadline_at": (utcnow() + timedelta(hours=1)).isoformat(),
                 "runtime_preparation": {
                     "phase": "files_verified",
                     "received_bytes": total,

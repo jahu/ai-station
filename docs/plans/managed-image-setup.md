@@ -134,12 +134,14 @@ against the pinned publishers, so another copy from the network is unnecessary.
 The existing VAE remains a distinct converted object. Existing owned llama.cpp
 is currently occupying the GPUs; source/command work does not stop it.
 
-The internal, unregistered `managed_image_command.py` binds Generate/Edit/Recompose
+The internal `managed_image_command.py` binds Generate/Edit/Recompose
 to fixed container coordinates and one/two allocated logical CUDA devices. It
 retains prompts as single literal arguments, validates source counts and bounded
 parameters, and cannot accept images, URLs, output paths or GPU strings supplied
-by a caller. Its 21 normal cases pass. The candidate JSON recipe retains
-`qualified=false`; it is not exposed as a ready model/runtime or installation.
+by a caller. The candidate retains native `managed_image_job.QUALIFIED=False`;
+this policy is deliberately outside the immutable JSON source recipe. Temporary
+qualification overrides cannot change multi-process source fingerprints. It is
+not exposed as a ready model/runtime or installation.
 The observed CLI supports explicit module placement, parameter placement, VAE
 precision rules and multiple reference arguments. Actual inference, memory fit,
 container ownership/cancellation/recovery, publication and guided UI remain the
@@ -149,8 +151,8 @@ required next implementation, not claims derived from `--help` or these tests.
 ## Owned container candidate
 
 The internal `managed_image_job.py` now implements fixed-profile create/start,
-inspection, Stop and bounded log replay. It remains unregistered and the recipe
-remains unqualified. Its private journal binds the request, station, daemon,
+inspection, Stop and bounded log replay. Typed routes are registered, while new
+dispatch remains qualification gated. Its private journal binds the request, station, daemon,
 container ID, image ID, mounts and source observations before dispatch. A lost
 create response can reconcile the same deterministic name; a lost start response
 never authorizes a second start. A still-created container after an uncertain
@@ -187,10 +189,49 @@ reporting, kernel scope/deadline, native-process reattachment, owned Stop and fi
 publication. It does **not** constitute actual image inference or GUI/worker
 qualification. No operational image setup is exposed by this increment.
 
-Next, extend the existing runtime-preparation profile and verified-input worker
-for the reviewed image plus its companion files, retaining unchanged source
-fingerprints for existing speech/llama recipes. Freeze both bundle and native
-model-manifest identities, preserve explicit photo configuration, bind ordinary
-PhotoExecutor jobs to this lifecycle and the existing resource scheduler, and
-complete the guided card before activation. Actual model inference and the full
-new-account/API/worker/native/desktop/phone journey remain mandatory gates.
+## Ordinary worker integration candidate
+
+The image profile now uses `/api/setup/runtimes` and the existing input downloader
+and OCI preparation supervisor. Each companion remains a hash-verified immutable
+object, shared only as model infrastructure. Preparation history and the final
+JSON receipt remain private. The image recipe retains component-specific Qwen
+Research/Apache licenses; it is not a uniformly permissive bundle. Existing
+speech/llama source identities and their saved preparation histories are preserved.
+
+Normal `PhotoPipeExecutor` work can freeze the managed descriptor after checking
+the claim and cancellation state, reserve two discovered eligible GPUs and 12 GiB
+host RAM, and call the fixed native image route. This is a provisional two-GPU
+candidate pending real fit qualification, not an assertion that any pair fits.
+An explicit external photo setting, even partial, prevents managed fallback;
+the Krea/LUSTIFY path is unchanged. Prompt-only/instruction-only forms retain the
+effective user instruction; legacy pipeline styling uses frozen reference-pipeline
+constants without importing or changing the external script. Edit geometry comes
+from verified source bytes and preserves the existing maximum-side convention.
+Reference identities are checked again before dispatch; publication remains an
+ordinary private image artifact with source lineage and the frozen command.
+
+Native `/v1/runs/managed-image` accepts only the fixed typed request. Inspection
+and Stop also work after qualification is withdrawn, so disabling new inference
+cannot strand an owned job. Generic process inspection/Stop delegates only an
+existing private image journal. A 404 following an uncertain dispatch is not a
+release proof: recovery must persist the typed pre-dispatch Stop tombstone first.
+Runner outages retain reservations even though the execution target is container.
+Revoked-owner cleanup Stops only that verified job and retains resources when
+termination is uncertain; it never resumes generation under a disabled account.
+
+The guided Models card/Images setup entry, Upscale companion and actual complete
+GPU/model/API/worker/desktop/phone qualification remain required before activation.
+
+The runtime-preparation profile, verified-input worker, frozen bundle/native
+identities and ordinary PhotoExecutor/resource integration are implemented.
+Native execution receives a fresh random seed frozen with the effective prompt;
+an explicit retry retains it and gets a new native deadline. That deadline begins
+after resource admission and is bounded by any existing Task deadline, so queue
+wait does not consume the inference budget. Permissions are checked before source
+inspection, and a missing permission cannot trigger native preflight.
+
+Next, finish the guided card and Upscale companion before activation. Actual model
+inference and the full new-account/API/worker/native/desktop/phone journey remain
+mandatory gates. The real qualification data root now contains verified copies
+of the three existing weights plus the pinned raw public VAE. Originals were not
+changed, and preparing those files is not evidence of successful GPU inference.

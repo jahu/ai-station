@@ -16,10 +16,86 @@ class PhotoPipeExecutor(HostMediaExecutor):
     artifact_type = "image"
     mime_type = "image/png"
 
+    def execute(self, session, run):
+        from app.runner_client import RunnerClient
+        from app.task_control import lock_task
+
+        session.refresh(run)
+        if self._cancel_before_dispatch(session, run):
+            return "done"
+        require(run.effective_permissions, "filesystem_read")
+        require(run.effective_permissions, "workspace_write")
+        if run.parameters.get("backend") == "krea2":
+            return super().execute(session, run)
+        worker, claim = run.worker_id, run.claimed_at
+        session.commit()
+        capabilities = RunnerClient().request("GET", "/v1/photo/capabilities")
+        managed = capabilities.get("configuration_source") == "managed"
+        if managed or run.parameters.get("managed_image_runtime"):
+            lock_task(session, run.task)
+            session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                session.rollback()
+                return "done"
+            if self._cancel_before_dispatch(session, run):
+                session.commit()
+                return "done"
+            if not managed:
+                raise ValueError("Image runtime configuration changed before execution")
+            from app.managed_image_execution import freeze
+
+            run.parameters = freeze(session, run, capabilities)
+            runtime = run.parameters["managed_image_runtime"]
+            run.requested_resources = {
+                **run.requested_resources,
+                "gpu_count": runtime["gpu_count"],
+                "ram_mib": max(12288, run.requested_resources.get("ram_mib", 0)),
+            }
+            run.execution_target = "container"
+            session.commit()
+        return super().execute(session, run)
+
+    def runner(self, run):
+        if run.parameters.get("managed_image_runtime"):
+            from app.managed_image_client import ManagedImageClient
+
+            return ManagedImageClient()
+        return super().runner(run)
+
+    def fence_missing_dispatch(self, runner, run):
+        if run.parameters.get("managed_image_runtime"):
+            from app.managed_image_client import fence_missing_dispatch
+
+            fence_missing_dispatch(runner, run)
+
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        runtime = run.parameters.get("managed_image_runtime")
+        if runtime:
+            eligible = runtime["eligible_gpu_indices"]
+            hardware = {
+                **hardware,
+                "gpus": [gpu for gpu in hardware.get("gpus", []) if int(gpu["index"]) in eligible],
+            }
+        return super().reserve_devices_from_hardware(session, run, hardware)
+
     def validate_inputs(self, session, run):
         from app.media_translation import validate_media_translation
 
         validate_media_translation(session, run)
+        if run.parameters.get("managed_image_runtime"):
+            from datetime import datetime, timedelta
+
+            from app.db import utcnow
+            from app.managed_image_execution import verify_references
+
+            verify_references(session, run)
+            # Begin the native budget only after resources are admitted, not
+            # while the image is waiting in the queue. Persist before dispatch.
+            if not run.parameters.get("managed_image_native_deadline_at"):
+                deadline = utcnow() + timedelta(hours=1)
+                if run.parameters.get("execution_deadline_at"):
+                    deadline = min(deadline, datetime.fromisoformat(run.parameters["execution_deadline_at"]))
+                run.parameters = {**run.parameters, "managed_image_native_deadline_at": deadline.isoformat()}
 
     def output_metadata(self, output):
         relative = str(Path(output).with_suffix(".json"))
@@ -42,7 +118,7 @@ class PhotoPipeExecutor(HostMediaExecutor):
         return {"execution": report}
 
     def reserve_devices(self, session, run, indexes):
-        if run.parameters.get("backend") == "krea2":
+        if run.parameters.get("backend") == "krea2" or run.parameters.get("managed_image_runtime"):
             from app.resources import reserve_gpu_bundle
 
             return reserve_gpu_bundle(session, run, indexes, run.requested_resources["gpu_count"])
@@ -116,6 +192,21 @@ class PhotoPipeExecutor(HostMediaExecutor):
         )
 
     def _start(self, runner, run, allocated, output):
+        if runtime := run.parameters.get("managed_image_runtime"):
+            return runner.request(
+                "POST",
+                "/v1/runs/managed-image",
+                {
+                    "run_id": run.id,
+                    "profile": runtime["profile"],
+                    "manifest_sha256": runtime["manifest_sha256"],
+                    "command": runtime["command"],
+                    "references": runtime["references"],
+                    "gpus": [int(gpu) for gpu in run.allocated_resources["gpus"]],
+                    "deadline_at": run.parameters["managed_image_native_deadline_at"],
+                    "permissions": ["filesystem_read", "workspace_write"],
+                },
+            )
         if run.parameters.get("backend") == "krea2":
             model = run.parameters["image_model"]
             keys = (

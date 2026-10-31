@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.db import utcnow
+from app.image_setup_client import ImageSetupClient
 from app.model_setup import DB, Resume, administrator, fingerprint
 from app.models import Run, Task
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -21,7 +22,12 @@ router = APIRouter(prefix="/api/setup/runtimes", tags=["guided runtime setup"])
 INTENT = "runtime.catalog.prepare"
 PERMISSIONS = ["manage_models", "network_read", "workspace_write"]
 SPEECH_PROFILE = "chatterbox-v3-linux-x86-64-python312-v1"
-Profile = Literal["llamacpp-cuda-linux-amd64-v1", "chatterbox-v3-linux-x86-64-python312-v1"]
+IMAGE_PROFILE = "qwen-image21-cuda-linux-amd64-v1"
+Profile = Literal[
+    "llamacpp-cuda-linux-amd64-v1",
+    "chatterbox-v3-linux-x86-64-python312-v1",
+    "qwen-image21-cuda-linux-amd64-v1",
+]
 
 
 class Prepare(BaseModel):
@@ -34,7 +40,13 @@ class Prepare(BaseModel):
 
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
-        client = SpeechSetupClient(timeout=30) if profile == SPEECH_PROFILE else RunnerClient(timeout=30)
+        client = (
+            ImageSetupClient(timeout=30)
+            if profile == IMAGE_PROFILE
+            else SpeechSetupClient(timeout=30)
+            if profile == SPEECH_PROFILE
+            else RunnerClient(timeout=30)
+        )
         return client.runtime_setup_catalog()
     except (RunnerError, RunnerUnavailable):
         return {
@@ -77,22 +89,24 @@ def get_task(session, identity):
 
 def attempt(session, task, saved, previous=None):
     speech = saved["recipe"]["profile"] == SPEECH_PROFILE
+    image = saved["recipe"]["profile"] == IMAGE_PROFILE
+    inputs = speech or image
     run = create_run(
         session,
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="speech_setup" if speech else "runtime_setup",
+        executor_type="image_setup" if image else "speech_setup" if speech else "runtime_setup",
         execution_target="host",
         operation_key=f"runtime-prepare:{saved['attempt']}",
         parameters={
             "profile": saved["recipe"]["profile"],
             "manifest_sha256": saved["manifest_sha256"],
             "recipe": saved["recipe"],
-            "execution_deadline_at": (utcnow() + timedelta(hours=24 if speech else 2)).isoformat(),
+            "execution_deadline_at": (utcnow() + timedelta(hours=24 if inputs else 2)).isoformat(),
         },
-        permissions=[*PERMISSIONS, "filesystem_read"] if speech else PERMISSIONS,
-        requested_resources={"ram_mib": 4096 if speech else 1024},
+        permissions=[*PERMISSIONS, "filesystem_read"] if inputs else PERMISSIONS,
+        requested_resources={"ram_mib": 4096 if inputs else 1024},
         retry_class="inspect",
         parent_run_id=previous.id if previous else None,
     )

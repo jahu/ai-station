@@ -1,4 +1,4 @@
-"""Internal fixed image-container lifecycle; not registered or qualified yet.
+"""Fixed image-container lifecycle; new dispatch remains qualification gated.
 
 A Docker client's PID is never evidence that its container has stopped. Journals,
 exact daemon/container identity and an in-container deadline survive that client.
@@ -33,6 +33,7 @@ from ai_station_runner.speech_environment import fingerprint
 from ai_station_runner.telemetry import collect
 
 PROFILE = "qwen-image21-cuda-linux-amd64-v1"
+QUALIFIED = False
 PERMISSIONS = {"filesystem_read", "workspace_write"}
 LIMIT = 8 * 1024**2
 RAM = 12 * 1024**3
@@ -72,6 +73,28 @@ class Start(BaseModel):
 def recipe():
     path = Path(__file__).with_name("recipes") / (PROFILE + ".json")
     return json.loads(path.read_text())
+
+
+def owns(identity):
+    """Probe the journal without creating storage for unrelated process IDs."""
+    current = get_settings().host_data_dir().resolve()
+    for index, part in enumerate(("runtime", "image-jobs", str(UUID(str(identity))), "image.json")):
+        current /= part
+        try:
+            info = current.lstat()
+        except FileNotFoundError:
+            return False
+        if (
+            info.st_uid != os.geteuid()
+            or stat.S_ISLNK(info.st_mode)
+            or (
+                index < 3
+                and (not stat.S_ISDIR(info.st_mode) or info.st_mode & (0o002 if index == 0 else 0o022))
+            )
+            or (index == 3 and (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1))
+        ):
+            raise HTTPException(409, "Image journal ownership requires inspection")
+    return True
 
 
 def folder(identity):
@@ -357,7 +380,7 @@ def create_config(body, work, models, image_id, devices, *, prepare_assets=True)
 def validate_dispatch(api, identity, record):
     body = validate_record(identity, record)
     frozen = recipe()
-    if not frozen.get("qualified") or body.manifest_sha256 != fingerprint(frozen):
+    if not QUALIFIED or body.manifest_sha256 != fingerprint(frozen):
         raise HTTPException(409, "This image recipe cannot dispatch new work")
     image = runtime_install.inspect_image(api, frozen["runtime"])
     hardware = collect(get_settings().host_data_dir())
@@ -599,7 +622,7 @@ def start(body: Start):
                 return canceled_result(identity)
         else:
             frozen = recipe()
-            if not frozen.get("qualified") or body.manifest_sha256 != fingerprint(frozen):
+            if not QUALIFIED or body.manifest_sha256 != fingerprint(frozen):
                 raise HTTPException(409, "This image profile is not qualified or its manifest changed")
             if not 1 < body.deadline_at.timestamp() - time.time() <= 3600:
                 raise HTTPException(422, "Use an image deadline within one hour")
@@ -654,6 +677,8 @@ def start(body: Start):
 
 
 def inspect(identity, *, stdout_offset=0, stderr_offset=0):
+    if not owns(identity):
+        raise HTTPException(404, "Image operation is not owned by this Runner")
     with locked(identity):
         record = read(identity)
         if not record:

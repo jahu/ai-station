@@ -28,6 +28,7 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_STATION_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("AI_STATION_DATA_HOST_PATH", str(tmp_path))
     clear_settings_cache()
+    monkeypatch.setattr(job, "QUALIFIED", True)
     root = tmp_path / "models/store"
     root.mkdir(parents=True)
     inputs = []
@@ -312,9 +313,9 @@ def test_model_changed_between_create_and_start_never_runs(setup, writable):
     assert state["start_count"] == 0
 
 
-def test_unqualified_profile_rejects_start_before_docker_access(setup):
+def test_unqualified_profile_rejects_start_before_docker_access(setup, monkeypatch):
     _, frozen, state, body = setup
-    frozen["qualified"] = False
+    monkeypatch.setattr(job, "QUALIFIED", False)
     with pytest.raises(HTTPException):
         job.start(body)
     assert not state["calls"]

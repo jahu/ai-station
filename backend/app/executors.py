@@ -39,6 +39,7 @@ from app.events import append_event
 from app.film_sound import FilmSoundExecutor
 from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
+from app.image_setup_job import ImageSetupExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
 from app.local_coding import LocalProposalExecutor
@@ -321,6 +322,7 @@ class FakeExecutor:
 
 EXECUTORS = {
     "speech_setup": SpeechSetupExecutor(),
+    "image_setup": ImageSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),

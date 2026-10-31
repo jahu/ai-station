@@ -310,6 +310,11 @@ def prepare(body: Prepare):
                 raise HTTPException(409, "Runtime preparation identity is immutable")
             return snapshot(identity, previous)
         frozen = runtime_setup.recipe(body)
+        if body.profile == "qwen-image21-cuda-linux-amd64-v1":
+            from ai_station_runner.managed_image_job import QUALIFIED
+
+            if not QUALIFIED:
+                raise HTTPException(409, "Managed image setup is still being qualified")
         if runtime_setup.fingerprint(frozen) != body.manifest_sha256:
             raise HTTPException(409, "Runtime recipe changed; review it before preparing")
         if not runtime_setup.platform_supported():

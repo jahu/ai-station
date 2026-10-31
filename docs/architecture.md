@@ -39,9 +39,13 @@ preparation receipts, voice recordings and generated speech remain account scope
 The internal [managed-image candidate](plans/managed-image-setup.md#owned-container-candidate)
 reuses native Docker ownership/journals for fixed container image jobs. Its
 controller-independent deadline, typed source/command construction, inspection,
-Stop and final file receipt do not add a workload execution engine. It remains
-unregistered until complete guided setup, normal PhotoExecutor binding and actual
-model/worker/UI qualification. Explicit configured photo integrations are unchanged.
+Stop and final file receipt do not add a workload execution engine. Typed native
+routes, verified companion downloads and ordinary PhotoExecutor binding are now
+implemented behind a native qualification flag. A missing journal after uncertain
+dispatch requires a durable native Stop fence before releasing reservations.
+Explicit photo configuration, including incomplete settings, retains priority.
+The guided UI and actual model/worker/UI qualification remain unfinished; this
+candidate is not an operational installation recommendation.
 
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small

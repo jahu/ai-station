@@ -23,10 +23,14 @@ REFERENCE = (
 
 class RuntimeSelection(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    profile: Literal["llamacpp-cuda-linux-amd64-v1"]
+    profile: Literal["llamacpp-cuda-linux-amd64-v1", "qwen-image21-cuda-linux-amd64-v1"]
 
 
 def recipe(selection: RuntimeSelection) -> dict:
+    if selection.profile == "qwen-image21-cuda-linux-amd64-v1":
+        from ai_station_runner.image_setup import recipe as image_recipe
+
+        return image_recipe()
     # An immutable manifest qualified with the app-owned Q4 model, 32k Q8 KV
     # context and two private consumers on Linux/NVIDIA. No moving Docker tag.
     return {
@@ -98,12 +102,14 @@ def inspect_image(selection: RuntimeSelection) -> dict:
         result["image"]["notice"] = "This CUDA image profile requires a Linux x86-64 Runner"
         return result
     try:
-        raw = llama_runtime.docker("image", "inspect", REFERENCE, "--format", "{{json .}}", missing_ok=True)
+        raw = llama_runtime.docker(
+            "image", "inspect", frozen["image_reference"], "--format", "{{json .}}", missing_ok=True
+        )
         if raw is None:
             result["image"]["status"] = "unavailable"
             return result
         observed = json.loads(raw)
-        validate_image(observed, REFERENCE)
+        validate_image(observed, frozen["image_reference"])
         result["image"] = {"status": "available", "present": True, "id": observed["Id"]}
     except (HTTPException, OSError, ValueError, TypeError):
         result["image"]["notice"] = "The pinned runtime image inspection could not be confirmed"

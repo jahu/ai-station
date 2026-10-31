@@ -1,9 +1,11 @@
-"""Worker-only cancellation of a revoked account's existing runtime preparation.
+"""Worker-only cancellation of revoked runtime preparation and managed image jobs.
 
 No execution session, identity impersonation or machine-policy grant is issued.
 Only the exact immutable owned native action can be canceled; uncertain cleanup
 retains its lease/reservations and never dispatches another action.
 """
+
+import re
 
 from app.data_access import DataAccessError, ScopedSession
 from app.events import append_event
@@ -18,15 +20,25 @@ from app.state import RunStatus
 def cleanup_revoked_runtime_setup(session, run, worker_id):
     if isinstance(session, ScopedSession):
         raise DataAccessError("Revoked operation cleanup requires trusted worker coordination")
-    if run.executor_type not in {"runtime_setup", "speech_setup"} or run.owner_id is None:
+    image_job = run.executor_type == "photo_pipe" and isinstance(
+        run.parameters.get("managed_image_runtime"), dict
+    )
+    if (
+        run.executor_type not in {"runtime_setup", "speech_setup", "image_setup"} and not image_job
+    ) or run.owner_id is None:
         return False
-    speech = run.executor_type == "speech_setup"
-    if speech:
+    inputs = run.executor_type in {"speech_setup", "image_setup"}
+    if inputs:
         from app.speech_setup_job import SpeechSetupExecutor
 
-        speech_contract = SpeechSetupExecutor()
+        if run.executor_type == "image_setup":
+            from app.image_setup_job import ImageSetupExecutor
+
+            input_contract = ImageSetupExecutor()
+        else:
+            input_contract = SpeechSetupExecutor()
     user = session.get(User, run.owner_id, populate_existing=True)
-    if user is not None and user.enabled and user.is_admin and not user.bootstrap_pending:
+    if user is not None and user.enabled and (image_job or user.is_admin) and not user.bootstrap_pending:
         return False
     if not run.metadata_json.get("dispatch_attempted"):
         return False
@@ -42,8 +54,20 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         session.commit()
         return True
     try:
-        if speech:
-            speech_contract.validate(run)
+        if image_job:
+            runtime = run.parameters["managed_image_runtime"]
+            if (
+                run.execution_target != "container"
+                or run.task is None
+                or run.task.owner_id != run.owner_id
+                or runtime.get("profile") != "qwen-image21-cuda-linux-amd64-v1"
+                or not isinstance(runtime.get("manifest_sha256"), str)
+                or not re.fullmatch(r"[a-f0-9]{64}", runtime["manifest_sha256"])
+                or not {"filesystem_read", "workspace_write"} <= set(run.effective_permissions)
+            ):
+                raise ValueError("The managed image identity requires inspection")
+        elif inputs:
+            input_contract.validate(run)
         else:
             validate_operation(run)
     except ValueError:
@@ -61,14 +85,27 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         transition(session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested")
     run.metadata_json = {**run.metadata_json, "cancel_on_resume": True, "cleanup_requires_inspection": True}
     touch_lease(session, run)
-    payload = cancel_payload(run)
+    payload = None if image_job else cancel_payload(run)
     confirmed = run.metadata_json.get("process_confirmed_gone") is True
     session.commit()  # Native I/O must not hold the database transaction.
     if not confirmed:
         try:
-            client = speech_contract.runner() if speech else RunnerClient(timeout=10)
-            result = client.cancel_runtime_preparation(identity, payload)
-            confirmed = confirmed_gone(result, run)
+            if image_job:
+                from app.managed_image_client import ManagedImageClient
+
+                result = ManagedImageClient(timeout=10).cancel_process(identity)
+                confirmed = (
+                    result.get("run_id") == identity
+                    and result.get("executor") == "photo_pipe"
+                    and result.get("execution_target") == "container"
+                    and result.get("alive") is False
+                    and not result.get("completion_pending")
+                    and result.get("status") == "canceled"
+                )
+            else:
+                client = input_contract.runner() if inputs else RunnerClient(timeout=10)
+                result = client.cancel_runtime_preparation(identity, payload)
+                confirmed = confirmed_gone(result, run)
         except (RunnerError, RunnerUnavailable, ValueError):
             confirmed = False  # Never persist a native daemon/configuration details or raw error.
     run = session.get(Run, identity, populate_existing=True, with_for_update=True)

@@ -1,8 +1,6 @@
 {
   "profile": "qwen-image21-cuda-linux-amd64-v1",
   "name": "Qwen Image 2.1 \u00b7 Q4_K_M",
-  "qualified": false,
-  "qualification_notice": "Runtime CLI and CUDA enumeration inspected; generation, lifecycle and guided setup still require qualification.",
   "runtime": {
     "image_reference": "ghcr.io/leejet/stable-diffusion.cpp@sha256:800ba95bf36cbb24dd6c4cf116bd0c9a319b7b0ff00e1111ad1a6ea76944c33d",
     "source_revision": "e239e4b0fd3de49834cec67031a44796ca465abc",
