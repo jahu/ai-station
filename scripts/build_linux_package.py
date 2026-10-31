@@ -193,6 +193,12 @@ def package_permissions(root):
             raise ValueError("OS package inputs must be regular files, directories or inspected links")
 
 
+def debian_version(metadata):
+    # Hashes identify bytes but cannot order updates. Preview also sorts after
+    # the old experimental ~dev.<hash> scheme, without a forced downgrade.
+    return f"0.1.0~preview.{metadata['source_epoch']}+{metadata['bundle_id'][:16]}"
+
+
 def deb(bundle, metadata):
     result = bundle.with_suffix(".deb")
     if result.exists():
@@ -212,9 +218,7 @@ def deb(bundle, metadata):
         control = root / "DEBIAN"
         control.mkdir()
         (control / "control").write_text(
-            "Package: ai-station\nVersion: 0.1.0~dev."
-            + metadata["bundle_id"][:16]
-            + "\nArchitecture: amd64\n"
+            "Package: ai-station\nVersion: " + debian_version(metadata) + "\nArchitecture: amd64\n"
             "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
             "Depends: zenity, pkexec, passwd, login, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
             "Description: Local AI workstation with a bundled native Python runner\n"

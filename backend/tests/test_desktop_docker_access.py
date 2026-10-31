@@ -273,3 +273,20 @@ def test_OS_package_modes_do_not_inherit_group_write_or_follow_links(tmp_path):
     assert stat.S_IMODE(helper.stat().st_mode) == 0o755
     assert stat.S_IMODE(policy.stat().st_mode) == 0o644
     assert stat.S_IMODE(external.stat().st_mode) == 0o600
+
+
+def test_newer_source_upgrades_regardless_of_hash_and_supersedes_legacy_previews():
+    import shutil
+
+    if not shutil.which("dpkg"):
+        pytest.skip("Debian version comparison requires the actual package manager")
+    old = build_linux_package.debian_version({"source_epoch": 1793460000, "bundle_id": "f" * 64})
+    new = build_linux_package.debian_version({"source_epoch": 1793460001, "bundle_id": "a" * 64})
+    subprocess.run(["dpkg", "--compare-versions", old, "lt", new], check=True)
+    for previous in (
+        "0.1.0~dev.e42b59894363044c",
+        "0.1.0~dev.d1c765ce319bf1b8",
+        "0.1.0~dev.14b5ceb52c3f0a2d",
+    ):
+        subprocess.run(["dpkg", "--compare-versions", previous, "lt", new], check=True)
+    subprocess.run(["dpkg", "--compare-versions", new, "lt", "0.1.0"], check=True)
