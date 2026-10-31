@@ -162,6 +162,21 @@ def test_terminal_status_and_stop_address_only_live_desktop_owner(shell, monkeyp
     supervise.assert_not_called()
 
 
+@pytest.mark.parametrize("background", [False, True])
+def test_reopening_with_background_flag_never_opens_native_controls(shell, monkeypatch, background):
+    root, browser, prerequisites, supervise = shell
+    desktop.publish_ready(root, "http://127.0.0.1:8766")
+    manager = Mock()
+    monkeypatch.setattr(desktop, "existing_controls", manager)
+    monkeypatch.setattr(sys, "argv", ["desktop.py", *(["--background"] if background else [])])
+    with live_owner(root):
+        desktop.main()
+    browser.assert_called_once_with("http://127.0.0.1:8766")
+    assert manager.call_count == (0 if background else 1)
+    prerequisites.assert_not_called()
+    supervise.assert_not_called()
+
+
 def test_reopened_controls_cannot_stop_replacement_instance(shell, monkeypatch):
     root, _, _, _ = shell
     desktop.publish_ready(root, "http://127.0.0.1:8766")

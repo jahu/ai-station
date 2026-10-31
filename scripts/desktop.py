@@ -536,7 +536,7 @@ def main():
                     print(message, flush=True)
                 else:
                     dialog("--info", "--text=" + message)
-            elif not args.console:
+            elif not (args.console or args.background):
                 existing_controls(root)
             return
         acquired = True
