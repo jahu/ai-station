@@ -199,6 +199,13 @@ and Upscale. Stop/Resume and download verification use normal private Runs;
 existing configured image integrations keep priority.
 [Image setup and measured qualification](docs/plans/managed-image-setup.md).
 
+**Set up memory** prepares a small multilingual CPU model for searching saved
+knowledge by meaning. The app shows sources, license and storage before setup;
+your GPUs stay free and memory content remains private. Existing embedding
+endpoints remain selected unless you explicitly replace them.
+[Memory setup](docs/plans/memory-embeddings-readiness.md).
+
+
 
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup

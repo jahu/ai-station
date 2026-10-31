@@ -1,5 +1,5 @@
 {
-  "version": 23,
+  "version": 24,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -4184,6 +4184,50 @@
       ],
       "resources": "Bez generacji i pobierania; osobne konta/profile QA",
       "minutes": 7,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-115",
+      "area": "Konfiguracja modeli",
+      "title": "Pamięć: model CPU i pierwszy wynik semantyczny",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny świeży profil QA z kontem administratora i wolnym miejscem; GPU nie jest wymagany."
+      ],
+      "steps": [
+        "W Models otwórz Set up memory. Sprawdź dwa przypięte źródła, MIT, pobranie około 130 MiB i dostępne miejsce.",
+        "Dodaj własną notatkę w Memory, wróć do konfiguracji i świadomie zaakceptuj pobranie. Przygotuj model i poczekaj na indeks.",
+        "W Memory zapytaj innymi słowami o treść swojej notatki. Wróć do konfiguracji na telefonie i odśwież."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Model zostaje faktycznie uruchomiony na CPU, ma 384 wymiary, indeksuje prywatną notatkę i zwraca ją w wyszukiwaniu. Gotowość i aktywność pozostają po odświeżeniu, a telefon nie ma poziomego przewijania."
+      ],
+      "resources": "Około 130 MiB pobrania, CPU / do 2 GiB RAM; bez GPU",
+      "minutes": 8,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-116",
+      "area": "Konfiguracja modeli",
+      "title": "Pamięć: Stop, ponowienie, uprawnienia i istniejący endpoint",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny profil QA, konta administratora A i członka B; opcjonalny osobny profil z istniejącym endpointem embeddingów."
+      ],
+      "steps": [
+        "Zatrzymaj aktywne przygotowanie z karty modeli, odśwież i uruchom je ponownie.",
+        "Na B sprawdź gotowość oraz próbę dostępu do linku Run A i do instalacji.",
+        "W profilu z endpointem otwórz kartę pamięci; nie wybieraj świadomej opcji zmiany na model lokalny."
+      ],
+      "expected": [
+        "Zatrzymuje się tylko własny Run. Ponowienie weryfikuje kompletne pliki, a niepełny pobiera od początku; postęp nie udaje byte-range Resume. B nie widzi aktywności A i nie konfiguruje modeli. Istniejący endpoint pozostaje wybrany i jest opisany jako skonfigurowany, nie jako świeżo przetestowany runtime."
+      ],
+      "resources": "CPU i ewentualne dalsze pobieranie; osobne konta QA",
+      "minutes": 8,
       "requirements": [
         "NR-14"
       ]

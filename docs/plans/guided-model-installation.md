@@ -420,3 +420,20 @@ The next [managed image setup](managed-image-setup.md) binds reviewed Qwen compa
 and a fixed CUDA runtime to owned container jobs. Its source audit is recorded;
 GPU/lifecycle/wizard qualification must precede activation. Existing configured
 photo integrations remain authoritative.
+
+### Guided semantic memory entry
+
+The next NR-14 increment should expose the existing pinned multilingual E5 INT8
+CPU model alongside conversation/images/speech in Models setup. Reuse
+`/api/memory/embeddings/setup`, `/prepare` and the ordinary `memory_embed`
+executor; do not add another downloader, worker or native runtime. Show the two
+immutable file sources, MIT license, measured disk space, CPU/two-GiB ceiling,
+explicit download consent, saved private preparation/index activity and Stop.
+A completed preparation already probes the actual 384-dimensional engine and
+queues the current account's memory index. Link to Memory for search and index
+management. Preserve a configured endpoint until the administrator explicitly
+chooses a local replacement; members can inspect shared readiness but cannot
+install/configure or inspect another user's Runs. Canceled preparation may be
+retried using verified complete files; do not label the existing downloader as
+byte-range resumable. CPU inference, fresh-account first setup, scoped activity
+and compiled desktop/mobile require qualification before rollout.

@@ -1,6 +1,8 @@
 # Operator QA catalog and workbook
 
-The developing v23 catalog adds SETUP-110–114 for guided image installation,
+The developing v24 catalog contains 185 cases and adds SETUP-115–116 for guided CPU memory setup,
+semantic first results, Stop/retry, private activity and preserved endpoints.
+It also retains SETUP-110–114 for guided image installation,
 Stop/Resume, all four image operations, large-result reuse, native restart/Stop,
 private histories and preserved external configuration. These are untested
 operator cases; internal qualification is recorded separately in the
@@ -12,8 +14,8 @@ qualifies a complete replacement Sonic profile separately from the original
 Echo failure. It preserves the issued v15 workbook and records positive owner
 feedback on the replacement; it is not a silent change to AVATAR-005 or its result.
 
-The versioned [catalog](cases.json) contains 161 Polish operator cases across 21
-areas, including all four permanent-deletion journeys and real semantic-memory
+The original v15 handoff below contains 161 Polish operator cases across 21
+areas. The developing [catalog](cases.json) adds the release-specific cases above, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
 Catalog v15 retains ready-to-upload synthetic data with independently checkable
 answers, so CSV/Excel/document and basic Vision cases need no manual boilerplate.

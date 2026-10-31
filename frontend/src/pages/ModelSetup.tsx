@@ -19,6 +19,7 @@ import type { Run } from "../api";
 import RuntimeSetupPanel from "./RuntimeSetupPanel";
 import SpeechSetupPanel from "./SpeechSetupPanel";
 import ImageSetupPanel from "./ImageSetupPanel";
+import MemorySetupPanel from "./MemorySetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -361,12 +362,13 @@ export default function ModelSetup() {
   return (
     <>
       <PageTitle eyebrow="GET STARTED / MODELS" title="Set up your models">
-        Start with a local conversation model, images or a voice. AI Station
-        downloads, checks and prepares the files for you.
+        Start with a local conversation model, images, a voice or memory. AI
+        Station downloads, checks and prepares the files for you.
       </PageTitle>
       <RuntimeSetupPanel onReadiness={setRuntimeReady} />
       <SpeechSetupPanel />
       <ImageSetupPanel />
+      <MemorySetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>

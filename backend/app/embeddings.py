@@ -21,7 +21,14 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.config import get_settings
 from app.db import session_scope, utcnow
-from app.embedding_models import DIMENSION, MODEL_ID, dependencies_available, descriptor, installation
+from app.embedding_models import (
+    DIMENSION,
+    MODEL_ID,
+    dependencies_available,
+    descriptor,
+    installation,
+    storage,
+)
 from app.embedding_process import CpuEmbeddingProcess, EmbeddingStopped, check_running
 from app.events import append_event
 from app.local_provider import validate_endpoint
@@ -352,8 +359,11 @@ def setup_view(session, setup=None):
         "last_index_run_id": index_run["id"] if index_run else None,
         "indexed_count": indexed,
         "memory_count": memories,
+        "can_prepare": not isinstance(session, ScopedSession)
+        or bool(session.scope.administrator and not session.scope.execution and not session.scope.read_only),
         "local_model": {
             **descriptor(),
+            "storage": storage(get_settings().data_dir),
             "available": dependencies_available(),
             "installed": local["installed"],
             "reason": local["reason"],
