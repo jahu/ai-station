@@ -371,3 +371,12 @@ the four larger GGUF headers are checked, without a full-weight inference claim.
 The next [desktop package candidate](desktop-installation.md) bundles Python
 and the compiled app. Complete consumer prerequisite/setup/update/uninstall
 journeys, Windows/macOS execution and multimodal/companion setup remain required.
+
+
+NR-14's [managed speech increment](managed-speech-setup.md) now has a qualified
+Linux NVIDIA account/API/worker/native/UI journey: fixed source/dependency/model
+inputs, runtime-owned Python, offline installation, saved progress, Stop/Resume,
+private receipts and an ordinary first CUDA speech Run. Configured external
+Chatterbox remains authoritative. The compiled desktop/phone UI and saved WAV
+restore after restart. Remaining guided media recipes and real cross-platform
+consumer installation remain required; this is not release completion.

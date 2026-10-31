@@ -2,8 +2,9 @@
 
 This implements NR-13/14 of the [0.1.0 release contract](next-release-0.1.md).
 All three requested platforms and all creative capability families remain in
-scope. Current production still uses the documented Linux prerequisites. The current candidate adds a Linux guided conversation-model workflow, not
-the complete cross-platform launcher or a complete multimodal installation.
+scope. Current production still uses the documented Linux prerequisites. The current candidate adds Linux guided conversation-model and managed speech
+workflows; the complete cross-platform launcher and other media installations
+remain required.
 Production release status is separate from the evidence below.
 
 ## User journey
@@ -399,3 +400,17 @@ profiles, local search, the exact selected manifest/license, queued Stop and
 history after refresh without downloading weights. This is the documented local
 equivalent gate for the focused change; the prior full baseline and unchanged
 native qualification remain separate. No new schema or native restart is needed.
+
+
+## Managed speech qualification
+
+The [managed speech flow](managed-speech-setup.md#qualified-managed-speech-flow)
+now extends the same wizard and runtime supervisor with one fixed Chatterbox
+profile. It downloads/verifies 136 pinned objects, prepares an offline SDK and
+its own Python, then enables ordinary Audio Runs. Private setup history,
+Stop/Resume and configured external runtime preservation are covered. Actual
+isolated account/API/worker/native/browser qualification produced a first CUDA
+recording; the final compiled UI restored that preparation and played/seeked its
+saved WAV after restart. Cached complete inputs and separately measured cold
+source downloads are distinguished in the speech report. This does not complete
+image/video/music/avatar setup or any untested operating-system installer.
