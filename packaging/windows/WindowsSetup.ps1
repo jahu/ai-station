@@ -150,7 +150,11 @@ $support.Add_LinkClicked({
   } catch { Show-Failure $_.Exception.Message }
  }
 })
-$form.Add_FormClosing({ param($sender,$eventArgs) if (-not $script:allowExit) { $eventArgs.Cancel=$true;$form.Hide() } })
+$form.Add_FormClosing({
+ param($sender,$eventArgs)
+ if ($eventArgs.CloseReason -eq [Windows.Forms.CloseReason]::WindowsShutDown) { $script:allowExit=$true;return }
+ if (-not $script:allowExit) { $eventArgs.Cancel=$true;$form.Hide() }
+})
 $timer=[Windows.Forms.Timer]::new();$timer.Interval=200
 $timer.Add_Tick({
  try {
