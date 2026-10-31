@@ -154,6 +154,7 @@ class DownloadExecutor:
                 and profile.get("attention_layers") == entry.attention_layers
                 and profile.get("trained_context") == entry.trained_context
                 and profile.get("q8_kv_bytes_per_token") == per_token
+                and profile.get("state_reserve_mib", 0) == entry.state_reserve_mib
             ):
                 raise ValueError(
                     "The downloaded model does not match its native source/architecture inspection"
@@ -182,7 +183,7 @@ class DownloadExecutor:
                     mtime=report["mtime"],
                     format="gguf",
                     category="llm",
-                    family="qwen3",
+                    family=entry.architecture,
                     quantization=entry.quantization,
                     capabilities=["chat"],
                     root_label="AI Station storage",
@@ -205,7 +206,7 @@ class DownloadExecutor:
                     file_id=file.id,
                     name=entry.name,
                     category="llm",
-                    family="qwen3",
+                    family=entry.architecture,
                     capabilities=["chat"],
                     status="registered" if image_present else "downloaded",
                     last_verify_run_id=run.id,

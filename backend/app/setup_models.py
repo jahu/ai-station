@@ -1,7 +1,7 @@
 """Reviewed download candidates, not an assertion of installed runtime readiness.
 
 Source/LFS identities were checked through the publishers' Hugging Face APIs on
-2026-10-30. Importing the catalog never accesses the network or downloads weights.
+2026-10-30–31. Importing the catalog never accesses the network or downloads weights.
 Actual GGUF inspection and the existing load admission remain authoritative.
 """
 
@@ -24,7 +24,7 @@ class Candidate(BaseModel):
     capability: Literal["chat"] = "chat"
     runtime: Literal["llama.cpp"] = "llama.cpp"
     format: Literal["gguf"] = "gguf"
-    quantization: Literal["Q4_K_M", "Q8_0"]
+    quantization: Literal["Q4_K_M", "Q8_0", "IQ2_XS"]
     filename: str
     file: FileSpec
     repository: str = REPOSITORY
@@ -35,11 +35,15 @@ class Candidate(BaseModel):
     config_url: str = f"https://huggingface.co/{ORIGINAL}/resolve/{ORIGINAL_REVISION}/config.json"
     trained_context: int = 262144
     # Declared architecture hints are not a verified/native GGUF observation.
-    architecture: Literal["qwen3"] = "qwen3"
+    architecture: Literal["qwen3", "qwen35"] = "qwen3"
     attention_layers: int = 36
     kv_heads: int = 8
     key_length: int = 128
     value_length: int = 128
+    # Omit legacy defaults so existing durable download identities do not change.
+    state_reserve_mib: int = Field(default=0, ge=0, le=4096, exclude_if=lambda v: v == 0)
+    context_ceiling: int = Field(default=32768, ge=4096, le=131072, exclude_if=lambda v: v == 32768)
+    description: str = Field(default="", max_length=240, exclude_if=lambda v: not v)
 
 
 def _candidate(quantization, size, sha):
@@ -78,6 +82,37 @@ def _larger_candidate(parameters, quantization, size, sha):
         config_url=f"https://huggingface.co/{original}/resolve/{source_revision}/config.json",
         trained_context=40960,
         attention_layers=layers,
+    )
+
+
+def _rvn_candidate(quantization, size, sha, description):
+    repository = "0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF"
+    revision = "ab8d7bd81d03117501e4da60cccdff4c80f0eea0"
+    original_revision = "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
+    filename = f"RVN-{quantization}-multilingual.gguf"
+    return Candidate(
+        id="rvn-qwen38-27b-" + quantization.lower().replace("_", ""),
+        name="Qwen3.8 RVN · 27B",
+        quantization=quantization,
+        filename=filename,
+        file=FileSpec(
+            sha256=sha,
+            size_bytes=size,
+            urls=(f"https://huggingface.co/{repository}/resolve/{revision}/{filename}",),
+        ),
+        repository=repository,
+        revision=revision,
+        source_url=f"https://huggingface.co/{repository}/tree/{revision}",
+        license_url=f"https://huggingface.co/{repository}/blob/{revision}/README.md",
+        config_url=f"https://huggingface.co/Qwen/Qwen3.8-27B/resolve/{original_revision}/config.json",
+        architecture="qwen35",
+        attention_layers=16,
+        kv_heads=4,
+        key_length=256,
+        value_length=256,
+        state_reserve_mib=512,
+        context_ceiling=131072,
+        description=description,
     )
 
 
@@ -131,6 +166,18 @@ CANDIDATES = (
         "Q8_0",
         15698534208,
         "1600956488a618f5722e53b9def34315ec724ff48cf1373f304c271117c051d4",
+    ),
+    _rvn_candidate(
+        "Q4_K_M",
+        16547400224,
+        "9ed40ccc8b8432f38b9a85d0ca67928167f5719e8c10bd299e56d34facaf6e61",
+        "Quality-focused 27B model with context sized for your GPUs.",
+    ),
+    _rvn_candidate(
+        "IQ2_XS",
+        9090591264,
+        "9e7995899191c94875b3962443320452cd092608c06caae2b02e84a27bf2ae61",
+        "Smaller download and more context headroom. Lower precision can reduce answer quality.",
     ),
 )
 

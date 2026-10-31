@@ -33,6 +33,7 @@ type Entry = {
   quantization: string;
   starter?: boolean;
   trained_context?: number;
+  description?: string;
   filename: string;
   file: { size_bytes: number; sha256: string };
   license: string;
@@ -522,6 +523,9 @@ export default function ModelSetup() {
                         ? `Up to ${entry.trained_context?.toLocaleString()} model context · llama.cpp`
                         : entry.name}
                     </p>
+                    {entry.description && (
+                      <p className="setup-small muted">{entry.description}</p>
+                    )}
                     <div className="setup-small setup-size muted">
                       {entry.quantization} · <HardDrive size={13} />{" "}
                       {size(entry.file.size_bytes)} download

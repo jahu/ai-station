@@ -289,6 +289,7 @@ it("explores and searches larger models locally, filters fit and submits the sel
     ...entry,
     id: "larger-q4",
     name: "Qwen3 · 14B · mlabonne",
+    description: "Quality-focused model with context sized for your GPUs.",
     starter: false,
     trained_context: 40960,
     manifest_sha256: "c".repeat(64),
@@ -315,6 +316,11 @@ it("explores and searches larger models locally, filters fit and submits the sel
     },
   );
   expect(screen.getAllByRole("radio")).toHaveLength(2);
+  expect(
+    screen.getAllByText(
+      "Quality-focused model with context sized for your GPUs.",
+    ),
+  ).toHaveLength(2);
   fireEvent.click(
     screen.getByRole("checkbox", {
       name: "Only models that fit this workstation",

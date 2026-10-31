@@ -84,9 +84,12 @@ def recommendation(entry, hardware):
         * ((entry.key_length + 31) // 32 + (entry.value_length + 31) // 32)
         * 34
     )
+    best = None
     for count in range(1, len(devices) + 1):
         group = devices[:count]
-        budget = kv_budget_mib([g["memory_total_mib"] for g in group], entry.file.size_bytes)
+        budget = kv_budget_mib(
+            [g["memory_total_mib"] for g in group], entry.file.size_bytes, entry.state_reserve_mib
+        )
         if budget * 1024**2 < 4096 * per_token:
             continue
         indices = [g["index"] for g in group]
@@ -94,20 +97,28 @@ def recommendation(entry, hardware):
             gpus=indices,
             size_bytes=entry.file.size_bytes,
             gpu_memory_mib=[g["memory_total_mib"] for g in group],
-            ceiling=32768,
+            ceiling=entry.context_ceiling,
             context_profile={
                 "trained_context": entry.trained_context,
                 "q8_kv_bytes_per_token": per_token,
-                "state_reserve_mib": 0,
+                "state_reserve_mib": entry.state_reserve_mib,
             },
         )
-        return {
+        result = {
             "fits": True,
             "reason": "Estimated GPU fit with memory headroom; verified again when loading",
             "gpus": indices,
             "context_size": context,
             "cache_type": "q8_0",
         }
+        if best is None or context > best["context_size"]:
+            best = result
+        # Preserve legacy presets; long-context profiles may need a GPU pair
+        # even when the weights alone fit one device with a very short cache.
+        if entry.context_ceiling <= 32768 or context >= entry.context_ceiling:
+            return result
+    if best is not None:
+        return best
     return {
         "fits": False,
         "reason": "No detected GPU group fits this managed CUDA profile; existing local servers remain usable",
