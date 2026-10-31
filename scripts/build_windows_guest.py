@@ -69,6 +69,10 @@ def build(package, expected, output):
         for name in source_hashes:
             shutil.copy2(SOURCE / name, context / name)
         shutil.copy2(package, context / "station.deb")
+        if digest(context / "station.deb") != expected or any(
+            digest(context / name) != expected_hash for name, expected_hash in source_hashes.items()
+        ):
+            raise ValueError("Package inputs changed while creating the private build context")
         (context / "guest-build.json").write_text(json.dumps(receipt, indent=2) + "\n")
         subprocess.run(
             [
@@ -87,6 +91,8 @@ def build(package, expected, output):
         image_id = subprocess.check_output(
             ["docker", "image", "inspect", "--format", "{{.Id}}", image], text=True
         ).strip()
+        if not re.fullmatch(r"sha256:[a-f0-9]{64}", image_id):
+            raise ValueError("Docker returned an invalid built-image identity")
         archive = stage / "ai-station-wsl-rootfs.tar.gz"
         try:
             subprocess.run(

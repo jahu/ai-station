@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -276,3 +277,21 @@ def test_guest_builder_rejects_unrelated_package_or_wrong_cpu_architecture(fake_
         builder.package_identity(package, desktop.digest(package))
     run.assert_called_once()
     assert not calls
+
+
+def test_changed_package_during_staging_cannot_build_under_an_earlier_hash(fake_build, tmp_path, monkeypatch):
+    package, calls = fake_build
+    original = builder.shutil.copy2
+
+    def tamper(source, target):
+        result = original(source, target)
+        if Path(target).name == "station.deb":
+            Path(target).write_bytes(b"changed during copy")
+        return result
+
+    monkeypatch.setattr(builder.shutil, "copy2", tamper)
+    with pytest.raises(ValueError, match="changed while"):
+        builder.build(package, desktop.digest(package), tmp_path / "out")
+    assert not any(command[0] == "docker" for command in calls)
+    assert not (tmp_path / "out").exists()
+    assert package.read_bytes() == b"audited private package fixture"

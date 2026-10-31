@@ -87,7 +87,7 @@ No nested Docker daemon was started. These probes qualify installed guest bytes
 and fixed operations only; they do not qualify WSL boot, Windows networking,
 background lifecycle, resource scopes or a Windows first model result.
 
-The complete affected desktop/package/access scope passes 133 tests and the
+The complete affected desktop/package/access scope passes 134 tests and the
 whole Python lint/format gate. The QA catalog is version 34 with planned Windows
 cases SETUP-149–152; all operator answers remain untested. Offline QA tools pass
 26 tests. The native Windows shell, owned registration/import/recovery, actual
