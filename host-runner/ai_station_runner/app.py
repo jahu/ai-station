@@ -68,6 +68,7 @@ from ai_station_runner.publication import (
 from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_report, start_reconcile
 from ai_station_runner.python_runs import PythonRequest
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
+from ai_station_runner.runtime_install import router as runtime_setup_router
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
@@ -705,6 +706,7 @@ app.include_router(local_model_router)
 
 
 app.include_router(llama_router)
+app.include_router(runtime_setup_router)
 
 
 @app.get("/v1/krea2/capabilities")

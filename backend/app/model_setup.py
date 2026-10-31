@@ -175,6 +175,7 @@ def catalog(session: DB):
                     installed and definition and definition.status == "registered" and preset["fits"]
                 ),
                 "model_file_id": installed.id if installed else None,
+                "definition_id": definition.id if definition else None,
             }
         )
     return {

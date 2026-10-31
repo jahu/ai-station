@@ -23,11 +23,13 @@ from app.runs import claim_next, mark_failed
 def cleanup_owned_cancellation(session, run, worker_id):
     from app.model_cancellation import cleanup_revoked_load, cleanup_revoked_stop
     from app.revoked_private_access import cleanup_revoked_private_access
+    from app.revoked_runtime_setup import cleanup_revoked_runtime_setup
 
     return (
         cleanup_revoked_load(session, run, worker_id)
         or cleanup_revoked_stop(session, run, worker_id)
         or cleanup_revoked_private_access(session, run, worker_id)
+        or cleanup_revoked_runtime_setup(session, run, worker_id)
     )
 
 
@@ -143,6 +145,7 @@ def _execute_claimed(session, run, worker_id, executors):
         user = session.get(User, run.owner_id)
         host_account_executors = {
             "model_download",
+            "runtime_setup",
             "cursor_proposal",
             "codex_proposal",
             "github_publication",

@@ -304,8 +304,10 @@ def load(body: Load):
             devices = {int(g["index"]): g["uuid"] for g in hardware.get("gpus", [])}
             if any(g not in devices for g in body.gpus):
                 raise HTTPException(422, "A selected GPU is unavailable")
-            image = docker("image", "inspect", settings.llama_image, "--format", "{{.Id}}")
-            if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+            from ai_station_runner.runtime_setup import image_observation
+
+            _, image = image_observation(app_owned=body.app_owned)
+            if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
                 raise HTTPException(409, "Configured llama.cpp image identity is invalid")
             folder.mkdir(mode=0o700, exist_ok=True)
             (folder / "io").mkdir(mode=0o700, exist_ok=True)

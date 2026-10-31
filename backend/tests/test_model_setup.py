@@ -334,3 +334,24 @@ def test_shared_startup_observation_retains_the_app_owned_source_identity(setup_
             assert source["app_owned"] is True
             assert source["model_sha256"] == setup_bridge["entry"].file.sha256
             assert source["model_path"] == "models/store/" + setup_bridge["entry"].file.sha256
+
+
+def test_files_prepared_before_runtime_can_be_verified_without_redownloading(setup_bridge, monkeypatch):
+    from app.models import RuntimeInstance
+
+    monkeypatch.setattr(llama_runtime, "docker", lambda *args, **kwargs: None)
+    with TestClient(app) as api:
+        created = api.post("/api/setup/downloads", json=request(setup_bridge["entry"]))
+        work()
+        value = api.get("/api/setup/downloads/" + created.json()["id"]).json()
+        assert value["run"]["status"] == "succeeded" and value["progress"]["ready_to_try"] is False
+        entry = api.get("/api/setup/catalog").json()["entries"][0]
+        assert entry["definition_id"] and not entry["ready_to_try"]
+        monkeypatch.setattr(llama_runtime, "docker", lambda *args, **kwargs: "sha256:" + "a" * 64)
+        checked = api.post("/api/models/definitions/" + entry["definition_id"] + "/install", json={})
+        assert checked.status_code == 202, checked.text
+        work()
+        assert api.get("/api/setup/catalog").json()["entries"][0]["ready_to_try"] is True
+        assert len(setup_bridge["calls"]) == 1
+        with control_session_factory()() as db:
+            assert not list(db.scalars(select(RuntimeInstance)))

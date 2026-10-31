@@ -178,7 +178,8 @@ not declare the remaining 0.1.0 work complete.
 Development builds offer **Models → Set up a local model** for reviewed local
 conversation-model downloads. See actual RAM/VRAM and free application storage,
 accept the model license, stop/resume preparation and open Chat after verification.
-This Linux route uses an already-installed llama.cpp runtime; cross-platform
+This Linux route can prepare a reviewed llama.cpp runtime image, then download
+your selected model. Existing configured images stay available. Cross-platform
 launchers and full media setup remain in progress.
 [Guided setup and measured qualification](docs/plans/guided-model-installation.md).
 

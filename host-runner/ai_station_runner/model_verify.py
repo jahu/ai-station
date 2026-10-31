@@ -11,7 +11,6 @@ from uuid import UUID
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
-from ai_station_runner import llama_runtime
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.gguf_context import inspect_context
 from ai_station_runner.security import PathBoundaryError, ensure_within
@@ -106,8 +105,9 @@ def verify_model(body: VerifyModel) -> dict:
                 result["error"] = "The app-owned GGUF header could not be verified"
     if not body.check_image:
         return result
-    image_name = settings.llama_image
-    image_id = llama_runtime.docker("image", "inspect", image_name, "--format", "{{.Id}}", missing_ok=True)
+    from ai_station_runner.runtime_setup import image_observation
+
+    image_name, image_id = image_observation(app_owned=body.app_owned)
     present = bool(image_id) and bool(_IMAGE_ID.fullmatch(image_id or ""))
     result["image"] = {
         "checked": True,

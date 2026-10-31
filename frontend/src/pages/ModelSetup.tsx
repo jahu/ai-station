@@ -16,6 +16,7 @@ import { Button } from "../components/ui/button";
 import { ErrorNotice, Loading, PageTitle, Badge } from "../components/common";
 import { randomId } from "../lib/random-id";
 import type { Run } from "../api";
+import RuntimeSetupPanel from "./RuntimeSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -30,6 +31,7 @@ type Entry = {
   revision: string;
   manifest_sha256: string;
   model_file_id: string | null;
+  definition_id?: string | null;
   ready_to_try: boolean;
   recommendation: {
     fits: boolean;
@@ -247,6 +249,9 @@ export default function ModelSetup() {
   const [selected, setSelected] = useState("");
   const [accepted, setAccepted] = useState("");
   const [downloadOnly, setDownloadOnly] = useState(false);
+  const [runtimeReady, setRuntimeReady] = useState<boolean | undefined>(
+    undefined,
+  );
   const entries = catalog.data?.entries ?? [];
   const current =
     entries.find((row) => row.id === selected) ??
@@ -302,6 +307,32 @@ export default function ModelSetup() {
     },
     onSuccess: refresh,
   });
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const verify = useMutation({
+    mutationFn: () =>
+      api<Run>(
+        `/models/definitions/${current?.definition_id}/install`,
+        json({}),
+      ),
+    onSuccess: (run) => setVerificationId(run.id),
+  });
+  const verification = useQuery({
+    queryKey: ["setup-model-verification", verificationId],
+    queryFn: () => api<Run>(`/runs/${verificationId}`),
+    enabled: Boolean(verificationId),
+    refetchInterval: (query) =>
+      terminal.has(query.state.data?.status ?? "") ? false : 1000,
+  });
+  useEffect(() => {
+    if (verification.data && terminal.has(verification.data.status)) {
+      void cache.invalidateQueries({ queryKey: ["setup-catalog"] });
+      void cache.invalidateQueries({ queryKey: ["models"] });
+      void cache.invalidateQueries({ queryKey: ["chat-model-catalog"] });
+    }
+  }, [verification.data, cache]);
+  const verifying =
+    verify.isPending ||
+    Boolean(verificationId && !terminal.has(verification.data?.status ?? ""));
   const chat = useMutation({
     mutationFn: (model: string) =>
       api<{ id: string }>(
@@ -316,6 +347,7 @@ export default function ModelSetup() {
         Choose a local conversation model. AI Station downloads and checks the
         files for you.
       </PageTitle>
+      <RuntimeSetupPanel onReadiness={setRuntimeReady} />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>
@@ -345,7 +377,14 @@ export default function ModelSetup() {
         </Link>
       </div>
       <ErrorNotice
-        error={catalog.error ?? history.error ?? download.error ?? chat.error}
+        error={
+          catalog.error ??
+          history.error ??
+          download.error ??
+          chat.error ??
+          verify.error ??
+          verification.error
+        }
       />
       {catalog.isPending ? (
         <Loading />
@@ -484,7 +523,8 @@ export default function ModelSetup() {
                         and its safety headroom. Existing files are kept.
                       </p>
                     )}
-                    {!current.recommendation.fits && (
+                    {(!current.recommendation.fits ||
+                      runtimeReady === false) && (
                       <label className="setup-license">
                         <input
                           type="checkbox"
@@ -495,8 +535,8 @@ export default function ModelSetup() {
                           }
                         />
                         <span>
-                          Download files only. This computer is not ready to run
-                          this profile.
+                          Download files only. Runtime or hardware setup is
+                          still needed before this profile can run.
                         </span>
                       </label>
                     )}
@@ -532,7 +572,9 @@ export default function ModelSetup() {
                         insufficientStorage ||
                         download.isPending ||
                         accepted !== current.manifest_sha256 ||
-                        (!current.recommendation.fits && !downloadOnly)
+                        ((!current.recommendation.fits ||
+                          runtimeReady === false) &&
+                          !downloadOnly)
                       }
                       onClick={() => download.mutate()}
                     >
@@ -544,10 +586,29 @@ export default function ModelSetup() {
                   </>
                 )}
                 {current.model_file_id && !current.ready_to_try && (
-                  <p className="notice">
-                    Model files are installed. Compatible runtime and hardware
-                    readiness still need to be checked before trying this model.
-                  </p>
+                  <>
+                    <p className="notice">
+                      Model files are installed. Compatible runtime and hardware
+                      readiness still need to be checked before trying this
+                      model.
+                    </p>
+                    {current.definition_id && catalog.data?.can_prepare && (
+                      <Button
+                        variant="secondary"
+                        disabled={verifying}
+                        onClick={() => verify.mutate()}
+                      >
+                        {verifying
+                          ? "Checking readiness…"
+                          : "Verify model readiness"}
+                      </Button>
+                    )}
+                    {verification.data?.error_message && (
+                      <p className="notice" role="alert">
+                        {verification.data.error_message}
+                      </p>
+                    )}
+                  </>
                 )}
                 {current.model_file_id && current.ready_to_try && (
                   <PreparedModel

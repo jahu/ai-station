@@ -72,6 +72,7 @@ from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
 from app.runtime_registry import router as runtime_router
+from app.runtime_setup_api import router as runtime_setup_router
 from app.site_preview import router as site_preview_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
@@ -477,6 +478,7 @@ app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
 app.include_router(model_setup_router)
+app.include_router(runtime_setup_router)
 app.include_router(document_router)
 app.include_router(agent_router)
 app.include_router(agent_draft_router)

@@ -148,3 +148,36 @@
     white-space: normal;
   }
 }
+
+.setup-runtime {
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+.setup-runtime h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.setup-runtime > .row,
+.setup-runtime-attempt .row {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.setup-runtime p {
+  margin: 0.65rem 0;
+}
+.setup-runtime details {
+  margin-top: 0.9rem;
+}
+.setup-runtime .model-path {
+  overflow-wrap: anywhere;
+}
+.setup-runtime-attempt {
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.setup-runtime-attempt progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: var(--accent);
+}

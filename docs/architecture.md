@@ -1,3 +1,10 @@
+Guided local runtime preparation now reuses owned Tasks/Runs, a native immutable
+operation journal and a bounded child over the local Docker Unix API. The child
+streams only one reviewed image digest, records actual layer progress and verifies
+its source/platform before a private receipt is published. Worker lease recovery
+reattaches that operation; revoked-owner cleanup has separate trusted cancellation
+coordination. [Setup contracts](plans/guided-model-installation.md).
+
 Guided conversation-model setup uses the [reviewed installation catalog](plans/guided-model-installation.md), ordinary owned download Tasks/Runs and private JSON receipts. Migration 0042 adds an exclusive app-data-relative ModelFile coordinate alongside existing external host paths. Workers stream and hash pinned public weights; the native Runner inspects only fixed immutable references before the existing llama.cpp adapter loads them. Models remain shared infrastructure; download histories remain account scoped.
 
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly

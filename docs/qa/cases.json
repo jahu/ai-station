@@ -1,5 +1,5 @@
 {
-  "version": 18,
+  "version": 19,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -3919,6 +3919,29 @@
       "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
       "minutes": 10,
       "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-104",
+      "area": "Konfiguracja modeli",
+      "title": "Przygotowanie runtime przed wyborem modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z przygotowaniem runtime; konto administratora; Linux x86-64, działający lokalny Docker i NVIDIA dla pierwszej generacji. Nie usuwaj istniejących obrazów Dockera ani modeli tylko na potrzeby testu."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model. Jeśli istniejący obraz jest dostępny, sprawdź komunikat Image available i przejdź do modelu bez ponownego pobierania runtime.",
+        "Jeżeli runtime wymaga przygotowania, sprawdź rozmiar, wolne miejsce i licencje. Zaakceptuj warunki i kliknij Prepare llama.cpp. W czasie transferu przejdź na inną stronę, wróć i odśwież.",
+        "Przy potrzebnym transferze kliknij Stop runtime preparation, następnie Resume runtime preparation. Po weryfikacji wybierz/pobierz model i wyślij krótką wiadomość w Chat. Jeśli pliki pobrano wcześniej bez runtime, użyj Verify model readiness."
+      ],
+      "expected": [
+        "Stan/progres i historia pozostają po odświeżeniu; wznowienie zachowuje zadanie i zweryfikowaną tożsamość obrazu. Sam obraz runtime nie jest przedstawiany jako udana odpowiedź modelu. Działające konfiguracje i modele pozostają, a pliki modelu nie są pobierane drugi raz podczas weryfikacji. Drugie zwykłe konto widzi wspólny zasób, ale nie prywatną historię ani Run administratora."
+      ],
+      "resources": "Lokalny Docker i publiczny runtime około 2,41 GiB, tylko jeśli brak; model według wyboru; bez płatnego API",
+      "minutes": 15,
+      "requirements": [
+        "NR-13",
         "NR-14"
       ]
     }

@@ -47,6 +47,23 @@ class RunnerClient:
             return response.json()
         return {}
 
+    def runtime_setup_catalog(self) -> dict:
+        return self.request("GET", "/v1/setup/runtimes")
+
+    def prepare_runtime(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/setup/runtimes/prepare", payload)
+
+    def inspect_runtime_preparation(
+        self, identity: str, *, stdout_offset: int = 0, stderr_offset: int = 0
+    ) -> dict:
+        return self.request(
+            "GET",
+            f"/v1/setup/runtimes/{identity}?stdout_offset={stdout_offset}&stderr_offset={stderr_offset}",
+        )
+
+    def cancel_runtime_preparation(self, identity: str, payload: dict) -> dict:
+        return self.request("POST", f"/v1/setup/runtimes/{identity}/cancel", payload)
+
     def load_llama(self, payload: dict) -> dict:
         return self.request("POST", "/v1/llama/load", payload)
 
