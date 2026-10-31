@@ -16,6 +16,14 @@ A version string alone is insufficient to reproduce that source. Dependency
 metadata includes an unpinned Perth Git dependency; a managed runtime must lock
 its complete inference dependency graph rather than execute that moving branch.
 
+The published PyPI 0.1.7 wheel was also inspected: its multilingual loader lacks
+the v3 selector used by the working Git source. The installed Perth is 1.1.0 at
+[`ff1c8ac`](https://github.com/resemble-ai/Perth/tree/ff1c8ac55a976971245cdd53c18d6131ca00d993);
+that version is not published on PyPI (whose inspected release is 1.0.1).
+Do not replace either source merely because a package/version name looks
+similar. Managed preparation must bind the inspected source revisions and
+complete inference dependencies, with separately verified build inputs.
+
 The matching public model snapshot is
 [`ResembleAI/chatterbox@5bb1f6e`](https://huggingface.co/ResembleAI/chatterbox/tree/5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18),
 declared MIT by the publisher. The inspected loader selects `ve.pt`,
