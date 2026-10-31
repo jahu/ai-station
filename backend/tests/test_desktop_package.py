@@ -90,13 +90,14 @@ def test_occupied_default_port_is_not_reused_or_shutdown():
 
 
 def test_unmarked_existing_station_is_never_silently_migrated_to_accounts(tmp_path):
-    database = tmp_path / "data/db/ai-station.sqlite"
+    root = tmp_path / "unmarked-station"
+    database = root / "data/db/ai-station.sqlite"
     database.parent.mkdir(parents=True)
     database.write_bytes(b"existing operator database")
     with pytest.raises(ValueError, match="not adopted"):
-        desktop.configuration(tmp_path)
+        desktop.configuration(root)
     assert database.read_bytes() == b"existing operator database"
-    assert not (tmp_path / "desktop.env").exists()
+    assert not (root / "desktop.env").exists()
 
 
 def test_other_station_and_python_environment_cannot_redirect_desktop_launch(monkeypatch):
