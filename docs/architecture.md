@@ -36,6 +36,13 @@ explicit external speech settings retain priority. Each environment owns its
 Python and stdlib independently of application versions. Model files are shared;
 preparation receipts, voice recordings and generated speech remain account scoped.
 
+The internal [managed-image candidate](plans/managed-image-setup.md#owned-container-candidate)
+reuses native Docker ownership/journals for fixed container image jobs. Its
+controller-independent deadline, typed source/command construction, inspection,
+Stop and final file receipt do not add a workload execution engine. It remains
+unregistered until complete guided setup, normal PhotoExecutor binding and actual
+model/worker/UI qualification. Explicit configured photo integrations are unchanged.
+
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
 container coordinator waits for the verified final film before publishing sound;

@@ -52,6 +52,16 @@ manifest and use an eleven-GiB/zero-swap child with Python network connections
 blocked. Existing configured external Chatterbox remains authoritative. See the
 [managed speech contract](plans/managed-speech-setup.md).
 
+The unregistered [image-container candidate](plans/managed-image-setup.md#owned-container-candidate)
+reconstructs the allowed create/start policy from native code and a pinned recipe;
+shared journal JSON cannot choose Docker commands, images, mounts or contexts.
+Station/request labels and exact container/image identities precede inspection
+and Stop. Its fixed deadline script is outside shared application storage, checks
+actual kernel memory/zero-swap limits, and runs inside the bounded container.
+An uncertain late start is fenced by deleting only its verified owned container,
+without removing bind data. Only complete confirmed PNG publication produces a
+file receipt; no HTTP route or operational setup capability is registered yet.
+
 Conversation sound scopes never grant Library browsing to a model. Current-turn
 commands bind a manually selected owned film or the single completed film visibly
 linked to that conversation; ambiguous, partial and latest unfinished results are

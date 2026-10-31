@@ -144,3 +144,53 @@ The observed CLI supports explicit module placement, parameter placement, VAE
 precision rules and multiple reference arguments. Actual inference, memory fit,
 container ownership/cancellation/recovery, publication and guided UI remain the
 required next implementation, not claims derived from `--help` or these tests.
+
+
+## Owned container candidate
+
+The internal `managed_image_job.py` now implements fixed-profile create/start,
+inspection, Stop and bounded log replay. It remains unregistered and the recipe
+remains unqualified. Its private journal binds the request, station, daemon,
+container ID, image ID, mounts and source observations before dispatch. A lost
+create response can reconcile the same deterministic name; a lost start response
+never authorizes a second start. A still-created container after an uncertain
+start is pending, rather than proof that resources can be released. Stop deletes
+that exact verified container when necessary to fence a daemon-side late start;
+it never deletes bind-mounted application data. Confirmed missing containers
+without that cancellation receipt require inspection rather than regeneration.
+
+Creation/start reconstruct the permitted policy from native code and the fixed
+recipe, rather than trusting executable commands or mounts saved in shared
+metadata. The saved Docker endpoint must still match the native host context.
+The fixed `image_deadline.sh` is packaged with native code outside the shared
+application data mount and is individually mounted read-only. It verifies actual
+cgroup-v2 twelve-GiB RAM / zero-swap limits and the absolute deadline before
+executing the fixed CLI. Containers use a private cgroup namespace, no core
+dumps, no network, non-root UID, read-only root and only the allocated GPU UUIDs.
+CUDA UUID ordering binds logical module placement to those allocated devices.
+
+Only a confirmed successful exit, complete observable logs and a fully decoded
+PNG of the frozen dimensions permit final file publication. Its receipt is
+persisted before retiring the private intermediate image; later inspection
+verifies the published file and cannot resurrect a deleted artifact from a
+shadow copy. Temporary log transport failures preserve captured bytes and can
+recover before completion; unavailable/truncated completion logs cannot invent
+success or block a separately confirmed cancellation.
+
+Normal cases exercise command/path/device validation, edited-journal rejection,
+wrong Docker/container ownership and isolation, lost create/start responses,
+pre-dispatch Stop, uncertain-start deletion, daemon/client loss, frozen repeat
+requests, log replay/failure, incomplete output, publication and deletion. A
+separate opt-in actual Docker fixture uses deliberately invalid tiny model bytes,
+a controlled PNG copy and sleep commands: it verifies the fixed image's failure
+reporting, kernel scope/deadline, native-process reattachment, owned Stop and file
+publication. It does **not** constitute actual image inference or GUI/worker
+qualification. No operational image setup is exposed by this increment.
+
+Next, extend the existing runtime-preparation profile and verified-input worker
+for the reviewed image plus its companion files, retaining unchanged source
+fingerprints for existing speech/llama recipes. Freeze both bundle and native
+model-manifest identities, preserve explicit photo configuration, bind ordinary
+PhotoExecutor jobs to this lifecycle and the existing resource scheduler, and
+complete the guided card before activation. Actual model inference and the full
+new-account/API/worker/native/desktop/phone journey remain mandatory gates.
