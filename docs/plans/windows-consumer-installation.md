@@ -257,3 +257,13 @@ gates. No public Windows installer or Windows support claim is added.
 
 The full original NR-01–NR-14 release scope, including macOS, broader hardware
 and model profiles, media quality, naming and final operator QA, is unchanged.
+
+After the real prerequisite reboot, the pending-restart key clears and the
+installed controls reopen without elevation. Exact launcher reproduction found
+another native incompatibility: WSL 3 treats quoted option tokens such as
+`"--version"` as a default-distribution invocation, while bare `--version` works.
+The private serializer now leaves fixed switches bare and quotes only
+whitespace-bearing data. Actual same-CWD/environment probes pass both options;
+twelve process/argument/cancellation cases pass on Windows. Five successive
+native installer builds now pass, including the corrected adapter. The existing
+VM and import state are inspected rather than restarting on observation timeout.
