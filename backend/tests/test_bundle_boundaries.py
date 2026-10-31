@@ -40,14 +40,15 @@ def test_bundle_history_and_receipts_private_while_model_files_shared(accounts, 
     assert owner.get("/api/artifacts/" + artifact_id + "/file").status_code == 200
 
 
-def test_demoted_administrator_cannot_finish_bundle(accounts, bundle_source):
+@pytest.mark.parametrize("field", ["is_admin", "enabled"])
+def test_revoked_administrator_cannot_finish_bundle(accounts, bundle_source, field):
     owner, _, _ = accounts
     created = owner.post("/api/setup/bundles/downloads", json=body(bundle_source["entry"])).json()
 
     def demote(name):
         with control_session_factory()() as db:
             run = db.get(Run, created["run"]["id"])
-            db.get(User, run.owner_id).is_admin = False
+            setattr(db.get(User, run.owner_id), field, False)
             db.commit()
         bundle_source["hook"] = None
 
@@ -56,6 +57,7 @@ def test_demoted_administrator_cannot_finish_bundle(accounts, bundle_source):
     with control_session_factory()() as db:
         assert db.get(Run, created["run"]["id"]).status == "canceled"
         assert not list(db.scalars(select(ModelFile))) and not list(db.scalars(select(Artifact)))
+        assert not list(db.scalars(select(ResourceLock).where(ResourceLock.released_at.is_(None))))
 
 
 @pytest.mark.parametrize("same_worker", [False, True])
