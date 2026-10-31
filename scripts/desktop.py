@@ -23,6 +23,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 READY = "AI_STATION_READY "
+READY_FILE = "desktop-ready.json"
 
 
 def digest(path):
@@ -249,10 +250,47 @@ def browser_url(value):
         raise ValueError("The desktop supervisor returned an unexpected local address")
     fragment = parsed.fragment
     if fragment:
-        if not re.fullmatch(r"/\?setup_token=[A-Za-z0-9_-]{43}", fragment):
+        if not re.fullmatch(r"/(?:setup/models)?\?setup_token=[A-Za-z0-9_-]{43}", fragment):
             raise ValueError("The desktop supervisor returned an invalid setup link")
         fragment = fragment.replace("/?", "/setup/models?", 1)
     return urlunsplit(parsed._replace(fragment=fragment))
+
+
+def publish_ready(root, url):
+    """Private handoff to later desktop clicks; never an ordinary log entry."""
+    url = browser_url(url)
+    descriptor, temporary = tempfile.mkstemp(prefix=".desktop-ready-", dir=root)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as target:
+            json.dump({"url": url}, target)
+            target.flush()
+            os.fsync(target.fileno())
+        os.replace(temporary, root / READY_FILE)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def reopen(root):
+    """Called only after the owning desktop process's lock is observed held."""
+    try:
+        descriptor = os.open(root / READY_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return False
+    with os.fdopen(descriptor, "r", encoding="utf-8") as source:
+        info = os.fstat(source.fileno())
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or info.st_nlink != 1
+            or info.st_mode & 0o077
+            or info.st_size > 4096
+        ):
+            raise ValueError("The desktop readiness link must remain a private owned file")
+        value = json.load(source)
+    if not isinstance(value, dict) or set(value) != {"url"} or not isinstance(value["url"], str):
+        raise ValueError("The desktop readiness link is invalid")
+    webbrowser.open(browser_url(value["url"]))
+    return True
 
 
 def stop(proc):
@@ -266,7 +304,9 @@ def stop(proc):
             ) from None
 
 
-def supervise(root, config, value, log, *, console=False, on_ready=lambda: None):
+def supervise(
+    root, config, value, log, *, console=False, on_ready=lambda: None, on_ready_url=lambda url: None
+):
     env = {**launch_environment(), "AI_STATION_APP_IMAGE": value["image_tag"], "PYTHONNOUSERSITE": "1"}
     proc = subprocess.Popen(
         [
@@ -308,6 +348,7 @@ def supervise(root, config, value, log, *, console=False, on_ready=lambda: None)
             raise RuntimeError("AI Station did not become ready; inspect the private desktop log") from None
         if not url or proc.poll() is not None:
             raise RuntimeError("AI Station could not start; see the private desktop log")
+        on_ready_url(url)
         on_ready()
         if console:
             print(READY + json.dumps({"url": url}), flush=True)
@@ -375,15 +416,27 @@ def main():
     signal.signal(signal.SIGTERM, terminate)
     if not args.console and not shutil.which("zenity"):
         raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
-    prerequisites()
     value = manifest(ROOT)
     root = state_root()
     lock = os.open(root / "desktop.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    acquired = False
     try:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise RuntimeError("AI Station is already running. Use its existing desktop window.") from None
+            if not reopen(root):
+                message = (
+                    "AI Station is still starting. Its existing progress window will open the app when ready."
+                )
+                if args.console:
+                    print(message, flush=True)
+                else:
+                    dialog("--info", "--text=" + message)
+            return
+        acquired = True
+        # A new owner must never reuse the previous process's readiness link.
+        (root / READY_FILE).unlink(missing_ok=True)
+        prerequisites()
         if not args.console and not (root / "desktop.env").exists():
             answer = dialog(
                 "--question",
@@ -410,11 +463,23 @@ def main():
                 progress.stage("Preparing the bundled application image…")
                 import_image(installed, value, log)
                 progress.stage("Starting your local AI Station…")
-                supervise(installed, config, value, log, console=args.console, on_ready=progress.close)
+                supervise(
+                    installed,
+                    config,
+                    value,
+                    log,
+                    console=args.console,
+                    on_ready=progress.close,
+                    on_ready_url=lambda url: publish_ready(root, url),
+                )
         finally:
             progress.close()
     finally:
-        os.close(lock)
+        try:
+            if acquired:
+                (root / READY_FILE).unlink(missing_ok=True)
+        finally:
+            os.close(lock)
 
 
 if __name__ == "__main__":
