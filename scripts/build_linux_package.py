@@ -22,6 +22,9 @@ SOURCE = (
     "scripts/launch.py",
     "scripts/desktop.py",
     "scripts/desktop_control.py",
+    "scripts/desktop_docker_access.py",
+    "packaging/linux/docker_access.py",
+    "packaging/linux/org.ai-station.docker-access.policy",
     "compose.yaml",
     "config/search/settings.yml",
     "LICENSE",
@@ -197,9 +200,19 @@ def deb(bundle, metadata):
             + metadata["bundle_id"][:16]
             + "\nArchitecture: amd64\n"
             "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
-            "Depends: zenity, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
+            "Depends: zenity, pkexec, passwd, login, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
             "Description: Local AI workstation with a bundled native Python runner\n"
             " Development package. Docker must be available to the current user.\n"
+        )
+        helper = root / "usr/libexec/ai-station/docker-access"
+        helper.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / "packaging/linux/docker_access.py", helper)
+        helper.chmod(0o755)
+        policy = root / "usr/share/polkit-1/actions"
+        policy.mkdir(parents=True)
+        shutil.copy2(
+            ROOT / "packaging/linux/org.ai-station.docker-access.policy",
+            policy / "org.ai-station.docker-access.policy",
         )
         run("dpkg-deb", "--root-owner-group", "--build", str(root), str(result))
     return result

@@ -14,6 +14,17 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+The Linux package's optional one-time Docker access action runs only through
+fresh OS administrator authentication. A root-owned, argument-free helper uses
+the bundled interpreter in isolated, no-site mode and standard library only.
+It validates `PKEXEC_UID` and the fixed root-owned Docker socket before granting
+only that account's group membership. The native consent explains Docker's
+administrator-level authority; application passwords never enter this flow.
+Only the fixed installed launcher is reopened under the original ordinary UID.
+No HTTP/Runner/agent endpoint, caller-selected command, root application process,
+driver change or socket permission relaxation is added. Qualification remains
+separate from implementation: [clean Linux contract](plans/linux-consumer-qualification.md).
+
 Repeated desktop clicks read a private, bounded readiness handoff only while the
 desktop owner's file lock is held. The file permits only its validated loopback
 browser/setup address, is never served over HTTP or written to ordinary logs,

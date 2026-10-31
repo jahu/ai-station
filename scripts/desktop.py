@@ -29,6 +29,9 @@ READY_FILE = "desktop-ready.json"
 sys.path.insert(0, str(ROOT / "scripts"))
 from desktop_control import DesktopControl  # noqa: E402
 from desktop_control import request as control_request  # noqa: E402
+from desktop_docker_access import DockerAccessNeeded  # noqa: E402
+from desktop_docker_access import continue_setup as continue_docker_setup  # noqa: E402
+from desktop_docker_access import needed as docker_access_needed  # noqa: E402
 
 
 def digest(path):
@@ -192,6 +195,8 @@ def prerequisites():
     for command in (["docker", "compose", "version"], ["docker", "info"]):
         result = subprocess.run(command, capture_output=True, timeout=15)
         if result.returncode:
+            if command == ["docker", "info"] and docker_access_needed(endpoint):
+                raise DockerAccessNeeded()
             raise RuntimeError(
                 "Docker and Compose must be running and accessible to your user. "
                 "AI Station did not change permissions or Docker settings."
@@ -545,7 +550,13 @@ def main():
             return
         # A new owner must never reuse the previous process's readiness link.
         (root / READY_FILE).unlink(missing_ok=True)
-        prerequisites()
+        try:
+            prerequisites()
+        except DockerAccessNeeded:
+            if args.console:
+                raise
+            if not continue_docker_setup(dialog, background=args.background):
+                return
         if not args.console and not (root / "desktop.env").exists():
             answer = dialog(
                 "--question",

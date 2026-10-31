@@ -52,6 +52,13 @@ package and OS session. Rootless alternatives remain a separately reviewed path.
 
 ## Required acceptance
 
+The candidate implementation now includes the native dialog, fixed package
+helper/polkit action and same-UID `sg` continuation of the root-owned launcher.
+The helper uses isolated, no-site bundled Python and only standard-library
+imports. Normal CI simulates OS identity/tools and never changes host groups.
+The initial 104 desktop/access regression cases pass; real installed consent,
+OS authentication and first-result qualification are still required below.
+
 1. Test detection of permission denial versus other Docker failures, cancellation,
    unsafe helpers/socket ownership, arbitrary extra arguments and unchanged
    working configurations. Review every privileged line and package path.
