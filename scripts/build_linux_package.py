@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -22,6 +23,9 @@ SOURCE = (
     "scripts/launch.py",
     "scripts/desktop.py",
     "scripts/desktop_control.py",
+    "scripts/desktop_docker_access.py",
+    "packaging/linux/docker_access.py",
+    "packaging/linux/org.ai-station.docker-access.policy",
     "compose.yaml",
     "config/search/settings.yml",
     "LICENSE",
@@ -174,6 +178,27 @@ def build(output, *, allow_dirty=False, python_tar=None):
     return metadata
 
 
+def package_permissions(root):
+    """OS-owned code must not inherit the builder's cooperative group-write umask."""
+    root.chmod(0o755)
+    for path in root.rglob("*"):
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            path.chmod(0o755)
+        elif stat.S_ISREG(info.st_mode):
+            path.chmod(0o755 if info.st_mode & 0o111 else 0o644)
+        else:
+            raise ValueError("OS package inputs must be regular files, directories or inspected links")
+
+
+def debian_version(metadata):
+    # Hashes identify bytes but cannot order updates. Preview also sorts after
+    # the old experimental ~dev.<hash> scheme, without a forced downgrade.
+    return f"0.1.0~preview.{metadata['source_epoch']}+{metadata['bundle_id'][:16]}"
+
+
 def deb(bundle, metadata):
     result = bundle.with_suffix(".deb")
     if result.exists():
@@ -193,14 +218,23 @@ def deb(bundle, metadata):
         control = root / "DEBIAN"
         control.mkdir()
         (control / "control").write_text(
-            "Package: ai-station\nVersion: 0.1.0~dev."
-            + metadata["bundle_id"][:16]
-            + "\nArchitecture: amd64\n"
+            "Package: ai-station\nVersion: " + debian_version(metadata) + "\nArchitecture: amd64\n"
             "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
-            "Depends: zenity, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
+            "Depends: zenity, pkexec, passwd, login, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
             "Description: Local AI workstation with a bundled native Python runner\n"
             " Development package. Docker must be available to the current user.\n"
         )
+        helper = root / "usr/libexec/ai-station/docker-access"
+        helper.parent.mkdir(parents=True)
+        shutil.copy2(ROOT / "packaging/linux/docker_access.py", helper)
+        helper.chmod(0o755)
+        policy = root / "usr/share/polkit-1/actions"
+        policy.mkdir(parents=True)
+        shutil.copy2(
+            ROOT / "packaging/linux/org.ai-station.docker-access.policy",
+            policy / "org.ai-station.docker-access.policy",
+        )
+        package_permissions(root)
         run("dpkg-deb", "--root-owner-group", "--build", str(root), str(result))
     return result
 

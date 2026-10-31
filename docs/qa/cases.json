@@ -1,5 +1,5 @@
 {
-  "version": 32,
+  "version": 33,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -28,7 +28,8 @@
     "docs/plans/managed-avatar-setup.md",
     "docs/plans/managed-effects-setup.md",
     "docs/plans/managed-fish-setup.md",
-    "docs/plans/guided-cpu-conversation.md"
+    "docs/plans/guided-cpu-conversation.md",
+    "docs/plans/linux-consumer-qualification.md"
   ],
   "cases": [
     {
@@ -4930,6 +4931,81 @@
         "NR-13",
         "NR-14"
       ]
+    },
+    {
+      "id": "SETUP-146",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Pierwszy start Linux: zgoda na Docker i anulowanie",
+      "prerequisites": [
+        "Osobna nowa instalacja pakietu Debian na wspieranym Ubuntu; zwykłe konto bez dostępu do lokalnego Dockera. Nie zmieniaj uprawnień swojej działającej stacji do tego testu."
+      ],
+      "steps": [
+        "Zainstaluj paczkę przez menedżer systemowy i otwórz AI Station z menu aplikacji.",
+        "Przeczytaj zakres dostępu i kliknij Cancel; sprawdź, że nic nie zostało uruchomione.",
+        "Otwórz ponownie, wybierz autoryzację i anuluj okno systemowe.",
+        "Powtórz i potwierdź autoryzację w oknie systemowym."
+      ],
+      "expected": [
+        "Odmowa w obu oknach nie zmienia dostępu konta. Hasło przyjmuje system operacyjny, nie AI Station.",
+        "Zgoda nadaje dostęp tylko bieżącemu kontu i prowadzi dalej do zwykłej konfiguracji; aplikacja i Host Runner działają bez roota.",
+        "Na już działającym Dockerze lub po wcześniejszej zgodzie dodatkowe uwierzytelnienie nie pojawia się."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 12
+    },
+    {
+      "id": "SETUP-147",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Linux: aktualizacja działającej instalacji i zachowane dane",
+      "prerequisites": [
+        "Działająca instalacja pakietowa; własna rozmowa, pamięć i pliki; odrębna nowsza paczka."
+      ],
+      "steps": [
+        "Zapisz rozmowę i wpis pamięci. W trakcie pracy aplikacji zainstaluj nowszą paczkę normalnym menedżerem systemowym.",
+        "Otwórz ikonę ponownie i sprawdź, że uruchomiona sesja nadal działa bez duplikatu usług.",
+        "Zatrzymaj AI Station przyciskiem, otwórz nową wersję i sprawdź konto, historię, pamięć, Library oraz modele."
+      ],
+      "expected": [
+        "Nowsza paczka ma prawidłową kolejność wersji i nie wymaga wymuszonego downgrade.",
+        "Instalacja plików nie usuwa kodu aktywnej sesji; restart następuje dopiero po świadomym Stop/otwarciu.",
+        "Dane oraz sesja przeglądarki pozostają dostępne, bez ponownego pytania o wcześniej nadane uprawnienia Dockera."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-148",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Linux: usunięcie i ponowna instalacja z zachowaniem danych",
+      "prerequisites": [
+        "Osobna kwalifikowana instalacja pakietowa z zakończoną rozmową i plikami."
+      ],
+      "steps": [
+        "Zatrzymaj aplikację i usuń sam pakiet przez menedżer systemowy, bez zaznaczania osobnego kasowania danych.",
+        "Zainstaluj ponownie tę samą lub nowszą wersję i otwórz AI Station.",
+        "Sprawdź zachowane konto, rozmowę, pamięć, pliki Library, modele i historię zadań."
+      ],
+      "expected": [
+        "Odinstalowanie usuwa pliki programu i wpis menu; nie usuwa prywatnego katalogu, modeli, historii ani obcych zasobów Dockera.",
+        "Ponowna instalacja korzysta z istniejących danych. Nie żąda tworzenia nowego administratora ani pobierania tych samych zweryfikowanych wag."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 15
     }
   ]
 }
