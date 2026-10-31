@@ -140,7 +140,8 @@ def runtime_readiness():
     avatar_ready = bool(avatar.get("available") or whole_avatar.get("available"))
     image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
     music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
-    speech_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
+    chatterbox_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
+    speech_ready = chatterbox_ready or bool(speech.get("engines", {}).get("fish_s2_pro", {}).get("available"))
     return {
         "effects": {
             "ready": effects_ready,
@@ -171,11 +172,12 @@ def runtime_readiness():
         "speech": {
             "ready": speech_ready,
             "engines": {
+                "chatterbox": {"ready": chatterbox_ready},
                 "fish_s2_pro": {
                     "ready": bool(speech.get("engines", {}).get("fish_s2_pro", {}).get("available")),
                     "reason": speech.get("engines", {}).get("fish_s2_pro", {}).get("reason")
                     or "Expressive speech is unavailable or still being verified",
-                }
+                },
             },
             "reason": None
             if speech_ready

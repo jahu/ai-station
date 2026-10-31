@@ -46,6 +46,20 @@ environment and compatible GPU, with 12-GiB/18-GiB zero-swap scopes for short/lo
 tracks. Stop and restart inspect the same owned process; partial audio is never
 published. Setup metadata, logs and receipts remain account scoped.
 
+Managed expressive voice uses two separate fixed environments and immutable
+closed-world Fish/Whisper model views. The ASR child resolves its approved model
+view using standard-library helpers, without importing the application or native
+API dependencies. Managed speech/transcription freeze an opaque environment ID,
+verify their owned interpreter/source/models, omit ambient site-packages and
+credentials, and deny Python network access. Existing explicit configurations
+retain priority and cannot silently consume a managed request's identity. Model
+preparation requires administrator authority, license acceptance and the existing
+model/network/workspace permissions; ordinary generation receives artifact
+read/write only. Native setup shares the existing four-GiB scope and journal;
+speech retains its two allocated GPUs and 24-GiB zero-swap scope. A post-load
+VRAM check handles external-runtime contention without stopping unrelated jobs.
+See [qualification and remaining gates](plans/managed-fish-setup.md).
+
 Managed speech assembly verifies every fixed source/wheel/model object before
 executing a separate offline venv install with its own pinned Python. SDK archives
 reject links/traversal/special files; the standalone Python's legitimate links

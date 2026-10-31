@@ -181,6 +181,7 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None, no
             "profile_sha256": ready["profile_sha256"],
             "parent_artifact_ids": [source.id],
             **({"normalize_reference": True} if normalize_reference else {}),
+            **({"environment_id": ready["environment_id"]} if ready.get("environment_id") else {}),
         },
     )
 
@@ -251,6 +252,11 @@ class TranscriptionExecutor(NativeJobExecutor):
             "profile_sha256": run.parameters["profile_sha256"],
             "permissions": list(run.effective_permissions),
             **({"normalize_reference": True} if run.parameters.get("normalize_reference") is True else {}),
+            **(
+                {"environment_id": run.parameters["environment_id"]}
+                if run.parameters.get("environment_id")
+                else {}
+            ),
         }
 
     def start(self, runner, payload):

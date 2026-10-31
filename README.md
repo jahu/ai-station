@@ -238,6 +238,14 @@ profile**: the Apple CLIP component has a research-only license and MMAudio
 checkpoints have separate noncommercial terms. Existing configured engines stay
 selected. [Sound setup and measured qualification](docs/plans/managed-effects-setup.md).
 
+**Set up expressive voice** prepares Fish S2 Pro and local reference transcription
+on supported Linux BF16-capable NVIDIA workstations with two GPUs (10 + 5 GiB
+VRAM) and 24 GiB system RAM. Add a phone recording, enter your script and choose
+delivery and pace in Audio. Model weights stay on GPUs; setup progress and
+Stop/Resume use private ordinary Runs. Existing Fish/Whisper settings retain
+priority. Review the component licenses before installation.
+[Expressive voice setup and qualification](docs/plans/managed-fish-setup.md).
+
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
 in your browser, and keeps data outside the installed package. Docker/Compose

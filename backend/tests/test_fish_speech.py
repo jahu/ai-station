@@ -195,6 +195,58 @@ def test_uploaded_reference_is_transcribed_then_queued_speech_keeps_text_style_a
             assert not active_locks(db)
 
 
+def test_managed_speech_freezes_environment_gpu_roles_and_does_not_inherit_secrets(fish_bridge, monkeypatch):
+    from pathlib import Path
+
+    from ai_station_runner import fish_environment, fish_prepare, fish_selection
+
+    settings = fish_runtime.get_settings()
+    chosen = {
+        "fish_speech_python": Path(settings.fish_speech_python),
+        "fish_speech_dir": Path(settings.fish_speech_dir),
+        "fish_speech_models": Path(settings.fish_speech_models),
+        "managed": True,
+        "observation": {
+            "profile": fish_environment.PROFILE,
+            "operation_id": str(uuid4()),
+            "manifest_sha256": "c" * 64,
+        },
+    }
+    identity = fish_environment.environment_id(chosen["observation"])
+    monkeypatch.setattr(fish_selection, "selection", lambda settings, identity=None: chosen)
+
+    def resolve(root, value):
+        assert value == identity
+        return chosen
+
+    monkeypatch.setattr(fish_environment, "resolve_id", resolve)
+    monkeypatch.setattr(fish_prepare, "compatible_devices", lambda gpus: gpus)
+    monkeypatch.setattr(fish_prepare, "driver_supported", lambda minimum: True)
+    monkeypatch.setenv("PRIVATE_OWNER_TOKEN", "must-not-reach-the-voice-process")
+    with TestClient(app) as client:
+        source = reference(client)
+        body = {"text": "Zapisane słowa.", "reference_artifact_id": source["id"], "engine": "fish_s2_pro"}
+        rejected = client.post("/api/audio/runs", json={**body, "gpu": "9"})
+        assert rejected.status_code == 422
+        response = client.post("/api/audio/runs", json=body)
+        assert response.status_code == 202, response.text
+        run = response.json()
+        assert run["parameters"]["environment_id"] == identity
+        assert run["parameters"]["primary_gpu_indices"] == [7]
+        work()
+        assert work() == run["id"]
+        result = client.get("/api/runs/" + run["id"]).json()
+        assert result["status"] == "succeeded", result
+        captured = fish_bridge["starts"][-1]
+        assert "PRIVATE_OWNER_TOKEN" not in captured["env"]
+        assert "PIP_INDEX_URL" not in captured["env"]
+        assert captured["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
+        native_body = json.loads((Path(captured["cwd"]) / "native-fish-payload.json").read_text())
+        assert native_body["environment_id"] == identity and native_body["gpus"] == [7, 9]
+        artifact = client.get("/api/artifacts", params={"run_id": run["id"]}).json()[0]
+        assert artifact["metadata"]["environment_id"] == identity
+
+
 def compressed_reference(client):
     response = client.post(
         "/api/audio/transcription/uploads",

@@ -18,7 +18,9 @@ class Bundle(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,79}$")
     name: str = Field(min_length=1, max_length=120)
     capability: Literal["speech", "image", "music", "video", "avatar", "effects"] = "speech"
-    family: Literal["chatterbox", "qwen_image21", "ace_step15", "wan22", "sonic", "mmaudio"] = "chatterbox"
+    family: Literal[
+        "chatterbox", "qwen_image21", "ace_step15", "wan22", "sonic", "mmaudio", "fish_s2_pro"
+    ] = "chatterbox"
     license: Literal["MIT", "Qwen Research", "Apache-2.0", "Multiple component licenses"] = "MIT"
     license_url: str
     source_url: str

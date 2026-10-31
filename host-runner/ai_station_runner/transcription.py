@@ -29,20 +29,28 @@ class TranscriptionRequest(BaseModel):
     profile_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     permissions: list[str] = Field(max_length=2)
     normalize_reference: StrictBool = Field(default=False, exclude_if=lambda value: value is False)
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
 
 
 def directory(run_id):
     return resolve_child(get_settings().host_data_dir(), f"runtime/transcription/{UUID(run_id)}")
 
 
-def configured():
+def configured(identity=None):
     settings = get_settings()
-    if not settings.transcription_python or not settings.transcription_model_dir:
+    from ai_station_runner.fish_selection import ASR_FIELDS, transcription_selection
+
+    selected = transcription_selection(settings, identity) or {}
+    if identity is not None and not selected.get("managed"):
+        raise ValueError("The exact managed transcription environment is no longer selected")
+    if not all(selected.get(k) for k in ASR_FIELDS):
         raise ValueError("Configure an offline Whisper runtime and model first")
-    python = Path(settings.transcription_python).expanduser().absolute()
+    python = selected["transcription_python"].absolute()
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Transcription Python is unavailable")
-    model = Path(settings.transcription_model_dir).expanduser().resolve(strict=True)
+    model = selected["transcription_model_dir"].resolve(strict=True)
     return python, model
 
 
@@ -63,6 +71,10 @@ def runtime_ready(python, modified):
 
 def capabilities():
     try:
+        from ai_station_runner.fish_environment import environment_id
+        from ai_station_runner.fish_selection import transcription_selection
+
+        selected = transcription_selection(get_settings()) or {}
         python, model = configured()
         if not runtime_ready(python, python.stat().st_mtime_ns):
             raise ValueError("Transcription runtime dependencies are unavailable")
@@ -73,6 +85,9 @@ def capabilities():
             "max_seconds": 300,
             "formats": list(FORMATS),
             "reference_normalization": True,
+            **(
+                {"environment_id": environment_id(selected["observation"])} if selected.get("managed") else {}
+            ),
         }
     except (ValueError, OSError, KeyError, TypeError):
         return {
@@ -113,7 +128,11 @@ def start(manager, body):
             pass
         else:
             raise ValueError("Run already owns a process")
-        python, model = configured()
+        from ai_station_runner.fish_selection import transcription_selection
+
+        if body.environment_id is None and (transcription_selection(get_settings()) or {}).get("managed"):
+            raise ValueError("Managed transcription requires its frozen environment identity")
+        python, model = configured(body.environment_id) if body.environment_id else configured()
         if profile(model) != body.profile_sha256:
             raise ValueError("Transcription model changed since submission")
         audio_bytes(get_settings().host_data_dir(), body.source.model_dump())
@@ -129,6 +148,19 @@ def start(manager, body):
             "CUDA_VISIBLE_DEVICES": "",
             "OMP_NUM_THREADS": "2",
         }
+        if body.environment_id:
+            home = resolve_child(root, "home")
+            home.mkdir(mode=0o700)
+            env = {
+                **env,
+                "PATH": "/usr/bin:/bin",
+                "PYTHONPATH": str(Path(__file__).parent.parent),
+                "HOME": str(home),
+                "LANG": "C.UTF-8",
+                "PYTHONNOUSERSITE": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "TOKENIZERS_PARALLELISM": "false",
+            }
         return manager.start(
             run_id=str(body.run_id),
             argv=[

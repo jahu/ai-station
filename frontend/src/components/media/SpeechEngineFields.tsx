@@ -19,6 +19,7 @@ export default function SpeechEngineFields({
   onPace: (value: string) => void;
 }) {
   const fish = capabilities?.engines?.fish_s2_pro;
+  const checking = !capabilities || fish?.readiness === "checking";
   return (
     <div className="speech-engine-fields">
       <label>
@@ -33,7 +34,7 @@ export default function SpeechEngineFields({
             Fish S2 Pro · Expressive
             {fish?.available
               ? ""
-              : fish?.readiness === "checking"
+              : checking
                 ? " · Checking…"
                 : " · Not configured"}
           </option>
@@ -79,8 +80,10 @@ export default function SpeechEngineFields({
           </div>
           {!fish?.available && (
             <p role="status">
-              {fish?.reason ??
-                "This expressive model is not ready. Choose another model or check setup."}
+              {checking
+                ? "Checking expressive speech on this workstation…"
+                : (fish?.reason ??
+                  "This expressive model is not ready. Choose another model or check setup.")}
             </p>
           )}
           <small className="muted">

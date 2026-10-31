@@ -92,6 +92,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             "video_setup",
             "avatar_setup",
             "effects_setup",
+            "fish_setup",
         }:
             # A readiness waiter only reads shared infrastructure observations;
             # it can resume without inspecting or dispatching any host process.

@@ -1,5 +1,5 @@
 {
-  "version": 29,
+  "version": 30,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -4650,15 +4650,22 @@
       "id": "AUDIO-103",
       "area": "Audio",
       "priority": "P1",
-      "requirements": ["NR-01", "NR-06"],
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
       "title": "Fish: próbka głosu z telefonu bez ręcznej konwersji",
-      "prerequisites": ["Gotowy Fish i lokalna transkrypcja; własna próbka M4A, MP3 albo WebM, 5–15 sekund."],
+      "prerequisites": [
+        "Gotowy Fish i lokalna transkrypcja; własna próbka M4A, MP3 albo WebM, 5–15 sekund."
+      ],
       "steps": [
         "W Audio wybierz Fish. Dodaj próbkę z telefonu i wpisz krótkie zdanie, wybierając kierunek głosu i tempo.",
         "Uruchom generowanie. Przejdź do innej zakładki, wróć i odtwórz wynik.",
         "Zleć kolejną wypowiedź z tą samą próbką. Sprawdź pochodzenie próbki i transkrypcji w historii zadania."
       ],
-      "expected": ["Próbka jest automatycznie transkrybowana i przygotowana lokalnie. W historii twórczej wynikiem jest nowa wypowiedź, a nie przekonwertowana próbka. Oryginał pozostaje dostępny; kolejna wypowiedź może użyć tego samego sprawdzonego WAV i transkrypcji."],
+      "expected": [
+        "Próbka jest automatycznie transkrybowana i przygotowana lokalnie. W historii twórczej wynikiem jest nowa wypowiedź, a nie przekonwertowana próbka. Oryginał pozostaje dostępny; kolejna wypowiedź może użyć tego samego sprawdzonego WAV i transkrypcji."
+      ],
       "resources": "Dwa zgodne GPU, 24 GiB dostępnego RAM; bez dodatkowego pobierania przy gotowych silnikach",
       "minutes": 10
     },
@@ -4666,17 +4673,139 @@
       "id": "AUDIO-104",
       "area": "Audio",
       "priority": "P1",
-      "requirements": ["NR-06", "NR-11"],
+      "requirements": [
+        "NR-06",
+        "NR-11"
+      ],
       "title": "Fish: prywatność i odrzucanie niepoprawnej próbki telefonu",
-      "prerequisites": ["Dwa konta A i B; gotowy Fish i lokalna transkrypcja; własna próbka ponad 60 sekund."],
+      "prerequisites": [
+        "Dwa konta A i B; gotowy Fish i lokalna transkrypcja; własna próbka ponad 60 sekund."
+      ],
       "steps": [
         "Na A spróbuj użyć ponad 60-sekundowej skompresowanej próbki głosu.",
         "Na poprawnej krótkiej próbce wykonaj wypowiedź. Na B sprawdź bezpośrednie odnośniki do oryginału, transkrypcji, pochodnego WAV i wyniku A.",
         "Wybierz Chatterbox i sprawdź, że formularz nadal wymaga próbki WAV."
       ],
-      "expected": ["Zbyt długa próbka zostaje odrzucona po dekodowaniu przed generowaniem Fish. Nie powstaje częściowa wypowiedź. B nie odczytuje żadnego z prywatnych plików A. Obsługa WAV i dotychczasowe ustawienia Chatterbox pozostają zachowane."],
+      "expected": [
+        "Zbyt długa próbka zostaje odrzucona po dekodowaniu przed generowaniem Fish. Nie powstaje częściowa wypowiedź. B nie odczytuje żadnego z prywatnych plików A. Obsługa WAV i dotychczasowe ustawienia Chatterbox pozostają zachowane."
+      ],
       "resources": "Dwa zgodne GPU i 24 GiB dostępnego RAM dla poprawnej wypowiedzi; transkrypcja CPU",
       "minutes": 10
+    },
+    {
+      "id": "SETUP-136",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Fish: kompletna instalacja głosu i transkrypcji",
+      "prerequisites": [
+        "Świeży profil QA bez jawnej konfiguracji Fish ani Whisper; konto administratora i zgodna para GPU."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models → Expressive voice. Sprawdź wymagania sprzętowe, rozmiar i odnośniki do licencji.",
+        "Zaakceptuj licencje i rozpocznij instalację. Zatrzymaj ją podczas pobierania lub przygotowania silnika, następnie wybierz Resume.",
+        "Poczekaj na rzeczywistą gotowość i wybierz Open expressive speech."
+      ],
+      "expected": [
+        "Przygotowane są oba niezależne silniki: Fish oraz transkrypcja CPU. Nie trzeba wpisywać ścieżek, instalować pakietów ani ręcznie przepisywać nagrania. Resume zachowuje zadanie i sprawdzone pliki. Link otwiera Audio z wybranym Fish."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-137",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-01",
+        "NR-06",
+        "NR-14"
+      ],
+      "title": "Fish: pierwsza wypowiedź z próbką telefonu",
+      "prerequisites": [
+        "Gotowy profil Expressive voice; własne krótkie nagranie M4A, MP3 albo WebM."
+      ],
+      "steps": [
+        "Wgraj nagranie telefonu, wpisz krótki tekst i wybierz kierunek głosu oraz tempo.",
+        "Uruchom generowanie, przejdź do innej zakładki i wróć do tej samej historii.",
+        "Odtwórz wynik; sprawdź ostatnie zdanie oraz pochodzenie oryginału, transkrypcji i przygotowanego WAV."
+      ],
+      "expected": [
+        "Lokalna transkrypcja i konwersja odbywają się automatycznie. Historia pokazuje wygenerowaną wypowiedź, a nie próbkę przygotowawczą. Cały wynik jest odtwarzalny i pozostaje po odświeżeniu. Ocenę emocji i wierności głosu zapisz osobno w AUDIO-101."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-138",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-01",
+        "NR-14"
+      ],
+      "title": "Fish: Stop, ponowne otwarcie historii i zachowanie poprzedniego wyniku",
+      "prerequisites": [
+        "Ukończona wypowiedź we własnym zapisanym workspace Speech."
+      ],
+      "steps": [
+        "Zleć kolejną wypowiedź w tym samym workspace. Odśwież stronę w trakcie przygotowania modelu.",
+        "Zatrzymaj zadanie z historii, poczekaj na potwierdzenie i ponownie otwórz workspace.",
+        "Sprawdź poprzedni wynik, status zatrzymanej wersji i brak częściowej nowej wypowiedzi."
+      ],
+      "expected": [
+        "Odświeżenie nie tworzy drugiej generacji. Stop kończy wyłącznie własne zadanie; wcześniejszy wynik nadal działa, a zatrzymane zadanie nie udaje ukończonego. Rezerwacje zasobów zostają zwolnione po potwierdzeniu zakończenia."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-139",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-11",
+        "NR-14"
+      ],
+      "title": "Fish: wspólny silnik i prywatne próbki, transkrypcje oraz wyniki",
+      "prerequisites": [
+        "Administrator A przygotował profil i wypowiedź; zwykłe konto B."
+      ],
+      "steps": [
+        "Na B otwórz Models i Audio. Sprawdź dostępność Fish bez ponownej instalacji.",
+        "Na B spróbuj otworzyć odnośniki A do historii instalacji, workspace, Run, oryginału, transkrypcji, pochodnego WAV i wyniku.",
+        "Sprawdź możliwość rozpoczęcia instalacji silnika na B."
+      ],
+      "expected": [
+        "Gotowość modelu jest wspólna. Żadne prywatne zadanie, nagranie, tekst, log ani wynik A nie jest dostępne dla B. Instalacja wymaga administratora."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-140",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-06",
+        "NR-14"
+      ],
+      "title": "Fish: dotychczasowy głos i zajęta pamięć GPU",
+      "prerequisites": [
+        "Istniejąca konfiguracja Chatterbox; gotowy Fish. Opcjonalnie inne aktywne obciążenie GPU."
+      ],
+      "steps": [
+        "Po aktualizacji sprawdź dotychczasowy model i próbkę głosu w Audio.",
+        "Otwórz Fish z prowadzonej instalacji, następnie świadomie zmień model na Chatterbox i odśwież stronę.",
+        "Przy zajętych GPU zleć Fish; sprawdź oczekiwanie na zasoby i możliwość Stop. Jeśli pamięć zmieni się już podczas ładowania, zapisz widoczny komunikat."
+      ],
+      "expected": [
+        "Istniejąca konfiguracja nie jest zastępowana. Wybór użytkownika ma pierwszeństwo przed wcześniejszym linkiem instalatora. Zadanie nie zatrzymuje obcych programów; oczekuje na zasoby albo informuje o zmianie dostępnej pamięci. Nie publikuje częściowej wypowiedzi."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
     }
   ]
 }

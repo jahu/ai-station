@@ -11,6 +11,23 @@ from ai_station_runner.media_inputs import MediaInput
 from pydantic import ValidationError
 
 
+@pytest.mark.parametrize(
+    "free,minimum,available",
+    [(10240, 10240, True), (10239, 10240, False), (5120, 5120, True), (5000, 5120, False)],
+)
+def test_changed_external_gpu_usage_is_rechecked_before_weight_transfer(free, minimum, available):
+    from types import SimpleNamespace
+
+    torch = SimpleNamespace(
+        cuda=SimpleNamespace(mem_get_info=lambda device: (free * 1024**2, 12288 * 1024**2))
+    )
+    if available:
+        fish_job.require_gpu_memory(torch, 0, minimum)
+    else:
+        with pytest.raises(ValueError, match="other GPU workloads"):
+            fish_job.require_gpu_memory(torch, 0, minimum)
+
+
 def test_editable_namespace_packages_check_actual_implementation_locations(tmp_path):
     from types import SimpleNamespace
 
