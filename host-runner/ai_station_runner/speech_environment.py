@@ -113,8 +113,10 @@ def unpack_segmenter(source, destination, check):
             archive.extract(item, destination)
 
 
-def unpack_python(source, destination, check):
+def unpack_python(source, destination, check, *, python_version="3.12"):
     """Pinned standalone Python includes legitimate in-tree binary/library links."""
+    if python_version not in {"3.10", "3.12"}:
+        raise ValueError("Use a reviewed fixed runtime Python version")
     with tarfile.open(source) as archive:
         members = archive.getmembers()
         if len(members) > 20000 or sum(v.size for v in members) > 250 * 1024**2:
@@ -131,7 +133,7 @@ def unpack_python(source, destination, check):
     for path in folder.rglob("*"):
         if not path.resolve().is_relative_to(folder.resolve()):
             raise ValueError("Standalone Python links must stay inside its owned directory")
-    return folder / "bin/python3.12"
+    return folder / ("bin/python" + python_version)
 
 
 def offline_environment(folder):

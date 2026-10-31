@@ -284,22 +284,34 @@ def test_speech_cli_requires_actual_scope_before_importing_models(tmp_path, monk
 
 
 @pytest.mark.parametrize("outside", [False, True])
-def test_standalone_python_allows_only_links_inside_its_own_tree(tmp_path, outside):
+@pytest.mark.parametrize("minor", ["3.10", "3.12"])
+def test_standalone_python_allows_only_links_inside_its_own_tree(tmp_path, outside, minor):
     source = tmp_path / "python.tar"
     with tarfile.open(source, "w") as archive:
-        binary = tarfile.TarInfo("python/bin/python3.12")
+        binary = tarfile.TarInfo("python/bin/python" + minor)
         binary.size = 5
         archive.addfile(binary, io.BytesIO(b"fixed"))
         alias = tarfile.TarInfo("python/bin/python")
         alias.type = tarfile.SYMTYPE
-        alias.linkname = "../../../../escape" if outside else "python3.12"
+        alias.linkname = "../../../../escape" if outside else "python" + minor
         archive.addfile(alias)
     output = tmp_path / "extracted"
+    # Preserve the existing three-argument default and test the avatar's fixed
+    # interpreter without changing the same archive/symlink boundaries.
+    options = {"python_version": minor} if minor != "3.12" else {}
     if outside:
         with pytest.raises((ValueError, tarfile.FilterError)):
-            environment.unpack_python(source, output, lambda: None)
+            environment.unpack_python(source, output, lambda: None, **options)
     else:
-        binary = environment.unpack_python(source, output, lambda: None)
+        binary = environment.unpack_python(source, output, lambda: None, **options)
         assert binary.read_bytes() == b"fixed"
         assert (output / "python/bin/python").resolve() == binary
     assert not (tmp_path / "escape").exists()
+
+
+@pytest.mark.parametrize("version", ["../../external", "3.11", "python3.10", "3.10/bin/sh"])
+def test_runtime_python_version_cannot_select_an_arbitrary_executable(tmp_path, version):
+    output = tmp_path / "extracted"
+    with pytest.raises(ValueError, match="reviewed fixed"):
+        environment.unpack_python(tmp_path / "absent.tar", output, lambda: None, python_version=version)
+    assert not output.exists()
