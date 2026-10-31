@@ -47,8 +47,9 @@ class ImageSetupExecutor(SpeechSetupExecutor):
         inputs = recipe.get("inputs") or []
         if (
             run.parameters.get("profile") != IMAGE_PROFILE
-            or len(inputs) != 4
-            or {v.get("role") for v in inputs} != {"diffusion", "text_encoder", "vision_projector", "vae"}
+            or len(inputs) != 5
+            or {v.get("role") for v in inputs}
+            != {"diffusion", "text_encoder", "vision_projector", "vae", "upscaler"}
             or any(v.get("kind") != "model" for v in inputs)
             or not re.fullmatch(r"[a-f0-9]{64}", recipe.get("model_manifest_sha256", ""))
         ):

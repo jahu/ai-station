@@ -42,6 +42,11 @@
     {
       "name": "CUDA components",
       "url": "https://docs.nvidia.com/cuda/eula/index.html"
+    },
+    {
+      "name": "RealESRGAN \u00b7 BSD 3-Clause",
+      "url": "https://github.com/xinntao/Real-ESRGAN/blob/0573f32dd04a6ff9dbafff67df23f808dffc8811/LICENSE",
+      "source_url": "https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.1.0"
     }
   ],
   "files": [
@@ -84,6 +89,16 @@
       "size_bytes": 1350989512,
       "sha256": "a07a1b7c4ee2966a1b3bdc37de9b4f983d56937e46619f709a80b6e490675417",
       "license": "Qwen Research"
+    },
+    {
+      "role": "upscaler",
+      "filename": "RealESRGAN_x4plus.pth",
+      "repository": "xinntao/Real-ESRGAN",
+      "revision": "4c05b20cb30aded73ed3731848a9fbbf70c7c0ac",
+      "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+      "size_bytes": 67040989,
+      "sha256": "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1",
+      "license": "BSD-3-Clause"
     }
   ]
 }

@@ -36,16 +36,17 @@ explicit external speech settings retain priority. Each environment owns its
 Python and stdlib independently of application versions. Model files are shared;
 preparation receipts, voice recordings and generated speech remain account scoped.
 
-The internal [managed-image candidate](plans/managed-image-setup.md#owned-container-candidate)
-reuses native Docker ownership/journals for fixed container image jobs. Its
-controller-independent deadline, typed source/command construction, inspection,
-Stop and final file receipt do not add a workload execution engine. Typed native
-routes, verified companion downloads and ordinary PhotoExecutor binding are now
-implemented behind a native qualification flag. A missing journal after uncertain
-dispatch requires a durable native Stop fence before releasing reservations.
-Explicit photo configuration, including incomplete settings, retains priority.
-The guided UI and actual model/worker/UI qualification remain unfinished; this
-candidate is not an operational installation recommendation.
+The [managed image profile](plans/managed-image-setup.md#qualified-managed-image-flow)
+uses the same runtime-preparation Tasks, verified downloads and native OCI
+supervisor for five fixed model companions. Its guided card restores private
+history/progress and supports Stop/Resume. Ordinary PhotoExecutor Runs freeze
+sources, prompt, seed, resource bundle and deadline; a typed native controller
+owns the exact container independently of the Runner process. Missing dispatch
+requires a durable Stop fence before reservations are released. Generate, Edit,
+one/multiple-reference Recompose, Upscale and restart/Stop passed real separate
+API/worker/native qualification with compiled desktop/mobile UI. Existing explicit
+photo configuration, including incomplete settings, retains priority. This fixed
+Linux NVIDIA profile does not qualify other hardware or consumer installers.
 
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small

@@ -3,7 +3,8 @@
 This is the next NR-14 vertical slice after [managed speech](managed-speech-setup.md).
 Deliver a fresh-installation route from reviewed sources to an ordinary Images
 result. Preserve the working configured photo pipeline, original script and model
-files. This plan does not mark a new image adapter operational.
+files. The fixed Linux NVIDIA profile below has passed real integrated qualification;
+other hardware/media and consumer installers remain separate release work.
 
 ## Source audit, 2026-10-31
 
@@ -22,7 +23,7 @@ uses CUDA 12.6.3 and Ubuntu 24.04; entrypoint is `/sd-cli`. MIT runtime source,
 CUDA and base-system components retain their separate licenses. A manifest audit
 or successful pull does not establish GPU inference or supported image modes.
 
-The initial Qwen profile should reuse the known four-file pipeline shape:
+The Qwen profile preserves the known four-file generation/editing shape:
 diffusion transformer, quantized text encoder, vision projector and VAE. Public
 metadata pins the following candidate sources:
 
@@ -42,15 +43,20 @@ metadata pins the following candidate sources:
   `a07a1b7c4ee2966a1b3bdc37de9b4f983d56937e46619f709a80b6e490675417`.
   The workstation's existing converted VAE is 675,509,688 bytes. It is a distinct
   object: do not use its filename or working result to claim qualification of
-  the larger published object. Confirm actual supported VAE precision and memory
-  behavior through the pinned CLI before fixing the recipe.
+  the larger published object. The pinned public VAE has now passed the actual
+  generation/editing tests below with GPU-only parameter placement.
 
 Existing workstation files may seed an isolated qualification store only after
 full SHA verification, without renaming, changing modes or linking writes back
 to the originals. The user declined another Qwen weight download; reuse matching
 existing transformer/encoder/projector bytes for qualification. Preserve the
-separate proof of what was actually downloaded versus reused. The upscaler is a
-separate companion/source/license to qualify before declaring Upscale ready.
+separate proof of what was actually downloaded versus reused. The fifth companion is
+[RealESRGAN_x4plus.pth](https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.1.0),
+67,040,989 bytes, SHA-256
+`4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1`,
+with its separate [BSD 3-Clause license](https://github.com/xinntao/Real-ESRGAN/blob/0573f32dd04a6ff9dbafff67df23f808dffc8811/LICENSE).
+All five files are verified before setup publication. Upscale uses the pinned
+CLI's native `-M upscale` operation and fixed 4× RealESRGAN model.
 Private source evidence: `data/acceptance/guided-image-runtime-20261031/`.
 
 ## Implementation contract
@@ -124,114 +130,89 @@ semantic-memory setup, broader source discovery or actual Linux/Windows/macOS
 consumer install/update/data-preserving uninstall requirements from NR-13/14.
 
 
-## Current candidate evidence
-
-The pinned image was actually pulled and its CLI was executed under non-root,
-read-only-root, no-network, dropped-capability, PID and RAM limits. CUDA device
-enumeration detected both workstation GPUs; no image weights were loaded. The
-three existing transformer/encoder/projector files passed full SHA comparison
-against the pinned publishers, so another copy from the network is unnecessary.
-The existing VAE remains a distinct converted object. Existing owned llama.cpp
-is currently occupying the GPUs; source/command work does not stop it.
-
-The internal `managed_image_command.py` binds Generate/Edit/Recompose
-to fixed container coordinates and one/two allocated logical CUDA devices. It
-retains prompts as single literal arguments, validates source counts and bounded
-parameters, and cannot accept images, URLs, output paths or GPU strings supplied
-by a caller. The candidate retains native `managed_image_job.QUALIFIED=False`;
-this policy is deliberately outside the immutable JSON source recipe. Temporary
-qualification overrides cannot change multi-process source fingerprints. It is
-not exposed as a ready model/runtime or installation.
-The observed CLI supports explicit module placement, parameter placement, VAE
-precision rules and multiple reference arguments. Actual inference, memory fit,
-container ownership/cancellation/recovery, publication and guided UI remain the
-required next implementation, not claims derived from `--help` or these tests.
-
-
 ## Owned container candidate
 
-The internal `managed_image_job.py` now implements fixed-profile create/start,
-inspection, Stop and bounded log replay. Typed routes are registered, while new
-dispatch remains qualification gated. Its private journal binds the request, station, daemon,
-container ID, image ID, mounts and source observations before dispatch. A lost
-create response can reconcile the same deterministic name; a lost start response
-never authorizes a second start. A still-created container after an uncertain
-start is pending, rather than proof that resources can be released. Stop deletes
-that exact verified container when necessary to fence a daemon-side late start;
-it never deletes bind-mounted application data. Confirmed missing containers
-without that cancellation receipt require inspection rather than regeneration.
+The fixed native implementation has passed actual Docker and GPU qualification.
+It reconstructs create/start from the built-in recipe instead of trusting shared
+journal commands. A lost create acknowledgement reconciles the same owned name;
+a lost start acknowledgement never authorizes another inference. Stop durably
+fences dispatch before releasing resources. If create failed before any start
+was attempted, an absent container is safely canceled; a later create still
+cannot start. An uncertain late start is fenced by deleting only the exact
+verified owned container, never its bind data. Missing previously started jobs
+without a cancellation receipt still require inspection.
 
-Creation/start reconstruct the permitted policy from native code and the fixed
-recipe, rather than trusting executable commands or mounts saved in shared
-metadata. The saved Docker endpoint must still match the native host context.
-The fixed `image_deadline.sh` is packaged with native code outside the shared
-application data mount and is individually mounted read-only. It verifies actual
-cgroup-v2 twelve-GiB RAM / zero-swap limits and the absolute deadline before
-executing the fixed CLI. Containers use a private cgroup namespace, no core
-dumps, no network, non-root UID, read-only root and only the allocated GPU UUIDs.
-CUDA UUID ordering binds logical module placement to those allocated devices.
+The packaged deadline guard is outside mounted application data and independently
+enforces the absolute deadline and actual twelve-GiB/zero-swap cgroup. Models
+remain on allocated CUDA devices; no CPU parameter offload is requested. Logs
+are bounded to eight MiB; complete output and generated-reference bytes to 256
+MiB with a separate 64-megapixel decode bound. Uploaded files and LLM vision keep
+the existing 20-MiB limit. PNG/JPEG/WebP references are decoded only after owned
+path/length/hash verification and normalized to private PNG copies. Edit copies
+are resized to frozen output geometry; original Library files are unchanged.
 
-Only a confirmed successful exit, complete observable logs and a fully decoded
-PNG of the frozen dimensions permit final file publication. Its receipt is
-persisted before retiring the private intermediate image; later inspection
-verifies the published file and cannot resurrect a deleted artifact from a
-shadow copy. Temporary log transport failures preserve captured bytes and can
-recover before completion; unavailable/truncated completion logs cannot invent
-success or block a separately confirmed cancellation.
+## Qualified managed image flow
 
-Normal cases exercise command/path/device validation, edited-journal rejection,
-wrong Docker/container ownership and isolation, lost create/start responses,
-pre-dispatch Stop, uncertain-start deletion, daemon/client loss, frozen repeat
-requests, log replay/failure, incomplete output, publication and deletion. A
-separate opt-in actual Docker fixture uses deliberately invalid tiny model bytes,
-a controlled PNG copy and sleep commands: it verifies the fixed image's failure
-reporting, kernel scope/deadline, native-process reattachment, owned Stop and file
-publication. It does **not** constitute actual image inference or GUI/worker
-qualification. No operational image setup is exposed by this increment.
+Models → **Set up images** reviews hardware, storage, five component sources and
+licenses. Explicit administrator consent queues the existing runtime-preparation
+Task/Run, verified downloader and native OCI supervisor. Cached files are verified
+before reuse. Download progress, private attempt history, Stop and Resume survive
+navigation/restarts. A final receipt registers shared model facts; it deliberately
+does not claim that inference was performed during installation. **Open Images**
+then uses the ordinary saved Images workspace and PhotoExecutor. An unavailable
+photo integration links to setup instead of queuing a doomed job.
 
-## Ordinary worker integration candidate
+The qualified starting profile requires Linux x86-64, Docker with NVIDIA device
+support, two discovered GPUs with at least 12 GiB each, and sufficient RAM/storage.
+Generate/Edit/Recompose reserve the eligible GPU pair and twelve GiB host RAM;
+Upscale reserves one eligible GPU and the same RAM ceiling. This is one measured
+profile, not a claim that every resolution/reference count fits every GPU pair.
+Generation/edit geometry is bounded to 256–2048 pixels per axis in multiples of
+32; Upscale is exact 4×, bounded to 64 megapixels. Existing explicit photo
+Python/script settings, even incomplete ones, retain priority; Krea/LUSTIFY and
+legacy snapshots are preserved.
 
-The image profile now uses `/api/setup/runtimes` and the existing input downloader
-and OCI preparation supervisor. Each companion remains a hash-verified immutable
-object, shared only as model infrastructure. Preparation history and the final
-JSON receipt remain private. The image recipe retains component-specific Qwen
-Research/Apache licenses; it is not a uniformly permissive bundle. Existing
-speech/llama source identities and their saved preparation histories are preserved.
+### Real qualification, 2026-10-31
 
-Normal `PhotoPipeExecutor` work can freeze the managed descriptor after checking
-the claim and cancellation state, reserve two discovered eligible GPUs and 12 GiB
-host RAM, and call the fixed native image route. This is a provisional two-GPU
-candidate pending real fit qualification, not an assertion that any pair fits.
-An explicit external photo setting, even partial, prevents managed fallback;
-the Krea/LUSTIFY path is unchanged. Prompt-only/instruction-only forms retain the
-effective user instruction; legacy pipeline styling uses frozen reference-pipeline
-constants without importing or changing the external script. Edit geometry comes
-from verified source bytes and preserves the existing maximum-side convention.
-Reference identities are checked again before dispatch; publication remains an
-ordinary private image artifact with source lineage and the frozen command.
+The isolated fresh-account journey used the compiled UI, real Docker API and
+separate worker, private native Runner, pinned model bytes and both RTX 3060
+12-GiB cards. This did not replace the owner's production instance or modify
+original models/photo script. Actual setup was stopped during verification and
+resumed as the same Task, succeeding on attempt two. Desktop and 390-pixel phone
+UI, reload/history restoration and source/license presentation passed.
 
-Native `/v1/runs/managed-image` accepts only the fixed typed request. Inspection
-and Stop also work after qualification is withdrawn, so disabling new inference
-cannot strand an owned job. Generic process inspection/Stop delegates only an
-existing private image journal. A 404 following an uncertain dispatch is not a
-release proof: recovery must persist the typed pre-dispatch Stop tombstone first.
-Runner outages retain reservations even though the execution target is container.
-Revoked-owner cleanup Stops only that verified job and retains resources when
-termination is uncertain; it never resumes generation under a disabled account.
+| Ordinary operation | Actual output | Observed wall time |
+| --- | --- | --- |
+| Generate, 30 steps | 832×1216 blue mug and apple | See saved Run timings; output visually inspected |
+| Structural Edit, 30 steps | 832×1216; apple removed, mug/table retained | 180.28 s |
+| Recompose, one reference, 30 steps | 832×1216; blue mug moved to marble counter/plant | 180.71 s |
+| Recompose, two references, 30 steps | 832×1216; same requested composition | 678.73 s |
+| RealESRGAN Upscale | 3328×4864; 23,889,065 bytes | 43.02 s |
+| Reuse that large result in Edit, 8 steps/max-side 512 | 352×512; original hash unchanged | 19.93 s |
 
-The guided Models card/Images setup entry, Upscale companion and actual complete
-GPU/model/API/worker/desktop/phone qualification remain required before activation.
+These are specific qualification observations including orchestration/polling,
+not universal benchmarks. The four-step early native Generate was visibly poor
+and is not the image-quality acceptance. The thirty-step ordinary result and
+Edit/Recompose/Upscale outputs were visually inspected. Native log observation
+reported 9,337.96 MiB CUDA parameter memory and zero parameter RAM for the tested
+Qwen load; exact UUID allocations and private receipts remain with the Runs.
 
-The runtime-preparation profile, verified-input worker, frozen bundle/native
-identities and ordinary PhotoExecutor/resource integration are implemented.
-Native execution receives a fresh random seed frozen with the effective prompt;
-an explicit retry retains it and gets a new native deadline. That deadline begins
-after resource admission and is bounded by any existing Task deadline, so queue
-wait does not consume the inference budget. Permissions are checked before source
-inspection, and a missing permission cannot trigger native preflight.
+An actual in-flight 150-step job survived stopping/restarting only the private
+QA Runner: the same container ID/StartedAt remained, with no repeated inference.
+Normal API Stop after reattachment canceled it, released all reservations and
+published no partial image. A real second account could read shared readiness,
+but got empty private preparation history, 403 on installation and 404 for the
+owner's Run, artifact/file and setup detail. The synthetic member was disabled
+afterward. Normal tests also cover lost acknowledgements, late-create fences,
+claim/revocation handling, permissions, source tampering and failed outputs.
 
-Next, finish the guided card and Upscale companion before activation. Actual model
-inference and the full new-account/API/worker/native/desktop/phone journey remain
-mandatory gates. The real qualification data root now contains verified copies
-of the three existing weights plus the pinned raw public VAE. Originals were not
-changed, and preparing those files is not evidence of successful GPU inference.
+Evidence and generated pictures remain private under
+`data/acceptance/guided-image-runtime-20261031/`; no QA screenshots or user media
+are published in repository docs. Final source/package/build validation and the
+reviewed PR/deployment receipt determine rollout, rather than this plan alone.
+The native qualification policy is outside immutable source identities so it can
+be withdrawn without preventing inspection/Stop of already owned work.
+
+This completes qualification of this image profile; NR-13/14 still include
+music/video/avatar/memory setup, broader source discovery and real consumer
+Linux/Windows/macOS installation/update/data-preserving uninstall.

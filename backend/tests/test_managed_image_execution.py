@@ -75,7 +75,10 @@ def bridge(monkeypatch):
             with session_factory()() as db:
                 run = db.get(Run, json["run_id"])
                 assert run.metadata_json["dispatch_attempted"]
-                assert all_locks(db) == {"gpu:7", "gpu:9", "ram:" + run.id}
+                expected = {"gpu:7", "ram:" + run.id}
+                if json["command"]["mode"] != "upscale":
+                    expected.add("gpu:9")
+                assert all_locks(db) == expected
                 assert run.execution_target == "container"
             root = get_settings().data_dir
             identity = json["run_id"]
@@ -376,3 +379,98 @@ def test_retry_renews_native_deadline_but_retains_the_frozen_effective_prompt_an
             tick(db, "another-image-worker")
             assert db.get(Run, another["id"]).status == "succeeded"
         assert state["start"]["command"]["seed"] == 5678
+
+
+def test_upscale_uses_one_gpu_and_exact_source_geometry_without_generation_controls(bridge):
+    state, _ = bridge
+    with TestClient(app) as api:
+        run, parents = queue(api, "upscale", 1)
+        with session_factory()() as db:
+            tick(db, "upscale-worker")
+            saved = db.get(Run, run["id"])
+            assert saved.status == "succeeded", saved.error_message
+            assert all_locks(db) == set()
+        assert state["start"]["gpus"] == [7]
+        command = state["start"]["command"]
+        assert command == dict(
+            mode="upscale",
+            prompt="",
+            reference_count=1,
+            width=2048,
+            height=3072,
+            steps=None,
+            cfg=None,
+            seed=None,
+        )
+        artifact = api.get(f"/api/artifacts?run_id={run['id']}").json()[0]
+        assert artifact["parent_artifact_ids"] == [parents[0]["id"]]
+        assert (artifact["metadata"]["width"], artifact["metadata"]["height"]) == (2048, 3072)
+
+
+def test_image_readiness_is_shared_metadata_without_dispatch_or_private_inputs(bridge, accounts):
+    state, _ = bridge
+    _, alice, bob = accounts
+    for browser in (alice, bob):
+        reply = browser.get("/api/images/capabilities")
+        assert reply.status_code == 200 and reply.json()["available"] is True
+        assert set(reply.json()) == {"configuration_source", "available", "managed_image"}
+    assert state["start"] is None
+
+
+def test_image_readiness_reports_unknown_runner_without_enqueuing_a_job(monkeypatch):
+    def missing(*args, **kwargs):
+        raise RunnerUnavailable("fixture unavailable")
+
+    monkeypatch.setattr(RunnerClient, "request", missing)
+    with TestClient(app) as api:
+        reply = api.get("/api/images/capabilities")
+        assert reply.status_code == 200
+        assert reply.json()["available"] is False and reply.json()["status"] == "unknown"
+        assert api.get("/api/runs").json() == []
+
+
+def test_large_generated_library_image_can_be_edited_without_relaxing_upload_or_vision_limits(
+    bridge, tmp_path
+):
+    import random
+
+    from app.artifacts import register_file
+    from app.vision_inputs import LIMIT, snapshot, verify
+
+    state, _ = bridge
+    path = tmp_path / "large-generated.png"
+    image = Image.frombytes("RGB", (3072, 3072), random.Random(42).randbytes(3072 * 3072 * 3))
+    image.save(path)
+    path.chmod(0o600)
+    assert path.stat().st_size > LIMIT
+    with session_factory()() as db:
+        source = register_file(
+            db,
+            source=path,
+            artifact_type="image",
+            mime_type="image/png",
+            original_filename="large-generated.png",
+            run_id=None,
+        )
+        identity = source.id
+        db.commit()
+        with pytest.raises(ValueError):
+            verify(db, [snapshot(source)], read_bytes=True)
+    with TestClient(app) as api:
+        reply = api.post(
+            "/api/images/runs",
+            json={
+                "mode": "img2img",
+                "edit_prompt": "Remove the red cup",
+                "prompt_style": "instruction",
+                "max_side": 512,
+                "input_artifact_ids": [identity],
+            },
+        )
+        assert reply.status_code == 202, reply.text
+        with session_factory()() as db:
+            tick(db, "large-image-worker")
+            run = db.get(Run, reply.json()["id"])
+            assert run.status == "succeeded", run.error_message
+        assert state["start"]["references"][0]["size_bytes"] > LIMIT
+        assert state["start"]["command"]["width"] == state["start"]["command"]["height"] == 512

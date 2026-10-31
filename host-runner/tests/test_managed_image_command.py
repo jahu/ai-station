@@ -50,6 +50,7 @@ def test_references_are_ordered_fixed_coordinates_and_two_gpu_placement_is_expli
         {"steps": True},
         {"seed": -1},
         {"prompt": "  "},
+        {"prompt": "invalid\x00instruction"},
         {"image_reference": "unreviewed/image:latest"},
         {"output": "/data/db/application.sqlite"},
     ],
@@ -63,3 +64,32 @@ def test_invalid_or_unimplemented_operations_and_caller_destinations_are_rejecte
 def test_unsupported_device_counts_never_construct_a_command(gpu_count):
     with pytest.raises(ValueError):
         argv(request(), gpu_count=gpu_count)
+
+
+def test_upscale_has_one_fixed_input_and_no_generation_or_remote_controls():
+    body = ImageCommand(mode="upscale", reference_count=1, width=1268, height=1692)
+    command = argv(body, gpu_count=1)
+    assert command[:5] == ["/sd-cli", "-M", "upscale", "--upscale-model", "/models/upscaler.pth"]
+    assert command[command.index("-i") + 1] == "/inputs/0.png"
+    assert command[command.index("--upscale-repeats") + 1] == "1"
+    assert command[command.index("--backend") + 1] == "CUDA0"
+    assert "-p" not in command and "--llm" not in command and "--offload-to-cpu" not in command
+    with pytest.raises(ValueError):
+        argv(body, gpu_count=2)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"width": 8192, "height": 8196},
+        {"width": 1269},
+        {"reference_count": 2},
+        {"prompt": "change something"},
+        {"steps": 4},
+        {"cfg": 5.0},
+        {"seed": 42},
+    ],
+)
+def test_upscale_never_accepts_unbounded_output_or_ignored_generation_options(changes):
+    with pytest.raises(ValidationError):
+        ImageCommand(**{"mode": "upscale", "reference_count": 1, "width": 1268, "height": 1692, **changes})

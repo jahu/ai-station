@@ -28,9 +28,12 @@ from test_model_bundles import bundle_source as bundle_source
 def image_source(bundle_source, monkeypatch):
     source = bundle_source
     source["payloads"]["vision.gguf"] = b"tiny vision fixture"
+    source["payloads"]["upscaler.pth"] = b"tiny upscaler fixture"
     inputs = []
     for role, (filename, data) in zip(
-        ["diffusion", "text_encoder", "vision_projector", "vae"], source["payloads"].items(), strict=True
+        ["diffusion", "text_encoder", "vision_projector", "vae", "upscaler"],
+        source["payloads"].items(),
+        strict=True,
     ):
         spec = FileSpec(
             sha256=hashlib.sha256(data).hexdigest(),
@@ -170,7 +173,7 @@ def test_queued_complete_image_setup_registers_shared_image_files_and_one_privat
         assert len(api.get("/api/setup/runtimes/preparations", params={"profile": IMAGE_PROFILE}).json()) == 1
         with control_session_factory()() as db:
             models = list(db.scalars(select(ModelFile)))
-            assert len(models) == 4 and all(v.category == "image" for v in models)
+            assert len(models) == 5 and all(v.category == "image" for v in models)
             assert all(v.relative_path.startswith("models/store/") and v.host_path is None for v in models)
             assert len(list(db.scalars(select(Artifact)))) == 1
             assert not list(db.scalars(select(ResourceLock).where(ResourceLock.released_at.is_(None))))

@@ -1,6 +1,7 @@
 """Container identity, crash recovery and publication without Docker or GPU use."""
 
 import hashlib
+import io
 import json
 import subprocess
 import sys
@@ -23,6 +24,82 @@ def frame(text, stream=1):
     return bytes([stream, 0, 0, 0]) + len(data).to_bytes(4, "big") + data
 
 
+def upscale_request(setup, format="PNG", corrupt=False, size=(256, 256)):
+    root, _, _, original = setup
+    source = root / "artifacts/source.png"
+    source.parent.mkdir(exist_ok=True)
+    output = io.BytesIO()
+    Image.new("RGB", size, "blue").save(output, format=format)
+    data = b"not an image" if corrupt else output.getvalue()
+    source.write_bytes(data)
+    source.chmod(0o600)
+    reference = dict(
+        relative_path="artifacts/source.png", sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data)
+    )
+    body = job.Start.model_validate(
+        {
+            **original.model_dump(mode="json"),
+            "command": {"mode": "upscale", "reference_count": 1, "width": size[0] * 4, "height": size[1] * 4},
+            "references": [reference],
+        }
+    )
+    return body, source, data
+
+
+@pytest.mark.parametrize("format", ["PNG", "JPEG", "WEBP"])
+def test_upscale_normalizes_verified_reference_and_publishes_exact_4x_output(setup, format):
+    root, _, state, _ = setup
+    body, source, data = upscale_request(setup, format)
+    assert job.start(body)["alive"]
+    record = job.read(body.run_id)
+    private = job.folder(body.run_id) / "input-0.png"
+    with Image.open(private) as image:
+        assert image.format == "PNG" and image.size == (256, 256)
+    assert source.read_bytes() == data and not private.stat().st_mode & 0o222
+    argv = record["create"]["Cmd"]
+    assert argv[argv.index("--upscale-model") + 1] == "/models/upscaler.pth"
+    state["container"]["State"].update(Status="exited", Running=False, ExitCode=0, Pid=0)
+    output = job.folder(body.run_id) / "output/result.png"
+    Image.new("RGB", (1024, 1024), "blue").save(output)
+    output.chmod(0o600)
+    assert job.inspect(body.run_id)["exit_code"] == 0
+    assert (root / job.read(body.run_id)["output"]["relative_path"]).is_file()
+
+
+@pytest.mark.parametrize("corrupt,wrong_scale", [(True, False), (False, True)])
+def test_upscale_rejects_invalid_source_or_wrong_scale_before_container_creation(setup, corrupt, wrong_scale):
+    _, _, state, _ = setup
+    body, _, _ = upscale_request(setup, corrupt=corrupt)
+    if wrong_scale:
+        body = body.model_copy(update={"command": body.command.model_copy(update={"width": 512})})
+    with pytest.raises(HTTPException) as rejected:
+        job.start(body)
+    assert rejected.value.status_code == (422 if corrupt else 409)
+    assert state["create_count"] == state["start_count"] == 0
+
+
+def test_edit_resizes_only_its_private_copy_to_frozen_processing_geometry(setup):
+    body, source, original = upscale_request(setup, size=(1024, 768))
+    body = body.model_copy(
+        update={
+            "command": ImageCommand(
+                mode="img2img",
+                reference_count=1,
+                width=512,
+                height=384,
+                prompt="Remove the red cup",
+                steps=4,
+                cfg=6.0,
+                seed=42,
+            )
+        }
+    )
+    assert job.start(body)["alive"]
+    with Image.open(job.folder(body.run_id) / "input-0.png") as image:
+        assert image.size == (512, 384)
+    assert source.read_bytes() == original
+
+
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_STATION_DATA_DIR", str(tmp_path))
@@ -32,7 +109,7 @@ def setup(tmp_path, monkeypatch):
     root = tmp_path / "models/store"
     root.mkdir(parents=True)
     inputs = []
-    for role in ["diffusion", "text_encoder", "vision_projector", "vae"]:
+    for role in ["diffusion", "text_encoder", "vision_projector", "vae", "upscaler"]:
         data = ("GGUF " + role).encode()
         sha = hashlib.sha256(data).hexdigest()
         (root / sha).write_bytes(data)
@@ -79,6 +156,8 @@ def setup(tmp_path, monkeypatch):
         if path.endswith("/containers/create"):
             config = json.loads(request.content)
             state["create_count"] += 1
+            if state.get("create_rejected"):
+                return httpx.Response(500, text="fixture create rejected before any container exists")
             state["container"] = dict(
                 Id="c" * 64,
                 Image=config["Image"],
@@ -161,6 +240,28 @@ def test_actual_container_identity_is_frozen_hardened_and_repeated_start_only_in
     assert config["HostConfig"]["NetworkMode"] == "none" and config["HostConfig"]["ReadonlyRootfs"]
     assert [m["Target"] for m in config["HostConfig"]["Mounts"] if not m["ReadOnly"]] == ["/output"]
     assert config["HostConfig"]["DeviceRequests"][0]["DeviceIDs"] == ["GPU-qa-seven"]
+
+
+def test_rejected_create_can_be_stopped_without_stranding_reservations_or_allowing_a_late_start(setup):
+    _, _, state, body = setup
+    state["create_rejected"] = True
+    with pytest.raises(httpx.HTTPStatusError):
+        job.start(body)
+    result = job.cancel(body.run_id, permissions=body.permissions)
+    assert result["status"] == "canceled" and result["alive"] is False
+    assert job.inspect(body.run_id)["status"] == "canceled"
+    assert job.start(body)["status"] == "canceled"
+    assert state["start_count"] == 0 and state["create_count"] == 1
+    # A Docker create may have been queued before the failed response. Even
+    # when it appears later, the durable Stop must never authorize its start.
+    record = job.read(body.run_id)
+    state["create_rejected"] = False
+    with job.api_for(record) as api:
+        reply = api.post("/v1.52/containers/create", params={"name": record["name"]}, json=record["create"])
+        reply.raise_for_status()
+    assert job.start(body)["status"] == "canceled" and state["start_count"] == 0
+    assert job.cancel(body.run_id, permissions=body.permissions)["status"] == "canceled"
+    assert state["container"] is None
 
 
 def test_completed_png_publishes_once_and_retains_exact_prompt_and_source_identity(setup, monkeypatch):

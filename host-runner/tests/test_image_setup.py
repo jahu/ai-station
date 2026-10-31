@@ -32,7 +32,7 @@ def test_qualification_toggle_does_not_change_sources_or_parent_child_fingerprin
     monkeypatch.setattr(managed_image_job, "QUALIFIED", not managed_image_job.QUALIFIED)
     assert image_setup.recipe() == first
     assert runtime_setup.recipe(runtime_setup.RuntimeSelection(profile=managed_image_job.PROFILE)) == first
-    assert len(first["inputs"]) == 4 and all(v["kind"] == "model" for v in first["inputs"])
+    assert len(first["inputs"]) == 5 and all(v["kind"] == "model" for v in first["inputs"])
     assert first["model_manifest_sha256"] == managed_image_job.fingerprint(managed_image_job.recipe())
 
 
@@ -97,7 +97,9 @@ def test_two_gpu_candidate_does_not_promise_readiness_on_a_single_gpu(setup, cat
     assert not setup.state["starts"]
 
 
-def test_existing_configured_pipeline_stays_selected_while_managed_candidate_is_unavailable(setup, catalog):
+@pytest.mark.parametrize("qualified", [False, True])
+def test_existing_configured_pipeline_keeps_priority(setup, catalog, monkeypatch, qualified):
+    monkeypatch.setattr(managed_image_job, "QUALIFIED", qualified)
     python = setup.root / "configured-python"
     python.write_text("fixture")
     python.chmod(0o700)
@@ -106,7 +108,7 @@ def test_existing_configured_pipeline_stays_selected_while_managed_candidate_is_
     catalog.photo_python, catalog.photo_script = str(python), str(script)
     result = image_setup.catalog()
     assert result["existing_images"] == {"source": "configured", "available": True}
-    assert not result["installation_available"]
+    assert result["installation_available"] is qualified
 
 
 def test_partial_external_configuration_does_not_silently_choose_managed(setup, catalog):

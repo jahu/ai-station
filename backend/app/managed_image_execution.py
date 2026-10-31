@@ -13,7 +13,7 @@ from app.image_prompt_presets import (
 )
 from app.models import Artifact
 from app.python_execution import read_owned_file
-from app.vision_inputs import snapshot, verify
+from app.vision_inputs import IMAGE_RESULT_LIMIT, snapshot, verify
 
 
 def freeze(session, run, capabilities):
@@ -22,8 +22,10 @@ def freeze(session, run, capabilities):
         raise ValueError("Prepare a qualified local image runtime in Models before generating")
     parameters = run.parameters
     saved = parameters.get("managed_image_runtime")
-    if parameters.get("backend") != "qwen" or parameters.get("mode") == "upscale":
-        raise ValueError("This managed image profile supports Qwen Generate, Edit and Recompose")
+    mode = parameters["mode"]
+    upscale = mode == "upscale"
+    if parameters.get("backend") != "qwen":
+        raise ValueError("This managed profile supports Qwen images and RealESRGAN Upscale")
     selected = (parameters.get("image_model") or {}).get("model_file")
     if selected and (selected.get("sha256"), selected.get("size")) != (
         report.get("diffusion_sha256"),
@@ -37,28 +39,31 @@ def freeze(session, run, capabilities):
         if artifact is None:
             raise ValueError("A selected image reference is unavailable")
         item = snapshot(artifact)
-        verify(session, [item], read_bytes=True)
+        verify(session, [item], read_bytes=True, limit=IMAGE_RESULT_LIMIT)
         if dimensions is None:
             data = read_owned_file(
-                artifact.relative_path, artifact.size_bytes, artifact.sha256, limit=20 * 1024**2, binary=True
+                artifact.relative_path,
+                artifact.size_bytes,
+                artifact.sha256,
+                limit=IMAGE_RESULT_LIMIT,
+                binary=True,
             )
             with Image.open(io.BytesIO(data)) as image:
                 dimensions = image.size
         references.append({key: item[key] for key in ("relative_path", "size_bytes", "sha256")})
     if [item["relative_path"] for item in references] != parameters.get("inputs", []):
         raise ValueError("Selected image references differ from their saved artifact identities")
-    mode = parameters["mode"]
     if (
         mode == "t2i"
         and references
-        or mode == "img2img"
+        or mode in {"img2img", "upscale"}
         and len(references) != 1
         or mode == "recompose"
         and not references
     ):
         raise ValueError("Image references do not match the requested operation")
-    prompt = parameters["edit_prompt"] if mode == "img2img" else parameters["prompt"]
-    if parameters.get("prompt_style", "pipeline") == "pipeline":
+    prompt = "" if upscale else parameters["edit_prompt"] if mode == "img2img" else parameters["prompt"]
+    if not upscale and parameters.get("prompt_style", "pipeline") == "pipeline":
         if mode == "t2i":
             prompt = f"{prompt.strip()}, {PHOTO_SUFFIX}"
         elif mode == "img2img":
@@ -67,10 +72,14 @@ def freeze(session, run, capabilities):
             prefix = RECOMPOSE_PREFIX_SINGLE if len(references) == 1 else RECOMPOSE_PREFIX_MULTI
             prompt = f"{prefix} {prompt.strip()}, {PHOTO_SUFFIX}"
     width, height = parameters.get("width"), parameters.get("height")
-    if mode == "img2img":
+    if upscale:
+        width, height = (value * 4 for value in dimensions)
+        if width * height > 64 * 1024**2 or max(width, height) > 32768:
+            raise ValueError("Upscale output exceeds the supported image dimensions")
+    elif mode == "img2img":
         scale = min(1, (parameters.get("max_side") or 1216) / max(dimensions))
         width, height = (max(32, round(value * scale / 32) * 32) for value in dimensions)
-    if not width or not height or not (256 <= width <= 2048 and 256 <= height <= 2048):
+    if not upscale and (not width or not height or not (256 <= width <= 2048 and 256 <= height <= 2048)):
         raise ValueError("Managed image output dimensions must be between 256 and 2048 pixels per side")
     if len(prompt) > 10000:
         raise ValueError("The effective image prompt exceeds the runtime's 10,000 character limit")
@@ -80,9 +89,11 @@ def freeze(session, run, capabilities):
         "reference_count": len(references),
         "width": width,
         "height": height,
-        "steps": parameters["steps"],
-        "cfg": float(parameters.get("cfg") if parameters.get("cfg") is not None else 6),
-        "seed": parameters.get("seed")
+        "steps": None if upscale else parameters["steps"],
+        "cfg": None if upscale else float(parameters.get("cfg") if parameters.get("cfg") is not None else 6),
+        "seed": None
+        if upscale
+        else parameters.get("seed")
         if parameters.get("seed") is not None
         else saved["command"]["seed"]
         if saved
@@ -90,6 +101,7 @@ def freeze(session, run, capabilities):
     }
     runtime = {
         **report,
+        "gpu_count": 1 if upscale else report["gpu_count"],
         "command": command,
         "references": references,
     }
@@ -110,4 +122,4 @@ def verify_references(session, run):
         item = snapshot(artifact)
         if any(item[key] != expected[key] for key in ("relative_path", "size_bytes", "sha256")):
             raise ValueError("Managed image reference changed after admission")
-        verify(session, [item], read_bytes=True)
+        verify(session, [item], read_bytes=True, limit=IMAGE_RESULT_LIMIT)

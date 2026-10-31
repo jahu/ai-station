@@ -1,5 +1,5 @@
 {
-  "version": 22,
+  "version": 23,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -21,7 +21,8 @@
     "docs/plans/next-release-0.1.md",
     "docs/plans/guided-model-installation.md",
     "docs/plans/desktop-installation.md",
-    "docs/plans/managed-speech-setup.md"
+    "docs/plans/managed-speech-setup.md",
+    "docs/plans/managed-image-setup.md"
   ],
   "cases": [
     {
@@ -4075,6 +4076,114 @@
       ],
       "resources": "Tylko przegląd konfiguracji i sprzętu, bez pobierania",
       "minutes": 5,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-110",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: instalacja modeli i pierwszy wynik",
+      "priority": "P1",
+      "prerequisites": [
+        "Świeży profil QA Linux x86-64 z Docker/NVIDIA i dwiema kartami co najmniej 12 GiB; administrator, wolne miejsce, zgoda na pobranie około 13 GiB."
+      ],
+      "steps": [
+        "Otwórz Models → Set up images. Sprawdź sprzęt, miejsce, pięć źródeł i osobne licencje; zaakceptuj je świadomie.",
+        "Rozpocznij instalację, przejdź do innej zakładki, wróć i otwórz Images po zakończeniu.",
+        "Wygeneruj przy 30 krokach niebieski kubek z czerwonym jabłkiem na drewnianym stole. Otwórz wynik w Library i odśwież workspace."
+      ],
+      "expected": [
+        "Instalacja zachowuje historię i mierzone pobranie. Dopiero komplet zweryfikowanych modeli i silnik pozwalają tworzyć. Prawdziwy wynik, prompt i Run pozostają w prywatnej historii i Library."
+      ],
+      "resources": "Pobranie około 13 GiB, dwa GPU, kilka minut generowania",
+      "minutes": 20,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-111",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: Stop i Resume instalacji",
+      "priority": "P1",
+      "prerequisites": [
+        "Profil QA z SETUP-110, pobieranie lub weryfikacja w toku."
+      ],
+      "steps": [
+        "Zatrzymaj instalację, odśwież stronę i sprawdź zapisaną próbę.",
+        "Wznów przygotowanie; sprawdź numer próby i gotowość po zakończeniu."
+      ],
+      "expected": [
+        "Stop nie zatrzymuje innych usług. Zweryfikowane pliki pozostają. Resume zachowuje zaakceptowaną receptę i tę samą historię, nie uruchamia podwójnej instalacji."
+      ],
+      "resources": "Bez generowania; możliwe dalsze pobieranie modeli",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-112",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: Edit, Recompose i ponowna edycja Upscale",
+      "priority": "P1",
+      "prerequisites": [
+        "SETUP-110 zakończony; własny neutralny obraz kubka i jabłka."
+      ],
+      "steps": [
+        "Edit: usuń jabłko, zachowując kubek i tło; oceń obraz, nie tylko status.",
+        "Recompose: przenieś kubek na marmurowy blat, z jednym, a następnie dwoma własnymi odniesieniami.",
+        "Upscale: sprawdź dokładne 4× wymiary. Użyj wyniku z Library ponownie w Edit z max side 512; uwzględnij także wynik większy niż 20 MB."
+      ],
+      "expected": [
+        "Strukturalna edycja wykonuje instrukcję. Recompose wykorzystuje odniesienia. Upscale i ponowna edycja publikują osobne wyniki z poprawną genealogią; oryginały pozostają bez zmian."
+      ],
+      "resources": "Jeden/dwa GPU; kilka generacji, dwa odniesienia mogą trwać ponad 10 minut",
+      "minutes": 25,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-113",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: odzyskanie po restarcie Runnera i Stop",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobna instalacja QA, aktywne własne generowanie; tylko jej Runner może być restartowany."
+      ],
+      "steps": [
+        "Podczas generowania zrestartuj wyłącznie Runner QA, zachowując kontener obliczeniowy.",
+        "Wróć do zapisanego Run, następnie kliknij Stop i sprawdź rezerwacje oraz Library."
+      ],
+      "expected": [
+        "Run dołącza do tego samego kontenera bez ponownej inferencji. Stop kończy wyłącznie własną pracę, zwalnia rezerwacje po potwierdzeniu i nie publikuje częściowego obrazu."
+      ],
+      "resources": "Dwa GPU i restart wyłącznie wydzielonego Runnera QA",
+      "minutes": 8,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-114",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: prywatność i zachowanie istniejącej konfiguracji",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobne konta QA administratora A i członka B; profil z gotowym zarządzanym obrazowaniem oraz osobny z jawną konfiguracją photo pipeline."
+      ],
+      "steps": [
+        "Na B otwórz stan gotowości; spróbuj otworzyć linki A do próby instalacji, Run, obrazu i pliku.",
+        "Na B spróbuj zainstalować modele. W osobnym profilu sprawdź, czy istniejący photo pipeline zachowuje pierwszeństwo.",
+        "Sprawdź kartę na telefonie oraz profil bez zgodnej pary GPU."
+      ],
+      "expected": [
+        "Modele są współdzielone, lecz B nie widzi historii ani plików A i nie instaluje bez uprawnień. Jawna konfiguracja, również niepełna, nie jest nadpisana. Telefon nie ma poziomego przewijania; niezgodny sprzęt nie otrzymuje aktywnej instalacji."
+      ],
+      "resources": "Bez generacji i pobierania; osobne konta/profile QA",
+      "minutes": 7,
       "requirements": [
         "NR-14"
       ]

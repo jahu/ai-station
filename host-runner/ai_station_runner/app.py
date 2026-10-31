@@ -419,7 +419,7 @@ def photo_capabilities():
             "configuration_present": False,
             "configuration_source": "managed",
             "backend": "photo_pipe",
-            "modes": ["t2i", "img2img", "recompose"],
+            "modes": ["t2i", "img2img", "recompose", "upscale"],
             "backends": ["qwen"],
             "requires_gpu": True,
             "managed_image": {

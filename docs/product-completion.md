@@ -1,4 +1,13 @@
 Next milestone (owner direction, 2026-10-29): the
+
+2026-10-31 guided image setup qualification: the fixed Linux NVIDIA profile now
+covers reviewed five-file Qwen/RealESRGAN setup, saved Stop/Resume and ordinary
+Generate/Edit/Recompose/Upscale. Actual fresh-account/compiled desktop/phone,
+separate worker/native GPU output, same-container Runner recovery/Stop and
+second-account denial passed. A real 23.9-MB Upscale result exposed and verified
+a fix for subsequent managed editing without increasing upload/LLM vision limits.
+[Contracts and measured evidence](plans/managed-image-setup.md). PR/deployment
+receipts determine availability; full NR-13/14 and the release remain open.
 [0.1 release plan](plans/next-release-0.1.md) tracks all requested creative
 history/progress, editing/prompt quality, expressive audio, timeline, account
 privacy/2FA, search, naming/docs and consumer-installation work. It is planned

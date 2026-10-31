@@ -22,7 +22,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import HTTPException
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from ai_station_runner import runtime_install
@@ -33,9 +33,11 @@ from ai_station_runner.speech_environment import fingerprint
 from ai_station_runner.telemetry import collect
 
 PROFILE = "qwen-image21-cuda-linux-amd64-v1"
-QUALIFIED = False
+# Qualified through ordinary API/worker/native GPU Runs; see managed-image-setup.md.
+QUALIFIED = True
 PERMISSIONS = {"filesystem_read", "workspace_write"}
 LIMIT = 8 * 1024**2
+OUTPUT_LIMIT = 256 * 1024**2
 RAM = 12 * 1024**3
 GUARD_PATH = Path(__file__).with_name("image_deadline.sh").resolve()
 GUARD = GUARD_PATH.read_bytes()
@@ -45,7 +47,7 @@ class Reference(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
     relative_path: str = Field(pattern=r"^artifacts/[A-Za-z0-9_./-]{1,200}$")
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    size_bytes: int = Field(gt=0, le=25 * 1024**2)
+    size_bytes: int = Field(gt=0, le=OUTPUT_LIMIT)
 
 
 class Start(BaseModel):
@@ -280,7 +282,7 @@ def files(frozen):
         ):
             raise HTTPException(409, "The verified image bundle is incomplete or changed")
         result[item["role"]] = candidate
-    if set(result) != {"diffusion", "text_encoder", "vision_projector", "vae"}:
+    if set(result) != {"diffusion", "text_encoder", "vision_projector", "vae", "upscaler"}:
         raise ValueError("The fixed image bundle must bind every companion")
     return result
 
@@ -305,7 +307,31 @@ def copy_references(body, work):
             or hashlib.sha256(data).hexdigest() != reference.sha256
         ):
             raise HTTPException(409, "The selected image reference changed")
-        write_bytes(target, data)
+        # Decode only verified bounded bytes. Normalize private copies so all
+        # advertised PNG/JPEG/WebP uploads work with the pinned CLI's PNG path.
+        try:
+            with Image.open(io.BytesIO(data)) as image:
+                if image.format not in {"PNG", "JPEG", "WEBP"} or image.width * image.height > 64 * 1024**2:
+                    raise HTTPException(422, "Unsupported or oversized image reference")
+                if body.command.mode == "upscale" and (image.width * 4, image.height * 4) != (
+                    body.command.width,
+                    body.command.height,
+                ):
+                    raise HTTPException(409, "Upscale dimensions do not match the selected source")
+                image.load()
+                encoded = io.BytesIO()
+                normalized = image.convert("RGB")
+                if body.command.mode == "img2img" and normalized.size != (
+                    body.command.width,
+                    body.command.height,
+                ):
+                    normalized = normalized.resize(
+                        (body.command.width, body.command.height), Image.Resampling.LANCZOS
+                    )
+                normalized.save(encoded, format="PNG")
+                write_bytes(target, encoded.getvalue())
+        except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError):
+            raise HTTPException(422, "The verified reference is not a supported image") from None
         target.chmod(0o400)
         copied.append(target)
     return copied
@@ -335,6 +361,7 @@ def create_config(body, work, models, image_id, devices, *, prepare_assets=True)
         "text_encoder": "text.gguf",
         "vae": "vae.safetensors",
         "vision_projector": "vision.gguf",
+        "upscaler": "upscaler.pth",
     }
     mounts.extend(
         dict(Type="bind", Source=str(p), Target="/models/" + aliases[role], ReadOnly=True)
@@ -441,7 +468,7 @@ def publish(identity, record):
         if target != root / relative:
             raise HTTPException(409, "The published image cannot cross a symlink")
         with os.fdopen(runtime_install.owned_file(target, os.O_RDONLY), "rb") as f:
-            data = f.read(25 * 1024**2 + 1)
+            data = f.read(OUTPUT_LIMIT + 1)
         if len(data) != published["size_bytes"] or hashlib.sha256(data).hexdigest() != published["sha256"]:
             raise HTTPException(409, "The published image is unavailable or changed")
         return published
@@ -450,9 +477,9 @@ def publish(identity, record):
         raise HTTPException(409, "Image output cannot cross a symlink")
     command = record["request"]["command"]
     with os.fdopen(runtime_install.owned_file(source, os.O_RDONLY), "rb") as f:
-        if os.fstat(f.fileno()).st_size > 25 * 1024**2:
+        if os.fstat(f.fileno()).st_size > OUTPUT_LIMIT:
             raise HTTPException(409, "Image output exceeded its byte budget")
-        data = f.read(25 * 1024**2 + 1)
+        data = f.read(OUTPUT_LIMIT + 1)
     with Image.open(io.BytesIO(data)) as image:
         if image.format != "PNG" or image.size != (command["width"], command["height"]):
             raise HTTPException(409, "Image output does not match its frozen dimensions")
@@ -514,7 +541,9 @@ def snapshot(api, identity, record, *, stdout_offset=0, stderr_offset=0):
         raise HTTPException(422, "Image log offsets must be nonnegative integers")
     item = inspect_container(api, record)
     if item is None:
-        if record.get("cancel_requested") and record.get("removed_after_cancel"):
+        if record.get("cancel_requested") and (
+            record.get("removed_after_cancel") or record.get("creation_canceled")
+        ):
             return canceled_result(identity)
         raise HTTPException(409, "The owned image container is missing; inspect before retrying")
     state = item["State"]
@@ -651,7 +680,9 @@ def start(body: Start):
         with api_for(record) as api:
             item = inspect_container(api, record)
             if item is None:
-                if record.get("cancel_requested") and record.get("removed_after_cancel"):
+                if record.get("cancel_requested") and (
+                    record.get("removed_after_cancel") or record.get("creation_canceled")
+                ):
                     return canceled_result(identity)
                 if record.get("container_id") or record.get("start_attempted"):
                     raise HTTPException(409, "An earlier image container disappeared; inspect it")
@@ -705,8 +736,14 @@ def cancel(identity, *, permissions):
             if item is None:
                 if record.get("removed_after_cancel"):
                     return canceled_result(identity)
+                if not record.get("container_id") and not record.get("start_attempted"):
+                    # No start was ever sent. This durable fence also prevents
+                    # starting a create that completes after its reply was lost.
+                    record["creation_canceled"] = True
+                    save(identity, record)
+                    return canceled_result(identity)
                 raise HTTPException(409, "Missing image container requires cleanup inspection")
-            if item["State"].get("Status") == "created" and record.get("start_attempted"):
+            if item["State"].get("Status") == "created":
                 # A timed-out Docker start may still be queued in the daemon.
                 # Deletion of this exact owned ID fences that late request;
                 # observing "created" alone cannot prove a safe cancellation.

@@ -52,7 +52,7 @@ manifest and use an eleven-GiB/zero-swap child with Python network connections
 blocked. Existing configured external Chatterbox remains authoritative. See the
 [managed speech contract](plans/managed-speech-setup.md).
 
-The qualification-gated [image-container candidate](plans/managed-image-setup.md#owned-container-candidate)
+The qualification-controlled [image container profile](plans/managed-image-setup.md#owned-container-candidate)
 reconstructs the allowed create/start policy from native code and a pinned recipe;
 shared journal JSON cannot choose Docker commands, images, mounts or contexts.
 Station/request labels and exact container/image identities precede inspection
@@ -63,7 +63,8 @@ without removing bind data. Only complete confirmed PNG publication produces a
 file receipt. Typed private Runner routes now support start, inspection and Stop;
 the generic process routes delegate only an existing owned journal and never
 create image storage for unrelated process IDs. New dispatch and preparation
-remain unavailable while the native qualification flag is false. That policy is
+can be withdrawn through the native qualification flag; inspection/Stop remain
+available for owned jobs. That policy is
 outside the immutable source recipe, keeping parent/child source hashes stable.
 The ordinary worker freezes the effective prompt, owned reference observations,
 GPU bundle, RAM reservation and deadline. Uncertain missing dispatch is fenced

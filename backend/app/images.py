@@ -34,6 +34,18 @@ MAX_PIXELS = 64 * 1024 * 1024
 FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP": (".webp", "image/webp")}
 
 
+@router.get("/images/capabilities")
+def image_capabilities(session: DB):
+    try:
+        return RunnerClient().request("GET", "/v1/photo/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        return {
+            "available": False,
+            "status": "unknown",
+            "notice": "Connect the Host Runner to inspect local image generation",
+        }
+
+
 @router.get("/images/runs/{run_id}/workflow")
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
