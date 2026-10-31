@@ -1,7 +1,7 @@
 name: ai-station
 
 x-control-plane: &control-plane
-  image: ai-station:local
+  image: ${AI_STATION_APP_IMAGE:-ai-station:local}
   build: .
   user: "${AI_STATION_UID:-1000}:${AI_STATION_GID:-1000}"
   init: true

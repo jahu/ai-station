@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import ipaddress
+import json
 import os
 import runpy
 import signal
@@ -22,8 +23,8 @@ COMPOSE_DOWN = ("down", "--timeout", "10")
 VOLUME_WIPE_FLAGS = frozenset({"-v", "--volumes", "--rmi"})
 
 
-def configuration() -> dict[str, str]:
-    load_dotenv(ROOT / ".env", override=False)
+def configuration(config_file: Path | None = None) -> dict[str, str]:
+    load_dotenv(config_file or ROOT / ".env", override=False)
     env = dict(os.environ)
     data = Path(env.get("AI_STATION_DATA_HOST_PATH") or ROOT / "data").expanduser().resolve()
     sock = (
@@ -129,9 +130,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dev", action="store_true")
     parser.add_argument("--no-build", action="store_true", help="Reuse the existing application image")
+    parser.add_argument("--config", type=Path, help="Explicit local desktop installation configuration")
+    parser.add_argument("--desktop", action="store_true", help="Report readiness to the local desktop parent")
     args = parser.parse_args()
     os.chdir(ROOT)
-    env = configuration()
+    env = configuration(args.config) if args.config else configuration()
     if env.get("AI_STATION_LAN_HOST"):
         try:
             address = ipaddress.IPv4Address(env["AI_STATION_LAN_HOST"])
@@ -177,11 +180,18 @@ def main() -> None:
             if not args.no_build:
                 # One shared image; Docker build works even when the optional
                 # buildx plugin is absent from a workstation's Compose install.
-                subprocess.run(["docker", "build", "-t", "ai-station:local", str(ROOT)], env=env, check=True)
+                subprocess.run(
+                    ["docker", "build", "-t", env.get("AI_STATION_APP_IMAGE", "ai-station:local"), str(ROOT)],
+                    env=env,
+                    check=True,
+                )
             # Building can take minutes; the preflight Runner may have exited
             # or been replaced. Recheck before reusing it.
             if not runner_health(env):
-                proc = subprocess.Popen([sys.executable, "-m", "ai_station_runner.main"], env=env)
+                proc = subprocess.Popen(
+                    [sys.executable, *(["-I"] if args.desktop else []), "-m", "ai_station_runner.main"],
+                    env=env,
+                )
                 deadline = time.monotonic() + 20
                 while not runner_health(env):
                     if proc.poll() is not None or time.monotonic() > deadline:
@@ -195,7 +205,12 @@ def main() -> None:
                 client.get(url).raise_for_status()
                 api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
                 url = local_entry_url(client, run, url, api_url)
-            print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
+            if args.desktop:
+                # Private pipe to the owning desktop process. The parent consumes
+                # this setup authority without persisting it in ordinary logs.
+                print("AI_STATION_READY " + json.dumps({"url": url}), flush=True)
+            else:
+                print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
             if env.get("AI_STATION_LAN_HOST"):
                 print(f"Private LAN: http://{env['AI_STATION_LAN_HOST']}:{port}", flush=True)
             while True:
