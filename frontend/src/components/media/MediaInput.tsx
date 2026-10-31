@@ -15,7 +15,7 @@ type Props = {
   uploadEndpoint?: string;
   uploadLabel?: string;
   maxAudioSeconds?: number;
-  audioMode?: "voice" | "transcription";
+  audioMode?: "voice" | "transcription" | "voice-recording";
   label: string;
   hint: string;
   value: string;
@@ -73,7 +73,7 @@ export default function MediaInput({
   const headingId = useId();
   const labelId = useId();
   const audioTypes =
-    audioMode === "transcription" ? TRANSCRIPTION_AUDIO_TYPES : ["audio/wav"];
+    audioMode !== "voice" ? TRANSCRIPTION_AUDIO_TYPES : ["audio/wav"];
   const available =
     library.data?.filter(
       (a) =>
@@ -204,7 +204,7 @@ export default function MediaInput({
             accept={
               kind === "image"
                 ? "image/png,image/jpeg"
-                : audioMode === "transcription"
+                : audioMode !== "voice"
                   ? TRANSCRIPTION_AUDIO_ACCEPT
                   : "audio/wav,.wav"
             }
@@ -251,7 +251,7 @@ export default function MediaInput({
                 ? "portraits"
                 : kind === "video"
                   ? "completed films"
-                  : audioMode === "transcription"
+                  : audioMode !== "voice"
                     ? "recordings"
                     : "WAV recordings"}
               .{" "}

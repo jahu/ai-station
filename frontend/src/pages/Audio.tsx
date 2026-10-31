@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { AudioLines, Settings2, Sparkles } from "lucide-react";
-import { api, useHardware, type Run } from "../api";
+import { api, useHardware, type Artifact, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
@@ -265,7 +265,19 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
               direction={direction}
               pace={pace}
               capabilities={capabilities.data}
-              onEngine={setEngine}
+              onEngine={(next) => {
+                const selected = cache.getQueryData<Artifact>([
+                  "artifact",
+                  reference,
+                ]);
+                if (
+                  next !== "fish_s2_pro" &&
+                  selected &&
+                  selected.mime_type !== "audio/wav"
+                )
+                  setReference("");
+                setEngine(next);
+              }}
               onDirection={setDirection}
               onPace={setPace}
             />
@@ -285,10 +297,12 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
             )}
             <MediaInput
               kind="audio"
+              audioMode={fish ? "voice-recording" : "voice"}
+              uploadEndpoint={fish ? "/audio/transcription/uploads" : undefined}
               label="Voice reference"
               hint={
                 fish
-                  ? "WAV · best with 5–15 sec of clear speech · up to 60 sec / 20 MB"
+                  ? "WAV, M4A, MP3 or phone recording · best with 5–15 sec of clear speech · up to 60 sec / 20 MB. Prepared automatically on this workstation."
                   : "WAV · 0.1–60 sec · up to 20 MB"
               }
               value={reference}

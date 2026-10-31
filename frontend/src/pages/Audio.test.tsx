@@ -317,3 +317,44 @@ it("keeps an unconfigured expressive engine unavailable instead of inventing rea
     ).value,
   ).toBe("");
 });
+
+it("prepares phone references with Fish and clears an incompatible reference when switching models", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/audio/capabilities")
+          ? {
+              available: true,
+              engines: { fish_s2_pro: { available: true, readiness: "ready" } },
+            }
+          : path.endsWith("/hardware")
+            ? { gpus: [] }
+            : {
+                id: "phone",
+                type: "audio",
+                mime_type: "audio/mp4",
+                original_filename: "voice.m4a",
+              },
+    })),
+  );
+  mount();
+  const model = await screen.findByRole("combobox", { name: "Speech model" });
+  await screen.findByRole("option", { name: "Fish S2 Pro · Expressive" });
+  fireEvent.change(model, { target: { value: "fish_s2_pro" } });
+  expect(
+    screen.getByLabelText("Upload speech").getAttribute("accept"),
+  ).toContain(".m4a");
+  fireEvent.change(screen.getByLabelText("Upload speech"), {
+    target: {
+      files: [new File(["voice"], "voice.m4a", { type: "audio/mp4" })],
+    },
+  });
+  await screen.findByText("voice.m4a");
+  fireEvent.change(model, { target: { value: "" } });
+  expect(screen.queryByText("voice.m4a")).toBeNull();
+  expect(screen.getByLabelText("Upload speech").getAttribute("accept")).toBe(
+    "audio/wav,.wav",
+  );
+});

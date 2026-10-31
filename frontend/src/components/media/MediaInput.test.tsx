@@ -174,3 +174,76 @@ it("keeps effect tracks out of voice references without hiding them from transcr
     await screen.findByRole("button", { name: "Choose wind.wav effects-" }),
   ).toBeTruthy();
 });
+
+it("accepts phone voice recordings while excluding long recordings and effects", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/uploads")
+        ? {
+            id: "uploaded-phone",
+            original_filename: "voice.m4a",
+            type: "audio",
+            mime_type: "audio/mp4",
+          }
+        : [
+            {
+              id: "phone",
+              original_filename: "voice.m4a",
+              type: "audio",
+              mime_type: "audio/mp4",
+              metadata: {},
+            },
+            {
+              id: "long",
+              original_filename: "meeting.mp3",
+              type: "audio",
+              mime_type: "audio/mpeg",
+              metadata: { duration_seconds: 90 },
+            },
+            {
+              id: "effect",
+              original_filename: "wind.wav",
+              type: "audio",
+              mime_type: "audio/wav",
+              metadata: { capability: "audio.effects", duration_seconds: 4 },
+            },
+          ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const onChange = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MediaInput
+        kind="audio"
+        audioMode="voice-recording"
+        uploadEndpoint="/audio/transcription/uploads"
+        label="Voice reference"
+        hint="Prepared automatically"
+        value=""
+        onChange={onChange}
+        disabled={false}
+        onBusy={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByLabelText("Upload speech").getAttribute("accept"),
+  ).toContain(".m4a");
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  await screen.findByRole("button", { name: "Choose voice.m4a phone" });
+  expect(screen.queryByRole("button", { name: /meeting.mp3/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /wind.wav/ })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Upload speech"), {
+    target: {
+      files: [new File(["voice"], "voice.m4a", { type: "audio/mp4" })],
+    },
+  });
+  await vi.waitFor(() =>
+    expect(onChange).toHaveBeenCalledWith("uploaded-phone"),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/audio/transcription/uploads",
+    expect.objectContaining({ method: "POST" }),
+  );
+});

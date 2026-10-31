@@ -1,8 +1,10 @@
 """Expressive speech reuses ordinary media execution and offline transcription."""
 
 import hashlib
+import io
 import math
 import re
+import wave
 from datetime import timedelta
 
 from fastapi import HTTPException
@@ -65,6 +67,48 @@ def transcript_text(session, snapshot, transcript):
     return text
 
 
+def execution_reference(session, source, transcript):
+    """Bind the canonical derivative to the same intact source and ASR receipt."""
+    from app.audio import wav_metadata
+    from app.transcription import checked_report
+
+    snapshot = source_snapshot(source)
+    if source.mime_type == "audio/wav":
+        data = read_owned_file(
+            snapshot["relative_path"],
+            snapshot["size_bytes"],
+            snapshot["sha256"],
+            limit=20 * 1024**2,
+            binary=True,
+        )
+        wav_metadata(data)
+        return snapshot
+    report = checked_report(transcript, transcript.metadata_json.get("transcription", {}))
+    artifact = session.get(Artifact, report.get("artifacts", {}).get("reference_wav"))
+    if (
+        artifact is None
+        or artifact.run_id != transcript.id
+        or artifact.artifact_type != "audio"
+        or artifact.mime_type != "audio/wav"
+        or source.id not in artifact.parent_artifact_ids
+        or artifact.metadata_json.get("source_sha256") != source.sha256
+        or artifact.metadata_json.get("transcription_run_id") != transcript.id
+    ):
+        raise ValueError("Verified voice reference WAV is unavailable")
+    result = source_snapshot(artifact)
+    descriptor = report.get("normalized_audio", {})
+    if any(result[key] != descriptor.get(key) for key in ("sha256", "size_bytes")):
+        raise ValueError("Voice reference differs from the verified transcription")
+    data = read_owned_file(
+        result["relative_path"], result["size_bytes"], result["sha256"], limit=20 * 1024**2, binary=True
+    )
+    wav_metadata(data)
+    with wave.open(io.BytesIO(data), "rb") as wav:
+        if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 16000:
+            raise ValueError("Voice reference is not the canonical PCM WAV")
+    return result
+
+
 def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
     ready = capabilities().get("engines", {}).get("fish_s2_pro", {})
     if (
@@ -79,6 +123,23 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
         )
     try:
         snapshot = source_snapshot(source)
+        from app.recordings import FORMATS, recording_format
+        from app.transcription import recording
+
+        data = read_owned_file(
+            snapshot["relative_path"],
+            snapshot["size_bytes"],
+            snapshot["sha256"],
+            limit=20 * 1024**2,
+            binary=True,
+        )
+        recording(data)
+        if FORMATS[recording_format(data)][0] != source.mime_type:
+            raise ValueError("Voice reference format changed")
+        if source.mime_type == "audio/wav":
+            from app.audio import wav_metadata
+
+            wav_metadata(data)
     except (ValueError, OSError) as exc:
         raise HTTPException(422, "Voice reference changed or is unavailable") from exc
     task = task or create_task(session, title=body.text[:80], prompt=body.text, capability="audio.speech")
@@ -86,7 +147,10 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
     reference_text = None
     if cached_id:
         try:
-            reference_text = transcript_text(session, snapshot, session.get(Run, cached_id))
+            cached = session.get(Run, cached_id)
+            text = transcript_text(session, snapshot, cached)
+            execution_reference(session, source, cached)
+            reference_text = text
         except (ValueError, OSError, UnicodeError):
             pass  # An unavailable old transcript can be safely recreated from the owned recording.
     parameters = {
@@ -113,7 +177,11 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
         from app.transcription import TranscriptionRequest, create_transcription_run
 
         transcript = create_transcription_run(
-            session, TranscriptionRequest(audio_artifact_id=source.id), task=task, parent_run_id=parent_run_id
+            session,
+            TranscriptionRequest(audio_artifact_id=source.id),
+            task=task,
+            parent_run_id=parent_run_id,
+            normalize_reference=source.mime_type != "audio/wav",
         )
         parameters["reference_transcription_run_id"] = transcript.id
         parameters["reference_text_provenance"] = {
@@ -159,6 +227,9 @@ def resolve_reference_text(session, run):
     frozen = run.parameters.get("reference_text")
     if frozen is not None and frozen != text:
         raise ValueError("Frozen voice transcript changed")
+    selected = execution_reference(session, source, transcript)
+    if run.parameters.get("execution_reference", selected) != selected:
+        raise ValueError("Frozen canonical voice reference changed")
     return text
 
 
@@ -202,9 +273,15 @@ class FishSpeechExecutor(AudioExecutor):
     def validate_inputs(self, session, run):
         super().validate_inputs(session, run)
         text = resolve_reference_text(session, run)
+        selected = execution_reference(
+            session,
+            session.get(Artifact, run.parameters["reference_artifact_id"]),
+            session.get(Run, run.parameters["reference_transcription_run_id"]),
+        )
         run.parameters = {
             **run.parameters,
             "reference_text": text,
+            **({"execution_reference": selected} if selected != run.parameters["reference"] else {}),
             "execution_deadline_at": run.parameters.get("execution_deadline_at")
             or (utcnow() + timedelta(minutes=30)).isoformat(),
         }
@@ -218,7 +295,7 @@ class FishSpeechExecutor(AudioExecutor):
                 "text": run.parameters["text"],
                 "direction": run.parameters["direction"],
                 "pace": run.parameters["pace"],
-                "reference": run.parameters["reference"],
+                "reference": run.parameters.get("execution_reference", run.parameters["reference"]),
                 "reference_text": run.parameters["reference_text"],
                 "observation": run.parameters["observation"],
                 "gpus": [int(device) for device in run.allocated_resources["gpus"]],

@@ -1,5 +1,5 @@
 {
-  "version": 28,
+  "version": 29,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -4645,6 +4645,38 @@
       ],
       "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
       "minutes": 20
+    },
+    {
+      "id": "AUDIO-103",
+      "area": "Audio",
+      "priority": "P1",
+      "requirements": ["NR-01", "NR-06"],
+      "title": "Fish: próbka głosu z telefonu bez ręcznej konwersji",
+      "prerequisites": ["Gotowy Fish i lokalna transkrypcja; własna próbka M4A, MP3 albo WebM, 5–15 sekund."],
+      "steps": [
+        "W Audio wybierz Fish. Dodaj próbkę z telefonu i wpisz krótkie zdanie, wybierając kierunek głosu i tempo.",
+        "Uruchom generowanie. Przejdź do innej zakładki, wróć i odtwórz wynik.",
+        "Zleć kolejną wypowiedź z tą samą próbką. Sprawdź pochodzenie próbki i transkrypcji w historii zadania."
+      ],
+      "expected": ["Próbka jest automatycznie transkrybowana i przygotowana lokalnie. W historii twórczej wynikiem jest nowa wypowiedź, a nie przekonwertowana próbka. Oryginał pozostaje dostępny; kolejna wypowiedź może użyć tego samego sprawdzonego WAV i transkrypcji."],
+      "resources": "Dwa zgodne GPU, 24 GiB dostępnego RAM; bez dodatkowego pobierania przy gotowych silnikach",
+      "minutes": 10
+    },
+    {
+      "id": "AUDIO-104",
+      "area": "Audio",
+      "priority": "P1",
+      "requirements": ["NR-06", "NR-11"],
+      "title": "Fish: prywatność i odrzucanie niepoprawnej próbki telefonu",
+      "prerequisites": ["Dwa konta A i B; gotowy Fish i lokalna transkrypcja; własna próbka ponad 60 sekund."],
+      "steps": [
+        "Na A spróbuj użyć ponad 60-sekundowej skompresowanej próbki głosu.",
+        "Na poprawnej krótkiej próbce wykonaj wypowiedź. Na B sprawdź bezpośrednie odnośniki do oryginału, transkrypcji, pochodnego WAV i wyniku A.",
+        "Wybierz Chatterbox i sprawdź, że formularz nadal wymaga próbki WAV."
+      ],
+      "expected": ["Zbyt długa próbka zostaje odrzucona po dekodowaniu przed generowaniem Fish. Nie powstaje częściowa wypowiedź. B nie odczytuje żadnego z prywatnych plików A. Obsługa WAV i dotychczasowe ustawienia Chatterbox pozostają zachowane."],
+      "resources": "Dwa zgodne GPU i 24 GiB dostępnego RAM dla poprawnej wypowiedzi; transkrypcja CPU",
+      "minutes": 10
     }
   ]
 }

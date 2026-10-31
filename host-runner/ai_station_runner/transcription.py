@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_inputs import MediaInput
@@ -28,6 +28,7 @@ class TranscriptionRequest(BaseModel):
     language: Literal["auto", "pl", "en", "de", "fr", "es", "it", "pt", "uk", "ru"] = "auto"
     profile_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     permissions: list[str] = Field(max_length=2)
+    normalize_reference: StrictBool = Field(default=False, exclude_if=lambda value: value is False)
 
 
 def directory(run_id):
@@ -71,6 +72,7 @@ def capabilities():
             "profile_sha256": profile(model),
             "max_seconds": 300,
             "formats": list(FORMATS),
+            "reference_normalization": True,
         }
     except (ValueError, OSError, KeyError, TypeError):
         return {
@@ -159,9 +161,16 @@ def report(manager, run_id):
     path = resolve_child(directory(run_id), "report.json")
     if path.stat().st_size > 512000:
         raise ValueError("Transcript exceeds its limit")
-    return validate_report(
+    value = validate_report(
         json.loads(path.read_text()),
         run_id=run_id,
         source_hash=body.source.sha256,
         profile_hash=body.profile_sha256,
     )
+    if ("normalized_audio" in value) != body.normalize_reference:
+        raise ValueError("Transcription reference normalization differs from the request")
+    if body.normalize_reference:
+        from ai_station_runner.transcription_reference import verify
+
+        verify(get_settings().host_data_dir(), value["normalized_audio"], run_id, value["duration_seconds"])
+    return value

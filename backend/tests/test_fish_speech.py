@@ -83,7 +83,12 @@ print('speech.chunk.completed 1/1',flush=True)
 
         def request(self, method, path, json=None):
             if path == "/v1/transcription/capabilities":
-                return {"available": True, "profile_sha256": "b" * 64, "formats": ["wav"]}
+                return {
+                    "available": True,
+                    "profile_sha256": "b" * 64,
+                    "formats": ["wav", "mp3"],
+                    "reference_normalization": True,
+                }
             if path == "/v1/runs/transcription":
                 rid = json["run_id"]
                 reports[rid] = {
@@ -96,6 +101,15 @@ print('speech.chunk.completed 1/1',flush=True)
                     "text": "To jest referencja głosu.",
                     "segments": [{"start": 0, "end": 0.2, "text": "To jest referencja głosu."}],
                 }
+                if json.get("normalize_reference") is True:
+                    import numpy as np
+                    from ai_station_runner.transcription_reference import save
+                    from app.config import get_settings
+
+                    root = get_settings().data_dir
+                    (root / "runtime/transcription" / rid).mkdir(parents=True)
+                    reports[rid]["input_format"] = "mp3"
+                    reports[rid]["normalized_audio"] = save(root, rid, np.zeros(3200, dtype=np.float32))
                 return {"pid": 12, "process_group_id": 12, "stdout_log": "", "stderr_log": ""}
             if (
                 path.startswith("/v1/process/")
@@ -179,6 +193,107 @@ def test_uploaded_reference_is_transcribed_then_queued_speech_keeps_text_style_a
         assert artifacts[0]["parent_artifact_ids"] == [source["id"]]
         with session_factory()() as db:
             assert not active_locks(db)
+
+
+def compressed_reference(client):
+    response = client.post(
+        "/api/audio/transcription/uploads",
+        files={"file": ("phone.mp3", b"ID3" + b"\0" * 30, "audio/mpeg")},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_phone_reference_normalizes_once_and_reuses_verified_wav_and_transcript(fish_bridge):
+    with TestClient(app) as client:
+        source = compressed_reference(client)
+        body = {"text": "Dokładne słowa.", "reference_artifact_id": source["id"], "engine": "fish_s2_pro"}
+        first = client.post("/api/audio/runs", json=body)
+        assert first.status_code == 202, first.text
+        asr = work()
+        transcript = client.get("/api/runs/" + asr).json()
+        assert transcript["status"] == "succeeded", transcript
+        normalized = transcript["metadata"]["transcription"]["artifacts"]["reference_wav"]
+        derivative = client.get("/api/artifacts/" + normalized).json()
+        assert derivative["parent_artifact_ids"] == [source["id"]]
+        assert derivative["mime_type"] == "audio/wav"
+        assert work() == first.json()["id"]
+        result = client.get("/api/runs/" + first.json()["id"]).json()
+        assert result["status"] == "succeeded", result
+        assert result["parameters"]["reference"]["relative_path"] == source["relative_path"]
+        assert result["parameters"]["execution_reference"]["relative_path"] == derivative["relative_path"]
+        assert fish_bridge["starts"][-1]["executor"] == "fish_speech"
+        again = client.post("/api/audio/runs", json=body).json()
+        assert again["parameters"]["reference_text_provenance"]["kind"] == "cached_asr"
+        assert work() == again["id"]
+        assert client.get("/api/runs/" + again["id"]).json()["status"] == "succeeded"
+        assert len(fish_bridge["reports"]) == 1
+
+
+def test_phone_reference_requires_capable_runner_and_keeps_chatterbox_wav_only(fish_bridge, monkeypatch):
+    original = RunnerClient.request
+
+    def older(self, method, path, json=None):
+        result = original(self, method, path, json)
+        if path == "/v1/transcription/capabilities":
+            result.pop("reference_normalization")
+        return result
+
+    monkeypatch.setattr(RunnerClient, "request", older)
+    with TestClient(app) as client:
+        source = compressed_reference(client)
+        body = {"text": "Hej.", "reference_artifact_id": source["id"]}
+        assert client.post("/api/audio/runs", json=body).status_code == 422
+        rejected = client.post("/api/audio/runs", json={**body, "engine": "fish_s2_pro"})
+        assert rejected.status_code == 409, rejected.text
+        assert "Update the Host Runner" in rejected.json()["detail"]
+        assert not fish_bridge["reports"] and not fish_bridge["starts"]
+        from app.models import Task
+        from sqlalchemy import func, select
+
+        with control_session_factory()() as db:
+            assert db.scalar(select(func.count()).select_from(Run)) == 0
+            assert db.scalar(select(func.count()).select_from(Task)) == 0
+
+
+@pytest.mark.parametrize("fault", ["bytes", "trash", "missing", "long", "forged_path"])
+def test_bad_canonical_reference_never_reaches_gpu(fish_bridge, fault):
+    from app.config import get_settings
+    from app.db import utcnow
+    from app.models import Artifact
+
+    with TestClient(app) as client:
+        source = compressed_reference(client)
+        submitted = client.post(
+            "/api/audio/runs",
+            json={"text": "Hej.", "reference_artifact_id": source["id"], "engine": "fish_s2_pro"},
+        ).json()
+        asr = work()
+        with control_session_factory()() as db:
+            transcript = db.get(Run, asr)
+            report = transcript.metadata_json["transcription"]
+            artifact = db.get(Artifact, report["artifacts"]["reference_wav"])
+            if fault == "bytes":
+                (get_settings().data_dir / artifact.relative_path).write_bytes(b"changed")
+            elif fault == "trash":
+                artifact.trashed_at = utcnow()
+            elif fault == "missing":
+                (get_settings().data_dir / artifact.relative_path).unlink()
+            else:
+                changed = dict(report)
+                if fault == "long":
+                    changed["duration_seconds"] = 61
+                else:
+                    changed["normalized_audio"] = {
+                        **changed["normalized_audio"],
+                        "relative_path": "elsewhere",
+                    }
+                transcript.metadata_json = {**transcript.metadata_json, "transcription": changed}
+            db.commit()
+        work()
+        result = client.get("/api/runs/" + submitted["id"]).json()
+        assert result["status"] == "failed", result
+        assert not fish_bridge["starts"]
 
 
 @pytest.mark.parametrize("fault", ["transcript_text", "reference_bytes"])

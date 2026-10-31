@@ -81,6 +81,17 @@ def generate(body: SpeechRequest, session: DB):
 
 def create_audio_run(session, body, *, task=None, parent_run_id=None):
     reference = session.get(Artifact, str(body.reference_artifact_id))
+    if body.engine == "fish_s2_pro":
+        from app.fish_speech import create_fish_run
+        from app.recordings import FORMATS
+
+        if (
+            reference is None
+            or reference.artifact_type != "audio"
+            or reference.mime_type not in {value[0] for value in FORMATS.values()}
+        ):
+            raise HTTPException(422, "Choose a voice recording")
+        return create_fish_run(session, body, reference, task=task, parent_run_id=parent_run_id)
     if reference is None or reference.artifact_type != "audio" or reference.mime_type != "audio/wav":
         raise HTTPException(422, "Choose a WAV reference artifact")
     path = safe_join(get_settings().data_dir, reference.relative_path)
@@ -89,10 +100,6 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None):
             wav_metadata(source.read(MAX_BYTES + 1))
     except (OSError, ValueError) as exc:
         raise HTTPException(422, "Reference audio is unavailable or invalid") from exc
-    if body.engine == "fish_s2_pro":
-        from app.fish_speech import create_fish_run
-
-        return create_fish_run(session, body, reference, task=task, parent_run_id=parent_run_id)
     task = task or create_task(session, title=body.text[:80], prompt=body.text, capability="audio.speech")
     run = create_run(
         session,
