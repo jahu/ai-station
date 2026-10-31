@@ -418,3 +418,5 @@ private receipts and an ordinary first CUDA speech Run. Configured external
 Chatterbox remains authoritative. The compiled desktop/phone UI and saved WAV
 restore after restart. Remaining guided media recipes and real cross-platform
 consumer installation remain required; this is not release completion.
+
+The [Windows guest packaging increment](windows-consumer-installation.md) now builds a private checked WSL rootfs and qualifies its ordinary-user fixed desktop bridge in isolated container probes. This is guest-layer evidence only: native Windows onboarding, WSL boot/network/lifecycle and actual first-result/update/uninstall gates remain open. It does not narrow NR-13/14 or complete the release.

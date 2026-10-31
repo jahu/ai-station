@@ -67,3 +67,29 @@ Linux guest build and simulated command tests are evidence only for those layers
 Signing, native UI/accessibility and genuine WSL first-result gates remain open
 until exercised on the advertised OS. Keep test images ephemeral after compact
 proofs are retained, following the owner's disk-cleanup instruction.
+
+## Implemented guest layer — 2026-10-31
+
+`scripts/build_windows_guest.py` consumes an explicitly hash-checked amd64 Debian
+package and a clean source checkout. It builds from the pinned official Ubuntu
+24.04 image, installs the guest OS dependencies without starting daemons, exports
+only its own never-started container, and publishes a compressed filesystem plus
+source/package/image/archive identity receipt. It refuses existing destinations
+and removes incomplete output after export failure. This is a developer builder,
+not the finished Windows installer UI.
+
+The actual guest image was built with the bundled compiled application/Python.
+Isolated no-network, no-host-mount container probes used that exact image:
+ordinary `station` account status passed; root, another account and extra command
+arguments were rejected. Installed systemd/Docker enablement, private home,
+empty machine identity and disabled drive/interop configuration were checked.
+No nested Docker daemon was started. These probes qualify installed guest bytes
+and fixed operations only; they do not qualify WSL boot, Windows networking,
+background lifecycle, resource scopes or a Windows first model result.
+
+The complete affected desktop/package/access scope passes 133 tests and the
+whole Python lint/format gate. The QA catalog is version 34 with planned Windows
+cases SETUP-149–152; all operator answers remain untested. Offline QA tools pass
+26 tests. The native Windows shell, owned registration/import/recovery, actual
+platform acceptance and signing remain required next steps. Private build/layer
+proofs are in `data/acceptance/windows-consumer-install-20261031/`.

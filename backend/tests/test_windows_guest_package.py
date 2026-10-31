@@ -231,3 +231,48 @@ def test_wsl_guest_configuration_does_not_mount_windows_drives_or_enable_interop
     assert not config["automount"].getboolean("mountFsTab")
     assert not config["interop"].getboolean("enabled")
     assert not config["interop"].getboolean("appendWindowsPath")
+
+
+def test_failed_export_removes_only_its_stopped_container_and_never_publishes(
+    fake_build, tmp_path, monkeypatch
+):
+    package, calls = fake_build
+
+    class FailedExport:
+        def __init__(self, argv, **kwargs):
+            self.stdout = io.BytesIO(b"incomplete archive")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def wait(self):
+            return 1
+
+    monkeypatch.setattr(builder.subprocess, "Popen", FailedExport)
+    output = tmp_path / "incomplete"
+    with pytest.raises(RuntimeError, match="did not complete"):
+        builder.build(package, desktop.digest(package), output)
+    assert not output.exists()
+    assert calls[-1][0:2] == ["docker", "rm"]
+    assert calls[-1][2].startswith("ai-station-wsl-export-")
+    assert not list(tmp_path.glob(".wsl-build-*"))
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        "Package: unrelated\nVersion: 1\nArchitecture: amd64\n",
+        "Package: ai-station\nVersion: 1\nArchitecture: arm64\n",
+    ],
+)
+def test_guest_builder_rejects_unrelated_package_or_wrong_cpu_architecture(fake_build, monkeypatch, fields):
+    package, calls = fake_build
+    run = Mock(return_value=SimpleNamespace(stdout=fields))
+    monkeypatch.setattr(builder.subprocess, "run", run)
+    with pytest.raises(ValueError, match="amd64 package"):
+        builder.package_identity(package, desktop.digest(package))
+    run.assert_called_once()
+    assert not calls
