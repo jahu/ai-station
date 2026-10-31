@@ -398,6 +398,9 @@ def supervise(
         while proc.poll() is None and not stopped.wait(0.2):
             pass
     finally:
+        if control is not None:
+            control.stop_requested.set()
+            control.ready.clear()
         stop(proc)
         reader.join(timeout=5)
 

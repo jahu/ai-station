@@ -73,6 +73,7 @@ def test_background_retains_supervisor_until_its_own_stop_event(tmp_path, monkey
         control.stop_requested.set()
         thread.join(timeout=5)
     assert not thread.is_alive() and not errors
+    assert not control.ready.is_set()
     proc.terminate.assert_called_once()
     proc.wait.assert_called_once_with(timeout=45)
 
