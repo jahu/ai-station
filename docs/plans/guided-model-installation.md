@@ -414,3 +414,9 @@ recording; the final compiled UI restored that preparation and played/seeked its
 saved WAV after restart. Cached complete inputs and separately measured cold
 source downloads are distinguished in the speech report. This does not complete
 image/video/music/avatar setup or any untested operating-system installer.
+
+
+The next [managed image setup](managed-image-setup.md) binds reviewed Qwen companions
+and a fixed CUDA runtime to owned container jobs. Its source audit is recorded;
+GPU/lifecycle/wizard qualification must precede activation. Existing configured
+photo integrations remain authoritative.

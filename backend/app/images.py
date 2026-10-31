@@ -34,6 +34,18 @@ MAX_PIXELS = 64 * 1024 * 1024
 FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP": (".webp", "image/webp")}
 
 
+@router.get("/images/capabilities")
+def image_capabilities(session: DB):
+    try:
+        return RunnerClient().request("GET", "/v1/photo/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        return {
+            "available": False,
+            "status": "unknown",
+            "notice": "Connect the Host Runner to inspect local image generation",
+        }
+
+
 @router.get("/images/runs/{run_id}/workflow")
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
@@ -115,7 +127,11 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         executor_type="photo_pipe",
         execution_target="host",
         parameters={
-            **original.parameters,
+            **{
+                key: value
+                for key, value in original.parameters.items()
+                if key != "managed_image_native_deadline_at"
+            },
             **(receipt["original"] if receipt and body.translation != "reuse" else {}),
         },
         requested_gpu=original.requested_gpu,

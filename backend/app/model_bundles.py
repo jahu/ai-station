@@ -17,9 +17,9 @@ class Bundle(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,79}$")
     name: str = Field(min_length=1, max_length=120)
-    capability: Literal["speech"] = "speech"
-    family: Literal["chatterbox"] = "chatterbox"
-    license: Literal["MIT"] = "MIT"
+    capability: Literal["speech", "image"] = "speech"
+    family: Literal["chatterbox", "qwen_image21"] = "chatterbox"
+    license: Literal["MIT", "Qwen Research"] = "MIT"
     license_url: str
     source_url: str
     repository: str

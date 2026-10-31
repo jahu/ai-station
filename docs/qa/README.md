@@ -1,5 +1,12 @@
 # Operator QA catalog and workbook
 
+The developing v23 catalog adds SETUP-110–114 for guided image installation,
+Stop/Resume, all four image operations, large-result reuse, native restart/Stop,
+private histories and preserved external configuration. These are untested
+operator cases; internal qualification is recorded separately in the
+[image setup plan](../plans/managed-image-setup.md). The previously issued
+workbook and its answers remain unchanged.
+
 2026-10-29: [the whole-recording avatar follow-up](whole-avatar-follow-up.md)
 qualifies a complete replacement Sonic profile separately from the original
 Echo failure. It preserves the issued v15 workbook and records positive owner

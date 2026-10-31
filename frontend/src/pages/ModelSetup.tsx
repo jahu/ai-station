@@ -18,6 +18,7 @@ import { randomId } from "../lib/random-id";
 import type { Run } from "../api";
 import RuntimeSetupPanel from "./RuntimeSetupPanel";
 import SpeechSetupPanel from "./SpeechSetupPanel";
+import ImageSetupPanel from "./ImageSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -360,11 +361,12 @@ export default function ModelSetup() {
   return (
     <>
       <PageTitle eyebrow="GET STARTED / MODELS" title="Set up your models">
-        Start with a local conversation model or add a voice. AI Station
+        Start with a local conversation model, images or a voice. AI Station
         downloads, checks and prepares the files for you.
       </PageTitle>
       <RuntimeSetupPanel onReadiness={setRuntimeReady} />
       <SpeechSetupPanel />
+      <ImageSetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>

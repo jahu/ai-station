@@ -160,6 +160,16 @@ function ImageForm({
     queryKey: ["image-models"],
     queryFn: () => api<ImageModelCatalog>("/images/models"),
   });
+  const capabilities = useQuery({
+    queryKey: ["image-capabilities"],
+    queryFn: () =>
+      api<{
+        available: boolean;
+        status?: string;
+        notice?: string;
+        backends?: string[];
+      }>("/images/capabilities"),
+  });
   const [translation, setTranslation] = useState<TranslationOptions>(
     (restored.translation as TranslationOptions | undefined) ?? {
       mode: "inherit",
@@ -480,9 +490,20 @@ function ImageForm({
   const missing =
     mode !== "t2i" &&
     (!ids.length || sources.some((s) => s.isPending || s.isError));
+  const needsImageSetup =
+    selectedModel?.backend !== "krea2" &&
+    capabilities.data?.available === false;
+  const unsupportedBackend =
+    selectedModel?.backend !== "krea2" &&
+    capabilities.data?.available === true &&
+    capabilities.data.backends &&
+    selectedModel &&
+    !capabilities.data.backends.includes(selectedModel.backend);
   const unavailable =
     !selectedModel?.available ||
     !selectedModel.modes.includes(mode) ||
+    needsImageSetup ||
+    unsupportedBackend ||
     (automatic && (recommendation.isFetching || previewPrompt !== prompt));
   const tooManySources = mode !== "t2i" && ids.length > maximumSources;
   return (
@@ -498,6 +519,29 @@ function ImageForm({
       >
         Create and transform images with your local models.
       </PageTitle>
+      {needsImageSetup && (
+        <div className="notice" role="status">
+          <strong>
+            {capabilities.data?.status === "unknown"
+              ? "Connect the Host Runner to create images."
+              : "Set up local images to get started."}
+          </strong>
+          <p>
+            {capabilities.data?.notice ??
+              "AI Station can download the image models and prepare them for this workstation."}
+          </p>
+          <Button asChild variant="secondary">
+            <Link to="/setup/models?capability=images">Set up images</Link>
+          </Button>
+        </div>
+      )}
+      {unsupportedBackend && (
+        <p className="notice">
+          This image integration supports{" "}
+          {capabilities.data?.backends?.join(", ")}. Choose a supported model or
+          inspect <Link to="/system">Diagnostics</Link>.
+        </p>
+      )}
       <ImageOperationChoiceList
         value={mode}
         disabled={upload.isPending || busy}
@@ -676,12 +720,16 @@ function ImageForm({
                     </Button>
                   </div>
                 )}
-              {!automatic && catalog.isSuccess && unavailable && (
-                <p className="notice">
-                  This model is unavailable for this operation. Choose another
-                  model or check <Link to="/models">Models</Link>.
-                </p>
-              )}
+              {!automatic &&
+                catalog.isSuccess &&
+                unavailable &&
+                !needsImageSetup &&
+                !unsupportedBackend && (
+                  <p className="notice">
+                    This model is unavailable for this operation. Choose another
+                    model or check <Link to="/models">Models</Link>.
+                  </p>
+                )}
               {catalog.error && (
                 <Button
                   type="button"

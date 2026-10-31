@@ -174,6 +174,7 @@ def test_populated_timeline_downgrade_refuses_to_delete_saved_history(tmp_path):
         db.add(revision)
         db.commit()
         identity = revision.id
+        previous_schema = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
     with pytest.raises(RuntimeError, match="Keep timeline history"):
         with engine.begin() as connection:
             cfg = alembic_config()
@@ -181,7 +182,7 @@ def test_populated_timeline_downgrade_refuses_to_delete_saved_history(tmp_path):
             command.downgrade(cfg, "0040")
     with Session(engine) as db:
         assert db.get(TimelineRevision, identity).manifest == {"private": "keep"}
-        assert db.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0041"
+        assert db.execute(text("SELECT version_num FROM alembic_version")).scalar() == previous_schema
     engine.dispose()
 
 

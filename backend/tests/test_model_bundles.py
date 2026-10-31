@@ -63,6 +63,7 @@ def bundle_source(monkeypatch):
     monkeypatch.setattr(RunnerClient, "hardware", lambda _: {"memory": {"available_mib": 16384}})
     state = {
         "entry": entry,
+        "payloads": payloads,
         "calls": [],
         "stop": False,
         "api": None,

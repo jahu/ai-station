@@ -192,6 +192,14 @@ wire up a separate environment.
 [Speech setup and qualification](docs/plans/managed-speech-setup.md).
 
 
+On supported Linux NVIDIA workstations with two 12-GiB GPUs, **Set up images**
+reviews the Qwen/RealESRGAN sources and licenses, prepares the engine and all
+companions, and opens the saved Images workspace for Generate, Edit, Recompose
+and Upscale. Stop/Resume and download verification use normal private Runs;
+existing configured image integrations keep priority.
+[Image setup and measured qualification](docs/plans/managed-image-setup.md).
+
+
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
 in your browser, and keeps data outside the installed package. Docker/Compose

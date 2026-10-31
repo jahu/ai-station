@@ -35,6 +35,12 @@ These are all in scope. A partial Linux installer, an emotion selector with no
 audible effect, cosmetic progress or workspace-local component state does not
 satisfy the corresponding requirement. Unfinished adapters remain unavailable.
 
+The guided Images increment qualifies one Linux NVIDIA profile with five pinned
+companions, ordinary Generate/Edit/Recompose/Upscale, private saved setup history,
+real GPU Stop/recovery and desktop/mobile first-result checks. See
+[image setup](managed-image-setup.md). It advances NR-14; it does not complete
+other media catalogs or the NR-13 cross-platform consumer installation contract.
+
 ## Delivery order
 
 1. **Foundation and visible defect:** record this plan and fix NR-05. Retain the

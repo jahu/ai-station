@@ -890,3 +890,38 @@ it("uses the automatic nonstructural model's presets without submitting backend-
   ])
     expect(writes[0]).not.toHaveProperty(field);
 });
+
+it("opens guided setup for an unavailable photo engine without submitting a failed generation", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (options?.method === "POST") writes.push(path);
+      return {
+        ok: true,
+        json: async () =>
+          path === "/api/images/capabilities"
+            ? { available: false, status: "unavailable" }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.endsWith("/generation/preferences")
+                ? { enabled: false, revision: 0 }
+                : [],
+      };
+    }),
+  );
+  await mount();
+  const link = await screen.findByRole("link", { name: "Set up images" });
+  expect(link.getAttribute("href")).toBe("/setup/models?capability=images");
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A forest" },
+  });
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Queue generate",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(writes).toHaveLength(0);
+});
