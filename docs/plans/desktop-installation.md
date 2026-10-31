@@ -90,6 +90,36 @@ and cancellation; streaming uses the already-connected socket. The same helper
 covers the native Runner listener and supervisor health probe.
 
 The initial actual bundle is relocatable and creates a real nested Python venv
-without system Python packages. Full GUI/account/model/first-result/restart
-qualification remains a gate until its exact evidence is recorded; building a
-`.deb` alone does not complete NR-13 or qualify Windows/macOS.
+without system Python packages. A clean-source Debian payload was extracted into an isolated staging directory,
+then its actual Zenity dialogs ran on a private authenticated X server. It
+created the first administrator in the compiled browser UI, opened guided model
+setup, verified/adopted the existing public Q4 weights and returned a real GPU
+reply. Desktop/mobile rendering, scoped model Stop, full desktop Stop, restart
+with the same cookie/account/memory/history/model registry, and a separate
+packaged fake worker all passed. Both Runner and model socket paths exceeded the
+usual address limit. No new weight download, production mutation or real OS
+package installation is claimed. Private evidence is under
+`data/acceptance/linux-desktop-package-20261031/`.
+
+The complete native suite passes 1248 tests (two opt-in skips); the eight complete
+backend/launcher/recovery families pass 129 cases, with 69 final socket/transport
+cases. Full Python lint/format covers 825 files. Two old recovery assertions were
+updated from schema 0041 to the existing 0042 migration; no migration was added
+or bypassed. The desktop package and Docker image were built from clean sources.
+QA v21 adds INSTALL-101 without changing issued workbook answers. These checks
+are the documented focused local equivalent; final source/package/Compose review
+and preserving deployment remain separate. Building and testing this `.deb`
+does not complete clean-machine NR-13 or qualify Windows/macOS.
+
+A second actual two-version exercise removed the staged OS package payload
+while the old private interpreter/supervisor kept running, stopped that owned
+station, then extracted and started the newer package. The same account cookie,
+memory and successful Run history survived; workers executed before and after,
+and both immutable code versions plus configuration were retained. This is
+payload-removal/reinstallation qualification without OS mutation, not a claim
+that apt installation/uninstallation or a clean machine has been exercised.
+
+Desktop dialog preparation currently remains in a small native status window;
+closing the browser leaves the workstation active, while **Stop AI Station**
+closes this installation. A tray/background service, prerequisite acquisition,
+signing/distribution and other advertised platforms remain consumer-setup work.

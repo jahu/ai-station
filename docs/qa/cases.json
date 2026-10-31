@@ -1,5 +1,5 @@
 {
-  "version": 20,
+  "version": 21,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -19,7 +19,8 @@
     "docs/plans/media-timeline.md",
     "docs/plans/synchronized-sound.md",
     "docs/plans/next-release-0.1.md",
-    "docs/plans/guided-model-installation.md"
+    "docs/plans/guided-model-installation.md",
+    "docs/plans/desktop-installation.md"
   ],
   "cases": [
     {
@@ -3964,6 +3965,30 @@
       "resources": "Bez pobierania wag; obserwacja aktualnego RAM/VRAM",
       "minutes": 5,
       "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "INSTALL-101",
+      "area": "Instalacja desktop",
+      "title": "Linux: pierwsze konto, model, restart i zachowanie danych",
+      "priority": "P1",
+      "prerequisites": [
+        "Przejrzana paczka rozwojowa Linux x86-64; Docker i Compose dostępne dla zalogowanego użytkownika. Używaj osobnego profilu QA. Nie usuwaj istniejących obrazów, modeli ani danych roboczych."
+      ],
+      "steps": [
+        "Otwórz zainstalowaną aplikację AI Station i potwierdź utworzenie prywatnej instalacji. Sprawdź etapy przygotowania oraz brak terminala do wpisywania poleceń.",
+        "Utwórz konto administratora; sprawdź przejście do konfiguracji modeli i widoczne RAM/VRAM. Przygotuj pasujący model, akceptując jego licencję, i wyślij krótką wiadomość.",
+        "Zapisz rozmowę i wpis Memory. Zatrzymaj przez Stop AI Station, uruchom ponownie i sprawdź dane oraz istniejącą sesję logowania.",
+        "Podczas zaplanowanego testu aktualizacji zamknij stację, zainstaluj nową przejrzaną paczkę i sprawdź dane ponownie. Odinstalowanie samej aplikacji nie powinno usuwać prywatnych danych; po ponownej instalacji muszą pozostać."
+      ],
+      "expected": [
+        "Pierwsze uruchomienie prowadzi do konta i modeli bez instalowania Pythona/Node przez użytkownika. Stacja pozostaje lokalna, nie zatrzymuje innych instalacji ani usług. Stop zamyka tylko jej procesy/kontenery. Aktualizacja i usunięcie pakietu zachowują konto, historię, Memory, Library i pobrane modele, dopóki użytkownik osobno nie zdecyduje o usunięciu danych."
+      ],
+      "resources": "Linux x86-64, Docker/Compose, lokalny GPU i świadomie wybrany model; bez płatnego API",
+      "minutes": 20,
+      "requirements": [
+        "NR-13",
         "NR-14"
       ]
     }
