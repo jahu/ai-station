@@ -83,6 +83,35 @@ mistaking dpkg's preservation of old directory modes for a clean installation;
 it is not a production migration claim. Subsequent preserving update/removal
 acceptance must use the working corrected package and a distinct newer version.
 
+That subsequent test passed: normal OS upgrade from the working corrected
+preview to a newer preview kept the exact active control-plane containers,
+native Runner and desktop owner running. Reopening used the same station.
+Explicit native Stop then started the new retained version with the same cookie,
+conversation, memory, Library and model. A real follow-up Send returned
+`UPDATE_OK`, followed by normal model Stop, without new setup/downloads or
+repeated OS consent.
+
+Actual OS removal and reinstallation kept the database, verified model bytes,
+artifacts, uploads and secrets byte-identical. Restart retained the same login
+and complete history without a new admin or download. Reloading the retained
+model after reinstall confirmed actual kernel `memory.max` **4069 MiB** and
+`memory.swap.max` **0**, no GPU requests, network disabled and readonly rootfs;
+owned Stop completed. Full desktop regression: 106 passing cases; offline QA
+tools: 26 passing cases, catalog v33. Operator answers remain untested.
+
+Removing the application package does not revoke the OS account's Docker-group
+membership, remove Docker or delete unrelated containers/images. That access
+is an explicit persistent OS account setting, rather than an application cookie.
+User data remains in the private desktop folder. Package/code removal and
+source/asset checks are separate from deletion of that data.
+
+After qualification, remove unused project-created VM/install/model/environment
+copies only after checking live processes, container mounts and production
+configuration references. Retain compact reports, source hashes and final media
+needed for remaining quality acceptance. Preserve production Library/data,
+working models/runtimes and unrelated infrastructure. Never use global Docker
+pruning. This cleanup follows the owner's explicit 2026-10-31 request.
+
 1. Test detection of permission denial versus other Docker failures, cancellation,
    unsafe helpers/socket ownership, arbitrary extra arguments and unchanged
    working configurations. Review every privileged line and package path.

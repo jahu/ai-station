@@ -70,8 +70,10 @@ separate no-GPU Ubuntu VM and installs the real Debian package. It reproduced
 and corrected missing account access, inherited package write permissions and
 unordered preview versions. Native consent/authentication cancellation and
 grant, ordinary-user continuation, first admin, real engine/model downloads,
-Chat Send/reply and scoped Stop passed. Preserving OS upgrade/removal and final
-package gates remain separate. Host permissions, Docker and drivers were left untouched.
+Chat Send/reply and scoped Stop passed. Actual preserving OS update, explicit
+restart, continued Chat and removal/reinstallation also passed, including
+same-cookie/history/memory/Library/model retention. Final package review remains
+separate. Host permissions, Docker and drivers were left untouched.
 
 The next desktop increment keeps the existing supervisor alive when the native
 status window is closed or **Run in background** is chosen. **Stop AI Station**
