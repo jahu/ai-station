@@ -68,6 +68,13 @@ model selection and NR-06/07 quality acceptance remain in scope.
 
 ## Delivery order
 
+The [guided CPU conversation increment](guided-cpu-conversation.md) adds an
+explicit Linux x86-64 starter with a measured RAM budget and no GPU access.
+Fresh-account compiled setup, cached verification, real Chat, native reattachment,
+Stop/Resume and second-account privacy passed in isolation. This advances NR-14
+and enables later CPU clean-machine work; it does not complete the three-platform
+consumer installer or broaden the hardware claims beyond actual qualification.
+
 1. **Foundation and visible defect:** record this plan and fix NR-05. Retain the
    v0.0.2 release/tag and owner working changes. The current Library has 15
    completed purges: filtering dismissals before taking the next three makes X

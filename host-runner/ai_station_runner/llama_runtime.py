@@ -3,6 +3,7 @@
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import subprocess
@@ -13,7 +14,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.local_model import CodingCompletion, forward_completion
@@ -46,12 +47,30 @@ class Load(BaseModel):
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector: Projector | None = None
     permissions: list[str]
+    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    ram_mib: StrictInt | None = Field(default=None, ge=256, le=65536, exclude_if=lambda v: v is None)
 
     @model_validator(mode="after")
     def coordinate(self):
         from ai_station_runner.owned_models import validate_reference
 
         validate_reference(self.model_path, self.model_sha256, self.app_owned)
+        if self.runtime_profile:
+            from ai_station_runner import cpu_runtime_profile as cpu
+
+            if (
+                not self.app_owned
+                or self.gpus
+                or self.projector
+                or self.cache_type != "q8_0"
+                or self.context_size != cpu.DEFAULT_CONTEXT
+                or self.ram_mib is None
+            ):
+                raise ValueError("Managed CPU requires owned weights, its fixed context/cache and RAM budget")
+        elif self.ram_mib is not None:
+            raise ValueError("A managed RAM budget requires its explicit CPU profile")
         return self
 
     @model_serializer(mode="wrap")
@@ -142,6 +161,19 @@ def inspected(record):
         raise HTTPException(409, "Container ownership does not match the saved runtime")
     if record.get("container_id") and item["Id"] != record["container_id"]:
         raise HTTPException(409, "Container identity changed")
+    cpu = record.get("request", {}).get("runtime_profile")
+    if cpu:
+        budget = record["request"]["ram_mib"] * 1024**2
+        host = item.get("HostConfig", {})
+        env = item.get("Config", {}).get("Env", [])
+        if (
+            host.get("Memory") != budget
+            or host.get("MemorySwap") != budget
+            or host.get("DeviceRequests")
+            or "CUDA_VISIBLE_DEVICES=-1" not in env
+            or "NVIDIA_VISIBLE_DEVICES=void" not in env
+        ):
+            raise HTTPException(409, "The owned CPU container memory/device policy changed")
     return item
 
 
@@ -310,7 +342,22 @@ def load(body: Load):
                 raise HTTPException(422, "A selected GPU is unavailable")
             from ai_station_runner.runtime_setup import image_observation
 
-            _, image = image_observation(app_owned=body.app_owned)
+            if body.runtime_profile:
+                from ai_station_runner import cpu_runtime_profile as cpu
+                from ai_station_runner.gguf_context import inspect_context
+
+                if not cpu.QUALIFIED:
+                    raise HTTPException(409, "Managed CPU execution is still being qualified")
+                checked = inspect_context(model, body.size_bytes, body.mtime)
+                budget = cpu.memory_budget_mib(body.size_bytes, body.context_size, checked)
+                if budget != body.ram_mib:
+                    raise HTTPException(422, "The managed CPU memory budget changed")
+                free = (hardware.get("memory") or {}).get("available_mib")
+                if type(free) not in {int, float} or not math.isfinite(free) or not 0 < budget <= free:
+                    raise HTTPException(422, "Available RAM changed before managed CPU launch")
+                _, image = image_observation(app_owned=True, runtime_profile=body.runtime_profile)
+            else:
+                _, image = image_observation(app_owned=body.app_owned)
             if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
                 raise HTTPException(409, "Configured llama.cpp image identity is invalid")
             folder.mkdir(mode=0o700, exist_ok=True)
@@ -372,6 +419,19 @@ def load(body: Load):
                 "--mount",
                 f"type=bind,src={folder / 'io'},dst=/runtime",
             ]
+            if body.runtime_profile:
+                args += [
+                    "--memory",
+                    str(body.ram_mib) + "m",
+                    "--memory-swap",
+                    str(body.ram_mib) + "m",
+                    "--cpus",
+                    str(min(8, max(1, os.cpu_count() or 1))),
+                    "--env",
+                    "CUDA_VISIBLE_DEVICES=-1",
+                    "--env",
+                    "NVIDIA_VISIBLE_DEVICES=void",
+                ]
             if record["devices"]:
                 args += ["--gpus", '"device=' + ",".join(record["devices"]) + '"']
             if record.get("projector"):
@@ -400,6 +460,8 @@ def load(body: Load):
                 "--reasoning-budget",
                 "0",
             ]
+            if body.runtime_profile:
+                args += ["--threads", str(min(8, max(1, os.cpu_count() or 1)))]
             if body.cache_type == "q8_0":
                 args += [
                     "--cache-type-k",

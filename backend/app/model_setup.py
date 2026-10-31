@@ -51,6 +51,25 @@ def storage_info():
 def recommendation(entry, hardware):
     from app.llama import fit_coding_context, kv_budget_mib
 
+    if entry.runtime_profile:
+        from app.cpu_models import estimate
+
+        ram = (hardware.get("memory") or {}).get("total_mib")
+        needed = estimate(entry)
+        fits = type(ram) in {int, float} and math.isfinite(ram) and ram >= needed + 2048
+        return {
+            "fits": fits,
+            "reason": "Runs on CPU; slower, with a reserved system-RAM budget"
+            if fits
+            else "Connect the Host Runner to inspect system RAM"
+            if type(ram) not in {int, float} or not math.isfinite(ram)
+            else "More system RAM is needed for this CPU profile",
+            "gpus": [],
+            "context_size": 4096 if fits else None,
+            "cache_type": "q8_0",
+            "ram_mib": needed,
+            "runtime_profile": entry.runtime_profile,
+        }
     devices = [
         g
         for g in (hardware.get("gpus") or [])
@@ -180,11 +199,17 @@ def catalog(session: DB):
         entries.append(
             {
                 **item.model_dump(mode="json"),
-                "starter": item.id in STARTER_CANDIDATE_IDS,
+                "starter": bool(item.runtime_profile)
+                if not hardware.get("gpus")
+                else item.id in STARTER_CANDIDATE_IDS,
                 "manifest_sha256": fingerprint(item.model_dump(mode="json")),
                 "recommendation": preset,
                 "ready_to_try": bool(
-                    installed and definition and definition.status == "registered" and preset["fits"]
+                    installed
+                    and definition
+                    and definition.status == "registered"
+                    and preset["fits"]
+                    and (definition.metadata_json or {}).get("runtime_profile") == item.runtime_profile
                 ),
                 "model_file_id": installed.id if installed else None,
                 "definition_id": definition.id if definition else None,

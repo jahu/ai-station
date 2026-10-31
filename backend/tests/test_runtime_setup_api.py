@@ -14,9 +14,9 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def runtime_catalog(monkeypatch):
+def runtime_catalog(monkeypatch, request):
     recipe = {
-        "profile": "llamacpp-cuda-linux-amd64-v1",
+        "profile": getattr(request, "param", "llamacpp-cuda-linux-amd64-v1"),
         "name": "Synthetic local runtime",
         "image_reference": "ghcr.io/ggml-org/llama.cpp@sha256:" + "a" * 64,
         "download_bytes": 1024,
@@ -28,7 +28,7 @@ def runtime_catalog(monkeypatch):
         "installation_available": True,
         "image": {"present": False, "status": "unavailable"},
     }
-    monkeypatch.setattr(RunnerClient, "runtime_setup_catalog", lambda _: report)
+    monkeypatch.setattr(RunnerClient, "runtime_setup_catalog", lambda _, profile=None: report)
     return report
 
 
@@ -119,4 +119,29 @@ def test_uncertain_native_cleanup_disables_resume(runtime_catalog):
                 json={"client_request_id": str(uuid4()), "expected_run_id": created["run"]["id"]},
             ).status_code
             == 409
+        )
+
+
+@pytest.mark.parametrize("runtime_catalog", ["llamacpp-cpu-linux-amd64-v1"], indirect=True)
+def test_cpu_profile_keeps_the_owned_preparation_queue_and_resume_identity(runtime_catalog):
+    with TestClient(app) as api:
+        payload = body(runtime_catalog)
+        report = api.get("/api/setup/runtimes", params={"profile": payload["profile"]})
+        assert report.status_code == 200 and report.json()["recipe"]["profile"] == payload["profile"]
+        created = api.post("/api/setup/runtimes", json=payload)
+        assert created.status_code == 202
+        value = created.json()
+        assert value["run"]["executor_type"] == "runtime_setup"
+        assert value["run"]["parameters"]["recipe"] == runtime_catalog["recipe"]
+        path = "/api/setup/runtimes/preparations/" + value["id"]
+        assert api.post(path + "/cancel", json={}).json()["run"]["status"] == "canceled"
+        resumed = api.post(
+            path + "/resume", json={"client_request_id": str(uuid4()), "expected_run_id": value["run"]["id"]}
+        )
+        assert resumed.status_code == 202 and resumed.json()["attempt"] == 2
+        assert resumed.json()["recipe"] == value["recipe"]
+        assert api.get("/api/setup/runtimes/preparations").json() == []
+        assert (
+            len(api.get("/api/setup/runtimes/preparations", params={"profile": payload["profile"]}).json())
+            == 1
         )

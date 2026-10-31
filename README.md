@@ -183,6 +183,12 @@ your selected model. Existing configured images stay available. Cross-platform
 launchers and full media setup remain in progress.
 [Guided setup and measured qualification](docs/plans/guided-model-installation.md).
 
+On Linux x86-64 without an NVIDIA GPU, model setup offers a small **CPU
+conversation model**. Review its source and RAM estimate, prepare the engine,
+then open Chat. This explicit profile uses system RAM and a 4096-token context;
+it is slower than GPU inference. Existing GPU/external models stay selected
+until you choose another model. [CPU setup](docs/plans/guided-cpu-conversation.md).
+
 On supported Linux NVIDIA workstations, the same page offers **Set up local
 speech**: review hardware, storage and component licenses, prepare Chatterbox,
 then open Audio with your reference recording. Setup history and Stop/Resume are

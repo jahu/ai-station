@@ -47,8 +47,8 @@ class RunnerClient:
             return response.json()
         return {}
 
-    def runtime_setup_catalog(self) -> dict:
-        return self.request("GET", "/v1/setup/runtimes")
+    def runtime_setup_catalog(self, profile=None) -> dict:
+        return self.request("GET", "/v1/setup/runtimes" + ("?profile=" + profile if profile else ""))
 
     def prepare_runtime(self, payload: dict) -> dict:
         return self.request("POST", "/v1/setup/runtimes/prepare", payload)

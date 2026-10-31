@@ -49,6 +49,14 @@ def setup_bridge(monkeypatch, request):
     from app import model_download_job
     from app.model_download_files import FileSpec
 
+    cpu = getattr(request, "param", "qwen3") == "cpu"
+    if cpu:
+        from ai_station_runner import cpu_runtime_profile, runtime_setup
+
+        monkeypatch.setattr(cpu_runtime_profile, "QUALIFIED", True)
+        monkeypatch.setattr(
+            runtime_setup, "inspect_image", lambda _: {"image": {"present": True, "id": "sha256:" + "a" * 64}}
+        )
     hybrid = getattr(request, "param", "qwen3") == "qwen35"
     content = gguf(
         {
@@ -65,7 +73,13 @@ def setup_bridge(monkeypatch, request):
         if hybrid
         else None
     )
-    selected = next(e for e in CANDIDATES if e.id == "rvn-qwen38-27b-q4km") if hybrid else CANDIDATES[0]
+    selected = (
+        next(e for e in CANDIDATES if e.id == "huihui-qwen3-4b-2507-q4km-cpu")
+        if cpu
+        else next(e for e in CANDIDATES if e.id == "rvn-qwen38-27b-q4km")
+        if hybrid
+        else CANDIDATES[0]
+    )
     item = selected.model_copy(
         update={
             "file": FileSpec(
@@ -130,13 +144,13 @@ def work():
         return tick(db, "model-setup-test")
 
 
-@pytest.mark.parametrize("setup_bridge", ["qwen3", "qwen35"], indirect=True)
+@pytest.mark.parametrize("setup_bridge", ["qwen3", "qwen35", "cpu"], indirect=True)
 def test_download_is_durable_idempotent_and_registers_relative_model_without_copying_weights(setup_bridge):
     with TestClient(app) as api:
         item = setup_bridge["entry"]
         listing = api.get("/api/setup/catalog")
         assert listing.status_code == 200, listing.text
-        assert listing.json()["entries"][0]["recommendation"]["gpus"] == [7]
+        assert listing.json()["entries"][0]["recommendation"]["gpus"] == ([] if item.runtime_profile else [7])
         body = request(item)
         response = api.post("/api/setup/downloads", json=body)
         assert response.status_code == 202, response.text
@@ -153,7 +167,9 @@ def test_download_is_durable_idempotent_and_registers_relative_model_without_cop
             assert model.sha256 == item.file.sha256
             assert model.family == item.architecture
             definition = db.scalar(select(ModelDefinition).where(ModelDefinition.file_id == model.id))
-            assert definition.status == "registered" and definition.metadata_json["gpus"] == [7]
+            assert definition.status == "registered" and definition.metadata_json["gpus"] == (
+                [] if item.runtime_profile else [7]
+            )
             assert definition.family == item.architecture
             outputs = list(db.scalars(select(Artifact).where(Artifact.run_id == result["run"]["id"])))
             assert len(outputs) == 1 and outputs[0].artifact_type == "json" and outputs[0].size_bytes < 10000
@@ -285,6 +301,52 @@ def test_a_second_preparation_reuses_the_immutable_file_and_shared_registry_iden
             assert len(list(db.scalars(select(ModelDefinition)))) == 1
 
 
+@pytest.mark.parametrize("setup_bridge", ["cpu"], indirect=True)
+def test_cpu_preparation_preserves_an_existing_different_shared_preset(setup_bridge):
+    with TestClient(app) as api:
+        first = api.post("/api/setup/downloads", json=request(setup_bridge["entry"]))
+        assert first.status_code == 202
+        work()
+        with control_session_factory()() as db:
+            row = db.scalar(select(ModelDefinition))
+            preserved = {
+                k: v for k, v in row.metadata_json.items() if k not in {"runtime_profile", "ram_mib"}
+            }
+            preserved["gpus"] = [7]
+            row.metadata_json = preserved
+            db.commit()
+        second = api.post("/api/setup/downloads", json=request(setup_bridge["entry"]))
+        assert second.status_code == 202
+        work()
+        result = api.get("/api/setup/downloads/" + second.json()["id"]).json()
+        assert result["run"]["status"] == "failed"
+        assert "different runtime preset" in result["run"]["error_message"]
+        with control_session_factory()() as db:
+            assert db.scalar(select(ModelDefinition)).metadata_json == preserved
+            assert len(list(db.scalars(select(ModelDefinition)))) == 1
+        assert not api.get("/api/setup/catalog").json()["entries"][0]["ready_to_try"]
+
+
+@pytest.mark.parametrize("setup_bridge", ["cpu"], indirect=True)
+def test_cpu_budget_mismatch_cannot_publish_a_ready_model(setup_bridge, monkeypatch):
+    original = RunnerClient.verify_model
+
+    def changed_budget(self, payload):
+        report = original(self, payload)
+        return {**report, "cpu": {**report["cpu"], "ram_mib": report["cpu"]["ram_mib"] + 1}}
+
+    monkeypatch.setattr(RunnerClient, "verify_model", changed_budget)
+    with TestClient(app) as api:
+        created = api.post("/api/setup/downloads", json=request(setup_bridge["entry"]))
+        assert created.status_code == 202
+        work()
+        row = api.get("/api/setup/downloads/" + created.json()["id"]).json()
+        assert row["run"]["status"] == "failed"
+        assert "CPU profile/budget" in row["run"]["error_message"]
+        with control_session_factory()() as db:
+            assert db.scalar(select(ModelDefinition)) is None
+
+
 def test_catalog_reports_application_storage_without_host_paths(setup_bridge, monkeypatch):
     monkeypatch.setattr(model_setup.shutil, "disk_usage", lambda _: SimpleNamespace(free=123, total=456))
     with TestClient(app) as api:
@@ -401,10 +463,10 @@ def test_catalog_exposes_distinct_larger_quantizations_without_network_or_new_ru
         report = api.get("/api/setup/catalog")
         assert report.status_code == 200
         entries = report.json()["entries"]
-        assert len(entries) == len(CANDIDATES) == 8
-        assert {row["id"] for row in entries if row["starter"]} == STARTER_CANDIDATE_IDS
+        assert len(entries) == len(CANDIDATES) == 9
+        assert {row["id"] for row in entries if row["starter"]} == {"huihui-qwen3-4b-2507-q4km-cpu"}
         for row in entries:
-            if row["starter"]:
+            if row["starter"] or row["id"] in STARTER_CANDIDATE_IDS:
                 continue
             if row["id"].startswith("rvn-"):
                 assert "27B" in row["name"] and row["trained_context"] == 262144
@@ -447,6 +509,8 @@ def test_new_profile_fields_preserve_all_issued_legacy_manifest_identities():
         "mlabonne-qwen3-8b-q80": "4dd468316e6a23ae5ecf48bcf359aa96a1feb9f268bd600012d3201807de7b63",
         "mlabonne-qwen3-14b-q4km": "25723823fffa165905b85f9f294d7a467b16a1e024387e62e1f2084730a762c9",
         "mlabonne-qwen3-14b-q80": "059f900e4dfcadc8b0c51b44e65559e5c00915ebd5bd7bc50894e3acbb24dbb6",
+        "rvn-qwen38-27b-q4km": "31f260b6eefd8e626bf677db6b4db322f371b111e59d81e2e8da36a2501b971a",
+        "rvn-qwen38-27b-iq2xs": "7bcdd1e7e465570db21cd32dc5b0549ca4829e2d4a7a1c3b6d2506003016ff0f",
     }
     assert {
         identity: model_setup.fingerprint(candidate(identity).model_dump(mode="json"))

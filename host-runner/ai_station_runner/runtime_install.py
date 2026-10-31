@@ -248,19 +248,28 @@ def snapshot(identity, record, *, stdout_offset=0, stderr_offset=0):
 
 
 @router.get("")
-def catalog():
-    selection = runtime_setup.RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1")
+def catalog(
+    profile: Literal[
+        "llamacpp-cuda-linux-amd64-v1", "llamacpp-cpu-linux-amd64-v1"
+    ] = "llamacpp-cuda-linux-amd64-v1",
+):
+    from ai_station_runner import cpu_runtime_profile as cpu
+
+    qualified = INSTALLATION_QUALIFIED and (profile != cpu.PROFILE or cpu.QUALIFIED)
+    selection = runtime_setup.RuntimeSelection(profile=profile)
     result = runtime_setup.inspect_image(selection)
     result["configured_image"] = {"present": False, "status": "unknown"}
-    result["usable_image"] = bool(result["image"]["present"])
+    result["usable_image"] = bool(result["image"]["present"] and (profile != cpu.PROFILE or cpu.QUALIFIED))
     result["storage"] = None
+    if profile == cpu.PROFILE and not cpu.QUALIFIED:
+        result["installation_notice"] = "Managed CPU setup is still being qualified"
     try:
         configured = llama_runtime.docker(
             "image", "inspect", get_settings().llama_image, "--format", "{{.Id}}", missing_ok=True
         )
         present = isinstance(configured, str) and bool(re.fullmatch(r"sha256:[a-f0-9]{64}", configured))
         result["configured_image"] = {"present": present, "status": "available" if present else "unavailable"}
-        result["usable_image"] = result["usable_image"] or present
+        result["usable_image"] = result["usable_image"] or (present and profile != cpu.PROFILE)
         target = daemon()
         try:
             free = shutil.disk_usage(target["data_root"]).free
@@ -269,9 +278,9 @@ def catalog():
             free = None
         enough = free is not None and free >= result["recipe"]["minimum_free_bytes"]
         result["installation_available"] = bool(
-            INSTALLATION_QUALIFIED and result["platform_supported"] and (result["image"]["present"] or enough)
+            qualified and result["platform_supported"] and (result["image"]["present"] or enough)
         )
-        if INSTALLATION_QUALIFIED:
+        if qualified:
             result["installation_notice"] = (
                 ""
                 if result["installation_available"]
@@ -309,6 +318,10 @@ def prepare(body: Prepare):
             if previous.get("request_hash") != request_hash:
                 raise HTTPException(409, "Runtime preparation identity is immutable")
             return snapshot(identity, previous)
+        from ai_station_runner import cpu_runtime_profile as cpu
+
+        if body.profile == cpu.PROFILE and not cpu.QUALIFIED:
+            raise HTTPException(409, "Managed CPU setup is still being qualified")
         frozen = runtime_setup.recipe(body)
         if body.profile == "qwen-image21-cuda-linux-amd64-v1":
             from ai_station_runner.managed_image_job import QUALIFIED

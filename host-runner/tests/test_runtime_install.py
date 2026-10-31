@@ -16,13 +16,16 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture
-def setup(tmp_path, monkeypatch):
+@pytest.fixture(params=["llamacpp-cuda-linux-amd64-v1", "llamacpp-cpu-linux-amd64-v1"])
+def setup(tmp_path, monkeypatch, request):
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     monkeypatch.setenv("AI_STATION_DATA_HOST_PATH", str(tmp_path))
     clear_settings_cache()
     monkeypatch.setattr(runtime_setup, "platform_supported", lambda: True)
-    frozen = runtime_setup.recipe(runtime_setup.RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1"))
+    from ai_station_runner import cpu_runtime_profile
+
+    monkeypatch.setattr(cpu_runtime_profile, "QUALIFIED", True)
+    frozen = runtime_setup.recipe(runtime_setup.RuntimeSelection(profile=request.param))
     state = {
         "inspections": [],
         "image": None,
@@ -286,11 +289,32 @@ def test_catalog_distinguishes_existing_configured_image_and_pinned_install_stor
         },
     )
     monkeypatch.setattr(native.llama_runtime, "docker", lambda *args, **kwargs: "sha256:" + "c" * 64)
-    value = setup.api.get("/v1/setup/runtimes").json()
-    assert value["usable_image"] is True and value["configured_image"]["present"] is True
+    value = setup.api.get("/v1/setup/runtimes", params={"profile": setup.frozen["profile"]}).json()
+    assert (
+        value["usable_image"] is (setup.frozen["profile"] != "llamacpp-cpu-linux-amd64-v1")
+        and value["configured_image"]["present"] is True
+    )
     assert value["installation_available"] is True
     assert value["storage"]["free_bytes"] == 20 * 1024**3
     assert "data_root" not in value
     monkeypatch.setattr(native.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024))
-    value = setup.api.get("/v1/setup/runtimes").json()
-    assert value["usable_image"] is True and value["installation_available"] is False
+    value = setup.api.get("/v1/setup/runtimes", params={"profile": setup.frozen["profile"]}).json()
+    assert (
+        value["usable_image"] is (setup.frozen["profile"] != "llamacpp-cpu-linux-amd64-v1")
+        and value["installation_available"] is False
+    )
+
+
+def test_unqualified_cpu_profile_cannot_dispatch_or_claim_readiness(setup, monkeypatch):
+    from ai_station_runner import cpu_runtime_profile as cpu
+
+    if setup.frozen["profile"] != cpu.PROFILE:
+        return
+    monkeypatch.setattr(cpu, "QUALIFIED", False)
+    monkeypatch.setattr(native, "INSTALLATION_QUALIFIED", True)
+    monkeypatch.setattr(native.llama_runtime, "docker", lambda *args, **kwargs: "sha256:" + "c" * 64)
+    report = setup.api.get("/v1/setup/runtimes", params={"profile": cpu.PROFILE}).json()
+    assert not report["usable_image"] and not report["installation_available"]
+    response = setup.api.post("/v1/setup/runtimes/prepare", json=request(setup))
+    assert response.status_code == 409
+    assert not setup.state["starts"]

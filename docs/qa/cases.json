@@ -1,5 +1,5 @@
 {
-  "version": 31,
+  "version": 32,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -26,7 +26,9 @@
     "docs/plans/managed-music-setup.md",
     "docs/plans/managed-video-setup.md",
     "docs/plans/managed-avatar-setup.md",
-    "docs/plans/managed-effects-setup.md"
+    "docs/plans/managed-effects-setup.md",
+    "docs/plans/managed-fish-setup.md",
+    "docs/plans/guided-cpu-conversation.md"
   ],
   "cases": [
     {
@@ -4854,6 +4856,78 @@
       "resources": "CPU/sieć · pobranie wag tylko po świadomym wznowieniu",
       "minutes": 5,
       "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-143",
+      "area": "Instalacja modeli",
+      "title": "Mały model CPU: pierwsza rozmowa bez GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobna stacja Linux x86-64 bez NVIDIA albo izolowany profil QA z rzeczywiście wyłączonym dostępem do GPU; administrator, co najmniej 7 GiB RAM."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models i sprawdź propozycję CPU, źródło, licencję oraz wymagane miejsce i pamięć.",
+        "Przygotuj silnik i model Q4, następnie wybierz Open Chat with this model i wyślij neutralne pytanie.",
+        "Odśwież Chat i sprawdź zachowaną odpowiedź na komputerze i telefonie."
+      ],
+      "expected": [
+        "Model CPU jest opisany jako wolniejszy i korzystający z RAM. Kontekst wynosi 4096; GPU ani chmura nie są używane.",
+        "Zwykły Chat odpowiada z wybranym modelem; rozmowa i wynik zostają zachowane."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-144",
+      "area": "Instalacja modeli",
+      "title": "CPU: Stop, Resume i zachowanie RAM",
+      "priority": "P1",
+      "prerequisites": [
+        "Gotowy model CPU; oddzielny profil QA."
+      ],
+      "steps": [
+        "Zatrzymaj własne przygotowanie silnika/modelu i wznów to samo zadanie z historii.",
+        "Uruchom rozmowę i podczas gotowości zrestartuj wyłącznie testowy Host Runner.",
+        "Zatrzymaj wybrany model i sprawdź zwolnienie jego rezerwacji pamięci."
+      ],
+      "expected": [
+        "Resume zachowuje wybrane źródło i historię; nie tworzy nowej instalacji bez polecenia.",
+        "Powrót Runnera rozpoznaje ten sam kontener; nie uruchamia modelu drugi raz. RAM pozostaje zarezerwowany do potwierdzenia Stop; kontener nie korzysta ze swapu."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-145",
+      "area": "Instalacja modeli",
+      "title": "CPU: prywatne historie i zachowane wcześniejsze modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Konta administratora A i użytkownika B; przygotowany CPU; istniejące modele GPU lub zewnętrzne, jeśli były skonfigurowane."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość modelu i spróbuj otworzyć odnośniki A do instalacji, rozmowy, Run i pliku potwierdzenia.",
+        "Spróbuj zainstalować silnik/model na B.",
+        "Sprawdź stare modele i zapisane wcześniej pobrania. Przy konflikcie z istniejącym presetem sprawdź komunikat."
+      ],
+      "expected": [
+        "Gotowość modelu jest wspólna, prywatne dane A pozostają niedostępne. Instalacja wymaga administratora.",
+        "Dotychczasowe modele, presety i tożsamości ośmiu wcześniejszych manifestów są zachowane. Konflikt nie nadpisuje konfiguracji ani nie przełącza GPU na CPU automatycznie."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
         "NR-14"
       ]
     }

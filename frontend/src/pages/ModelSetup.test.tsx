@@ -75,12 +75,24 @@ function mount(
           json: async () => ({ id: "readiness-run", status: "succeeded" }),
         };
       }
-      if (url.endsWith("/setup/runtimes"))
+      if (url.split("?")[0].endsWith("/setup/runtimes"))
         return {
           ok: true,
           json: async () => ({
             usable_image: true,
             installation_available: false,
+            ...(url.includes("llamacpp-cpu-linux-amd64-v1")
+              ? {
+                  recipe: {
+                    profile: "llamacpp-cpu-linux-amd64-v1",
+                    name: "CPU",
+                    download_bytes: 123,
+                    license: "MIT",
+                    license_url: "https://example.com/license",
+                    image_reference: "pinned",
+                  },
+                }
+              : {}),
           }),
         };
       if (url.includes("/setup/runtimes/preparations"))
@@ -340,4 +352,59 @@ it("explores and searches larger models locally, filters fit and submits the sel
     manifest_sha256: "c".repeat(64),
     license_accepted: true,
   });
+});
+
+it("shows a CPU starter and its RAM tradeoff without requiring GPU selection", async () => {
+  const cpu = {
+    ...entry,
+    id: "small-cpu",
+    name: "Local CPU model",
+    starter: true,
+    runtime_profile: "llamacpp-cpu-linux-amd64-v1",
+    description: "Uses system RAM and is slower than GPU inference.",
+    recommendation: {
+      ...entry.recommendation,
+      gpus: [],
+      context_size: 4096,
+      ram_mib: 4069,
+    },
+  };
+  mount(true, [], 20 * 1024 ** 3, cpu);
+  expect(
+    await screen.findByText("CPU · small conversation model"),
+  ).toBeTruthy();
+  expect(
+    await screen.findByText(/CPU execution · no NVIDIA GPU needed/),
+  ).toBeTruthy();
+  expect(screen.getByText(cpu.description)).toBeTruthy();
+  expect(screen.getByText(/3.97 GiB system RAM reserved/)).toBeTruthy();
+});
+
+it("keeps the visible CPU starter selected when RAM is insufficient", async () => {
+  const insufficient = { ...entry.recommendation, fits: false };
+  mount(
+    true,
+    [],
+    20 * 1024 ** 3,
+    { ...entry, starter: false, recommendation: insufficient },
+    [
+      {
+        ...entry,
+        id: "cpu",
+        starter: true,
+        runtime_profile: "llamacpp-cpu-linux-amd64-v1",
+        recommendation: { ...insufficient, gpus: [] },
+      },
+    ],
+  );
+  expect(
+    (
+      (await screen.findByRole("radio", {
+        name: "Choose Q4_K_M",
+      })) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    await screen.findByText(/CPU execution · no NVIDIA GPU needed/),
+  ).toBeTruthy();
 });

@@ -130,6 +130,7 @@ class DownloadExecutor:
                     "mtime": observed.st_mtime,
                     "check_context": True,
                     "check_image": True,
+                    **({"runtime_profile": entry.runtime_profile} if entry.runtime_profile else {}),
                     "permissions": ["filesystem_read", "manage_models"],
                 }
             )
@@ -159,6 +160,15 @@ class DownloadExecutor:
                 raise ValueError(
                     "The downloaded model does not match its native source/architecture inspection"
                 )
+            if entry.runtime_profile:
+                from app.cpu_models import estimate
+
+                if report.get("cpu") != {
+                    "runtime_profile": entry.runtime_profile,
+                    "ram_mib": estimate(entry),
+                    "context_size": 4096,
+                }:
+                    raise ValueError("The native CPU profile/budget differs from the reviewed model")
             image_present = bool(report.get("image", {}).get("present"))
             if report.get("error") and image_present:
                 raise ValueError("Native model inspection did not succeed")
@@ -201,6 +211,13 @@ class DownloadExecutor:
                     "The installed model registry observation changed; inspect it before replacing anything"
                 )
             definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+            if definition is not None:
+                from app.cpu_models import compatible
+
+                if not compatible(definition, entry):
+                    raise ValueError(
+                        "These model files already have a different runtime preset; use the existing model configuration"
+                    )
             if definition is None:
                 definition = ModelDefinition(
                     file_id=file.id,
@@ -215,6 +232,11 @@ class DownloadExecutor:
                         "context_size": preset.get("context_size") or 4096,
                         "cache_type": "q8_0",
                         "context_profile": profile,
+                        **(
+                            {"runtime_profile": entry.runtime_profile, "ram_mib": preset["ram_mib"]}
+                            if entry.runtime_profile
+                            else {}
+                        ),
                         "catalog_id": entry.id,
                         "catalog_manifest_sha256": run.parameters["manifest_sha256"],
                         "source_sha256": entry.file.sha256,

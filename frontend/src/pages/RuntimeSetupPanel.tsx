@@ -13,7 +13,7 @@ type Recipe = {
   download_bytes: number;
   license: string;
   license_url: string;
-  cuda_license_url: string;
+  cuda_license_url?: string;
   image_reference: string;
 };
 type Catalog = {
@@ -165,17 +165,25 @@ function RuntimePreparation({
 
 export default function RuntimeSetupPanel({
   onReadiness,
+  profile = "llamacpp-cuda-linux-amd64-v1",
 }: {
+  profile?: string;
   onReadiness: (ready: boolean | undefined) => void;
 }) {
   const cache = useQueryClient();
+  const cpu = profile === "llamacpp-cpu-linux-amd64-v1";
+  const suffix = cpu ? "?profile=" + profile : "";
   const catalog = useQuery({
-    queryKey: ["runtime-setup-catalog"],
-    queryFn: () => api<Catalog>("/setup/runtimes"),
+    queryKey: cpu
+      ? ["runtime-setup-catalog", profile]
+      : ["runtime-setup-catalog"],
+    queryFn: () => api<Catalog>("/setup/runtimes" + suffix),
   });
   const history = useQuery({
-    queryKey: ["runtime-preparations"],
-    queryFn: () => api<Preparation[]>("/setup/runtimes/preparations"),
+    queryKey: cpu
+      ? ["runtime-preparations", profile]
+      : ["runtime-preparations"],
+    queryFn: () => api<Preparation[]>("/setup/runtimes/preparations" + suffix),
     refetchInterval: (query) =>
       query.state.data?.some((row) => !terminal.has(row.run.status))
         ? 1000
@@ -262,6 +270,12 @@ export default function RuntimeSetupPanel({
           ? "llama.cpp is available. Choose a local model below; it loads when you send a message."
           : "First prepare llama.cpp, then choose your local model below."}
       </p>
+      {cpu && (
+        <p className="notice">
+          CPU execution · no NVIDIA GPU needed. This uses system RAM and is
+          slower than GPU inference.
+        </p>
+      )}
       <ErrorNotice error={catalog.error ?? history.error ?? prepare.error} />
       {!data?.usable_image && recipe && (
         <>
@@ -280,15 +294,20 @@ export default function RuntimeSetupPanel({
             <p>
               <a href={recipe.license_url} target="_blank" rel="noreferrer">
                 llama.cpp license
-              </a>{" "}
-              ·{" "}
-              <a
-                href={recipe.cuda_license_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                CUDA component terms
               </a>
+              {recipe.cuda_license_url && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a
+                    href={recipe.cuda_license_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    CUDA component terms
+                  </a>
+                </>
+              )}
             </p>
             <p className="setup-small muted">{recipe.license}</p>
             <p className="setup-small model-path">{recipe.image_reference}</p>

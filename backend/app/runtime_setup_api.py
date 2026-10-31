@@ -35,6 +35,7 @@ VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 Profile = Literal[
     "llamacpp-cuda-linux-amd64-v1",
+    "llamacpp-cpu-linux-amd64-v1",
     "chatterbox-v3-linux-x86-64-python312-v1",
     "qwen-image21-cuda-linux-amd64-v1",
     "ace-step15-turbo-linux-x86-64-python312-v1",
@@ -72,7 +73,11 @@ def report(profile="llamacpp-cuda-linux-amd64-v1"):
             if profile == SPEECH_PROFILE
             else RunnerClient(timeout=30)
         )
-        return client.runtime_setup_catalog()
+        return (
+            client.runtime_setup_catalog(profile=profile)
+            if profile == "llamacpp-cpu-linux-amd64-v1"
+            else client.runtime_setup_catalog()
+        )
     except (RunnerError, RunnerUnavailable):
         return {
             "installation_available": False,

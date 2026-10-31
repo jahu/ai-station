@@ -152,6 +152,7 @@ def preset_of(row: ModelDefinition) -> dict:
         ],
         "context_size": context_size,
         "cache_type": cache_type,
+        **{k: meta[k] for k in ("runtime_profile", "ram_mib") if meta.get(k) is not None},
     }
 
 
@@ -218,6 +219,10 @@ def active_install(session: Session, definition_id: str) -> Run | None:
 
 
 def store_preset(row: ModelDefinition, *, gpus, context_size, cache_type):
+    if (row.metadata_json or {}).get("runtime_profile") and (
+        gpus or context_size != 4096 or cache_type != "q8_0"
+    ):
+        raise HTTPException(422, "This managed CPU profile keeps its reviewed 4096-token Q8 preset")
     if len(set(gpus)) != len(gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     row.metadata_json = {
@@ -341,6 +346,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **{
+                k: row.metadata_json[k]
+                for k in ("runtime_profile", "ram_mib")
+                if row.metadata_json.get(k) is not None
+            },
         },
     )
     row.last_verify_run_id = run.id
@@ -363,6 +373,7 @@ def load_definition(definition_id: UUID, body: EmptyBody, session: DB):
     run = enqueue_load(
         LoadModel(
             model_file_id=file.id,
+            **{k: preset[k] for k in ("runtime_profile", "ram_mib") if preset.get(k) is not None},
             gpus=preset["gpus"],
             context_size=preset["context_size"],
             cache_type=preset["cache_type"],
@@ -413,6 +424,11 @@ class ModelInstallExecutor:
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
+                    **(
+                        {"check_context": True, "runtime_profile": run.parameters["runtime_profile"]}
+                        if run.parameters.get("runtime_profile")
+                        else {}
+                    ),
                     "permissions": run.effective_permissions,
                 }
             )
@@ -446,6 +462,16 @@ class ModelInstallExecutor:
             and report.get("matches_observation")
             and not report.get("error")
         )
+        if run.parameters.get("runtime_profile"):
+            ok = bool(
+                ok
+                and report.get("cpu")
+                == {
+                    "runtime_profile": run.parameters["runtime_profile"],
+                    "ram_mib": run.parameters["ram_mib"],
+                    "context_size": 4096,
+                }
+            )
         image = report.get("image")
         if run.parameters.get("check_image"):
             ok = bool(ok and isinstance(image, dict) and image.get("present"))
