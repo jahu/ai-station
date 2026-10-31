@@ -99,6 +99,17 @@ acknowledgements must reconcile that receipt instead of repeating downloads,
 model loads or runtime installation. Downloaded code is never imported or
 executed by the file primitive.
 
+Download execution is fenced by both worker identity and the original claim
+timestamp. Losing either ends that executor attempt without canceling, failing,
+requeueing, publishing for, or releasing reservations owned by its replacement.
+This applies at progress checks, final registry/receipt publication, resource
+deferral and transport exceptions. Reusing a worker name does not reuse its
+claim. The generic worker error handler independently reloads the current Run
+before failure/inspection cleanup and applies the same claim check; a previous
+executor commit must not leave a stale ORM observation authoritative. Errors
+within the current claim still fail normally, or retain reservations and require
+inspection when an external process has not been confirmed gone.
+
 ## Implementation sequence and remaining gates
 
 1. Complete and qualify the immutable file primitive and curated source metadata.

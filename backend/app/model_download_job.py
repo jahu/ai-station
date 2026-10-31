@@ -31,6 +31,10 @@ class Stopped(Exception):
     pass
 
 
+class LostClaim(Exception):
+    pass
+
+
 class DownloadExecutor:
     name = "model_download"
 
@@ -38,21 +42,21 @@ class DownloadExecutor:
         for permission in ("manage_models", "filesystem_read", "workspace_write", "network_read"):
             require(run.effective_permissions, permission)
         worker, claim = run.worker_id, run.claimed_at
+        release = True
 
-        def check():
+        def check(*, commit=True):
             session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                raise LostClaim()
             cancel_expired_run(session, run.id)
             if run.owner_id:
                 owner = session.get(User, run.owner_id, populate_existing=True)
                 if owner is None or not owner.enabled or not owner.is_admin:
                     raise Stopped("Model preparation account authority changed")
-            if (
-                run.status not in {"claimed", "preparing", "running"}
-                or run.worker_id != worker
-                or run.claimed_at != claim
-            ):
-                raise Stopped("Model preparation was stopped or its lease changed")
-            session.commit()
+            if run.status not in {"claimed", "preparing", "running"}:
+                raise Stopped("Model preparation was stopped")
+            if commit:
+                session.commit()
 
         try:
             check()
@@ -71,7 +75,9 @@ class DownloadExecutor:
                 )
             available = (hardware.get("memory") or {}).get("available_mib")
             if not reserve_memory(session, run, available, 256):
-                return self.defer(session, run, memory_observation(session, run, available, 256))
+                return self.defer(
+                    session, run, memory_observation(session, run, available, 256), worker=worker, claim=claim
+                )
             session.commit()
             root = get_settings().data_dir
             folder = directory(root)
@@ -101,7 +107,7 @@ class DownloadExecutor:
             try:
                 path = asyncio.run(obtain(root, entry.file, check=check, progress=progress))
             except DownloadBusy:
-                return self.defer(session, run)
+                return self.defer(session, run, worker=worker, claim=claim)
             check()
             run.metadata_json = {
                 **run.metadata_json,
@@ -158,7 +164,7 @@ class DownloadExecutor:
             preset = recommendation(entry, hardware)
             # Stop and registry/receipt publication use the same task fence.
             lock_task(session, run.task)
-            session.refresh(run)
+            check(commit=False)
             if run.task.metadata_json.get("stop_requested_at") or run.status != "running":
                 raise Stopped("Model preparation stopped before registration")
             if run.owner_id:
@@ -264,21 +270,38 @@ class DownloadExecutor:
             )
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
             return "done"
+        except LostClaim:
+            release = False
+            session.rollback()
+            return "done"
         except Stopped:
             session.rollback()
             session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                release = False
+                return "done"
             if run.status in {"claimed", "preparing", "running"}:
                 transition(session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested")
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             return "done"
+        except Exception:
+            session.rollback()
+            session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                release = False
+                return "done"
+            raise
         finally:
-            release_run_locks(session, run.id)
+            if release:
+                release_run_locks(session, run.id)
 
     @staticmethod
-    def defer(session, run, memory=None):
+    def defer(session, run, memory=None, *, worker, claim):
         lock_task(session, run.task)
         session.refresh(run)
+        if run.worker_id != worker or run.claimed_at != claim:
+            raise LostClaim()
         if run.task.metadata_json.get("stop_requested_at") or run.status == "cancel_requested":
             raise Stopped("Model preparation stopped before deferral")
         run.task.metadata_json = {
