@@ -53,6 +53,10 @@ def runtime(tmp_path, monkeypatch):
                 "Config": {"Labels": labels},
                 "State": {"Status": "created", "Running": False},
             }
+            if "--memory" in args:
+                budget = int(args[args.index("--memory") + 1].removesuffix("m")) * 1024**2
+                state["item"]["HostConfig"] = {"Memory": budget, "MemorySwap": budget, "DeviceRequests": []}
+                state["item"]["Config"]["Env"] = [args[i + 1] for i, v in enumerate(args) if v == "--env"]
             return "b" * 64
         if args[0] == "start":
             state["item"]["State"] = {"Status": "running", "Running": True}
@@ -355,3 +359,81 @@ def test_long_data_root_preserves_owned_container_layout_and_request_identity(ru
     create = next(call for call in state["calls"] if call[0] == "create")
     assert f"type=bind,src={longer / 'runtime/llama' / str(body.instance_id) / 'io'},dst=/runtime" in create
     assert len(os.fsencode(llama.socket_path(body.instance_id))) >= 108
+
+
+@pytest.fixture
+def cpu_runtime(runtime, monkeypatch):
+    import hashlib
+
+    from ai_station_runner import cpu_runtime_profile as cpu
+    from ai_station_runner import runtime_setup
+    from ai_station_runner.gguf_context import inspect_context
+    from test_gguf_context import fields, header
+
+    root, body, state = runtime
+    data = bytes(header(fields()))
+    sha = hashlib.sha256(data).hexdigest()
+    store = root / "models/store"
+    store.mkdir()
+    model = store / sha
+    model.write_bytes(data)
+    model.chmod(0o444)
+    info = model.stat()
+    budget = cpu.memory_budget_mib(info.st_size, 4096, inspect_context(model, info.st_size, info.st_mtime))
+    body = llama.Load.model_validate(
+        {
+            **body.model_dump(),
+            "app_owned": True,
+            "model_path": "models/store/" + sha,
+            "model_sha256": sha,
+            "size_bytes": info.st_size,
+            "mtime": info.st_mtime,
+            "gpus": [],
+            "cache_type": "q8_0",
+            "runtime_profile": cpu.PROFILE,
+            "ram_mib": budget,
+        }
+    )
+    monkeypatch.setattr(cpu, "QUALIFIED", True)
+    monkeypatch.setattr(llama, "collect", lambda _: {"gpus": [], "memory": {"available_mib": 32768}})
+    monkeypatch.setattr(
+        runtime_setup, "inspect_image", lambda _: {"image": {"id": "sha256:" + "a" * 64, "present": True}}
+    )
+    return root, body, state
+
+
+def test_managed_cpu_launch_enforces_memory_no_swap_and_no_gpu_access(cpu_runtime):
+    root, body, state = cpu_runtime
+    llama.load(body)
+    create = next(v for v in state["calls"] if v[0] == "create")
+    assert "--gpus" not in create
+    assert create[create.index("--memory") + 1] == str(body.ram_mib) + "m"
+    assert create[create.index("--memory-swap") + 1] == str(body.ram_mib) + "m"
+    assert "CUDA_VISIBLE_DEVICES=-1" in create and "NVIDIA_VISIBLE_DEVICES=void" in create
+    assert create[create.index("--gpu-layers") + 1] == "0"
+    assert "--network" in create and create[create.index("--network") + 1] == "none"
+    assert llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))["status"] == "stopped"
+    assert state["item"] is None
+
+
+@pytest.mark.parametrize(
+    "change",
+    [{"ram_mib": 9999}, {"ram_mib": None}, {"gpus": [2]}, {"cache_type": "f16"}, {"context_size": 8192}],
+)
+def test_cpu_bad_or_changed_budget_cannot_launch(cpu_runtime, change):
+    from pydantic import ValidationError
+
+    _, body, state = cpu_runtime
+    with pytest.raises((ValidationError, HTTPException, ValueError)):
+        llama.load(llama.Load.model_validate({**body.model_dump(), **change}))
+    assert not any(v[0] == "create" for v in state["calls"])
+
+
+def test_cpu_policy_change_requires_inspection_before_any_owned_signal(cpu_runtime):
+    _, body, state = cpu_runtime
+    llama.load(body)
+    state["item"]["HostConfig"]["MemorySwap"] = -1
+    before = len(state["calls"])
+    with pytest.raises(HTTPException, match="CPU container"):
+        llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))
+    assert not any(v[0] in {"stop", "rm"} for v in state["calls"][before:])

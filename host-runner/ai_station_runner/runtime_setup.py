@@ -23,10 +23,16 @@ REFERENCE = (
 
 class RuntimeSelection(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    profile: Literal["llamacpp-cuda-linux-amd64-v1", "qwen-image21-cuda-linux-amd64-v1"]
+    profile: Literal[
+        "llamacpp-cuda-linux-amd64-v1", "qwen-image21-cuda-linux-amd64-v1", "llamacpp-cpu-linux-amd64-v1"
+    ]
 
 
 def recipe(selection: RuntimeSelection) -> dict:
+    from ai_station_runner import cpu_runtime_profile as cpu
+
+    if selection.profile == cpu.PROFILE:
+        return cpu.recipe()
     if selection.profile == "qwen-image21-cuda-linux-amd64-v1":
         from ai_station_runner.image_setup import recipe as image_recipe
 
@@ -99,7 +105,11 @@ def inspect_image(selection: RuntimeSelection) -> dict:
         "inference_tested_now": False,
     }
     if not supported:
-        result["image"]["notice"] = "This CUDA image profile requires a Linux x86-64 Runner"
+        result["image"]["notice"] = (
+            "This CPU image profile requires a Linux x86-64 Runner"
+            if selection.profile == "llamacpp-cpu-linux-amd64-v1"
+            else "This CUDA image profile requires a Linux x86-64 Runner"
+        )
         return result
     try:
         raw = llama_runtime.docker(
@@ -116,10 +126,17 @@ def inspect_image(selection: RuntimeSelection) -> dict:
     return result
 
 
-def image_observation(*, app_owned=False):
+def image_observation(*, app_owned=False, runtime_profile=None):
     """Resolve one installed image observation without replacing configured tags."""
     from ai_station_runner.config import get_settings
 
+    if runtime_profile is not None:
+        from ai_station_runner import cpu_runtime_profile as cpu
+
+        if runtime_profile != cpu.PROFILE or not cpu.QUALIFIED or not app_owned:
+            raise ValueError("The managed CPU profile is unavailable or not explicitly owned")
+        report = inspect_image(RuntimeSelection(profile=cpu.PROFILE))
+        return cpu.REFERENCE, report["image"].get("id")
     configured = get_settings().llama_image
     existing = llama_runtime.docker("image", "inspect", configured, "--format", "{{.Id}}", missing_ok=True)
     if existing is not None or not app_owned and configured != "ghcr.io/ggml-org/llama.cpp:server-cuda":

@@ -39,6 +39,7 @@ function preparation(status: string) {
 }
 function mount({
   ready = false,
+  cpu = false,
   admin = true,
   rows = [] as ReturnType<typeof preparation>[],
 } = {}) {
@@ -64,9 +65,15 @@ function mount({
       return {
         ok: true,
         json: async () =>
-          url.endsWith("/setup/runtimes")
+          url.split("?")[0].endsWith("/setup/runtimes")
             ? {
-                recipe,
+                recipe: cpu
+                  ? {
+                      ...recipe,
+                      profile: "llamacpp-cpu-linux-amd64-v1",
+                      cuda_license_url: undefined,
+                    }
+                  : recipe,
                 manifest_sha256: "b".repeat(64),
                 can_prepare: admin,
                 usable_image: ready,
@@ -92,7 +99,10 @@ function mount({
       }
     >
       <MemoryRouter>
-        <RuntimeSetupPanel onReadiness={readiness} />
+        <RuntimeSetupPanel
+          profile={cpu ? "llamacpp-cpu-linux-amd64-v1" : undefined}
+          onReadiness={readiness}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -167,4 +177,18 @@ it("keeps shared runtime mutation restricted to the administrator", async () => 
   ).toBeNull();
   expect(screen.queryByRole("checkbox")).toBeNull();
   expect(writes).toEqual([]);
+});
+
+it("prepares the explicit CPU engine without CUDA terms or a GPU readiness shortcut", async () => {
+  const { writes } = mount({ cpu: true });
+  expect(
+    await screen.findByText(/CPU execution · no NVIDIA GPU needed/),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "CUDA component terms" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: "Prepare llama.cpp" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].body.profile).toBe("llamacpp-cpu-linux-amd64-v1");
 });

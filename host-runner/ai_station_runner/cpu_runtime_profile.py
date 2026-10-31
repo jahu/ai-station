@@ -1,11 +1,11 @@
-"""Unregistered fixed CPU candidate; no implicit fallback from CUDA execution."""
+"""Fixed CPU conversation profile; no implicit fallback from CUDA execution."""
 
 PROFILE = "llamacpp-cpu-linux-amd64-v1"
 REFERENCE = (
     "ghcr.io/ggml-org/llama.cpp@sha256:c50671c463e746cdccf2c6e77ffd6d77dca2e95290e54ca5ba5c7f524c33e234"
 )
 SOURCE_REVISION = "1052f7e1d62611d328ccc65d38c77cd194ee59fc"
-QUALIFIED = False
+QUALIFIED = True
 DEFAULT_CONTEXT = 4096
 MIB = 1024**2
 
@@ -43,3 +43,27 @@ def memory_budget_mib(size_bytes, context_size, context_profile):
     weight_loading = (size_bytes * 115 + 99) // 100
     total = weight_loading + context_size * per_token + (reserve + 1024) * MIB
     return (total + MIB - 1) // MIB
+
+
+def recipe():
+    return {
+        "profile": PROFILE,
+        "name": "llama.cpp · Local CPU",
+        "image_reference": REFERENCE,
+        "platform": "linux/amd64",
+        "license": "MIT (llama.cpp); bundled base-system licenses",
+        "license_url": "https://github.com/ggml-org/llama.cpp/blob/" + SOURCE_REVISION + "/LICENSE",
+        "download_bytes": 309482267,
+        "minimum_free_bytes": 2 * 1024**3,
+        "layers": {
+            "7a48b8f0e5c73d0cc2a85b008978396aa19d253dc1b96fdb0b769ee6dcbeca4a": 29767612,
+            "51d0a056c3fd1f909b87dabf8b0f1f3895c5b79880ce542d058ab6206407edfa": 260756536,
+            "527deae2828283e77e80a5d30514c47c0db65e9de03d80e1aa9319b5c8221701": 18932939,
+            "4c96f76f36994b1b68ba648e5afbd441f36c21c7e97aa77df09da749bafcfe9b": 25148,
+            "4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1": 32,
+        },
+        "capability": "chat",
+        "source_url": "https://github.com/ggml-org/llama.cpp/tree/" + SOURCE_REVISION,
+        "qualification": "CPU candidate; fixed small GGUF; 4096-token Q8 cache",
+        "compute_target": "cpu",
+    }

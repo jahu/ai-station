@@ -12,8 +12,8 @@ def profile(**changes):
     }
 
 
-def test_cpu_candidate_is_fixed_and_unavailable_before_lifecycle_qualification():
-    assert cpu.QUALIFIED is False
+def test_qualified_cpu_profile_keeps_its_fixed_source_and_context():
+    assert cpu.QUALIFIED is True
     assert cpu.PROFILE == "llamacpp-cpu-linux-amd64-v1"
     assert cpu.REFERENCE.startswith("ghcr.io/ggml-org/llama.cpp@sha256:")
     assert cpu.DEFAULT_CONTEXT == 4096

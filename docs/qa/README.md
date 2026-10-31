@@ -1,12 +1,13 @@
 # Operator QA catalog and workbook
 
-The developing v28 catalog contains 204 cases and adds SETUP-131–135 for guided
-film-sound preparation, research/component notices, complete sound/preview output,
-Stop/Resume, native recovery, private shared readiness and CPU editing without a
-separate video environment. These remain untested operator cases; see the
-[effects setup plan](../plans/managed-effects-setup.md). It retains SETUP-126–130
-for [guided avatars](../plans/managed-avatar-setup.md) and SETUP-121–125
-for [guided video](../plans/managed-video-setup.md).
+The developing v32 catalog contains 216 cases. SETUP-143–145 cover the explicit
+CPU conversation starter, first reply, RAM/Stop/recovery and private setup
+history. SETUP-141–142 retain larger-model/context and old-download compatibility;
+SETUP-136–140 retain expressive voice/phone-reference setup. These are untested
+operator cases; internal qualification is recorded separately in the
+[CPU setup plan](../plans/guided-cpu-conversation.md).
+It retains SETUP-131–135 for guided film sound, SETUP-126–130 for guided avatars
+and SETUP-121–125 for guided video.
 It retains SETUP-117–120 for guided
 music installation, first-track playback, Stop/Resume, native recovery and
 account privacy. Internal qualification is recorded in the

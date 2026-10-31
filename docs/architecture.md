@@ -1,3 +1,11 @@
+The [guided CPU conversation profile](plans/guided-cpu-conversation.md) reuses
+the same runtime preparation, verified model store and llama.cpp lifecycle.
+Explicit CPU metadata freezes its image, 4096-token Q8 context and native GGUF
+RAM budget. A durable reservation survives readiness; the owned container has
+no GPU request, disabled GPU visibility and equal RAM/swap limits. Native restart
+reattaches the same identity. Legacy GPU requests/catalog identities and existing
+shared presets are preserved; there is no implicit CPU fallback.
+
 The [managed expressive voice profile](plans/managed-fish-setup.md) extends
 the existing preparation lifecycle with one fixed Fish/Whisper recipe and two
 independent offline Python environments. Their protobuf requirements conflict;

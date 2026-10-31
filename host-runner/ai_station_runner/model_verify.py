@@ -28,6 +28,9 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
+    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
     permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
 
     @model_validator(mode="after")
@@ -107,7 +110,25 @@ def verify_model(body: VerifyModel) -> dict:
         return result
     from ai_station_runner.runtime_setup import image_observation
 
-    image_name, image_id = image_observation(app_owned=body.app_owned)
+    if body.runtime_profile:
+        from ai_station_runner import cpu_runtime_profile as cpu
+
+        if not matches or not body.check_context or not body.app_owned:
+            raise HTTPException(422, "CPU preparation requires the verified owned GGUF context")
+        try:
+            budget = cpu.memory_budget_mib(
+                body.size_bytes, cpu.DEFAULT_CONTEXT, result.get("context_profile")
+            )
+            image_name, image_id = image_observation(app_owned=True, runtime_profile=body.runtime_profile)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        result["cpu"] = {
+            "runtime_profile": cpu.PROFILE,
+            "ram_mib": budget,
+            "context_size": cpu.DEFAULT_CONTEXT,
+        }
+    else:
+        image_name, image_id = image_observation(app_owned=body.app_owned)
     present = bool(image_id) and bool(_IMAGE_ID.fullmatch(image_id or ""))
     result["image"] = {
         "checked": True,

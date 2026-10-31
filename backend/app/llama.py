@@ -1,15 +1,17 @@
 """Model selection and durable ownership of llama.cpp runtime lifecycle."""
 
 import json
+import math
 import re
 import tempfile
 import time
+from datetime import timedelta
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -43,6 +45,25 @@ class LoadModel(BaseModel):
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector_file_id: UUID | None = None
+    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    ram_mib: StrictInt | None = Field(default=None, ge=256, le=65536, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def cpu_profile(self):
+        if self.runtime_profile:
+            if (
+                self.gpus
+                or self.projector_file_id
+                or self.cache_type != "q8_0"
+                or self.context_size != 4096
+                or self.ram_mib is None
+            ):
+                raise ValueError("Managed CPU requires its fixed context/cache and RAM budget, without GPUs")
+        elif self.ram_mib is not None:
+            raise ValueError("A RAM budget requires the explicit CPU profile")
+        return self
 
 
 class EmptyBody(BaseModel):
@@ -293,6 +314,11 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
+    if body.runtime_profile and not model.relative_path:
+        raise HTTPException(422, "The managed CPU profile requires verified app-owned weights")
+    from app.cpu_models import fields as cpu_fields
+
+    cpu = cpu_fields(body.model_dump())
     requested_context = body.context_size
     projector = None
     if body.projector_file_id is not None:
@@ -330,6 +356,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
             "projector_file_id": str(body.projector_file_id) if body.projector_file_id else None,
+            **cpu,
         },
     )
     task = task or create_task(
@@ -347,7 +374,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         execution_target="host",
         permissions=["manage_models", "filesystem_read"],
         retry_class="inspect",
-        requested_resources={"gpus": body.gpus},
+        requested_resources={"gpus": body.gpus, **({"ram_mib": body.ram_mib} if cpu else {})},
         parameters={
             "instance_id": instance.id,
             **source_of(model),
@@ -356,6 +383,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
             "projector": projector,
+            **cpu,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -467,6 +495,7 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
         LoadModel(
             model_file_id=file_id,
             gpus=list(meta.get("gpus") or []),
+            **{key: meta[key] for key in ("runtime_profile", "ram_mib") if meta.get(key) is not None},
             context_size=int(meta.get("context_size") or 4096),
             cache_type=meta.get("cache_type") if meta.get("cache_type") in {"f16", "q8_0"} else "f16",
         ),
@@ -524,14 +553,38 @@ def reserve(session, run, indexes, *, hardware=None):
     requested = {f"gpu:{g}" for g in selected}
     if (active_locks(session) - own) & requested:
         return False
+    if run.parameters.get("runtime_profile"):
+        from app.config import get_settings
+        from app.resources import RESOURCE_WAIT_KEY, memory_observation, reserve_memory
+        from app.task_control import lock_task
+
+        free = ((hardware or {}).get("memory") or {}).get("available_mib")
+        if type(free) not in {int, float} or not math.isfinite(free):
+            free = None
+        needed = run.parameters["ram_mib"]
+        existing_ram = "ram:" + run.id in own
+        if run.metadata_json.get("dispatch_attempted") and not existing_ram:
+            raise ValueError("The dispatched CPU runtime lost its RAM reservation; inspect it")
+        if not existing_ram and not reserve_memory(session, run, free, needed):
+            wait = {"reason": "memory", **memory_observation(session, run, free, needed)}
+            run.metadata_json = {**run.metadata_json, "resource_wait": wait}
+            lock_task(session, run.task)
+            run.task.metadata_json = {
+                **run.task.metadata_json,
+                RESOURCE_WAIT_KEY: (
+                    utcnow() + timedelta(seconds=max(2, get_settings().heartbeat_seconds * 2))
+                ).isoformat(),
+            }
+            append_event(session, run.id, "resource.waiting", wait)
+            return False
     from app.llama_admission import memory_available
 
     if not run.metadata_json.get("dispatch_attempted") and not memory_available(session, run, hardware):
         return False
     for key in requested - own:
         session.add(ResourceLock(resource_key=key, run_id=run.id))
+    run.allocated_resources = {**run.allocated_resources, "gpus": selected}
     session.flush()
-    run.allocated_resources = {"gpus": selected}
     return True
 
 
@@ -581,6 +634,35 @@ class LlamaExecutor:
 
     def fit_context(self, session, run, instance, runner, hardware):
         require(run.effective_permissions, "filesystem_read")
+        if run.parameters.get("runtime_profile"):
+            report = runner.verify_model(
+                {
+                    "run_id": run.id,
+                    **verify_source(run.parameters),
+                    "check_context": True,
+                    "check_image": True,
+                    "runtime_profile": run.parameters["runtime_profile"],
+                    "permissions": run.effective_permissions,
+                }
+            )
+            expected = {
+                "runtime_profile": run.parameters["runtime_profile"],
+                "ram_mib": run.parameters["ram_mib"],
+                "context_size": 4096,
+            }
+            if (
+                not report.get("matches_observation")
+                or report.get("cpu") != expected
+                or not report.get("image", {}).get("present")
+            ):
+                instance.status = "failed"
+                run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+                mark_failed(
+                    session, run, "CpuProfileChanged", "The verified CPU source/runtime/budget changed"
+                )
+                return False
+            instance.metadata_json = {**instance.metadata_json, "context_profile": report["context_profile"]}
+            return
         try:
             report = runner.verify_model(
                 {
@@ -700,6 +782,8 @@ class LlamaExecutor:
                 "context_size",
                 "cache_type",
                 "projector",
+                "runtime_profile",
+                "ram_mib",
             )
             if key in run.parameters
         }
@@ -751,7 +835,11 @@ class LlamaExecutor:
                         )
                     return "done"
                 if info["status"] == "ready" and self.operation == "load" and not canceled:
-                    run.summary = f"{instance.name} ready on GPUs {run.parameters['gpus']}"
+                    run.summary = (
+                        f"{instance.name} ready on CPU"
+                        if run.parameters.get("runtime_profile")
+                        else f"{instance.name} ready on GPUs {run.parameters['gpus']}"
+                    )
                     payload = {
                         "instance_id": instance.id,
                         "gpus": run.parameters["gpus"],
@@ -999,8 +1087,15 @@ def prepare_consumer(session, run):
             load_run = enqueue_load(
                 LoadModel(
                     model_file_id=file_id,
+                    **{
+                        key: preset[key]
+                        for key in ("runtime_profile", "ram_mib")
+                        if preset.get(key) is not None
+                    },
                     gpus=preset["gpus"],
-                    context_size=CODING_CONTEXT_CEILING if coding else preset["context_size"],
+                    context_size=CODING_CONTEXT_CEILING
+                    if coding and not preset.get("runtime_profile")
+                    else preset["context_size"],
                     cache_type="q8_0" if coding else preset.get("cache_type", "f16"),
                 ),
                 session,

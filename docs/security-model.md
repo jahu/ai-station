@@ -1,3 +1,10 @@
+The explicit managed CPU conversation profile accepts only its pinned image and
+verified owned GGUF. Native dispatch rechecks actual cache geometry and the exact
+RAM budget; no GPU devices/visibility, bounded threads, zero GPU layers and equal
+memory/swap limits apply. Inspection rechecks memory/device policy before any
+owned signal. A lost acknowledgement retains the original RAM reservation and
+operation identity. This adds no shell, raw Docker endpoint or public listener.
+
 The desktop packaging candidate is a trusted local installation/supervision
 process. It never grants Docker access to an HTTP client or application agent.
 The package carries a pinned Python archive, hash-pinned dependencies and a

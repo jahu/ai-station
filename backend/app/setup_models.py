@@ -43,6 +43,9 @@ class Candidate(BaseModel):
     # Omit legacy defaults so existing durable download identities do not change.
     state_reserve_mib: int = Field(default=0, ge=0, le=4096, exclude_if=lambda v: v == 0)
     context_ceiling: int = Field(default=32768, ge=4096, le=131072, exclude_if=lambda v: v == 32768)
+    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
     description: str = Field(default="", max_length=240, exclude_if=lambda v: not v)
 
 
@@ -178,6 +181,22 @@ CANDIDATES = (
         9090591264,
         "9e7995899191c94875b3962443320452cd092608c06caae2b02e84a27bf2ae61",
         "Smaller download and more context headroom. Lower precision can reduce answer quality.",
+    ),
+)
+
+
+CPU_PROFILE = "llamacpp-cpu-linux-amd64-v1"
+CPU_CANDIDATE_ID = "huihui-qwen3-4b-2507-q4km-cpu"
+CANDIDATES = (
+    *CANDIDATES,
+    CANDIDATES[0].model_copy(
+        update={
+            "id": CPU_CANDIDATE_ID,
+            "name": "Huihui Qwen3 · 4B · CPU",
+            "runtime_profile": CPU_PROFILE,
+            "context_ceiling": 4096,
+            "description": "Runs on your CPU without NVIDIA. Uses system RAM and is slower than GPU inference.",
+        }
     ),
 )
 

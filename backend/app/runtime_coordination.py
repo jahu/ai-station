@@ -184,7 +184,14 @@ def consume_runtime_intent(session, instance):
         )
         or any(
             instance.metadata_json.get(key) != run.parameters.get(key)
-            for key in ("gpus", "context_size", "cache_type", "requested_context_size")
+            for key in (
+                "gpus",
+                "context_size",
+                "cache_type",
+                "requested_context_size",
+                "runtime_profile",
+                "ram_mib",
+            )
         )
     ):
         return False

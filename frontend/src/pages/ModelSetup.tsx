@@ -34,6 +34,7 @@ type Entry = {
   starter?: boolean;
   trained_context?: number;
   description?: string;
+  runtime_profile?: string;
   filename: string;
   file: { size_bytes: number; sha256: string };
   license: string;
@@ -49,6 +50,7 @@ type Entry = {
     reason: string;
     gpus: number[];
     context_size: number | null;
+    ram_mib?: number;
   };
 };
 type Catalog = {
@@ -280,6 +282,7 @@ export default function ModelSetup() {
   const current =
     entries.find((row) => row.id === selected) ??
     entries.find((row) => row.recommendation.fits) ??
+    entries.find((row) => row.starter !== false) ??
     entries[0];
   const existingPreparation = history.data?.find(
     (row) =>
@@ -371,7 +374,11 @@ export default function ModelSetup() {
         Start with a local conversation model, images, video, speech, music or
         memory. AI Station downloads, checks and prepares the files for you.
       </PageTitle>
-      <RuntimeSetupPanel onReadiness={setRuntimeReady} />
+      <RuntimeSetupPanel
+        key={current?.runtime_profile ?? "cuda"}
+        profile={current?.runtime_profile}
+        onReadiness={setRuntimeReady}
+      />
       <SpeechSetupPanel />
       <FishSetupPanel />
       <ImageSetupPanel />
@@ -505,11 +512,13 @@ export default function ModelSetup() {
                   <div>
                     <div className="row spread">
                       <strong>
-                        {entry.starter === false
-                          ? entry.name
-                          : entry.quantization === "Q4_K_M"
-                            ? "Balanced"
-                            : "Higher precision"}
+                        {entry.runtime_profile
+                          ? "CPU · small conversation model"
+                          : entry.starter === false
+                            ? entry.name
+                            : entry.quantization === "Q4_K_M"
+                              ? "Balanced"
+                              : "Higher precision"}
                       </strong>
                       {entry.recommendation.fits && (
                         <span className="setup-fit">
@@ -533,6 +542,12 @@ export default function ModelSetup() {
                     <p className="setup-small muted">
                       {entry.recommendation.reason}
                     </p>
+                    {entry.runtime_profile && entry.recommendation.ram_mib && (
+                      <p className="setup-small muted">
+                        {size(entry.recommendation.ram_mib * 1024 ** 2)} system
+                        RAM reserved while the model is loaded.
+                      </p>
+                    )}
                     {entry.model_file_id && (
                       <span className="chip">Files already installed</span>
                     )}
@@ -586,8 +601,11 @@ export default function ModelSetup() {
                     <p className="muted">
                       Suggested context:{" "}
                       {current.recommendation.context_size.toLocaleString()}{" "}
-                      tokens · GPU {current.recommendation.gpus.join(", ")}. The
-                      actual model is checked again before loading.
+                      tokens ·{" "}
+                      {current.runtime_profile
+                        ? "CPU"
+                        : `GPU ${current.recommendation.gpus.join(", ")}`}
+                      . The actual model is checked again before loading.
                     </p>
                   )}
                 </details>
