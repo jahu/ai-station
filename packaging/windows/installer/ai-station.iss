@@ -1,4 +1,4 @@
-; Publisher build input. Native Windows signing/installation qualification is required.
+; Inno Setup 7 publisher input. Native signing/installation qualification is required.
 #ifndef Payload
   #error Payload directory is required
 #endif
@@ -13,6 +13,9 @@ AppId={{556C5DB1-CA40-4920-A26F-6140E96D407C}
 AppName=AI Station
 AppVersion={#InstallerVersion}
 AppPublisher=AI Station contributors
+SetupArchitecture=x64
+ArchitecturesAllowed=x64os
+ArchitecturesInstallIn64BitMode=x64os
 DefaultDirName={localappdata}\Programs\AI Station
 PrivilegesRequired=lowest
 MinVersion=10.0.22000

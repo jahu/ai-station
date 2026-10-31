@@ -1,6 +1,6 @@
 # Native installation orchestration. Not an HTTP/tool/agent execution surface.
 Set-StrictMode -Version 2.0
-foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest','DesktopPort')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
+foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest','DesktopPort','DesktopProcess')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
 
 function Read-StationInstallRecord {
     param($Lease)
@@ -33,31 +33,18 @@ function Start-StationWslProcess {
     return $process
 }
 
-function Wait-StationWslProcess {
-    param($Process,[bool]$KeepOutput=$false)
-    # Start both drains before waiting; the native UI runs this installer off its event thread.
-    $output=$Process.StandardOutput.ReadToEndAsync();$errors=$Process.StandardError.ReadToEndAsync()
-    try {
-        $Process.WaitForExit()
-        $text=$output.GetAwaiter().GetResult();[void]$errors.GetAwaiter().GetResult()
-        if ($Process.ExitCode -ne 0) { throw 'The Windows preparation step did not finish. Saved state and guest data were retained; check preparation before retrying.' }
-        if ($KeepOutput) {
-            if ([Text.Encoding]::UTF8.GetByteCount($text) -gt 16384) { throw 'The fixed WSL response exceeds its expected size.' }
-            return $text
-        }
-    } finally { $Process.Dispose() }
-}
-
 function Confirm-StationGuest {
-    param($Lease,$Record,[string]$Executable)
+    param($Lease,$Record,[string]$Executable,
+          [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
+    $CancellationToken.ThrowIfCancellationRequested()
     Assert-StationNoReparsePath $Record.State.Directory
     $inventory=@(Get-StationWslRegistrations)
     $plan=Get-StationImportPlan $Record.State $Lease.Root ([IO.Path]::Combine($Lease.Root,'accepted-rootfs.tar.gz')) -Inventory $inventory
     if ($plan.Kind -cne 'VerifyGuest') { throw 'The private guest is not registered yet. Existing setup and files were preserved.' }
-    $text=Wait-StationWslProcess (Start-StationWslProcess $Executable $plan.Arguments $Lease.Root) -KeepOutput $true
+    $text=Wait-StationWslProcess (Start-StationWslProcess $Executable $plan.Arguments $Lease.Root) -KeepOutput $true -CancellationToken $CancellationToken
     $guest=$text | ConvertFrom-Json -ErrorAction Stop
     Assert-StationImportedGuest $Record.Manifest $guest
-    $description=Wait-StationWslProcess (Start-StationWslProcess $Executable @('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control','describe') $Lease.Root) -KeepOutput $true
+    $description=Wait-StationWslProcess (Start-StationWslProcess $Executable @('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control','describe') $Lease.Root) -KeepOutput $true -CancellationToken $CancellationToken
     $capabilities=$description | ConvertFrom-Json -ErrorAction Stop
     if ($capabilities.desktop_protocol -ne 2) { throw 'This guest does not support browser identity and Windows port selection.' }
     $after=@(Get-StationWslRegistrations)
@@ -65,6 +52,7 @@ function Confirm-StationGuest {
     $before=@($inventory | Where-Object { $_.DistributionName -ieq $Record.State.Distribution })
     $current=@($after | Where-Object { $_.DistributionName -ieq $Record.State.Distribution })
     if ($before.Count -ne 1 -or $current.Count -ne 1 -or $before[0].Id -ine $current[0].Id) { throw 'The guest registration changed during verification. Nothing was adopted.' }
+    $CancellationToken.ThrowIfCancellationRequested()
     if ($Record.State.RegistrationId -ine $current[0].Id -or $Record.State.Phase -cne 'ready') {
         $Record.State.RegistrationId=$current[0].Id; $Record.State.Phase='ready'
         Write-StationStateFile $Lease $Record
@@ -72,11 +60,16 @@ function Confirm-StationGuest {
 }
 
 function Invoke-StationSetup {
-    param([Parameter(Mandatory=$true)][string]$PackageFolder)
+    param([Parameter(Mandatory=$true)][string]$PackageFolder,
+          [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
+    $CancellationToken.ThrowIfCancellationRequested()
     Assert-StationWindowsHost
     $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
-    foreach ($probe in @('--version','--status')) { Wait-StationWslProcess (Start-StationWslProcess $executable @($probe) ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) }
+    foreach ($probe in @('--version','--status')) {
+        $CancellationToken.ThrowIfCancellationRequested()
+        Wait-StationWslProcess (Start-StationWslProcess $executable @($probe) ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -CancellationToken $CancellationToken
+    }
     Assert-StationNoReparsePath $PackageFolder
     $manifestPath=[IO.Path]::Combine($PackageFolder,'windows-guest-manifest.json')
     Assert-StationNoReparsePath $manifestPath
@@ -86,21 +79,30 @@ function Invoke-StationSetup {
     $lease=New-StationPrivateStore
     $archive=$null
     try {
+        $CancellationToken.ThrowIfCancellationRequested()
         $record=Read-StationInstallRecord $lease
         if ($null -eq $record) {
             $record=[pscustomobject]@{RecordSchema=1;State=(New-StationInstallState $lease.Root $manifest.package_sha256);Manifest=$manifest}
         } elseif ($record.Manifest.rootfs_sha256 -cne $manifest.rootfs_sha256) {
             throw 'A previous application version and its data are retained. Use the reviewed update flow rather than importing over it.'
         }
+        Assert-StationNoReparsePath $record.State.Directory
         $plan=Get-StationImportPlan $record.State $lease.Root ([IO.Path]::Combine($PackageFolder,'ai-station-wsl-rootfs.tar.gz')) -Inventory @(Get-StationWslRegistrations) -ExistingDisk ([IO.Directory]::Exists($record.State.Directory))
         if ($plan.Kind -in @('InspectIncompleteDisk','InspectImport')) { throw 'An interrupted import needs inspection. Its files were preserved and no second import was started.' }
         if ($plan.Kind -ceq 'Import') {
             $archive=Open-StationVerifiedArchive $plan.Arguments[3] $record.Manifest.rootfs_sha256 $record.Manifest.rootfs_bytes
+            $CancellationToken.ThrowIfCancellationRequested()
             Write-StationStateFile $lease $record
             $record.State.Phase='importing';Write-StationStateFile $lease $record
-            Wait-StationWslProcess (Start-StationWslProcess $executable $plan.Arguments $lease.Root)
+            if ($CancellationToken.IsCancellationRequested) {
+                # No import client has been launched: this known boundary is
+                # resumable, unlike cancellation after WSL accepted the request.
+                $record.State.Phase='reserved';Write-StationStateFile $lease $record
+                $CancellationToken.ThrowIfCancellationRequested()
+            }
+            Wait-StationWslProcess (Start-StationWslProcess $executable $plan.Arguments $lease.Root) -CancellationToken $CancellationToken
         }
-        Confirm-StationGuest $lease $record $executable
+        Confirm-StationGuest $lease $record $executable -CancellationToken $CancellationToken
         return [pscustomobject]@{Status='ready';Distribution=$record.State.Distribution;Root=$lease.Root}
     } finally { if ($null -ne $archive) { $archive.Stream.Dispose() }; $lease.Stream.Dispose() }
 }

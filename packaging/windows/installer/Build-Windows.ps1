@@ -23,7 +23,7 @@ $archive=Open-StationVerifiedArchive (Join-Path $GuestPackage 'ai-station-wsl-ro
 $stage=$Output+'.building-'+[guid]::NewGuid().ToString('N')
 try {
  [void][IO.Directory]::CreateDirectory($stage)
- $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','Setup.psm1','WindowsSetup.ps1','Uninstall-Check.ps1')
+ $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','Uninstall-Check.ps1')
  foreach ($name in $files) {
   # A BOM keeps built-in Windows PowerShell 5.1 source decoding unambiguous.
   $text=[IO.File]::ReadAllText((Join-Path $source $name),[Text.UTF8Encoding]::new($false,$true))

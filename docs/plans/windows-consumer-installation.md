@@ -184,3 +184,29 @@ staging, snapshots the validated guest manifest, and hashes the staged host
 payload. Keep only the current private guest/archive and compact evidence after
 audit; remove superseded build trees/images without touching production or its
 models. The full NR-01–NR-14 goal, including macOS, remains open.
+
+### Native qualification in progress
+
+Use a disposable Microsoft Enterprise evaluation VM with a verified publisher
+ISO, UEFI/vTPM and an ordinary limited user token. Keep host drivers, Docker
+services, filesystems and production unchanged. Private test transport is bound
+only to loopback with a random capability, and VM operations check the exact
+recorded process/start identity. Delete its large disk/media after qualification
+and retain compact provenance, screenshots and results. This is evaluation
+infrastructure, not an application feature or a public Windows support claim.
+
+The publisher requires Inno Setup 7. Explicit x64 setup/install mode prevents
+uninstall checks from selecting WOW64 PowerShell while the native runtime
+requires x64 Windows. The build must reject ARM64 until separately qualified.
+See the publisher's [architecture documentation](https://jrsoftware.org/ishelp/topic_setup_setuparchitecture.htm).
+
+Preparation has a Cancel setup action using an in-process cancellation token.
+The UI remains responsive while stdout/stderr drain concurrently. Cancellation
+stops only the exact launched WSL client process handle, never a distribution or
+another process. A request canceled before launch returns to its reserved state;
+after an import has been dispatched, its receipt remains for reconciliation
+because WSL's service may finish independently. A canceled or failed operation
+never triggers application startup. Stop and exit can cancel preparation and
+wait for that safe boundary. Seven real portable process/runspace cases prove
+output/error bounds, cancellation delivery, own-client exit and preservation of
+an unrelated process. Genuine WSL cancellation/recovery remains a native gate.

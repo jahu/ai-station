@@ -72,6 +72,7 @@ $tray=[Windows.Forms.NotifyIcon]::new();$tray.Icon=[Drawing.SystemIcons]::Applic
 $menu=[Windows.Forms.ContextMenuStrip]::new();$showItem=$menu.Items.Add('Open AI Station controls');$stopExit=$menu.Items.Add('Stop AI Station and exit');$tray.ContextMenuStrip=$menu
 
 function Sync-Buttons {
+ $preparing=$null -ne $script:worker -and $script:worker.Action -eq 'prepare'
  $busy=$null -ne $script:worker -or ($null -ne $script:station -and $null -eq $script:ready) -or $script:stopPending
  $progress.Visible=$busy
  $prepare.Enabled=-not $busy -and -not $script:running
@@ -81,7 +82,8 @@ function Sync-Buttons {
  $prepare.Text=$(if ($script:prepared) {'Check setup'} else {'Prepare AI Station'})
  $form.AcceptButton=$(if ($open.Enabled) {$open} elseif ($start.Enabled) {$start} else {$prepare})
  $open.Enabled=-not $busy -and $script:running
- $stop.Enabled=$null -eq $script:worker -and $script:running -and -not $script:stopPending
+ $stop.Text=$(if ($preparing) {'Cancel setup'} else {'Stop'})
+ $stop.Enabled=($preparing -and -not $script:worker.Cancellation.IsCancellationRequested) -or ($null -eq $script:worker -and $script:running -and -not $script:stopPending)
  $support.Enabled=-not $busy -and -not $script:running
 }
 function Show-Failure([string]$Message) {
@@ -92,17 +94,18 @@ function Begin-StationAction([string]$Action) {
  if ($null -ne $script:worker) { return }
  $details.Visible=$false
  $engine=[Management.Automation.PowerShell]::Create()
+ $cancellation=[Threading.CancellationTokenSource]::new()
  [void]$engine.AddCommand('Microsoft.PowerShell.Core\Import-Module').AddParameter('Name',(Join-Path $PSScriptRoot 'Setup.psm1'))
  [void]$engine.AddStatement()
  if ($Action -eq 'prepare') {
-  [void]$engine.AddCommand('Invoke-StationSetup').AddParameter('PackageFolder',$PackageFolder)
+  [void]$engine.AddCommand('Invoke-StationSetup').AddParameter('PackageFolder',$PackageFolder).AddParameter('CancellationToken',$cancellation.Token)
   $status.Text='Preparing your private workspace';$description.Text='Checking the package and preparing the local environment. You can leave this window in the background.'
  } else {
   [void]$engine.AddCommand('Invoke-StationDesktop').AddParameter('Action',$Action)
   $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} elseif ($Action -eq 'start') {'Starting AI Station'} else {'Checking your station'})
   $description.Text='Your saved conversations, models and creations stay in place.'
  }
- $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action}
+ $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation}
  Sync-Buttons
 }
 function Open-ReadyTarget($Ready) {
@@ -110,12 +113,17 @@ function Open-ReadyTarget($Ready) {
  Open-StationBrowser $Ready
 }
 $prepare.Add_Click({ Begin-StationAction 'prepare' });$start.Add_Click({ if ($script:attention -and $null -ne $script:station -and $null -eq $script:ready) { Begin-StationAction 'status' } else { Begin-StationAction 'start' } })
-$open.Add_Click({ Begin-StationAction 'open' });$stop.Add_Click({ Begin-StationAction 'stop' })
+$open.Add_Click({ Begin-StationAction 'open' });$stop.Add_Click({
+ if ($null -ne $script:worker -and $script:worker.Action -eq 'prepare') {
+  $script:worker.Cancellation.Cancel();$status.Text='Canceling setup';$description.Text='Finishing the current safe step. Saved work stays in place.';Sync-Buttons
+ } else { Begin-StationAction 'stop' }
+})
 $background.Add_LinkClicked({ $form.Hide() })
 $details.Add_LinkClicked({ [void][Windows.Forms.MessageBox]::Show($form,$script:lastError,'AI Station details','OK','Information') })
 $showItem.Add_Click({ $form.Show();$form.Activate() });$tray.Add_DoubleClick({ $form.Show();$form.Activate() })
 $stopExit.Add_Click({
  $script:exitAfterStop=$true
+ if ($null -ne $script:worker -and $script:worker.Action -eq 'prepare') { $script:worker.Cancellation.Cancel() }
  if ($null -eq $script:worker) {
   if ($script:running) { Begin-StationAction 'stop' } elseif ($null -ne $script:station) { $status.Text='Finishing startup before stopping' } else { $script:allowExit=$true;$form.Close() }
  }
@@ -140,6 +148,7 @@ $timer.Add_Tick({
    $job=$script:worker;$script:worker=$null
    try {
     $value=Receive-StationActionResult $job.Engine $job.Handle
+    if ($job.Action -eq 'prepare') { $job.Cancellation.Token.ThrowIfCancellationRequested() }
     switch ($job.Action) {
      'prepare' { $script:prepared=$true;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
      'start' {
@@ -165,7 +174,14 @@ $timer.Add_Tick({
       } else { $status.Text=$(if ($script:stopPending) {'Stopping AI Station'} else {'Running locally'}) }
      }
     }
-   } catch { Show-Failure $_.Exception.Message } finally { $job.Engine.Dispose() }
+   } catch {
+    $cause=$_.Exception;$canceled=$false
+    while ($null -ne $cause) { if ($cause -is [OperationCanceledException]) { $canceled=$true;break };$cause=$cause.InnerException }
+    if ($job.Action -eq 'prepare' -and $job.Cancellation.IsCancellationRequested -and $canceled) {
+     $script:prepared=$false;$status.Text='Setup canceled';$description.Text='Saved files were preserved. Choose Prepare to inspect or resume your private workspace.'
+     if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }
+    } else { Show-Failure $_.Exception.Message }
+   } finally { $job.Engine.Dispose();$job.Cancellation.Dispose() }
    Sync-Buttons
   }
   if ($null -ne $script:reader -and $script:reader.IsCompleted) {
