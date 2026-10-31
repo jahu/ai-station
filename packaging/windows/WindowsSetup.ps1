@@ -54,6 +54,7 @@ $progress=[Windows.Forms.ProgressBar]::new();$progress.Style='Marquee';$progress
 $progress.SetBounds(32,257,550,5);$form.Controls.Add($progress)
 function Button([string]$Text,[int]$X,[int]$Width) {
  $button=[Windows.Forms.Button]::new();$button.Text=$Text;$button.SetBounds($X,284,$Width,42)
+ $button.AccessibleRole=[Windows.Forms.AccessibleRole]::PushButton;$button.AccessibleName=$Text
  $button.FlatStyle='Flat';$button.FlatAppearance.BorderColor=[Drawing.ColorTranslator]::FromHtml('#3B5142')
  $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$button.ForeColor=$form.ForeColor;$form.Controls.Add($button);return $button
 }
@@ -88,6 +89,7 @@ function Sync-Buttons {
  $start.Visible=$known;$open.Visible=$known;$stop.Visible=$known -or $preparing
  $prepare.Width=$(if ($known) {190} elseif ($preparing) {426} else {550})
  foreach($button in @($prepare,$start,$open,$stop)) {
+  $button.AccessibleName=$button.Text
   $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$button.ForeColor=$form.ForeColor
  }
  $primary=$(if ($open.Enabled) {$open} elseif ($start.Enabled) {$start} else {$prepare})

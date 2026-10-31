@@ -31,7 +31,8 @@ RestartApplications=no
 UninstallDisplayName=AI Station
 UninstallDisplayIcon={app}\versions\{#VersionId}\AIStation.exe
 [Files]
-Source: "{#Payload}\*"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Payload}\*"; Excludes: "ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Payload}\ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion nocompression
 [Icons]
 Name: "{userprograms}\AI Station"; Filename: "{app}\versions\{#VersionId}\AIStation.exe"
 [Run]
