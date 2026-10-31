@@ -60,10 +60,10 @@ offline assembly, fresh-account Stop/Resume, complete two-cue sound/preview,
 CPU editor/export, native recovery/Stop and account privacy passed. Final
 packaging and production desktop/phone checks passed with existing data and
 private access preserved. [Guided expressive voice](managed-fish-setup.md) is
-now has a fresh-account candidate with independent Fish/ASR environments,
-canonical phone references, complete Library output, native recovery/Stop and
-account privacy. Final package verification, review and deployment are tracked
-in that plan. Consumer installation on all three operating systems, broader
+is reviewed, merged and deployed (PR #546), with independent Fish/ASR
+environments, canonical phone references, complete Library output, native
+recovery/Stop, account privacy and final packaged/default-policy checks.
+Production data, configured engines, memory and private access were preserved. Consumer installation on all three operating systems, broader
 model selection and NR-06/07 quality acceptance remain in scope.
 
 ## Delivery order

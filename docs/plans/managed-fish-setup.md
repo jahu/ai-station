@@ -3,8 +3,8 @@
 Status: the fixed Linux two-GPU candidate passed fresh-account installation,
 Stop/Resume, compressed-reference transcription, complete generation and
 Library playback, native restart/Task Stop and second-account privacy. Final
-packaged/default-policy verification passed; reviewed deployment remains a
-separate rollout step.
+packaged/default-policy verification passed. PR #546 was reviewed, squash-merged
+into develop and deployed, preserving the existing configured engines.
 Preserve Chatterbox defaults and every existing runtime, voice reference and result.
 
 ## User journey
@@ -189,3 +189,10 @@ restored complete audio/history, desktop/phone layout and fake API/separate-work
 SSE passed after an idle private upgrade. The Docker image exactly matches 605
 backend/frontend files, and the native wheel exactly matches all 195 approved
 Python/recipe/shell assets. No completed GPU inference was repeated for packaging.
+
+Production rollout preserved all 38 database tables, account credentials, managed
+model observations, configured media engines, memory configuration/index and the
+private access node. Final production desktop/phone controls and LAN health
+passed without generating new content or capturing private Library screenshots.
+The temporary verification device was revoked; only the owned QA services were
+removed, with all model inputs, synthetic results and evidence retained.

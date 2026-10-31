@@ -1,5 +1,5 @@
 {
-  "version": 30,
+  "version": 31,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -4806,6 +4806,56 @@
       ],
       "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
       "minutes": 20
+    },
+    {
+      "id": "SETUP-141",
+      "area": "Instalacja modeli",
+      "title": "Model 27B: precyzja i długi kontekst",
+      "priority": "P1",
+      "prerequisites": [
+        "Wspierana stacja NVIDIA; administrator; zgodne GPU i wolna pamięć; przygotowany silnik llama.cpp."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models → Explore larger models i wyszukaj 27B.",
+        "Porównaj Q4_K_M i IQ2_XS: rozmiary, źródła, licencję, wymagane GPU i proponowany kontekst.",
+        "Przygotuj wybrany wariant, otwórz Chat i wyślij neutralne pytanie.",
+        "Sprawdź rzeczywiście załadowany kontekst i zatrzymaj wyłącznie ten silnik."
+      ],
+      "expected": [
+        "Oba warianty mają oddzielne źródła/hash i widoczną informację o kompromisie precyzji IQ2.",
+        "Dobór pamięci uwzględnia KV i stan hybrydowy; kontekst nie jest obietnicą pełnej długości modelu na każdej karcie.",
+        "Na kwalifikowanej parze 12-GiB profil IQ2 dobiera 131072, a Q4 92160 tokenów; na innym sprzęcie wartości wynikają z zasobów.",
+        "Chat odpowiada z wybranym modelem, historia pozostaje prywatna, Stop zwalnia jego zasoby."
+      ],
+      "resources": "GPU · lokalna inferencja; duże wagi, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-142",
+      "area": "Instalacja modeli",
+      "title": "Wznowienie starszego pobrania po poszerzeniu katalogu",
+      "priority": "P1",
+      "prerequisites": [
+        "Zachowane zatrzymane pobranie jednego ze wcześniejszych profili 4B/8B/14B; aktualizacja zachowująca dane."
+      ],
+      "steps": [
+        "Otwórz zapisane przygotowanie wcześniejszego modelu po aktualizacji.",
+        "Porównaj wybrany model, kwantyzację i zapisane źródło.",
+        "Wznów to samo zadanie; sprawdź wynik i poprzednią historię."
+      ],
+      "expected": [
+        "Nowe pola profili 27B nie zmieniają tożsamości wcześniejszych sześciu manifestów.",
+        "Resume zachowuje to samo zadanie i wybrane wagi; nie przełącza modelu ani źródła na nową propozycję.",
+        "Poprzednie dane, modele i historia pozostają dostępne."
+      ],
+      "resources": "CPU/sieć · pobranie wag tylko po świadomym wznowieniu",
+      "minutes": 5,
+      "requirements": [
+        "NR-14"
+      ]
     }
   ]
 }

@@ -437,3 +437,70 @@ install/configure or inspect another user's Runs. Canceled preparation may be
 retried using verified complete files; do not label the existing downloader as
 byte-range resumable. CPU inference, fresh-account first setup, scoped activity
 and compiled desktop/mobile require qualification before rollout.
+
+## Long-context 27B catalog increment (in progress)
+
+Add two explicit advanced RVN 27B choices, Q4_K_M for higher precision and
+IQ2_XS for lower weight memory use. They reuse the same reviewed download Task,
+immutable object store, native GGUF inspection, shared ModelDefinition and
+ordinary llama.cpp load/Chat path. No new runtime, shell endpoint or migration.
+The publisher calls this community model Qwen3.8 RVN; its actual GGUF architecture
+is `qwen35`, not the fully attentive `qwen3` geometry of the existing profiles.
+
+The pinned publisher tree is
+[`ab8d7bd`](https://huggingface.co/0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF/tree/ab8d7bd81d03117501e4da60cccdff4c80f0eea0).
+Both complete read-only local files match that tree's LFS SHA-256 and exact size,
+with unchanged mtime/size before and after inspection. The pinned README Git blob
+and Apache-2.0 metadata were checked. The declared
+[base config](https://huggingface.co/Qwen/Qwen3.8-27B/blob/1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0/config.json)
+and actual GGUF agree on 64 blocks, a full-attention interval of four, four KV
+heads, 256-dimensional K/V and 262,144 trained context. The native inspected
+profile has 16 attention layers, 34,816 Q8 KV bytes/token and a separate 512-MiB
+recurrent-state reserve. Model claims about refusal rates are not product claims.
+
+The estimator must include that state reserve both before minimum-cache admission
+and when sizing the context. For these long-context profiles, consider additional
+GPUs until the requested ceiling is reached, or retain the largest fitting
+context. Fitting weights on one card does not establish a useful long context.
+On two observed 12-GiB devices and 32-GiB RAM, current conservative estimates are
+92,160 tokens for Q4 and 131,072 for IQ2_XS. These are admission estimates, not
+new actual load/long-input acceptance results. IQ2 trades precision for headroom;
+explain that beside the choice. A one-card installation can receive a shorter
+context rather than an unsupported 100k promise.
+
+Freeze the new fields with the selected download. Omit their legacy default
+values from serialization so the original six manifest identities and saved
+Stop/Resume receipts remain unchanged. Native publication must compare the
+recurrent-state reserve as well as architecture, attention and context.
+
+Qualification: preserve all six prior identities; temporary fake hybrid GGUF
+through actual typed inspection and worker registration; reject changed state
+before publication; check single/pair/insufficient-memory and context sizing;
+compiled desktop/mobile selection and private setup/history; exact-source actual
+managed load/answer/Stop on a fresh private instance. Reuse verified existing
+weights instead of downloading a second copy merely for evidence. The existing
+2026-10-13 long-context experiment remains historical evidence; it does not
+automatically qualify the new guided first-install flow. No production change
+or new GPU inference is claimed for this increment yet.
+
+### Measured 27B candidate qualification
+
+The actual compiled private account selected both profiles on desktop and 390-px
+phone layouts, adopted the verified cached full weights through ordinary workers
+and native GGUF inspection, and opened Chat with the chosen model. Each model
+loaded on the two actual GPUs at its selected Q8-cache size: 131,072 for IQ2_XS
+and 92,160 for Q4_K_M. Each returned `MODEL_OK` through an ordinary local Chat
+Run and then stopped through its normal owned lifecycle. Both runtime instances
+are stopped and all private-station reservations are released. This is real
+load/short-reply evidence at those cache sizes, not a new 110k-input benchmark
+or proof of answer quality for complex tasks.
+
+A second actual member sees the shared prepared choices but cannot install or
+read the owner's preparation receipts/JSON artifacts, Runs or conversations.
+The full affected nine backend families pass 173 cases; final registration
+family assertions pass 21 cases. Eight setup UI tests, lint/types/format/build
+and a Docker image build pass. QA catalog v31 adds SETUP-141–142 without
+pre-filling operator results. Final image/source checks and compiled desktop/mobile catalog plus retained
+Chat replies passed after an idle private image upgrade. PR review and preserving
+production rollout remain separate gates for this increment.
+Private evidence: `data/acceptance/guided-large-llm-models-20261031/`.

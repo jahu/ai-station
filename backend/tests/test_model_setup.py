@@ -21,8 +21,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 
-def gguf():
-    values = {
+def gguf(values=None):
+    values = values or {
         "general.architecture": "qwen3",
         "qwen3.block_count": 36,
         "qwen3.context_length": 262144,
@@ -45,12 +45,28 @@ def gguf():
 
 
 @pytest.fixture
-def setup_bridge(monkeypatch):
+def setup_bridge(monkeypatch, request):
     from app import model_download_job
     from app.model_download_files import FileSpec
 
-    content = gguf()
-    item = CANDIDATES[0].model_copy(
+    hybrid = getattr(request, "param", "qwen3") == "qwen35"
+    content = gguf(
+        {
+            "general.architecture": "qwen35",
+            "qwen35.block_count": 64,
+            "qwen35.full_attention_interval": 4,
+            "qwen35.context_length": 262144,
+            "qwen35.embedding_length": 5120,
+            "qwen35.attention.head_count": 24,
+            "qwen35.attention.head_count_kv": 4,
+            "qwen35.attention.key_length": 256,
+            "qwen35.attention.value_length": 256,
+        }
+        if hybrid
+        else None
+    )
+    selected = next(e for e in CANDIDATES if e.id == "rvn-qwen38-27b-q4km") if hybrid else CANDIDATES[0]
+    item = selected.model_copy(
         update={
             "file": FileSpec(
                 size_bytes=len(content),
@@ -114,6 +130,7 @@ def work():
         return tick(db, "model-setup-test")
 
 
+@pytest.mark.parametrize("setup_bridge", ["qwen3", "qwen35"], indirect=True)
 def test_download_is_durable_idempotent_and_registers_relative_model_without_copying_weights(setup_bridge):
     with TestClient(app) as api:
         item = setup_bridge["entry"]
@@ -134,8 +151,10 @@ def test_download_is_durable_idempotent_and_registers_relative_model_without_cop
             model = db.get(ModelFile, result["model_file_id"])
             assert model.host_path is None and model.relative_path == "models/store/" + item.file.sha256
             assert model.sha256 == item.file.sha256
+            assert model.family == item.architecture
             definition = db.scalar(select(ModelDefinition).where(ModelDefinition.file_id == model.id))
             assert definition.status == "registered" and definition.metadata_json["gpus"] == [7]
+            assert definition.family == item.architecture
             outputs = list(db.scalars(select(Artifact).where(Artifact.run_id == result["run"]["id"])))
             assert len(outputs) == 1 and outputs[0].artifact_type == "json" and outputs[0].size_bytes < 10000
         assert api.get("/api/setup/downloads").json()[0]["id"] == result["id"]
@@ -382,12 +401,15 @@ def test_catalog_exposes_distinct_larger_quantizations_without_network_or_new_ru
         report = api.get("/api/setup/catalog")
         assert report.status_code == 200
         entries = report.json()["entries"]
-        assert len(entries) == len(CANDIDATES) == 6
+        assert len(entries) == len(CANDIDATES) == 8
         assert {row["id"] for row in entries if row["starter"]} == STARTER_CANDIDATE_IDS
         for row in entries:
             if row["starter"]:
                 continue
-            assert "mlabonne" in row["name"] and row["trained_context"] == 40960
+            if row["id"].startswith("rvn-"):
+                assert "27B" in row["name"] and row["trained_context"] == 262144
+            else:
+                assert "mlabonne" in row["name"] and row["trained_context"] == 40960
             assert row["manifest_sha256"] == model_setup.fingerprint(
                 next(item for item in CANDIDATES if item.id == row["id"]).model_dump(mode="json")
             )
@@ -395,3 +417,59 @@ def test_catalog_exposes_distinct_larger_quantizations_without_network_or_new_ru
         assert api.get("/api/setup/downloads").json() == []
         with control_session_factory()() as db:
             assert list(db.scalars(select(Run))) == []
+
+
+def test_long_context_hybrid_prefers_a_gpu_pair_and_accounts_for_recurrent_state():
+    from app.setup_models import candidate
+
+    entry = candidate("rvn-qwen38-27b-iq2xs")
+    one = {"memory": {"total_mib": 32768}, "gpus": [{"index": 7, "memory_total_mib": 12288}]}
+    short = model_setup.recommendation(entry, one)
+    assert short["fits"] and short["gpus"] == [7] and 4096 <= short["context_size"] < 32768
+    two = {**one, "gpus": [*one["gpus"], {"index": 19, "memory_total_mib": 12288}]}
+    long = model_setup.recommendation(entry, two)
+    assert long["fits"] and long["gpus"] == [7, 19] and long["context_size"] == 131072
+    quality = model_setup.recommendation(candidate("rvn-qwen38-27b-q4km"), two)
+    assert quality["fits"] and 32768 < quality["context_size"] < 100000
+    without_state = model_setup.recommendation(
+        candidate("rvn-qwen38-27b-q4km").model_copy(update={"state_reserve_mib": 0}), two
+    )
+    assert quality["context_size"] < without_state["context_size"]
+
+
+def test_new_profile_fields_preserve_all_issued_legacy_manifest_identities():
+    from app.setup_models import candidate
+
+    identities = {
+        "huihui-qwen3-4b-2507-q4km": "7a2898f9dc021d1954ecba5991faee59638eaa179e103ff3578af97b3f4a8ddc",
+        "huihui-qwen3-4b-2507-q80": "7a85fc6d495c5e67d791929be160862a00395f440d2b5ac6215b3ac941a48e57",
+        "mlabonne-qwen3-8b-q4km": "e00998208007934af98f9682f3592116e6386a5bb3684501737580000497bb7c",
+        "mlabonne-qwen3-8b-q80": "4dd468316e6a23ae5ecf48bcf359aa96a1feb9f268bd600012d3201807de7b63",
+        "mlabonne-qwen3-14b-q4km": "25723823fffa165905b85f9f294d7a467b16a1e024387e62e1f2084730a762c9",
+        "mlabonne-qwen3-14b-q80": "059f900e4dfcadc8b0c51b44e65559e5c00915ebd5bd7bc50894e3acbb24dbb6",
+    }
+    assert {
+        identity: model_setup.fingerprint(candidate(identity).model_dump(mode="json"))
+        for identity in identities
+    } == identities
+
+
+@pytest.mark.parametrize("setup_bridge", ["qwen35"], indirect=True)
+def test_wrong_recurrent_state_budget_is_rejected_before_model_registration(setup_bridge, monkeypatch):
+    original = RunnerClient.verify_model
+
+    def changed_state(self, payload):
+        report = original(self, payload)
+        return {**report, "context_profile": {**report["context_profile"], "state_reserve_mib": 0}}
+
+    monkeypatch.setattr(RunnerClient, "verify_model", changed_state)
+    with TestClient(app) as api:
+        created = api.post("/api/setup/downloads", json=request(setup_bridge["entry"]))
+        assert created.status_code == 202
+        work()
+        result = api.get("/api/setup/downloads/" + created.json()["id"]).json()
+        assert result["run"]["status"] == "failed"
+        assert "native source/architecture inspection" in result["run"]["error_message"]
+        with control_session_factory()() as db:
+            assert list(db.scalars(select(ModelDefinition))) == []
+            assert list(db.scalars(select(ModelFile))) == []
