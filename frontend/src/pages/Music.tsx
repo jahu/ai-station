@@ -5,7 +5,7 @@ import {
   creativeRun,
 } from "../components/creative/creative-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Music2, Settings2, Sparkles } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
@@ -164,6 +164,16 @@ function MusicForm({ initialRun }: { initialRun?: Run }) {
         From a quiet piano theme to a full song. Describe the mood and
         instruments, or bring your own lyrics.
       </PageTitle>
+      {profile.data?.available === false && (
+        <div className="notice" role="status">
+          <strong>Set up local music to create your first track.</strong>
+          <p>{profile.data.reason}</p>
+          <Button asChild variant="secondary">
+            <Link to="/setup/models?capability=music">Set up music</Link>
+          </Button>
+        </div>
+      )}
+
       <div className="media-workspace">
         <form
           className="panel media-composer"

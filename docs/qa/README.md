@@ -1,6 +1,10 @@
 # Operator QA catalog and workbook
 
-The developing v24 catalog contains 185 cases and adds SETUP-115–116 for guided CPU memory setup,
+The developing v25 catalog contains 189 cases and adds SETUP-117–120 for guided
+music installation, first-track playback, Stop/Resume, native recovery and
+account privacy. Internal qualification is recorded in the
+[music setup plan](../plans/managed-music-setup.md); operator answers remain untested.
+It retains SETUP-115–116 for guided CPU memory setup,
 semantic first results, Stop/retry, private activity and preserved endpoints.
 It also retains SETUP-110–114 for guided image installation,
 Stop/Resume, all four image operations, large-result reuse, native restart/Stop,

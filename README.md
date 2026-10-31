@@ -205,6 +205,13 @@ your GPUs stay free and memory content remains private. Existing embedding
 endpoints remain selected unless you explicitly replace them.
 [Memory setup](docs/plans/memory-embeddings-readiness.md).
 
+**Set up music** prepares ACE-Step 1.5 Turbo on supported Linux NVIDIA
+workstations with at least 12 GiB VRAM and 24 GiB system RAM. Review sources and
+component licenses, install with saved progress and Stop/Resume, then create an
+instrumental or use your own lyrics in Music. This profile uses CPU offload;
+existing configured ACE-Step environments keep priority.
+[Music setup and measured qualification](docs/plans/managed-music-setup.md).
+
 
 
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.

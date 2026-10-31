@@ -150,6 +150,7 @@ def _execute_claimed(session, run, worker_id, executors):
             "runtime_setup",
             "speech_setup",
             "image_setup",
+            "music_setup",
             "cursor_proposal",
             "codex_proposal",
             "github_publication",

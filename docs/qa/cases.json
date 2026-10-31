@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -22,7 +22,8 @@
     "docs/plans/guided-model-installation.md",
     "docs/plans/desktop-installation.md",
     "docs/plans/managed-speech-setup.md",
-    "docs/plans/managed-image-setup.md"
+    "docs/plans/managed-image-setup.md",
+    "docs/plans/managed-music-setup.md"
   ],
   "cases": [
     {
@@ -4231,6 +4232,93 @@
       "requirements": [
         "NR-14"
       ]
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-117",
+      "title": "Muzyka: instalacja i pierwszy utwór z nowego konta",
+      "prerequisites": [
+        "Osobny świeży profil QA Linux x86-64, NVIDIA co najmniej 12 GiB VRAM, co najmniej 24 GiB RAM; administrator i około 18 GiB wolnego miejsca."
+      ],
+      "steps": [
+        "W Models otwórz Set up music. Sprawdź sprzęt, wolne miejsce, źródła i osobne licencje modeli, SDK oraz komponentów.",
+        "Zaakceptuj pobranie około 10 GiB. Rozpocznij instalację, przejdź do innej zakładki i wróć.",
+        "Po zakończeniu otwórz Music, opisz spokojny fortepian bez wokalu i wygeneruj 30 sekund. Otwórz wynik w Library, odtwórz i przewiń; odśwież historię."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Postęp i historia nie znikają po nawigacji. Dopiero pełna instalacja odblokowuje Music. Kompletny WAV, prompt i Run pozostają prywatne. Profil jawnie korzysta także z RAM/CPU."
+      ],
+      "resources": "Około 10 GiB pobrania; jedno GPU 12 GiB, generacja do 12 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-118",
+      "title": "Muzyka: Stop i Resume przygotowania silnika",
+      "prerequisites": [
+        "Oddzielny profil QA z SETUP-117; pobieranie lub instalowanie silnika trwa."
+      ],
+      "steps": [
+        "W karcie muzyki kliknij Stop music setup, odśwież stronę i sprawdź zatrzymaną próbę.",
+        "Kliknij Resume music setup. Sprawdź tę samą historię, nowy numer próby, zachowane źródła i końcową gotowość."
+      ],
+      "expected": [
+        "Stop kończy wyłącznie własną operację. Zweryfikowane pliki zostają i są ponownie sprawdzane; niepełne środowisko nie uzyskuje gotowości. Resume zachowuje receptę, nie duplikuje aktywnej próby i nie udaje byte-range wznowienia instalacji pakietów."
+      ],
+      "resources": "CPU / do 4 GiB RAM, ewentualne dalsze pobieranie; bez generacji GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-119",
+      "title": "Muzyka: restart Runnera i anulowanie generacji",
+      "prerequisites": [
+        "Oddzielny profil QA z gotowym silnikiem; aktywna własna generacja. Restart dotyczy wyłącznie wydzielonego Runnera QA."
+      ],
+      "steps": [
+        "Podczas generowania zrestartuj Runner QA i wróć do tego samego Run.",
+        "Sprawdź zachowany proces i postęp, następnie kliknij Stop.",
+        "Sprawdź zakończenie procesu, rezerwacje GPU/RAM oraz brak częściowego utworu w Library."
+      ],
+      "expected": [
+        "Restart dołącza do tego samego procesu bez drugiej inferencji. Stop zatrzymuje tylko własną generację; zasoby są zwalniane po potwierdzeniu, a niepełny WAV nie jest publikowany."
+      ],
+      "resources": "Jedno GPU, do 18 GiB RAM dla utworu ponad minutę; restart tylko Runnera QA",
+      "minutes": 7
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-120",
+      "title": "Muzyka: prywatność, telefon i dotychczasowy runtime",
+      "prerequisites": [
+        "Konta QA administratora A i członka B; dodatkowy osobny profil z jawną konfiguracją ACE-Step."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość modeli, a potem linki A do próby instalacji, Run i pliku utworu. Spróbuj rozpocząć instalację.",
+        "Otwórz kartę i wynik na telefonie. Sprawdź komunikat dla niezgodnego sprzętu.",
+        "W osobnym profilu potwierdź, że istniejące ustawienia ACE-Step, także niepełne, nadal mają pierwszeństwo."
+      ],
+      "expected": [
+        "B może używać wspólnego silnika, lecz nie ma dostępu do historii, promptów ani plików A i nie instaluje bez uprawnień. Telefon nie przewija poziomo. Niezgodny sprzęt nie otrzymuje aktywnego przycisku instalacji. Dotychczasowa konfiguracja nie jest nadpisywana."
+      ],
+      "resources": "Bez pobierania/generacji; osobne konta i profile QA",
+      "minutes": 7
     }
   ]
 }

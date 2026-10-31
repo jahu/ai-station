@@ -57,6 +57,7 @@ from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
+from ai_station_runner.music_prepare import router as music_setup_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.project_plan import ProjectPlanRequest, inspect_project_plan
@@ -746,6 +747,7 @@ app.include_router(llama_router)
 app.include_router(runtime_setup_router)
 app.include_router(speech_setup_router)
 app.include_router(image_setup_router)
+app.include_router(music_setup_router)
 app.include_router(image_jobs_router)
 
 

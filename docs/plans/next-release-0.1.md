@@ -14,6 +14,13 @@ three-chunk long and scoped-cancellation tests pass on the local GPU pair.
 Audible style/fidelity acceptance remains open; this is not completion of NR-06
 or this release. See [the measured speech contract](expressive-speech.md).
 
+NR-14 now includes a qualified [guided music profile](managed-music-setup.md),
+following conversation, speech, images and CPU memory setup. It reuses ordinary
+Task/Run preparation and the existing music executor; real first-account
+installation, Stop/Resume, first-track Library playback, native restart/Stop and
+account denial passed privately. It does not close video/avatar/effects setup,
+broader hardware/catalog choice or the consumer OS installer requirements.
+
 | ID | Requirement | Observable acceptance |
 | --- | --- | --- |
 | NR-01 | Persistent creative conversations in Images, Video, Music, Speech and Avatars | Start a job, navigate away, return to the same saved workspace, refresh/restart and retain history, inputs, progress and results. A follow-up creates a new linked variation with the feedback and chosen previous result; it never overwrites earlier work. |

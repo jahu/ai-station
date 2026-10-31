@@ -53,6 +53,7 @@ from app.model_download_job import DownloadExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.music import MusicExecutor
+from app.music_setup_job import MusicSetupExecutor
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
 from app.private_ui import PrivateAccessExecutor
@@ -323,6 +324,7 @@ class FakeExecutor:
 EXECUTORS = {
     "speech_setup": SpeechSetupExecutor(),
     "image_setup": ImageSetupExecutor(),
+    "music_setup": MusicSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),

@@ -3,6 +3,7 @@
 import os
 import signal
 import sys
+import time
 import wave
 from pathlib import Path
 from uuid import UUID
@@ -16,10 +17,15 @@ def deny_network(event, args):
         raise PermissionError("Local music inference cannot access the network")
 
 
-def generate(body, model_root, checkpoint_root, source_root, work_root):
+def generate(body, model_root, checkpoint_root, source_root, work_root, *, immutable_root=None):
     # No upstream import runs until checkpoint/source hashes have passed and
     # model code has been copied into a private view, never the approved model.
-    view = checkpoint_view(model_root, source_root, checkpoint_root)
+    view = checkpoint_view(
+        model_root,
+        source_root,
+        checkpoint_root,
+        **({"immutable_root": immutable_root} if immutable_root is not None else {}),
+    )
     os.environ["ACESTEP_CHECKPOINTS_DIR"] = str(view)
     sys.addaudithook(deny_network)
     from acestep.handler import AceStepHandler
@@ -119,10 +125,38 @@ def execute(run_id, data_root, model_root, source_root):
     output = resolve_child(data_root, output_relative)
     if output != data_root / output_relative or output.exists():
         raise ValueError("Music output exists or contains symlinks")
-    signal.alarm(3600)
+    immutable_root = None
+    if body.runtime_manifest_sha256:
+        from ai_station_runner import music_environment
+        from ai_station_runner.memory_scope import require_scope
+
+        require_scope(run_id, 12288 if body.duration_seconds <= 60 else 18432)
+        observation = music_environment.read_json(work_root / "environment.json")
+        if observation.get("manifest_sha256") != body.runtime_manifest_sha256:
+            raise ValueError("The owned music runtime changed")
+        chosen = music_environment.resolve(data_root, observation)
+        if (
+            Path(model_root) != chosen["models"]
+            or Path(source_root) != chosen["source"]
+            or Path(sys.base_prefix).resolve() != chosen["environment"] / "python"
+        ):
+            raise ValueError("Music must execute its exact frozen environment")
+        immutable_root = data_root / "models/store"
+    if body.runtime_manifest_sha256:
+        seconds = min(3600, body.deadline_at - time.time()) if body.deadline_at is not None else 3600
+        if seconds <= 0:
+            raise TimeoutError("Music execution deadline has expired")
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+    else:
+        signal.alarm(3600)
     parameters = body.model_dump(mode="json")
     tensor = generate(
-        parameters, str(no_symlink(model_root)), work_root / "checkpoints", source_root, work_root
+        parameters,
+        str(no_symlink(model_root)),
+        work_root / "checkpoints",
+        source_root,
+        work_root,
+        **({"immutable_root": immutable_root} if immutable_root is not None else {}),
     )
     partial = work_root / "output.partial.wav"
     write_pcm(tensor, partial)

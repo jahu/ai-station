@@ -14,7 +14,13 @@ import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-const profile = "chatterbox-v3-linux-x86-64-python312-v1";
+type Family = "speech" | "music";
+const profiles = {
+  speech: "chatterbox-v3-linux-x86-64-python312-v1",
+  music: "ace-step15-turbo-linux-x86-64-python312-v1",
+};
+const destination = (family: Family) =>
+  family === "music" ? "/audio?mode=music" : "/audio";
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const size = (bytes: number) =>
   bytes >= 1024 ** 3
@@ -38,6 +44,7 @@ type Catalog = {
     inputs: { filename: string; kind: string; size_bytes: number }[];
   };
   existing_speech?: { available: boolean; source: string };
+  existing_music?: { available: boolean; source: string };
   recommendation?: { fits: boolean; reason: string };
   storage?: {
     free_bytes: number;
@@ -49,6 +56,7 @@ type Catalog = {
 };
 type Preparation = {
   id: string;
+  manifest_sha256: string;
   attempt: number;
   run: Run;
   resume_allowed: boolean;
@@ -77,11 +85,32 @@ function Attempt({
   value,
   canPrepare,
   refresh,
+  family,
+  ready,
+  available,
+  manifest,
 }: {
   value: Preparation;
   canPrepare: boolean;
   refresh: () => void;
+  family: Family;
+  ready: boolean;
+  available: boolean;
+  manifest?: string;
 }) {
+  const title = family === "music" ? "Music" : "Speech";
+  const familyPhases =
+    family === "speech"
+      ? phases
+      : {
+          ...phases,
+          downloading_files: "Downloading music files",
+          files_verified: "Files verified · preparing the music engine",
+          creating_environment: "Preparing the local music engine",
+          installing_dependencies: "Installing the music engine",
+          preparing_sdk: "Preparing the music SDK",
+          environment_prepared: "Music engine prepared",
+        };
   const receipt = useRef<{ run: string; id: string } | null>(null);
   const active = !terminal.has(value.run.status);
   const action = useMutation({
@@ -112,7 +141,11 @@ function Attempt({
   );
   const label =
     value.run.status === "succeeded"
-      ? "Ready for your first recording"
+      ? ready
+        ? family === "music"
+          ? "Ready for your first track"
+          : "Ready for your first recording"
+        : "Installation prepared"
       : value.run.status === "queued"
         ? "Waiting for available resources"
         : value.run.status === "cancel_requested"
@@ -120,12 +153,13 @@ function Attempt({
           : value.run.status === "canceled"
             ? "Stopped · downloaded files are kept"
             : active
-              ? (phases[value.progress.phase ?? ""] ?? "Preparing speech")
+              ? (familyPhases[value.progress.phase ?? ""] ??
+                `Preparing ${family}`)
               : "Preparation needs attention";
   return (
     <article
       className="setup-runtime-attempt"
-      aria-label={`Speech preparation ${value.id.slice(0, 8)}`}
+      aria-label={`${title} preparation ${value.id.slice(0, 8)}`}
     >
       <div className="row spread">
         <strong>{label}</strong>
@@ -135,12 +169,12 @@ function Attempt({
         <>
           {downloading && total > 0 ? (
             <progress
-              aria-label="Speech files progress"
+              aria-label={`${title} files progress`}
               value={received}
               max={total}
             />
           ) : (
-            <progress aria-label="Speech engine preparation" />
+            <progress aria-label={`${title} engine preparation`} />
           )}
           <p className="muted setup-small" role="status">
             {downloading
@@ -162,22 +196,26 @@ function Attempt({
             }
             onClick={() => action.mutate("cancel")}
           >
-            <Square size={14} /> Stop speech setup
+            <Square size={14} /> Stop {family} setup
           </Button>
         )}
         {canPrepare && value.resume_allowed && (
           <Button
             variant="secondary"
-            disabled={action.isPending}
+            disabled={
+              action.isPending ||
+              !available ||
+              value.manifest_sha256 !== manifest
+            }
             onClick={() => action.mutate("resume")}
           >
-            <RotateCcw size={15} /> Resume speech setup
+            <RotateCcw size={15} /> Resume {family} setup
           </Button>
         )}
-        {value.run.status === "succeeded" && (
+        {value.run.status === "succeeded" && ready && (
           <Button asChild>
-            <Link to="/audio">
-              <AudioLines size={16} /> Create speech
+            <Link to={destination(family)}>
+              <AudioLines size={16} /> Create {family}
             </Link>
           </Button>
         )}
@@ -194,17 +232,23 @@ function Attempt({
 }
 
 export default function SpeechSetupPanel() {
+  return <EnvironmentSetupPanel family="speech" />;
+}
+
+export function EnvironmentSetupPanel({ family }: { family: Family }) {
+  const profile = profiles[family];
+  const title = family === "music" ? "Music" : "Speech";
   const [search] = useSearchParams();
   const [opened, setExpanded] = useState(false);
-  const expanded = opened || search.get("capability") === "speech";
+  const expanded = opened || search.get("capability") === family;
   const cache = useQueryClient();
   const catalog = useQuery({
-    queryKey: ["speech-setup-catalog"],
+    queryKey: [`${family}-setup-catalog`],
     queryFn: () => api<Catalog>(`/setup/runtimes?profile=${profile}`),
     enabled: expanded,
   });
   const history = useQuery({
-    queryKey: ["speech-preparations"],
+    queryKey: [`${family}-preparations`],
     queryFn: () =>
       api<Preparation[]>(`/setup/runtimes/preparations?profile=${profile}`),
     enabled: expanded,
@@ -220,13 +264,13 @@ export default function SpeechSetupPanel() {
   const completed = useRef(new Set<string>());
   const section = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (expanded && search.get("capability") === "speech")
+    if (expanded && search.get("capability") === family)
       section.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
-  }, [expanded, search]);
+  }, [expanded, search, family]);
   const refresh = () => {
-    void cache.invalidateQueries({ queryKey: ["speech-preparations"] });
-    void cache.invalidateQueries({ queryKey: ["speech-setup-catalog"] });
-    void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
+    void cache.invalidateQueries({ queryKey: [`${family}-preparations`] });
+    void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
+    void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
   };
   useEffect(() => {
     for (const row of history.data ?? [])
@@ -235,11 +279,11 @@ export default function SpeechSetupPanel() {
         !completed.current.has(row.run.id)
       ) {
         completed.current.add(row.run.id);
-        void cache.invalidateQueries({ queryKey: ["speech-setup-catalog"] });
-        void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
+        void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
+        void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
         void cache.invalidateQueries({ queryKey: ["models"] });
       }
-  }, [history.data, cache]);
+  }, [history.data, cache, family]);
   const prepare = useMutation({
     mutationFn: () => {
       if (!data?.recipe || accepted !== data.manifest_sha256)
@@ -259,15 +303,19 @@ export default function SpeechSetupPanel() {
     onSuccess: refresh,
   });
   const existing = history.data?.find(
-    (row) => !terminal.has(row.run.status) || row.resume_allowed,
+    (row) =>
+      !terminal.has(row.run.status) ||
+      (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
-  const ready = data?.existing_speech?.available === true;
+  const existingRuntime =
+    family === "music" ? data?.existing_music : data?.existing_speech;
+  const ready = existingRuntime?.available === true;
   const storageFits =
     !data?.storage || data.storage.free_bytes >= data.storage.required_bytes;
   return (
     <section
-      className="panel setup-runtime setup-speech"
-      aria-label="Local speech setup"
+      className={`panel setup-runtime setup-${family}`}
+      aria-label={`Local ${family} setup`}
       ref={section}
     >
       <div className="speech-setup-heading">
@@ -275,10 +323,15 @@ export default function SpeechSetupPanel() {
           <AudioLines size={24} />
         </div>
         <div>
-          <h2>Speech & voice cloning</h2>
+          <h2>
+            {family === "music"
+              ? "Music & soundtracks"
+              : "Speech & voice cloning"}
+          </h2>
           <p className="muted">
-            Bring your words to life with a voice recording. Local Polish
-            speech, delivery controls and no cloud account.
+            {family === "music"
+              ? "Turn a description into an instrumental or a song with your own lyrics. Create locally, keep every version."
+              : "Bring your words to life with a voice recording. Local Polish speech, delivery controls and no cloud account."}
           </p>
         </div>
         {ready && (
@@ -289,7 +342,7 @@ export default function SpeechSetupPanel() {
       </div>
       {!expanded ? (
         <Button variant="secondary" onClick={() => setExpanded(true)}>
-          Set up speech <ArrowRight size={15} />
+          Set up {family} <ArrowRight size={15} />
         </Button>
       ) : (
         <>
@@ -300,7 +353,7 @@ export default function SpeechSetupPanel() {
             <Loading />
           ) : !data?.recipe ? (
             <p className="notice">
-              Speech setup could not be inspected.{" "}
+              {title} setup could not be inspected.{" "}
               <Link to="/system">Open Diagnostics</Link>
             </p>
           ) : (
@@ -308,15 +361,18 @@ export default function SpeechSetupPanel() {
               {ready && (
                 <div className="speech-setup-ready">
                   <p>
-                    <strong>Your speech engine is ready.</strong> Add a short
-                    voice recording in Audio, enter your text and generate.
+                    <strong>Your {family} engine is ready.</strong>{" "}
+                    {family === "music"
+                      ? "Describe an idea in Music, choose an instrumental or your own lyrics, and create a track."
+                      : "Add a short voice recording in Audio, enter your text and generate."}
                   </p>
                   <Button asChild>
-                    <Link to="/audio">
-                      Open Audio <ArrowRight size={15} />
+                    <Link to={destination(family)}>
+                      {family === "music" ? "Open Music" : "Open Audio"}{" "}
+                      <ArrowRight size={15} />
                     </Link>
                   </Button>
-                  {data.existing_speech?.source === "configured" && (
+                  {existingRuntime?.source === "configured" && (
                     <button
                       className="text-link"
                       type="button"
@@ -334,7 +390,11 @@ export default function SpeechSetupPanel() {
                   <div className="speech-setup-facts">
                     <div>
                       <small>MODEL</small>
-                      <strong>Chatterbox Multilingual v3</strong>
+                      <strong>
+                        {family === "music"
+                          ? "ACE-Step 1.5 Turbo"
+                          : "Chatterbox Multilingual v3"}
+                      </strong>
                     </div>
                     <div>
                       <small>DOWNLOAD</small>
@@ -350,7 +410,10 @@ export default function SpeechSetupPanel() {
                     </div>
                     <div>
                       <small>HARDWARE</small>
-                      <strong>One NVIDIA GPU · 6 GiB VRAM</strong>
+                      <strong>
+                        One NVIDIA GPU · {family === "music" ? "12" : "6"} GiB
+                        VRAM
+                      </strong>
                     </div>
                   </div>
                   <p className="muted setup-small">
@@ -359,16 +422,24 @@ export default function SpeechSetupPanel() {
                     {data.storage &&
                       `${size(data.storage.free_bytes)} free · ${size(data.storage.required_bytes)} needed during setup. Cached files are checked and reused.`}
                   </p>
+                  {family === "music" && (
+                    <p className="muted setup-small">
+                      This profile offloads parts of the model to CPU: short
+                      tracks reserve 12 GiB RAM, tracks over a minute reserve 18
+                      GiB. Model weights and lyrics remain local.
+                    </p>
+                  )}
                   {ready && (
                     <p className="notice">
-                      Your configured speech integration keeps its settings.
+                      Your configured {family} integration keeps its settings.
                       This prepares an additional managed copy.
                     </p>
                   )}
                   <details className="speech-setup-sources">
                     <summary>Sources, licenses and download details</summary>
                     <p className="setup-small muted">
-                      {data.recipe.license_notice}
+                      {data.recipe.license_notice ??
+                        "Models, runtime and bundled components retain their individual licenses. Review the sources before installation."}
                     </p>
                     <div className="speech-setup-license-links">
                       {data.licenses?.map((item) => (
@@ -396,7 +467,7 @@ export default function SpeechSetupPanel() {
                   {!data.can_prepare ? (
                     <p className="notice">
                       Your administrator can install shared models. Your
-                      recordings and generated speech stay private.
+                      recordings, lyrics and generated audio stay private.
                     </p>
                   ) : (
                     !existing && (
@@ -404,14 +475,14 @@ export default function SpeechSetupPanel() {
                         {!data.installation_available && (
                           <p className="notice">
                             {data.installation_notice ??
-                              "This speech profile is not available on this workstation."}{" "}
+                              `This ${family} profile is not available on this workstation.`}{" "}
                             <Link to="/system">View Diagnostics</Link>
                           </p>
                         )}
                         {!storageFits && (
                           <p className="notice">
-                            More free storage is needed before speech setup can
-                            begin.
+                            More free storage is needed before {family} setup
+                            can begin.
                           </p>
                         )}
                         <label className="setup-license">
@@ -430,7 +501,7 @@ export default function SpeechSetupPanel() {
                             }
                           />
                           <span>
-                            I have reviewed the speech model and bundled
+                            I have reviewed the {family} model and bundled
                             component licenses.
                           </span>
                         </label>
@@ -445,8 +516,8 @@ export default function SpeechSetupPanel() {
                         >
                           <Download size={16} />{" "}
                           {prepare.isPending
-                            ? "Starting speech setup…"
-                            : "Download & set up speech"}
+                            ? `Starting ${family} setup…`
+                            : `Download & set up ${family}`}
                         </Button>
                       </>
                     )
@@ -461,6 +532,10 @@ export default function SpeechSetupPanel() {
               value={value}
               canPrepare={data?.can_prepare ?? false}
               refresh={refresh}
+              family={family}
+              ready={ready}
+              available={data?.installation_available ?? false}
+              manifest={data?.manifest_sha256}
             />
           ))}
         </>

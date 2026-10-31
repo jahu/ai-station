@@ -37,6 +37,15 @@ Downloaded PT/safetensors/JSON bytes are not imported or deserialized as model
 code. Runtime activation remains a separate qualified operation. Histories and
 receipts remain private even though model files are shared infrastructure.
 
+Managed music uses the same owned offline preparation policy as speech, with
+only its fixed built-in profile. It verifies all source, wheel, interpreter and
+model inputs before execution. Only exact closed-world links to read-only,
+single-link immutable model objects are allowed in the managed view; external
+music paths keep strict symlink rejection. Native dispatch rechecks the frozen
+environment and compatible GPU, with 12-GiB/18-GiB zero-swap scopes for short/long
+tracks. Stop and restart inspect the same owned process; partial audio is never
+published. Setup metadata, logs and receipts remain account scoped.
+
 Managed speech assembly verifies every fixed source/wheel/model object before
 executing a separate offline venv install with its own pinned Python. SDK archives
 reject links/traversal/special files; the standalone Python's legitimate links

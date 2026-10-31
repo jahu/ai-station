@@ -144,16 +144,26 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                 return True
             return "requeued"
 
+    def bundle(self, recipe):
+        return model_bundle(recipe)
+
+    def adopt(self, runner, run):
+        return runner.adopt_speech_environment(
+            run.id, {"profile": SPEECH_PROFILE, "permissions": PERMISSIONS}
+        )
+
     def progress(self, run, value):
-        if not isinstance(value, dict) or not isinstance(value.get("speech_preparation"), dict):
+        key = self.metadata_prefix + "_preparation"
+        if not isinstance(value, dict) or not isinstance(value.get(key), dict):
             return None
-        incoming = value["speech_preparation"]
+        incoming = value[key]
         phase = incoming.get("phase")
         if phase not in {
             "verifying_inputs",
             "creating_environment",
             "installing_dependencies",
             "building_sdk",
+            "preparing_sdk",
             "checking_environment",
             "environment_prepared",
         }:
@@ -164,7 +174,7 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
             "sdk": incoming.get("sdk"),
             "native_completed_files": incoming.get("completed_files"),
             "native_file_count": incoming.get("file_count"),
-            "speech_inference_tested": False,
+            self.metadata_prefix + "_inference_tested": False,
         }
 
     def complete(self, session, run, result, runner):
@@ -173,10 +183,12 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
         from app.state import RunStatus
 
         if result.get("environment_prepared") is not True:
-            raise ValueError("The completed native operation did not verify a speech environment")
-        entry = model_bundle(run.parameters["recipe"])
+            raise ValueError(
+                f"The completed native operation did not verify a {self.setup_label} environment"
+            )
+        entry = self.bundle(run.parameters["recipe"])
         root = get_settings().data_dir
-        observed = run.metadata_json.get("speech_model_observations") or {}
+        observed = run.metadata_json.get(self.metadata_prefix + "_model_observations") or {}
         files = publish_verified_models(
             session,
             entry,
@@ -185,17 +197,15 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                 for item in entry.files
             ],
         )
-        prepared = runner.adopt_speech_environment(
-            run.id, {"profile": SPEECH_PROFILE, "permissions": PERMISSIONS}
-        )
+        prepared = self.adopt(runner, run)
         if (
-            prepared.get("profile") != SPEECH_PROFILE
+            prepared.get("profile") != run.parameters["profile"]
             or prepared.get("operation_id") != run.id
             or prepared.get("manifest_sha256") != run.parameters["manifest_sha256"]
             or prepared.get("environment_prepared") is not True
         ):
-            raise ValueError("The native speech activation receipt changed")
-        receipt = {**prepared, "model_files": files, "speech_inference_tested": False}
+            raise ValueError(f"The native {self.setup_label} activation receipt changed")
+        receipt = {**prepared, "model_files": files, self.metadata_prefix + "_inference_tested": False}
         with tempfile.NamedTemporaryFile("w", suffix=".json") as output:
             json.dump(receipt, output)
             output.flush()
@@ -204,9 +214,9 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                 source=Path(output.name),
                 artifact_type="json",
                 mime_type="application/json",
-                original_filename="speech-runtime-preparation.json",
+                original_filename=f"{self.setup_label}-runtime-preparation.json",
                 run_id=run.id,
-                metadata={"runtime_preparation": True, "speech_setup": True},
+                metadata={"runtime_preparation": True, self.setup_label + "_setup": True},
             )
         total = sum(v["size_bytes"] for v in run.parameters["recipe"]["inputs"])
         run.metadata_json = {
@@ -216,12 +226,14 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                 "received_bytes": total,
                 "expected_bytes": total,
                 "model_file_ids": [v["model_file_id"] for v in files],
-                "speech_inference_tested": False,
+                self.metadata_prefix + "_inference_tested": False,
             },
         }
         run.summary = (
             "Speech runtime and model files prepared. Generate a first recording to check your voice."
+            if self.setup_label == "speech"
+            else f"{self.setup_label.capitalize()} runtime and model files prepared. Generate a first result to check the engine."
         )
-        append_event(session, run.id, "runtime.speech.prepared", receipt)
+        append_event(session, run.id, f"runtime.{self.setup_label}.prepared", receipt)
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
         return "done"
