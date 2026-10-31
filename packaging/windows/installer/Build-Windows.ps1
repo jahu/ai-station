@@ -39,9 +39,17 @@ try {
  $parameters.CompilerOptions='/platform:x64 /target:winexe';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
  $parameters.OutputAssembly=Join-Path $stage 'AIStation.exe'
  [void]$parameters.ReferencedAssemblies.Add('System.dll');[void]$parameters.ReferencedAssemblies.Add('System.Core.dll')
- # Windows PowerShell 5.1 forbids mixing CompilerParameters with the separate
- # output/reference flags. Keep the complete native build in one configuration.
- Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Bootstrap.cs'))) -Language CSharp -CompilerParameters $parameters
+ # Compile without loading application types into this PowerShell session.
+ # Add-Type caches names and otherwise breaks a second build in the same host.
+ Add-Type -AssemblyName Microsoft.CSharp
+ $provider=[Microsoft.CSharp.CSharpCodeProvider]::new();$compiled=$null
+ try {
+  $compiled=$provider.CompileAssemblyFromSource($parameters,[string[]]@([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Bootstrap.cs'))))
+  if ($compiled.Errors.HasErrors) { throw ('Native launcher compilation failed: '+(($compiled.Errors | ForEach-Object {$_.ErrorText}) -join '; ')) }
+ } finally {
+  if ($null -ne $compiled) { $compiled.TempFiles.Delete() }
+  $provider.Dispose()
+ }
  $binary=[IO.File]::ReadAllBytes($parameters.OutputAssembly)
  if ($binary.Length -lt 256 -or $binary.Length -gt 1048576 -or [BitConverter]::ToUInt16($binary,0) -ne 0x5a4d) { throw 'The native launcher did not produce a valid executable.' }
  $pe=[BitConverter]::ToInt32($binary,0x3c)
