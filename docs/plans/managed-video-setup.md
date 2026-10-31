@@ -163,5 +163,11 @@ alongside native policy, lint/format, TypeScript, production build, all three
 Compose variants and the Docker image. Operator catalog v26 retains unanswered
 SETUP-121–125; internal checks do not fill in the owner's QA answers.
 
-Idle-only production deployment remains a separate gate. No new production video
-rollout is claimed at this checkpoint.
+PR #542 was reviewed, squash-merged into `develop` and deployed while idle with
+a database backup. All 38 existing table snapshots, credentials, configured
+video/image/music/speech integrations, shared models, memory/index and private
+node identity were preserved. The production compiled setup/workspace passed
+desktop/phone checks; its temporary audited device was revoked. Exact isolated
+QA services were removed while retaining verified inputs, generated media and
+private evidence. This completes this fixed video profile, not the full release
+or the remaining guided media/consumer-platform work.
