@@ -62,6 +62,23 @@ opens that running version; it does not apply an update during its jobs.
 
 ## Qualification and remaining work
 
+The next desktop increment keeps the existing supervisor alive when the native
+status window is closed or **Run in background** is chosen. **Stop AI Station**
+is a separate explicit action. Reopening the entry opens the browser and can
+show controls for that background owner. A private, same-OS-user Unix socket
+supports only status and instance-bound stop; it is outside the mounted data
+root, carries no setup token, and accepts no process IDs, commands or URLs.
+Only the owning supervisor signals the child it launched. Long socket paths
+reuse the qualified directory-descriptor transport. Terminal status/stop flags
+support diagnostics and qualification without adding application HTTP routes.
+This is session background supervision, not login autostart or reboot recovery.
+
+Qualification must exercise background/close/open/stop with an actual packaged
+supervisor and independent clients, reject stale-instance stop and unsafe socket
+files/peers, prove no duplicate services or unrelated process signals, and retain
+account/history across a later restart. Native dialog rendering and button
+semantics require a real private GUI experiment in addition to fake tests.
+
 Unit tests must cover configuration isolation, import identity, no overwrite,
 owned shutdown, occupied ports and setup-link handling. Build the actual bundle,
 relocate it, test Python/SSL/venv/native readiness without host Python/Node,
@@ -132,7 +149,12 @@ and both immutable code versions plus configuration were retained. This is
 payload-removal/reinstallation qualification without OS mutation, not a claim
 that apt installation/uninstallation or a clean machine has been exercised.
 
-Desktop dialog preparation currently remains in a small native status window;
-closing the browser leaves the workstation active, while **Stop AI Station**
-closes this installation. A tray/background service, prerequisite acquisition,
-signing/distribution and other advertised platforms remain consumer-setup work.
+Desktop preparation uses a small native progress window. After readiness,
+closing the status window or choosing **Run in background** leaves supervision
+active in the current user session. Reopen the desktop icon to access the same
+browser and background controls; **Stop AI Station** explicitly closes only
+that installation. Terminal diagnostics use `station --status` and
+`station --stop`; `--background` skips the status window while retaining the
+owning launcher process. Login autostart/reboot recovery, a tray, prerequisite
+acquisition, signing/distribution and actual cross-platform installations remain
+consumer-setup work.

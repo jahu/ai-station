@@ -10,8 +10,13 @@ desktop logs. [Packaging and remaining platform gates](plans/desktop-installatio
 Repeated desktop clicks read a private, bounded readiness handoff only while the
 desktop owner's file lock is held. The file permits only its validated loopback
 browser/setup address, is never served over HTTP or written to ordinary logs,
-and is removed at shutdown or before a new owner starts. Reopening grants no
-Docker, stop, process or host-operation capability.
+and is removed at shutdown or before a new owner starts. The link grants no
+Docker or host-operation capability. Background desktop status/stop uses a
+separate mode-0600 Unix socket outside mounted application data, verified with
+kernel same-OS-user credentials. Stop is bound to the currently inspected
+desktop instance; only its supervisor signals its owned child. This local
+lifecycle channel carries no setup link, caller-selected PID, URL or command
+and is never exposed to web users, agents or HTTP clients.
 
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.

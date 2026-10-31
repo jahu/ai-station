@@ -5,6 +5,12 @@ application image; no second application API is introduced. Installed code is
 copied into a retained version directory before supervision so OS package
 replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
 
+The desktop owner can supervise in the background without keeping a window
+open. A private same-OS-user control socket supports only status and
+instance-bound Stop; the existing supervisor remains responsible for shutdown.
+It is outside the HTTP application and its container data mount. This adds no
+workload executor, native Runner endpoint or login/reboot service.
+
 Guided local runtime preparation now reuses owned Tasks/Runs, a native immutable
 operation journal and a bounded child over the local Docker Unix API. The child
 streams only one reviewed image digest, records actual layer progress and verifies

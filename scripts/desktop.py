@@ -17,6 +17,7 @@ import sys
 import tarfile
 import tempfile
 import threading
+import time
 import webbrowser
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit, urlunsplit
@@ -24,6 +25,10 @@ from urllib.parse import urlsplit, urlunsplit
 ROOT = Path(__file__).resolve().parent.parent
 READY = "AI_STATION_READY "
 READY_FILE = "desktop-ready.json"
+# Isolated packaged Python deliberately ignores ambient Python module paths.
+sys.path.insert(0, str(ROOT / "scripts"))
+from desktop_control import DesktopControl  # noqa: E402
+from desktop_control import request as control_request  # noqa: E402
 
 
 def digest(path):
@@ -270,12 +275,12 @@ def publish_ready(root, url):
         Path(temporary).unlink(missing_ok=True)
 
 
-def reopen(root):
-    """Called only after the owning desktop process's lock is observed held."""
+def ready_url(root):
+    """Read only after the owning desktop process's lock is observed held."""
     try:
         descriptor = os.open(root / READY_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError:
-        return False
+        return None
     with os.fdopen(descriptor, "r", encoding="utf-8") as source:
         info = os.fstat(source.fileno())
         if (
@@ -289,7 +294,14 @@ def reopen(root):
         value = json.load(source)
     if not isinstance(value, dict) or set(value) != {"url"} or not isinstance(value["url"], str):
         raise ValueError("The desktop readiness link is invalid")
-    webbrowser.open(browser_url(value["url"]))
+    return browser_url(value["url"])
+
+
+def reopen(root):
+    url = ready_url(root)
+    if url is None:
+        return False
+    webbrowser.open(url)
     return True
 
 
@@ -305,7 +317,16 @@ def stop(proc):
 
 
 def supervise(
-    root, config, value, log, *, console=False, on_ready=lambda: None, on_ready_url=lambda url: None
+    root,
+    config,
+    value,
+    log,
+    *,
+    console=False,
+    background=False,
+    control=None,
+    on_ready=lambda: None,
+    on_ready_url=lambda url: None,
 ):
     env = {**launch_environment(), "AI_STATION_APP_IMAGE": value["image_tag"], "PYTHONNOUSERSITE": "1"}
     proc = subprocess.Popen(
@@ -341,33 +362,103 @@ def supervise(
 
     reader = threading.Thread(target=read, daemon=True)
     reader.start()
+    stopped = control.stop_requested if control is not None else threading.Event()
     try:
-        try:
-            url = ready.get(timeout=180)
-        except queue.Empty:
-            raise RuntimeError("AI Station did not become ready; inspect the private desktop log") from None
+        deadline = time.monotonic() + 180
+        while True:
+            if stopped.is_set():
+                return
+            try:
+                url = ready.get(timeout=0.2)
+                break
+            except queue.Empty:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError(
+                        "AI Station did not become ready; inspect the private desktop log"
+                    ) from None
         if not url or proc.poll() is not None:
             raise RuntimeError("AI Station could not start; see the private desktop log")
         on_ready_url(url)
         on_ready()
+        if control is not None:
+            control.ready.set()
         if console:
             print(READY + json.dumps({"url": url}), flush=True)
-            proc.wait()
         else:
             webbrowser.open(url)
-            while proc.poll() is None:
-                answer = dialog(
-                    "--question",
-                    "--text=AI Station is running locally.\n\nYou can close your browser and keep working agents running. Keep this window open or minimized.\n\nStop AI Station to shut down this desktop installation; your data stays saved.",
-                    "--ok-label=Open AI Station",
-                    "--cancel-label=Stop AI Station",
-                )
-                if answer != 0:
-                    break
-                webbrowser.open(url)
+
+        def active():
+            return proc.poll() is None and not stopped.is_set()
+
+        if not console and not background:
+            if running_window(url, active=active) == "stop":
+                return
+        if control is not None:
+            control.background.set()
+        while proc.poll() is None and not stopped.wait(0.2):
+            pass
     finally:
         stop(proc)
         reader.join(timeout=5)
+
+
+def running_window(url, *, active):
+    """Closing the native window leaves work running; Stop is always explicit."""
+    wait = threading.Event()
+    while active():
+        window = subprocess.Popen(
+            [
+                "zenity",
+                "--title=AI Station",
+                "--width=540",
+                "--question",
+                "--text=AI Station is running locally.\n\nClose this window or choose Run in background to keep your agents and generations working. Open AI Station from its desktop icon whenever you need it.\n\nStop AI Station shuts down this desktop installation; your data stays saved.",
+                "--ok-label=Open AI Station",
+                "--cancel-label=Run in background",
+                "--extra-button=Stop AI Station",
+            ],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            while window.poll() is None and active():
+                wait.wait(0.2)
+            if window.poll() is None:
+                window.terminate()
+            answer, _ = window.communicate(timeout=5)
+        finally:
+            if window.poll() is None:
+                window.terminate()
+                window.wait(timeout=5)
+        if answer.strip() == "Stop AI Station":
+            return "stop"
+        if window.returncode != 0:
+            return "background"
+        webbrowser.open(url)
+    return "ended"
+
+
+def existing_controls(root):
+    try:
+        status = control_request(root)
+    except (FileNotFoundError, ConnectionRefusedError):
+        return  # A previous development package may not expose desktop controls.
+    if not status.get("background") or status.get("stopping"):
+        return
+    instance_id = status["instance_id"]
+
+    def active():
+        try:
+            current = control_request(root)
+        except (FileNotFoundError, ConnectionRefusedError):
+            return False
+        return current.get("instance_id") == instance_id and not current.get("stopping")
+
+    url = ready_url(root)
+    if url is None:
+        return
+    if running_window(url, active=active) == "stop":
+        control_request(root, "stop", instance_id=instance_id)
 
 
 def dialog(*args):
@@ -407,6 +498,10 @@ def main():
     parser.add_argument(
         "--console", action="store_true", help="Explicit terminal supervision instead of desktop dialogs"
     )
+    parser.add_argument("--background", action="store_true", help="Run without a native status window")
+    operation = parser.add_mutually_exclusive_group()
+    operation.add_argument("--status", action="store_true", help="Inspect this desktop installation")
+    operation.add_argument("--stop", action="store_true", help="Request this desktop installation to stop")
     args = parser.parse_args()
     os.umask(0o077)
 
@@ -414,7 +509,7 @@ def main():
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, terminate)
-    if not args.console and not shutil.which("zenity"):
+    if not (args.console or args.status or args.stop) and not shutil.which("zenity"):
         raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
     value = manifest(ROOT)
     root = state_root()
@@ -424,6 +519,12 @@ def main():
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
+            if args.status or args.stop:
+                status = control_request(root)
+                if args.stop:
+                    status = control_request(root, "stop", instance_id=status["instance_id"])
+                print(json.dumps({"running": True, **status}), flush=True)
+                return
             if not reopen(root):
                 message = (
                     "AI Station is still starting. Its existing progress window will open the app when ready."
@@ -432,8 +533,13 @@ def main():
                     print(message, flush=True)
                 else:
                     dialog("--info", "--text=" + message)
+            elif not args.console:
+                existing_controls(root)
             return
         acquired = True
+        if args.status or args.stop:
+            print(json.dumps({"running": False}), flush=True)
+            return
         # A new owner must never reuse the previous process's readiness link.
         (root / READY_FILE).unlink(missing_ok=True)
         prerequisites()
@@ -459,9 +565,11 @@ def main():
                     [executable, "-I", str(installed / "scripts/desktop.py"), *sys.argv[1:]],
                     launch_environment(),
                 )
-            with (root / "desktop.log").open("a", encoding="utf-8") as log:
+            with (root / "desktop.log").open("a", encoding="utf-8") as log, DesktopControl(root) as control:
                 progress.stage("Preparing the bundled application image…")
                 import_image(installed, value, log)
+                if control.stop_requested.is_set():
+                    return
                 progress.stage("Starting your local AI Station…")
                 supervise(
                     installed,
@@ -469,6 +577,8 @@ def main():
                     value,
                     log,
                     console=args.console,
+                    background=args.background,
+                    control=control,
                     on_ready=progress.close,
                     on_ready_url=lambda url: publish_ready(root, url),
                 )
@@ -488,7 +598,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, queue.Empty) as error:
-        if "--console" not in sys.argv and shutil.which("zenity"):
+        if not {"--console", "--status", "--stop"}.intersection(sys.argv) and shutil.which("zenity"):
             dialog("--error", "--text=" + str(error))
         else:
             raise SystemExit(str(error))
