@@ -1163,3 +1163,5 @@ prepared Python when no explicit CPU/video configuration exists, so installing
 film sound does not silently require a second video engine. Public readiness
 shares no private setup UUID or logs. See [profile qualification and component
 licenses](plans/managed-effects-setup.md).
+
+The Windows consumer packaging increment keeps the same control-plane/Runner Unix-socket boundary inside an application-owned WSL2 distribution. A native Windows lifecycle shell is separate from workload execution; it must not adopt existing distributions, expose Windows drives or change global WSL policy. The [Windows installation contract](plans/windows-consumer-installation.md) tracks the guest filesystem builder, private readiness pipe and pending real-platform acceptance. This is experimental packaging, not qualified Windows support.

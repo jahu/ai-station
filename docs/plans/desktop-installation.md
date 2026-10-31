@@ -171,3 +171,5 @@ that installation. Terminal diagnostics use `station --status` and
 owning launcher process. Login autostart/reboot recovery, a tray, prerequisite
 acquisition, signing/distribution and actual cross-platform installations remain
 consumer-setup work.
+
+The next Windows increment follows the [dedicated WSL2 consumer contract](windows-consumer-installation.md). It keeps the Linux native boundary in a private guest rather than adopting existing Windows/WSL environments. Windows remains unqualified until its real platform acceptance passes.

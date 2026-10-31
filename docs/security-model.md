@@ -1221,3 +1221,5 @@ view, real BF16 GPU/driver and owned process scope. Sound previews freeze that
 same environment, verify their own Python and run in a separate four-GiB CPU
 scope. Shared readiness and model infrastructure confer no access to another
 account's setup, inputs, prompts, workspace, sound stems or films.
+
+The private Windows installer prototype uses a dedicated WSL2 guest with its own Docker daemon and an ordinary native Runner account. Guest configuration disables Windows-drive automounts and Windows executable interop. Its local desktop bridge accepts only fixed start/status/open/stop operations; account-bootstrap authority travels through a private parent pipe and is never an application API or ordinary log. The prototype does not establish Windows isolation or readiness before actual WSL acceptance. See [Windows consumer installation](plans/windows-consumer-installation.md).
