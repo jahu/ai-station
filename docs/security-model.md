@@ -7,6 +7,12 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+Repeated desktop clicks read a private, bounded readiness handoff only while the
+desktop owner's file lock is held. The file permits only its validated loopback
+browser/setup address, is never served over HTTP or written to ordinary logs,
+and is removed at shutdown or before a new owner starts. Reopening grants no
+Docker, stop, process or host-operation capability.
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local

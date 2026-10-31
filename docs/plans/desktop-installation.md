@@ -46,6 +46,19 @@ license notices. No weights, credentials or personal data enter a package.
 5. Open the existing app at account setup or Chat. Offer model setup afterward.
    Closing a browser does not cancel Runs; stopping the desktop station signals
    only its own supervisor and uses its existing data-preserving shutdown.
+6. Opening the desktop entry again reuses the live desktop owner's browser link.
+   It neither prepares another image nor starts/restarts services. While the
+   first instance is preparing, explain that its existing progress window owns
+   startup. A newly acquired desktop lock discards stale readiness before work;
+   ordinary shutdown and failed startup remove the current link.
+
+The readiness handoff is an atomic mode-0600 file in the owned desktop state
+directory, read only after observing the existing desktop lock held. It can
+contain the one-use first-admin setup link, so it is not a log or HTTP resource.
+Reads reject symlinks, hard links, nonregular or shared-readable files and
+unexpected URLs. Only the existing loopback browser/setup destinations are
+accepted. Opening an updated package while the previous desktop owner is active
+opens that running version; it does not apply an update during its jobs.
 
 ## Qualification and remaining work
 
