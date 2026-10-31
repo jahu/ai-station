@@ -74,10 +74,17 @@ class TailnetManager:
     def _processes(self):
         private_directory(self.root / "runtime")
         registry = self.root / "runtime/processes.json"
-        if registry.exists() or registry.is_symlink():
-            read_private(registry, limit=1024 * 1024)
         if self._manager is None:
+            if registry.exists() or registry.is_symlink():
+                read_private(registry, limit=1024 * 1024)
             self._manager = ProcessManager(self.root, grace_seconds=0.5)
+        else:
+            # The wait/deadline threads replace this registry atomically. Keep
+            # strict ownership/read-stability checks under their same lock so
+            # an owned process exit cannot appear to be private-file tampering.
+            with self._manager._lock:
+                if registry.exists() or registry.is_symlink():
+                    read_private(registry, limit=1024 * 1024)
         return self._manager
 
     def _service(self):
