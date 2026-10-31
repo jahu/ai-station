@@ -352,10 +352,22 @@ linked previews and scoped Stop pass. Per-scene descriptions are deployed in
 PR #526. Reviewed media-agent output is deployed in PR #528, with private film
 selection, saved scene cues, ordinary effects/preview Runs and existing workflow
 approvals/Stop. Conversation existing/new-film orchestration and default original-audio layering
-are implemented in the current candidate; review/deployment and perceptual
-acceptance remain. See the conversation delivery contract below.
+are reviewed, merged and deployed in PR #529; perceptual
+acceptance remains. See the conversation delivery contract below.
 NR-08 multitrack editing is reviewed, merged in PR #527 and deployed. Private
 revisions, trim/move/reorder, audio gain/fades/mute, measured waveforms and verified
 CPU preview/export pass API/worker/native and compiled desktop/mobile qualification.
 Actual scoped Stop, preserving migration 0041 and restoration of earlier edits
 are verified. Source media and prior results remain intact. See [timeline contracts](media-timeline.md). [Deployment and remaining contracts](synchronized-sound.md).
+
+
+NR-13/14 now have deployed Linux guided model/runtime preparation in PRs
+#530–#532: pinned resumable model downloads, relative owned model coordinates,
+native adoption, hardware/context recommendations, private histories and a
+journaled fixed-image runtime installation. Actual Q4 hashing/adoption/GPU
+responses, runtime transfer Stop/Resume/recovery and preserving-data upgrades
+are qualified. Six reviewed 4B/8B/14B Q4/Q8 profiles have local search/fit filters;
+the four larger GGUF headers are checked, without a full-weight inference claim.
+The next [desktop package candidate](desktop-installation.md) bundles Python
+and the compiled app. Complete consumer prerequisite/setup/update/uninstall
+journeys, Windows/macOS execution and multimodal/companion setup remain required.

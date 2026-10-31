@@ -1,3 +1,10 @@
+The Linux desktop packaging candidate bundles a relocatable real CPython,
+native Runner and compiled Docker image around the existing supervisor. Its
+private configuration selects a separate data root, Compose project and exact
+application image; no second application API is introduced. Installed code is
+copied into a retained version directory before supervision so OS package
+replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
+
 Guided local runtime preparation now reuses owned Tasks/Runs, a native immutable
 operation journal and a bounded child over the local Docker Unix API. The child
 streams only one reviewed image digest, records actual layer progress and verifies

@@ -19,6 +19,7 @@ from ai_station_runner.config import _split, get_settings
 from ai_station_runner.local_model import CodingCompletion, forward_completion
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
+from ai_station_runner.unix_sockets import unix_address
 from ai_station_runner.vision_messages import VisionCompletion
 
 router = APIRouter(prefix="/v1/llama")
@@ -220,9 +221,12 @@ def snapshot(instance_id):
     observed = {}
     if alive:
         try:
-            with httpx.Client(
-                transport=httpx.HTTPTransport(uds=str(socket_path(instance_id))), timeout=2, trust_env=False
-            ) as client:
+            with (
+                unix_address(socket_path(instance_id)) as address,
+                httpx.Client(
+                    transport=httpx.HTTPTransport(uds=address), timeout=2, trust_env=False
+                ) as client,
+            ):
                 if client.get("http://llama/health").status_code == 200:
                     status = "ready"
                     observed = query_runtime_metadata(client)
@@ -311,8 +315,8 @@ def load(body: Load):
                 raise HTTPException(409, "Configured llama.cpp image identity is invalid")
             folder.mkdir(mode=0o700, exist_ok=True)
             (folder / "io").mkdir(mode=0o700, exist_ok=True)
-            if "," in str(folder) or len(str(folder / "io/model.sock").encode()) >= 108:
-                raise HTTPException(422, "Runtime directory is too long for a private Unix socket")
+            if "," in str(folder):
+                raise HTTPException(422, "Runtime directory cannot contain a comma")
             record = {
                 "request": request,
                 "name": f"ai-station-llama-{body.instance_id}",
@@ -474,13 +478,16 @@ async def completion(instance_id: UUID, body: VisionCompletion, incoming: Reques
         raise HTTPException(409, "Runtime/model identity does not match")
     if any(isinstance(item.content, list) for item in body.messages) and not record.get("projector"):
         raise HTTPException(409, "Load this model with its vision projector before sending images")
-    client = httpx.AsyncClient(
-        transport=httpx.AsyncHTTPTransport(uds=str(socket_path(instance_id))),
-        timeout=httpx.Timeout(300, connect=10),
-        trust_env=False,
-        follow_redirects=False,
-    )
-    return await forward_completion(body, incoming, "http://llama/v1", client, {})
+    with unix_address(socket_path(instance_id)) as address:
+        client = httpx.AsyncClient(
+            transport=httpx.AsyncHTTPTransport(uds=address),
+            timeout=httpx.Timeout(300, connect=10),
+            trust_env=False,
+            follow_redirects=False,
+        )
+        # forward_completion establishes the connection before returning its
+        # response iterator. The connected socket then outlives this directory FD.
+        return await forward_completion(body, incoming, "http://llama/v1", client, {})
 
 
 @router.post("/{instance_id}/coding/completions")

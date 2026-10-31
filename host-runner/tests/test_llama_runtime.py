@@ -340,3 +340,18 @@ def test_projector_outside_roots_or_changed_observation_is_rejected(runtime, tmp
             llama.load(body.model_copy(update={"projector": selected}))
         assert denied.value.status_code == 422
     assert not any(call[0] == "create" for call in state["calls"])
+
+
+def test_long_data_root_preserves_owned_container_layout_and_request_identity(runtime, tmp_path, monkeypatch):
+    root, body, state = runtime
+    longer = tmp_path / ("long-installation-folder-" * 4)
+    longer.mkdir()
+    monkeypatch.setenv("AI_STATION_DATA_HOST_PATH", str(longer))
+    clear_settings_cache()
+    result = llama.load(body)
+    assert result["alive"]
+    record = llama.manifest(body.instance_id)
+    assert record["request"] == body.model_dump(mode="json")
+    create = next(call for call in state["calls"] if call[0] == "create")
+    assert f"type=bind,src={longer / 'runtime/llama' / str(body.instance_id) / 'io'},dst=/runtime" in create
+    assert len(os.fsencode(llama.socket_path(body.instance_id))) >= 108
