@@ -158,8 +158,12 @@ complete backend regression cases plus the managed inference/preview flow case,
 seek/editor/phone and fake API/separate-worker/SSE checks passed. The final image
 matches all 601 application/UI files; the native wheel matches all 186 source/
 recipe assets. Lint, types, formatting, production UI/Docker builds, three Compose
-variants and 26 QA catalog checks pass. Review and production rollout remain
-separate recorded gates. Private evidence is under the
+variants and 26 QA catalog checks pass. PR #544 was reviewed, squash-merged into
+develop and deployed. The rollout preserved all 38 existing tables, credentials,
+configured engines, managed models, memory/index and the private access node.
+Actual production desktop/phone controls passed; the temporary audited device
+was revoked and only the owned private QA services were removed, retaining their
+evidence and results. Private evidence is under the
 acceptance directory named above, outside Git. Native inference mathematics and
 original source/model/environment files were preserved. These results demonstrate
 complete execution and timing; perceptual sound/scene acceptance remains in NR-07.

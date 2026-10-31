@@ -152,3 +152,21 @@ and consistent emotional control across scripts require listening acceptance.
 Fish's noncommercial research-model license and **Built with Fish Audio**
 attribution are shown in the UI; commercial use requires Fish's separate license.
 This adapter does not close NR-06's listening acceptance or the full 0.1.0 scope.
+
+## Phone voice references and guided setup
+
+Fish accepts the existing supported recording formats, including M4A, MP3 and
+WebM, through the ordinary private upload and transcription pipeline. A compressed
+reference requests a canonical mono 16-kHz PCM WAV from the exact decoded ASR
+samples. Only successful complete transcription publishes that derivative;
+original recording and transcript provenance remain bound and rechecked before
+GPU dispatch and speech publication. The reference still has a 60-second limit,
+validated after decoding, and no partial or overlong source is sent to Fish.
+Existing WAV references and their verified transcript caches retain their path.
+Chatterbox continues to require WAV. A Runner lacking canonical-reference support
+rejects compressed Fish submissions before queueing rather than failing mid-job.
+
+The [guided installation plan](managed-fish-setup.md) includes CPU transcription
+and codec prerequisites. Its dependency candidate is separate from the historical
+configured runtime above; guided readiness and real fresh-install qualification
+remain unfinished.

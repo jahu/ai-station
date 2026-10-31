@@ -72,6 +72,10 @@ def execute(run_id, data_root, model_root):
         "segments": segments,
         "text": "\n".join(s["text"] for s in segments),
     }
+    if body.get("normalize_reference") is True:
+        from ai_station_runner.transcription_reference import save
+
+        value["normalized_audio"] = save(data_root, run_id, samples)
     validate_report(
         value, run_id=run_id, source_hash=body["source"]["sha256"], profile_hash=body["profile_sha256"]
     )

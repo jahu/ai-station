@@ -54,11 +54,15 @@ CPU editor export, native recovery/Stop and private shared-engine checks.
 [Guided avatars](managed-avatar-setup.md) are reviewed, merged and deployed
 (PR #543): independent preparation, complete two-second generation,
 recovery/Stop, private outputs and final packaged/default-policy checks passed.
-[Guided film sound](managed-effects-setup.md) is locally qualified: independent
+[Guided film sound](managed-effects-setup.md) is reviewed, merged and deployed
+(PR #544): independent
 offline assembly, fresh-account Stop/Resume, complete two-cue sound/preview,
 CPU editor/export, native recovery/Stop and account privacy passed. Final
-packaging, review and rollout remain separate gates for this increment.
-Consumer installation on all three operating systems, remaining sound setup,
+packaging and production desktop/phone checks passed with existing data and
+private access preserved. [Guided expressive voice](managed-fish-setup.md) is
+in progress, including complete offline transcription/codec prerequisites and
+canonical phone-recording references.
+Consumer installation on all three operating systems, remaining expressive voice setup,
 broader model selection and NR-06/07 quality acceptance remain in scope.
 
 ## Delivery order

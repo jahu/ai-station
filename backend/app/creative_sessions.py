@@ -152,7 +152,13 @@ def turn_dict(session, turn):
     artifacts_query = (
         select(Artifact)
         .join(Run, Artifact.run_id == Run.id)
-        .where(Run.task_id == turn.task_id, Artifact.artifact_type.in_(["image", "video", "audio"]))
+        .where(
+            Run.task_id == turn.task_id,
+            Artifact.artifact_type.in_(["image", "video", "audio"]),
+            # ASR's canonical voice WAV is an inspected input, not this turn's
+            # generated speech. It remains available in lineage/Run history.
+            Run.executor_type != "whisper_transcribe",
+        )
         .order_by(Artifact.created_at, Artifact.id)
     )
     if job is not None:

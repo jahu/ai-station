@@ -124,7 +124,7 @@ def generate(body: TranscriptionRequest, session: DB):
     return run_dict(run)
 
 
-def create_transcription_run(session, body, *, task=None, parent_run_id=None):
+def create_transcription_run(session, body, *, task=None, parent_run_id=None, normalize_reference=False):
     source = session.get(Artifact, str(body.audio_artifact_id))
     if (
         source is None
@@ -153,6 +153,8 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
         raise HTTPException(409, ready.get("reason", "Offline transcription is unavailable"))
     if fmt not in ready.get("formats", ["wav"]):
         raise HTTPException(409, "Update the Host Runner to transcribe this recording format")
+    if normalize_reference and ready.get("reference_normalization") is not True:
+        raise HTTPException(409, "Update the Host Runner to prepare this voice reference")
     task = task or create_task(
         session,
         title=f"Transcribe {source.original_filename}"[:100],
@@ -178,6 +180,7 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
             "input_format": fmt,
             "profile_sha256": ready["profile_sha256"],
             "parent_artifact_ids": [source.id],
+            **({"normalize_reference": True} if normalize_reference else {}),
         },
     )
 
@@ -218,6 +221,12 @@ def checked_report(run, report):
         previous = end
     if text != "\n".join(item["text"] for item in segments):
         raise ValueError("Transcript text differs from segments")
+    if ("normalized_audio" in report) != (run.parameters.get("normalize_reference") is True):
+        raise ValueError("Transcript normalization differs from the request")
+    if "normalized_audio" in report:
+        from app.transcription_reference import descriptor
+
+        descriptor(run, report)
     return report
 
 
@@ -241,6 +250,7 @@ class TranscriptionExecutor(NativeJobExecutor):
             "language": run.parameters["language"],
             "profile_sha256": run.parameters["profile_sha256"],
             "permissions": list(run.effective_permissions),
+            **({"normalize_reference": True} if run.parameters.get("normalize_reference") is True else {}),
         }
 
     def start(self, runner, payload):
@@ -269,6 +279,29 @@ class TranscriptionExecutor(NativeJobExecutor):
             (".json", "json", "application/json", json.dumps(report, ensure_ascii=False)),
         ]
         artifacts = {}
+        if run.parameters.get("normalize_reference") is True:
+            from app.transcription_reference import verified_bytes
+
+            data, metadata = verified_bytes(run, report)
+            with tempfile.NamedTemporaryFile(suffix=".wav") as handle:
+                handle.write(data)
+                handle.flush()
+                artifact = register_file(
+                    session,
+                    source=Path(handle.name),
+                    artifact_type="audio",
+                    mime_type="audio/wav",
+                    original_filename="voice-reference.wav",
+                    run_id=run.id,
+                    parent_artifact_ids=run.parameters["parent_artifact_ids"],
+                    metadata={
+                        **metadata,
+                        "operation": "audio.reference.normalize",
+                        "source_sha256": run.parameters["source"]["sha256"],
+                        "transcription_run_id": run.id,
+                    },
+                )
+            artifacts["reference_wav"] = artifact.id
         for suffix, kind, mime, content in outputs:
             with tempfile.NamedTemporaryFile(mode="w+", suffix=suffix, encoding="utf-8") as handle:
                 handle.write(content)
