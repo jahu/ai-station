@@ -34,8 +34,13 @@ try {
  $target=[IO.File]::Open((Join-Path $stage 'ai-station-wsl-rootfs.tar.gz'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
  try { $archive.Stream.CopyTo($target);$target.Flush($true) } finally { $target.Dispose() }
  foreach ($name in @('LICENSE','NOTICE','COMMERCIAL.md')) { [IO.File]::Copy((Join-Path $repo $name),(Join-Path $stage $name),$false) }
- $parameters=[CodeDom.Compiler.CompilerParameters]::new();$parameters.CompilerOptions='/platform:x64'
- Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Bootstrap.cs'))) -Language CSharp -CompilerParameters $parameters -ReferencedAssemblies 'System.dll','System.Core.dll' -OutputAssembly (Join-Path $stage 'AIStation.exe') -OutputType WindowsApplication
+ $parameters=[CodeDom.Compiler.CompilerParameters]::new()
+ $parameters.CompilerOptions='/platform:x64 /target:winexe';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
+ $parameters.OutputAssembly=Join-Path $stage 'AIStation.exe'
+ [void]$parameters.ReferencedAssemblies.Add('System.dll');[void]$parameters.ReferencedAssemblies.Add('System.Core.dll')
+ # Windows PowerShell 5.1 forbids mixing CompilerParameters with the separate
+ # output/reference flags. Keep the complete native build in one configuration.
+ Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Bootstrap.cs'))) -Language CSharp -CompilerParameters $parameters
  $hashes=[ordered]@{}
  foreach ($file in [IO.Directory]::EnumerateFiles($stage)) { $hashes[[IO.Path]::GetFileName($file)]=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() }
  if ((Get-StationPublisherSource) -cne $sourceHead) { throw 'The publisher source changed during packaging; no payload was published.' }

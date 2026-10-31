@@ -29,8 +29,14 @@ try {
  [IO.Directory]::Delete($target)
  Refuses {Assert-StationNoReparsePath (Join-Path $link 'new-child')}
  [IO.Directory]::Delete($link) # Remove the junction itself, never recurse through it.
- $lease=New-StationPrivateStore
- try {$acl=Get-Acl -LiteralPath $lease.Root} finally {$lease.Stream.Dispose()}
+ # Build only a DACL/owner fixture. Copying Get-Acl wholesale can also request
+ # SACL privileges that an ordinary desktop account deliberately does not have.
+ $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
+ $acl=[Security.AccessControl.DirectorySecurity]::new()
+ $acl.SetOwner($sid);$acl.SetAccessRuleProtection($true,$false)
+ foreach($identity in @($sid,[Security.Principal.SecurityIdentifier]::new('S-1-5-18'))) {
+  $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($identity,[Security.AccessControl.FileSystemRights]::FullControl,[Security.AccessControl.AccessControlType]::Allow))
+ }
  Set-Acl -LiteralPath $root -AclObject $acl
  Assert-StationPrivateAcl $root
  Check $true 'A genuinely owner/SYSTEM-only native ACL must pass.'
