@@ -186,11 +186,18 @@ $timer.Add_Tick({
      }
     }
    } catch {
-    $cause=$_.Exception;$canceled=$false
-    while ($null -ne $cause) { if ($cause -is [OperationCanceledException]) { $canceled=$true;break };$cause=$cause.InnerException }
+    $cause=$_.Exception;$canceled=$false;$restart=$false
+    while ($null -ne $cause) {
+     if ($cause -is [OperationCanceledException]) { $canceled=$true }
+     if ($cause.Data['AIStationRestartRequired'] -eq $true) { $restart=$true }
+     $cause=$cause.InnerException
+    }
     if ($job.Action -eq 'prepare' -and $job.Cancellation.IsCancellationRequested -and $canceled) {
      $script:prepared=$false;$status.Text='Setup canceled';$description.Text='Saved files were preserved. Choose Prepare to inspect or resume your private workspace.'
      if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }
+    } elseif ($restart) {
+     $script:attention=$true;$status.Text='Restart Windows to continue'
+     $description.Text='Save other work, restart Windows, then reopen AI Station. Your saved workspace stays in place.'
     } else { Show-Failure $_.Exception.Message }
    } finally { $job.Engine.Dispose();$job.Cancellation.Dispose() }
    Sync-Buttons

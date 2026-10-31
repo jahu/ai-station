@@ -64,6 +64,7 @@ function Invoke-StationSetup {
           [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
     $CancellationToken.ThrowIfCancellationRequested()
     Assert-StationWindowsHost
+    Assert-StationWindowsPreparationReady
     $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
     foreach ($probe in @('--version','--status')) {
