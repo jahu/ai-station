@@ -267,3 +267,24 @@ whitespace-bearing data. Actual same-CWD/environment probes pass both options;
 twelve process/argument/cancellation cases pass on Windows. Five successive
 native installer builds now pass, including the corrected adapter. The existing
 VM and import state are inspected rather than restarting on observation timeout.
+
+The corrected installed launcher has now imported its own WSL2 distribution,
+verified the registered path and guest receipt, and started the existing API,
+worker, scheduler and search services. Windows-side loopback health and the
+private desktop's ready/background status both pass. A separate ordinary Edge
+profile used the private first-admin link and submitted the actual account form;
+the new administrator remained authenticated while opening guided model setup.
+Scoped Stop then confirmed that the desktop owner had exited before the test
+machine shut down normally. These checks still do not establish model inference.
+
+The first 12-GiB Windows fixture exposed an important hardware boundary: WSL's
+unchanged default memory allocation was about 5.77 GiB. The 4B CPU recommendation
+correctly refused its 4069-MiB model budget plus 2048-MiB system headroom. The same
+installed test disk is being qualified on a 16-GiB Windows fixture; neither the
+application's memory thresholds nor global `.wslconfig` are changed to pass it.
+Smaller starter models and clearer host-versus-guest memory guidance remain
+consumer-catalog work, rather than silently claiming the 4B profile fits all
+Windows machines. The completed OS installation ISO was ejected and removed
+after boot/WSL verification, reclaiming 7.66 GiB while retaining the active guest,
+current installer and compact proof. Remove the remaining disposable test disk
+and obsolete publisher copies after final qualification.
