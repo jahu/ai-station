@@ -36,7 +36,10 @@ def test_source_exception_cannot_select_a_different_package(tmp_path, change):
 
 
 @pytest.mark.parametrize("inherited", [0o002, 0o022, 0o077])
-def test_fixed_build_controls_private_modes_independently_of_parent_umask(tmp_path, inherited):
+@pytest.mark.parametrize("python_version", [(3, 10, 21), (3, 12, 14)])
+def test_fixed_build_controls_private_modes_independently_of_parent_umask(
+    tmp_path, inherited, python_version
+):
     marker = tmp_path / "wheel-mode"
     # Exercise the actual build child preamble with fake tools, rather than
     # depending on a specific Python/tool installation on normal CI machines.
@@ -45,7 +48,7 @@ import importlib.metadata, os, pathlib, sys, types
 os.umask(int(sys.argv[2]))
 marker=pathlib.Path(sys.argv[1])
 importlib.metadata.version=lambda name: {'setuptools':'79.0.1','wheel':'0.45.1'}[name]
-sys.version_info=(3,10,21)
+sys.version_info=tuple(json.loads(sys.argv[3]))
 package=types.ModuleType('setuptools');module=types.ModuleType('setuptools.build_meta')
 module.build_wheel=lambda path: marker.write_text('synthetic wheel')
 sys.modules['setuptools']=package;sys.modules['setuptools.build_meta']=module
@@ -56,12 +59,19 @@ exec(BUILD)
         [
             sys.executable,
             "-c",
-            "BUILD=" + json.dumps(source.BUILD) + "\n" + program,
+            "import json\nBUILD=" + json.dumps(source.build_program(python_version)) + "\n" + program,
             str(marker),
             str(inherited),
+            json.dumps(python_version),
         ],
         check=True,
         capture_output=True,
     )
     assert marker.stat().st_mode & 0o777 == 0o600
     assert marker.read_text() == "synthetic wheel"
+
+
+@pytest.mark.parametrize("python_version", [None, "3.12.14", (3, 12, 3), (3, 11, 0)])
+def test_source_builder_cannot_select_an_unqualified_python(python_version):
+    with pytest.raises(ValueError, match="qualified fixed"):
+        source.build_program(python_version)

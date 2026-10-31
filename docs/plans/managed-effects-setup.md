@@ -38,8 +38,9 @@ Seventy compatible public wheels resolve to 3,586,720,579 bytes. CUDA Torch
 wheels come from the official PyTorch cu126 index with published SHA-256 and
 exact lengths; other wheels come from exact PyPI release metadata. The remaining
 ANTLR 4.9.3 distribution has only a source release. Reuse the reviewed fixed
-offline source-build strategy introduced for Sonic, with separately qualified
-Python 3.12 reproducibility. The selected runtime uses setuptools 78.1.0 whereas
+offline source-build strategy introduced for Sonic, with Python 3.12 reproducibility now checked: two offline builds on the pinned
+3.12.14 interpreter produced the exact existing 144,590-byte wheel, SHA-256
+`e403b2aa433c161c3ed3dc04e9176db63aef53c6dc0af5bb9617748e9c0dd1ba`. The selected runtime uses setuptools 78.1.0 whereas
 the reviewed builder uses 79.0.1. Build-only inputs must not introduce conflicting
 runtime requirements or silently replace the selected runtime dependency set.
 Keep that distinction explicit in the fixed manifest and normal tests; do not
@@ -100,3 +101,18 @@ access. Keep original files, models, evidence and finished outputs.
 Private evidence: `data/acceptance/guided-effects-setup-20261031/`. The next gates
 remain expressive-voice setup, broader catalogs, real Linux/Windows/macOS
 consumer install/update/uninstall, NR-06/07 quality, naming and final owner QA.
+
+
+## Implemented preparation primitives
+
+The fixed source builder now accepts only the two qualified interpreter tuples,
+3.10.21 and 3.12.14, retaining the existing Avatar default and identical derived
+wheel requirement. Its actual isolated child preamble is tested for both Python
+versions under three inherited umasks; unqualified versions are rejected.
+Shared offline installation links build inputs before invoking its trusted fixed
+callback, then excludes explicitly build-only wheels from the runtime hash lock.
+Without a fixed callback, build-only inputs are rejected. This permits the known
+79.0.1 builder followed by the selected 78.1.0 runtime without conflicting pins.
+All 94 cases across the complete affected source-build and speech/music/video/
+avatar environment families pass. These are reusable preparation changes, not
+completed managed-effects assembly, dispatch or UI qualification.
