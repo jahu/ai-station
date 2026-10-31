@@ -4,7 +4,7 @@ $script:Cases=0
 function Check($Condition,[string]$Message) { if (-not $Condition) { throw $Message }; $script:Cases++ }
 function Refuses([scriptblock]$Action) { $failed=$false;try { & $Action | Out-Null } catch { $failed=$true };Check $failed 'Unverified metadata was accepted.' }
 function Fixture {
- return [pscustomobject]@{schema=1;source_head=('a'*40);base=('ubuntu:24.04@sha256:'+('b'*64));package_sha256=('c'*64);rootfs_sha256=('d'*64);image_id=('sha256:'+('e'*64));rootfs_bytes=435188534;package=[pscustomobject]@{Package='ai-station';Architecture='amd64';Version='0.1.0~preview.42'};sources=[pscustomobject]@{'guest.Dockerfile'=('1'*64);'wsl.conf'=('2'*64);'guest_control.py'=('3'*64)}}
+ return [pscustomobject]@{schema=1;desktop_protocol=2;source_head=('a'*40);base=('ubuntu:24.04@sha256:'+('b'*64));package_sha256=('c'*64);rootfs_sha256=('d'*64);image_id=('sha256:'+('e'*64));rootfs_bytes=435188534;package=[pscustomobject]@{Package='ai-station';Architecture='amd64';Version='0.1.0~preview.42'};sources=[pscustomobject]@{'guest.Dockerfile'=('1'*64);'wsl.conf'=('2'*64);'guest_control.py'=('3'*64)}}
 }
 $prior=[Globalization.CultureInfo]::CurrentCulture
 try {

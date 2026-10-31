@@ -1,6 +1,6 @@
 # Native installation orchestration. Not an HTTP/tool/agent execution surface.
 Set-StrictMode -Version 2.0
-foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
+foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest','DesktopPort')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
 
 function Read-StationInstallRecord {
     param($Lease)
@@ -57,6 +57,9 @@ function Confirm-StationGuest {
     $text=Wait-StationWslProcess (Start-StationWslProcess $Executable $plan.Arguments $Lease.Root) -KeepOutput $true
     $guest=$text | ConvertFrom-Json -ErrorAction Stop
     Assert-StationImportedGuest $Record.Manifest $guest
+    $description=Wait-StationWslProcess (Start-StationWslProcess $Executable @('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control','describe') $Lease.Root) -KeepOutput $true
+    $capabilities=$description | ConvertFrom-Json -ErrorAction Stop
+    if ($capabilities.desktop_protocol -ne 2) { throw 'This guest does not support browser identity and Windows port selection.' }
     $after=@(Get-StationWslRegistrations)
     [void](Get-StationImportPlan $Record.State $Lease.Root ([IO.Path]::Combine($Lease.Root,'accepted-rootfs.tar.gz')) -Inventory $after)
     $before=@($inventory | Where-Object { $_.DistributionName -ieq $Record.State.Distribution })
@@ -71,6 +74,7 @@ function Confirm-StationGuest {
 function Invoke-StationSetup {
     param([Parameter(Mandatory=$true)][string]$PackageFolder)
     Assert-StationWindowsHost
+    $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
     foreach ($probe in @('--version','--status')) { Wait-StationWslProcess (Start-StationWslProcess $executable @($probe) ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) }
     Assert-StationNoReparsePath $PackageFolder
@@ -110,7 +114,13 @@ function Invoke-StationDesktop {
         $record=Read-StationInstallRecord $lease
         if ($null -eq $record) { throw 'Prepare this private installation before starting AI Station.' }
         Confirm-StationGuest $lease $record $executable
-        $arguments=Get-StationLifecyclePlan $record.State $lease.Root $Action
+        if ($Action -ieq 'start') {
+            $statusArgs=Get-StationLifecyclePlan $record.State $lease.Root 'status'
+            $status=(Wait-StationWslProcess (Start-StationWslProcess $executable $statusArgs $lease.Root) -KeepOutput $true) | ConvertFrom-Json -ErrorAction Stop
+            if ($status.running -isnot [bool]) { throw 'The guest returned an invalid lifecycle status.' }
+            if ($status.running) { $arguments=Get-StationLifecyclePlan $record.State $lease.Root 'open' }
+            else { $arguments=Get-StationLifecyclePlan $record.State $lease.Root 'start' -Port (Get-StationAvailablePort) }
+        } else { $arguments=Get-StationLifecyclePlan $record.State $lease.Root $Action }
         $process=Start-StationWslProcess $executable $arguments $lease.Root
         if ($Action -ieq 'start') { return $process } # Native owner consumes its private pipe until Stop.
         return (Wait-StationWslProcess $process -KeepOutput $true)

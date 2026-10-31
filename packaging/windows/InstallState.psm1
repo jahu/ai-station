@@ -74,10 +74,15 @@ function Get-StationImportPlan {
 
 function Get-StationLifecyclePlan {
     param([Parameter(Mandatory=$true)]$State, [Parameter(Mandatory=$true)][string]$ExpectedRoot,
-          [Parameter(Mandatory=$true)][ValidateSet('start','status','open','stop')][string]$Action)
+          [Parameter(Mandatory=$true)][ValidateSet('start','status','open','stop')][string]$Action, [int]$Port=0)
     Assert-StationInstallState $State $ExpectedRoot
     if ($State.Phase -cne 'ready') { throw 'Verify the imported guest before starting this installation.' }
-    return [string[]]@('--distribution',$State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control',$Action.ToLowerInvariant())
+    $arguments=[string[]]@('--distribution',$State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control',$Action.ToLowerInvariant())
+    if ($Action -ieq 'start') {
+        if ($Port -lt 8765 -or $Port -ge 8865) { throw 'Choose an available Windows loopback port before starting.' }
+        $arguments+=[string]$Port
+    } elseif ($Port -ne 0) { throw 'Only startup can select a desktop port.' }
+    return $arguments
 }
 
 Export-ModuleMember -Function ConvertTo-StationWindowsPath,New-StationInstallState,Assert-StationInstallState,Get-StationImportPlan,Get-StationLifecyclePlan

@@ -25,7 +25,15 @@ def package_identity(package, expected):
     if not 0 < package.stat().st_size < 1024**3 or digest(package) != expected:
         raise ValueError("The Debian package differs from its audited identity")
     result = subprocess.run(
-        ["dpkg-deb", "--field", str(package), "Package", "Version", "Architecture"],
+        [
+            "dpkg-deb",
+            "--field",
+            str(package),
+            "Package",
+            "Version",
+            "Architecture",
+            "X-AI-Station-Desktop-Protocol",
+        ],
         capture_output=True,
         text=True,
         check=True,
@@ -34,6 +42,8 @@ def package_identity(package, expected):
     fields = dict(line.split(": ", 1) for line in result.stdout.splitlines())
     if fields.get("Package") != "ai-station" or fields.get("Architecture") != "amd64":
         raise ValueError("The Windows x64 guest requires the AI Station amd64 package")
+    if fields.get("X-AI-Station-Desktop-Protocol") != "2":
+        raise ValueError("The Windows guest requires desktop protocol 2 (browser identity and host port)")
     return fields
 
 
@@ -50,6 +60,7 @@ def build(package, expected, output):
     }
     receipt = dict(
         schema=1,
+        desktop_protocol=2,
         source_head=head,
         base=BASE,
         package_sha256=expected,

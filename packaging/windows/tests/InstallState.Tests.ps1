@@ -24,8 +24,10 @@ Refuses { Get-StationImportPlan $state $root $archive -Inventory @($entry,$entry
 Refuses { Get-StationLifecyclePlan $state $root start }
 $state.RegistrationId=$entry.Id; $state.Phase='ready'
 foreach ($action in @('start','status','open','stop')) {
- $args=Get-StationLifecyclePlan $state $root $action
- Check (($args -join '|') -ceq ('--distribution|'+$state.Distribution+'|--user|station|--exec|/usr/libexec/ai-station/wsl-control|'+$action)) 'Lifecycle must use the fixed ordinary-user bridge without shell/PID/URL arguments.'
+ $port=0;if ($action -eq 'start') { $port=8766 };$argv=Get-StationLifecyclePlan $state $root $action -Port $port
+ $expected='--distribution|'+$state.Distribution+'|--user|station|--exec|/usr/libexec/ai-station/wsl-control|'+$action
+ if ($action -eq 'start') { $expected+='|8766' }
+ Check (($argv -join '|') -ceq $expected) 'Lifecycle must use the fixed ordinary-user bridge without shell/PID/URL arguments.'
 }
 Refuses { Get-StationLifecyclePlan $state $root shutdown }
 Refuses { Get-StationImportPlan $state $root $archive }
@@ -46,4 +48,6 @@ $fresh = New-StationInstallState $root ('a' * 64)
 Check ((Get-StationImportPlan $fresh $root $archive -Inventory @($unknown)).Kind -eq 'Import') 'Unrelated path formats must be preserved without blocking a fresh own installation.'
 $pending = New-StationInstallState $root ('a' * 64); $pending.Phase='importing'
 Check ((Get-StationImportPlan $pending $root $archive).Kind -eq 'InspectImport') 'An unknown live/lost import must not be blindly repeated without registration or completion evidence.'
+foreach ($badPort in @(0,80,8865,65535)) { Refuses { Get-StationLifecyclePlan $state $root start -Port $badPort } }
+Refuses { Get-StationLifecyclePlan $state $root stop -Port 8766 }
 Write-Output ('PASS '+$script:Cases+' native PowerShell ownership/command-planning assertions; Windows OS qualification remains pending')

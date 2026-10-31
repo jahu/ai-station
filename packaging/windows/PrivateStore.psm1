@@ -44,14 +44,14 @@ function New-StationPrivateStore {
         Set-Acl -LiteralPath $root -AclObject $acl -ErrorAction Stop
     }
     Assert-StationPrivateAcl $root
-    foreach ($name in @('install.lock','install-state.json')) {
+    foreach ($name in @('install.lock','install-state.json','ui-active.lock')) {
         $path=[IO.Path]::Combine($root,$name)
         if ([IO.File]::Exists($path)) { Assert-StationPrivateAcl $path }
     }
     $lease=New-StationFileLease $root
     try {
         if (-not [IO.File]::Exists([IO.Path]::Combine($root,'install-state.json'))) {
-            $unknown=@([IO.Directory]::EnumerateFileSystemEntries($root) | Where-Object { [IO.Path]::GetFileName($_) -ne 'install.lock' })
+            $unknown=@([IO.Directory]::EnumerateFileSystemEntries($root) | Where-Object { [IO.Path]::GetFileName($_) -notin @('install.lock','ui-active.lock') })
             if ($unknown.Count -gt 0) { throw 'Existing unmarked data was found. It was not adopted, overwritten or deleted.' }
         }
         return $lease
@@ -59,3 +59,15 @@ function New-StationPrivateStore {
 }
 
 Export-ModuleMember -Function Assert-StationNoReparsePath,Assert-StationPrivateAcl,New-StationPrivateStore
+
+# Shared lifetime marker covers every session of this OS account, independently
+# of the per-session show-window mutex. Windows denies exclusive uninstall access.
+function Open-StationUiLease {
+    $lease=New-StationPrivateStore
+    try {
+        $path=[IO.Path]::Combine($lease.Root,'ui-active.lock')
+        if ([IO.File]::Exists($path)) { Assert-StationPrivateAcl $path }
+        return [IO.File]::Open($path,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::ReadWrite)
+    } finally { $lease.Stream.Dispose() }
+}
+Export-ModuleMember -Function Open-StationUiLease
