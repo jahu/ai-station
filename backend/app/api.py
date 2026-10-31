@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -215,11 +215,15 @@ def get_run(session: Session, run_id: UUID) -> Run:
 
 
 @app.get("/api/health")
-def health():
+def health(response: Response):
     # Public readiness checks reveal no account rows or application history.
     with get_engine().connect() as connection:
         connection.execute(text("SELECT 1"))
-    return {"status": "ok", "version": "0.1.0"}
+    response.headers["Cache-Control"] = "no-store"
+    result = {"status": "ok", "version": "0.1.0"}
+    if instance_id := get_settings().desktop_instance_id:
+        result["desktop_instance_id"] = instance_id
+    return result
 
 
 @app.get("/api/runs")

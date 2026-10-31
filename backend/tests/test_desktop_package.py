@@ -127,7 +127,9 @@ def test_matching_existing_image_is_reused_and_mismatched_tag_is_not_overwritten
 def test_private_setup_link_is_consumed_without_ordinary_log_persistence(tmp_path, monkeypatch):
     proof = "http://127.0.0.1:8766/#/?setup_token=" + "a" * 43
     proc = Mock()
-    proc.stdout = io.StringIO("starting\n" + desktop.READY + json.dumps({"url": proof}) + "\n")
+    proc.stdout = io.StringIO(
+        "starting\n" + desktop.READY + json.dumps({"url": proof, "instance_id": "d" * 32}) + "\n"
+    )
     proc.poll.return_value = None
     spawn = Mock(return_value=proc)
     monkeypatch.setattr(desktop.subprocess, "Popen", spawn)
@@ -135,7 +137,13 @@ def test_private_setup_link_is_consumed_without_ordinary_log_persistence(tmp_pat
     monkeypatch.setattr(desktop.webbrowser, "open", browser)
     monkeypatch.setattr(desktop, "running_window", lambda *args, **kwargs: "stop")
     log = io.StringIO()
-    desktop.supervise(tmp_path, tmp_path / "desktop.env", {"image_tag": "ai-station:desktop-test"}, log)
+    desktop.supervise(
+        tmp_path,
+        tmp_path / "desktop.env",
+        {"image_tag": "ai-station:desktop-test"},
+        log,
+        instance_id="d" * 32,
+    )
     browser.assert_called_once_with(proof.replace("/#/?", "/#/setup/models?"))
     assert log.getvalue() == "starting\n" and "setup_token" not in log.getvalue()
     command = spawn.call_args.args[0]

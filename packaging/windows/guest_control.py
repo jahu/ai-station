@@ -63,10 +63,12 @@ def open_existing(desktop):
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             # Read authority only while observing the actual live owner's lock.
-            url = desktop.ready_url(root)
-            if url is None:
+            value = desktop.ready_info(root)
+            if value is None:
                 raise RuntimeError("AI Station is still starting; wait for its existing owner")
-            print(desktop.READY + json.dumps({"url": url}), flush=True)
+            if not value.get("instance_id"):
+                raise RuntimeError("Restart this desktop version to obtain its browser identity")
+            print(desktop.READY + json.dumps(value), flush=True)
             return True
         return False
     finally:
