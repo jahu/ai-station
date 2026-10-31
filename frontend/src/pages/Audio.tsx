@@ -151,7 +151,11 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   );
   const [text, setText] = useState(String(restored.text ?? ""));
   const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
-  const [engine, setEngine] = useState(String(restored.engine ?? ""));
+  const [engine, setEngine] = useState(
+    search.get("engine") === "fish_s2_pro"
+      ? "fish_s2_pro"
+      : String(restored.engine ?? ""),
+  );
   const [direction, setDirection] = useState(
     String(restored.direction ?? "natural"),
   );
@@ -277,6 +281,16 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 )
                   setReference("");
                 setEngine(next);
+                if (search.has("engine")) {
+                  setSearch(
+                    (current) => {
+                      const updated = new URLSearchParams(current);
+                      updated.delete("engine");
+                      return updated;
+                    },
+                    { replace: true },
+                  );
+                }
               }}
               onDirection={setDirection}
               onPace={setPace}

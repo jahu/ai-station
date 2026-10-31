@@ -18,8 +18,8 @@ NR-14 now includes a qualified [guided music profile](managed-music-setup.md),
 following conversation, speech, images and CPU memory setup. It reuses ordinary
 Task/Run preparation and the existing music executor; real first-account
 installation, Stop/Resume, first-track Library playback, native restart/Stop and
-account denial passed privately. It does not close video/avatar/effects setup,
-broader hardware/catalog choice or the consumer OS installer requirements.
+account denial passed privately. Later guided media profiles are described below; broader hardware/catalog
+choice and the consumer OS installer requirements remain open.
 
 | ID | Requirement | Observable acceptance |
 | --- | --- | --- |
@@ -60,10 +60,11 @@ offline assembly, fresh-account Stop/Resume, complete two-cue sound/preview,
 CPU editor/export, native recovery/Stop and account privacy passed. Final
 packaging and production desktop/phone checks passed with existing data and
 private access preserved. [Guided expressive voice](managed-fish-setup.md) is
-in progress, including complete offline transcription/codec prerequisites and
-canonical phone-recording references.
-Consumer installation on all three operating systems, remaining expressive voice setup,
-broader model selection and NR-06/07 quality acceptance remain in scope.
+now has a fresh-account candidate with independent Fish/ASR environments,
+canonical phone references, complete Library output, native recovery/Stop and
+account privacy. Final package verification, review and deployment are tracked
+in that plan. Consumer installation on all three operating systems, broader
+model selection and NR-06/07 quality acceptance remain in scope.
 
 ## Delivery order
 

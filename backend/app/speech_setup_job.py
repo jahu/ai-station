@@ -234,6 +234,6 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
             if self.setup_label == "speech"
             else f"{self.setup_label.capitalize()} runtime and model files prepared. Generate a first result to check the engine."
         )
-        append_event(session, run.id, f"runtime.{self.setup_label}.prepared", receipt)
+        append_event(session, run.id, f"runtime.{self.metadata_prefix}.prepared", receipt)
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
         return "done"

@@ -1,3 +1,14 @@
+The [managed expressive voice profile](plans/managed-fish-setup.md) extends
+the existing preparation lifecycle with one fixed Fish/Whisper recipe and two
+independent offline Python environments. Their protobuf requirements conflict;
+they exchange only a verified transcript and canonical owned PCM artifact.
+Shared models/engine readiness use opaque identities; setup history and voice
+data remain private. Normal speech and transcription Runs freeze those identities,
+while explicit existing configurations retain priority. The fixed Linux profile
+passed fresh browser/worker setup and complete inference, Stop/recovery, privacy
+and final package checks; other platforms and audible expression acceptance
+remain separate gates.
+
 The Linux desktop packaging candidate bundles a relocatable real CPython,
 native Runner and compiled Docker image around the existing supervisor. Its
 private configuration selects a separate data root, Compose project and exact

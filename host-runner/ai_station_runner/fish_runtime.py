@@ -40,15 +40,18 @@ def devices(root, *, free=False):
     return result
 
 
-def installation():
+def installation(identity=None):
     settings = get_settings()
-    if not settings.fish_speech_enabled:
+    from ai_station_runner.fish_selection import FIELDS, selection
+
+    chosen = selection(settings, identity) or {}
+    if identity is not None and not chosen.get("managed"):
+        raise ValueError("The exact managed Fish environment is no longer selected")
+    if not settings.fish_speech_enabled and not chosen.get("managed"):
         raise ValueError("Expressive speech is not enabled")
-    if not all((settings.fish_speech_python, settings.fish_speech_dir, settings.fish_speech_models)):
+    if not all(chosen.get(k) for k in FIELDS):
         raise ValueError("Configure the offline Fish Python, source and model directory")
-    python = Path(settings.fish_speech_python).expanduser().absolute()
-    runtime = Path(settings.fish_speech_dir).expanduser().absolute()
-    models = Path(settings.fish_speech_models).expanduser().absolute()
+    python, runtime, models = (chosen[k].absolute() for k in FIELDS)
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Configured Fish Python is unavailable")
     if any(path.resolve() != path or not path.is_dir() for path in (runtime, models)):
@@ -82,9 +85,30 @@ def capabilities():
         "attribution": "Built with Fish Audio",
         "commercial_license_required": True,
     }
+    managed = False
     try:
+        from ai_station_runner.fish_selection import selection
+
+        chosen = selection(get_settings()) or {}
+        managed = chosen.get("managed") is True
         _, runtime, models = installation()
         capacity = devices(get_settings().host_data_dir())
+        eligibility = {}
+        if managed:
+            from ai_station_runner.fish_environment import environment_id
+            from ai_station_runner.fish_prepare import compatible_devices, driver_supported
+
+            if not driver_supported("580.126.20"):
+                raise ValueError("The prepared Fish profile requires a compatible NVIDIA driver")
+            fitting = compatible_devices(collect(get_settings().host_data_dir()).get("gpus", []))
+            allowed = {int(g["index"]) for g in fitting}
+            capacity = {k: v for k, v in capacity.items() if k in allowed}
+            eligibility = {
+                "environment_id": environment_id(chosen["observation"]),
+                "eligible_gpu_indices": sorted(allowed),
+                "primary_gpu_indices": sorted(k for k, v in capacity.items() if v >= PRIMARY_VRAM_MIB),
+                "codec_gpu_indices": sorted(k for k, v in capacity.items() if v >= CODEC_VRAM_MIB),
+            }
         if not any(
             primary != auxiliary and a >= PRIMARY_VRAM_MIB and b >= CODEC_VRAM_MIB
             for primary, a in capacity.items()
@@ -111,16 +135,32 @@ def capabilities():
                 "reason": "Verifying installed speech files",
             }
         observation = future.result()
-        return {**base, "available": True, "readiness": "ready", "observation": observation}
+        return {**base, **eligibility, "available": True, "readiness": "ready", "observation": observation}
     except (OSError, ValueError) as exc:
-        return {**base, "available": False, "readiness": "unavailable", "reason": str(exc)}
+        reason = (
+            "Prepared expressive speech is unavailable or changed; inspect model setup"
+            if managed
+            else str(exc)
+        )
+        return {**base, "available": False, "readiness": "unavailable", "reason": reason}
 
 
 def start(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise PermissionError("Speech requires artifact read/write permissions")
-    python, runtime, models = installation()
+    from ai_station_runner.fish_selection import FIELDS, selection
+
+    if body.environment_id is None and (selection(get_settings()) or {}).get("managed"):
+        raise ValueError("Managed Fish speech requires its frozen environment identity")
+    python, runtime, models = installation(body.environment_id) if body.environment_id else installation()
     root = manager.data_dir.resolve()
+    managed = None
+    if body.environment_id:
+        from ai_station_runner.fish_environment import resolve_id
+
+        managed = resolve_id(root, body.environment_id)
+        if (python, runtime, models) != tuple(managed[k] for k in FIELDS):
+            raise ValueError("Fish launch must use its exact frozen environment")
     run_id = str(body.run_id)
     launch = resolve_child(root, f"runs/{run_id}/fish-launch")
     if launch != root / f"runs/{run_id}/fish-launch":
@@ -153,6 +193,12 @@ def start(manager, body):
     free = devices(root, free=True)
     if free.get(body.gpus[0], 0) < PRIMARY_VRAM_MIB or free.get(body.gpus[1], 0) < CODEC_VRAM_MIB:
         raise ValueError("Allocated speech GPUs lack the required free VRAM")
+    if managed:
+        from ai_station_runner.fish_prepare import compatible_devices, driver_supported
+
+        compatible = {int(g["index"]) for g in compatible_devices(collect(root).get("gpus", []))}
+        if not driver_supported("580.126.20") or not set(body.gpus) <= compatible:
+            raise ValueError("The allocated Fish GPU pair or driver does not fit its prepared profile")
     reference_bytes(root, body.reference.model_dump())
     output = resolve_child(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav")
     if output.exists() or output.is_symlink():
@@ -171,6 +217,28 @@ def start(manager, body):
         "PYTHONPATH": str(Path(__file__).parent.parent) + os.pathsep + str(runtime),
         "PYTHONUNBUFFERED": "1",
     }
+    if managed:
+        home = launch / "home"
+        home.mkdir(mode=0o700)
+        environment = {
+            **scope_environment(),
+            **{
+                k: environment[k]
+                for k in (
+                    "HF_HUB_OFFLINE",
+                    "TRANSFORMERS_OFFLINE",
+                    "HF_HUB_DISABLE_TELEMETRY",
+                    "CUDA_VISIBLE_DEVICES",
+                    "PYTHONPATH",
+                    "PYTHONUNBUFFERED",
+                )
+            },
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(home),
+            "LANG": "C.UTF-8",
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+        }
     # Hashing and all model work occur in the owned child after PID journaling.
     return manager.start(
         run_id=run_id,

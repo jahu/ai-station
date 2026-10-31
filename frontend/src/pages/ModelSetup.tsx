@@ -24,6 +24,7 @@ import MusicSetupPanel from "./MusicSetupPanel";
 import VideoSetupPanel from "./VideoSetupPanel";
 import AvatarSetupPanel from "./AvatarSetupPanel";
 import EffectsSetupPanel from "./EffectsSetupPanel";
+import FishSetupPanel from "./FishSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -371,6 +372,7 @@ export default function ModelSetup() {
       </PageTitle>
       <RuntimeSetupPanel onReadiness={setRuntimeReady} />
       <SpeechSetupPanel />
+      <FishSetupPanel />
       <ImageSetupPanel />
       <VideoSetupPanel />
       <AvatarSetupPanel />

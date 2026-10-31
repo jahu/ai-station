@@ -2,6 +2,7 @@
 
 import json
 import os
+import signal
 import sys
 import time
 import wave
@@ -9,7 +10,9 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from ai_station_runner.fish_contract import (
+    CODEC_VRAM_MIB,
     DIRECTIONS,
+    PRIMARY_VRAM_MIB,
     RAM_MIB,
     FishRequest,
     installation_observation,
@@ -20,6 +23,10 @@ from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_chunks import text_chunks
 
 
+class GpuMemoryUnavailable(ValueError):
+    """Another workload took VRAM after initial resource admission."""
+
+
 def verify_module_locations(runtime, modules):
     # Fish uses namespace packages, whose __file__ is legitimately None.
     # Check imported implementation files, including editable installations.
@@ -27,6 +34,15 @@ def verify_module_locations(runtime, modules):
         if name.startswith("fish_speech.") and getattr(module, "__file__", None):
             if not Path(module.__file__).resolve().is_relative_to(runtime / "fish_speech"):
                 raise ValueError("Fish was imported from another installation")
+
+
+def require_gpu_memory(torch, device, minimum_mib):
+    free, _ = torch.cuda.mem_get_info(device)
+    if type(free) is not int or free < minimum_mib * 1024**2:
+        raise GpuMemoryUnavailable(
+            "GPU memory became unavailable while loading expressive speech. "
+            "Wait for other GPU workloads to finish, then retry this task."
+        )
 
 
 def render(request, *, runtime, models, work, reference):
@@ -57,10 +73,15 @@ def render(request, *, runtime, models, work, reference):
     started = time.monotonic()
     print("speech.model.loading", file=sys.__stdout__, flush=True)
     model = DualARTransformer.from_pretrained(models, load_weights=True, max_length=4096)
+    # CPU loading may take a minute. An external runtime can claim VRAM after
+    # native admission, so recheck before copying any semantic weights to CUDA.
+    require_gpu_memory(torch, 0, PRIMARY_VRAM_MIB)
+    require_gpu_memory(torch, 1, CODEC_VRAM_MIB)
     model = model.to(device="cuda:0", dtype=torch.bfloat16).eval()
     with torch.device("cuda:0"):
         model.setup_caches(max_batch_size=1, max_seq_len=4096, dtype=torch.bfloat16)
     model._cache_setup_done = True
+    require_gpu_memory(torch, 1, CODEC_VRAM_MIB)
     codec = load_codec_model(models / "codec.pth", "cuda:1", torch.bfloat16)
     verify_module_locations(runtime, sys.modules)
     if any(p.device != torch.device("cuda:0") for p in model.parameters()) or any(
@@ -184,6 +205,24 @@ def run(receipt):
     if time.time() >= request.deadline_at:
         raise ValueError("Speech execution deadline elapsed")
     runtime, models = Path(record["runtime"]), Path(record["models"])
+    if request.environment_id:
+        from ai_station_runner.fish_environment import resolve_id
+
+        chosen = resolve_id(root, request.environment_id)
+        if (
+            Path(sys.base_prefix).resolve() != chosen["environment"] / "fish/python"
+            or runtime != chosen["fish_speech_dir"]
+            or models != chosen["fish_speech_models"]
+            or Path(record["python"]) != chosen["fish_speech_python"]
+        ):
+            raise ValueError("Fish must execute its exact frozen environment")
+        signal.setitimer(signal.ITIMER_REAL, min(1800, request.deadline_at - time.time()))
+
+        def offline(event, args):
+            if event in {"socket.connect", "socket.getaddrinfo", "socket.sendto"}:
+                raise PermissionError("Managed Fish speech stays offline")
+
+        sys.addaudithook(offline)
     if installation_observation(runtime, models) != request.observation:
         raise ValueError("Fish implementation or model changed since queuing")
     data = reference_bytes(root, request.reference.model_dump())
@@ -217,4 +256,8 @@ def run(receipt):
 
 
 if __name__ == "__main__":
-    run(Path(sys.argv[1]))
+    try:
+        run(Path(sys.argv[1]))
+    except GpuMemoryUnavailable as exc:
+        print(str(exc), file=sys.stderr, flush=True)
+        sys.exit(2)

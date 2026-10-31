@@ -121,6 +121,25 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
         raise HTTPException(
             409, ready.get("reason", "Expressive speech is not configured or still being verified")
         )
+    if ready.get("environment_id"):
+        eligible = ready.get("eligible_gpu_indices", [])
+        primary = ready.get("primary_gpu_indices", [])
+        codec = ready.get("codec_gpu_indices", [])
+        if (
+            not re.fullmatch(r"[a-f0-9]{64}", ready["environment_id"])
+            or any(
+                not isinstance(group, list) or any(type(i) is not int or i < 0 for i in group)
+                for group in (eligible, primary, codec)
+            )
+            or not set(primary) <= set(eligible)
+            or not set(codec) <= set(eligible)
+            or not any(a != b for a in primary for b in codec)
+        ):
+            raise HTTPException(
+                409, "The prepared expressive voice profile is unavailable; inspect model setup"
+            )
+        if body.gpu != "auto" and int(body.gpu) not in primary:
+            raise HTTPException(422, "Choose Auto or a compatible primary GPU for expressive voice")
     try:
         snapshot = source_snapshot(source)
         from app.recordings import FORMATS, recording_format
@@ -164,6 +183,16 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
         "reference": snapshot,
         "reference_artifact_id": source.id,
         "parent_artifact_ids": [source.id],
+        **(
+            {
+                "environment_id": ready["environment_id"],
+                "eligible_gpu_indices": ready.get("eligible_gpu_indices", []),
+                "primary_gpu_indices": ready.get("primary_gpu_indices", []),
+                "codec_gpu_indices": ready.get("codec_gpu_indices", []),
+            }
+            if ready.get("environment_id")
+            else {}
+        ),
     }
     if reference_text:
         parameters["reference_transcription_run_id"] = cached_id
@@ -237,6 +266,12 @@ class FishSpeechExecutor(AudioExecutor):
     name = "fish_speech"
 
     def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("environment_id"):
+            eligible = run.parameters.get("eligible_gpu_indices", [])
+            hardware = {
+                **hardware,
+                "gpus": [g for g in hardware.get("gpus", []) if int(g["index"]) in eligible],
+            }
         devices = {}
         for gpu in hardware.get("gpus", []):
             total, used = gpu.get("memory_total_mib"), gpu.get("memory_used_mib")
@@ -258,11 +293,18 @@ class FishSpeechExecutor(AudioExecutor):
                 )
         ordered = sorted(devices, key=devices.get, reverse=True)
         for primary in ordered:
+            if run.parameters.get("environment_id") and primary not in run.parameters["primary_gpu_indices"]:
+                continue
             if devices[primary] < 10240 or (
                 run.requested_gpu != "auto" and primary != int(run.requested_gpu)
             ):
                 continue
             for secondary in ordered:
+                if (
+                    run.parameters.get("environment_id")
+                    and secondary not in run.parameters["codec_gpu_indices"]
+                ):
+                    continue
                 if secondary == primary or devices[secondary] < 5120:
                     continue
                 selected = reserve_gpu_bundle(session, run, [primary, secondary], 2)
@@ -301,6 +343,11 @@ class FishSpeechExecutor(AudioExecutor):
                 "gpus": [int(device) for device in run.allocated_resources["gpus"]],
                 "permissions": run.effective_permissions,
                 **self.native_budget(run),
+                **(
+                    {"environment_id": run.parameters["environment_id"]}
+                    if run.parameters.get("environment_id")
+                    else {}
+                ),
             },
         )
 
@@ -314,5 +361,10 @@ class FishSpeechExecutor(AudioExecutor):
             "profile": PROFILE,
             "observation": run.parameters["observation"],
             "attribution": "Built with Fish Audio",
+            **(
+                {"environment_id": run.parameters["environment_id"]}
+                if run.parameters.get("environment_id")
+                else {}
+            ),
         }
         super().on_success(session, run, artifact)

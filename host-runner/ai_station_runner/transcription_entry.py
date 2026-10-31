@@ -14,8 +14,6 @@ from ai_station_runner.transcription_protocol import audio_bytes, profile, valid
 
 
 def execute(run_id, data_root, model_root):
-    from faster_whisper import WhisperModel
-
     from ai_station_runner.transcription_decode import decode
 
     signal.alarm(600)
@@ -26,6 +24,21 @@ def execute(run_id, data_root, model_root):
     body = json.loads(request_path.read_text())
     if body["run_id"] != run_id or set(body["permissions"]) != {"filesystem_read", "workspace_write"}:
         raise ValueError("Request ownership changed")
+    if body.get("environment_id"):
+        from ai_station_runner.fish_model_views import environment_directory
+
+        environment = environment_directory(data_root, body["environment_id"])
+        if (
+            Path(model_root) != environment / "models/transcription"
+            or Path(sys.base_prefix).resolve() != environment / "transcription/python"
+        ):
+            raise ValueError("Transcription must use its exact frozen environment")
+
+        def offline(event, args):
+            if event in {"socket.connect", "socket.getaddrinfo", "socket.sendto"}:
+                raise PermissionError("Managed transcription stays offline")
+
+        sys.addaudithook(offline)
     if profile(model_root) != body["profile_sha256"]:
         raise ValueError("Model changed since submission")
     with resolve_child(Path(model_root), "ai-station-model.json").open("rb") as handle:
@@ -35,6 +48,8 @@ def execute(run_id, data_root, model_root):
     model_manifest = json.loads(model_bytes)
     data = audio_bytes(data_root, body["source"])
     samples, metadata = decode(data)
+    from faster_whisper import WhisperModel
+
     model = WhisperModel(
         str(model_root),
         device="cpu",

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from app.avatar_setup_client import AvatarSetupClient
 from app.db import utcnow
 from app.effects_setup_client import EffectsSetupClient
+from app.fish_setup_client import FishSetupClient
 from app.image_setup_client import ImageSetupClient
 from app.model_setup import DB, Resume, administrator, fingerprint
 from app.models import Run, Task
@@ -29,6 +30,7 @@ SPEECH_PROFILE = "chatterbox-v3-linux-x86-64-python312-v1"
 IMAGE_PROFILE = "qwen-image21-cuda-linux-amd64-v1"
 AVATAR_PROFILE = "sonic-whole-linux-x86-64-python310-v1"
 EFFECTS_PROFILE = "mmaudio-large44-linux-x86-64-python312-v1"
+FISH_PROFILE = "fish-s2-pro-linux-x86-64-python312-v1"
 VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 Profile = Literal[
@@ -39,6 +41,7 @@ Profile = Literal[
     "wan22-5b-linux-x86-64-python312-v1",
     "sonic-whole-linux-x86-64-python310-v1",
     "mmaudio-large44-linux-x86-64-python312-v1",
+    "fish-s2-pro-linux-x86-64-python312-v1",
 ]
 
 
@@ -53,7 +56,9 @@ class Prepare(BaseModel):
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
         client = (
-            EffectsSetupClient(timeout=30)
+            FishSetupClient(timeout=30)
+            if profile == FISH_PROFILE
+            else EffectsSetupClient(timeout=30)
             if profile == EFFECTS_PROFILE
             else AvatarSetupClient(timeout=30)
             if profile == AVATAR_PROFILE
@@ -114,13 +119,16 @@ def attempt(session, task, saved, previous=None):
     video = saved["recipe"]["profile"] == VIDEO_PROFILE
     avatar = saved["recipe"]["profile"] == AVATAR_PROFILE
     effects = saved["recipe"]["profile"] == EFFECTS_PROFILE
-    inputs = speech or image or music or video or avatar or effects
+    fish = saved["recipe"]["profile"] == FISH_PROFILE
+    inputs = speech or image or music or video or avatar or effects or fish
     run = create_run(
         session,
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="effects_setup"
+        executor_type="fish_setup"
+        if fish
+        else "effects_setup"
         if effects
         else "avatar_setup"
         if avatar

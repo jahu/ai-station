@@ -72,3 +72,27 @@ def test_unfinished_speech_is_not_in_the_draft_catalog(monkeypatch):
 
     monkeypatch.setattr(agent_media, "SPEECH_AGENTS_ENABLED", False)
     assert "speech" not in available_media_outputs()
+
+
+@pytest.mark.parametrize("fish_ready", [False, True])
+def test_fish_only_installation_reports_speech_readiness_without_enabling_avatar_synthesis(
+    monkeypatch, fish_ready
+):
+    from app import agent_media
+    from app.runner_client import RunnerClient
+
+    monkeypatch.setattr(agent_media, "SPEECH_AGENTS_ENABLED", True)
+    monkeypatch.setattr(
+        RunnerClient,
+        "request",
+        lambda self, method, path, *a, **kw: (
+            {"available": False, "engines": {"fish_s2_pro": {"available": fish_ready}}}
+            if path == "/v1/audio/capabilities"
+            else {}
+        ),
+    )
+    result = agent_media.runtime_readiness()
+    assert result["speech"]["ready"] is fish_ready
+    assert result["speech"]["engines"]["chatterbox"]["ready"] is False
+    assert result["speech"]["engines"]["fish_s2_pro"]["ready"] is fish_ready
+    assert result["avatar"]["speech_ready"] is False

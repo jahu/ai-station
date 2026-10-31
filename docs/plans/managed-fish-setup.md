@@ -1,9 +1,11 @@
 # Guided expressive voice setup (NR-06 / NR-14)
 
-Status: implementation in progress. The existing explicitly configured Fish
-adapter remains available; this document does not claim guided installation or
-fresh-user qualification is complete. Preserve Chatterbox defaults and every
-existing runtime, voice reference and result.
+Status: the fixed Linux two-GPU candidate passed fresh-account installation,
+Stop/Resume, compressed-reference transcription, complete generation and
+Library playback, native restart/Task Stop and second-account privacy. Final
+packaged/default-policy verification passed; reviewed deployment remains a
+separate rollout step.
+Preserve Chatterbox defaults and every existing runtime, voice reference and result.
 
 ## User journey
 
@@ -116,3 +118,74 @@ Audible neutral/happy/sad/fearful/whisper/pace and Polish voice-fidelity accepta
 remain separate NR-06 gates. A direction selector, completed WAV or ASR transcript
 alone does not prove expressive quality. This profile also does not close the
 Linux/Windows/macOS consumer-installation or broader catalog requirements.
+
+## Independent runtime qualification
+
+The complete fixed recipe assembled successfully offline in an actual owned
+4-GiB, zero-swap preparation scope. Both venvs passed pip check; the Fish semantic
+and codec imports passed, and CPU Whisper loaded the pinned local model. Native
+preparation uses the existing typed journal, immutable identity, absolute deadline,
+Stop/adoption fences and private receipts; the installer remains qualification
+controlled rather than enabled on this evidence alone.
+
+The new managed-only ASR environment transcribed the synthetic AAC/M4A voice and
+published 66,219 verified PCM samples without the original transcription runtime
+or ambient application site-packages. A native-only two-GPU Fish invocation then
+produced a complete 2.461-second, EOS-terminated result from that canonical voice.
+These are real native results, not a browser/worker or audible-expression claim.
+
+The first invocation failed because an existing external Ollama process acquired
+about 5.2 GiB on each GPU during Fish's CPU loading interval. Its service was
+left under its existing ownership. The wrapper now rechecks free VRAM immediately
+before semantic weight transfer and codec loading, reporting resource contention
+without publishing partial audio. The successful new attempt used a new Run after
+the failed process and missing final artifact were confirmed; its first failure
+and logs are retained. Rechecks reduce this loading race; external services do
+not participate in AI Station's reservations and can still change GPU usage.
+
+Normal setup/worker and UI contracts cover the new family, including source
+verification, license acceptance, account revocation, recovery and Stop. Fresh
+administrator UI setup/Stop/Resume, separate-worker generation, actual native
+restart/Task Stop, account privacy, packaged default-policy checks and rollout
+remain qualification gates. Operator cases SETUP-136–140 are untested until the
+operator records results; automated evidence never pre-fills those answers.
+
+## Fresh application qualification
+
+An isolated fresh account installed the entire recipe from verified cached
+public inputs through the compiled Models UI and a separate ordinary worker.
+Stop and Resume retained the same Task with two attempts. The ready link opened
+Audio with Fish selected; it does not change the saved default. The experiment
+proves cached-input first setup, not a second network download of every weight.
+
+The actual UI uploaded a synthetic neutral M4A reference and requested the exact
+Polish text “Dzisiaj opowiem o naszej małej przygodzie.” with happy direction.
+An ordinary CPU transcription Run produced the canonical WAV; the dependent
+Fish Run used the same opaque environment identity and two GPUs. Its final
+44,100-Hz WAV contains 108,544 samples (2.461 seconds), with EOS for the complete
+text. Library decoding/seeking, saved creative history and desktop/390-px layouts
+passed. This is functional evidence, not audible happy-direction acceptance.
+
+A separate same-workspace follow-up retained its exact process PID/start time
+through native Runner restart. Task-wide Stop confirmed that process gone,
+published no partial artifact and released reservations while retaining the
+first result. A second actual member sees shared engine readiness and its opaque
+identity but receives 404 for the other account’s setup, Runs, workspace, original
+recording, transcripts, canonical reference and generated audio. Installation is
+admin-only. No production data or external service was changed by these probes.
+
+Local regression evidence covers the full native suite and complete affected
+backend families: 1,929 passed, two opt-in skips. All 1,064 baseline UI tests pass;
+the final readiness wording and related Audio/setup families pass 16 cases.
+Python lint/format, UI lint/types/format/build, Docker image build, three Compose
+configurations and 26 offline QA-tool cases pass. The initially started unbounded
+Python invocation was explicitly interrupted and is not counted as a pass.
+The final policy-only native families pass 62 cases. Operator workbook answers
+remain untested. Private evidence stays under the acceptance directory above.
+
+The final candidate ran with the repository's default qualification policy,
+without a private availability override. Its compiled setup and voice selection,
+restored complete audio/history, desktop/phone layout and fake API/separate-worker
+SSE passed after an idle private upgrade. The Docker image exactly matches 605
+backend/frontend files, and the native wheel exactly matches all 195 approved
+Python/recipe/shell assets. No completed GPU inference was repeated for packaging.

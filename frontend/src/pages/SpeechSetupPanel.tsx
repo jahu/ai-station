@@ -16,25 +16,38 @@ import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-type Family = "speech" | "music" | "video" | "avatar" | "effects";
+type Family = "speech" | "music" | "video" | "avatar" | "effects" | "fish";
 const profiles = {
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
   video: "wan22-5b-linux-x86-64-python312-v1",
   avatar: "sonic-whole-linux-x86-64-python310-v1",
   effects: "mmaudio-large44-linux-x86-64-python312-v1",
+  fish: "fish-s2-pro-linux-x86-64-python312-v1",
 };
 const destination = (family: Family) =>
-  family === "effects"
-    ? "/audio?mode=effects"
-    : family === "avatar"
-      ? "/avatars"
-      : family === "video"
-        ? "/video"
-        : family === "music"
-          ? "/audio?mode=music"
-          : "/audio";
+  family === "fish"
+    ? "/audio?engine=fish_s2_pro"
+    : family === "effects"
+      ? "/audio?mode=effects"
+      : family === "avatar"
+        ? "/avatars"
+        : family === "video"
+          ? "/video"
+          : family === "music"
+            ? "/audio?mode=music"
+            : "/audio";
 const content = {
+  fish: {
+    title: "Expressive voice",
+    heading: "Expressive voice & delivery",
+    description:
+      "Local speech with delivery directions and pacing. Add a short voice sample; AI Station prepares it for you.",
+    ready:
+      "Open expressive speech, add your voice recording and choose how the words should sound.",
+    model: "Fish S2 Pro",
+    open: "Open expressive speech",
+  },
   effects: {
     title: "Sound effects",
     heading: "Film sound & ambience",
@@ -113,6 +126,7 @@ type Catalog = {
   existing_video?: { available: boolean; source: string };
   existing_avatar?: { available: boolean; source: string; readiness?: string };
   existing_effects?: { available: boolean; source: string; readiness?: string };
+  existing_fish?: { available: boolean; source: string; readiness?: string };
   recommendation?: { fits: boolean; reason: string };
   storage?: {
     free_bytes: number;
@@ -167,7 +181,12 @@ function Attempt({
   manifest?: string;
 }) {
   const title = content[family].title;
-  const familyLabel = family === "effects" ? "sound effects" : family;
+  const familyLabel =
+    family === "fish"
+      ? "expressive voice"
+      : family === "effects"
+        ? "sound effects"
+        : family;
   const Icon =
     family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const familyPhases =
@@ -315,7 +334,12 @@ export default function SpeechSetupPanel() {
 export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const profile = profiles[family];
   const title = content[family].title;
-  const familyLabel = family === "effects" ? "sound effects" : family;
+  const familyLabel =
+    family === "fish"
+      ? "expressive voice"
+      : family === "effects"
+        ? "sound effects"
+        : family;
   const Icon =
     family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const [search] = useSearchParams();
@@ -330,7 +354,9 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (family === "avatar" &&
         query.state.data?.existing_avatar?.readiness === "checking") ||
       (family === "effects" &&
-        query.state.data?.existing_effects?.readiness === "checking")
+        query.state.data?.existing_effects?.readiness === "checking") ||
+      (family === "fish" &&
+        query.state.data?.existing_fish?.readiness === "checking")
         ? 1000
         : false,
   });
@@ -358,6 +384,12 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     void cache.invalidateQueries({ queryKey: [`${family}-preparations`] });
     void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
     void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
+    if (family === "fish") {
+      void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
+      void cache.invalidateQueries({
+        queryKey: ["transcription-capabilities"],
+      });
+    }
     if (family === "avatar")
       void cache.invalidateQueries({ queryKey: ["whole-avatar-capabilities"] });
   };
@@ -370,6 +402,12 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
         completed.current.add(row.run.id);
         void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
         void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
+        if (family === "fish") {
+          void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
+          void cache.invalidateQueries({
+            queryKey: ["transcription-capabilities"],
+          });
+        }
         if (family === "avatar")
           void cache.invalidateQueries({
             queryKey: ["whole-avatar-capabilities"],
@@ -401,25 +439,37 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "effects"
-      ? data?.existing_effects
-      : family === "avatar"
-        ? data?.existing_avatar
-        : family === "video"
-          ? data?.existing_video
-          : family === "music"
-            ? data?.existing_music
-            : data?.existing_speech;
+    family === "fish"
+      ? data?.existing_fish
+      : family === "effects"
+        ? data?.existing_effects
+        : family === "avatar"
+          ? data?.existing_avatar
+          : family === "video"
+            ? data?.existing_video
+            : family === "music"
+              ? data?.existing_music
+              : data?.existing_speech;
   const ready = existingRuntime?.available === true;
   const checkingRuntime =
     (family === "avatar" && data?.existing_avatar?.readiness === "checking") ||
-    (family === "effects" && data?.existing_effects?.readiness === "checking");
+    (family === "effects" &&
+      data?.existing_effects?.readiness === "checking") ||
+    (family === "fish" && data?.existing_fish?.readiness === "checking");
+  useEffect(() => {
+    if (family === "fish" && ready) {
+      void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
+      void cache.invalidateQueries({
+        queryKey: ["transcription-capabilities"],
+      });
+    }
+  }, [family, ready, cache]);
   const storageFits =
     !data?.storage || data.storage.free_bytes >= data.storage.required_bytes;
   return (
     <section
       className={`panel setup-runtime setup-${family}`}
-      aria-label={`Local ${family} setup`}
+      aria-label={`Local ${family === "fish" ? familyLabel : family} setup`}
       ref={section}
     >
       <div className="speech-setup-heading">
@@ -481,8 +531,12 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
               {checkingRuntime && (
                 <p className="notice" role="status">
                   Checking the installed{" "}
-                  {family === "avatar" ? "avatar" : "sound"} files. Your setup
-                  and saved work are retained.
+                  {family === "fish"
+                    ? "expressive voice"
+                    : family === "avatar"
+                      ? "avatar"
+                      : "sound"}{" "}
+                  files. Your setup and saved work are retained.
                 </p>
               )}
               {(!ready || showManaged) && !checkingRuntime && (
@@ -507,8 +561,14 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                     <div>
                       <small>HARDWARE</small>
                       <strong>
-                        One NVIDIA GPU · {family === "speech" ? "6" : "12"} GiB
-                        VRAM
+                        {family === "fish" ? (
+                          "Two NVIDIA GPUs · 10 + 5 GiB VRAM"
+                        ) : (
+                          <>
+                            One NVIDIA GPU · {family === "speech" ? "6" : "12"}{" "}
+                            GiB VRAM
+                          </>
+                        )}
                       </strong>
                     </div>
                   </div>
@@ -523,6 +583,15 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                       This profile offloads parts of the model to CPU: short
                       tracks reserve 12 GiB RAM, tracks over a minute reserve 18
                       GiB. Model weights and lyrics remain local.
+                    </p>
+                  )}
+                  {family === "fish" && (
+                    <p className="muted setup-small">
+                      This profile needs two BF16-compatible GPUs and 24 GiB
+                      available RAM. Model weights stay on GPUs. Voice-reference
+                      transcription runs locally on CPU and is included in
+                      setup. Fish Audio's model and code terms apply; review
+                      them below.
                     </p>
                   )}
                   {family === "video" && (

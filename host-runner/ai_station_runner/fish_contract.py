@@ -44,6 +44,12 @@ WRAPPERS = (
     "security.py",
     "transcription_protocol.py",
     "recordings.py",
+    "fish_model_views.py",
+    "fish_environment.py",
+    "fish_selection.py",
+    "environment_files.py",
+    "speech_environment.py",
+    "fish_source_wheels.py",
 )
 MODEL_FILES = {
     "chat_template.jinja": {
@@ -97,6 +103,9 @@ class FishRequest(BaseModel):
     gpus: list[StrictInt] = Field(min_length=2, max_length=2)
     deadline_at: float = Field(gt=0, strict=True, allow_inf_nan=False)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
 
     @model_validator(mode="after")
     def distinct_devices(self):
@@ -106,6 +115,11 @@ class FishRequest(BaseModel):
 
 
 def direct(root, relative):
+    from ai_station_runner.fish_model_views import model_reference
+
+    managed = model_reference(root, relative)
+    if managed is not None:
+        return managed
     path = resolve_child(Path(root), relative)
     if path != Path(root) / relative or not path.is_file():
         raise ValueError("Fish files must be direct configured files without symlinks")
