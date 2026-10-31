@@ -42,6 +42,15 @@
   display: grid;
   gap: 0.4rem;
 }
+.setup-catalog-filters input[type="search"] {
+  width: 100%;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #14161b;
+  color: #edf0f4;
+}
 .setup-option {
   display: grid;
   grid-template-columns: 1.1rem minmax(0, 1fr);
