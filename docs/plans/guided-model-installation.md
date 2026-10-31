@@ -333,3 +333,53 @@ package sources and compiled desktop/mobile browser assets are compared with the
 reviewed checkout. Existing five React refresh warnings and the bundle-size
 advisory remain; there are no lint errors. These checks do not claim a fresh run
 of unrelated test families or Windows/macOS acceptance.
+
+### Expanded conversation catalog — implementation contract
+
+Keep the two verified 4B starter profiles as the initial simple choice. Add
+an optional searchable **More models** section with reviewed 8B and 14B
+Q4_K_M/Q8_0 alternatives. Search/filter stay local to the reviewed catalog;
+opening it must not send prompts, download weights or launch inference. Show
+each alternative's size, supported context, quantization and actual hardware
+estimate, including a files-only route for profiles that do not fit. Selection
+must reset license acceptance and freeze that profile's own publisher, revision,
+full-file hash, source license and architecture geometry through existing Runs.
+
+Publisher metadata checked on 2026-10-31 identifies the new derivatives as
+**mlabonne** Qwen3 abliteration, distinct from the Huihui 4B starter. Their
+quantizer repositories are `mradermacher/Qwen3-8B-abliterated-GGUF` at
+`24198a3d288997af9fd7f09c54c84535396f7e77` and
+`mradermacher/Qwen3-14B-abliterated-GGUF` at
+`53729450c82efabb1b3a00ea4637df10240b1719`.
+The source configurations declare 40960-token context, eight KV heads and
+128-dimensional keys/values; 8B has 36 layers and 14B has 40. Their estimates
+remain distinct from downloaded native GGUF verification and real inference.
+This increment does not replace advanced public source discovery, media bundles,
+platform installers or their remaining qualification gates.
+
+
+The expanded profiles now share the same durable verified download/adoption
+path. Public LFS byte lengths/full-file hashes and pinned source configurations
+were inspected; a bounded 8-MiB Range prefix from **each of the four GGUF files**
+was parsed by the actual native metadata reader and matched its declared
+context/attention geometry. This is header qualification, not a full-weight hash
+or real 8B/14B inference claim. The source configurations are pinned at
+[8B](https://huggingface.co/mlabonne/Qwen3-8B-abliterated/blob/30c72fa348f37c72d12ecbb259068ddee98aa9ed/config.json)
+and [14B](https://huggingface.co/mlabonne/Qwen3-14B-abliterated/blob/9d8db58cddb750e732cd2179fa504e8830b733ce/config.json).
+
+The 4B manifests retain their exact prior fingerprints. Estimates account for
+each model's own weight size and KV geometry, and may select multiple discovered
+GPUs. Complete model preparation still requires full length/hash and native
+GGUF inspection; the catalog never downloads merely because it is opened.
+Operator QA v20 adds SETUP-105; issued older workbooks and untested results are
+preserved.
+
+The reviewed-catalog increment passes 49 complete model setup/download/account
+cases, 41 frontend cases across seven complete affected families, full Python
+lint/format and frontend format/lint/types/build, the 26 QA workbook tests,
+Docker packaging/fake API/worker/SSE and Compose checks. Compiled desktop/mobile
+against an isolated real account API confirms the two starter/six expanded
+profiles, local search, the exact selected manifest/license, queued Stop and
+history after refresh without downloading weights. This is the documented local
+equivalent gate for the focused change; the prior full baseline and unchanged
+native qualification remain separate. No new schema or native restart is needed.

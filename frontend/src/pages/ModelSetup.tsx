@@ -23,6 +23,8 @@ type Entry = {
   id: string;
   name: string;
   quantization: string;
+  starter?: boolean;
+  trained_context?: number;
   filename: string;
   file: { size_bytes: number; sha256: string };
   license: string;
@@ -249,10 +251,23 @@ export default function ModelSetup() {
   const [selected, setSelected] = useState("");
   const [accepted, setAccepted] = useState("");
   const [downloadOnly, setDownloadOnly] = useState(false);
+  const [moreModels, setMoreModels] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
+  const [onlyFitting, setOnlyFitting] = useState(false);
   const [runtimeReady, setRuntimeReady] = useState<boolean | undefined>(
     undefined,
   );
   const entries = catalog.data?.entries ?? [];
+  const query = modelSearch.trim().toLocaleLowerCase();
+  const visibleEntries = entries.filter(
+    (entry) =>
+      (!moreModels ||
+        ((!onlyFitting || entry.recommendation.fits) &&
+          `${entry.name} ${entry.quantization}`
+            .toLocaleLowerCase()
+            .includes(query))) &&
+      (moreModels || entry.starter !== false),
+  );
   const current =
     entries.find((row) => row.id === selected) ??
     entries.find((row) => row.recommendation.fits) ??
@@ -396,18 +411,62 @@ export default function ModelSetup() {
           >
             <h2>Start with a conversation model</h2>
             <p className="muted">
-              Both choices run locally with llama.cpp. Select a download size
-              that fits your computer; advanced model settings stay available in
-              Models.
+              Start small, or explore larger models. Each choice runs locally
+              with llama.cpp and shows an estimate for your hardware.
             </p>
+            {entries.some((entry) => entry.starter === false) && (
+              <div className="setup-explore">
+                <Button
+                  variant="secondary"
+                  aria-expanded={moreModels}
+                  aria-controls="setup-model-options"
+                  onClick={() => setMoreModels(!moreModels)}
+                >
+                  {moreModels ? "Show starter models" : "Explore larger models"}
+                </Button>
+                {moreModels && (
+                  <div className="setup-catalog-filters">
+                    <label>
+                      Search model or quantization
+                      <input
+                        type="search"
+                        placeholder="Try 14B or Q8_0"
+                        value={modelSearch}
+                        onChange={(event) => setModelSearch(event.target.value)}
+                      />
+                    </label>
+                    <label className="setup-license">
+                      <input
+                        type="checkbox"
+                        checked={onlyFitting}
+                        onChange={(event) =>
+                          setOnlyFitting(event.target.checked)
+                        }
+                      />
+                      <span>Only models that fit this workstation</span>
+                    </label>
+                    <p className="setup-small muted" role="status">
+                      {visibleEntries.length} of {entries.length} reviewed
+                      profiles. Search stays on this station.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             {!catalog.data?.can_prepare && (
               <p className="notice">
                 Your administrator manages shared model installation. You can
                 use models already available in Chat.
               </p>
             )}
-            <div className="setup-options">
-              {entries.map((entry, index) => (
+            <div className="setup-options" id="setup-model-options">
+              {visibleEntries.length === 0 && (
+                <p className="notice">
+                  No matching profiles. Try another search or clear the fit
+                  filter.
+                </p>
+              )}
+              {visibleEntries.map((entry) => (
                 <label
                   key={entry.id}
                   className={`panel setup-option ${current?.id === entry.id ? "selected" : ""}`}
@@ -422,12 +481,16 @@ export default function ModelSetup() {
                       setAccepted("");
                       setDownloadOnly(false);
                     }}
-                    aria-label={`Choose ${entry.quantization}`}
+                    aria-label={`Choose ${entry.starter === false ? `${entry.name} ` : ""}${entry.quantization}`}
                   />
                   <div>
                     <div className="row spread">
                       <strong>
-                        {index === 0 ? "Balanced" : "Higher precision"}
+                        {entry.starter === false
+                          ? entry.name
+                          : entry.quantization === "Q4_K_M"
+                            ? "Balanced"
+                            : "Higher precision"}
                       </strong>
                       {entry.recommendation.fits && (
                         <span className="setup-fit">
@@ -436,7 +499,11 @@ export default function ModelSetup() {
                         </span>
                       )}
                     </div>
-                    <p>{entry.name}</p>
+                    <p>
+                      {entry.starter === false
+                        ? `Up to ${entry.trained_context?.toLocaleString()} model context · llama.cpp`
+                        : entry.name}
+                    </p>
                     <div className="setup-small setup-size muted">
                       {entry.quantization} · <HardDrive size={13} />{" "}
                       {size(entry.file.size_bytes)} download
@@ -456,6 +523,11 @@ export default function ModelSetup() {
                 <h3>
                   <ShieldCheck size={18} /> Your download
                 </h3>
+                <p>
+                  <strong>
+                    {current.name} · {current.quantization}
+                  </strong>
+                </p>
                 <p>
                   {size(current.file.size_bytes)} · {current.license} model
                   license

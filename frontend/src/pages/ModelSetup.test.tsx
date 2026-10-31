@@ -37,6 +37,7 @@ function mount(
   initial: unknown[] = [],
   freeBytes = 20 * 1024 ** 3,
   selectedEntry?: Record<string, unknown>,
+  additionalEntries: Record<string, unknown>[] = [],
 ) {
   const writes: { url: string; body: Record<string, unknown> }[] = [];
   let rows = initial;
@@ -95,6 +96,7 @@ function mount(
                     ...(selectedEntry ?? entry),
                     ...(verified ? { ready_to_try: true } : {}),
                   },
+                  ...additionalEntries,
                 ],
                 hardware: {
                   memory: { total_mib: 32768 },
@@ -280,4 +282,56 @@ it("verifies previously downloaded model files without another download or autom
     "/api/models/definitions/shared-definition/install",
   );
   expect(writes[0].body).toEqual({});
+});
+
+it("explores and searches larger models locally, filters fit and submits the selected frozen profile", async () => {
+  const larger = {
+    ...entry,
+    id: "larger-q4",
+    name: "Qwen3 · 14B · mlabonne",
+    starter: false,
+    trained_context: 40960,
+    manifest_sha256: "c".repeat(64),
+  };
+  const tooLarge = {
+    ...larger,
+    id: "larger-q8",
+    quantization: "Q8_0",
+    recommendation: { ...entry.recommendation, fits: false },
+  };
+  const { writes } = mount(true, [], 20 * 1024 ** 3, undefined, [
+    larger,
+    tooLarge,
+  ]);
+  await screen.findByRole("radio", { name: "Choose Q4_K_M" });
+  expect(screen.getAllByRole("radio")).toHaveLength(1);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Explore larger models" }),
+  );
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Search model or quantization" }),
+    {
+      target: { value: "14B" },
+    },
+  );
+  expect(screen.getAllByRole("radio")).toHaveLength(2);
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "Only models that fit this workstation",
+    }),
+  );
+  expect(screen.getAllByRole("radio")).toHaveLength(1);
+  fireEvent.click(
+    screen.getByRole("radio", { name: "Choose Qwen3 · 14B · mlabonne Q4_K_M" }),
+  );
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /I have reviewed the model license/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Download 2.33 GiB/ }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].body).toMatchObject({
+    catalog_id: "larger-q4",
+    manifest_sha256: "c".repeat(64),
+    license_accepted: true,
+  });
 });

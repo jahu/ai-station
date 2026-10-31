@@ -1,5 +1,5 @@
 {
-  "version": 19,
+  "version": 20,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -3942,6 +3942,28 @@
       "minutes": 15,
       "requirements": [
         "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-105",
+      "area": "Konfiguracja modeli",
+      "title": "Większe modele, wyszukiwanie i dopasowanie sprzętu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z rozszerzonym katalogiem; konto administratora. Sam przegląd nie pobiera wag."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model; sprawdź dwa startowe warianty 4B. Kliknij Explore larger models.",
+        "Wyszukaj 14B, następnie Q8_0. Włącz Only models that fit this workstation i porównaj dostępne warianty, rozmiary oraz estymację GPU/kontekstu.",
+        "Wybierz inny wariant i sprawdź jego nazwę w Your download, źródło, licencję i SHA-256. Potwierdzenie licencji powinno zostać wyzerowane po zmianie wyboru. Nie musisz rozpoczynać wielogigabajtowego pobrania w tym przypadku."
+      ],
+      "expected": [
+        "Katalog pokazuje 4B/8B/14B i osobne Q4_K_M/Q8_0. Wyszukiwanie jest lokalne; wybór nie uruchamia modelu ani pobierania. Model, który się nie mieści, nie jest przedstawiany jako gotowy; można świadomie pobrać same pliki. Nazwa i licencja odpowiadają faktycznie wybranemu modelowi, bez pomylenia wydawców Huihui i mlabonne."
+      ],
+      "resources": "Bez pobierania wag; obserwacja aktualnego RAM/VRAM",
+      "minutes": 5,
+      "requirements": [
         "NR-14"
       ]
     }

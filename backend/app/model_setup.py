@@ -19,7 +19,7 @@ from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.models import ModelDefinition, ModelFile, Run, Task
 from app.runs import create_run, run_dict
-from app.setup_models import CANDIDATES, candidate
+from app.setup_models import CANDIDATES, STARTER_CANDIDATE_IDS, candidate
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
 
@@ -169,6 +169,7 @@ def catalog(session: DB):
         entries.append(
             {
                 **item.model_dump(mode="json"),
+                "starter": item.id in STARTER_CANDIDATE_IDS,
                 "manifest_sha256": fingerprint(item.model_dump(mode="json")),
                 "recommendation": preset,
                 "ready_to_try": bool(

@@ -30,6 +30,18 @@
   display: grid;
   gap: 0.75rem;
 }
+.setup-explore {
+  margin-bottom: 1rem;
+}
+.setup-catalog-filters {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.setup-catalog-filters > label:first-child {
+  display: grid;
+  gap: 0.4rem;
+}
 .setup-option {
   display: grid;
   grid-template-columns: 1.1rem minmax(0, 1fr);

@@ -355,3 +355,43 @@ def test_files_prepared_before_runtime_can_be_verified_without_redownloading(set
         assert len(setup_bridge["calls"]) == 1
         with control_session_factory()() as db:
             assert not list(db.scalars(select(RuntimeInstance)))
+
+
+def test_larger_profiles_use_their_own_context_geometry_and_can_span_discovered_gpus():
+    from app.setup_models import candidate
+
+    entry = candidate("mlabonne-qwen3-14b-q80")
+    assert entry is not None and entry.trained_context == 40960 and entry.attention_layers == 40
+    one = {
+        "memory": {"total_mib": 32768},
+        "gpus": [{"index": 7, "memory_total_mib": 12288}],
+    }
+    assert model_setup.recommendation(entry, one)["fits"] is False
+    two = {**one, "gpus": [*one["gpus"], {"index": 19, "memory_total_mib": 12288}]}
+    preset = model_setup.recommendation(entry, two)
+    assert preset["fits"] and preset["gpus"] == [7, 19]
+    assert 4096 <= preset["context_size"] <= min(32768, entry.trained_context)
+    assert not model_setup.recommendation(entry, {**two, "memory": {"total_mib": 8192}})["fits"]
+
+
+def test_catalog_exposes_distinct_larger_quantizations_without_network_or_new_runs(monkeypatch):
+    from app.setup_models import CANDIDATES, STARTER_CANDIDATE_IDS
+
+    monkeypatch.setattr(RunnerClient, "hardware", lambda _: {"memory": {"total_mib": 32768}, "gpus": []})
+    with TestClient(app) as api:
+        report = api.get("/api/setup/catalog")
+        assert report.status_code == 200
+        entries = report.json()["entries"]
+        assert len(entries) == len(CANDIDATES) == 6
+        assert {row["id"] for row in entries if row["starter"]} == STARTER_CANDIDATE_IDS
+        for row in entries:
+            if row["starter"]:
+                continue
+            assert "mlabonne" in row["name"] and row["trained_context"] == 40960
+            assert row["manifest_sha256"] == model_setup.fingerprint(
+                next(item for item in CANDIDATES if item.id == row["id"]).model_dump(mode="json")
+            )
+            assert row["model_file_id"] is None and not row["ready_to_try"]
+        assert api.get("/api/setup/downloads").json() == []
+        with control_session_factory()() as db:
+            assert list(db.scalars(select(Run))) == []
