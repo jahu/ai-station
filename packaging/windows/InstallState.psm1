@@ -61,6 +61,7 @@ function Get-StationImportPlan {
     }
     if ($matches.Count -eq 0) {
         if ($State.Phase -in @('registered','ready')) { throw 'The saved distribution disappeared. Preserve its data and inspect before reinstalling.' }
+        if ($State.Phase -ceq 'importing') { return [pscustomobject]@{ Kind = 'InspectImport'; Arguments = @() } }
         if ($ExistingDisk) { return [pscustomobject]@{ Kind = 'InspectIncompleteDisk'; Arguments = @() } }
         return [pscustomobject]@{ Kind = 'Import'; Arguments = @('--import',$State.Distribution,$State.Directory,$archivePath,'--version','2') }
     }

@@ -44,4 +44,6 @@ Refuses { Get-StationLifecyclePlan $bad $root start }
 $unknown = [pscustomobject]@{ DistributionName='Foreign'; BasePath='\\?\Volume{12345678-1234-1234-1234-123456789abc}\folder'; Version=2; Id=$entry.Id }
 $fresh = New-StationInstallState $root ('a' * 64)
 Check ((Get-StationImportPlan $fresh $root $archive -Inventory @($unknown)).Kind -eq 'Import') 'Unrelated path formats must be preserved without blocking a fresh own installation.'
+$pending = New-StationInstallState $root ('a' * 64); $pending.Phase='importing'
+Check ((Get-StationImportPlan $pending $root $archive).Kind -eq 'InspectImport') 'An unknown live/lost import must not be blindly repeated without registration or completion evidence.'
 Write-Output ('PASS '+$script:Cases+' native PowerShell ownership/command-planning assertions; Windows OS qualification remains pending')
