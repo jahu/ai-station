@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import build_linux_package
 import desktop
 import desktop_docker_access as access
 import pytest
@@ -249,3 +250,26 @@ def test_only_Docker_info_permission_failure_offers_account_setup(monkeypatch, f
     expected = access.DockerAccessNeeded if failed == "info" else RuntimeError
     with pytest.raises(expected):
         desktop.prerequisites()
+
+
+def test_OS_package_modes_do_not_inherit_group_write_or_follow_links(tmp_path):
+    root = tmp_path / "package"
+    root.mkdir(mode=0o700)
+    folder = root / "usr/libexec/ai-station"
+    folder.mkdir(parents=True)
+    folder.chmod(0o775)
+    helper = folder / "helper"
+    helper.write_text("executable")
+    helper.chmod(0o775)
+    policy = root / "policy"
+    policy.write_text("policy")
+    policy.chmod(0o664)
+    external = tmp_path / "preserve"
+    external.write_text("preserve")
+    external.chmod(0o600)
+    (folder / "link").symlink_to(external)
+    build_linux_package.package_permissions(root)
+    assert stat.S_IMODE(root.stat().st_mode) == stat.S_IMODE(folder.stat().st_mode) == 0o755
+    assert stat.S_IMODE(helper.stat().st_mode) == 0o755
+    assert stat.S_IMODE(policy.stat().st_mode) == 0o644
+    assert stat.S_IMODE(external.stat().st_mode) == 0o600

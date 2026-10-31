@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -177,6 +178,21 @@ def build(output, *, allow_dirty=False, python_tar=None):
     return metadata
 
 
+def package_permissions(root):
+    """OS-owned code must not inherit the builder's cooperative group-write umask."""
+    root.chmod(0o755)
+    for path in root.rglob("*"):
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            continue
+        if stat.S_ISDIR(info.st_mode):
+            path.chmod(0o755)
+        elif stat.S_ISREG(info.st_mode):
+            path.chmod(0o755 if info.st_mode & 0o111 else 0o644)
+        else:
+            raise ValueError("OS package inputs must be regular files, directories or inspected links")
+
+
 def deb(bundle, metadata):
     result = bundle.with_suffix(".deb")
     if result.exists():
@@ -214,6 +230,7 @@ def deb(bundle, metadata):
             ROOT / "packaging/linux/org.ai-station.docker-access.policy",
             policy / "org.ai-station.docker-access.policy",
         )
+        package_permissions(root)
         run("dpkg-deb", "--root-owner-group", "--build", str(root), str(result))
     return result
 
