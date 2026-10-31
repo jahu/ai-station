@@ -165,3 +165,20 @@ def test_child_without_matching_identity_never_opens_or_publishes_its_setup_url(
     publish.assert_not_called()
     assert log.getvalue() == ""
     proc.terminate.assert_called_once()
+
+
+def test_non_json_listener_is_rejected_before_requesting_setup_authority():
+    run = Mock()
+    paths = []
+
+    def respond(request):
+        paths.append(request.url.path)
+        return httpx.Response(200, text="A different local application")
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(RuntimeError, match="unexpected local response"):
+            local_entry_url(
+                client, run, "http://127.0.0.1:8766", "http://127.0.0.1:8766", instance_id="a" * 32
+            )
+    assert paths == ["/api/health"]
+    run.assert_not_called()
