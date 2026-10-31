@@ -62,7 +62,7 @@ def publish_verified_models(session, entry, objects):
                 category="audio"
                 if entry.capability in {"speech", "music"}
                 else "video"
-                if entry.capability == "video"
+                if entry.capability in {"video", "avatar"}
                 else "image",
                 family=entry.family,
                 capabilities=[entry.capability],

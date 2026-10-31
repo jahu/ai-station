@@ -19,6 +19,7 @@ from app.artifact_purge import ArtifactPurgeExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
+from app.avatar_setup_job import AvatarSetupExecutor
 from app.avatars import AvatarExecutor
 from app.browser import BrowserExecutor
 from app.bundle_download_job import BundleDownloadExecutor
@@ -327,6 +328,7 @@ EXECUTORS = {
     "image_setup": ImageSetupExecutor(),
     "music_setup": MusicSetupExecutor(),
     "video_setup": VideoSetupExecutor(),
+    "avatar_setup": AvatarSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),

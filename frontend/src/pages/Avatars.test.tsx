@@ -29,7 +29,7 @@ function mount(entry = "/avatars") {
   return client;
 }
 
-function wholeRuntime(checking = false) {
+function wholeRuntime(checking = false, echoAvailable = true) {
   const writes: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
@@ -68,7 +68,7 @@ function wholeRuntime(checking = false) {
                 readiness: checking ? "checking" : "ready",
               }
             : path.endsWith("capabilities")
-              ? { available: true }
+              ? { available: echoAvailable }
               : path.endsWith("hardware")
                 ? { gpus: [] }
                 : path.includes("/media/jobs")
@@ -116,6 +116,20 @@ it("defaults new full recordings to stable detail and sends only applicable cont
   expect(writes[0]).not.toHaveProperty("size");
   expect(writes[0]).not.toHaveProperty("memory_profile");
   expect(writes[0]).not.toHaveProperty("translation");
+});
+
+it("offers the installed Sonic engine when an unavailable short-preview mode is selected", async () => {
+  const writes = wholeRuntime(false, false);
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByRole("region", { name: "High-detail avatar quality" });
+  fireEvent.click(screen.getByLabelText("Full recording (up to 60 seconds)"));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use installed Sonic" }),
+  );
+  expect(
+    screen.getByRole("region", { name: "High-detail avatar quality" }),
+  ).toBeTruthy();
+  expect(writes).toHaveLength(0);
 });
 
 it("sends local enhancement only for an Echo descriptive prompt", async () => {
@@ -598,9 +612,9 @@ it.each([false, true])(
     if (!failed)
       expect(
         screen
-          .getByRole("link", { name: "Inspect system" })
+          .getByRole("link", { name: "Set up avatars" })
           .getAttribute("href"),
-      ).toBe("/system");
+      ).toBe("/setup/models?capability=avatar");
   },
 );
 

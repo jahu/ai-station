@@ -65,6 +65,17 @@ def _start_owned(manager, body, *, python, runtime, models, hardware, verify_ins
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Configured Sonic Python is unavailable")
     root = manager.data_dir.resolve()
+    managed = None
+    if body.recipe.get("environment_id"):
+        from ai_station_runner.avatar_environment import resolve_id
+
+        managed = resolve_id(root, body.recipe["environment_id"])
+        if (
+            python != managed["sonic_python"]
+            or runtime != managed["sonic_dir"]
+            or models != managed["sonic_models"]
+        ):
+            raise ValueError("Avatar launch must use its exact frozen environment")
     run_id = str(body.run_id)
     launch = resolve_child(root, f"runs/{run_id}/whole-avatar-launch")
     if launch != root / f"runs/{run_id}/whole-avatar-launch":
@@ -123,6 +134,13 @@ def _start_owned(manager, body, *, python, runtime, models, hardware, verify_ins
         or output.with_suffix(".json").exists()
     ):
         raise ValueError("Inspect existing or changed whole-recording output")
+    if managed:
+        from ai_station_runner.avatar_prepare import driver_supported
+
+        if not driver_supported("580.126.20") or any(
+            (devices[str(i)].get("memory_total_mib") or 0) < 12288 for i in body.gpus
+        ):
+            raise ValueError("The allocated avatar GPU or driver does not fit its prepared profile")
     prefix = scope_prefix(run_id, 18432)
     launch.mkdir(parents=True, mode=0o700)
     receipt.write_text(json.dumps(record, sort_keys=True))
@@ -149,6 +167,11 @@ def _start_owned(manager, body, *, python, runtime, models, hardware, verify_ins
         TORCHINDUCTOR_CACHE_DIR=str(launch / "torch"),
         XDG_CACHE_HOME=str(launch / "cache"),
     )
+    if managed:
+        home = launch / "home"
+        home.mkdir(mode=0o700)
+        environment.pop("LD_LIBRARY_PATH", None)
+        environment.update(PATH=str(managed["environment"] / "bin") + ":/usr/bin:/bin", HOME=str(home))
     return manager.start(
         run_id=run_id,
         argv=[

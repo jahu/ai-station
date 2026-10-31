@@ -222,6 +222,14 @@ Existing configured video integrations keep priority.
 
 
 
+**Set up avatars** prepares Sonic on supported Linux NVIDIA workstations with
+at least 12 GiB VRAM, 24 GiB system RAM and a compatible driver. Review the
+component licenses, install with saved progress and Stop/Resume, then animate a
+portrait with your complete recording. The prepared engine includes its own
+Python and finishing codec. Existing Sonic and EchoMimic configurations are
+preserved; installing Sonic does not install EchoMimic. Output is up to 768 px,
+rather than native HD. [Avatar setup and qualification](docs/plans/managed-avatar-setup.md).
+
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
 in your browser, and keeps data outside the installed package. Docker/Compose

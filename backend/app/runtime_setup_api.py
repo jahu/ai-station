@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.avatar_setup_client import AvatarSetupClient
 from app.db import utcnow
 from app.image_setup_client import ImageSetupClient
 from app.model_setup import DB, Resume, administrator, fingerprint
@@ -25,6 +26,7 @@ INTENT = "runtime.catalog.prepare"
 PERMISSIONS = ["manage_models", "network_read", "workspace_write"]
 SPEECH_PROFILE = "chatterbox-v3-linux-x86-64-python312-v1"
 IMAGE_PROFILE = "qwen-image21-cuda-linux-amd64-v1"
+AVATAR_PROFILE = "sonic-whole-linux-x86-64-python310-v1"
 VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 Profile = Literal[
@@ -33,6 +35,7 @@ Profile = Literal[
     "qwen-image21-cuda-linux-amd64-v1",
     "ace-step15-turbo-linux-x86-64-python312-v1",
     "wan22-5b-linux-x86-64-python312-v1",
+    "sonic-whole-linux-x86-64-python310-v1",
 ]
 
 
@@ -47,7 +50,9 @@ class Prepare(BaseModel):
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
         client = (
-            VideoSetupClient(timeout=30)
+            AvatarSetupClient(timeout=30)
+            if profile == AVATAR_PROFILE
+            else VideoSetupClient(timeout=30)
             if profile == VIDEO_PROFILE
             else MusicSetupClient(timeout=30)
             if profile == MUSIC_PROFILE
@@ -102,13 +107,16 @@ def attempt(session, task, saved, previous=None):
     image = saved["recipe"]["profile"] == IMAGE_PROFILE
     music = saved["recipe"]["profile"] == MUSIC_PROFILE
     video = saved["recipe"]["profile"] == VIDEO_PROFILE
-    inputs = speech or image or music or video
+    avatar = saved["recipe"]["profile"] == AVATAR_PROFILE
+    inputs = speech or image or music or video or avatar
     run = create_run(
         session,
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="video_setup"
+        executor_type="avatar_setup"
+        if avatar
+        else "video_setup"
         if video
         else "music_setup"
         if music

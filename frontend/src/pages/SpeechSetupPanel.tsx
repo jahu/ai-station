@@ -9,25 +9,39 @@ import {
   RotateCcw,
   Square,
   Film,
+  UserRound,
 } from "lucide-react";
 import { api, type Run } from "../api";
 import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-type Family = "speech" | "music" | "video";
+type Family = "speech" | "music" | "video" | "avatar";
 const profiles = {
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
   video: "wan22-5b-linux-x86-64-python312-v1",
+  avatar: "sonic-whole-linux-x86-64-python310-v1",
 };
 const destination = (family: Family) =>
-  family === "video"
-    ? "/video"
-    : family === "music"
-      ? "/audio?mode=music"
-      : "/audio";
+  family === "avatar"
+    ? "/avatars"
+    : family === "video"
+      ? "/video"
+      : family === "music"
+        ? "/audio?mode=music"
+        : "/audio";
 const content = {
+  avatar: {
+    title: "Avatar",
+    heading: "Avatars & talking portraits",
+    description:
+      "Bring a portrait to life with your voice. Animate the complete recording and keep every version together.",
+    ready:
+      "Add a portrait and a recording in Avatars. Sonic animates the complete speech in one saved workspace.",
+    model: "Sonic · whole recording",
+    open: "Open Avatars",
+  },
   speech: {
     title: "Speech",
     heading: "Speech & voice cloning",
@@ -84,6 +98,7 @@ type Catalog = {
   existing_speech?: { available: boolean; source: string };
   existing_music?: { available: boolean; source: string };
   existing_video?: { available: boolean; source: string };
+  existing_avatar?: { available: boolean; source: string; readiness?: string };
   recommendation?: { fits: boolean; reason: string };
   storage?: {
     free_bytes: number;
@@ -138,7 +153,8 @@ function Attempt({
   manifest?: string;
 }) {
   const title = content[family].title;
-  const Icon = family === "video" ? Film : AudioLines;
+  const Icon =
+    family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const familyPhases =
     family === "speech"
       ? phases
@@ -182,11 +198,13 @@ function Attempt({
   const label =
     value.run.status === "succeeded"
       ? ready
-        ? family === "video"
-          ? "Ready for your first film"
-          : family === "music"
-            ? "Ready for your first track"
-            : "Ready for your first recording"
+        ? family === "avatar"
+          ? "Ready for your first avatar"
+          : family === "video"
+            ? "Ready for your first film"
+            : family === "music"
+              ? "Ready for your first track"
+              : "Ready for your first recording"
         : "Installation prepared"
       : value.run.status === "queued"
         ? "Waiting for available resources"
@@ -280,7 +298,8 @@ export default function SpeechSetupPanel() {
 export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const profile = profiles[family];
   const title = content[family].title;
-  const Icon = family === "video" ? Film : AudioLines;
+  const Icon =
+    family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
   const [search] = useSearchParams();
   const [opened, setExpanded] = useState(false);
   const expanded = opened || search.get("capability") === family;
@@ -289,6 +308,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     queryKey: [`${family}-setup-catalog`],
     queryFn: () => api<Catalog>(`/setup/runtimes?profile=${profile}`),
     enabled: expanded,
+    refetchInterval: (query) =>
+      family === "avatar" &&
+      query.state.data?.existing_avatar?.readiness === "checking"
+        ? 1000
+        : false,
   });
   const history = useQuery({
     queryKey: [`${family}-preparations`],
@@ -314,6 +338,8 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     void cache.invalidateQueries({ queryKey: [`${family}-preparations`] });
     void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
     void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
+    if (family === "avatar")
+      void cache.invalidateQueries({ queryKey: ["whole-avatar-capabilities"] });
   };
   useEffect(() => {
     for (const row of history.data ?? [])
@@ -324,6 +350,10 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
         completed.current.add(row.run.id);
         void cache.invalidateQueries({ queryKey: [`${family}-setup-catalog`] });
         void cache.invalidateQueries({ queryKey: [`${family}-capabilities`] });
+        if (family === "avatar")
+          void cache.invalidateQueries({
+            queryKey: ["whole-avatar-capabilities"],
+          });
         void cache.invalidateQueries({ queryKey: ["models"] });
       }
   }, [history.data, cache, family]);
@@ -351,12 +381,16 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "video"
-      ? data?.existing_video
-      : family === "music"
-        ? data?.existing_music
-        : data?.existing_speech;
+    family === "avatar"
+      ? data?.existing_avatar
+      : family === "video"
+        ? data?.existing_video
+        : family === "music"
+          ? data?.existing_music
+          : data?.existing_speech;
   const ready = existingRuntime?.available === true;
+  const checkingRuntime =
+    family === "avatar" && data?.existing_avatar?.readiness === "checking";
   const storageFits =
     !data?.storage || data.storage.free_bytes >= data.storage.required_bytes;
   return (
@@ -421,7 +455,13 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                   )}
                 </div>
               )}
-              {(!ready || showManaged) && (
+              {checkingRuntime && (
+                <p className="notice" role="status">
+                  Checking the installed avatar files. Your setup and saved work
+                  are retained.
+                </p>
+              )}
+              {(!ready || showManaged) && !checkingRuntime && (
                 <>
                   <div className="speech-setup-facts">
                     <div>
@@ -466,6 +506,15 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                       This profile uses CPU offload within 11 GiB RAM. Its
                       landscape format is 1280 × 704 with at least 20 steps.
                       Longer films retain their own saved progress and versions.
+                    </p>
+                  )}
+                  {family === "avatar" && (
+                    <p className="muted setup-small">
+                      One or two compatible GPUs · up to 768 px · 18 GiB system
+                      RAM without swap. The complete recording is animated
+                      together; detailed rendering can take hours. Sonic uses an
+                      SVD component powered by Stability AI. Each component
+                      retains its own license.
                     </p>
                   )}
                   {ready && (

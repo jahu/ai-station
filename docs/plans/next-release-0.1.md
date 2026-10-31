@@ -48,6 +48,16 @@ real GPU Stop/recovery and desktop/mobile first-result checks. See
 [image setup](managed-image-setup.md). It advances NR-14; it does not complete
 other media catalogs or the NR-13 cross-platform consumer installation contract.
 
+Guided video is reviewed, merged and deployed (PR #542), including actual
+installation, first scene/image animation, a continuous film, final composition,
+CPU editor export, native recovery/Stop and private shared-engine checks.
+[Guided avatars](managed-avatar-setup.md) are the current NR-14 increment:
+independent preparation, complete two-second generation, recovery/Stop, privacy
+and final packaged/default-policy checks have passed. Review, merge and deployment
+are the remaining gates for this profile.
+Consumer installation on all three operating systems, remaining sound setup,
+broader model selection and NR-06/07 quality acceptance remain in scope.
+
 ## Delivery order
 
 1. **Foundation and visible defect:** record this plan and fix NR-05. Retain the

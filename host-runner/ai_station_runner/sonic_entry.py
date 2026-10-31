@@ -7,6 +7,7 @@ an owned kernel scope, an absolute deadline and the ordinary ProcessManager.
 import argparse
 import json
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -94,6 +95,20 @@ def run(options):
         options.runtime_dir.resolve(),
         options.model_dir.resolve(),
     )
+    if request["recipe"].get("environment_id"):
+        from ai_station_runner.avatar_environment import resolve_id
+
+        selected = resolve_id(root, request["recipe"]["environment_id"])
+        if (
+            Path(sys.base_prefix).resolve() != selected["environment"] / "python"
+            or runtime != selected["sonic_dir"]
+            or models != selected["sonic_models"]
+        ):
+            raise ValueError("Avatars must execute their exact frozen environment")
+        remaining = request["deadline_at"] - time.time()
+        if remaining <= 0:
+            raise TimeoutError("The avatar execution deadline expired")
+        signal.setitimer(signal.ITIMER_REAL, min(14400, remaining))
     if installation_observation(runtime, models) != request["recipe"]["observation"]:
         raise ValueError("Sonic implementation or model observation changed")
     observed = inspect_inputs(root, request["portrait"], request["audio"])

@@ -48,7 +48,17 @@ def read_json(path):
         return value
 
 
-def install_python(folder, frozen, objects, *, check, progress, run_command=command, unpack=unpack_python):
+def install_python(
+    folder,
+    frozen,
+    objects,
+    *,
+    check,
+    progress,
+    run_command=command,
+    unpack=unpack_python,
+    prepare_wheels=None,
+):
     """Install only verified, exact wheels; no resolver, network or ambient site packages."""
     standalone = next(v for v in frozen["inputs"] if v["kind"] == "python")
     progress({"phase": "creating_environment"})
@@ -67,6 +77,8 @@ def install_python(folder, frozen, objects, *, check, progress, run_command=comm
         (folder / "wheels" / item["filename"]).symlink_to(
             os.path.relpath(objects[item["filename"]], folder / "wheels")
         )
+    if prepare_wheels is not None:
+        wheels = [*wheels, *prepare_wheels(python)]
     lock = folder / "requirements.lock"
     lock.write_text(
         "\n".join(f"{v['name']}=={v['version']} --hash=sha256:{v['sha256']}" for v in wheels) + "\n"

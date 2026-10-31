@@ -11,6 +11,8 @@ type WholeCapabilities = {
   readiness?: "disabled" | "checking" | "unavailable" | "ready";
   reason?: string;
   detected_gpu_count?: number;
+  configuration_source?: "managed" | "configured";
+  eligible_gpu_indices?: number[];
 };
 
 export function useWholeAvatarCapabilities(enabled = true) {

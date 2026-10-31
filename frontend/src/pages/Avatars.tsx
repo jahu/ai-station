@@ -476,7 +476,14 @@ function AvatarForm({
                 <span>GPU</span>
                 <GpuTargetChoiceList
                   value={gpu}
-                  gpus={hardware.data?.gpus ?? []}
+                  gpus={
+                    hardware.data?.gpus.filter(
+                      (device) =>
+                        !wholeRecording ||
+                        whole.data?.configuration_source !== "managed" ||
+                        whole.data.eligible_gpu_indices?.includes(device.index),
+                    ) ?? []
+                  }
                   disabled={uploading || busy}
                   onChange={setGpu}
                 />
@@ -504,8 +511,27 @@ function AvatarForm({
               capability.data &&
               !capability.data.available && (
                 <p className="notice" role="status">
-                  Local avatar generation needs setup. {capability.data.reason}{" "}
-                  <Link to="/system">Inspect system</Link>
+                  {whole.data?.available ? (
+                    <>
+                      This short-preview mode uses EchoMimic. Your installed
+                      Sonic engine animates the complete recording.
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={() => setFullRecording(true)}
+                      >
+                        Use installed Sonic
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Local avatar generation needs setup.{" "}
+                      {capability.data.reason}{" "}
+                      <Link to="/setup/models?capability=avatar">
+                        Set up avatars
+                      </Link>
+                    </>
+                  )}
                 </p>
               )}
             {wholeRecording &&
@@ -514,7 +540,9 @@ function AvatarForm({
               !whole.data.available && (
                 <p className="notice" role="status">
                   High-detail avatar generation needs setup.{" "}
-                  <Link to="/system">Inspect system</Link>
+                  <Link to="/setup/models?capability=avatar">
+                    Set up avatars
+                  </Link>
                 </p>
               )}
             <Button
