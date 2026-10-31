@@ -91,7 +91,7 @@ def test_open_does_not_create_or_restart_a_stopped_station(monkeypatch):
 
 def test_private_setup_authority_is_not_read_without_an_actual_live_owner(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(desktop, "state_root", lambda: tmp_path)
-    desktop.publish_ready(tmp_path, "http://127.0.0.1:8767/#/?setup_token=" + "a" * 43)
+    desktop.publish_ready(tmp_path, "http://127.0.0.1:8767/#/?setup_token=" + "a" * 43, instance_id="c" * 32)
     assert not guest.open_existing(desktop)
     (tmp_path / "desktop.lock").touch(mode=0o600)
     assert not guest.open_existing(desktop)
@@ -112,12 +112,15 @@ def test_live_guest_reopen_transports_validated_setup_url_only_through_private_p
     )
     try:
         assert proc.stdout.readline().strip() == "ready"
-        desktop.publish_ready(tmp_path, "http://127.0.0.1:8767/#/?setup_token=" + "a" * 43)
+        desktop.publish_ready(
+            tmp_path, "http://127.0.0.1:8767/#/?setup_token=" + "a" * 43, instance_id="c" * 32
+        )
         assert guest.open_existing(desktop)
         output = capsys.readouterr().out
         assert output.startswith(desktop.READY)
         assert json.loads(output[len(desktop.READY) :]) == {
-            "url": "http://127.0.0.1:8767/#/setup/models?setup_token=" + "a" * 43
+            "url": "http://127.0.0.1:8767/#/setup/models?setup_token=" + "a" * 43,
+            "instance_id": "c" * 32,
         }
         assert proc.poll() is None
     finally:

@@ -31,7 +31,9 @@ def test_window_close_keeps_running_and_only_explicit_stop_stops(monkeypatch, co
 @pytest.mark.parametrize("console,background", [(False, False), (False, True), (True, False)])
 def test_background_retains_supervisor_until_its_own_stop_event(tmp_path, monkeypatch, console, background):
     proc = Mock()
-    proc.stdout = io.StringIO(desktop.READY + json.dumps({"url": "http://127.0.0.1:8766"}) + "\n")
+    proc.stdout = io.StringIO(
+        desktop.READY + json.dumps({"url": "http://127.0.0.1:8766", "instance_id": "d" * 32}) + "\n"
+    )
     state = {"alive": True}
     proc.poll.side_effect = lambda: None if state["alive"] else 0
     proc.terminate.side_effect = lambda: state.update(alive=False)
@@ -55,6 +57,7 @@ def test_background_retains_supervisor_until_its_own_stop_event(tmp_path, monkey
                 console=console,
                 background=background,
                 control=control,
+                instance_id="d" * 32,
             )
         except BaseException as error:
             errors.append(error)
@@ -110,6 +113,7 @@ def test_control_stop_during_startup_does_not_wait_for_readiness_deadline(tmp_pa
                     io.StringIO(),
                     console=True,
                     control=control,
+                    instance_id="d" * 32,
                     on_ready=ready,
                 )
             except BaseException as error:

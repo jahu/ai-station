@@ -98,9 +98,12 @@ def test_new_owner_discards_stale_link_and_removes_its_own_link_on_stop(shell, m
     monkeypatch.setattr(desktop, "install_copy", lambda *args: desktop.ROOT)
     monkeypatch.setattr(desktop, "import_image", lambda *args: None)
 
-    def supervise(*args, on_ready_url, **kwargs):
+    def supervise(*args, on_ready_url, instance_id, **kwargs):
         on_ready_url("http://127.0.0.1:8766")
-        assert json.loads((root / desktop.READY_FILE).read_text()) == {"url": "http://127.0.0.1:8766"}
+        assert json.loads((root / desktop.READY_FILE).read_text()) == {
+            "url": "http://127.0.0.1:8766",
+            "instance_id": instance_id,
+        }
         if fails:
             raise RuntimeError("Owned supervisor ended")
 
