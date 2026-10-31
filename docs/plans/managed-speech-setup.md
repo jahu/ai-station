@@ -102,3 +102,65 @@ the two tokenizer JSON objects were actually downloaded from the pinned public
 source. This is not a full new weight-network-transfer or speech-inference
 claim. Existing caches, runtimes and production records were unchanged. Evidence
 is private under `data/acceptance/guided-media-model-setup-20261031/`.
+
+## Managed environment implementation
+
+The native package now contains a fixed Linux x86-64 / CPython 3.12 / CUDA 12.6
+recipe, an offline assembler, a preparation probe and an internal Polish speech
+CLI. These remain internal helpers, with no HTTP route, executor registration,
+automatic activation or replacement of configured external Chatterbox settings.
+Account-bound download/dispatch, cancellation/recovery and the guided speech
+card must be completed before this becomes a selectable managed runtime.
+
+The recipe binds 126 exact binary wheels, the two immutable SDK archives, the
+six model objects and the upstream segmentation archive: 135 objects totaling
+6,455,407,333 bytes before installation. Every object has a public HTTPS source,
+exact byte length and SHA-256. Dependencies retain their separate licenses;
+the MIT speech model license is not a license for bundled NVIDIA components.
+Source SDKs are built offline with pinned setuptools/wheel/uv_build and no
+dependency resolution or Git invocation. No system compiler is needed for these
+two Python packages. The complete installed graph is checked with `pip check`.
+
+The assembler requires all inputs in the immutable app-owned store and hashes
+them before executing any package. It uses the native packaged interpreter to
+create a separate venv, preserves incomplete operation directories, never
+overwrites another attempt and writes readiness only after its offline probe
+passes. Its subprocesses inherit the dispatcher's owned process group/deadline;
+this is not an independent process supervisor or a background shell service.
+The future native dispatch must supply that supervisor and claim/account fences.
+
+Model and wheel aliases stay inside the new environment and point only to its
+verified immutable objects; large weights are not duplicated or hard-linked.
+SDK/segmenter archives reject traversal, links, special files and oversized
+contents. The Chinese mapping has the precise HF snapshot/ref layout required
+by the inspected tokenizer. The separate `spacy_ontonotes.zip` is verified and
+extracted before inference, so its default initializer does not download it.
+The probe disables Python network connections and checks the v3 selector,
+complete mapping/segmenter and the real packaged Perth watermark checkpoint.
+The speech CLI also blocks Python network access and loads only `from_local`.
+This guard supplements the future native execution boundary; it does not claim
+to sandbox arbitrary third-party code or expose a browser/network tool.
+
+Normal boundary tests require no models, installer execution, GPU or network.
+Real preparation/speech qualification is opt-in and private under
+`data/acceptance/managed-speech-runtime-20261031/`. A successful environment probe
+proves import/tokenizer prerequisites, not successful speech inference, clean-OS
+installation or completion of NR-13/14 on any platform.
+
+The actual isolated assembler passed with the packaged CPython 3.12 interpreter,
+all 135 real inputs and no online install resolution. Its built native wheel was
+also inspected to ensure the complete recipe and helper sources are included.
+Real Polish CUDA samples produced 10.28-second and 27.4-second PCM results; the
+longer result used two existing 220-character chunks with the model loaded once.
+Observed allocated GPU peaks were about 3.5–3.6 GiB. The actual child verified an
+11-GiB RAM, zero-swap kernel scope. Stop during actual model execution ended the
+owned group and published no partial final WAV. This is internal model/runtime
+qualification, not an account/API/wizard or clean-OS installation claim.
+
+The first unchunked long experiment continued with unrelated speech until the
+model token limit. It is superseded: the helper now uses the established text
+chunk policy, rejects invalid/token-limit-length parts and publishes the whole
+PCM result without overwriting an existing file. Offline Whisper-tiny checks
+provide intelligibility evidence, with recognition errors still visible in the
+private transcript; they do not replace listening/style acceptance. The normal
+external Chatterbox adapter and its existing chunk wrapper were unchanged.

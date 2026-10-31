@@ -37,6 +37,13 @@ Downloaded PT/safetensors/JSON bytes are not imported or deserialized as model
 code. Runtime activation remains a separate qualified operation. Histories and
 receipts remain private even though model files are shared infrastructure.
 
+Internal managed-speech assembly verifies every fixed source/wheel/model object
+before executing a separate offline venv install. Archive traversal, links and
+special files are rejected; incomplete operations cannot create readiness.
+There is no public operation for choosing Python code, packages, commands or
+paths, and the helpers are not registered as an available runtime. Native owned
+dispatch/recovery and account-scoped publication remain activation gates.
+
 Conversation sound scopes never grant Library browsing to a model. Current-turn
 commands bind a manually selected owned film or the single completed film visibly
 linked to that conversation; ambiguous, partial and latest unfinished results are

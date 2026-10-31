@@ -26,6 +26,12 @@ publication creates shared ModelFile observations and a private receipt only
 after every object verifies. This file-preparation operation does not install
 Python dependencies, activate a model definition or claim speech readiness.
 
+The subsequent [offline speech environment](plans/managed-speech-setup.md#managed-environment-implementation)
+binds SDK sources, binary dependencies and tokenizer assets in a fixed native
+recipe. Its assembler/probe/CLI remain internal and unregistered until owned
+native dispatch, account cleanup and the guided UI qualify. Existing configured
+speech integrations retain their settings.
+
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
 container coordinator waits for the verified final film before publishing sound;
