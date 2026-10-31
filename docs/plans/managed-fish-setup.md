@@ -73,6 +73,15 @@ its actual three-wheel offline reproduction passes. It reuses the existing
 qualified ANTLR build without changing Avatar or Effects preparation. This helper
 is unregistered: no guided Fish profile is available from this work alone.
 
+The complete candidate recipe now freezes 163 unique public inputs
+(14,840,228,365 bytes), with explicit Fish/transcription environment groups,
+13 model files, the pinned SDK and interpreter, and the three reproduced wheels.
+The downloaded SDK archive matches all 32 qualified source/config files. The four
+Whisper files additionally match the pinned publisher tree (LFS hashes or Git
+blob hashes), not only the local manifest. This recipe is unregistered and
+unqualified until independent offline assembly, typed lifecycle integration and
+the fresh-user gates below pass.
+
 Phone recordings may be M4A, MP3, WebM or another supported audio format. Extend
 the existing bounded transcription decoder to optionally save its complete mono
 16-kHz PCM as a WAV. Publish that derivative only after successful owned-process
