@@ -53,7 +53,10 @@ function Get-StationImportPlan {
     $matches = @($Inventory | Where-Object { $_.DistributionName -ieq $State.Distribution })
     if ($matches.Count -gt 1) { throw 'Multiple registrations claim the saved distribution name.' }
     foreach ($item in $Inventory) {
-        $base = ConvertTo-StationWindowsPath $item.BasePath
+        try { $base = ConvertTo-StationWindowsPath $item.BasePath } catch {
+            if ($item.DistributionName -ieq $State.Distribution) { throw }
+            continue # Preserve unrelated registrations using a path format this installer does not manage.
+        }
         if ($base.Equals($State.Directory, [StringComparison]::OrdinalIgnoreCase) -and $item.DistributionName -ine $State.Distribution) { throw 'Another distribution already owns this folder. Nothing was adopted or removed.' }
     }
     if ($matches.Count -eq 0) {
