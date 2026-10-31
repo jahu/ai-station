@@ -24,6 +24,7 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.processes import ProcessNotOwned
 
 router = APIRouter(prefix="/v1/setup/runtimes", tags=["runtime preparation"])
+INSTALLATION_QUALIFIED = True
 PERMISSIONS = {"manage_models", "network_read", "workspace_write"}
 
 
@@ -235,6 +236,7 @@ def snapshot(identity, record, *, stdout_offset=0, stderr_offset=0):
                 status = "interrupted"
     return {
         "run_id": str(identity),
+        "runner_id": get_settings().runner_id,
         "status": status,
         "alive": alive,
         "requires_inspection": record.get("requires_inspection", False),
@@ -247,7 +249,37 @@ def snapshot(identity, record, *, stdout_offset=0, stderr_offset=0):
 
 @router.get("")
 def catalog():
-    return runtime_setup.inspect_image(runtime_setup.RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1"))
+    selection = runtime_setup.RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1")
+    result = runtime_setup.inspect_image(selection)
+    result["configured_image"] = {"present": False, "status": "unknown"}
+    result["usable_image"] = bool(result["image"]["present"])
+    result["storage"] = None
+    try:
+        configured = llama_runtime.docker(
+            "image", "inspect", get_settings().llama_image, "--format", "{{.Id}}", missing_ok=True
+        )
+        present = isinstance(configured, str) and bool(re.fullmatch(r"sha256:[a-f0-9]{64}", configured))
+        result["configured_image"] = {"present": present, "status": "available" if present else "unavailable"}
+        result["usable_image"] = result["usable_image"] or present
+        target = daemon()
+        try:
+            free = shutil.disk_usage(target["data_root"]).free
+            result["storage"] = {"free_bytes": free, "required_bytes": result["recipe"]["minimum_free_bytes"]}
+        except (OSError, TypeError):
+            free = None
+        enough = free is not None and free >= result["recipe"]["minimum_free_bytes"]
+        result["installation_available"] = bool(
+            INSTALLATION_QUALIFIED and result["platform_supported"] and (result["image"]["present"] or enough)
+        )
+        if INSTALLATION_QUALIFIED:
+            result["installation_notice"] = (
+                ""
+                if result["installation_available"]
+                else "Check the supported platform and free Docker storage before preparing this runtime"
+            )
+    except (HTTPException, httpx.HTTPError, OSError, ValueError):
+        result["installation_notice"] = "Local Docker runtime inspection could not be confirmed"
+    return result
 
 
 @router.get("/{identity}")

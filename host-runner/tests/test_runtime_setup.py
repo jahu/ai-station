@@ -95,3 +95,45 @@ def test_other_platforms_do_not_inherit_a_cuda_qualification(linux, monkeypatch,
     )
     result = runtime_setup.inspect_image(selection())
     assert not result["platform_supported"] and not result["image"]["present"]
+
+
+@pytest.mark.parametrize("owned,present", [(False, False), (True, True), (True, False)])
+def test_configured_images_are_preserved_and_only_owned_models_use_a_prepared_pin(
+    monkeypatch, owned, present
+):
+    from ai_station_runner.config import Settings, clear_settings_cache
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    monkeypatch.setenv("AI_STATION_LLAMA_IMAGE", "operator/configured:reviewed")
+    clear_settings_cache()
+    calls = []
+
+    def inspect(*args, **kwargs):
+        calls.append(args)
+        return "sha256:" + "a" * 64 if present else None
+
+    monkeypatch.setattr(llama_runtime, "docker", inspect)
+    monkeypatch.setattr(runtime_setup, "inspect_image", lambda _: {"image": {"present": True}})
+    try:
+        result = runtime_setup.image_reference(app_owned=owned)
+        assert result == (
+            runtime_setup.REFERENCE if owned and not present else "operator/configured:reviewed"
+        )
+        assert len(calls) == int(owned)
+        assert all(call[:2] == ("image", "inspect") for call in calls)
+    finally:
+        clear_settings_cache()
+
+
+def test_prepared_pin_also_serves_discovered_models_with_a_missing_default_image(monkeypatch):
+    from ai_station_runner.config import Settings, clear_settings_cache
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    monkeypatch.setenv("AI_STATION_LLAMA_IMAGE", "ghcr.io/ggml-org/llama.cpp:server-cuda")
+    clear_settings_cache()
+    monkeypatch.setattr(llama_runtime, "docker", lambda *args, **kwargs: None)
+    monkeypatch.setattr(runtime_setup, "inspect_image", lambda _: {"image": {"present": True}})
+    try:
+        assert runtime_setup.image_reference(app_owned=False) == runtime_setup.REFERENCE
+    finally:
+        clear_settings_cache()

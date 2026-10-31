@@ -1,4 +1,4 @@
-"""Pinned runtime planning/inspection. Installation remains unpublished.
+"""Pinned runtime planning/inspection for the typed native preparation service.
 
 A Docker image's presence is not a working GPU/runtime qualification. This module
 never pulls, tags, starts, stops or removes anything. Recipes are host-owned, not
@@ -108,3 +108,26 @@ def inspect_image(selection: RuntimeSelection) -> dict:
     except (HTTPException, OSError, ValueError, TypeError):
         result["image"]["notice"] = "The pinned runtime image inspection could not be confirmed"
     return result
+
+
+def image_observation(*, app_owned=False):
+    """Resolve one installed image observation without replacing configured tags."""
+    from ai_station_runner.config import get_settings
+
+    configured = get_settings().llama_image
+    existing = llama_runtime.docker("image", "inspect", configured, "--format", "{{.Id}}", missing_ok=True)
+    if existing is not None or not app_owned and configured != "ghcr.io/ggml-org/llama.cpp:server-cuda":
+        return configured, existing
+    report = inspect_image(RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1"))
+    if report["image"]["present"]:
+        return REFERENCE, report["image"].get("id")
+    return configured, None
+
+
+def image_reference(*, app_owned=False):
+    from ai_station_runner.config import get_settings
+
+    configured = get_settings().llama_image
+    if not app_owned and configured != "ghcr.io/ggml-org/llama.cpp:server-cuda":
+        return configured
+    return image_observation(app_owned=app_owned)[0]

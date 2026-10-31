@@ -202,8 +202,8 @@ Complete the following before publishing an installation action:
   Stop/Resume and an understandable failure/recovery path. Preserve all existing
   models, account data and device credentials across upgrades.
 
-The new runtime recipe/inspection module is not registered as an install API.
-No runtime install/pull capability is claimed until those contracts pass. Linux
+The initial recipe/inspection checkpoint did not register an install API.
+The subsequent integrated runtime candidate is documented below. Linux
 x86-64 CUDA qualification does not imply macOS/Metal or native Windows readiness;
 those routes and all multimodal/companion-file recipes remain required.
 
@@ -276,3 +276,60 @@ SHA-256 verification; its Linux/amd64 child is
 `sha256:fd2e46908d509c497115bbec9372f0cc1d658c314b0394a4d190dff9f1c63827`.
 Its 13 layer/config objects total **2,589,389,163 bytes**. Private exact-source and
 qualification evidence is under `data/acceptance/guided-runtime-setup-20261031/`.
+
+### Integrated Linux runtime candidate — 2026-10-31
+
+The worker now records byte stages/log cursors, keeps a frozen native invocation,
+checks live administrator authority and its claim after native I/O, and publishes
+a private receipt only under the Task Stop fence. Recovery reattaches the same Run
+and native journal. Trusted worker coordination can stop an existing operation of
+a disabled/demoted account without granting it another execution session; unknown
+cleanup keeps its lease/RAM reservations. Dispatch rejection is distinguished from
+a lost acknowledgement. A queued dispatched cancellation still confirms native
+Stop. Actual image verification is separate from successful inference.
+
+`Models → Set up a local model` first shows its conversation engine. Existing
+images need no replacement download. When required, the administrator reviews
+source/component licenses and free runtime storage, prepares llama.cpp, watches
+its durable history/progress and can Stop/Resume. Model downloads remain available
+as explicit files-only preparation if runtime/hardware readiness is absent.
+Previously downloaded files have a separate **Verify model readiness** action;
+it reuses metadata verification and never redownloads or starts inference.
+
+A prepared pinned image serves app-owned GGUFs when the configured image is
+missing. It also serves discovered models when the missing configured image is
+the default server-CUDA tag. Existing images and explicitly configured custom
+legacy images remain authoritative; no image is retagged and request hashes of
+previously owned containers are unchanged.
+
+Qualification distinguishes three independent proofs:
+
+- Compiled desktop/mobile UI → actual account API → separate worker → native
+  process → real Docker transfer against the owned small TLS registry. License
+  gating, same-Task Stop/Resume, verified JSON receipt and private history/Run
+  denial passed. The neutral synthetic image is not an LLM inference claim.
+- Actual installed public pinned image preparation through an ordinary owned
+  Task, with the configured image deliberately missing. Real local GGUF replies
+  for two private accounts reused one GPU runtime, with 32k Q8 KV context; only
+  the owned test runtime was stopped afterward. Verified weights were reused.
+- Native SIGKILL/restart retained the owned process, reconciled its checked
+  receipt despite a lost exit status and avoided another transfer. No daemon
+  configuration, drivers, pre-existing images or production data were changed.
+
+A fresh 2.4-GiB public-image cold-cache installation is not claimed by those
+proofs. Clean-machine platform packaging, all media/companion recipes, advanced
+catalog discovery and actual Windows/macOS qualification remain NR-13/14 work.
+Local review/image/browser source identities and preserving-data rollout are
+recorded separately; the final 0.1.0 release gates remain in force.
+
+Local merge checks for this increment use the repository-authorized equivalent
+of `check-all.sh`: Python lint/format across 820 files; 266 passing cases across
+19 complete affected Python families, followed by 32 final worker/account/model
+cases and 68 native/image/source cases after review fixes; 40 frontend cases
+across seven complete affected families; frontend format/lint/types/production
+build; all 26 QA workbook utility tests; production/development/LAN Compose
+configuration; Docker image build and packaged fake API/worker/SSE smoke. Final
+package sources and compiled desktop/mobile browser assets are compared with the
+reviewed checkout. Existing five React refresh warnings and the bundle-size
+advisory remain; there are no lint errors. These checks do not claim a fresh run
+of unrelated test families or Windows/macOS acceptance.

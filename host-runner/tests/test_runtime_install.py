@@ -271,3 +271,26 @@ def test_atomic_receipt_does_not_follow_a_preexisting_temporary_symlink(setup):
     (native.directory(body["run_id"]) / "result.tmp").symlink_to(victim)
     assert job.run(body["run_id"]) == 0
     assert victim.read_text() == "Preserve this file"
+
+
+def test_catalog_distinguishes_existing_configured_image_and_pinned_install_storage(setup, monkeypatch):
+    monkeypatch.setattr(native, "INSTALLATION_QUALIFIED", True)
+    monkeypatch.setattr(
+        runtime_setup,
+        "inspect_image",
+        lambda _: {
+            "recipe": setup.frozen,
+            "manifest_sha256": runtime_setup.fingerprint(setup.frozen),
+            "platform_supported": True,
+            "image": {"present": False},
+        },
+    )
+    monkeypatch.setattr(native.llama_runtime, "docker", lambda *args, **kwargs: "sha256:" + "c" * 64)
+    value = setup.api.get("/v1/setup/runtimes").json()
+    assert value["usable_image"] is True and value["configured_image"]["present"] is True
+    assert value["installation_available"] is True
+    assert value["storage"]["free_bytes"] == 20 * 1024**3
+    assert "data_root" not in value
+    monkeypatch.setattr(native.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024))
+    value = setup.api.get("/v1/setup/runtimes").json()
+    assert value["usable_image"] is True and value["installation_available"] is False

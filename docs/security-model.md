@@ -1,3 +1,12 @@
+Guided runtime preparation is an explicit administrator action with frozen
+license acceptance, source/hash/deadline and model/network/workspace permissions.
+The native operation accepts only a built-in profile, uses the configured local
+Unix Docker context, and never exposes a general Docker API or caller-selected
+image/command/socket. Private receipts and log cursors remain owner scoped.
+Lost acknowledgements reuse the native journal; Stop and revoked-account cleanup
+retain reservations until owned transfer completion is confirmed. Existing
+configured images are preserved. [Contracts](plans/guided-model-installation.md).
+
 [Guided model setup](plans/guided-model-installation.md) requires explicit administrator authority, license acceptance and snapshotted filesystem/network/manage-model permissions. Clients select a reviewed manifest, never URLs, commands, destinations or hashes of their own. Download DNS/redirects are publicly validated and pinned; complete hash/length checks precede immutable publication. Native adoption accepts only `models/store/<sha256>`, validates read-only regular-file ownership and bounded GGUF metadata, and does not claim a second full-file hash. Stop, live account authority and worker identity are checked before shared registry/private receipt publication. Discovery cannot mark these app-owned sources missing merely because external roots were rescanned.
 
 Conversation sound scopes never grant Library browsing to a model. Current-turn

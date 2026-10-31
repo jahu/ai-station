@@ -36,15 +36,22 @@ function mount(
   canPrepare = true,
   initial: unknown[] = [],
   freeBytes = 20 * 1024 ** 3,
+  selectedEntry?: Record<string, unknown>,
 ) {
   const writes: { url: string; body: Record<string, unknown> }[] = [];
   let rows = initial;
+  let verified = false;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") {
         const body = JSON.parse(String(init.body));
         writes.push({ url, body });
+        if (url.endsWith("/install"))
+          return {
+            ok: true,
+            json: async () => ({ id: "readiness-run", status: "queued" }),
+          };
         if (url.endsWith("/chat/conversations"))
           return { ok: true, json: async () => ({ id: "new-chat" }) };
         if (url.endsWith("/cancel"))
@@ -60,13 +67,35 @@ function mount(
         else rows = [preparation("queued")];
         return { ok: true, json: async () => rows[0] };
       }
+      if (url.endsWith("/runs/readiness-run")) {
+        verified = true;
+        return {
+          ok: true,
+          json: async () => ({ id: "readiness-run", status: "succeeded" }),
+        };
+      }
+      if (url.endsWith("/setup/runtimes"))
+        return {
+          ok: true,
+          json: async () => ({
+            usable_image: true,
+            installation_available: false,
+          }),
+        };
+      if (url.includes("/setup/runtimes/preparations"))
+        return { ok: true, json: async () => [] };
       return {
         ok: true,
         json: async () =>
           url.endsWith("/setup/catalog")
             ? {
                 can_prepare: canPrepare,
-                entries: [entry],
+                entries: [
+                  {
+                    ...(selectedEntry ?? entry),
+                    ...(verified ? { ready_to_try: true } : {}),
+                  },
+                ],
                 hardware: {
                   memory: { total_mib: 32768 },
                   gpus: [
@@ -233,4 +262,22 @@ it("shows free application storage and prevents a download that cannot fit", asy
     ).disabled,
   ).toBe(true);
   expect(writes).toEqual([]);
+});
+
+it("verifies previously downloaded model files without another download or automatic inference", async () => {
+  const { writes } = mount(true, [], 20 * 1024 ** 3, {
+    ...entry,
+    model_file_id: "shared-file",
+    definition_id: "shared-definition",
+    ready_to_try: false,
+  });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Verify model readiness" }),
+  );
+  await screen.findByRole("button", { name: "Open Chat with this model" });
+  expect(writes).toHaveLength(1);
+  expect(writes[0].url).toBe(
+    "/api/models/definitions/shared-definition/install",
+  );
+  expect(writes[0].body).toEqual({});
 });

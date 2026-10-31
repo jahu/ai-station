@@ -65,6 +65,7 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.runtime_coordination import LlamaWaitExecutor
 from app.runtime_registry import RuntimeObservationExecutor
+from app.runtime_setup_job import RuntimeSetupExecutor
 from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecutor, PreviewExecutor
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
@@ -317,6 +318,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),
     "media_translation_apply": TranslationApplyExecutor(),
     "artifact_purge": ArtifactPurgeExecutor(),
