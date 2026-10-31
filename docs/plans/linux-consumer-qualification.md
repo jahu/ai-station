@@ -56,8 +56,32 @@ The candidate implementation now includes the native dialog, fixed package
 helper/polkit action and same-UID `sg` continuation of the root-owned launcher.
 The helper uses isolated, no-site bundled Python and only standard-library
 imports. Normal CI simulates OS identity/tools and never changes host groups.
-The initial 104 desktop/access regression cases pass; real installed consent,
-OS authentication and first-result qualification are still required below.
+The initial 104 desktop/access regression cases passed. Two real package
+findings added regression coverage: the builder's group-write umask must not
+affect installed root-owned paths, and a newer source must compare newer in
+the OS package manager regardless of its hash. Preview versions now use source
+epoch before the hash and supersede the earlier private `~dev.<hash>` format.
+The complete updated desktop scope passed 106 cases. Already authorized group
+membership activates the fixed normal-user launcher without another dialog.
+
+The actual corrected package's native consent was inspected visually and by
+accessibility text. Canceling consent and canceling the OS authentication left
+membership unchanged. A successful actual OS authentication granted only the
+invoking account and continued to ordinary setup. Both desktop and native Runner
+processes had real/effective UID 1000, with no root application process.
+The compiled guest browser created the first admin, prepared the initially
+absent CPU engine, downloaded/verified the initially absent Q4 weights and
+clicked Chat **Send**. The ordinary worker/native CPU model returned `MODEL_OK`;
+reload retained it and normal scoped Stop passed. No host mounts, GPU access,
+host OS permission changes, preinstalled developer environment or copied model
+cache supplied that first result.
+
+The earlier unpublished bad-mode package was removed in this disposable guest;
+only its package-code leftovers were reversibly archived before fresh corrected
+installation. The user's private folder remained byte-identical. This avoids
+mistaking dpkg's preservation of old directory modes for a clean installation;
+it is not a production migration claim. Subsequent preserving update/removal
+acceptance must use the working corrected package and a distinct newer version.
 
 1. Test detection of permission denial versus other Docker failures, cancellation,
    unsafe helpers/socket ownership, arbitrary extra arguments and unchanged

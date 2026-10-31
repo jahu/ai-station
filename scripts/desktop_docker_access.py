@@ -60,27 +60,24 @@ def continue_setup(dialog, *, background=False):
     account = pwd.getpwuid(os.getuid())
     group = grp.getgrnam("docker")
     member = account.pw_gid == group.gr_gid or account.pw_name in group.gr_mem
-    if (
-        dialog(
-            "--question",
-            "--text="
-            + (
-                "Your account already has Docker access, but this session has not picked it up. "
-                "Continue to reopen AI Station with the updated permissions?"
-                if member
-                else "One setup step remains: allow your account to use local Docker.\n\n"
-                "This adds your account to the Docker group, which grants administrator-level control "
-                "of this computer. Your operating system will ask for administrator authentication. "
-                "AI Station does not receive your password.\n\n"
-                "AI Station itself continues to run as your normal user."
-            ),
-            "--ok-label=Continue" if member else "--ok-label=Authorize Docker access",
-            "--cancel-label=Cancel",
-        )
-        != 0
-    ):
-        return False
     if not member:
+        if (
+            dialog(
+                "--question",
+                "--text="
+                + (
+                    "One setup step remains: allow your account to use local Docker.\n\n"
+                    "This adds your account to the Docker group, which grants administrator-level control "
+                    "of this computer. Your operating system will ask for administrator authentication. "
+                    "AI Station does not receive your password.\n\n"
+                    "AI Station itself continues to run as your normal user."
+                ),
+                "--ok-label=Authorize Docker access",
+                "--cancel-label=Cancel",
+            )
+            != 0
+        ):
+            return False
         result = subprocess.run(
             ["/usr/bin/pkexec", "--disable-internal-agent", str(HELPER)],
             stdin=subprocess.DEVNULL,

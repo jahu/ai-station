@@ -1,6 +1,8 @@
 # Operator QA catalog and workbook
 
-The developing v32 catalog contains 216 cases. SETUP-143–145 cover the explicit
+The developing v33 catalog contains 219 cases. SETUP-146–148 cover native
+Docker consent and preserving OS package update/removal/reinstallation.
+ SETUP-143–145 cover the explicit
 CPU conversation starter, first reply, RAM/Stop/recovery and private setup
 history. SETUP-141–142 retain larger-model/context and old-download compatibility;
 SETUP-136–140 retain expressive voice/phone-reference setup. These are untested

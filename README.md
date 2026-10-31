@@ -254,8 +254,11 @@ priority. Review the component licenses before installation.
 
 An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
 It bundles Python and the compiled application image, opens account/model setup
-in your browser, and keeps data outside the installed package. Docker/Compose
-must already be available to your user; the desktop shell uses Zenity. This is
+in your browser, and keeps data outside the installed package. The Debian package
+installs its system dependencies through your package manager. If your account
+needs Docker access, a native dialog explains the permission and requests OS
+administrator authentication; AI Station keeps running as your normal user.
+Existing working Docker configurations are preserved. This is
 not yet the promised cross-platform consumer installer.
 [Desktop packaging and qualification](docs/plans/desktop-installation.md).
 

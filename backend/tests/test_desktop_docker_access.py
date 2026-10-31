@@ -152,8 +152,10 @@ def test_successful_OS_authentication_reopens_only_the_fixed_normal_user_launche
 def test_already_granted_membership_requires_no_repeat_privileged_action(consent):
     group, execute, launch = consent
     group.gr_mem = ["stationqa"]
+    ask = Mock()
     with pytest.raises(RuntimeError, match="captured fixed launcher"):
-        access.continue_setup(Mock(return_value=0))
+        access.continue_setup(ask)
+    ask.assert_not_called()
     execute.assert_not_called()
     launch.assert_called_once()
 

@@ -29,8 +29,11 @@ license notices. No weights, credentials or personal data enter a package.
 ## Install and startup
 
 1. The user opens the installed desktop entry. Show prerequisites and local
-   storage/network use. Docker/Compose must be installed and available to that
-   user. Explain missing prerequisites through the desktop, not a traceback;
+   storage/network use. The Debian package declares Docker/Compose and native
+   dialog/authentication dependencies. Missing current-user Docker access offers
+   the explicit OS-authenticated step in the [clean Linux contract](linux-consumer-qualification.md).
+   Already granted membership activates the fixed user launcher without another
+   confirmation. Explain other missing prerequisites through the desktop, not a traceback;
    never install drivers or change daemon/group/OS settings silently.
 2. After local confirmation, create private XDG application storage. Copy the
    shipped bundle into an immutable versioned application directory there,
@@ -62,12 +65,13 @@ opens that running version; it does not apply an update during its jobs.
 
 ## Qualification and remaining work
 
-The [actual clean Linux qualification](linux-consumer-qualification.md) now boots
-a separate no-GPU Ubuntu VM and installs the real Debian package. It reproduced
-a first-start blocker after dependency installation: the ordinary account lacks
-Docker socket access. A native consent/authentication step is being designed;
-the failed first start is not qualified consumer onboarding. Host permissions,
-Docker and drivers were left untouched.
+The [actual clean Linux qualification](linux-consumer-qualification.md) boots a
+separate no-GPU Ubuntu VM and installs the real Debian package. It reproduced
+and corrected missing account access, inherited package write permissions and
+unordered preview versions. Native consent/authentication cancellation and
+grant, ordinary-user continuation, first admin, real engine/model downloads,
+Chat Send/reply and scoped Stop passed. Preserving OS upgrade/removal and final
+package gates remain separate. Host permissions, Docker and drivers were left untouched.
 
 The next desktop increment keeps the existing supervisor alive when the native
 status window is closed or **Run in background** is chosen. **Stop AI Station**
