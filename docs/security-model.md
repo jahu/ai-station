@@ -1139,3 +1139,21 @@ publication and execution. Goal preparation may replace only the description,
 with source and scene timings retained. Approval, cancellation, deadlines and
 idempotent receipts remain shared with other media agents. A completed stem does
 not authorize delivery of an unverified or failed film preview.
+
+## Managed video preparation
+
+The fixed Wan setup recipe accepts no caller-selected URL, Python package,
+command, source checkout or destination. The worker verifies pinned inputs;
+native preparation installs only exact hash-locked binary wheels offline in an
+owned four-GiB/zero-swap scope. The source and all model companions are checked
+before execution. Custom/API nodes and runtime downloads remain disabled.
+
+Shared readiness exposes an opaque environment hash, never a private setup Run
+identifier. The native identity mapping must publish successfully before the
+active pointer changes. Preparation histories, receipts, prompts and generated
+media remain account scoped; models and readiness are shared infrastructure.
+Managed generation uses the reviewed GPU/CPU-offload profile and a per-process
+deadline. Composition uses the same frozen environment, CPU-only execution and
+its own four-GiB reservation/scope. Stop/recovery use existing process ownership,
+group signaling and resource-release confirmation. External video configuration
+retains priority and is never changed by setup.

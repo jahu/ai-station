@@ -1,5 +1,5 @@
 {
-  "version": 25,
+  "version": 26,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -23,7 +23,8 @@
     "docs/plans/desktop-installation.md",
     "docs/plans/managed-speech-setup.md",
     "docs/plans/managed-image-setup.md",
-    "docs/plans/managed-music-setup.md"
+    "docs/plans/managed-music-setup.md",
+    "docs/plans/managed-video-setup.md"
   ],
   "cases": [
     {
@@ -4319,6 +4320,114 @@
       ],
       "resources": "Bez pobierania/generacji; osobne konta i profile QA",
       "minutes": 7
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-121",
+      "title": "Wideo: instalacja i pierwszy film",
+      "prerequisites": [
+        "Osobny świeży profil QA Linux x86-64, NVIDIA co najmniej 12 GiB VRAM, 24 GiB RAM i zgodny sterownik; administrator, około 32 GiB wolnego miejsca."
+      ],
+      "steps": [
+        "W Models wybierz Set up video. Sprawdź sprzęt, miejsce, źródła oraz osobne licencje Wan, ComfyUI i zależności.",
+        "Zaakceptuj około 20 GiB pobrania; rozpocznij przygotowanie, przejdź do innej zakładki i wróć.",
+        "Po zakończeniu otwórz Video i wygeneruj neutralną scenę jeziora. Sprawdź film w Library, odtwórz, przewiń i odśwież workspace."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Postęp i próba pozostają po nawigacji. Gotowość wynika z kompletnej instalacji. Film jest rzeczywisty, ma zgodne wymiary/czas i zachowaną prywatną historię. Profil ujawnia 1280×704, co najmniej 20 kroków i limit RAM 11 GiB bez swapu."
+      ],
+      "resources": "Około 20 GiB pobrania, jedno GPU 12 GiB; kilka minut krótkiej generacji",
+      "minutes": 20
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-122",
+      "title": "Wideo: Stop i Resume instalacji",
+      "prerequisites": [
+        "Oddzielny profil QA z SETUP-121, aktywne pobieranie lub przygotowanie silnika."
+      ],
+      "steps": [
+        "Kliknij Stop video setup w trakcie przygotowania silnika. Odśwież i sprawdź zatrzymaną próbę.",
+        "Wznów to samo zadanie, sprawdź numer próby i zakończone przygotowanie."
+      ],
+      "expected": [
+        "Zatrzymuje się tylko własna operacja. Zweryfikowane pliki pozostają, niepełne środowisko nie uzyskuje gotowości. Resume zachowuje źródła/receptę i historię, nie duplikuje działania ani nie udaje wznowienia pakietów od częściowego bajtu."
+      ],
+      "resources": "CPU / 4 GiB RAM, możliwe dalsze pobieranie; bez generacji GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-123",
+      "title": "Wideo: animacja obrazu i dłuższy ciągły film",
+      "prerequisites": [
+        "SETUP-121 zakończony; własny neutralny obraz krajobrazu PNG/JPEG."
+      ],
+      "steps": [
+        "W Video wybierz Animate an image, prześlij obraz i wygeneruj krótki ruch. Sprawdź wynik oraz powiązanie ze źródłem.",
+        "Utwórz film 10-sekundowy w trybie Continuous, przejdź do innej zakładki, wróć i odśwież.",
+        "Po zakończeniu odtwórz kompletny eksport i przewiń przez granice segmentów. Sprawdź, że ustawienia i wcześniejsze wersje zostały zachowane."
+      ],
+      "expected": [
+        "Animacja wykorzystuje własny obraz. Ciągły film kontynuuje kolejne segmenty z tym samym zamrożonym silnikiem/modelami, a końcowy eksport ma dokładnie zadany czas. Zakończenie jednego segmentu nie udaje zakończenia filmu. Dłuższe opcje pozostają dostępne; nie obiecujemy idealnej ciągłości obrazu ani stałego czasu generowania."
+      ],
+      "resources": "Jedno GPU / 11 GiB RAM; długi realny test może trwać znacznie dłużej niż czas filmu",
+      "minutes": 45
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-124",
+      "title": "Wideo: odzyskanie po restarcie i anulowanie",
+      "prerequisites": [
+        "Oddzielny Runner QA i aktywna własna generacja. Restart dotyczy wyłącznie tego Runnera."
+      ],
+      "steps": [
+        "Podczas generacji zrestartuj prywatny Runner QA i wróć do tego samego Run.",
+        "Kliknij Stop; sprawdź zakończenie własnego procesu, rezerwacje GPU/RAM i Library."
+      ],
+      "expected": [
+        "Runner dołącza do tego samego procesu bez ponownej inferencji. Stop nie zabija innych usług, zwalnia zasoby po potwierdzeniu i nie publikuje częściowego filmu. Nieznanego stanu nie przedstawia jako sukces."
+      ],
+      "resources": "Jedno GPU; restart tylko Runnera QA, bez restartu całego komputera",
+      "minutes": 8
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-125",
+      "title": "Wideo: prywatność, zachowanie konfiguracji i niezgodny sprzęt",
+      "prerequisites": [
+        "Konta QA administratora A i członka B; dodatkowy profil z jawną konfiguracją Wan/ComfyUI."
+      ],
+      "steps": [
+        "Na B sprawdź gotowość wspólnego silnika i brak historii instalacji A; spróbuj otworzyć linki do Run, filmu i pliku A oraz rozpocząć instalację.",
+        "Sprawdź kartę konfiguracji i wynik na telefonie. W osobnym profilu sprawdź reakcję na za małą VRAM/RAM lub niezgodny sterownik.",
+        "W profilu ze skonfigurowanym ComfyUI potwierdź pierwszeństwo dotychczasowych ustawień, także niepełnych."
+      ],
+      "expected": [
+        "Modele są wspólne, lecz B nie widzi cudzych promptów, historii, plików ani identyfikatora Run instalacji w gotowości silnika. Nie instaluje bez uprawnień. Telefon nie przewija poziomo. Niezgodny sprzęt nie otrzymuje aktywnej instalacji; aplikacja nie zmienia sterowników. Jawna konfiguracja nie jest nadpisywana."
+      ],
+      "resources": "Bez pobierania i generacji; osobne konta/profile QA",
+      "minutes": 8
     }
   ]
 }

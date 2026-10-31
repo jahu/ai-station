@@ -1,6 +1,7 @@
 """Durable segmented video jobs built from existing Runs, dependencies and artifacts."""
 
 import json
+from datetime import timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -27,6 +28,8 @@ from app.video import (
     VideoRequest,
     capabilities,
     create_video_run,
+    managed_native_budget,
+    managed_parameters,
     memory_reservation,
     valid_guidance_observation,
 )
@@ -104,6 +107,12 @@ def publish_video(
             raise HTTPException(409, "Media plan belongs to a different reviewed publication")
         return job_view(session, task)
     reservation = memory_reservation(body, observed_profile)
+    managed = managed_parameters(body, observed_profile)
+    if managed and not budget:
+        execution_deadline_at = (utcnow() + timedelta(hours=72)).isoformat()
+        # Manual long films previously had no whole-film expiry. Bound the
+        # managed route while preserving any explicit reviewed agent budget.
+        budget = {"execution_deadline_at": execution_deadline_at}
     # Freeze conditioning with the timeline. Old Runners and saved/resumed plans
     # retain their original prefix; a capable Runner never silently changes it.
     prefixes = observed_profile.get("continuation_frames")
@@ -194,10 +203,12 @@ def publish_video(
         capability="media.compose",
         executor_type="media_compose",
         execution_target="host",
+        requested_resources={"ram_mib": 4096} if managed else {},
         operation_key="media:1:compose:attempt:1",
         parameters={
             **budget,
             "stage_run_ids": [run.id for run in runs],
+            **({"managed_runtime": managed["managed_runtime"]} if managed else {}),
             "timeline": timing.model_dump(mode="json"),
             "width": body.width,
             "height": body.height,
@@ -224,6 +235,7 @@ def publish_video(
             **budget,
             **({"agent_media_parent_run_id": parent_run_id} if budget else {}),
             "version": 1,
+            **({"managed_runtime": managed["managed_runtime"]} if managed else {}),
             "profile_observation": observed_profile.get("profile_observation"),
             "revision": 1,
             "kind": "video",
@@ -499,7 +511,12 @@ class CompositionExecutor(HostMediaExecutor):
             "/v1/runs/media-compose",
             {
                 "run_id": run.id,
-                **self.native_budget(run),
+                **(
+                    {"managed_runtime": run.parameters["managed_runtime"]}
+                    if run.parameters.get("managed_runtime")
+                    else {}
+                ),
+                **managed_native_budget(run),
                 **({"audio": sound} if sound else {}),
                 "permissions": run.effective_permissions,
                 "clips": clips,
@@ -617,6 +634,8 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
     elif plan.get("request", {}).get("memory_profile", "default") != "default":
         memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
     observed = profile.get("profile_observation")
+    if plan.get("managed_runtime") and plan["managed_runtime"] != profile.get("managed_runtime"):
+        raise HTTPException(409, "The managed video environment changed; start a new media job")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")
     selected_ids = (
@@ -757,6 +776,11 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         operation_key=f"media:{next_revision}:compose:attempt:1",
         parameters={**old_compose.parameters, "stage_run_ids": new_ids},
         permissions=list(old_compose.effective_permissions),
+        requested_resources=(
+            {"ram_mib": 4096}
+            if old_compose.parameters.get("managed_runtime")
+            else dict(old_compose.requested_resources)
+        ),
         parent_run_id=old_compose.id,
         retry_class="inspect",
     )

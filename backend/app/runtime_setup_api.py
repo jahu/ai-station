@@ -18,18 +18,21 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
 from app.speech_setup_client import SpeechSetupClient
 from app.task_control import cancel_task, lock_task
+from app.video_setup_client import VideoSetupClient
 
 router = APIRouter(prefix="/api/setup/runtimes", tags=["guided runtime setup"])
 INTENT = "runtime.catalog.prepare"
 PERMISSIONS = ["manage_models", "network_read", "workspace_write"]
 SPEECH_PROFILE = "chatterbox-v3-linux-x86-64-python312-v1"
 IMAGE_PROFILE = "qwen-image21-cuda-linux-amd64-v1"
+VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 Profile = Literal[
     "llamacpp-cuda-linux-amd64-v1",
     "chatterbox-v3-linux-x86-64-python312-v1",
     "qwen-image21-cuda-linux-amd64-v1",
     "ace-step15-turbo-linux-x86-64-python312-v1",
+    "wan22-5b-linux-x86-64-python312-v1",
 ]
 
 
@@ -44,7 +47,9 @@ class Prepare(BaseModel):
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
         client = (
-            MusicSetupClient(timeout=30)
+            VideoSetupClient(timeout=30)
+            if profile == VIDEO_PROFILE
+            else MusicSetupClient(timeout=30)
             if profile == MUSIC_PROFILE
             else ImageSetupClient(timeout=30)
             if profile == IMAGE_PROFILE
@@ -96,13 +101,16 @@ def attempt(session, task, saved, previous=None):
     speech = saved["recipe"]["profile"] == SPEECH_PROFILE
     image = saved["recipe"]["profile"] == IMAGE_PROFILE
     music = saved["recipe"]["profile"] == MUSIC_PROFILE
-    inputs = speech or image or music
+    video = saved["recipe"]["profile"] == VIDEO_PROFILE
+    inputs = speech or image or music or video
     run = create_run(
         session,
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="music_setup"
+        executor_type="video_setup"
+        if video
+        else "music_setup"
         if music
         else "image_setup"
         if image

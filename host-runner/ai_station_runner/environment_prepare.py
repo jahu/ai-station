@@ -23,6 +23,7 @@ class OwnedEnvironmentPreparation:
     environment: object
     name: str
     storage_namespace: str
+    before_adoption: object = None
 
     def inspection(self, manager, identity, *, stdout_offset=0, stderr_offset=0):
         identity = str(UUID(str(identity)))
@@ -183,5 +184,7 @@ class OwnedEnvironmentPreparation:
             root = self.policy.get_settings().host_data_dir().resolve()
             folder = self.environment.directory(root / "runtime", self.storage_namespace)
             selected = {"profile": body.profile, "operation_id": identity, "manifest_sha256": current}
+            if self.before_adoption is not None:
+                self.before_adoption(root, selected)
             runtime_install.atomic_json(folder, "active.json", selected)
             return {**selected, "environment_prepared": True, self.name + "_inference_tested_now": False}

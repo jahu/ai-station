@@ -1,7 +1,9 @@
 # Guided local video setup
 
 NR-14 continues after the delivered conversation, speech, image, CPU-memory and
-music profiles. This is an implementation contract, not an available runtime.
+music profiles. The first fixed Linux NVIDIA profile has passed isolated real
+qualification and is enabled in the reviewed implementation. Merge and production
+deployment remain separate gates.
 Preserve the existing configured Wan adapter, its long-film coordinator, image
 animation, continuation/APG recipes, saved creative sessions and exact Resume.
 Do not change the external ComfyUI checkout, its Python environment or models.
@@ -102,3 +104,64 @@ Private audit evidence: `data/acceptance/guided-video-setup-20261031/`. This wor
 does not complete avatar/effects/expressive-voice setup, broader hardware/source
 catalog choice, consumer Linux/Windows/macOS install/update/uninstall, NR-06/07
 quality acceptance, naming or the final operator QA workbook.
+
+## Implemented contracts and measured qualification
+
+The recipe now prepares all 102 verified inputs, an independent Python and 97
+coherent binary wheels. A fresh-account compiled UI exercised actual native
+installation Stop/Resume and restored its completed setup after a restart.
+The prepared SDK/tokenizer imports pass offline without GPU inference; real
+inference is qualified separately, rather than claimed by a readiness probe.
+
+The first isolated native text-video result decoded all 17 frames at 1280×704
+under the 11-GiB/zero-swap profile in 241.52 seconds. A subsequent ordinary
+API/worker generation animated an uploaded image into 33 frames and retained
+source lineage. A two-segment continuous film produced and decoded its complete
+96-frame/four-second export, with compiled Library playback and phone layout.
+These are those exact tests, not evidence that every duration/scene is inspected.
+
+That full-film test found a composition configuration bug: the final CPU stage
+still required an external Python despite successful managed GPU segments. The
+fixed composition dispatch freezes the same opaque environment, admits four GiB
+of CPU RAM and executes CPU-only in its own zero-swap scope. Explicit Resume
+reused both completed GPU segments and retried only composition. The failed
+attempt remains in history. The prepared PyAV environment also supplies the
+existing timeline editor when no external codec runtime is configured.
+
+Manual managed films retain a 72-hour absolute whole-film expiry; individual
+native video/composition processes keep their one-hour ceiling (the CPU codec
+child also retains its shorter 30-minute limit). An explicit reviewed agent
+deadline is never extended. Short generation has a 24-hour queue/workflow expiry.
+Those budgets are bounds, not estimates or promises of generation speed.
+
+Second-account checks deny the owner's setup, generation, whole-film Task and
+artifact file while exposing shared readiness through an opaque hash. The native
+private mapping is written inside the adoption lock before the active pointer;
+a failed mapping publication preserves the previous active environment. Partial
+external configuration never falls through to a different managed installation.
+
+Actual Runner restart recovered the same PID and start time during generation.
+Ordinary API Stop ended that owned process without a partial artifact and released
+its resource reservations. The compiled editor also saved, rendered and restored
+the complete 96-frame film through the prepared CPU environment on desktop/phone.
+
+Normal qualification includes the complete 1508-test native suite (two explicit
+opt-in skips), the 1037-test frontend baseline plus the final 28 affected UI
+cases, 240 backend cases before the composition correction and complete final
+composition/consumer families afterward. The native suite exposed an unrelated
+private-process registry race: validation could overlap the owned exit thread's
+atomic replacement. Validation now shares that manager's lock, preserves strict
+file checks and passes a deterministic contention regression and the full suite.
+These are local equivalent checks; hosted Actions remain manual by owner policy.
+
+Final compiled desktop/phone qualification passed without the private activation
+override. It restored setup attempt two, the complete film with decoded seeking
+and the saved editor export; the separate fake worker/API/SSE test also passed.
+All 593 application/frontend files and 173 native wheel files match the reviewed
+source. Final composition/consumer checks pass (87 and 115 cases respectively),
+alongside native policy, lint/format, TypeScript, production build, all three
+Compose variants and the Docker image. Operator catalog v26 retains unanswered
+SETUP-121–125; internal checks do not fill in the owner's QA answers.
+
+Idle-only production deployment remains a separate gate. No new production video
+rollout is claimed at this checkpoint.

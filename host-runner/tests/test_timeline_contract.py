@@ -10,6 +10,23 @@ from app.timeline_schema import Manifest as PublicManifest
 from pydantic import ValidationError
 
 
+def test_cpu_timeline_uses_ready_managed_video_when_external_configuration_is_absent(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from ai_station_runner import video_selection
+
+    settings = SimpleNamespace(mmaudio_enabled=False, video_python="")
+    monkeypatch.setattr(runtime, "get_settings", lambda: settings)
+    monkeypatch.setattr(runtime, "available", lambda: True)
+    monkeypatch.setattr(
+        video_selection, "selection", lambda cfg: {"managed": True, "video_python": sys.executable}
+    )
+    assert runtime.installation() == __import__("pathlib").Path(sys.executable)
+    monkeypatch.setattr(video_selection, "selection", lambda cfg: {"managed": False})
+    with pytest.raises(ValueError, match="Configure"):
+        runtime.installation()
+
+
 def body(tmp_path):
     identity, run_id = str(uuid4()), str(uuid4())
     path = tmp_path / "artifacts/source.mp4"

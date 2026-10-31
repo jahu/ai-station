@@ -8,19 +8,57 @@ import {
   Download,
   RotateCcw,
   Square,
+  Film,
 } from "lucide-react";
 import { api, type Run } from "../api";
 import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-type Family = "speech" | "music";
+type Family = "speech" | "music" | "video";
 const profiles = {
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
+  video: "wan22-5b-linux-x86-64-python312-v1",
 };
 const destination = (family: Family) =>
-  family === "music" ? "/audio?mode=music" : "/audio";
+  family === "video"
+    ? "/video"
+    : family === "music"
+      ? "/audio?mode=music"
+      : "/audio";
+const content = {
+  speech: {
+    title: "Speech",
+    heading: "Speech & voice cloning",
+    description:
+      "Bring your words to life with a voice recording. Local Polish speech, delivery controls and no cloud account.",
+    ready:
+      "Add a short voice recording in Audio, enter your text and generate.",
+    model: "Chatterbox Multilingual v3",
+    open: "Open Audio",
+  },
+  music: {
+    title: "Music",
+    heading: "Music & soundtracks",
+    description:
+      "Turn a description into an instrumental or a song with your own lyrics. Create locally, keep every version.",
+    ready:
+      "Describe an idea in Music, choose an instrumental or your own lyrics, and create a track.",
+    model: "ACE-Step 1.5 Turbo",
+    open: "Open Music",
+  },
+  video: {
+    title: "Video",
+    heading: "Video & animation",
+    description:
+      "Bring a scene or your own image to life. Create clips and longer films, with saved versions and progress.",
+    ready:
+      "Describe a scene or add a first-frame image in Video. Create a clip or plan a longer film in the same saved workspace.",
+    model: "Wan 2.2 5B",
+    open: "Open Video",
+  },
+};
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const size = (bytes: number) =>
   bytes >= 1024 ** 3
@@ -45,6 +83,7 @@ type Catalog = {
   };
   existing_speech?: { available: boolean; source: string };
   existing_music?: { available: boolean; source: string };
+  existing_video?: { available: boolean; source: string };
   recommendation?: { fits: boolean; reason: string };
   storage?: {
     free_bytes: number;
@@ -98,18 +137,19 @@ function Attempt({
   available: boolean;
   manifest?: string;
 }) {
-  const title = family === "music" ? "Music" : "Speech";
+  const title = content[family].title;
+  const Icon = family === "video" ? Film : AudioLines;
   const familyPhases =
     family === "speech"
       ? phases
       : {
           ...phases,
-          downloading_files: "Downloading music files",
-          files_verified: "Files verified · preparing the music engine",
-          creating_environment: "Preparing the local music engine",
-          installing_dependencies: "Installing the music engine",
-          preparing_sdk: "Preparing the music SDK",
-          environment_prepared: "Music engine prepared",
+          downloading_files: `Downloading ${family} files`,
+          files_verified: `Files verified · preparing the ${family} engine`,
+          creating_environment: `Preparing the local ${family} engine`,
+          installing_dependencies: `Installing the ${family} engine`,
+          preparing_sdk: `Preparing the ${family} SDK`,
+          environment_prepared: `${title} engine prepared`,
         };
   const receipt = useRef<{ run: string; id: string } | null>(null);
   const active = !terminal.has(value.run.status);
@@ -142,9 +182,11 @@ function Attempt({
   const label =
     value.run.status === "succeeded"
       ? ready
-        ? family === "music"
-          ? "Ready for your first track"
-          : "Ready for your first recording"
+        ? family === "video"
+          ? "Ready for your first film"
+          : family === "music"
+            ? "Ready for your first track"
+            : "Ready for your first recording"
         : "Installation prepared"
       : value.run.status === "queued"
         ? "Waiting for available resources"
@@ -215,7 +257,7 @@ function Attempt({
         {value.run.status === "succeeded" && ready && (
           <Button asChild>
             <Link to={destination(family)}>
-              <AudioLines size={16} /> Create {family}
+              <Icon size={16} /> Create {family}
             </Link>
           </Button>
         )}
@@ -237,7 +279,8 @@ export default function SpeechSetupPanel() {
 
 export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const profile = profiles[family];
-  const title = family === "music" ? "Music" : "Speech";
+  const title = content[family].title;
+  const Icon = family === "video" ? Film : AudioLines;
   const [search] = useSearchParams();
   const [opened, setExpanded] = useState(false);
   const expanded = opened || search.get("capability") === family;
@@ -308,7 +351,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "music" ? data?.existing_music : data?.existing_speech;
+    family === "video"
+      ? data?.existing_video
+      : family === "music"
+        ? data?.existing_music
+        : data?.existing_speech;
   const ready = existingRuntime?.available === true;
   const storageFits =
     !data?.storage || data.storage.free_bytes >= data.storage.required_bytes;
@@ -320,19 +367,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     >
       <div className="speech-setup-heading">
         <div className="speech-setup-icon">
-          <AudioLines size={24} />
+          <Icon size={24} />
         </div>
         <div>
-          <h2>
-            {family === "music"
-              ? "Music & soundtracks"
-              : "Speech & voice cloning"}
-          </h2>
-          <p className="muted">
-            {family === "music"
-              ? "Turn a description into an instrumental or a song with your own lyrics. Create locally, keep every version."
-              : "Bring your words to life with a voice recording. Local Polish speech, delivery controls and no cloud account."}
-          </p>
+          <h2>{content[family].heading}</h2>
+          <p className="muted">{content[family].description}</p>
         </div>
         {ready && (
           <span className="setup-fit">
@@ -362,14 +401,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                 <div className="speech-setup-ready">
                   <p>
                     <strong>Your {family} engine is ready.</strong>{" "}
-                    {family === "music"
-                      ? "Describe an idea in Music, choose an instrumental or your own lyrics, and create a track."
-                      : "Add a short voice recording in Audio, enter your text and generate."}
+                    {content[family].ready}
                   </p>
                   <Button asChild>
                     <Link to={destination(family)}>
-                      {family === "music" ? "Open Music" : "Open Audio"}{" "}
-                      <ArrowRight size={15} />
+                      {content[family].open} <ArrowRight size={15} />
                     </Link>
                   </Button>
                   {existingRuntime?.source === "configured" && (
@@ -390,11 +426,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                   <div className="speech-setup-facts">
                     <div>
                       <small>MODEL</small>
-                      <strong>
-                        {family === "music"
-                          ? "ACE-Step 1.5 Turbo"
-                          : "Chatterbox Multilingual v3"}
-                      </strong>
+                      <strong>{content[family].model}</strong>
                     </div>
                     <div>
                       <small>DOWNLOAD</small>
@@ -411,7 +443,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                     <div>
                       <small>HARDWARE</small>
                       <strong>
-                        One NVIDIA GPU · {family === "music" ? "12" : "6"} GiB
+                        One NVIDIA GPU · {family === "speech" ? "6" : "12"} GiB
                         VRAM
                       </strong>
                     </div>
@@ -427,6 +459,13 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                       This profile offloads parts of the model to CPU: short
                       tracks reserve 12 GiB RAM, tracks over a minute reserve 18
                       GiB. Model weights and lyrics remain local.
+                    </p>
+                  )}
+                  {family === "video" && (
+                    <p className="muted setup-small">
+                      This profile uses CPU offload within 11 GiB RAM. Its
+                      landscape format is 1280 × 704 with at least 20 steps.
+                      Longer films retain their own saved progress and versions.
                     </p>
                   )}
                   {ready && (
@@ -467,7 +506,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                   {!data.can_prepare ? (
                     <p className="notice">
                       Your administrator can install shared models. Your
-                      recordings, lyrics and generated audio stay private.
+                      recordings, prompts and generated results stay private.
                     </p>
                   ) : (
                     !existing && (

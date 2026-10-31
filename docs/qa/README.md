@@ -1,6 +1,10 @@
 # Operator QA catalog and workbook
 
-The developing v25 catalog contains 189 cases and adds SETUP-117–120 for guided
+The developing v26 catalog contains 194 cases and adds SETUP-121–125 for guided
+video preparation, first films/image animation, continuous films, native recovery,
+private shared-engine readiness and hardware/driver admission. These are untested
+operator cases; see the [video setup plan](../plans/managed-video-setup.md).
+It retains SETUP-117–120 for guided
 music installation, first-track playback, Stop/Resume, native recovery and
 account privacy. Internal qualification is recorded in the
 [music setup plan](../plans/managed-music-setup.md); operator answers remain untested.

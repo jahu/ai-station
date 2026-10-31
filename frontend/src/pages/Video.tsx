@@ -163,7 +163,7 @@ function SceneForm({
   const [negative, setNegative] = useState(
     String(saved.negative ?? saved.negative_prompt ?? ""),
   );
-  const [resolution, setResolution] = useState(
+  const [resolutionChoice, setResolution] = useState(
     String(
       saved.resolution ??
         (saved.width && saved.height
@@ -205,7 +205,7 @@ function SceneForm({
     0,
   );
   const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
-  const [steps, setSteps] = useState(Number(saved.steps ?? 20));
+  const [stepsChoice, setSteps] = useState(Number(saved.steps ?? 20));
   const [profileChoice, setProfileChoice] = useState<VideoProfile | null>(
     (saved.profileChoice ??
       saved.memory_profile ??
@@ -218,8 +218,11 @@ function SceneForm({
     queryKey: ["video-capabilities"],
     queryFn: () => api<VideoCapabilities>("/video/capabilities"),
   });
+  const managed = capability.data?.configuration_source === "managed";
+  const resolution = managed ? "1280x704" : resolutionChoice;
+  const steps = managed ? Math.max(20, stepsChoice) : stepsChoice;
   const memoryProfile: VideoProfile =
-    profileChoice ??
+    (managed ? "bounded_11g" : profileChoice) ??
     (mode === "generate" &&
     resolution === "1280x704" &&
     steps >= 20 &&
@@ -370,8 +373,19 @@ function SceneForm({
         Describe the motion, or start with an image. Create a silent video and
         preview it here.
         {memoryProfile === "bounded_11g" &&
-          " Reduced-RAM landscape profile selected. Change it in Advanced settings."}
+          (managed
+            ? " Installed landscape profile · 11 GiB RAM. Clips and longer films use the same saved workspace."
+            : " Reduced-RAM landscape profile selected. Change it in Advanced settings.")}
       </PageTitle>
+      {capability.data?.available === false && (
+        <div className="notice" role="status">
+          <strong>Set up local video to create your first film.</strong>
+          <p>{capability.data.reason}</p>
+          <Button asChild variant="secondary">
+            <Link to="/setup/models?capability=video">Set up video</Link>
+          </Button>
+        </div>
+      )}
       <div className="media-workspace">
         <form
           className="panel media-composer"
@@ -421,6 +435,7 @@ function SceneForm({
               <MediaInput
                 kind="image"
                 label="First frame"
+                uploadLabel="Upload first frame"
                 hint="PNG or JPEG · up to 20 MB"
                 value={image}
                 onChange={setImage}
@@ -455,7 +470,7 @@ function SceneForm({
                 <select
                   aria-label="Format"
                   value={resolution}
-                  disabled={profileChoice === "bounded_11g"}
+                  disabled={managed || profileChoice === "bounded_11g"}
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -581,7 +596,7 @@ function SceneForm({
                   Steps
                   <input
                     type="number"
-                    min={profileChoice === "bounded_11g" ? 20 : 4}
+                    min={managed || profileChoice === "bounded_11g" ? 20 : 4}
                     max={40}
                     value={steps}
                     onChange={(event) => setSteps(Number(event.target.value))}
@@ -600,7 +615,13 @@ function SceneForm({
               </div>
               <GpuTargetChoiceList
                 value={gpu}
-                gpus={hardware.data?.gpus ?? []}
+                gpus={
+                  hardware.data?.gpus.filter(
+                    (g) =>
+                      !managed ||
+                      capability.data?.eligible_gpu_indices?.includes(g.index),
+                  ) ?? []
+                }
                 disabled={busy || uploading}
                 onChange={setGpu}
               />

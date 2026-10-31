@@ -4,6 +4,7 @@ import hashlib
 import json
 import signal
 import sys
+import time
 import wave
 from fractions import Fraction
 from pathlib import Path
@@ -135,6 +136,21 @@ def verify(av, path, request):
 
 
 def compose(config):
+    if config["request"].get("managed_runtime"):
+        from ai_station_runner import video_environment
+        from ai_station_runner.memory_scope import require_scope
+        from ai_station_runner.video_job import deny_network
+
+        request = config["request"]
+        frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
+        if Path(sys.base_prefix).resolve() != frozen["environment"] / "python":
+            raise ValueError("Composition must execute its exact frozen video environment")
+        require_scope(request["run_id"], 4096)
+        remaining = min(1800, request["deadline_at"] - time.time())
+        if remaining <= 0:
+            raise TimeoutError("Managed composition deadline expired")
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        sys.addaudithook(deny_network)
     import av
 
     request = config["request"]

@@ -4,6 +4,7 @@ import gc
 import json
 import signal
 import sys
+import time
 from pathlib import Path
 
 
@@ -11,9 +12,34 @@ def stage(message):
     print(f"video.stage: {message}", flush=True)
 
 
+def deny_network(event, args):
+    if event in {"socket.connect", "socket.getaddrinfo", "socket.sendto"}:
+        raise PermissionError("Managed video inference cannot access the network")
+
+
 def main(config_path):
     config = json.loads(Path(config_path).read_text())
     request, paths, work = config["request"], config["paths"], config["work"]
+    if request.get("managed_runtime"):
+        remaining = min(3600, request["deadline_at"] - time.time())
+        if remaining <= 0:
+            raise TimeoutError("Managed video execution deadline expired")
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        from ai_station_runner import video_environment
+
+        frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
+        if Path(sys.base_prefix).resolve() != frozen["environment"] / "python" or any(
+            Path(paths[key]).resolve() != frozen[key].resolve()
+            for key in ("video_python", "comfy_dir", *video_environment.ROLES)
+        ):
+            raise ValueError("Video must execute its exact frozen environment")
+        video_environment.model_paths(
+            Path(config["root"]),
+            frozen["environment"] / "models",
+            video_environment.recipe(),
+            verify_weights=True,
+        )
+        sys.addaudithook(deny_network)
     from ai_station_runner.wan_profiles import prepare_job
 
     weight_dtype = prepare_job(request)
@@ -25,7 +51,8 @@ def main(config_path):
         guidance_source is None or guidance_source != request.get("guidance_observation")
     ):
         raise ValueError("The frozen APG implementation changed before execution")
-    signal.alarm(3600)
+    if not request.get("managed_runtime"):
+        signal.alarm(3600)
     sys.path.insert(0, paths["comfy_dir"])
     sys.argv = [
         "ai-station-wan",

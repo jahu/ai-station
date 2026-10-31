@@ -59,7 +59,11 @@ def publish_verified_models(session, entry, objects):
                 size_bytes=item.file.size_bytes,
                 mtime=mtime,
                 format=Path(item.filename).suffix.lstrip("."),
-                category="audio" if entry.capability in {"speech", "music"} else "image",
+                category="audio"
+                if entry.capability in {"speech", "music"}
+                else "video"
+                if entry.capability == "video"
+                else "image",
                 family=entry.family,
                 capabilities=[entry.capability],
                 root_label="AI Station storage",

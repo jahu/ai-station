@@ -24,6 +24,12 @@ def installation():
     cfg = get_settings()
     configured = (cfg.mmaudio_python if cfg.mmaudio_enabled else "") or cfg.video_python
     if not configured:
+        from ai_station_runner.video_selection import selection
+
+        managed = selection(cfg) or {}
+        if managed.get("managed"):
+            configured = managed["video_python"]
+    if not configured:
         raise ValueError("Configure a CPU video Python with PyAV, NumPy and Pydantic v2")
     python = Path(configured).expanduser().absolute()
     if not python.is_file() or not os.access(python, os.X_OK):
