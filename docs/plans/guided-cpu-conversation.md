@@ -1,7 +1,8 @@
 # Guided CPU conversation setup (NR-13 / NR-14)
 
-Status: implemented; real isolated Linux CPU conversation/lifecycle qualification
-passed, with final package/regression review in progress. This does not claim a
+Status: implemented, qualified, reviewed and deployed through PR #548. Exact
+image/wheel and production desktop/phone checks passed with data, configured
+engines and private access preserved. This does not claim a
 CPU-first installer, clean-machine journey or Windows/macOS support is ready.
 Preserve the already qualified CUDA flows, all existing source/Run identities,
 configured external images/servers and the shared-model/private-history boundary.
