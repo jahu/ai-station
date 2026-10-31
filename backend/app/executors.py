@@ -21,6 +21,7 @@ from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
 from app.avatars import AvatarExecutor
 from app.browser import BrowserExecutor
+from app.bundle_download_job import BundleDownloadExecutor
 from app.chat_executor import ChatExecutor
 from app.chat_reasoning import ReasoningCheckExecutor
 from app.codex_coding import CodexProposalExecutor
@@ -318,6 +319,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),
     "media_translation_apply": TranslationApplyExecutor(),

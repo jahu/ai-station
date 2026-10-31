@@ -25,6 +25,7 @@ from app.artifact_purge import router as artifact_purge_router
 from app.audio import router as audio_router
 from app.avatars import router as avatar_router
 from app.browser import router as browser_router
+from app.bundle_setup import router as bundle_setup_router
 from app.chat import router as chat_router
 from app.chat_providers import router as chat_provider_router
 from app.chat_reasoning import router as chat_reasoning_router
@@ -478,6 +479,7 @@ app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
 app.include_router(model_setup_router)
+app.include_router(bundle_setup_router)
 app.include_router(runtime_setup_router)
 app.include_router(document_router)
 app.include_router(agent_router)
