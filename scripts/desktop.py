@@ -135,6 +135,10 @@ def configuration(root):
             raise ValueError("Desktop configuration must remain an owned regular file")
         return config
     data = owned_folder(root, "data")
+    if (data / "db").is_symlink() or (data / "db/ai-station.sqlite").exists():
+        raise ValueError(
+            "Existing station data needs its original configuration. It was not adopted or changed."
+        )
     project = "ai-station-desktop-" + hashlib.sha256(str(root).encode()).hexdigest()[:12]
     values = {
         "AI_STATION_DATA_HOST_PATH": str(data),
