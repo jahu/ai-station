@@ -1,5 +1,5 @@
 {
-  "version": 26,
+  "version": 27,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -24,7 +24,8 @@
     "docs/plans/managed-speech-setup.md",
     "docs/plans/managed-image-setup.md",
     "docs/plans/managed-music-setup.md",
-    "docs/plans/managed-video-setup.md"
+    "docs/plans/managed-video-setup.md",
+    "docs/plans/managed-avatar-setup.md"
   ],
   "cases": [
     {
@@ -4427,6 +4428,114 @@
         "Modele są wspólne, lecz B nie widzi cudzych promptów, historii, plików ani identyfikatora Run instalacji w gotowości silnika. Nie instaluje bez uprawnień. Telefon nie przewija poziomo. Niezgodny sprzęt nie otrzymuje aktywnej instalacji; aplikacja nie zmienia sterowników. Jawna konfiguracja nie jest nadpisywana."
       ],
       "resources": "Bez pobierania i generacji; osobne konta/profile QA",
+      "minutes": 8
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-126",
+      "title": "Awatary: instalacja Sonic i pierwszy wynik",
+      "prerequisites": [
+        "Oddzielny świeży profil QA Linux x86-64, co najmniej jedno NVIDIA 12 GiB, 24 GiB RAM, zgodny sterownik i 24 GiB wolnego miejsca; konto administratora."
+      ],
+      "steps": [
+        "W Models wybierz Set up avatar. Sprawdź sprzęt, miejsce, źródła i osobne licencje SDK Sonic, modeli, SVD i zależności.",
+        "Zaakceptuj składniki i rozpocznij instalację. Przejdź do innej zakładki i wróć; po zakończeniu wybierz Open Avatars.",
+        "Prześlij własny neutralny portret i krótkie nagranie WAV. Wygeneruj awatara i sprawdź wynik w Library."
+      ],
+      "expected": [
+        "Gotowość oznacza pełne środowisko bez ręcznego wskazywania Pythona lub modeli. Wynik obejmuje całe nagranie, ma prawidłowy czas i zachowaną historię; profil nie udaje natywnego HD."
+      ],
+      "resources": "Około 11 GiB danych; CPU 4 GiB podczas instalacji, generacja GPU i 18 GiB RAM",
+      "minutes": 25
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-127",
+      "title": "Awatary: Stop i Resume instalacji",
+      "prerequisites": [
+        "Aktywna własna instalacja z SETUP-126."
+      ],
+      "steps": [
+        "Kliknij Stop avatar setup podczas przygotowania zależności; odśwież widok.",
+        "Wznów to samo zadanie i sprawdź zakończenie oraz historię obu prób."
+      ],
+      "expected": [
+        "Anulowanie zatrzymuje tylko własny proces; niekompletne środowisko nie staje się gotowe. Resume korzysta ze zweryfikowanych plików, zachowuje receptę i nie ukrywa poprzedniej próby."
+      ],
+      "resources": "CPU 4 GiB bez swapu; bez generowania GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-128",
+      "title": "Awatary: całe nagranie, historia i podgląd",
+      "prerequisites": [
+        "Gotowy Sonic, własny neutralny portret i nagranie."
+      ],
+      "steps": [
+        "Wygeneruj awatara dla krótkiego nagrania, przejdź do innej zakładki i wróć.",
+        "Odtwórz i przewiń cały wynik w Library; sprawdź źródłowy portret i nagranie.",
+        "Dla oceny długiej animacji wybierz własne dłuższe nagranie i sprawdź również końcówkę głosu, twarz oraz oczy."
+      ],
+      "expected": [
+        "Jedno zadanie animuje całe nagranie. Liczba klatek i dźwięk obejmują końcówkę; historia i źródła pozostają po odświeżeniu. Jakość twarzy i synchronizację ocenia operator; sam sukces Run nie oznacza akceptacji jakości."
+      ],
+      "resources": "Jedno lub dwa GPU i 18 GiB RAM; długie nagranie może renderować się godzinami",
+      "minutes": 120
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-129",
+      "title": "Awatary: odzyskanie procesu i anulowanie",
+      "prerequisites": [
+        "Wydzielony Runner QA; własny awatar w trakcie generowania."
+      ],
+      "steps": [
+        "Zrestartuj tylko Runner QA i otwórz ten sam Run.",
+        "Kliknij Stop; sprawdź proces, rezerwacje GPU/RAM i brak niepełnego filmu w Library."
+      ],
+      "expected": [
+        "Wznowienie obserwacji dołącza do tego samego procesu. Stop kończy wyłącznie własne wykonanie i zwalnia zasoby po potwierdzeniu; brak częściowego wyniku."
+      ],
+      "resources": "GPU i 18 GiB RAM; restart wyłącznie wydzielonego Runnera",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-130",
+      "title": "Awatary: prywatność, telefon i zachowanie konfiguracji",
+      "prerequisites": [
+        "Administrator A, członek B; dodatkowy profil z istniejącym Sonic/Echo."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość, brak historii instalacji A i brak dostępu do linków A do Run, zadania oraz pliku. Spróbuj rozpocząć instalację.",
+        "Otwórz kartę i wynik na telefonie. Sprawdź komunikaty dla niezgodnego sprzętu.",
+        "W osobnym profilu potwierdź pierwszeństwo jawnych ustawień Sonic, również niepełnych. Sprawdź, że instalacja Sonic nie udaje gotowości Echo."
+      ],
+      "expected": [
+        "Modele i gotowość są wspólne; cudze prompty, źródła, wyniki i identyfikator próby instalacji pozostają prywatne. B nie instaluje bez uprawnień. Widok mieści się na telefonie, a istniejące integracje pozostają zachowane."
+      ],
+      "resources": "Bez nowej generacji/pobierania; konta i oddzielne profile QA",
       "minutes": 8
     }
   ]

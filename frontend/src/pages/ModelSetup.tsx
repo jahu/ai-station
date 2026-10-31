@@ -22,6 +22,7 @@ import ImageSetupPanel from "./ImageSetupPanel";
 import MemorySetupPanel from "./MemorySetupPanel";
 import MusicSetupPanel from "./MusicSetupPanel";
 import VideoSetupPanel from "./VideoSetupPanel";
+import AvatarSetupPanel from "./AvatarSetupPanel";
 import "./ModelSetup.css";
 
 type Entry = {
@@ -371,6 +372,7 @@ export default function ModelSetup() {
       <SpeechSetupPanel />
       <ImageSetupPanel />
       <VideoSetupPanel />
+      <AvatarSetupPanel />
       <MusicSetupPanel />
       <MemorySetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">

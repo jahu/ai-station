@@ -4,7 +4,8 @@ NR-14 continues after guided video PR #542. That PR is reviewed, merged into
 `develop` and deployed, preserving 38 tables, configured media/models, credentials,
 memory/index and the same private-access node. Its final compiled desktop/phone
 and real setup/generation/composition/editor/recovery/Stop/privacy checks pass.
-The full release goal remains active; this next profile is not available yet.
+The full release goal remains active. This avatar increment is qualified locally;
+review, merge and deployment remain separate final gates.
 
 ## Inspected starting point
 
@@ -97,3 +98,42 @@ local gates before a PR to `develop`; deploy only while idle with backup and
 preservation checks. Public/private evidence is kept separate. Remaining effects,
 expressive-voice setup, broader catalogs, consumer Linux/Windows/macOS journeys,
 NR-06/07 quality, naming and the final owner QA workbook remain in the full goal.
+
+
+## Qualification recorded on 2026-10-31
+
+The fixed recipe contains 92 verified inputs (11,641,377,749 bytes), including
+14 companions and 75 published wheels plus the reproduced ANTLR source wheel.
+Independent Python 3.10.21 assembly and the CPU-only probe passed within the
+owned four-GiB zero-swap preparation scope. A fresh private account used the
+compiled setup UI, stopped preparation and resumed the same Task to completion.
+
+An ordinary UI/API/separate-worker/native whole-recording avatar then completed
+50 frames at 512×768 and 25 fps, with the complete two-second recording. Library
+playback, seeking, restored history and desktop/390-px phone rendering passed.
+A second explicitly opted-in generation verified same-PID/start-time process
+recovery after Runner restart, then Task-wide Stop, no partial artifact and
+confirmed GPU/RAM reservation release. A second account sees opaque shared
+engine readiness but receives denial for setup history, Runs, jobs, source files
+and the completed movie; only administrators can install the shared runtime.
+
+Review tightened dispatch before launch mutation, the ready recipe's binding to
+the observed environment, managed recipe identity requirements, private failure
+messages and exact packaged FFmpeg selection. If Echo is unavailable, its preview
+screen offers the installed Sonic engine without losing selected inputs. Normal
+checks include 1,576 native passes (two expensive opt-in skips), 135 final backend
+passes across ten complete families after earlier 217-case regression coverage,
+131 additional backend consumer passes, 56 final native policy cases, 26 QA
+catalog checks and all 1,046 frontend cases, including the new Echo-to-Sonic
+handoff. These counts describe executed checks, not every
+possible user scenario. Lint, TypeScript, formatting, production UI build, three Compose variants and
+the Docker image passed. With the default qualification policy, final compiled
+desktop/phone setup, saved-history/playback/seek and a fake API/separate-worker/SSE
+Run passed. The final image matches 597 application/UI files; the native wheel
+matches all 180 source/recipe assets. Merge/deployment status is recorded
+separately. Private evidence stays under application
+acceptance storage and is not part of the public repository.
+
+The actual probe is a runtime integration check, not a new 40-second HD or
+perceptual lip-sync acceptance. Original source/models/environments are retained;
+no larger speech, sound, catalog or installer requirement is marked complete.

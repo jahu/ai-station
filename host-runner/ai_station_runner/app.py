@@ -17,6 +17,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ai_station_runner import __version__, managed_image_job
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.audio import capabilities as speech_capabilities
+from ai_station_runner.avatar_prepare import router as avatar_setup_router
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.browser_runs import BrowserRequest
 from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
@@ -750,6 +751,7 @@ app.include_router(speech_setup_router)
 app.include_router(image_setup_router)
 app.include_router(music_setup_router)
 app.include_router(video_setup_router)
+app.include_router(avatar_setup_router)
 app.include_router(image_jobs_router)
 
 

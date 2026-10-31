@@ -32,21 +32,26 @@ class ObservationPending(ValueError):
     pass
 
 
-def installation():
+def installation(identity=None):
     settings = get_settings()
-    if not settings.sonic_whole_enabled:
+    from ai_station_runner.avatar_selection import selection
+
+    chosen = selection(settings, identity) or {}
+    if identity is not None and not chosen.get("managed"):
+        raise ValueError("The exact managed avatar environment is no longer selected")
+    if not settings.sonic_whole_enabled and not chosen.get("managed"):
         raise ValueError("Whole-recording avatar integration is not enabled")
-    if not all((settings.sonic_python, settings.sonic_dir, settings.sonic_models)):
+    if not all(chosen.get(k) for k in ("sonic_python", "sonic_dir", "sonic_models")):
         raise ValueError("Configure the offline Sonic Python, installation and model directory")
-    python = Path(settings.sonic_python).expanduser().absolute()
+    python = chosen["sonic_python"].absolute()
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Configured Sonic Python is unavailable")
     if not scope_available():
         raise ValueError("Whole-recording avatars require owned user memory scopes")
     return (
         python,
-        Path(settings.sonic_dir).expanduser().resolve(),
-        Path(settings.sonic_models).expanduser().resolve(),
+        chosen["sonic_dir"].resolve(),
+        chosen["sonic_models"].resolve(),
     )
 
 
@@ -106,7 +111,19 @@ def ready_recipe(runtime, models):
         raise ObservationPending(
             "Verifying installed avatar files; this initial check runs in the background"
         )
-    return {"id": PROFILE, "observation": future.result()}
+    value = {"id": PROFILE, "observation": future.result()}
+    from ai_station_runner.avatar_environment import environment_id, read_json, resolve
+    from ai_station_runner.avatar_selection import selection
+
+    chosen = selection(get_settings()) or {}
+    if chosen.get("managed"):
+        ready = read_json(models.parent / "ready.json")
+        observed = {k: ready[k] for k in ("profile", "manifest_sha256", "operation_id")}
+        selected = resolve(get_settings().host_data_dir(), observed)
+        if selected["sonic_models"] != models or selected["sonic_dir"] != runtime:
+            raise ValueError("The observed avatar environment changed")
+        value["environment_id"] = environment_id(observed)
+    return value
 
 
 def capabilities():
@@ -121,7 +138,11 @@ def capabilities():
         "gpu_counts": [1, 2],
         "offline": True,
     }
-    if not get_settings().sonic_whole_enabled:
+    from ai_station_runner.avatar_selection import selection
+
+    chosen = selection(get_settings()) or {}
+    managed = chosen.get("managed") is True
+    if not get_settings().sonic_whole_enabled and not managed:
         return {
             **base,
             "available": False,
@@ -131,7 +152,15 @@ def capabilities():
     try:
         _, runtime, models = installation()
         recipe = ready_recipe(runtime, models)
+        if managed and not recipe.get("environment_id"):
+            raise ValueError("Managed avatar readiness requires its frozen environment identity")
         gpus = collect(get_settings().host_data_dir()).get("gpus", [])
+        if managed:
+            from ai_station_runner.avatar_prepare import driver_supported
+
+            gpus = [g for g in gpus if (g.get("memory_total_mib") or 0) >= 12288]
+            if not driver_supported("580.126.20"):
+                raise ValueError("The managed avatar driver is incompatible; inspect Diagnostics")
         if not gpus:
             raise ValueError("No CUDA GPU is detected for whole-recording avatars")
         return {
@@ -140,18 +169,33 @@ def capabilities():
             "readiness": "ready",
             "recipe": recipe,
             "detected_gpu_count": len(gpus),
+            "configuration_source": "managed" if managed else "configured",
+            **({"eligible_gpu_indices": [int(g["index"]) for g in gpus]} if managed else {}),
         }
     except ObservationPending as exc:
         return {**base, "available": False, "readiness": "checking", "reason": str(exc)}
     except (OSError, ValueError) as exc:
-        return {**base, "available": False, "readiness": "unavailable", "reason": str(exc)}
+        return {
+            **base,
+            "available": False,
+            "readiness": "unavailable",
+            "reason": "The installed avatar files changed or are unavailable; inspect model setup"
+            if managed
+            else str(exc),
+        }
 
 
 def start_whole_avatar(manager, body):
     from ai_station_runner.sonic_jobs import _start_owned
 
     try:
-        python, runtime, models = installation()
+        identity = body.recipe.get("environment_id")
+        if identity is None:
+            from ai_station_runner.avatar_selection import selection
+
+            if (selection(get_settings()) or {}).get("managed"):
+                raise ValueError("Managed avatars require their frozen environment identity")
+        python, runtime, models = installation(identity) if identity is not None else installation()
     except (OSError, ValueError) as exc:
         raise HTTPException(409, str(exc)) from exc
     # Readiness's cached observation never substitutes for launch/native checks.

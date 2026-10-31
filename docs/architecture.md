@@ -1103,3 +1103,24 @@ and cues, and passes its trusted engine preflight into transactional child
 publication. GPU sound generation and CPU preview remain ordinary existing Runs;
 no agent-specific process or separate execution engine is introduced. Final
 media-result summaries recognize only the verified effects preview.
+
+
+## Guided avatar preparation
+
+The fixed Linux NVIDIA Sonic profile extends the shared model-download and
+owned environment-preparation services. Ordinary private setup Tasks/Runs freeze
+all source, model, Python and dependency hashes; a separate worker supervises a
+four-GiB zero-swap native preparation process. The prepared Python 3.10 runtime
+is independent of the Python 3.12 Host Runner and control plane. A single pinned
+pure-Python dependency is built offline with fixed tools and an exact derived
+wheel hash. Readiness follows CPU-only SDK/audio-feature/codec verification.
+
+Whole-recording avatar Runs reuse the existing Sonic executor, saved creative
+history, canonical audio, owned process and 18-GiB zero-swap budget. The model
+view contains only validated links to the fixed immutable shared companions.
+Runs freeze an opaque environment identity; another account cannot infer the
+preparing account's Run UUID. Explicit Sonic configuration retains priority,
+including partial configuration; EchoMimic remains independent. The prepared
+finishing codec is checked before dispatch so an unavailable codec cannot fall
+back to unrelated host software after a long render. See
+[the profile, admission and qualification gates](plans/managed-avatar-setup.md).

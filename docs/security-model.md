@@ -1157,3 +1157,16 @@ deadline. Composition uses the same frozen environment, CPU-only execution and
 its own four-GiB reservation/scope. Stop/recovery use existing process ownership,
 group signaling and resource-release confirmation. External video configuration
 retains priority and is never changed by setup.
+
+
+Managed Sonic preparation accepts only its built-in avatar profile, frozen hash,
+permissions and deadline through the private Runner API. It verifies immutable
+inputs before offline execution; the only source-build exception is the pinned
+ANTLR distribution with fixed tools, epoch, permissions and derived-wheel hash.
+No client-selected package, command, destination or source exception is accepted.
+Managed companion links are permitted only inside the exact recipe namespace;
+configured external Sonic models retain strict symlink rejection. Dispatch
+checks the opaque environment, its own interpreter, model links, finishing codec,
+GPU admission and source observation before starting owned inference. Setup
+receipts, histories, portraits, recordings and generated movies retain ordinary
+account ownership; only verified runtime readiness and models are shared.
