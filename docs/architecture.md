@@ -20,6 +20,12 @@ coordination. [Setup contracts](plans/guided-model-installation.md).
 
 Guided conversation-model setup uses the [reviewed installation catalog](plans/guided-model-installation.md), ordinary owned download Tasks/Runs and private JSON receipts. Migration 0042 adds an exclusive app-data-relative ModelFile coordinate alongside existing external host paths. Workers stream and hash pinned public weights; the native Runner inspects only fixed immutable references before the existing llama.cpp adapter loads them. Models remain shared infrastructure; download histories remain account scoped.
 
+Reviewed [speech companion bundles](plans/managed-speech-setup.md) reuse that
+immutable store and normal worker queue for multiple files. Whole-bundle
+publication creates shared ModelFile observations and a private receipt only
+after every object verifies. This file-preparation operation does not install
+Python dependencies, activate a model definition or claim speech readiness.
+
 Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
 requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
 container coordinator waits for the verified final film before publishing sound;

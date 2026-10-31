@@ -29,6 +29,14 @@ configured images are preserved. [Contracts](plans/guided-model-installation.md)
 
 [Guided model setup](plans/guided-model-installation.md) requires explicit administrator authority, license acceptance and snapshotted filesystem/network/manage-model permissions. Clients select a reviewed manifest, never URLs, commands, destinations or hashes of their own. Download DNS/redirects are publicly validated and pinned; complete hash/length checks precede immutable publication. Native adoption accepts only `models/store/<sha256>`, validates read-only regular-file ownership and bounded GGUF metadata, and does not claim a second full-file hash. Stop, live account authority and worker identity are checked before shared registry/private receipt publication. Discovery cannot mark these app-owned sources missing merely because external roots were rescanned.
 
+Companion bundle preparation applies the same permissions and file checks to
+every object, with aggregate progress and the original manifest on Resume.
+Task Stop and worker/claim identity fence the entire shared-file publication;
+partial success publishes neither a bundle receipt nor model registrations.
+Downloaded PT/safetensors/JSON bytes are not imported or deserialized as model
+code. Runtime activation remains a separate qualified operation. Histories and
+receipts remain private even though model files are shared infrastructure.
+
 Conversation sound scopes never grant Library browsing to a model. Current-turn
 commands bind a manually selected owned film or the single completed film visibly
 linked to that conversation; ambiguous, partial and latest unfinished results are

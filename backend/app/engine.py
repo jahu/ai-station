@@ -146,6 +146,7 @@ def _execute_claimed(session, run, worker_id, executors):
         user = session.get(User, run.owner_id)
         host_account_executors = {
             "model_download",
+            "model_bundle_download",
             "runtime_setup",
             "cursor_proposal",
             "codex_proposal",
