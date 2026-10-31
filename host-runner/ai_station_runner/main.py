@@ -10,6 +10,7 @@ import uvicorn
 
 from ai_station_runner.app import app, manager
 from ai_station_runner.config import get_settings
+from ai_station_runner.unix_sockets import unix_address
 
 
 def main() -> None:
@@ -28,13 +29,15 @@ def main() -> None:
         if path.exists():
             with socket.socket(socket.AF_UNIX) as probe:
                 try:
-                    probe.connect(str(path))
+                    with unix_address(path) as address:
+                        probe.connect(address)
                 except ConnectionRefusedError:
                     path.unlink()
                 else:
                     raise SystemExit("The configured socket already has a listener")
         with socket.socket(socket.AF_UNIX) as listener:
-            listener.bind(str(path))
+            with unix_address(path) as address:
+                listener.bind(address)
             os.chmod(path, 0o600)
             listener.listen(128)
             try:

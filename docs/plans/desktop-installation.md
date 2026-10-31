@@ -61,3 +61,35 @@ prerequisite acquisition, supported Linux distributions, Windows WSL2/Docker
 transport and macOS native CPU/Metal execution still require their advertised
 platform journeys. Package signing/public release follows the owner-controlled
 release policy; development artifacts stay private until reviewed.
+
+## Build and current qualification
+
+Build from a clean reviewed checkout with Docker, `uv` and `dpkg-deb`:
+
+```bash
+python3 scripts/build_linux_package.py --output /path/to/new/ai-station-linux --deb
+```
+
+The builder refuses existing output and dirty sources. `--allow-dirty` is only
+for private experiments. It includes only an explicit source allowlist, a normal
+native wheel, checked Python and hash-pinned runtime dependencies; developer
+credentials, `.env`, application data, model weights and test artifacts are not
+included. The pinned CPython 3.12.14 source/hash is taken from
+[Astral's versioned download metadata](https://github.com/astral-sh/uv/blob/0.12.16/crates/uv-python/download-metadata.json).
+The installed package has a desktop entry; its private version copies and data
+are independent of OS package replacement/removal. No package hook deletes data
+or changes Docker, driver or account permissions.
+
+A real first-start experiment found that the normal desktop data directory
+could exceed the Unix-domain socket address limit for llama.cpp. Linux now uses
+an open parent-directory descriptor as the short bind/connect address when
+needed; socket files stay inside their original validated owned directories.
+No global symlink, TCP listener, filesystem relocation or changed native request
+identity is introduced. Descriptors close after bind/connect, including errors
+and cancellation; streaming uses the already-connected socket. The same helper
+covers the native Runner listener and supervisor health probe.
+
+The initial actual bundle is relocatable and creates a real nested Python venv
+without system Python packages. Full GUI/account/model/first-result/restart
+qualification remains a gate until its exact evidence is recorded; building a
+`.deb` alone does not complete NR-13 or qualify Windows/macOS.

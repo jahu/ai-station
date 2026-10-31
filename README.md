@@ -183,6 +183,13 @@ your selected model. Existing configured images stay available. Cross-platform
 launchers and full media setup remain in progress.
 [Guided setup and measured qualification](docs/plans/guided-model-installation.md).
 
+An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
+It bundles Python and the compiled application image, opens account/model setup
+in your browser, and keeps data outside the installed package. Docker/Compose
+must already be available to your user; the desktop shell uses Zenity. This is
+not yet the promised cross-platform consumer installer.
+[Desktop packaging and qualification](docs/plans/desktop-installation.md).
+
 Development builds also retain creative sessions across Images, Video, Music,
 Speech and Avatars. Measured generation stages and scoped time estimates use
 saved observations rather than a simulated countdown. See

@@ -1,3 +1,12 @@
+The desktop packaging candidate is a trusted local installation/supervision
+process. It never grants Docker access to an HTTP client or application agent.
+The package carries a pinned Python archive, hash-pinned dependencies and a
+checksummed, exactly identified control-plane image. Fresh desktop configuration
+uses private accounts, loopback networking and a dedicated project/data root;
+ambient settings cannot attach it to another station. First-admin authority
+travels through a private parent pipe to the local browser and is omitted from
+desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local

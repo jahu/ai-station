@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 
 import httpx
+from ai_station_runner.unix_sockets import unix_address
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,11 +50,14 @@ def configuration(config_file: Path | None = None) -> dict[str, str]:
 
 def runner_health(env: dict) -> bool:
     try:
-        with httpx.Client(
-            transport=httpx.HTTPTransport(uds=env["AI_STATION_RUNNER_SOCKET"]),
-            base_url="http://runner",
-            timeout=1,
-        ) as client:
+        with (
+            unix_address(Path(env["AI_STATION_RUNNER_SOCKET"])) as address,
+            httpx.Client(
+                transport=httpx.HTTPTransport(uds=address),
+                base_url="http://runner",
+                timeout=1,
+            ) as client,
+        ):
             response = client.get("/health")
             response.raise_for_status()
             body = response.json()
