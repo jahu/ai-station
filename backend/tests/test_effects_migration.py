@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
+from alembic.script import ScriptDirectory
 from app.db import alembic_config
 from app.models import CreativeSession, CreativeTurn
 from app.runs import create_run, create_task
@@ -61,5 +62,7 @@ def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_
         db.commit()
     with engine.connect() as connection:
         assert connection.execute(text("PRAGMA foreign_keys")).scalar() == 1
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0041"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar() == (
+            ScriptDirectory.from_config(alembic_config()).get_current_head()
+        )
     engine.dispose()

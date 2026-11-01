@@ -200,3 +200,24 @@ actual form-encoded POST search protocol; its failed synthetic Run was retained
 and explicitly regenerated after correcting only the fixture. This is separate
 from the real-model/public-search evidence above. Operator case WEB-008 is in
 catalog version 35; operator answers remain untested.
+
+Local final validation used the complete 6,461-case Python collection: 6,443
+passed, nine skipped and nine failed. All nine failures were diagnosed as stale
+test fixtures: two migration cases and maintenance pinned the former `0041`
+head, while six GPU-queue cases lacked the newer typed image-capability preflight
+and contacted the deliberately absent test socket. The tests now check the
+actual Alembic head and supply only the expected external-image capability
+response; real queue, process-ownership and foreign-key assertions remain.
+All 27 cases in those three complete families then passed. Together with the
+unchanged passing full-suite cases, this is the documented equivalent local
+validation; it is **not** a claim that the original `check.sh` invocation exited
+successfully. Ruff/format passed over all 943 Python files. No application
+source changed during these fixture corrections; the previously qualified
+compiled image still matches application/frontend inputs.
+
+After completed qualification, the three exact stopped QA containers and the
+separate 2,497,281,312-byte host-side weight copy were removed. The Windows guest
+was shut down normally; its installed disk, current private installer and compact
+proof remain for the outstanding Windows gates. Production models/data and
+shared Docker images were preserved. Private cleanup receipt:
+`completed-search-fixture-cleanup.private.json` in the same evidence directory.

@@ -6,6 +6,7 @@ from app.db import session_factory
 from app.image_composition_intent import requested
 from app.llama import instances
 from app.models import Run
+from app.runner_client import RunnerClient
 from app.runs import create_run, create_task, transition
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -30,8 +31,16 @@ EXACT = (
     ],
 )
 @pytest.mark.parametrize("web", [False, True])
-def test_ordered_photo_composition_waits_without_stopping_active_model(managed, prompt, web):
+def test_ordered_photo_composition_waits_without_stopping_active_model(managed, prompt, web, monkeypatch):
     model_id, _ = managed
+    capability_requests = []
+
+    def request(_, method, path, body=None):
+        assert (method, path, body) == ("GET", "/v1/photo/capabilities", None)
+        capability_requests.append(path)
+        return {"configuration_source": "external"}
+
+    monkeypatch.setattr(RunnerClient, "request", request)
     with TestClient(app) as client:
         load(client, model_id)
         tick_once()
@@ -73,6 +82,7 @@ def test_ordered_photo_composition_waits_without_stopping_active_model(managed, 
             assert photo.executor_type == "photo_pipe" and photo.parameters["mode"] == "recompose"
             assert photo.parameters["parent_artifact_ids"] == ids
         assert step() == photo_id  # Actual executor must defer instead of launching on the busy GPUs.
+        assert capability_requests == ["/v1/photo/capabilities"]
         with session_factory()() as session:
             photo = session.get(Run, photo_id)
             assert photo.status == "queued" and photo.metadata_json["resource_wait"]["reason"] == "gpu"
