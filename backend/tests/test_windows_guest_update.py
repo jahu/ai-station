@@ -175,6 +175,7 @@ def test_complete_update_preserves_private_data_and_original_backup(fixture):
     assert result == {"status": "updated", "backup_available": True, "data_preserved": True}
     assert database.read_bytes() == before
     assert json.loads(manifest.read_text()) == receipt(2)
+    assert manifest.stat().st_mode & 0o777 == 0o644  # Ordinary station must confirm the guest receipt.
     assert calls == ["validated", "installed", "verified_installed_files"]
     assert not list(store.glob("*.part")) and not (store / "pending.json").exists()
     assert not guest.PENDING_MARKER.exists()
@@ -353,8 +354,8 @@ def test_lost_ack_after_target_receipt_reconciles_without_second_install(fixture
     root, store, database, manifest, calls = fixture
     original = guest.atomic_json
 
-    def lost_ack(path, value):
-        original(path, value)
+    def lost_ack(path, value, **options):
+        original(path, value, **options)
         if path == manifest:
             raise InterruptedError("Synthetic lost client after completed guest receipt")
 

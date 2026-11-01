@@ -67,11 +67,13 @@ def read_json(path, uid):
     return json.loads(path.read_bytes(), object_pairs_hook=strict_object)
 
 
-def atomic_json(path, value):
+def atomic_json(path, value, *, public=False):
     with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".update-", delete=False) as output:
         temporary = Path(output.name)
         try:
             output.write(canonical_json(value))
+            if public:
+                os.fchmod(output.fileno(), 0o644)
             output.flush()
             os.fsync(output.fileno())
             if path.exists() or path.is_symlink():
@@ -377,7 +379,7 @@ def update(source, previous, target, size, uid):
             if current != target:
                 run("/usr/bin/dpkg", "--install", str(stage))
             installed(target)
-            atomic_json(RECEIPT, target)
+            atomic_json(RECEIPT, target, public=True)
             atomic_json(
                 STORE / (operation + ".json"), {"operation": operation, "phase": "complete", **accepted}
             )
