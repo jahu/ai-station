@@ -146,8 +146,8 @@ and the actual browser capture establish this failure; it is not inferred from a
 mock. Evidence: `data/acceptance/windows-native-qualification-20261031/`, result
 072. Existing actor/follow-up relevance qualification does not cover necessity.
 
-**Next implementation:** distinguish permission to search from a request that
-needs search. New automatic/contextual turns should ask the same admitted model
+**Implemented candidate:** distinguish permission to search from a request that
+needs search. New automatic/contextual turns ask the same admitted model
 for a bounded, tools-free structured decision: search with a concise public
 query, or continue without retrieval. Literal replies, greetings, transformations
 of supplied text and other self-contained requests should not acquire sources.
@@ -155,19 +155,36 @@ Factual requests needing retrieval and subject-dependent follow-ups keep their
 existing bounded, privacy-filtered context. An explicit Search query still
 searches; Web off must invoke neither the planner nor the network.
 
-Freeze the new planning contract in new Run snapshots without changing canonical
-client-request receipts or reinterpreting old saved/retried Runs. A no-search
+The new user-message metadata and Run snapshots freeze
+`web_search_plan_version=2`, without changing canonical client-request receipts
+or reinterpreting old saved/retried Runs. Legacy snapshots keep their original
+query-only schema and preparation template. A no-search
 decision emits an inspectable skip event and continues ordinary completion with
 the original messages: no search request, source cards, search artifact or claim
 that retrieval happened. Invalid/canceled preparation must not silently send raw
 private instructions or bypass the existing factual-search failure policy.
 Selected provider/model, external-AI grants, deadlines, cancellation and account
-isolation stay unchanged; do not add another planner runtime or shell surface.
+isolation stay unchanged; no planner runtime or shell surface is added. The Web
+control explains that availability is optional research; its switch, preference,
+keyboard behavior and explicit Search query are retained.
 
 Verification must cover both branches, a literal containing an apparent search
 keyword, greetings and supplied-text transformations, a genuine search and its
 subject-free follow-up, explicit queries, Web off, invalid output, Stop, external
 permission, legacy Run/retry identity and cross-account boundaries. Use fake
 model/network calls for normal tests; then exercise one actual compiled
-API/worker flow and a bounded selected-model smoke test. This necessity change
-is planned here and **has not yet been implemented or deployed**.
+API/worker flow and a bounded selected-model smoke test. This candidate is
+**not yet deployed**; review and the complete local checks remain required.
+
+The actual same verified 4B Q4_K_M weights passed four isolated API/engine cases
+on CPU: a literal containing `WINDOWS_MODEL_OK`, a Polish greeting, an explicit
+Python documentation search and a subject-free Polish follow-up about activating
+that environment on Windows. The first two made no search and returned no source
+cards/artifact. The latter two used the real pinned SearXNG service, recovered
+the Python subject and returned five relevant results each, including official
+Python documentation. Search-engine availability/ranking is not guaranteed for
+future queries. The temporary CPU/search containers were stopped afterward;
+production and original model files were unchanged. This source-level real-model
+proof does not substitute for the compiled API/separate-worker/browser gate.
+Private evidence: `real-search-necessity.private.json` in the Windows
+qualification directory referenced above.
