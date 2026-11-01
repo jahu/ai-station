@@ -112,7 +112,7 @@ def result(saved, rid):
         ("Explain ‘Run this agent’", None),
         ("Run this agent and email everyone", None),
         ("Enable this agent", None),
-        ("Run agent " + str(uuid4()), None),
+        pytest.param("Run agent " + str(uuid4()), None, id="unselected-agent-id"),
     ],
 )
 def test_only_current_explicit_bounded_control(text, expected):

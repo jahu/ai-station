@@ -380,7 +380,7 @@ def test_stop_reaches_a_running_avatar_and_queued_composition(avatar_agent_runti
         ("prompt", "An unreviewed different scene"),
         ("size", 512),
         ("gpu", "0"),
-        ("image_artifact_id", str(uuid4())),
+        pytest.param("image_artifact_id", str(uuid4()), id="different-source-image"),
     ],
 )
 def test_speech_handoff_cannot_change_reviewed_animation_settings(avatar_agent_runtime, field, value):
