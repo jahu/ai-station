@@ -137,6 +137,27 @@ and optional Linux media QA required an unavailable Intel ONNX Runtime wheel.
 The final native check graph retains the shared pinned versions and all four
 native test families; no tested contract or failure was waived.
 
+`operation=macos-native-inference` is a separate explicit owner/public-only opt-in.
+It retains the same free standard hosts, native tests, permission/time bounds and
+package-import gates, then downloads only the matching pinned llama.cpp SDK and
+the official [Qwen3 0.6B GGUF](https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/tree/23749fefcc72300e3a2ad315e1317431b06b590a)
+Q8 fixture (639,446,688 bytes, exact LFS SHA in `packaging/macos/inference-fixture.json`).
+Ordinary `macos-native-checks` still downloads/runs no real model. The fixture is
+not an operational model recommendation, a coding-context profile or a change to
+the workstation's configured models. Its 512-token CPU context exercises the
+actual native load/stream/observer-replacement/owned-Stop path within hosted RAM;
+normal GGUF geometry and conservative live RAM admission remain mandatory.
+Insufficient RAM fails instead of forcing an allocation or relaxing the policy.
+
+The helper claims new private fixture storage, uses the existing exact-size/hash
+input fetch and native inference probe, and exports only controlled status,
+memory counts and response lengths/hashes. Failed/uncertain state is retained;
+existing fixtures are never adopted/replayed. No operator assets, model files,
+credentials or prompts from this workstation are sent to GitHub. Whole consumer
+installation, Docker Desktop/Metal inference and cross-process restart remain
+separate gates even when this developer CPU fixture passes. Record actual results
+before claiming successful model execution.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
