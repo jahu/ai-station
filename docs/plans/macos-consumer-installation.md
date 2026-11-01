@@ -572,3 +572,33 @@ families with five opt-in skips, then the final complete Metal family40/one skip
 after a test-fixture refinement; other checked source stayed unchanged. Whole
 Python lint/format passed983 files. This closes the bundled-interpreter inference
 and immutability gap, not consumer GUI/bridge/Metal/station restart/minOS/signing.
+
+### Control-plane image production
+
+Apple Silicon needs the actual `linux/arm64` application image alongside native
+Darwin Python; an amd64-only Linux package is not a Mac ARM bundle. The trusted
+developer helper `scripts/build_control_plane_image.py` reuses the canonical
+Dockerfile and changes only its frontend stage to BuildKit's native
+`$BUILDPLATFORM`. JavaScript assets are architecture independent; backend Python,
+native wheels and the final image still target the explicitly selected platform.
+The ordinary Dockerfile, legacy/local build and end-user startup stay unchanged.
+This avoids spending the entire Node install/typecheck/build under emulation.
+
+Use an existing local Buildx builder (ordinary developer Docker authority):
+
+```sh
+python scripts/build_control_plane_image.py --platform linux/arm64   --builder <local-builder-name> --tag ai-station:<new-package-tag>   --output /absolute/new/package-image-proof
+```
+
+An optional `--buildx` selects an already verified standalone developer tool.
+The helper refuses dirty source, existing tags, uncertain image absence and
+existing proof directories. It freezes the source head and both Dockerfile hashes,
+loads locally without pushing, and verifies target OS/architecture, non-root user
+and the Buildx image digest before publishing an image-only receipt. Interrupted
+or inconsistent output remains for inspection. It changes no daemon, OS/emulator,
+GPU configuration or running application and does not grant a Runner/agent API.
+
+Actual API/worker/first-admin/restart qualification is separate from image
+production. Userspace-emulated ARM checks on Linux do not qualify Docker Desktop
+socket sharing or the complete Mac consumer journey. Package the verified target
+image only after those platform and application gates are satisfied.
