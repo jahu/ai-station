@@ -44,13 +44,13 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
    If this transport fails, stop setup with an actionable
    local prerequisite; design and review an authenticated alternative separately,
    without an automatic public/TCP listener.
-   Include the eventual inference socket and long Application Support paths in
-   this experiment. Desktop lifecycle, Runner transport and model inference are
-   separate connections; one successful short test socket does not qualify all
-   three. Inspect the pinned llama.cpp build's socket arguments rather than
-   assuming relative names work. Any short private runtime directory or typed
-   inference proxy needs its own reviewed path/ownership/mount contract; never
-   bypass canonical path checks with an unchecked alias.
+   Retain the existing typed Runner completion proxy: the native model socket
+   stays on the Runner side and needs no new container mount or TCP bridge.
+   Qualify that separate native inference connection, its short owned runtime
+   directory and the pinned build's socket arguments; one successful transport
+   probe does not qualify it. Long Application Support data paths still belong
+   in the shared-filesystem experiment. Never bypass canonical path checks with
+   an unchecked alias or assume relative socket names work.
 3. **Native process/resource adapter.** Separate platform-specific ownership,
    start identity and memory observation from executor logic. Reuse owned process
    groups, durable journals, deadlines, Stop and recovery. Darwin must not import
@@ -95,6 +95,52 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
    [Developer ID](https://developer.apple.com/developer-id/).
 
 ## Acceptance evidence
+
+### Native llama.cpp byte preparation
+
+The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
+at source `dde879bc4f954b809892fd0d660515f42536394a`. Both public archives
+were downloaded and independently hashed before reviewing their complete file
+inventories and Mach-O load metadata. ARM64 is 16,513,842 compressed bytes with
+SHA-256 `00468fe833eb000b78a748122f5921b6c7b07dc82331a8d0c68196c69cb26382`;
+Intel x86-64 is 12,258,802 bytes with SHA-256
+`291d99f3b6f45f67f73afe5381540f29928840a1a14d9c19d6595bd649a035fc`.
+These binaries declare macOS 13.3 as their minimum. The ARM archive contains the
+Metal backend; the Intel archive is CPU-only. Do not infer Intel GPU support
+from a successful Metal hardware observation. ARM's system RDMA dependency is
+weak-linked, rather than a required external/Homebrew installation.
+
+Preparation reuses the existing immutable store, canonical private directories,
+fingerprints and cooperative deadline/cancellation checks. It copies only the
+reviewed server, libraries and license; in-tree library aliases become independent
+immutable regular files, and other upstream command utilities are omitted.
+Exact source/output hashes, architecture, minimum OS, executable permissions,
+library dependencies/search paths and the complete output inventory are verified.
+No archive path or link can publish outside the new owned operation directory.
+Interrupted/changed operations remain for inspection instead of being overwritten;
+a final receipt is published only after complete verified byte assembly.
+
+The private receipt uses app-data-relative paths and explicitly records
+`inference_qualified=false`. Shared runtime observations must not expose its
+private setup-operation coordinate. Existing Runner runtime-selection APIs still
+reject these unqualified profiles. This module executes/downloads nothing and
+does not remove quarantine, sign binaries, alter Docker/OS settings, or install
+an available Mac application. Native launch, memory admission, owned Stop/recovery,
+local inference transport, signing and complete Mac consumer acceptance remain
+the next execution/package gates. Byte assembly can be tested on a Linux package
+builder; that result is not Mac inference evidence.
+
+Normal tests use synthetic native bytes and malformed archives. The opt-in
+`AI_STATION_REAL_MAC_BUNDLE_TESTS=1` with `AI_STATION_MAC_BUNDLE_CACHE` pointing to
+the already verified archives checks both actual distributions without network,
+native binary execution or model weights.
+
+This increment passed 225 affected tests across twelve complete families, plus
+two opt-in assemblies of the actual ARM/Intel archives. Whole-tree Ruff/format
+checks cover 971 Python files. The Linux builder verified 37 ARM and 34 Intel
+immutable output files and their native load metadata; it did not execute them.
+
+### Native observations and ownership
 
 Native hardware snapshots now include a separate `metal` observation on Darwin.
 It enumerates all devices through fixed OS Metal/Foundation/Objective-C symbols,
