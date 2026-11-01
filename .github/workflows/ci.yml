@@ -90,7 +90,7 @@ jobs:
       - name: Install checked developer dependencies and native package tool
         run: |
           python -m venv .venv
-          .venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/checks.lock
           .venv/bin/python -m pip install --require-hashes -r packaging/macos/build-tools.lock
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Exercise actual native kernel ownership and observations

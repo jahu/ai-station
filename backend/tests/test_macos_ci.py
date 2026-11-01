@@ -1,5 +1,6 @@
 """Cost/permission boundaries for explicitly dispatched native Mac checks."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -41,3 +42,14 @@ def test_native_builder_pin_is_a_valid_two_architecture_hash_lock():
     assert len(lines) == 4 and lines[1] == "uv==0.12.16 " + chr(92)
     assert lines[2].startswith("    --hash=sha256:") and lines[2].endswith(chr(92))
     assert lines[3].startswith("    --hash=sha256:") and not lines[3].endswith(chr(92))
+
+
+def test_native_check_hashes_preserve_the_existing_developer_versions():
+    root = Path(__file__).resolve().parents[2]
+
+    def versions(path):
+        return dict(re.findall(r"^([A-Za-z0-9_.-]+)==([^\s;\\]+)", path.read_text(), re.MULTILINE))
+
+    assert versions(root / "requirements-dev.lock") == versions(root / "packaging/macos/checks.lock")
+    text = (root / "packaging/macos/checks.lock").read_text()
+    assert "--hash=sha256:" in text
