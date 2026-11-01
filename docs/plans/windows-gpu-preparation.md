@@ -170,3 +170,32 @@ The retained VM has no GPU. Actual Windows GPU selection/inference, a fresh impo
 of this GPU-prepared image, native accessibility/signing gates and the complete
 cross-platform release remain separate acceptance work. Linux inference and a
 Windows CPU result cannot substitute for those observations.
+
+### Busy data-disk diagnostics
+
+A later retained-VM preflight stopped before any fresh import: WSL reported
+Wsl/Service/CreateInstance/MountDisk/HCS/ERROR_SHARING_VIOLATION for the existing
+guest disk. Windows Restart Manager identified kernel System as its holder;
+Storage reported the image unattached. This is not evidence that the new image
+failed import or that GPU execution passed. Preserve the original VM, disk,
+registration and data while investigating.
+
+Native setup and pre-readiness process completion recognize only that bounded
+machine-code line and show a fixed, actionable disk-busy explanation. Raw paths,
+bootstrap links and other process output never become those details. A user can
+close disk/backup tools, retry, or choose to save work and restart Windows; the
+application performs no automatic reset, global WSL shutdown, guest termination,
+unregistration, reinstall or reboot. EOF alone cannot release the owned startup
+client: the UI waits nonblockingly for its actual exit and diagnostic drain.
+
+The correction passed 42 failure/privacy/completion assertions and 12 real
+owned-child lifecycle assertions in Windows PowerShell 5.1.26100.9711 on the
+retained Windows 11 fixture. Its exact native failure handler and label layout
+were rendered at 96 DPI; the explanation fit and omitted synthetic private
+paths/tokens. This was an isolated component preview, not a new installation.
+Native testing found a CRLF line-ending mismatch that the Linux PowerShell
+tests had missed; both CRLF and LF now have regression coverage. The portable
+PowerShell scope also passes 89 coordinator and 34 guest-update assertions;
+57 desktop/guest packaging tests and the Docker image/configuration checks pass.
+An explicitly dispatched CI job runs these PowerShell contracts with the built-in
+Windows shell. Hosted Actions remain manual; no hosted execution is claimed.

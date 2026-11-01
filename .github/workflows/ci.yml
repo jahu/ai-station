@@ -25,6 +25,19 @@ jobs:
       - run: .venv/bin/pip install -r requirements-dev.lock
       - run: .venv/bin/pip install --no-deps -e backend -e host-runner
       - run: ./scripts/check.sh
+  windows-contracts:
+    if: inputs.operation != 'release-pr'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Windows PowerShell lifecycle contracts
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Use native Windows PowerShell 5.1 for these contracts.' }
+          & ./packaging/windows/tests/StartupFailure.Tests.ps1
+          & ./packaging/windows/tests/DesktopProcess.Tests.ps1
+          & ./packaging/windows/tests/UpdateCoordinator.Tests.ps1
+          & ./packaging/windows/tests/GuestUpdate.Tests.ps1
   frontend:
     if: inputs.operation != 'release-pr'
     runs-on: ubuntu-latest

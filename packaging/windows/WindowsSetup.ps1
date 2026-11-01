@@ -35,6 +35,7 @@ Import-Module (Join-Path $PSScriptRoot 'PrivateStore.psm1')
 try { $uiLease=Open-StationUiLease } catch { [void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'AI Station','OK','Error');$showEvent.Dispose();$mutex.ReleaseMutex();$mutex.Dispose();exit 1 }
 $script:worker=$null;$script:station=$null;$script:reader=$null;$script:stderr=$null
 $script:ready=$null;$script:running=$false;$script:prepared=$false;$script:stopPending=$false;$script:exitAfterStop=$false;$script:allowExit=$false
+$script:startupOutput='';$script:startupOutputTruncated=$false;$script:startupReady=$false
 $script:nextCheck=[DateTime]::UtcNow;$script:lastError='';$script:attention=$false
 $script:updateAvailable=$false;$script:updatePending=$false;$script:refreshAfterFailure=$false
 
@@ -99,9 +100,10 @@ function Sync-Buttons {
  $form.AcceptButton=$primary
  $background.Visible=$script:running -or $preparing
 }
-function Show-Failure([string]$Message) {
-$script:lastError=$Message;$script:attention=$true;$details.Visible=$true;$status.Text='Needs attention'
- $description.Text='Your saved work is preserved. Try again, or check Windows support. Details can help diagnose the problem.'
+function Show-Failure($Failure) {
+ $view=Get-StationFailurePresentation $Failure
+ $script:lastError=$view.Details;$script:attention=$true;$details.Visible=$true;$status.Text=$view.Title
+ $description.Text=$view.Description
 }
 function Begin-StationAction([string]$Action) {
  if ($null -ne $script:worker) { return }
@@ -156,7 +158,7 @@ $support.Add_LinkClicked({
    $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$exe;$info.Arguments='--install --no-distribution';$info.Verb='runas';$info.UseShellExecute=$true
    [void][Diagnostics.Process]::Start($info)
    $status.Text='Complete the Windows setup';$description.Text='Follow the Windows prompt. If Windows asks for a restart, reopen AI Station afterward and choose Prepare.'
-  } catch { Show-Failure $_.Exception.Message }
+  } catch { Show-Failure $_.Exception }
  }
 })
 $form.Add_FormClosing({
@@ -177,6 +179,7 @@ $timer.Add_Tick({
      'prepare' { $script:prepared=$true;$script:updateAvailable=$false;$script:updatePending=$false;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
      'start' {
       $script:station=$value;$script:ready=$null
+      $script:startupOutput='';$script:startupOutputTruncated=$false;$script:startupReady=$false
       $script:reader=$value.StandardOutput.ReadLineAsync();$script:stderr=$value.StandardError.ReadToEndAsync()
       $status.Text='Opening your station';$description.Text='Preparing the app and checking its local connection. Model setup opens in your browser.'
      }
@@ -184,7 +187,7 @@ $timer.Add_Tick({
       Import-Module (Join-Path $PSScriptRoot 'DesktopLink.psm1')
       $candidate=Read-StationReadyFrame ([string]$value).Trim()
       if ($null -eq $candidate) { throw 'The running station did not provide a valid browser handoff.' }
-      $script:ready=$candidate;$script:running=$true;Open-ReadyTarget $candidate;$status.Text='Running locally';$description.Text='Your AI Station is open. Agents and generation keep working when this window is closed.'
+      $script:ready=$candidate;$script:startupReady=$true;$script:running=$true;Open-ReadyTarget $candidate;$status.Text='Running locally';$description.Text='Your AI Station is open. Agents and generation keep working when this window is closed.'
      }
      'stop' { $script:stopPending=$true;$script:nextCheck=[DateTime]::UtcNow.AddSeconds(1) }
      'status' {
@@ -229,7 +232,7 @@ $timer.Add_Tick({
     } elseif ($restart) {
      $script:attention=$true;$status.Text='Restart Windows to continue'
      $description.Text='Save other work, restart Windows, then reopen AI Station. Your saved workspace stays in place.'
-    } else { Show-Failure $_.Exception.Message }
+    } else { Show-Failure $_.Exception }
    } finally { $job.Engine.Dispose();$job.Cancellation.Dispose() }
    Sync-Buttons
   }
@@ -242,15 +245,24 @@ $timer.Add_Tick({
     Import-Module (Join-Path $PSScriptRoot 'DesktopLink.psm1')
     $candidate=Read-StationReadyFrame $line
     if ($null -ne $candidate) {
-     $script:ready=$candidate;$script:running=$true
+     $script:ready=$candidate;$script:startupReady=$true;$script:running=$true
      if ($script:exitAfterStop) { Begin-StationAction 'stop' } else { Open-ReadyTarget $candidate }
      $status.Text=$(if ($script:exitAfterStop) {'Stopping AI Station'} else {'Running locally'});$description.Text='Your AI Station is open. Agents and generation keep working when this window is closed.'
+    } elseif ($null -eq $script:ready -and -not $script:startupOutputTruncated) {
+     if($script:startupOutput.Length+$line.Length+2 -le 65536) { $script:startupOutput+=$line+[Environment]::NewLine }
+     else { $script:startupOutput='';$script:startupOutputTruncated=$true }
     }
     $script:reader=$script:station.StandardOutput.ReadLineAsync()
-   } else {
+   }
+   Sync-Buttons
+  }
+  if ($null -ne $script:station -and $null -eq $script:reader) {
+   $completion=Get-StationDesktopCompletion $script:station $script:stderr $script:startupOutput $script:startupReady
+   if($completion.Completed) {
     $script:station.Dispose();$script:station=$null
+    $script:startupOutput='';$script:startupOutputTruncated=$false;$script:startupReady=$false;$script:stderr=$null
+    if($null -ne $completion.Failure) { throw $completion.Failure }
     if ($null -eq $script:worker) { Begin-StationAction 'status' }
-    if ($null -eq $script:ready) { throw 'The station stopped before its browser connection became ready.' }
    }
    Sync-Buttons
   }
@@ -259,7 +271,7 @@ $timer.Add_Tick({
   } elseif ($script:running -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15);Begin-StationAction 'status'
   }
- } catch { Show-Failure $_.Exception.Message;Sync-Buttons }
+ } catch { Show-Failure $_.Exception;Sync-Buttons }
 })
 try {
  Sync-Buttons

@@ -11,6 +11,26 @@ function Format-StationWslArguments {
     return ($parts -join ' ')
 }
 
+function New-StationWslFailure {
+    param([string]$StandardOutput='', [string]$StandardError='',
+          [string]$Fallback='The Windows preparation step did not finish. Saved state and guest data were retained; check preparation before retrying.')
+    $busy=$false
+    foreach($stream in @($StandardOutput,$StandardError)) {
+        # Some Windows WSL errors arrive as NUL-padded UTF-16 text while Linux
+        # bridge replies use UTF-8. Match only a complete, stable machine-code
+        # line, never a local path, setup link or translated human description.
+        if($stream.Length -gt 65536) { continue }
+        $text=$stream.Replace([string][char]0,'')
+        if($text -match '(?im)^[ \t]*(?:[^\r\n:]{1,80}:[ \t]*)?Wsl/Service/CreateInstance/MountDisk/HCS/ERROR_SHARING_VIOLATION[ \t]*\r?$') { $busy=$true }
+    }
+    if($busy) {
+        $failure=[InvalidOperationException]::new('Windows cannot open AI Station''s local data disk because it is in use. Close backup or disk tools and try again. If it stays busy, save other work and restart Windows, then reopen AI Station. Keep the existing installation and data folder.')
+        $failure.Data['AIStationWslFailure']='disk_busy'
+        return $failure
+    }
+    return [InvalidOperationException]::new($Fallback)
+}
+
 function Wait-StationWslProcess {
     param($Process,[bool]$KeepOutput=$false,
           [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
@@ -19,8 +39,8 @@ function Wait-StationWslProcess {
     try {
         while (-not $Process.WaitForExit(200)) { $CancellationToken.ThrowIfCancellationRequested() }
         $CancellationToken.ThrowIfCancellationRequested()
-        $text=$output.GetAwaiter().GetResult();[void]$errors.GetAwaiter().GetResult()
-        if ($Process.ExitCode -ne 0) { throw 'The Windows preparation step did not finish. Saved state and guest data were retained; check preparation before retrying.' }
+        $text=$output.GetAwaiter().GetResult();$errorText=$errors.GetAwaiter().GetResult()
+        if ($Process.ExitCode -ne 0) { throw (New-StationWslFailure $text $errorText) }
         if ($KeepOutput) {
             if ([Text.Encoding]::UTF8.GetByteCount($text) -gt 16384) { throw 'The fixed WSL response exceeds its expected size.' }
             return $text
@@ -37,4 +57,4 @@ function Wait-StationWslProcess {
         throw
     } finally { $Process.Dispose() }
 }
-Export-ModuleMember -Function Wait-StationWslProcess,Format-StationWslArguments
+Export-ModuleMember -Function Wait-StationWslProcess,Format-StationWslArguments,New-StationWslFailure
