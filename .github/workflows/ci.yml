@@ -111,12 +111,15 @@ jobs:
             --architecture "$TARGET_ARCHITECTURE" --cache "$PWD/.native-mac/inputs" \
             --output "$PWD/.native-mac/python" --download-inputs
       - name: Execute the actual bundled interpreter and native dependencies
+        if: inputs.operation == 'macos-native-checks'
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE"
       - name: Explicit fixed-model CPU inference and owned Stop
         if: inputs.operation == 'macos-native-inference'
-        run: .venv/bin/python -B scripts/macos_ci_inference.py --root "$PWD/.native-mac/inference" --run-native-inference
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

@@ -529,3 +529,18 @@ host. Native kernel/import/audio gates also passed. Normal validation passed
 whole Python lint/format. This qualifies the developer model-owner lifecycle,
 not a full station restart, Docker Desktop bridge, Metal inference, GUI installer,
 minimum OS or signing. The complete NR-13/14 consumer gates remain open.
+
+### Bundled interpreter model gate
+
+Earlier actual native inference/recovery runs used the developer interpreter;
+the pinned CPython 3.12.14 package passed separate native-import/audio gates.
+The explicit inference workflow now executes `macos_package_import_probe.py`
+under the exact bundled interpreter with `-IB` and the architecture plus
+`--run-native-inference`. It first checks the complete pinned Python inventory,
+imports and native audio, then uses the existing fixed CPU fixture and isolated
+owner-process recovery. Both native owners use that same bundled interpreter.
+A complete model/recovery/Stop result is required, and the shipped inventory is
+checked again after inference. No developer/user Python site or PYTHONPATH can
+supply missing package dependencies. Ordinary native checks retain their no-model
+path. This closes a package/runtime integration gap; it does not add or enable a
+consumer launcher, full station restart, Docker bridge, Metal or signing.
