@@ -30,6 +30,13 @@ desktop peer credentials and Darwin socket lengths; native transport, process
 ownership, CPU/Metal, packaging and actual-platform acceptance remain required.
 The existing Linux launcher does not admit macOS based on these primitives alone.
 
+Native Darwin telemetry now has a read-only platform branch for public Mach CPU
+counters, physical/free RAM and current swap. Its conservative free-page budget
+does not add reclaimable/overlapping counters or pretend to be dedicated GPU
+memory. Missing values remain unknown. This supplies observations for the Mac
+installer work; it does not enable that installer, Metal, native execution or
+Linux-style memory enforcement. Linux telemetry remains unchanged.
+
 The desktop owner can supervise in the background without keeping a window
 open. A private same-OS-user control socket supports only status and
 instance-bound Stop; the existing supervisor remains responsible for shutdown.
