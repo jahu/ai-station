@@ -78,6 +78,26 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Acceptance evidence
 
+The next process increment keeps managed execution Linux-only while preparing a
+read-only Darwin identity probe. It reads a fixed kernel boot UUID and the public
+`PROC_PIDTBSDINFO` ABI, including the effective UID, group and microsecond process
+start identity. A second snapshot brackets session lookup to reject PID reuse or
+changed ownership/group. Missing, denied or incomplete observations are errors,
+not successful empty process discovery. This does not itself authorize a signal
+or qualify group recovery. Linux boot-identity preflight must finish before
+launching a subprocess, so a missing identity cannot leave an unrecorded child.
+No Linux journal field is reinterpreted as a Darwin timestamp. The future native
+controller still needs complete Stop/deadline/descendant/recovery and memory gates.
+[Apple process-info ABI](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h),
+[libproc query implementation](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.c),
+[kernel boot-session query](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sysctl.c).
+
+On a native Mac, developer self-inspection is
+`python -m ai_station_runner.darwin_process_identity`. It accepts no target PID
+and launches no workload. The native self test runs only on Darwin; simulated ABI
+tests elsewhere are not a Mac acceptance result. A sandbox/OS denial remains an
+inspection error; do not replace the boot UUID with wall time or an invented ID.
+
 Record actual OS/architecture/Docker backend and immutable package/runtime/model
 identities. Exercise clean machine → ordinary-user install → first admin → guided
 hardware-fitting download → local streamed response → owned Stop → restart → same

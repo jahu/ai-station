@@ -7,7 +7,38 @@ import time
 from uuid import uuid4
 
 import pytest
+from ai_station_runner import processes
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+
+
+@pytest.mark.parametrize("failure", ["unreadable", "empty", "unsupported"])
+def test_boot_identity_failure_cannot_launch_an_unrecorded_child(tmp_path, monkeypatch, failure):
+    manager = ProcessManager(tmp_path)
+    launched = []
+
+    def forbidden(*args, **kwargs):
+        launched.append(args)
+        raise AssertionError("Process launch happened before boot identity preflight")
+
+    monkeypatch.setattr(processes.subprocess, "Popen", forbidden)
+    if failure == "unsupported":
+        monkeypatch.setattr(processes.sys, "platform", "darwin")
+        expected = RuntimeError
+    elif failure == "empty":
+        monkeypatch.setattr(processes, "_boot_id", lambda: "")
+        expected = RuntimeError
+    else:
+
+        def unreadable():
+            raise OSError("Boot identity cannot be inspected")
+
+        monkeypatch.setattr(processes, "_boot_id", unreadable)
+        expected = OSError
+    with pytest.raises(expected):
+        manager.start(run_id=str(uuid4()), argv=[sys.executable, "-c", "pass"], cwd=tmp_path, executor="test")
+    assert not launched and not manager._live and not manager._deadline_timers
+    assert json.loads(manager.path.read_text()) == {}
+    assert not (tmp_path / "runs").exists()
 
 
 def test_idempotent_launch_and_cancel_only_owned_group(tmp_path):
