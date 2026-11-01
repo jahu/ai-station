@@ -39,6 +39,7 @@ SAFE_FIELDS = {
     "error_type",
     "stop_error_type",
     "cleanup_error_type",
+    "native_failure",
 }
 
 
@@ -90,7 +91,16 @@ def experiment(root, *, opted_in=False):
                 "architecture": platform.machine(),
                 "memory": {
                     key: memory.get(key)
-                    for key in ("source", "status", "available_mib", "total_mib", "used_mib")
+                    for key in (
+                        "available_basis",
+                        "available_is_estimate",
+                        "status",
+                        "free_mib",
+                        "inactive_mib",
+                        "available_mib",
+                        "total_mib",
+                        "used_mib",
+                    )
                 },
             }
         ),

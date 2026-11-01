@@ -191,6 +191,9 @@ def run(data_root, output, digest, compute, context_size, *, opted_in=False):
             if snapshot["status"] == "ready":
                 break
             if snapshot["status"] != "loading":
+                proof["native_failure"] = {
+                    key: snapshot.get(key) for key in ("status", "alive", "exit_code", "error")
+                }
                 raise RuntimeError("Native probe requires inspection before continuation")
             time.sleep(0.1)
         proof["first_reply"] = asyncio.run(reply(manager, body.instance_id))

@@ -135,6 +135,7 @@ class DarwinProcessManager(ProcessManager):
                 stderr=stderr,
                 start_new_session=True,
                 pass_fds=(read,),
+                umask=0o077,
             )
             os.close(read)
             read = None

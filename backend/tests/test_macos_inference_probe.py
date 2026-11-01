@@ -76,6 +76,15 @@ def fixture(tmp_path, monkeypatch):
             return self.inspect(body.instance_id)
 
         def inspect(self, identity):
+            if state["failure"] == "startup" and not self.stopped:
+                return {
+                    "status": "failed",
+                    "alive": False,
+                    "exit_code": 1,
+                    "error": "Native llama.cpp process exited",
+                    "stdout": "PRIVATE output",
+                    "path": "/PRIVATE/data",
+                }
             return {"status": "stopped" if self.stopped else "ready", "alive": not self.stopped, "pid": 37}
 
         async def completion(self, identity, body, incoming):
@@ -188,6 +197,20 @@ def test_existing_proof_is_never_overwritten(fixture):
     with pytest.raises(FileExistsError):
         fixture["run"]()
     assert marker.read_text() == "keep" and not fixture["calls"]
+
+
+def test_failed_startup_retains_only_safe_native_status_and_stops(fixture):
+    fixture["failure"] = "startup"
+    with pytest.raises(RuntimeError, match="inspection"):
+        fixture["run"]()
+    result = json.loads((fixture["output"] / "proof.json").read_text())
+    assert result["native_failure"] == {
+        "status": "failed",
+        "alive": False,
+        "exit_code": 1,
+        "error": "Native llama.cpp process exited",
+    }
+    assert result["owned_stop_confirmed"] and "PRIVATE" not in json.dumps(result)
 
 
 def test_wrong_model_hash_cannot_be_qualified_even_with_a_valid_owned_filename(fixture):

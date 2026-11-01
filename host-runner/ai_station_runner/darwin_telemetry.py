@@ -11,7 +11,9 @@ class _VM(ctypes.Structure):
     # Public vm_statistics64 ABI. Unused cumulative counters remain opaque.
     _fields_ = [
         ("free_pages", ctypes.c_uint32),
-        ("resident_counts", ctypes.c_uint32 * 3),
+        ("active_pages", ctypes.c_uint32),
+        ("inactive_pages", ctypes.c_uint32),
+        ("wired_pages", ctypes.c_uint32),
         ("cumulative", ctypes.c_uint64 * 9),
         ("purgeable_pages", ctypes.c_uint32),
         ("speculative_pages", ctypes.c_uint32),
@@ -113,7 +115,7 @@ class _Native:
         if size.value != ctypes.sizeof(value):
             raise OSError("Incomplete native memory observation")
 
-    def free_memory(self):
+    def memory_pages(self):
         with self.host_port() as port:
             page = ctypes.c_uint32()
             if self.page_size(port, ctypes.byref(page)) != 0:
@@ -128,8 +130,12 @@ class _Native:
             # complete public layouts, not a truncated/torn counter.
             if count.value not in {38, 40}:
                 raise OSError("Incomplete native VM statistics")
-            # Speculative pages are already included in the free count.
-            return value.free_pages * page.value
+            # Free and inactive are disjoint queues. Speculative pages are
+            # already included in free; purgeable/compressed are not additions.
+            return value.free_pages * page.value, value.inactive_pages * page.value
+
+    def free_memory(self):
+        return self.memory_pages()[0]
 
     def cpu_ticks(self):
         with self.host_port() as port:
@@ -164,8 +170,20 @@ def cpu():
 
 
 def memory():
-    result = dict.fromkeys(("total_mib", "used_mib", "available_mib", "swap_used_mib", "swap_total_mib"))
-    result.update(available_basis="darwin_free_pages_only", status="unavailable")
+    result = dict.fromkeys(
+        (
+            "total_mib",
+            "used_mib",
+            "available_mib",
+            "free_mib",
+            "inactive_mib",
+            "swap_used_mib",
+            "swap_total_mib",
+        )
+    )
+    result.update(
+        available_basis="darwin_free_plus_inactive_pages", available_is_estimate=True, status="unavailable"
+    )
     try:
         native = _Native()
     except OSError:
@@ -173,10 +191,16 @@ def memory():
     try:
         total = native.physical_memory()
         result["total_mib"] = round(total / 1024**2, 1)
-        free = native.free_memory()
-        if not 0 <= free <= total:
-            raise OSError("Native free memory exceeds physical capacity")
-        result.update(used_mib=round((total - free) / 1024**2, 1), available_mib=round(free / 1024**2, 1))
+        free, inactive = native.memory_pages()
+        available = free + inactive
+        if not 0 <= free <= available <= total:
+            raise OSError("Native memory queues exceed physical capacity")
+        result.update(
+            used_mib=round((total - available) / 1024**2, 1),
+            available_mib=round(available / 1024**2, 1),
+            free_mib=round(free / 1024**2, 1),
+            inactive_mib=round(inactive / 1024**2, 1),
+        )
     except OSError:
         pass
     try:
