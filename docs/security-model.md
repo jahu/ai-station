@@ -91,6 +91,11 @@ Runner. Native Mac qualification and a separate memory policy remain required.
 
 The internal native llama.cpp candidate reuses that ownership engine with fixed
 SDK/model references, private canonical inference sockets and a minimal environment.
+The Darwin child gets umask 077 at launch independently of the parent process;
+new sockets are private at creation. RAM admission estimates free plus inactive
+Mach queues without adding speculative, compressed or purgeable counters; it
+remains an estimate with retained reservations, not permission to force memory
+allocation or change OS swap policy.
 Its shared inference process discards stdout/stderr before exec; prompts from a
 second account must never enter the first loader's Run logs. The persisted output
 policy cannot change on retry. An immutable dispatch fence prevents duplicate

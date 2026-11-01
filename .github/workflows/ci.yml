@@ -11,6 +11,7 @@ on:
           - checks
           - release-pr
           - macos-native-checks
+          - macos-native-inference
 permissions:
   contents: read
 jobs:
@@ -64,7 +65,7 @@ jobs:
       - run: docker build -f python-executor/Dockerfile -t ai-station-python:ci .
   macos-native:
     # Only standard free PUBLIC runners. Never allocate paid/private/larger hosts.
-    if: inputs.operation == 'macos-native-checks' && github.event.repository.private == false && github.actor == github.repository_owner
+    if: (inputs.operation == 'macos-native-checks' || inputs.operation == 'macos-native-inference') && github.event.repository.private == false && github.actor == github.repository_owner
     strategy:
       fail-fast: false
       matrix:
@@ -113,6 +114,9 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE"
+      - name: Explicit fixed-model CPU inference and owned Stop
+        if: inputs.operation == 'macos-native-inference'
+        run: .venv/bin/python -B scripts/macos_ci_inference.py --root "$PWD/.native-mac/inference" --run-native-inference
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

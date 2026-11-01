@@ -426,3 +426,10 @@ broader hardware and signing remain open. The internal
 [Mac native model lifecycle](macos-consumer-installation.md) now has process/socket
 control tests; real Mac inference, consumer packaging and platform acceptance
 remain required. Neither increment narrows NR-13/14 or completes the release.
+
+Actual developer Mac CPU inference is now qualified independently on ARM64 and
+Intel: run41347047301 at f509559 loads the pinned small public GGUF, completes
+streaming replies across observer replacement and confirms owned Stop/private
+socket cleanup. NR-13/14 are still open: this is not the consumer installer,
+Docker Desktop transport, Metal inference, signing or a full station restart.
+See [the measured Mac gates](macos-consumer-installation.md#acceptance-evidence).

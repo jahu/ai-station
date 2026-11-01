@@ -76,7 +76,7 @@ def kernel():
             value.speculative_pages = 12000  # A subset of free, not additional RAM.
             value.purgeable_pages = 14000
             value.compressed_pages = 16000
-            value.resident_counts[:] = (18000, 20000, 22000)
+            value.active_pages, value.inactive_pages, value.wired_pages = (18000, 20000, 22000)
         else:
             assert flavor == 3 and number.value == 4
             output[:] = (100, 50, 250, 0)
@@ -120,9 +120,10 @@ def test_public_layout_offsets_and_actual_page_size_no_double_counting(kernel):
     assert ctypes.sizeof(darwin._Swap) == 32
     assert native.physical_memory() == 16 * 1024**3
     assert native.free_memory() == 1024**3
+    assert native.memory_pages() == (1024**3, 20000 * 16384)
     assert native.swap() == (2048 * 1024**2, 256 * 1024**2)
     assert native.cpu_ticks() == (100, 50, 250, 0)
-    assert state["calls"].count(("release", 42, 37)) == 2
+    assert state["calls"].count(("release", 42, 37)) == 3
     state["page"] = 4096
     assert native.free_memory() == 256 * 1024**2
 
@@ -204,11 +205,14 @@ def test_memory_uses_existing_keys_and_keeps_unknown_values_null(kernel, monkeyp
     result = darwin.memory()
     assert result == {
         "total_mib": 16384.0,
-        "used_mib": 15360.0,
-        "available_mib": 1024.0,
+        "used_mib": 15047.5,
+        "available_mib": 1336.5,
+        "free_mib": 1024.0,
+        "inactive_mib": 312.5,
         "swap_total_mib": 2048.0,
         "swap_used_mib": 256.0,
-        "available_basis": "darwin_free_pages_only",
+        "available_basis": "darwin_free_plus_inactive_pages",
+        "available_is_estimate": True,
         "status": "available",
     }
     state["stats"] = 5
@@ -225,6 +229,15 @@ def test_impossible_free_ram_is_not_an_admission_budget(kernel, monkeypatch):
     native.physical_memory = lambda: 1024**3
     result = darwin.memory()
     assert result["total_mib"] == 1024.0 and result["available_mib"] is None
+
+
+def test_inactive_queue_cannot_make_available_ram_exceed_physical_memory(kernel, monkeypatch):
+    native, _ = kernel
+    monkeypatch.setattr(darwin, "_Native", lambda: native)
+    native.physical_memory = lambda: 1100 * 1024**2  # Free fits; free + inactive does not.
+    result = darwin.memory()
+    assert result["total_mib"] == 1100.0 and result["status"] == "partial"
+    assert all(result[key] is None for key in ("available_mib", "used_mib", "free_mib", "inactive_mib"))
 
 
 def test_cpu_interval_wrap_failure_reset_and_unknown_temperature(monkeypatch):
@@ -297,4 +310,7 @@ def test_actual_native_mac_memory_and_cpu():
     second = darwin.cpu()
     assert first["temperature_c"] is None and second["temperature_c"] is None
     assert second["utilization"] is None or 0 <= second["utilization"] <= 100
-    assert darwin.memory()["status"] == "available"
+    memory = darwin.memory()
+    assert memory["status"] == "available" and memory["available_is_estimate"] is True
+    assert 0 <= memory["free_mib"] <= memory["available_mib"] <= memory["total_mib"]
+    assert abs(memory["free_mib"] + memory["inactive_mib"] - memory["available_mib"]) < 0.2

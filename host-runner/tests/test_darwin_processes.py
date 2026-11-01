@@ -299,6 +299,32 @@ def test_candidate_failed_publication_never_executes_workload(tmp_path, monkeypa
     assert darwin._snapshot(child[0]) is None
 
 
+def test_native_child_socket_is_private_even_when_parent_umask_is_public(tmp_path, candidate_kernel):
+    manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
+    run_id = str(uuid4())
+    previous = os.umask(0o022)
+    try:
+        manager.start(
+            run_id=run_id,
+            executor="test",
+            cwd=tmp_path,
+            argv=[
+                sys.executable,
+                "-c",
+                "import socket,pathlib,time;s=socket.socket(socket.AF_UNIX);s.bind('private.sock');pathlib.Path('ready').touch();time.sleep(30)",
+            ],
+        )
+        deadline = time.monotonic() + 3
+        while not (tmp_path / "ready").exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert (tmp_path / "ready").exists()
+        assert (tmp_path / "private.sock").stat().st_mode & 0o077 == 0
+        assert os.umask(0o022) == 0o022  # Only the child policy changes.
+    finally:
+        os.umask(previous)
+        manager.shutdown()
+
+
 def test_candidate_failed_identity_capture_never_executes_unrecorded_work(
     tmp_path, monkeypatch, candidate_kernel
 ):

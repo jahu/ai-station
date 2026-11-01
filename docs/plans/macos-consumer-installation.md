@@ -58,10 +58,14 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
    unified-memory headroom, context/KV overhead and runtime contention. Do not
    report dedicated VRAM or a Linux hard zero-swap limit for unified memory.
    The native read-only telemetry branch uses fixed public Mach CPU/VM queries
-   and `hw.memsize`/`vm.swapusage`. It reports only actually free pages as its
-   conservative available RAM observation, without adding inactive, purgeable,
-   speculative or compressed counts that can overlap. Used RAM means total
-   minus those free pages, including cache. Unavailable sensors remain null.
+   and `hw.memsize`/`vm.swapusage`. Available RAM estimates free plus inactive
+   pages from one VM snapshot, following the
+   [psutil macOS method](https://github.com/giampaolo/psutil/blob/master/psutil/arch/osx/mem.c).
+   The disjoint queues and estimate basis are reported separately. Speculative
+   pages are already included in free; purgeable/compressed counts are not added.
+   Used RAM here means total minus that available estimate, rather than psutil's
+   active-plus-wired definition. Impossible sums and failed observations stay
+   unknown. Inactive pages are reclaimable estimates, not guaranteed allocations.
    This observation is neither a hard resource limit nor a Metal memory budget;
    no NVIDIA devices or CUDA/Metal capability are inferred from system RAM.
    Normal Linux observations and their admission rules remain unchanged.
@@ -137,6 +141,48 @@ and optional Linux media QA required an unavailable Intel ONNX Runtime wheel.
 The final native check graph retains the shared pinned versions and all four
 native test families; no tested contract or failure was waived.
 
+`operation=macos-native-inference` is a separate explicit owner/public-only opt-in.
+It retains the same free standard hosts, native tests, permission/time bounds and
+package-import gates, then downloads only the matching pinned llama.cpp SDK and
+the official [Qwen3 0.6B GGUF](https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/tree/23749fefcc72300e3a2ad315e1317431b06b590a)
+Q8 fixture (639,446,688 bytes, exact LFS SHA in `packaging/macos/inference-fixture.json`).
+Ordinary `macos-native-checks` still downloads/runs no real model. The fixture is
+not an operational model recommendation, a coding-context profile or a change to
+the workstation's configured models. Its 512-token CPU context exercises the
+actual native load/stream/observer-replacement/owned-Stop path within hosted RAM;
+normal GGUF geometry and conservative live RAM admission remain mandatory.
+Insufficient RAM fails instead of forcing an allocation or relaxing the policy.
+
+The helper claims new private fixture storage, uses the existing exact-size/hash
+input fetch and native inference probe, and exports only controlled status,
+memory counts and response lengths/hashes. Failed/uncertain state is retained;
+existing fixtures are never adopted/replayed. No operator assets, model files,
+credentials or prompts from this workstation are sent to GitHub. Whole consumer
+installation, Docker Desktop/Metal inference and cross-process restart remain
+separate gates even when this developer CPU fixture passes. Record actual results
+before claiming successful model execution.
+
+The first explicit two-architecture CPU fixture run (41345738478) failed, and
+is not inference acceptance. ARM exposed the earlier free-only RAM admission
+error; Intel failed native startup after input verification. Follow-up changes
+estimate free plus inactive pages, enforce the child socket umask, and retain
+only fixed native status/error/exit metadata on failed startup. Neither the RAM
+budget nor private-socket validation is bypassed to obtain a passing test.
+
+The corrected [actual CPU inference run](https://github.com/jahu/ai-station/actions/runs/41347047301)
+passed on both architectures at `f5095590971bc83781d3c3a9aff274bcc012c0e7`.
+Each native kernel/observation cohort passed 149 cases with one skip; bundled
+CPython/native imports and audio checks also passed. The fixed verified Qwen
+fixture loaded with its inspected 1756 MiB admission budget and 512-token context,
+completed two bounded SSE replies across observer replacement with the same
+process, then confirmed owned Stop and private socket cleanup on both hosts.
+ARM observed 3112.8 MiB available (84.7 free + 3028.1 inactive, rounded); Intel
+observed 9630.2 MiB available. Neither forced allocation nor a socket-policy waiver
+was needed. Normal checks passed 456 cases across 18 affected families, with eight
+opt-in skips, plus whole Python lint/format. This qualifies the native CPU fixture
+only: complete cross-process/station restart, Metal inference, Docker Desktop
+bridge, consumer installation/minimum OS and signing remain unqualified.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
@@ -204,9 +250,10 @@ Both use offline mode, disabled automatic fit, one slot and Q8 KV caches. The
 Intel archive cannot admit Metal. No binary, command or model URL is caller chosen.
 
 Admission includes model bytes plus a 15% weight margin, inspected full-context
-Q8 KV/state geometry and 1 GiB headroom. It compares actual conservative free RAM
-and retains other live/uncertain reservations; this deliberately double-counts
-already allocated resident memory rather than promising aggressive packing.
+Q8 KV/state geometry and 1 GiB headroom. It compares the current free-plus-inactive
+RAM estimate and retains other live/uncertain reservations; this deliberately
+double-counts already allocated resident memory rather than promising aggressive
+packing.
 Metal also needs its exact registry identity, complete unambiguous inventory and
 sufficient advisory working set. This is admission, not a hard allocation limit
 or a no-swap guarantee; those facts remain explicit in every safe projection.
@@ -220,8 +267,11 @@ an artificial maximum model lifetime. Unknown ownership retains its reservation.
 
 Inference uses a short canonical, owned mode-0700 socket directory and a private
 Unix socket; HTTP proxy environment and redirects are disabled. The shared model
-inherits only fixed per-instance environment/cache paths. Its stdout/stderr are
-discarded at process creation, preventing another user's prompt or response from
+inherits only fixed per-instance environment/cache paths. The process launches
+with child-only umask 077, including when its parent uses a public umask, so the
+inference socket is private at creation without a later permission-repair window.
+Its stdout/stderr are discarded at process creation, preventing another user's
+prompt or response from
 appearing in the loader owner's Run log. Ordinary executor output stays captured.
 The privacy policy is durable and cannot change on an idempotent process retry.
 
@@ -351,7 +401,9 @@ model execution, changes no OS setting, and requires no end-user SDK or PyObjC.
 not the consumer installer or proof of Metal inference. Native qualification is
 opt-in: `AI_STATION_REAL_MAC_METAL_TESTS=1 python -m pytest -q host-runner/tests/test_darwin_metal.py`.
 Normal tests simulate the native ABI and probe protocol; their real isolated Linux
-child is only a negative-platform control. Actual Mac hardware remains untested.
+child is only a negative-platform control. The owner-dispatched native run above
+qualifies observation on its two actual Mac hosts, not Metal inference or other
+hardware/OS versions.
 
 The native process candidate extends the existing ProcessManager through narrow
 boot/capture/liveness/launch hooks; it reuses the same journal, idempotency,
