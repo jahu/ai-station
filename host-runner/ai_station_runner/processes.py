@@ -12,6 +12,7 @@ import math
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -40,6 +41,8 @@ def _identity(pid: int) -> dict | None:
 
 
 def _boot_id() -> str:
+    if sys.platform != "linux":
+        raise RuntimeError("Managed host process execution is not qualified on this platform")
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
@@ -122,6 +125,11 @@ class ProcessManager:
                 or not 0 < deadline_at - time.time() <= MAX_PROCESS_DEADLINE_SECONDS
             ):
                 raise ValueError("Owned process deadline must be within the next four hours")
+            # An unreadable boot identity must fail before any native side
+            # effect. Darwin inspection is separate from qualified execution.
+            boot_id = _boot_id()
+            if not boot_id:
+                raise RuntimeError("Managed host process boot identity is unavailable")
             log_dir = resolve_child(self.data_dir, f"runs/{run_id}")
             log_dir.mkdir(parents=True, exist_ok=True)
             out = resolve_child(log_dir, "stdout.log")
@@ -136,7 +144,7 @@ class ProcessManager:
                 "pid": proc.pid,
                 "process_group_id": proc.pid,
                 "started_at": time.time(),
-                "boot_id": _boot_id(),
+                "boot_id": boot_id,
                 "start_ticks": identity["start_ticks"] if identity else None,
                 "executor": executor,
                 "cwd": str(cwd),

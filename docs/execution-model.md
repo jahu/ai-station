@@ -189,6 +189,13 @@ Planned explicit retry creates a new run with `parent_run_id`; it is not exposed
 
 The runner will not signal a pid that is absent from its ownership table. It never uses `pkill` or `killall`.
 
+Managed native launch reads its kernel boot identity before creating the child.
+Unavailable identity/platform preflight leaves no launched process or new Run
+logs. Existing Linux ownership records and deadline/recovery semantics remain
+unchanged. The separate [Darwin identity probe](plans/macos-consumer-installation.md)
+is read-only: it neither adopts processes nor authorizes signals. Mac execution
+still requires qualified group, descendant, deadline, recovery and resource policy.
+
 ## Scheduler
 
 The scheduler does not execute workloads. When an enabled agent's `next_run_at` is due, it inserts an ordinary task and run (`triggered_by=scheduler`) and advances the schedule. Pause is `enabled=false`. A restart does not lose schedules; they live in SQLite.

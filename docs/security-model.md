@@ -53,6 +53,12 @@ Darwin enforces its shorter socket address bound without a Linux `/proc`
 fallback. These primitives add no listener or endpoint and do not enable the
 unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
 
+Darwin process facts use only fixed read-only kernel/library queries, require
+the effective OS user and reject incomplete or changing snapshots. No caller
+chooses a library path, sysctl key or command. These facts are not signal authority
+and are not exposed as a new Runner API. Unsupported process execution fails
+before launch; the Linux ownership journal keeps its original interpretation.
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local
