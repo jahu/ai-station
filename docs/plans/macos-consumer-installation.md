@@ -552,3 +552,11 @@ an isolated temporary bytecode prefix. The Darwin barrier now also uses `-B`,
 preventing those writes instead of accepting new files or rewriting the receipt.
 Failure reports include only added-bytecode/other-file counts, not file paths or
 contents. This fixes the candidate launch path only; Linux launch is unchanged.
+
+The next actual run41349651754 retained the same failure gate after fixing the
+exec barrier. Its safe report showed 45 added bytecode files on Intel and 42
+on ARM, with three modified files on ARM and no other added files. The read-only
+Metal observer was a second child missing `-B`.
+A separate temporary-prefix regression failed before that fix as well. Both
+fixed native children now prohibit bytecode writes. No cache file is accepted
+into the receipt and no unrelated runtime or Linux launcher changes.

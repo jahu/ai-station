@@ -54,8 +54,8 @@ fallback. These primitives add no listener or endpoint and do not enable the
 unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
 
 The read-only Metal inventory runs only a fixed installed Python observer in an
-isolated no-site child with a minimal environment, bounded duration and validated
-output. Native framework errors/stderr are not exposed, and retained device/pool
+isolated no-site/no-bytecode child with a minimal environment, bounded duration
+and validated output. Native framework errors/stderr are not exposed, and retained device/pool
 objects are released. Working-set guidance is not dedicated/free VRAM, a hard
 memory limit or permission to launch a model. Metal identities stay separate from
 CUDA indices, so observation cannot admit a Linux NVIDIA recipe on a Mac. Native
