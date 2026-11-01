@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from ai_station_runner import nvidia
@@ -24,6 +25,9 @@ def collect(data_dir: Path) -> dict:
 
 
 def gpus() -> list[dict]:
+    if sys.platform == "darwin":
+        # System RAM is not dedicated VRAM, and Metal is qualified separately.
+        return []
     binary = nvidia.executable()
     basic = False
     try:
@@ -81,6 +85,10 @@ def gpus() -> list[dict]:
 
 
 def cpu() -> dict:
+    if sys.platform == "darwin":
+        from ai_station_runner.darwin_telemetry import cpu as native_cpu
+
+        return native_cpu()
     global _previous_cpu
     stat = Path("/proc/stat").read_text().splitlines()[0].split()
     values = [int(item) for item in stat[1:]]
@@ -98,6 +106,10 @@ def cpu() -> dict:
 
 
 def memory() -> dict:
+    if sys.platform == "darwin":
+        from ai_station_runner.darwin_telemetry import memory as native_memory
+
+        return native_memory()
     info = {}
     for line in Path("/proc/meminfo").read_text().splitlines():
         key, _, rest = line.partition(":")
