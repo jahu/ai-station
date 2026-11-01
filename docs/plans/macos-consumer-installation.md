@@ -106,6 +106,11 @@ standard `macos-15` ARM and `macos-15-intel` labels, read-only repository permis
 and a 20-minute bound. Ordinary CI/release jobs do not run for this operation.
 It creates no uploaded artifacts/caches or larger/paid runner allocation, changes
 no billing setting and does not run on push or pull requests automatically.
+The native check lock contains the full Runner/developer and packaging dependency
+graph at the existing pinned versions. It does not install the control-plane/Linux
+media-QA environment on macOS: its optional ONNX Runtime pin has no Intel Mac wheel.
+That separate media runtime is not qualified or advertised by these kernel/import
+checks. All four selected native test families run unchanged on both architectures.
 
 The operation opts kernel ownership, CPU/RAM and Metal **observation** tests into
 actual native APIs, then assembles the pinned Python layer and executes its exact

@@ -50,6 +50,10 @@ def test_native_check_hashes_preserve_the_existing_developer_versions():
     def versions(path):
         return dict(re.findall(r"^([A-Za-z0-9_.-]+)==([^\s;\\]+)", path.read_text(), re.MULTILINE))
 
-    assert versions(root / "requirements-dev.lock") == versions(root / "packaging/macos/checks.lock")
+    reference = versions(root / "requirements-dev.lock")
+    native = versions(root / "packaging/macos/checks.lock")
+    assert all(reference[name] == version for name, version in native.items())
+    assert {"pytest", "pytest-asyncio", "av", "numpy", "fastapi", "httpx"} <= set(native)
+    assert "onnxruntime" not in native  # Optional Linux media QA is not the native Runner stack.
     text = (root / "packaging/macos/checks.lock").read_text()
     assert "--hash=sha256:" in text
