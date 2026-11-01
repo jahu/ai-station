@@ -40,7 +40,7 @@ def test_native_loader_binds_fixed_system_symbols_without_commands_or_writes(mon
         assert path == "/usr/lib/libSystem.B.dylib" and use_errno is True
         return system
 
-    monkeypatch.setattr(darwin.sys, "platform", "darwin")
+    monkeypatch.setattr(darwin, "sys", SimpleNamespace(platform="darwin"))
     monkeypatch.setattr(darwin.ctypes, "CDLL", load)
     monkeypatch.setattr(darwin.ctypes, "c_uint32", Natural)
     native = darwin._Native()
@@ -260,7 +260,7 @@ def test_cpu_uses_unsigned_wrap_without_reporting_reset_as_a_spike(monkeypatch):
 
 
 def test_other_platform_never_loads_a_darwin_library_and_reports_unknown(monkeypatch):
-    monkeypatch.setattr(darwin.sys, "platform", "linux")
+    monkeypatch.setattr(darwin, "sys", SimpleNamespace(platform="linux"))
     monkeypatch.setattr(darwin.ctypes, "CDLL", lambda *a, **k: pytest.fail("Unexpected library load"))
     monkeypatch.setattr(darwin, "_previous_cpu", None)
     with pytest.raises(OSError, match="requires macOS"):
@@ -271,7 +271,7 @@ def test_other_platform_never_loads_a_darwin_library_and_reports_unknown(monkeyp
 
 
 def test_darwin_collect_uses_native_observations_and_never_invents_nvidia_vram(tmp_path, monkeypatch):
-    monkeypatch.setattr(telemetry.sys, "platform", "darwin")
+    monkeypatch.setattr(telemetry, "sys", SimpleNamespace(platform="darwin"))
     monkeypatch.setattr(darwin, "cpu", lambda: {"utilization": 12.5, "temperature_c": None})
     monkeypatch.setattr(darwin, "memory", lambda: {"available_mib": 123, "status": "partial"})
     monkeypatch.setattr(telemetry.nvidia, "executable", lambda: pytest.fail("Unexpected NVIDIA query"))

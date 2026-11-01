@@ -67,7 +67,7 @@ def kernel(monkeypatch):
         assert name is None
         return SimpleNamespace(sysctlbyname=boot)
 
-    monkeypatch.setattr(darwin.sys, "platform", "darwin")
+    monkeypatch.setattr(darwin, "sys", SimpleNamespace(platform="darwin"))
     monkeypatch.setattr(darwin.ctypes, "CDLL", load)
     monkeypatch.setattr(darwin.os, "getsid", lambda pid: state["session"])
     return state
@@ -188,7 +188,7 @@ def test_invalid_pid_never_reaches_native_calls(kernel, pid):
 
 
 def test_other_platform_cannot_load_darwin_system_libraries(monkeypatch):
-    monkeypatch.setattr(darwin.sys, "platform", "linux")
+    monkeypatch.setattr(darwin, "sys", SimpleNamespace(platform="linux"))
     monkeypatch.setattr(darwin.ctypes, "CDLL", lambda *a, **k: pytest.fail("Unexpected Darwin library load"))
     with pytest.raises(OSError, match="native macOS"):
         darwin.snapshot(37)

@@ -37,6 +37,14 @@ memory. Missing values remain unknown. This supplies observations for the Mac
 installer work; it does not enable that installer, Metal, native execution or
 Linux-style memory enforcement. Linux telemetry remains unchanged.
 
+The internal Darwin process candidate subclasses the existing ProcessManager
+at its boot, identity, liveness and launch boundaries. Journal publication,
+idempotency, reaping, cancellation and deadline handling remain shared. A native
+exec barrier keeps payload code stopped until ownership is durably recorded;
+Darwin start identities have a distinct journal format. The normal Runner still
+uses the qualified Linux manager. Actual Mac runtime/resource/installer gates
+must pass before selecting the candidate for workloads.
+
 The desktop owner can supervise in the background without keeping a window
 open. A private same-OS-user control socket supports only status and
 instance-bound Stop; the existing supervisor remains responsible for shutdown.

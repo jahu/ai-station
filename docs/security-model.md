@@ -59,6 +59,16 @@ chooses a library path, sysctl key or command. These facts are not signal author
 and are not exposed as a new Runner API. Unsupported process execution fails
 before launch; the Linux ownership journal keeps its original interpretation.
 
+An internal Darwin ProcessManager candidate adds owned-session interpretation
+behind the existing lifecycle engine. A fixed isolated Python barrier execs an
+already-admitted argv only after native identity capture and durable journal
+publication; EOF, missing authority or failed publication cannot launch payload
+code. Kernel boot/UID/start/session/group checks precede each owned signal.
+Bounded native group enumeration rejects denial, malformed data and truncation;
+unknown inspection is not treated as process exit. This candidate has no new
+endpoint or user-configurable command/path and is not selected by the normal
+Runner. Native Mac qualification and a separate memory policy remain required.
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local

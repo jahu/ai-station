@@ -96,16 +96,34 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Acceptance evidence
 
-The next process increment keeps managed execution Linux-only while preparing a
-read-only Darwin identity probe. It reads a fixed kernel boot UUID and the public
+The native process candidate extends the existing ProcessManager through narrow
+boot/capture/liveness/launch hooks; it reuses the same journal, idempotency,
+deadline, cancellation and recovery implementation. Normal Runner construction
+continues to select the qualified Linux manager. The Darwin class is an internal
+candidate, not an exposed capability or a new execution engine.
+
+Darwin launch starts a fixed isolated Python barrier in its own session. It
+cannot exec the already-validated workload until the parent captures its actual
+kernel identity and durably writes the ownership record. EOF/timeout/failed
+publication exits without executing the workload. This prevents fast group
+leaders disappearing before their start identity is recorded. Darwin journals
+keep a versioned native identity, never Linux start ticks. Only matching boot,
+effective UID, start time, group and session authorize cancellation; surviving
+group members require bounded native enumeration and independent snapshots.
+Denied or truncated enumeration requires inspection, rather than reporting the
+group gone. The barrier is native lifecycle code, not an HTTP/agent shell tool.
+Real Mac Stop/deadline/recovery qualification is still required before selecting
+this adapter in the consumer launcher; memory policy and Metal remain separate.
+
+The independent read-only Darwin identity probe reads a fixed kernel boot UUID and the public
 `PROC_PIDTBSDINFO` ABI, including the effective UID, group and microsecond process
 start identity. A second snapshot brackets session lookup to reject PID reuse or
 changed ownership/group. Missing, denied or incomplete observations are errors,
 not successful empty process discovery. This does not itself authorize a signal
 or qualify group recovery. Linux boot-identity preflight must finish before
 launching a subprocess, so a missing identity cannot leave an unrecorded child.
-No Linux journal field is reinterpreted as a Darwin timestamp. The future native
-controller still needs complete Stop/deadline/descendant/recovery and memory gates.
+No Linux journal field is reinterpreted as a Darwin timestamp. Consumer selection
+still requires actual native Stop/deadline/descendant/recovery and memory gates.
 [Apple process-info ABI](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h),
 [libproc query implementation](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.c),
 [kernel boot-session query](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sysctl.c).
@@ -115,6 +133,14 @@ On a native Mac, developer self-inspection is
 and launches no workload. The native self test runs only on Darwin; simulated ABI
 tests elsewhere are not a Mac acceptance result. A sandbox/OS denial remains an
 inspection error; do not replace the boot UUID with wall time or an invented ID.
+
+`AI_STATION_REAL_MAC_PROCESS_TESTS=1 python -m pytest -q host-runner/tests/test_darwin_processes.py`
+opts the shared candidate lifecycle cases into actual native kernel observations.
+Those cases launch only short disposable Python fixtures, not models, the UI or
+an agent. They check gated publication/failure, idempotency, record restoration,
+owned Stop, reused-PID denial, deadlines and a surviving descendant. In normal
+Linux tests the same cases use explicitly simulated Darwin facts and real owned
+Linux processes; they are a protocol control, not native Mac qualification.
 
 Record actual OS/architecture/Docker backend and immutable package/runtime/model
 identities. Exercise clean machine → ordinary-user install → first admin → guided
