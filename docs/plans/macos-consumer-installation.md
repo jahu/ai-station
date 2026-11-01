@@ -560,3 +560,15 @@ Metal observer was a second child missing `-B`.
 A separate temporary-prefix regression failed before that fix as well. Both
 fixed native children now prohibit bytecode writes. No cache file is accepted
 into the receipt and no unrelated runtime or Linux launcher changes.
+
+The corrected [actual bundled-runtime run](https://github.com/jahu/ai-station/actions/runs/41350101602)
+passed at `79425827f43c36273d24415563bceb614ad37004` on ARM macOS15.8.2
+and Intel macOS15.7.9. Both used exact isolated CPython3.12.14 for imports/audio,
+model startup and the separate model-owner process. CPU replies, owner exit,
+same-model-PID recovery, owned Stop and socket cleanup passed, followed by an
+unchanged full Python file inventory. Each native kernel/observation cohort
+passed151 cases with one skip. Local validation passed313 cases/13 complete
+families with five opt-in skips, then the final complete Metal family40/one skip
+after a test-fixture refinement; other checked source stayed unchanged. Whole
+Python lint/format passed983 files. This closes the bundled-interpreter inference
+and immutability gap, not consumer GUI/bridge/Metal/station restart/minOS/signing.
