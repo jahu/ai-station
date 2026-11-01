@@ -92,3 +92,42 @@ cannot qualify native peer credentials, a Docker Desktop socket mount, Metal,
 Gatekeeper or the complete Mac journey. Unsupported capability cards remain
 unavailable until their real platform/runtime/profile contracts pass. Export the
 remaining cases in the release QA workbook and retain failures as failures.
+
+## Private bridge qualification command
+
+Run `python scripts/macos_transport_probe.py --output /path/to/private-qa/fresh-proof`.
+Its parent must already be owned and not shared writable; the proof directory
+must be new. This is a developer experiment,
+not the unfinished end-user Mac installer or a new Runner/agent tool.
+
+The command admits only an ordinary native Mac user and a local `desktop-linux`
+Unix endpoint whose engine reports Docker Desktop and the native architecture.
+It never changes context/backend, daemon settings, OS permissions or drivers.
+Its fixed Python fixture binds one owned socket directory read-only and a
+separate synthetic data directory; there is no Docker socket, host home,
+network, GPU request or privileged container. Only its exact labeled containers
+can be stopped/removed after ownership checks. Failed/uncertain creation retains
+a private pending proof and its temporary root for inspection, without replay.
+
+Two fresh clients exchange nonces through a private native socket. They verify
+native peer UID, a long-path artifact, SQLite WAL transaction visibility and
+actual competing-writer rejection, then rebind/reconnect and read the retained
+data. Neither these checks nor a Linux control proves other-OS-user isolation,
+the separate inference path, a complete station restart, Metal or installer
+readiness. The result always records `macos_installer_qualified=false` and
+`other_os_user_tested=false` for those remaining gates.
+
+The fixed multi-architecture Python index is pinned in source, together with
+its amd64/arm64 manifest and configuration identities. This permits the same
+reviewed bytes in classic and containerd image stores; a different image or
+architecture is rejected. `--prepare-image` explicitly permits fetching that
+fixture if absent (about 43 MB compressed); otherwise no download occurs.
+Container creation uses `--pull never`. No model weights are involved.
+
+Normal tests use the same client in independent local Python processes and
+simulated Docker results, with real file/socket/WAL operations. Actual Linux
+Docker control is separately opted into with
+`AI_STATION_REAL_TRANSPORT_CONTROL_TESTS=1`; it is not Mac evidence. The actual
+Mac test requires `AI_STATION_REAL_MAC_TRANSPORT_TESTS=1` on a native Mac with
+the reviewed image already prepared. Retain its proof before enabling any Mac
+consumer path. [Python fixture publisher](https://hub.docker.com/_/python).
