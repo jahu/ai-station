@@ -196,6 +196,18 @@ unchanged. The separate [Darwin identity probe](plans/macos-consumer-installatio
 is read-only: it neither adopts processes nor authorizes signals. Mac execution
 still requires qualified group, descendant, deadline, recovery and resource policy.
 
+The internal DarwinProcessManager candidate shares this same lifecycle through
+platform identity/launch hooks. It starts a fixed, isolated native exec barrier,
+captures a versioned boot/UID/microsecond/session/group identity, then releases
+the already-admitted workload only after the existing atomic journal write.
+The PID, session and process group survive exec. Cancellation and recovery use
+that native format and a bounded native group query, including descendants after
+leader exit; Linux start ticks are never reinterpreted. The normal Runner still
+constructs the Linux manager. `AI_STATION_REAL_MAC_PROCESS_TESTS=1` opts into the
+same candidate contract tests on an actual Mac (no models required); normal Linux
+controls exercise the barrier and shared lifecycle with explicitly simulated
+Darwin facts and cannot qualify native Mac execution.
+
 ## Scheduler
 
 The scheduler does not execute workloads. When an enabled agent's `next_run_at` is due, it inserts an ordinary task and run (`triggered_by=scheduler`) and advances the schedule. Pause is `enabled=false`. A restart does not lose schedules; they live in SQLite.
