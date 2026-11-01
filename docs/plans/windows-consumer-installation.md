@@ -423,5 +423,19 @@ now accepts those legacy leaf modes behind the verified private ancestors;
 ownership, symlink/hardlink and group/other-write checks remain mandatory. It
 does not change the saved database's modes or contents, and its own backup stays
 0600. A real temporary SQLite regression covers preservation and five negative
-boundary cases. The repaired native update still needs the rebuilt publisher
-payload and actual Windows preserving-update/recovery acceptance before release.
+boundary cases; all 58 updater cases and the repository static gates pass.
+
+The repaired publisher was built and installed under the same ordinary Windows
+account. A real offline update retained all 45 logical database tables, seven
+persistent files (including the cached 4B model), the desktop configuration and
+the original distribution/registration. The installed Update button also
+reconciled a deliberately restored old Windows receipt after that successful
+guest update: the original backup, package-manager log and application manifest
+kept identical hashes, lengths and timestamps. No package reinstall or backup
+replacement occurred. This was a private lost-acknowledgement injection, not an
+actual power failure. The native window then started the application and opened
+its browser connection. The retained account accepted its original fixture
+password and displayed the earlier conversation; no account reset or replacement
+was needed. Actual PS5.1 isolated transport/coordinator fixtures pass 21 and 64
+assertions. Post-update inference/Stop, transfer cancellation, removal/reinstall
+and the other platform gates above remain required before release.
