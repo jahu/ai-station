@@ -200,13 +200,17 @@ $timer.Add_Tick({
      }
     }
    } catch {
-    if ($job.Updating) { $script:refreshAfterFailure=$true }
+    if ($job.Updating) { $script:prepared=$false }
     $cause=$_.Exception;$canceled=$false;$restart=$false
     while ($null -ne $cause) {
      if ($cause -is [OperationCanceledException]) { $canceled=$true }
      if ($cause.Data['AIStationRestartRequired'] -eq $true) { $restart=$true }
      $cause=$cause.InnerException
     }
+    # Preserve the explicit restart instruction. A successful read-only status
+    # does not prove that Windows preparation can proceed or an interrupted
+    # package is safe to start; only a later successful check may enable Start.
+    if ($job.Updating) { $script:refreshAfterFailure=-not $restart }
     if ($job.Action -eq 'prepare' -and $job.Cancellation.IsCancellationRequested -and $canceled) {
      $script:prepared=$false;$status.Text='Setup canceled';$description.Text='Saved files were preserved. Choose Prepare to inspect or resume your private workspace.'
      if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }

@@ -403,3 +403,13 @@ layer only. Native Windows old-to-new data preservation and interrupted-update
 qualification remain open. The `caf4717` complete normal Python gate passed
 6,499 cases with nine explicit opt-in skips before this discovered integration
 fix; later SDK changes require their affected tests and actual native checks.
+
+The actual first offline-update attempt was stopped by Windows' pending-restart
+preflight, before any package dispatch. The owned idle evaluation guest is
+finishing its ordinary system update; no prerequisite registry marker is cleared
+or bypassed. A native UI review found that an automatic status refresh could
+replace the explicit restart instruction with “Update available”. The handler
+now retains that instruction and clears Start readiness after a failed update
+until a successful inspection restores it. This small state correction has a
+parser check and review; its rendered Windows acceptance remains part of the
+pending native UI gate.
