@@ -16,14 +16,21 @@ function Assert-StationUpdateRecipe {
 }
 
 function Get-StationGuestUpdatePlan {
- param($State,[string]$Root,$Previous,$Target,[byte[]]$Program)
+ param($State,[string]$Root,$Previous,$Target,[byte[]]$Program,[switch]$StablePython)
  Assert-StationInstallState $State $Root
  Assert-StationUpdateRecipe $Previous $Target
  if ($State.Phase -cne 'ready' -or $State.PackageSha256 -cne $Previous.package_sha256) { throw 'Verify the existing registered application before updating.' }
  if ($Target.PSObject.Properties.Name -notcontains 'package_bytes' -or $Target.package_bytes -is [bool] -or ($Target.package_bytes -isnot [int] -and $Target.package_bytes -isnot [long]) -or $Target.package_bytes -le 0 -or $Target.package_bytes -ge 1073741824 -or $Target.package_bytes -ne [long]$Target.package_bytes) { throw 'The update needs its complete checked application package.' }
- if ($Program.Length -le 0 -or $Program.Length -gt 21600) { throw 'The fixed updater exceeds its reviewed source bound.' }
- $code="exec(__import__('base64').b64decode('"+[Convert]::ToBase64String($Program)+"'))"
- $arguments=[string[]]@('--distribution',$State.Distribution,'--user','root','--exec','/usr/bin/python3','-IBS','-c',$code,$State.Distribution)
+ if ($Program.Length -le 0 -or $Program.Length -gt 65536) { throw 'The fixed updater exceeds its reviewed source bound.' }
+ $buffer=[IO.MemoryStream]::new()
+ try {
+  $compress=[IO.Compression.GZipStream]::new($buffer,[IO.Compression.CompressionMode]::Compress,$true)
+  try {$compress.Write($Program,0,$Program.Length)} finally {$compress.Dispose()}
+  $encoded=[Convert]::ToBase64String($buffer.ToArray())
+ } finally {$buffer.Dispose()}
+ $code="exec(__import__('gzip').decompress(__import__('base64').b64decode('"+$encoded+"')))"
+ $python=$(if($StablePython){'/var/lib/ai-station-updates/python/bin/python3'}else{'/usr/lib/ai-station/python/bin/python3'})
+ $arguments=[string[]]@('--distribution',$State.Distribution,'--user','root','--exec',$python,'-IBS','-c',$code,$State.Distribution)
  if ((Format-StationWslArguments $arguments).Length -gt 30000) { throw 'The fixed Windows updater exceeds the native argument limit.' }
  $header=[Text.UTF8Encoding]::new($false,$true).GetBytes((@{previous=$Previous;target=$Target;package_bytes=[long]$Target.package_bytes}|ConvertTo-Json -Depth 8 -Compress)+"`n")
  if ($header.Length -gt 16384) { throw 'The update identity exceeds its private input limit.' }
@@ -39,7 +46,7 @@ function Send-StationGuestUpdate {
   $deadline.Token.ThrowIfCancellationRequested()
   $Process.StandardInput.BaseStream.Write($Header,0,$Header.Length)
   $transfer=$Archive.Stream.CopyToAsync($Process.StandardInput.BaseStream,65536,$deadline.Token)
-  $transfer.GetAwaiter().GetResult()
+  [void]$transfer.GetAwaiter().GetResult()
   $Process.StandardInput.Close()
   $waiting=$true # Wait owns this exact client and its disposal from this point.
   $text=Wait-StationWslProcess $Process -KeepOutput $true -CancellationToken $deadline.Token

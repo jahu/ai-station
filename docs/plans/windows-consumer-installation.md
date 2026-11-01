@@ -376,3 +376,30 @@ explicit Update, preserving registry identity, confirmation before Windows-state
 publication, lost-acknowledgement reconciliation, previous-version work, pending
 start refusal and status/Stop. The actual private Windows PS5.1 journey still
 needs to qualify these sources; PowerShell7/Linux is not its substitute.
+
+### Interpreter admission found by the actual image probe
+
+The built WSL guest has no `/usr/bin/python3`; its Python is the already verified
+application bundle. The initial native update candidate therefore could not run.
+The fixed native plan now uses only that bundled interpreter or the private
+frozen updater interpreter. A fixed read-only `/usr/bin/test` inspects pending
+state and the known interpreter slot, so status/Stop do not acquire a system
+Python dependency or package authority.
+
+Before reading update input, the guest verifies the installed Python source/hash
+inventory, copies it into its private updater directory, verifies and fsyncs that
+copy, then atomically publishes it. The same process re-execs the original fixed
+invocation there without consuming stdin. Later package replacement cannot
+remove the updater's stdlib or libraries; Resume can use the same independent
+interpreter even if the application package needs repair. A gzip-encoded fixed
+source keeps the Windows argument vector below its checked limit; decoded input
+is the publisher-verified program, never model/user code. No OS Python, driver,
+Windows-host Python or online dependency install is added.
+
+The actual exported image passed a no-network, read-only, bounded container probe:
+6,773 interpreter files verified, the isolated interpreter executed its stdlib,
+and repeated inspection reused that exact copy. This qualifies the package/SDK
+layer only. Native Windows old-to-new data preservation and interrupted-update
+qualification remain open. The `caf4717` complete normal Python gate passed
+6,499 cases with nine explicit opt-in skips before this discovered integration
+fix; later SDK changes require their affected tests and actual native checks.

@@ -75,7 +75,7 @@ function Read-StationGuestUpdateProgram {
     $publisherPath=Join-Path $PSScriptRoot 'windows-host-manifest.json'
     Assert-StationNoReparsePath $programPath
     Assert-StationNoReparsePath $publisherPath
-    if ([IO.FileInfo]::new($publisherPath).Length -gt 65536 -or [IO.FileInfo]::new($programPath).Length -gt 21600) { throw 'The fixed update source receipt exceeds its limit.' }
+    if ([IO.FileInfo]::new($publisherPath).Length -gt 65536 -or [IO.FileInfo]::new($programPath).Length -gt 65536) { throw 'The fixed update source receipt exceeds its limit.' }
     $publisher=[IO.File]::ReadAllText($publisherPath,[Text.UTF8Encoding]::new($false,$true)) | ConvertFrom-Json -ErrorAction Stop
     if ($publisher.schema -ne 1 -or $publisher.files.'guest_update.py' -cnotmatch '^[a-f0-9]{64}$') { throw 'The native update source lacks its publisher identity.' }
     $program=[IO.File]::ReadAllBytes($programPath)
@@ -93,7 +93,8 @@ function Invoke-StationGuestUpdate {
     $ownership=Get-StationImportPlan $Record.State $Lease.Root ([IO.Path]::Combine($PackageFolder,'ai-station-wsl-rootfs.tar.gz')) -Inventory $inventory -ExistingDisk $true
     if ($ownership.Kind -cne 'VerifyGuest' -or $Record.State.Phase -cne 'ready') { throw 'Inspect the existing installation before updating. No second import was started.' }
     $program=Read-StationGuestUpdateProgram
-    $plan=Get-StationGuestUpdatePlan $Record.State $Lease.Root $Record.Manifest $Manifest $program
+    $stable=Test-StationFixedGuestFile $Lease $Record $Executable '/var/lib/ai-station-updates/python/bin/python3' -ExecutableFile -RootUser
+    $plan=Get-StationGuestUpdatePlan $Record.State $Lease.Root $Record.Manifest $Manifest $program -StablePython:$stable
     $packagePath=[IO.Path]::Combine($PackageFolder,'station.deb')
     Assert-StationNoReparsePath $packagePath
     $archive=Open-StationVerifiedArchive $packagePath $Manifest.package_sha256 $Manifest.package_bytes
@@ -114,13 +115,26 @@ function Invoke-StationGuestUpdate {
     } finally { $archive.Stream.Dispose() }
 }
 
+function Test-StationFixedGuestFile {
+    param($Lease,$Record,[string]$Executable,[ValidateSet('/var/lib/ai-station-updates/python/bin/python3','/usr/lib/ai-station-wsl-update-pending.json')][string]$Path,[switch]$ExecutableFile,[switch]$RootUser)
+    $arguments=@('--distribution',$Record.State.Distribution,'--user',$(if($RootUser){'root'}else{'station'}),'--exec','/usr/bin/test',$(if($ExecutableFile){'-x'}else{'-e'}),$Path)
+    $process=Start-StationWslProcess $Executable $arguments $Lease.Root
+    try {
+        $output=$process.StandardOutput.ReadToEndAsync();$errors=$process.StandardError.ReadToEndAsync()
+        if(-not $process.WaitForExit(60000)){
+            $process.Kill()
+            if(-not $process.WaitForExit(10000)){throw 'The owned inspection client is still stopping; inspect this installation.'}
+            throw 'The guest filesystem inspection did not finish; no update was started.'
+        }
+        [void]$output.GetAwaiter().GetResult();[void]$errors.GetAwaiter().GetResult()
+        if($process.ExitCode -notin @(0,1)){throw 'The guest filesystem state requires inspection.'}
+        return $process.ExitCode -eq 0
+    } finally {$process.Dispose()}
+}
+
 function Test-StationGuestUpdatePending {
     param($Lease,$Record,[string]$Executable)
-    $code="print(__import__('os').path.lexists('/usr/lib/ai-station-wsl-update-pending.json'))"
-    $arguments=@('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/bin/python3','-IBS','-c',$code)
-    $text=(Wait-StationWslProcess (Start-StationWslProcess $Executable $arguments $Lease.Root) -KeepOutput $true).Trim()
-    if ($text -cnotin @('True','False')) { throw 'The guest update state requires inspection.' }
-    return $text -ceq 'True'
+    return Test-StationFixedGuestFile $Lease $Record $Executable '/usr/lib/ai-station-wsl-update-pending.json'
 }
 
 function Invoke-StationSetup {

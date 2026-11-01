@@ -59,6 +59,7 @@ $module=Get-Module Setup
   return [pscustomobject]@{status='updated';data_preserved=$true;backup_available=$true}
  }
  function script:Get-StationAvailablePort {return 8765}
+ function script:Test-StationFixedGuestFile {param($Lease,$Record,$Executable,$Path,[switch]$ExecutableFile,[switch]$RootUser);if($Path -eq '/var/lib/ai-station-updates/python/bin/python3'){Check ($RootUser -and $ExecutableFile) 'Wrong stable interpreter inspection';return $false};Check (-not $RootUser -and -not $ExecutableFile) 'Status/Stop acquired root authority';return $script:Pending}
 
  ResetFixture
  $refused=$false;try{Invoke-StationSetup -PackageFolder 'C:\Package'|Out-Null}catch{$refused=$true}

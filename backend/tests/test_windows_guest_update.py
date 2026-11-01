@@ -419,6 +419,7 @@ def test_private_entry_reads_bounded_header_and_handles_owned_termination(fixtur
     monkeypatch.setattr(guest.sys, "argv", ["guest-update", "AIStation-" + "a" * 32])
     monkeypatch.setattr(guest.sys, "stdin", SimpleNamespace(buffer=io.BytesIO(header + BYTES)))
     monkeypatch.setattr(guest, "assert_host", lambda _: os.getuid())
+    monkeypatch.setattr(guest, "use_update_python", lambda _: None)
     handler = Mock()
     monkeypatch.setattr(guest.signal, "signal", handler)
     guest.main()
@@ -441,3 +442,108 @@ def test_matching_operation_hash_never_adopts_different_pending_target(fixture):
     with pytest.raises(ValueError, match="different update"):
         apply()
     assert calls == [] and json.loads(manifest.read_text()) == receipt(1)
+
+
+@pytest.fixture
+def sdk_fixture(tmp_path, monkeypatch):
+    app, store = tmp_path / "application", tmp_path / "updater"
+    sdk = app / "python"
+    (sdk / "bin").mkdir(parents=True, mode=0o755)
+    app.chmod(0o755)
+    sdk.chmod(0o755)
+    executable = sdk / "bin/python3.12"
+    executable.write_bytes(b"Synthetic pinned interpreter fixture")
+    executable.chmod(0o755)
+    (sdk / "bin/python3").symlink_to("python3.12")
+    files = {
+        "python/" + p.relative_to(sdk).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sdk.rglob("*")
+        if p.is_file()
+    }
+    metadata = {"files": files, "python_source": {"sha256": "a" * 64}}
+    (app / "desktop-manifest.json").write_text(json.dumps(metadata))
+    (app / "desktop-manifest.json").chmod(0o644)
+    monkeypatch.setattr(guest, "APP", app)
+    monkeypatch.setattr(guest, "STORE", store)
+    monkeypatch.setattr(guest, "STABLE_PYTHON", store / "python")
+    return app, store, sdk
+
+
+def test_updater_freezes_interpreter_independently_of_application_replacement(sdk_fixture):
+    app, store, source = sdk_fixture
+    python = guest.freeze_python()
+    original = python.read_bytes()
+    assert python == store / "python/bin/python3"
+    assert python.is_symlink() and python.resolve().is_relative_to(store / "python")
+    (source / "bin/python3.12").write_bytes(b"New application interpreter")
+    assert guest.freeze_python() == python
+    assert python.read_bytes() == original
+    assert (store / "python-source.json").stat().st_mode & 0o777 == 0o600
+
+
+def test_changed_stable_interpreter_is_never_silently_replaced(sdk_fixture):
+    app, store, source = sdk_fixture
+    python = guest.freeze_python()
+    python.write_bytes(b"Changed updater bytes")
+    with pytest.raises(ValueError, match="bytes changed"):
+        guest.freeze_python()
+    assert python.read_bytes() == b"Changed updater bytes"
+
+
+def test_interpreter_links_must_stay_inside_the_exact_sdk(sdk_fixture, tmp_path):
+    app, store, source = sdk_fixture
+    outside = tmp_path / "other-python"
+    outside.write_bytes(b"Unrelated interpreter")
+    (source / "bin/python3").unlink()
+    (source / "bin/python3").symlink_to(outside)
+    with pytest.raises(ValueError, match="owned directory"):
+        guest.freeze_python()
+    assert not (store / "python").exists()
+    assert outside.read_bytes() == b"Unrelated interpreter"
+
+
+def test_incomplete_interpreter_publication_resumes_without_modifying_application(sdk_fixture, monkeypatch):
+    app, store, source = sdk_fixture
+    original = guest.os.rename
+    failed = Mock(side_effect=InterruptedError("Synthetic stopped publication"))
+    monkeypatch.setattr(guest.os, "rename", failed)
+    with pytest.raises(InterruptedError):
+        guest.freeze_python()
+    assert (store / "python-source.json").exists() and not (store / "python").exists()
+    monkeypatch.setattr(guest.os, "rename", original)
+    assert guest.freeze_python().read_bytes() == (source / "bin/python3").read_bytes()
+
+
+def test_interpreter_copy_is_verified_before_publication(sdk_fixture, monkeypatch):
+    app, store, source = sdk_fixture
+    original = guest.shutil.copytree
+
+    def changed(src, dst, *args, **kwargs):
+        result = original(src, dst, *args, **kwargs)
+        if Path(dst).name == "python":
+            (dst / "bin/python3.12").write_bytes(b"Changed while staging")
+        return result
+
+    monkeypatch.setattr(guest.shutil, "copytree", changed)
+    with pytest.raises(ValueError, match="bytes changed"):
+        guest.freeze_python()
+    assert not (store / "python").exists() and not (store / "python-source.json").exists()
+    assert not list(store.glob(".python-*"))
+
+
+def test_stable_python_handoff_preserves_exact_fixed_invocation_and_private_stdin(sdk_fixture, monkeypatch):
+    app, store, source = sdk_fixture
+    distro = "AIStation-" + "a" * 32
+    program = "approved private updater program"
+    monkeypatch.setattr(guest.sys, "executable", str(source / "bin/python3"))
+    monkeypatch.setattr(guest.sys, "orig_argv", [str(source / "bin/python3"), "-IBS", "-c", program, distro])
+    monkeypatch.setenv("AI_STATION_TEST_SECRET", "synthetic private value")
+    execute = Mock()
+    monkeypatch.setattr(guest.os, "execve", execute)
+    guest.use_update_python(distro)
+    python = str(store / "python/bin/python3")
+    execute.assert_called_once_with(
+        python,
+        [python, "-IBS", "-c", program, distro],
+        {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "WSL_DISTRO_NAME": distro},
+    )

@@ -1,8 +1,8 @@
 """Offline package update inside the dedicated WSL guest; no HTTP or agent entry point.
 
 The trusted Windows installer will stream its verified package to this program.
-This layer is not wired into the consumer installer until native transport and
-recovery qualification pass. Never invoke it on the development host.
+The private installer candidate uses this layer; genuine Windows transport and
+recovery qualification remain required before publication. Never invoke it on the development host.
 """
 
 import argparse
@@ -12,6 +12,7 @@ import json
 import os
 import pwd
 import re
+import shutil
 import signal
 import sqlite3
 import stat
@@ -19,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 from contextlib import ExitStack, contextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 APP = Path("/usr/lib/ai-station")
 HOME = Path("/home/station")
@@ -27,6 +28,7 @@ RECEIPT = Path("/usr/lib/ai-station-wsl-build.json")
 BRIDGE = Path("/usr/libexec/ai-station/wsl-control")
 STORE = Path("/var/lib/ai-station-updates")
 PENDING_MARKER = Path("/usr/lib/ai-station-wsl-update-pending.json")
+STABLE_PYTHON = STORE / "python"
 TERMINAL = ("succeeded", "failed", "canceled", "interrupted")
 
 
@@ -86,6 +88,126 @@ def atomic_json(path, value, *, public=False):
                 os.close(descriptor)
         finally:
             temporary.unlink(missing_ok=True)
+
+
+def python_metadata(path):
+    if regular(path, os.geteuid()).st_size > 16 * 1024**2:
+        raise ValueError("The bundled interpreter receipt exceeds its bound")
+    value = json.loads(path.read_bytes(), object_pairs_hook=strict_object)
+    files = value.get("files")
+    source = value.get("python_source")
+    if not isinstance(files, dict) or not isinstance(source, dict):
+        raise ValueError("The bundled interpreter lacks its package identity")
+    expected = {name: digest for name, digest in files.items() if name.startswith("python/")}
+    if not 1 <= len(expected) <= 30000 or "python/bin/python3" not in expected:
+        raise ValueError("The bundled interpreter inventory is incomplete")
+    if not isinstance(source.get("sha256"), str) or re.fullmatch(r"[a-f0-9]{64}", source["sha256"]) is None:
+        raise ValueError("The bundled interpreter source identity is invalid")
+    return {"files": expected, "python_source": {"sha256": source["sha256"]}}
+
+
+def verify_python(root, value):
+    uid = os.geteuid()
+    directory(root, uid)
+    canonical = root.resolve()
+    actual = set()
+    for path in root.rglob("*"):
+        resolved = path.resolve(strict=True)
+        if not resolved.is_relative_to(canonical):
+            raise ValueError("The frozen interpreter crosses its owned directory")
+        if path.is_file():
+            actual.add("python/" + path.relative_to(root).as_posix())
+        elif path.is_dir():
+            directory(resolved, uid)
+        else:
+            raise ValueError("Unexpected frozen interpreter file type")
+    if actual != set(value["files"]):
+        raise ValueError("The frozen interpreter file inventory changed")
+    for name, expected in value["files"].items():
+        relative = PurePosixPath(name)
+        if relative.is_absolute() or ".." in relative.parts or str(relative) != name:
+            raise ValueError("Invalid frozen interpreter path")
+        if not isinstance(expected, str) or re.fullmatch(r"[a-f0-9]{64}", expected) is None:
+            raise ValueError("Invalid frozen interpreter checksum")
+        path = root / relative.relative_to("python")
+        regular(path.resolve(strict=True), uid)
+        digest = hashlib.sha256()
+        with path.open("rb") as file:
+            while block := file.read(1024**2):
+                digest.update(block)
+        if digest.hexdigest() != expected:
+            raise ValueError("The frozen interpreter bytes changed")
+
+
+def sync_python(root):
+    # Only the newly verified private copy, never the source or another mount.
+    paths = list(root.rglob("*"))
+    for path in paths:
+        if path.is_file() and not path.is_symlink():
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+    for path in sorted(
+        [root, *[p for p in paths if p.is_dir() and not p.is_symlink()]],
+        key=lambda p: len(p.parts),
+        reverse=True,
+    ):
+        descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
+def freeze_python():
+    """Keep the installer interpreter outside the application replaced by dpkg."""
+    uid = os.geteuid()
+    directory(STORE.parent, uid)
+    if not STORE.exists() and not STORE.is_symlink():
+        STORE.mkdir(mode=0o700)
+    directory(STORE, uid, private=True)
+    metadata = STORE / "python-source.json"
+    with locked(STORE / "update.lock", uid, create=True):
+        if STABLE_PYTHON.exists() or STABLE_PYTHON.is_symlink():
+            value = python_metadata(metadata)
+            verify_python(STABLE_PYTHON, value)
+        else:
+            value = python_metadata(APP / "desktop-manifest.json")
+            verify_python(APP / "python", value)
+            if metadata.exists() or metadata.is_symlink():
+                if python_metadata(metadata) != value:
+                    raise ValueError("Inspect the original interpreter preparation before resuming")
+            with tempfile.TemporaryDirectory(prefix=".python-", dir=STORE) as temporary:
+                staged = Path(temporary) / "python"
+                shutil.copytree(APP / "python", staged, symlinks=True)
+                verify_python(staged, value)
+                sync_python(staged)
+                atomic_json(metadata, value)
+                os.rename(staged, STABLE_PYTHON)
+                descriptor = os.open(STORE, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+    return STABLE_PYTHON / "bin/python3"
+
+
+def use_update_python(distribution):
+    interpreter = freeze_python()
+    if Path(sys.executable).resolve() == interpreter.resolve():
+        return
+    arguments = sys.orig_argv
+    if len(arguments) != 5 or arguments[1:3] != ["-IBS", "-c"] or arguments[4] != distribution:
+        raise ValueError("Use only the fixed native update invocation")
+    # No stdin is read before exec: the exact original metadata/package stream
+    # remains available to this same process in its isolated stable interpreter.
+    os.execve(
+        str(interpreter),
+        [str(interpreter), *arguments[1:]],
+        {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "WSL_DISTRO_NAME": distribution},
+    )
 
 
 def identity(value):
@@ -181,7 +303,8 @@ def assert_host(distribution):
         raise ValueError("The dedicated guest account changed")
     for path in [Path("/"), Path("/usr"), Path("/usr/lib"), APP, RECEIPT.parent, BRIDGE.parent]:
         directory(path, 0)
-    regular(APP / "station", 0)
+    if not Path(sys.executable).resolve().is_relative_to(STABLE_PYTHON):
+        regular(APP / "station", 0)
     regular(BRIDGE, 0)
     directory(HOME, account.pw_uid, private=True)
     return account.pw_uid
@@ -396,6 +519,7 @@ def main():
     args = parser.parse_args()
     uid = assert_host(args.distribution)
     os.umask(0o077)
+    use_update_python(args.distribution)
 
     def interrupted(_signum, _frame):
         raise KeyboardInterrupt

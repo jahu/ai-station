@@ -18,9 +18,13 @@ $state=New-StationInstallState $root $old.package_sha256
 $state.Phase='ready';$state.RegistrationId='{12345678-1234-4234-8234-123456789abc}'
 $program=[Text.Encoding]::UTF8.GetBytes('print(1)')
 $plan=Get-StationGuestUpdatePlan $state $root $old $target $program
-Check (($plan.Arguments[0..7]-join '|') -ceq ('--distribution|'+$state.Distribution+'|--user|root|--exec|/usr/bin/python3|-IBS|-c')) 'Unexpected WSL operation'
+Check (($plan.Arguments[0..7]-join '|') -ceq ('--distribution|'+$state.Distribution+'|--user|root|--exec|/usr/lib/ai-station/python/bin/python3|-IBS|-c')) 'Unexpected WSL operation'
 Check ($plan.Arguments[-1] -ceq $state.Distribution) 'Updater was not bound to the saved distro'
-Check ($plan.Arguments[8] -ceq "exec(__import__('base64').b64decode('cHJpbnQoMSk='))") 'Unexpected updater program'
+Check ($plan.Arguments[8] -like "exec(__import__('gzip').decompress(__import__('base64').b64decode('*')*)") 'Unexpected updater program'
+$match=[regex]::Match($plan.Arguments[8],"b64decode\('([A-Za-z0-9+/=]+)'\)")
+$encodedStream=[IO.MemoryStream]::new([Convert]::FromBase64String($match.Groups[1].Value),$false)
+$decoded=[IO.MemoryStream]::new()
+try {$gzip=[IO.Compression.GZipStream]::new($encodedStream,[IO.Compression.CompressionMode]::Decompress);try{$gzip.CopyTo($decoded)}finally{$gzip.Dispose()};Check ([Text.Encoding]::UTF8.GetString($decoded.ToArray()) -ceq 'print(1)') 'Compressed updater source changed'}finally{$encodedStream.Dispose();$decoded.Dispose()}
 $header=[Text.Encoding]::UTF8.GetString($plan.Header)|ConvertFrom-Json
 Check ($header.package_bytes -eq 100 -and $header.previous.package_sha256 -ceq $old.package_sha256 -and $header.target.package_sha256 -ceq $target.package_sha256) 'Update identities were lost'
 foreach($name in @('guest.Dockerfile','wsl.conf','guest_control.py')) {
@@ -30,7 +34,7 @@ foreach($bytes in @($true,0,-1,1073741824,'100',1.5,1.0)) {
  $bad=Fixture 'c';$bad.package_bytes=$bytes;Refuses { Get-StationGuestUpdatePlan $state $root $old $bad $program }
 }
 $bad=Fixture 'c';$bad.PSObject.Properties.Remove('package_bytes');Refuses { Get-StationGuestUpdatePlan $state $root $old $bad $program }
-Refuses { Get-StationGuestUpdatePlan $state $root $old $target ([byte[]]::new(21601)) }
+Refuses { Get-StationGuestUpdatePlan $state $root $old $target ([byte[]]::new(65537)) }
 $bad=Fixture 'c';$bad|Add-Member -NotePropertyName 'oversized' -NotePropertyValue ('x'*17000);Refuses { Get-StationGuestUpdatePlan $state $root $old $bad $program }
 $state.PackageSha256='0'*64;Refuses { Get-StationGuestUpdatePlan $state $root $old $target $program };$state.PackageSha256=$old.package_sha256
 $state.Phase='reserved';Refuses { Get-StationGuestUpdatePlan $state $root $old $target $program };$state.Phase='ready'
@@ -40,10 +44,17 @@ $state.Phase='reserved';Refuses { Get-StationGuestUpdatePlan $state $root $old $
 $folder=Join-Path ([IO.Path]::GetTempPath()) ('ai-station-update-transport-'+[guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($folder)
 try {
- $fixture=Join-Path $folder 'receive.py'
- [IO.File]::WriteAllText($fixture,"import json,sys`nassert json.loads(sys.stdin.buffer.readline()) == {'fixture':True}`nassert sys.stdin.buffer.read() == bytes(range(256))*1024`nprint(json.dumps({'status':'updated','data_preserved':True,'backup_available':False}))`n",[Text.UTF8Encoding]::new($false))
- $python=(Get-Command python3 -ErrorAction Stop).Source
- $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$python;$info.Arguments='"'+$fixture+'"';$info.UseShellExecute=$false
+ $receiver=@'
+$stream=[Console]::OpenStandardInput();$header=[Collections.Generic.List[byte]]::new()
+do{$b=$stream.ReadByte();if($b -lt 0){throw 'Missing fixture header'};if($b -ne 10){$header.Add([byte]$b)}}while($b -ne 10 -and $header.Count -lt 16384)
+$value=[Text.Encoding]::UTF8.GetString($header.ToArray())|ConvertFrom-Json
+if(-not $value.fixture){throw 'Wrong fixture header'}
+$body=[IO.MemoryStream]::new();$stream.CopyTo($body);$data=$body.ToArray();if($data.Length -ne 262144){throw 'Wrong binary length'}
+for($i=0;$i -lt $data.Length;$i++){if($data[$i] -ne [byte]($i%256)){throw 'Binary transfer changed'}}
+[Console]::WriteLine('{"status":"updated","data_preserved":true,"backup_available":false}')
+'@
+ $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=(Get-Process -Id $PID).Path
+ $info.Arguments='-NoLogo -NoProfile -NonInteractive -EncodedCommand '+[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($receiver));$info.UseShellExecute=$false
  $info.RedirectStandardInput=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
  $process=[Diagnostics.Process]::Start($info)
  $data=[byte[]]::new(262144);for($i=0;$i -lt $data.Length;$i++){$data[$i]=[byte]($i%256)}
