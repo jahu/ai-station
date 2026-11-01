@@ -7,10 +7,11 @@ control plane, native user Runner and Task → Run → Events → Artifacts life
 
 ## Current code and verified upstream constraints
 
-`scripts/desktop.py` deliberately admits Linux x86-64 only. Its lifecycle control
-uses Linux `SO_PEERCRED`; long socket paths use `/proc/self/fd`. Native process
-identity and memory scopes also depend on Linux `/proc`, systemd and cgroups.
-Removing the launcher's platform check cannot produce a correct Mac package.
+`scripts/desktop.py` retains the Linux-only consumer prerequisite gate. Independent
+Darwin kernel ownership, peer credentials, telemetry, native Python and installed
+Runner components have passed the platform checks below. Consumer .app packaging,
+the Docker Desktop bridge and model setup/catalog are still separate requirements.
+Removing the launcher's platform check alone cannot produce a correct Mac package.
 
 Docker's maintainer reports support for shared native Unix sockets with Docker
 Desktop 4.87, Docker VMM and its enabled socket-sharing component. This changes
@@ -27,6 +28,29 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 [llama.cpp Metal build](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#metal-build).
 
 ## Delivery sequence
+
+Mac desktop storage uses `~/Library/Application Support/AI Station` for retained
+code, configuration and data. A separate short private directory under
+`/private/tmp`, named from OS UID and the canonical desktop-root hash, owns the
+lifecycle socket. Its private single-link marker binds the full root hash/UID;
+unrecognized contents, links, unsafe modes or a conflicting marker are refused.
+The Runner socket lives in a separate `runner` child, so its container mount
+cannot expose desktop Stop/readiness authority. Existing Linux XDG paths and
+control addresses remain unchanged. These storage primitives do not remove the
+Linux-only consumer prerequisite/GUI guard.
+
+Native presentation uses one small AppKit program and a bounded Python stdin
+protocol. Dialogs, an indeterminate preparation panel and status choices reuse
+the existing desktop supervisor. The application entry retains an NSApplication
+delegate for Dock reopen/Quit; it starts only the bundled Python/script and
+reopens a retained version when available. Quit signals only its owned NSTask
+child; the Python supervisor performs workload shutdown. Presentation receives
+neither provider credentials nor private browser/setup URLs. The CLI
+`--package-check` verifies package files without creating station data or starting
+workloads. Native compilation/window and long-path control experiments remain
+component qualification, not complete consumer acceptance.
+[AppKit termination contract](https://developer.apple.com/documentation/appkit/nsapplicationdelegate/applicationshouldterminate(_:)?language=objc),
+[indeterminate progress](https://developer.apple.com/documentation/appkit/nsprogressindicator/isindeterminate).
 
 `scripts/macos_application_python.py` builds the application interpreter from the
 qualified dependency layer. It installs a regular pure-Python Host Runner wheel,
