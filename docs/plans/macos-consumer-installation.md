@@ -617,15 +617,15 @@ This qualifies the ARM image/application fixture, not a Mac installation or brid
 The first fixture's console read exceeded a 30-second QA observation budget.
 That failed result was retained; all old containers were confirmed absent and the
 unactivated first-admin database passed integrity/schema inspection. A separate
-fresh fixture with a bounded120-second console budget completed the full journey;
-its actual console read took28.5seconds under emulation. No product timeout or
+fresh fixture with a bounded 120-second console budget completed the full journey;
+its actual console read took 28.5 seconds under emulation. No product timeout or
 failed assertion was waived. The superseded all-emulated frontend comparison was
 intentionally canceled after the native-frontend ARM candidate had built; it is
-not a successful baseline image claim. Its locked `npm ci` took842.7seconds versus
-40.6seconds natively, one local build observation rather than an AI speed promise.
+not a successful baseline image claim. Its locked `npm ci` took 842.7 seconds versus
+40.6 seconds natively, one local build observation rather than an AI speed promise.
 
 Validation: 58 cases across three complete package families, whole Python
-lint/format985files, production/development Compose validation, both actual target
+lint/format of 985 files, production/development Compose validation, both actual target
 image builds and the scoped ARM API/worker qualification above. Evidence remains
 in the private `arm64-control-plane-20261101` acceptance directory. Full consumer
 Mac app/launcher, Docker Desktop transport, Metal, station restart/update/removal,
