@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import pytest
+from alembic.script import ScriptDirectory
 from app.api import app
 from app.config import get_settings
-from app.db import session_factory, utcnow
+from app.db import alembic_config, session_factory, utcnow
 from app.engine import tick
 from app.models import Artifact, Run, Task
 from app.permissions import ALL_PERMISSIONS
@@ -25,7 +26,7 @@ def test_upgrade_readiness_is_inspect_only_and_restore_stays_unpublished():
     client = TestClient(app)
     body = client.get("/api/maintenance").json()
     assert body["schema_current_matches_head"] is True
-    assert body["schema_head"] == "0041"
+    assert body["schema_head"] == ScriptDirectory.from_config(alembic_config()).get_current_head()
     assert body["restore"] == "unpublished"
     assert body["image_rollout"] == "unpublished"
     assert body["lan_bind_allowed"] is False

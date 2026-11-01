@@ -288,3 +288,29 @@ Windows machines. The completed OS installation ISO was ejected and removed
 after boot/WSL verification, reclaiming 7.66 GiB while retaining the active guest,
 current installer and compact proof. Remove the remaining disposable test disk
 and obsolete publisher copies after final qualification.
+
+### First real Windows CPU result completed
+
+The same installed Windows fixture completed first-admin setup, fresh public
+llama.cpp engine preparation, the verified 2,497,281,312-byte 4B Q4_K_M download,
+the **Open Chat with this model** and **Send** controls, and a real
+`WINDOWS_MODEL_OK` reply. Reload retained that exact assistant message and the
+same authenticated account. The actual running Docker container had a
+4,266,655,744-byte memory limit with the identical memory-plus-swap limit, no GPU
+device requests, no network and no privileged mode. Its ordinary model Stop Run
+then succeeded. This qualifies the exercised 16-GiB Windows / default WSL / CPU
+profile, not GPU inference or every Windows memory configuration.
+
+The current private native installer was exported from the guest and verified
+as 438,049,757 bytes with SHA-256
+`652ad15c9cd0add97a07f6b1bbc497b1d20df597d29ae8faddfb651b9cd589da`.
+Evidence remains under the private qualification directory; screenshots and
+evaluation media are not published. The installer is still an unsigned private
+candidate, not a release asset. Full native accessibility/UIA/DPI/tray and
+remove/reinstall acceptance, preserving guest updates, physical Windows-volume
+admission, signing, macOS and the remaining original release scope stay open.
+
+The real conversation also exposed unnecessary automatic web searching for a
+literal-response instruction. That regression is tracked in
+[web search](../web-search.md#contextual-search-necessity--observed-regression),
+separately from successful native CPU inference.

@@ -66,7 +66,7 @@ def test_first_query_is_prepared_before_search_and_saved_with_sources(monkeypatc
             assert params["messages"][-1]["content"] == QUESTION
             assert "SENSITIVE SYSTEM CONTEXT" not in str(params["messages"])
             assert "assume a reported event is true" in params["messages"][0]["content"]
-            yield json.dumps({"query": QUERY})
+            yield json.dumps({"search_needed": True, "query": QUERY})
         else:
             order.append("answer")
             yield "Synthetic answer with a [source](https://example.org/check)."
@@ -153,7 +153,7 @@ def test_stop_during_first_preparation_closes_model_and_never_searches(monkeypat
                 session.commit()
             if not fast:
                 await asyncio.Future()
-            yield json.dumps({"query": QUERY})
+            yield json.dumps({"search_needed": True, "query": QUERY})
         finally:
             closed.append(True)
 
@@ -171,14 +171,21 @@ def test_stop_during_first_preparation_closes_model_and_never_searches(monkeypat
 
 
 @pytest.mark.parametrize("granted", [False, True])
-def test_external_preparation_uses_selected_provider_and_requires_its_permission(monkeypatch, granted):
+@pytest.mark.parametrize("search_needed", [False, True])
+def test_external_preparation_uses_selected_provider_and_requires_its_permission(
+    monkeypatch, granted, search_needed
+):
     calls = []
 
     async def stream(self, **params):
         calls.append(params)
         assert params["location"] == "external" and params["model"] == "cloud-model"
         assert params["endpoint"] == "https://api.example.test/v1"
-        yield json.dumps({"query": QUERY}) if params.get("json_output") else "Synthetic sourced answer."
+        yield (
+            json.dumps({"search_needed": search_needed, "query": QUERY if search_needed else None})
+            if params.get("json_output")
+            else "Synthetic sourced answer."
+        )
 
     async def forbidden(*_args, **_kwargs):
         pytest.fail("An ungranted external preparation must never reach inference")
@@ -219,9 +226,17 @@ def test_external_preparation_uses_selected_provider_and_requires_its_permission
         run = client.get("/api/runs/" + run_id).json()
         assert run["status"] == ("succeeded" if granted else "failed"), run
         if granted:
-            metadata = client.get(route).json()["messages"][-1]["metadata"]["web_search"]
-            assert metadata["query"] == QUERY
-            assert metadata["query_preparation"] == {"location": "external", "model": "cloud-model"}
+            metadata = client.get(route).json()["messages"][-1]["metadata"]
+            if search_needed:
+                assert metadata["web_search"]["query"] == QUERY
+                assert metadata["web_search"]["query_preparation"] == {
+                    "location": "external",
+                    "model": "cloud-model",
+                }
+            else:
+                assert "web_search" not in metadata
+                assert metadata["web_search_decision"]["location"] == "external"
+                assert metadata["web_search_decision"]["model"] == "cloud-model"
             assert len(calls) == 2 and calls[0]["json_output"]
         else:
             assert calls == []

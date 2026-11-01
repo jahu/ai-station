@@ -51,10 +51,10 @@ export function WebSearchControl({
   return (
     <div className="chat-web-search">
       <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
-        Search and read public pages. Visual website questions may capture a
-        screenshot and load an installed local Vision model. Search may use
-        recent conversation context. Attachments and memory are excluded from
-        search.
+        Allow web research when needed and read requested public pages. Visual
+        website questions may capture a screenshot and load an installed local
+        Vision model. Search may use recent conversation context. Attachments
+        and memory are excluded from search.
       </p>
       <div className="web-search-actions">
         <div
@@ -70,7 +70,7 @@ export function WebSearchControl({
               aria-checked={enabled}
               aria-label="Search the web"
               aria-describedby={labelId}
-              title="Web: search, read public pages and inspect website designs locally"
+              title="Web available: search when useful, read public pages and inspect website designs locally"
               disabled={busy}
               tabIndex={index === 0 ? 0 : -1}
               className="web-search-toggle"
@@ -114,9 +114,10 @@ export function WebSearchControl({
             />
           </label>
           <p className="muted">
-            Enter an exact query to keep conversation context out of search.
-            Otherwise, a short query is prepared from recent messages; the full
-            conversation and attachments are not sent to search engines.
+            Enter an exact query to request a search without conversation
+            context. Otherwise, AI Station decides whether search is useful and
+            prepares a short query when needed. The full conversation and
+            attachments are not sent to search engines.
           </p>
           {onRenderPages && (
             <>

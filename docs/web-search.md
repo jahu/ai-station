@@ -134,3 +134,90 @@ The model used the two discovered GPUs, Q8 cache and a 4096-token allocation for
 these short questions. The QA-owned instance was stopped afterward; temporary
 verification devices were revoked and no existing owner device or credentials
 were changed. Private evidence: `data/acceptance/search-preparation-20261030/`.
+
+## Contextual search necessity — observed regression
+
+The real Windows first-result test on 2026-11-01 sent
+`Reply with exactly WINDOWS_MODEL_OK.` with Web available by default. The selected
+local 4B model correctly returned the literal answer, but automatic query
+preparation first turned that instruction into `windows model ok` and retrieved
+five unrelated computer-model pages. Saved message metadata, the search artifact
+and the actual browser capture establish this failure; it is not inferred from a
+mock. Evidence: `data/acceptance/windows-native-qualification-20261031/`, result
+072. Existing actor/follow-up relevance qualification does not cover necessity.
+
+**Implemented candidate:** distinguish permission to search from a request that
+needs search. New automatic/contextual turns ask the same admitted model
+for a bounded, tools-free structured decision: search with a concise public
+query, or continue without retrieval. Literal replies, greetings, transformations
+of supplied text and other self-contained requests should not acquire sources.
+Factual requests needing retrieval and subject-dependent follow-ups keep their
+existing bounded, privacy-filtered context. An explicit Search query still
+searches; Web off must invoke neither the planner nor the network.
+
+The new user-message metadata and Run snapshots freeze
+`web_search_plan_version=2`, without changing canonical client-request receipts
+or reinterpreting old saved/retried Runs. Legacy snapshots keep their original
+query-only schema and preparation template. A no-search
+decision emits an inspectable skip event and continues ordinary completion with
+the original messages: no search request, source cards, search artifact or claim
+that retrieval happened. Invalid/canceled preparation must not silently send raw
+private instructions or bypass the existing factual-search failure policy.
+Selected provider/model, external-AI grants, deadlines, cancellation and account
+isolation stay unchanged; no planner runtime or shell surface is added. The Web
+control explains that availability is optional research; its switch, preference,
+keyboard behavior and explicit Search query are retained.
+
+Verification must cover both branches, a literal containing an apparent search
+keyword, greetings and supplied-text transformations, a genuine search and its
+subject-free follow-up, explicit queries, Web off, invalid output, Stop, external
+permission, legacy Run/retry identity and cross-account boundaries. Use fake
+model/network calls for normal tests; then exercise one actual compiled
+API/worker flow and a bounded selected-model smoke test. This candidate is
+**not yet deployed**; review and the complete local checks remain required.
+
+The actual same verified 4B Q4_K_M weights passed four isolated API/engine cases
+on CPU: a literal containing `WINDOWS_MODEL_OK`, a Polish greeting, an explicit
+Python documentation search and a subject-free Polish follow-up about activating
+that environment on Windows. The first two made no search and returned no source
+cards/artifact. The latter two used the real pinned SearXNG service, recovered
+the Python subject and returned five relevant results each, including official
+Python documentation. Search-engine availability/ranking is not guaranteed for
+future queries. The temporary CPU/search containers were stopped afterward;
+production and original model files were unchanged. This source-level real-model
+proof does not substitute for the compiled API/separate-worker/browser gate.
+Private evidence: `real-search-necessity.private.json` in the Windows
+qualification directory referenced above.
+
+The separately built application image also passed a disposable accounts API,
+separate worker and deterministic fake-provider/search flow. It verified the
+literal skip, factual retrieval, normal fake-executor completion/SSE and another
+account's denial. Actual compiled desktop/mobile browsers showed the literal
+reply without Sources, the researched reply with Sources, no page errors and no
+mobile horizontal overflow. Application Python and compiled frontend hashes
+matched the reviewed source inputs. An initial fixture used GET instead of the
+actual form-encoded POST search protocol; its failed synthetic Run was retained
+and explicitly regenerated after correcting only the fixture. This is separate
+from the real-model/public-search evidence above. Operator case WEB-008 is in
+catalog version 35; operator answers remain untested.
+
+Local final validation used the complete 6,461-case Python collection: 6,443
+passed, nine skipped and nine failed. All nine failures were diagnosed as stale
+test fixtures: two migration cases and maintenance pinned the former `0041`
+head, while six GPU-queue cases lacked the newer typed image-capability preflight
+and contacted the deliberately absent test socket. The tests now check the
+actual Alembic head and supply only the expected external-image capability
+response; real queue, process-ownership and foreign-key assertions remain.
+All 27 cases in those three complete families then passed. Together with the
+unchanged passing full-suite cases, this is the documented equivalent local
+validation; it is **not** a claim that the original `check.sh` invocation exited
+successfully. Ruff/format passed over all 943 Python files. No application
+source changed during these fixture corrections; the previously qualified
+compiled image still matches application/frontend inputs.
+
+After completed qualification, the three exact stopped QA containers and the
+separate 2,497,281,312-byte host-side weight copy were removed. The Windows guest
+was shut down normally; its installed disk, current private installer and compact
+proof remain for the outstanding Windows gates. Production models/data and
+shared Docker images were preserved. Private cleanup receipt:
+`completed-search-fixture-cleanup.private.json` in the same evidence directory.

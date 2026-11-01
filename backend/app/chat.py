@@ -492,6 +492,13 @@ def enqueue(
         execution_target="container",
         parameters={
             "web_search": web_search,
+            **(
+                {"web_search_plan_version": 2}
+                if web_search
+                and web_search.get("contextual")
+                and user.metadata_json.get("web_search_plan_version") == 2
+                else {}
+            ),
             "page_read": page_read,
             **(
                 {"web_search_context": conversation_query_context(session, row.id, user)}
@@ -698,6 +705,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
         raise HTTPException(422, str(exc)) from exc
     if search_options:
         user.metadata_json = {**user.metadata_json, "web_search": search_options}
+        if search_options.get("contextual"):
+            user.metadata_json = {**user.metadata_json, "web_search_plan_version": 2}
     session.add(user)
     session.flush()
     user.metadata_json = {

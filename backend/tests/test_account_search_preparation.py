@@ -53,7 +53,7 @@ def test_search_preparation_and_results_stay_private_across_api_and_worker(accou
         assert "BOB PRIVATE" not in json.dumps(params["messages"])
         if params.get("json_output"):
             assert "Alice public topic" in json.dumps(params["messages"])
-            yield json.dumps({"query": query})
+            yield json.dumps({"search_needed": True, "query": query})
         else:
             yield "Synthetic sourced answer."
 
@@ -89,3 +89,36 @@ def test_search_preparation_and_results_stay_private_across_api_and_worker(accou
     assert alice.get(f"/api/artifacts/{result['artifact_id']}/file").status_code == 200
     inspected = admin.get(f"/api/admin/users/{owner}/workspace/runs/{run_id}")
     assert inspected.status_code == 200 and inspected.json()["metadata"]["web_search"]["query"] == query
+
+
+def test_skipped_search_decision_is_private_and_creates_no_sources(accounts, monkeypatch):  # noqa: F811
+    admin, alice, bob = accounts
+    monkeypatch.setattr(LocalChatProvider, "models", lambda _: ["fixture-model"])
+    owner = alice.get("/api/auth").json()["user"]["id"]
+
+    async def stream(_self, **params):
+        yield '{"search_needed":false,"query":null}' if params.get("json_output") else "Hello."
+
+    async def forbidden(_query):
+        raise AssertionError("The skipped tool must never send an outbound query")
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    monkeypatch.setattr(web_search, "search", forbidden)
+    row = alice.post("/api/chat/conversations", json={"model": "fixture-model"}).json()
+    path = "/api/chat/conversations/" + row["id"]
+    sent = alice.post(path + "/messages", json={"content": "Say hello", "web_search": {"enabled": True}})
+    assert sent.status_code == 202, sent.text
+    run_id = sent.json()["id"]
+    with control_session_factory()() as queue:
+        assert tick(queue, "private-no-search") == run_id
+    run = alice.get("/api/runs/" + run_id).json()
+    assert run["status"] == "succeeded", run
+    message = alice.get(path).json()["messages"][-1]
+    assert message["content"] == "Hello." and "web_search" not in message["metadata"]
+    assert message["metadata"]["web_search_decision"]["search_needed"] is False
+    assert bob.get(path).status_code == 404
+    assert bob.get("/api/runs/" + run_id).status_code == 404
+    assert bob.get("/api/runs/" + run_id + "/events").status_code == 404
+    inspected = admin.get(f"/api/admin/users/{owner}/workspace/runs/{run_id}")
+    assert inspected.status_code == 200
+    assert inspected.json()["metadata"]["web_search_decision"]["search_needed"] is False
