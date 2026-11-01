@@ -96,6 +96,28 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Acceptance evidence
 
+### Owner-dispatched public Mac checks
+
+The repository is now public. GitHub documents standard public-repository runners
+as [free and unlimited](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+The existing manual workflow gains `operation=macos-native-checks`, restricted to
+the owner and a public repository before runner allocation. It uses only fixed
+standard `macos-15` ARM and `macos-15-intel` labels, read-only repository permission
+and a 20-minute bound. Ordinary CI/release jobs do not run for this operation.
+It creates no uploaded artifacts/caches or larger/paid runner allocation, changes
+no billing setting and does not run on push or pull requests automatically.
+
+The operation opts kernel ownership, CPU/RAM and Metal **observation** tests into
+actual native APIs, then assembles the pinned Python layer and executes its exact
+isolated interpreter. It verifies native imports, source Runner import, a tiny
+synthetic native FFmpeg audio round trip and unchanged layer bytes. Reports use
+only controlled public-fixture/platform/version/source facts, with no user data,
+credentials, real model, GPU inference or release/deployment. Successful hosted
+checks do not qualify Docker Desktop socket sharing, Metal inference, Gatekeeper,
+the GUI installer or a complete station journey. Retain exact job/head/results
+before claiming any native acceptance. Account/service refusal is not a pass and
+must not be worked around by selecting a paid runner or weakening a failed test.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)

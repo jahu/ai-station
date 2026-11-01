@@ -1,6 +1,6 @@
 name: CI
 on:
-  # Hosted Actions credits are exhausted; local verification is authoritative.
+  # Manual only. Ordinary checks retain owner-approved local verification.
   workflow_dispatch:
     inputs:
       operation:
@@ -10,11 +10,12 @@ on:
         options:
           - checks
           - release-pr
+          - macos-native-checks
 permissions:
   contents: read
 jobs:
   python:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +27,7 @@ jobs:
       - run: .venv/bin/pip install --no-deps -e backend -e host-runner
       - run: ./scripts/check.sh
   windows-contracts:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +40,7 @@ jobs:
           & ./packaging/windows/tests/UpdateCoordinator.Tests.ps1
           & ./packaging/windows/tests/GuestUpdate.Tests.ps1
   frontend:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +54,7 @@ jobs:
       - run: npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
         working-directory: frontend
   docker:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +62,57 @@ jobs:
       - run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
       - run: docker build -t ai-station:ci .
       - run: docker build -f python-executor/Dockerfile -t ai-station-python:ci .
+  macos-native:
+    # Only standard free PUBLIC runners. Never allocate paid/private/larger hosts.
+    if: inputs.operation == 'macos-native-checks' && github.event.repository.private == false && github.actor == github.repository_owner
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            architecture: arm64
+          - os: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend:host-runner:scripts
+      AI_STATION_REAL_MAC_PROCESS_TESTS: '1'
+      AI_STATION_REAL_MAC_TELEMETRY_TESTS: '1'
+      AI_STATION_REAL_MAC_METAL_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install checked developer dependencies and native package tool
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --require-hashes -r requirements-dev.lock
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/build-tools.lock
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Exercise actual native kernel ownership and observations
+        run: |
+          .venv/bin/python -m pytest -q -W error::pytest.PytestUnhandledThreadExceptionWarning \
+            host-runner/tests/test_darwin_process_identity.py \
+            host-runner/tests/test_darwin_processes.py \
+            host-runner/tests/test_darwin_telemetry.py \
+            host-runner/tests/test_darwin_metal.py
+      - name: Assemble fixed native Python layer
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          mkdir -m 700 .native-mac
+          mkdir -m 700 .native-mac/inputs
+          .venv/bin/python scripts/macos_desktop_python.py \
+            --architecture "$TARGET_ARCHITECTURE" --cache "$PWD/.native-mac/inputs" \
+            --output "$PWD/.native-mac/python" --download-inputs
+      - name: Execute the actual bundled interpreter and native dependencies
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE"
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

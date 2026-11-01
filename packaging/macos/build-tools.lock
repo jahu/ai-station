@@ -1,0 +1,4 @@
+# Trusted Mac package builder only; never shipped to consumers.
+uv==0.12.16 \
+    --hash=sha256:3b07f6867309ae1957b99d0ab9b008e3cea6497e2e9aec4a5c9642ddfc1fc3c3 \
+    --hash=sha256:50ed2f31db45e620a10a9e9fc20d2a828a207db67b791e7b888395679e96bab4
