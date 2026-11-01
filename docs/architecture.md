@@ -1165,3 +1165,10 @@ shares no private setup UUID or logs. See [profile qualification and component
 licenses](plans/managed-effects-setup.md).
 
 The Windows consumer packaging increment keeps the same control-plane/Runner Unix-socket boundary inside an application-owned WSL2 distribution. A native Windows lifecycle shell is separate from workload execution; it must not adopt existing distributions, expose Windows drives or change global WSL policy. The [Windows installation contract](plans/windows-consumer-installation.md) tracks the guest filesystem builder, private readiness pipe and pending real-platform acceptance. This is experimental packaging, not qualified Windows support.
+
+The offline [Windows preserving-update candidate](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract)
+replaces only a verified application package inside the same owned WSL guest.
+Its private native Update UI owns the bounded transport, with no workload
+API connection; the existing desktop/supervisor owns idle/Stop, while private
+kernel locks, a backup and exact update journal protect the retained state.
+No second execution architecture or application root service is introduced.

@@ -314,3 +314,168 @@ The real conversation also exposed unnecessary automatic web searching for a
 literal-response instruction. That regression is tracked in
 [web search](../web-search.md#contextual-search-necessity--observed-regression),
 separately from successful native CPU inference.
+
+## Preserving guest update — implementation contract
+
+Update the application package in the existing owned WSL distribution. Do not
+replace/import its root filesystem, unregister it, reset Windows features or
+copy user data into a new installation. The native Windows installer is the
+trusted caller; no application/agent/Runner HTTP action gains root or package
+installation authority. The normal application continues to run as `station`.
+
+The offline root helper (`packaging/windows/guest_update.py`) is an isolated
+implementation layer connected to the private installer candidate, not yet
+qualified or advertised as ready.
+Its entry requires root **inside the exact named AIStation WSL guest**, not the
+Linux development host. A bounded private input carries old/new immutable guest
+identities and the verified package bytes, never commands, paths or URLs. Admit
+only the same Ubuntu/Dockerfile/WSL/bridge recipe and a strictly newer AI Station
+amd64 package with desktop protocol 2. OS/bridge recipe changes need their own
+migration, rather than claiming that replacing the application updated the OS.
+
+Hold the updater, desktop and launcher kernel locks before package replacement;
+never signal an existing process or claim that an absent desktop window means
+idle. Refuse nonterminal saved Runs. A private, integrity-checked pre-update
+SQLite backup includes account/session/Library/memory history and retains its
+original bytes on Resume. Stream/hash/length/metadata admission precedes the
+fixed offline `dpkg --install`; verify the installed version and immutable
+application manifest before replacing the guest identity receipt. A pending
+journal binds the exact previous/target pair. Lost final acknowledgements inspect
+the completed target and do not reinstall it; a different pending pair requires
+inspection. Partial transfers are removed only if this operation created them;
+existing files, backups, distributions and application data are never cleared.
+
+The candidate now packages the same checked Debian file with the Windows
+payload and binds its length/hash. A bounded native stdin transfer carries the
+package without Windows-drive mounts. The Windows receipt advances only after
+exact-target confirmation. Update is explicit; Finish work can start the old
+version before an update begins, and pending-update inspection keeps status/Stop
+while refusing a new start. Actual preserving updates, cancellation/lost-client
+recovery and uninstall/reinstall on the retained Windows fixture remain required. Native
+sharing/ACL, physical Windows-volume admission, accessibility and signing remain
+separate acceptance gates. Normal tests use temporary databases and fake package
+installation, never root installation on the workstation.
+
+Candidate-layer verification: 213 cases in eight complete desktop/package/WSL
+families passed; after the last pending-receipt review correction, all 46 updater
+cases passed again. Whole-source Ruff/format covers 945 Python files. Real
+`dpkg-deb` metadata/version comparison was exercised using synthetic packages;
+installation itself used a fake `dpkg` and temporary private databases. Tests
+cover original backup retention, active desktop/launcher/Run refusal, link and
+permission boundaries, lost acknowledgement after the target receipt, matching
+operation hashes with a different pending target, and owned process-group timeout
+cleanup. A pending root marker blocks startup in the new desktop version while
+retaining status/Stop. The Windows coordinator must still qualify admission from
+an older installed launcher; these tests do not prove that platform transition.
+Private evidence remains in `data/acceptance/windows-native-qualification-20261031/`.
+This is not a Windows-qualified or published update flow.
+
+Native binding verification adds 20 pure plan/refusal and real binary stdin
+transport assertions plus 59 coordinator assertions with fake WSL. These cover
+explicit Update, preserving registry identity, confirmation before Windows-state
+publication, lost-acknowledgement reconciliation, previous-version work, pending
+start refusal and status/Stop. The actual private Windows PS5.1 journey still
+needs to qualify these sources; PowerShell7/Linux is not its substitute.
+
+### Interpreter admission found by the actual image probe
+
+The built WSL guest has no `/usr/bin/python3`; its Python is the already verified
+application bundle. The initial native update candidate therefore could not run.
+The fixed native plan now uses only that bundled interpreter or the private
+frozen updater interpreter. A fixed read-only `/usr/bin/test` inspects pending
+state and the known interpreter slot, so status/Stop do not acquire a system
+Python dependency or package authority.
+
+Before reading update input, the guest verifies the installed Python source/hash
+inventory, copies it into its private updater directory, verifies and fsyncs that
+copy, then atomically publishes it. The same process re-execs the original fixed
+invocation there without consuming stdin. Later package replacement cannot
+remove the updater's stdlib or libraries; Resume can use the same independent
+interpreter even if the application package needs repair. A gzip-encoded fixed
+source keeps the Windows argument vector below its checked limit; decoded input
+is the publisher-verified program, never model/user code. No OS Python, driver,
+Windows-host Python or online dependency install is added.
+
+The actual exported image passed a no-network, read-only, bounded container probe:
+6,773 interpreter files verified, the isolated interpreter executed its stdlib,
+and repeated inspection reused that exact copy. This qualifies the package/SDK
+layer only. Native Windows old-to-new data preservation and interrupted-update
+qualification remain open. The `caf4717` complete normal Python gate passed
+6,499 cases with nine explicit opt-in skips before this discovered integration
+fix; later SDK changes require their affected tests and actual native checks.
+
+The actual first offline-update attempt was stopped by Windows' pending-restart
+preflight, before any package dispatch. The owned idle evaluation guest completed
+its ordinary system update and passed that preflight; no prerequisite registry
+marker was cleared or bypassed. A native UI review found that an automatic status refresh could
+replace the explicit restart instruction with “Update available”. The handler
+now retains that instruction and clears Start readiness after a failed update
+until a successful inspection restores it. This small state correction has a
+parser check and review; its rendered Windows acceptance remains part of the
+pending native UI gate.
+
+The subsequent real offline attempt prepared the frozen interpreter and verified
+the incoming package, then refused the previous container-created database's
+0755 directory / 0644 file modes. No application replacement, pending update or
+database backup had been published. Read-only native inspection confirmed the
+original installed package and private 0700 desktop/data ancestors. The updater
+now accepts those legacy leaf modes behind the verified private ancestors;
+ownership, symlink/hardlink and group/other-write checks remain mandatory. It
+does not change the saved database's modes or contents, and its own backup stays
+0600. A real temporary SQLite regression covers preservation and five negative
+boundary cases; all 58 updater cases and the repository static gates pass.
+
+The repaired publisher was built and installed under the same ordinary Windows
+account. A real offline update retained all 45 logical database tables, seven
+persistent files (including the cached 4B model), the desktop configuration and
+the original distribution/registration. The installed Update button also
+reconciled a deliberately restored old Windows receipt after that successful
+guest update: the original backup, package-manager log and application manifest
+kept identical hashes, lengths and timestamps. No package reinstall or backup
+replacement occurred. This was a private lost-acknowledgement injection, not an
+actual power failure. The native window then started the application and opened
+its browser connection. The retained account accepted its original fixture
+password and displayed the earlier conversation; no account reset or replacement
+was needed. Actual PS5.1 isolated transport/coordinator fixtures pass 21 and 64
+assertions. The updated app then loaded its cached 4B CPU model automatically,
+continued the preserved conversation with the expected literal reply and skipped
+unnecessary Web retrieval. Its real bounded, zero-swap/no-GPU container was
+verified and stopped through an ordinary Run. The installed Stop button and
+normal tray exit also completed without force-killing processes.
+
+An actual installed Update/Cancel test observed its owned root updater client
+before canceling. All 45 database tables, persistent files and configuration
+matched the stopped baseline afterward; the original backup remained intact,
+the update lock was free and no partial transfer or pending marker remained.
+This exercises native transport cancellation, not a mid-dpkg interruption.
+
+A separate harmless non-reading child exposed a .NET Framework-specific gap:
+Windows PowerShell 5.1 cancellation waited 11.3 seconds for that child to finish,
+while the portable PowerShell probe returned within 0.6 seconds. Header/body
+writes now use cancellable owner polling, and cleanup reaps only its saved child
+before closing a potentially blocked pipe. Two real backpressure regressions
+also require an unrelated process to survive. The portable transport suite passes
+29 assertions. The same repaired suite also passes all 29 assertions under
+ordinary Windows PowerShell 5.1; the coordinator passes 64 separately isolated
+assertions there. The previously stalled native input probe now cancels in
+630 ms while its unrelated control process survives.
+
+The rebuilt, actually installed native candidate passed Update/Cancel after its
+owned root client appeared. All 45 logical tables, seven persistent files and
+configuration again matched the stopped baseline. Resume through that installed
+window completed, published the target Windows receipt and started the existing
+application; the original database backup, package-manager log and application
+manifest retained their hashes, lengths and timestamps. Ordinary Stop and tray
+exit released the UI lease. These checks cover transport cancellation and a
+deliberately stale Windows receipt, not a power loss during package installation.
+
+The same ordinary account then uninstalled the native program and reinstalled
+the exact checked installer. Both operations returned success. Read-only
+snapshots after each operation matched a fresh stopped baseline across all
+45 logical tables, the seven persistent files and desktop configuration. The
+guest directory, distribution registration and private installation record were
+retained; no model download, guest import or account reset occurred. This
+qualifies this private CPU fixture's preserving update/removal lifecycle.
+Physical Windows-volume capacity admission, broader hardware, native
+accessibility/DPI, signing and the remaining platform gates are still required
+before public consumer release.

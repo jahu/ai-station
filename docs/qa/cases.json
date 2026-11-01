@@ -1,5 +1,5 @@
 {
-  "version": 35,
+  "version": 36,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5050,13 +5050,15 @@
       ],
       "steps": [
         "Na osobnym Windows 11 x64 otwórz instalator. Przeczytaj wymagania i anuluj zgodę na brakujące WSL.",
-        "Po osobnej zgodzie systemowej przygotuj WSL, ponów instalację i przerwij tworzenie środowiska AI Station. Otwórz ponownie."
+        "Po osobnej zgodzie systemowej przygotuj WSL, ponów instalację i przerwij tworzenie środowiska AI Station. Otwórz ponownie.",
+        "Jeśli Windows wymaga restartu, sprawdź widoczny komunikat, zapisz pozostałą pracę i uruchom Windows ponownie przed dalszą konfiguracją."
       ],
       "expected": [
         "Odmowa nie zmienia funkcji Windows, sterowników ani istniejących dystrybucji.",
-        "Wznowienie rozpoznaje wyłącznie własną instalację; kolizja z obcą dystrybucją nie powoduje jej przejęcia ani usunięcia."
+        "Wznowienie rozpoznaje wyłącznie własną instalację; kolizja z obcą dystrybucją nie powoduje jej przejęcia ani usunięcia.",
+        "Wymagany restart nie jest ukrywany przez automatyczne odświeżenie statusu. Aplikacja nie restartuje komputera samodzielnie i nie odblokowuje Start bez ponownego potwierdzenia gotowości."
       ],
-      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
       "minutes": 15
     },
     {
@@ -5079,7 +5081,7 @@
         "Pobranie jest jawne, weryfikowane i zachowane; odpowiedź pochodzi z wybranego lokalnego modelu.",
         "Adres jest dostępny z Windows przez loopback, a nie z obcego hosta. Klucz konfiguracji nie trafia do zwykłych logów."
       ],
-      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
       "minutes": 15
     },
     {
@@ -5102,7 +5104,7 @@
         "Jedna instalacja ma jednego właściciela; zamknięcie okna nie zatrzymuje generacji.",
         "Stop dotyczy tylko własnej stacji, bez globalnego zamykania WSL i utraty danych."
       ],
-      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
       "minutes": 10
     },
     {
@@ -5118,14 +5120,16 @@
         "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
       ],
       "steps": [
-        "Zapisz rozmowę, plik i pamięć; zainstaluj nowszą wersję w czasie działania aplikacji.",
-        "Po świadomym zatrzymaniu otwórz nową wersję. Usuń sam program bez kasowania danych i zainstaluj go ponownie."
+        "Zapisz rozmowę, plik i pamięć. W czasie pracy spróbuj otworzyć instalator nowszej wersji; zapisz, czy wymaga najpierw bezpiecznego zakończenia pracy.",
+        "Dokończ zadania, użyj Stop i zamknij stare okno sterowania. Zainstaluj nową wersję, otwórz jej okno i wybierz Update AI Station.",
+        "Po zakończeniu sprawdź poprzednie konto, rozmowę, Library, pamięć i pobrany model. Usuń sam program bez kasowania danych i zainstaluj go ponownie."
       ],
       "expected": [
-        "Aktualizacja nie przerywa pracy ani nie usuwa aktywnego kodu.",
-        "Konto, sesja, modele, historia, Library i pamięć pozostają dostępne; usunięcie danych wymaga osobnej jawnej decyzji."
+        "Aktualizacja nie przerywa pracy. Jeśli instalator wymaga zamknięcia starego okna, pokazuje ten warunek i zachowuje zadania oraz kod. Nie tworzy drugiej dystrybucji WSL.",
+        "Nowa wersja jawnie proponuje Update. Po nieudanej lub przerwanej próbie Start pozostaje niedostępny do czasu poprawnego sprawdzenia; Status i Stop zachowują swój zakres.",
+        "Konto, sesja, modele, historia, Library i pamięć pozostają zachowane; naturalne wygaśnięcie sesji może wymagać ponownego logowania. Usunięcie danych wymaga osobnej jawnej decyzji."
       ],
-      "resources": "Osobny Windows 11 x64; minimum 8 GiB RAM dla profilu CPU; sieć do świadomych pobrań; zwykłe konto Windows",
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
       "minutes": 20
     }
   ]
