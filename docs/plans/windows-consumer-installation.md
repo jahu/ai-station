@@ -476,14 +476,13 @@ snapshots after each operation matched a fresh stopped baseline across all
 guest directory, distribution registration and private installation record were
 retained; no model download, guest import or account reset occurred. This
 qualifies this private CPU fixture's preserving update/removal lifecycle.
-Physical Windows-volume capacity admission, broader hardware, native
-accessibility/DPI, signing and the remaining platform gates are still required
+Broader hardware, native accessibility/DPI, signing and the remaining platform gates are still required
 before public consumer release.
 
-### Physical Windows storage admission (in implementation)
+### Physical Windows storage admission — private CPU qualification
 
 The virtual WSL filesystem can advertise much more free space than the NTFS
-volume backing its VHD. The trusted native launcher will measure the exact
+volume backing its VHD. The trusted native launcher measures the exact
 registered guest directory's volume using the current Windows account's
 available-space quota. Only bounded numeric capacity values cross into the
 same owned guest, through a fixed installed Python helper; no drive mount,
@@ -503,10 +502,33 @@ free space. Native status reports that failure separately; the guest's private
 observation still controls download admission. The controls show a recoverable
 storage notice and clear it after a successful refresh.
 
-The catalog and both single-model and companion-bundle download workers must
-use that effective budget, preserve verified/cache/partial files on refusal and
-recheck during transfer. Native runtime preparation must use the same underlying
-physical ceiling. Qualification must compare the displayed/admitted budget with
-actual Windows volume observations, exercise shortage and stale-report refusal,
-and preserve the existing guest/accounts/models. Until those tests pass this
-paragraph is an implementation contract, not a supported-release claim.
+The catalog and both single-model and companion-bundle download workers use
+that effective budget, preserve verified/cache/partial files on refusal and
+recheck during transfer. Native runtime preparation uses the same underlying
+physical ceiling. The opened file itself is checked after an atomic refresh;
+a changed inode from a legitimate replacement does not interrupt a download.
+
+The final private installer was built and installed under the existing ordinary
+Windows account. Its offline package update retained all 45 logical tables,
+seven persistent files, configuration and the same registered guest. Actual
+installed Start, the authenticated compiled model catalog, retained account and
+conversation, cached CPU-model readiness, ordinary Stop and normal tray exit
+passed. After the native controls were hidden for over a minute, a direct catalog
+request still obtained fresh physical capacity without a native status request
+refreshing the observation for the test. The page displayed about 33 GiB free,
+rather than the roughly 948 GiB advertised by the virtual filesystem, with no
+horizontal overflow.
+
+Actual Windows permission-failure qualification refused an unsafe transient
+observation while retaining Status/Stop and recovered after its private mode was
+restored. Synthetic shortage and stale/boot/link/bounds regressions also pass;
+both worker families preserve partial downloads without starting network work
+when admission fails. An actual atomic-replacement regression covers concurrent
+refresh. The complete Python/Runner baseline passed 6,544 tests with nine opt-in
+skips; final affected families passed 378 tests after the reader correction.
+Actual Windows PowerShell 5.1 passed 14 capacity and 89 coordinator assertions.
+The version-37 operator QA catalog includes a non-destructive Windows storage
+case. No new model download or repeat CPU inference was needed for this increment.
+
+This qualifies the private CPU fixture's storage flow. Broader hardware,
+accessibility/DPI, signing and other platform release gates remain separate.
