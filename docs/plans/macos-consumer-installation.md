@@ -642,3 +642,35 @@ image builds and the scoped ARM API/worker qualification above. Evidence remains
 in the private `arm64-control-plane-20261101` acceptance directory. Full consumer
 Mac app/launcher, Docker Desktop transport, Metal, station restart/update/removal,
 minimum OS and signing remain independent NR-13/14 gates.
+
+### Normal Host Runner integration
+
+Owner-dispatched run
+[`41355906536`](https://github.com/jahu/ai-station/actions/runs/41355906536)
+passed at implementation head `9e0b9c38a4ef7ea9e92737b755052f00ea21dfe9`:
+243 passed/one skipped on each actual ARM macOS 15.8.2 and Intel macOS 15.7.9.
+Alongside the existing kernel/observation families, the normal Runner experiment
+started its real main over a mode-0600 Unix socket in a mode-0700 directory,
+rejected a second owner, recovered an existing owned process, rejected unknown
+IDs and stopped only that group while an unrelated process survived. Normal
+shutdown removed the socket. Every unqualified registered route, a later included
+route and caller-supplied platform overrides were denied on Mac. Separate shipped
+Python 3.12.14 imports/audio and unchanged-inventory checks also passed on both
+architectures; normal Runner main used the native check interpreter. This was
+the no-model operation, not a repetition of the earlier native inference fixture.
+
+Review also found two cross-platform API issues. Generic process inspection/Stop
+could delegate a Linux image-container journal on Mac, and uncertain kernel facts
+could escape as raw API failures. Six regressions failed before the fixes; generic
+Mac process operations now use only native ownership and return a fixed
+inspection-required conflict for incomplete facts. No unverified signal or Linux
+container operation is authorized by that response.
+
+Equivalent local validation used `scripts/check.sh` with all complete Host Runner
+families and affected API/package families: 2288 passed/eight skipped, plus whole
+Python lint/format of 987 files. The initial broader run was deliberately
+interrupted in favor of these complete affected families and is not counted as
+successful; the prior full baseline remains separate evidence. No UI, deployment
+or model files changed. Evidence is retained in private acceptance directory
+`native-runner-platform-20261101`. Consumer launcher, model API routing, Docker
+Desktop, Metal, complete station restart/update/removal and signing remain open.
