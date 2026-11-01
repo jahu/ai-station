@@ -53,6 +53,14 @@ Darwin enforces its shorter socket address bound without a Linux `/proc`
 fallback. These primitives add no listener or endpoint and do not enable the
 unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
 
+The read-only Metal inventory runs only a fixed installed Python observer in an
+isolated no-site child with a minimal environment, bounded duration and validated
+output. Native framework errors/stderr are not exposed, and retained device/pool
+objects are released. Working-set guidance is not dedicated/free VRAM, a hard
+memory limit or permission to launch a model. Metal identities stay separate from
+CUDA indices, so observation cannot admit a Linux NVIDIA recipe on a Mac. Native
+runtime, memory policy and actual Mac qualification remain independent gates.
+
 Darwin process facts use only fixed read-only kernel/library queries, require
 the effective OS user and reject incomplete or changing snapshots. No caller
 chooses a library path, sysctl key or command. These facts are not signal authority

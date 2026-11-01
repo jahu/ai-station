@@ -15,13 +15,18 @@ _previous_cpu: tuple[int, int] | None = None
 
 
 def collect(data_dir: Path) -> dict:
-    return {
+    result = {
         "gpus": gpus(),
         "cpu": cpu(),
         "memory": memory(),
         "disk": disk(data_dir),
         "load": load(),
     }
+    if sys.platform == "darwin":
+        from ai_station_runner.darwin_metal import observe
+
+        result["metal"] = observe()
+    return result
 
 
 def gpus() -> list[dict]:
