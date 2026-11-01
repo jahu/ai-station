@@ -3,7 +3,27 @@ import socket
 from pathlib import Path
 
 import pytest
+from ai_station_runner import unix_sockets
 from ai_station_runner.unix_sockets import unix_address
+
+
+@pytest.mark.parametrize("length", [104, 105, 107, 108])
+def test_darwin_rejects_paths_exceeding_its_actual_socket_limit(monkeypatch, length):
+    monkeypatch.setattr(unix_sockets.sys, "platform", "darwin")
+    with pytest.raises(ValueError, match="shorter private Unix socket path"):
+        with unix_address(Path("/" + "a" * (length - 1))):
+            pytest.fail("Darwin must not receive a Linux-only /proc address or oversized path")
+
+
+def test_darwin_short_path_is_unchanged_and_length_uses_bytes(monkeypatch):
+    monkeypatch.setattr(unix_sockets.sys, "platform", "darwin")
+    path = Path("/" + "a" * 102)
+    with unix_address(path) as address:
+        assert address == str(path)
+    # Fewer than 104 characters may still exceed the filesystem byte limit.
+    with pytest.raises(ValueError, match="shorter private Unix socket path"):
+        with unix_address(Path("/" + "ą" * 52)):
+            pytest.fail("A Unicode path must not bypass the native byte limit")
 
 
 def test_long_owned_path_binds_and_connects_without_moving_the_socket(tmp_path):

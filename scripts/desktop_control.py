@@ -6,6 +6,7 @@ import re
 import socket
 import stat
 import struct
+import sys
 import threading
 from uuid import uuid4
 
@@ -33,10 +34,27 @@ def private_socket(path):
 
 
 def same_user(connection):
-    return (
-        struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[1]
-        == os.geteuid()
-    )
+    if sys.platform == "linux":
+        return (
+            struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[1]
+            == os.geteuid()
+        )
+    if sys.platform != "darwin":
+        raise OSError("Desktop peer credentials are unavailable on this platform")
+    # Darwin's uid_t/gid_t are unsigned 32-bit values. Resolve only the current
+    # process's system C library, never a supplied library path or claimed UID.
+    try:
+        import ctypes
+
+        query = ctypes.CDLL(None, use_errno=True).getpeereid
+    except (ImportError, AttributeError, OSError) as exc:
+        raise OSError("Desktop peer credential inspection is unavailable") from exc
+    query.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_uint), ctypes.POINTER(ctypes.c_uint)]
+    query.restype = ctypes.c_int
+    uid, gid = ctypes.c_uint(0xFFFFFFFF), ctypes.c_uint(0xFFFFFFFF)
+    if query(connection.fileno(), ctypes.byref(uid), ctypes.byref(gid)) != 0:
+        raise OSError(ctypes.get_errno(), "Desktop peer credential inspection failed")
+    return uid.value == os.geteuid()
 
 
 class DesktopControl:
