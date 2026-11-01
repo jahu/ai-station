@@ -126,7 +126,10 @@ def test_offline_preparation_verifies_macho_and_materializes_only_regular_files(
     engine = folder / "engine"
     assert (engine / "libtest.dylib").read_bytes() == fixture["files"]["libtest.0.1.dylib"]
     for file in engine.iterdir():
-        assert not file.is_symlink() and file.stat().st_nlink == 1 and not file.stat().st_mode & 0o222
+        assert not file.is_symlink() and not file.stat().st_mode & 0o222
+    assert (engine / "libtest.dylib").samefile(engine / "libtest.0.1.dylib")
+    assert (engine / "libtest.0.dylib").samefile(engine / "libtest.0.1.dylib")
+    assert (engine / "libtest.dylib").stat().st_nlink == 3
     assert os.access(engine / "llama-server", os.X_OK)
     assert fixture["progress"][-1]["completed_files"] == len(fixture["frozen"]["files"])
     with pytest.raises(ValueError, match="existing native preparation"):
@@ -235,7 +238,17 @@ def test_cancellation_preserves_partial_operation_without_a_ready_receipt(fixtur
 
 
 @pytest.mark.parametrize(
-    "change", ["file", "extra", "receipt", "engine_link", "runtime_link", "non_executable"]
+    "change",
+    [
+        "file",
+        "extra",
+        "receipt",
+        "engine_link",
+        "runtime_link",
+        "non_executable",
+        "external_hardlink",
+        "alias_copy",
+    ],
 )
 def test_inspection_rejects_changed_files_receipts_or_directory_links(fixture, change):
     result = prepare(fixture)
@@ -252,6 +265,14 @@ def test_inspection_rejects_changed_files_receipts_or_directory_links(fixture, c
         path.write_text("{}")
     if change == "non_executable":
         (folder / "engine/llama-server").chmod(0o444)
+    if change == "external_hardlink":
+        os.link(folder / "engine/libtest.dylib", fixture["root"] / "outside-link")
+    if change == "alias_copy":
+        path = folder / "engine/libtest.dylib"
+        content = path.read_bytes()
+        path.unlink()
+        path.write_bytes(content)
+        path.chmod(0o444)
     if change == "engine_link":
         other = fixture["root"] / "moved-engine"
         (folder / "engine").rename(other)
