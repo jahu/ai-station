@@ -148,6 +148,35 @@ def test_interrupted_activation_remains_pending_and_retries_without_losing_conta
     assert json.loads((store / "receipt.json").read_text())["phase"] == "complete"
 
 
+def test_absent_original_configuration_stays_absent_in_provenance_after_restart_retry(fixture):
+    _, store, config, state = fixture
+    config.unlink()
+    state["failure"] = "restart"
+    with pytest.raises(subprocess.CalledProcessError):
+        gpu.install("AIStation-" + "b" * 32)
+    assert json.loads((store / "receipt.json").read_text())["original_sha256"] is None
+    assert config.is_file() and not (store / "original-daemon.json").exists()
+    state["failure"] = None
+    gpu.install("AIStation-" + "b" * 32)
+    assert json.loads((store / "receipt.json").read_text())["original_sha256"] is None
+    assert not (store / "original-daemon.json").exists()
+
+
+def test_changed_original_configuration_backup_is_preserved_and_refuses_resume(fixture):
+    _, store, _, state = fixture
+    state["failure"] = "restart"
+    with pytest.raises(subprocess.CalledProcessError):
+        gpu.install("AIStation-" + "b" * 32)
+    backup = store / "original-daemon.json"
+    backup.write_bytes(b"changed original")
+    state["failure"] = None
+    calls = len(state["calls"])
+    with pytest.raises(ValueError, match="backup changed"):
+        gpu.install("AIStation-" + "b" * 32)
+    assert backup.read_bytes() == b"changed original"
+    assert not any(c[:2] == ("/usr/bin/systemctl", "restart") for c in state["calls"][calls:])
+
+
 @pytest.mark.parametrize("when", ["reload", "restart"])
 def test_changed_container_process_is_never_reported_preserved(fixture, when):
     _, store, _, state = fixture

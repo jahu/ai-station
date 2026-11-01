@@ -290,12 +290,27 @@ def install(distribution=None, *, image_build=False):
             "phase": "installing",
             "running_before": before,
             "target_sha256": hashlib.sha256(target).hexdigest(),
+            "original_sha256": receipt.get("original_sha256")
+            if receipt is not None
+            else hashlib.sha256(original).hexdigest()
+            if original is not None
+            else None,
         }
         if receipt is not None and receipt.get("target_sha256") != journal["target_sha256"]:
             raise ValueError("The pending guest toolkit configuration changed")
         atomic(receipt_path, canonical(journal))
-        if original is not None and not (STORE / "original-daemon.json").exists():
-            atomic(STORE / "original-daemon.json", original)
+        backup = STORE / "original-daemon.json"
+        if journal["original_sha256"] is not None:
+            if backup.exists() or backup.is_symlink():
+                trusted(backup, private=True)
+                if hashlib.sha256(backup.read_bytes()).hexdigest() != journal["original_sha256"]:
+                    raise ValueError("The original guest Docker configuration backup changed")
+            else:
+                if original is None or hashlib.sha256(original).hexdigest() != journal["original_sha256"]:
+                    raise ValueError("The original guest Docker configuration is no longer available")
+                atomic(backup, original)
+        elif backup.exists() or backup.is_symlink():
+            raise ValueError("An unexpected guest Docker configuration backup must be preserved")
         if not installed_packages():
             run(
                 "/usr/bin/dpkg",
