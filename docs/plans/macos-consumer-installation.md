@@ -602,3 +602,31 @@ Actual API/worker/first-admin/restart qualification is separate from image
 production. Userspace-emulated ARM checks on Linux do not qualify Docker Desktop
 socket sharing or the complete Mac consumer journey. Package the verified target
 image only after those platform and application gates are satisfied.
+
+The producer was actually exercised at `c20560373c176bd9bc21947f9ef00384f0da6d9a`:
+local `linux/arm64` and `linux/amd64` images built and passed target/digest/non-root
+inspection. The ARM image `sha256:01418ede41ab3337df8d854d29f2b786793390e533c323a0edf939ebc875e487`
+then ran under project-owned userspace QEMU on Linux, with unchanged host binfmt.
+Its real API created the first administrator, served compiled UI, executed an
+ordinary fake Run through the separate production worker/spawn path, streamed
+SSE and observed the separate scheduler heartbeat. Restarting only that owned API
+retained its cookie/account and completed Run. All three private test containers
+were stopped/removed afterward; production was untouched and no real AI model ran.
+This qualifies the ARM image/application fixture, not a Mac installation or bridge.
+
+The first fixture's console read exceeded a 30-second QA observation budget.
+That failed result was retained; all old containers were confirmed absent and the
+unactivated first-admin database passed integrity/schema inspection. A separate
+fresh fixture with a bounded120-second console budget completed the full journey;
+its actual console read took28.5seconds under emulation. No product timeout or
+failed assertion was waived. The superseded all-emulated frontend comparison was
+intentionally canceled after the native-frontend ARM candidate had built; it is
+not a successful baseline image claim. Its locked `npm ci` took842.7seconds versus
+40.6seconds natively, one local build observation rather than an AI speed promise.
+
+Validation: 58 cases across three complete package families, whole Python
+lint/format985files, production/development Compose validation, both actual target
+image builds and the scoped ARM API/worker qualification above. Evidence remains
+in the private `arm64-control-plane-20261101` acceptance directory. Full consumer
+Mac app/launcher, Docker Desktop transport, Metal, station restart/update/removal,
+minimum OS and signing remain independent NR-13/14 gates.
