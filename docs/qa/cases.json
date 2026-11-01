@@ -1,5 +1,5 @@
 {
-  "version": 36,
+  "version": 37,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5131,6 +5131,33 @@
       ],
       "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
       "minutes": 20
+    },
+    {
+      "id": "SETUP-153",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: rzeczywiste miejsce na modele i odświeżanie w tle",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Uruchom stację i otwórz wybór modeli do pobrania. Porównaj pokazywane wolne miejsce z właściwościami dysku Windows, na którym znajduje się instalacja. Nie zmieniaj plików WSL ani nie zapełniaj dysku celowo.",
+        "Schowaj okno sterowania AI Station, odczekaj minutę, wróć do wyboru modeli i odśwież widok.",
+        "Jeżeli katalog zawiera model większy niż wolne miejsce, sprawdź odmowę pobrania. Pomiń ten krok z opisem, jeśli każdy dostępny model się mieści.",
+        "Sprawdź otwieranie aplikacji i Stop z okna sterowania; zapisz każde ostrzeżenie o miejscu lub odświeżeniu."
+      ],
+      "expected": [
+        "Wolne miejsce odpowiada rzeczywistemu dyskowi Windows, z zapasem bezpieczeństwa i naturalnymi różnicami pomiaru; nie pokazuje zawyżonej pojemności wirtualnego dysku WSL.",
+        "Schowanie okna zachowuje działanie stacji i aktualny pomiar. Nie pojawia się bez powodu komunikat o utraconym pomiarze.",
+        "Za mało miejsca blokuje nowe pobranie bez usuwania modeli, danych ani plików częściowych. Nie trzeba celowo pobierać dużego modelu, aby zaliczyć pozostałe kroki.",
+        "Ostrzeżenie o pomiarze miejsca nie odbiera dostępu do otwierania stacji ani Stop."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 5
     }
   ]
 }

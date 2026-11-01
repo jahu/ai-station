@@ -18,11 +18,13 @@ $module=Get-Module Setup
  function ResetFixture {
   $script:Saved=Clone $script:Original;$script:Guest=Clone $script:Old;$script:Events=[Collections.Generic.List[string]]::new()
   $script:Pending=$false;$script:LostAck=$false;$script:Busy=$false;$script:ReplaceRegistration=$false
+  $script:StorageFailure=$false
  }
  # Only the native orchestration is exercised here. All OS/WSL operations are
  # fake, immutable manifests and the real typed planners/confirmation remain.
  function script:Assert-StationWindowsHost {}
  function script:Assert-StationWindowsPreparationReady {}
+ function script:Update-StationPhysicalStorage {param($Lease,$Record,$Executable);if($script:StorageFailure){throw 'Synthetic unavailable capacity'};return $true}
  function script:Assert-StationNoReparsePath {param($Path)}
  function script:Get-StationWslExecutable {return 'C:\Windows\System32\wsl.exe'}
  function script:Read-StationPublishedManifest {param($PackageFolder);return (Clone $script:Target)}
@@ -95,5 +97,15 @@ $module=Get-Module Setup
  ResetFixture;$script:ReplaceRegistration=$true
  $refused=$false;try{Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate|Out-Null}catch{$refused=$true}
  Check ($refused -and $script:Saved.Manifest.package_sha256 -ceq $script:Old.package_sha256) 'Changed registry identity was adopted'
+ ResetFixture
+ Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate|Out-Null
+ $script:StorageFailure=$true
+ $status=Invoke-StationDesktop -Action status -PackageFolder 'C:\Package'|ConvertFrom-Json
+ Check (-not $status.running -and $status.physical_storage_available -is [bool] -and -not $status.physical_storage_available) 'Capacity failure hid lifecycle status'
+ [void](Invoke-StationDesktop -Action start -PackageFolder 'C:\Package')
+ Check ($script:Events.Contains('start')) 'Cannot open the app to clean storage after a capacity failure'
+ $rootCalls=@($script:Events|Where-Object{$_ -ceq 'root-update'}).Count
+ Invoke-StationDesktop -Action stop -PackageFolder 'C:\Package'|Out-Null
+ Check (@($script:Events|Where-Object{$_ -ceq 'root-update'}).Count -eq $rootCalls) 'Capacity failure made Stop acquire root authority'
  Write-Output ('PASS '+$script:Cases+' update coordinator assertions; fake WSL only')
 }

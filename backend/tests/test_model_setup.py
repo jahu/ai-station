@@ -360,6 +360,28 @@ def test_catalog_reports_application_storage_without_host_paths(setup_bridge, mo
         assert not setup_bridge["calls"]
 
 
+def test_windows_physical_shortage_preserves_model_partial_before_network(setup_bridge):
+    from app.config import get_settings
+    from app.model_download_files import directory
+
+    setup_bridge["hardware"]["disk"] = {
+        "physical_storage": {"status": "ready", "total_bytes": 100 * 1024**3, "free_bytes": 0}
+    }
+    entry = setup_bridge["entry"]
+    partial = directory(get_settings().data_dir) / (entry.file.sha256 + ".part")
+    partial.write_bytes(setup_bridge["content"][:4])
+    with TestClient(app) as api:
+        assert api.get("/api/setup/catalog").json()["storage"]["free_bytes"] == 0
+        created = api.post("/api/setup/downloads", json=request(entry))
+        assert created.status_code == 202
+        work()
+        result = api.get("/api/setup/downloads/" + created.json()["id"]).json()
+        assert result["run"]["status"] == "failed"
+        assert "Not enough free application storage" in result["run"]["error_message"]
+        assert not setup_bridge["calls"]
+        assert partial.read_bytes() == setup_bridge["content"][:4]
+
+
 def test_lost_worker_cannot_publish_and_explicit_resume_reuses_the_downloaded_object(
     setup_bridge, monkeypatch
 ):

@@ -7,6 +7,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ai_station_runner.windows_storage import physical
+
 _previous_cpu: tuple[int, int] | None = None
 
 
@@ -95,12 +97,16 @@ def memory() -> dict:
 
 def disk(path: Path) -> dict:
     usage = shutil.disk_usage(path if path.exists() else Path("/"))
-    return {
+    result = {
         "path": str(path),
         "total_bytes": usage.total,
         "used_bytes": usage.used,
         "free_bytes": usage.free,
     }
+    report = physical(path)
+    if report is not None:
+        result["physical_storage"] = report
+    return result
 
 
 def load() -> dict:

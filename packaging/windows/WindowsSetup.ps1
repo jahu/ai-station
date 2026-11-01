@@ -76,7 +76,8 @@ $menu=[Windows.Forms.ContextMenuStrip]::new();$showItem=$menu.Items.Add('Open AI
 function Sync-Buttons {
  $preparing=$null -ne $script:worker -and $script:worker.Action -eq 'prepare'
  $busy=$null -ne $script:worker -or ($null -ne $script:station -and $null -eq $script:ready) -or $script:stopPending
- $progress.Visible=$busy
+ $initialCheck=$null -ne $script:worker -and $script:worker.Action -eq 'status' -and -not $script:prepared -and -not $script:running
+ $progress.Visible=$busy -and ($null -eq $script:worker -or $script:worker.Action -ne 'status' -or $initialCheck -or $script:stopPending)
  $prepare.Enabled=-not $busy -and -not $script:running
  $checkOnly=$script:attention -and $null -ne $script:station -and $null -eq $script:ready
  $start.Text=$(if ($checkOnly) {'Check status'} elseif ($script:updateAvailable) {'Finish work'} else {'Start'})
@@ -116,8 +117,13 @@ function Begin-StationAction([string]$Action) {
   $description.Text=$(if ($script:updateAvailable) {'Checking the new version and preserving your accounts, models and saved work. You can leave this window in the background.'} else {'Checking the package and preparing the local environment. You can leave this window in the background.'})
  } else {
   [void]$engine.AddCommand('Invoke-StationDesktop').AddParameter('Action',$Action).AddParameter('PackageFolder',$PackageFolder)
-  $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} elseif ($Action -eq 'start') {'Starting AI Station'} else {'Checking your station'})
-  $description.Text='Your saved conversations, models and creations stay in place.'
+  if ($Action -ne 'status') {
+   $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} else {'Starting AI Station'})
+   $description.Text='Your saved conversations, models and creations stay in place.'
+  } elseif (-not $script:prepared -and -not $script:running) {
+   $status.Text='Checking your saved workspace'
+   $description.Text='Finding your existing installation. Your models, conversations and creations stay on this computer.'
+  }
  }
  $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation;Updating=($Action -eq 'prepare' -and $script:updateAvailable)}
  Sync-Buttons
@@ -182,6 +188,7 @@ $timer.Add_Tick({
      }
      'stop' { $script:stopPending=$true;$script:nextCheck=[DateTime]::UtcNow.AddSeconds(1) }
      'status' {
+      $script:nextCheck=[DateTime]::UtcNow.AddSeconds($(if($script:stopPending){2}else{15}))
       $body=([string]$value) | ConvertFrom-Json -ErrorAction Stop
       if ($body.running -isnot [bool]) { throw 'Invalid station lifecycle response.' }
       if ($body.PSObject.Properties.Name -contains 'inspection_required' -and $body.inspection_required) { throw 'The previous supervisor is still active and requires inspection. It was not replaced or stopped indiscriminately.' }
@@ -195,7 +202,12 @@ $timer.Add_Tick({
        if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }
       } else {
        $status.Text=$(if ($script:stopPending) {'Stopping AI Station'} elseif ($script:updateAvailable) {'Running · update available'} else {'Running locally'})
-       if ($script:updateAvailable) { $description.Text='Finish your current work, choose Stop, then Update AI Station. Nothing will be interrupted automatically.' }
+       if ($script:stopPending) { $description.Text='Waiting for your station to stop. Your saved work stays in place.' }
+       elseif ($script:updateAvailable) { $description.Text='Finish your current work, choose Stop, then Update AI Station. Nothing will be interrupted automatically.' }
+       else { $description.Text='Your AI Station is open. Agents and generation keep working when this window is closed.' }
+      }
+      if (-not $script:updateAvailable -and $body.PSObject.Properties.Name -contains 'physical_storage_available' -and -not $body.physical_storage_available) {
+       $description.Text='Disk space could not be refreshed. Open the app to review storage. Your saved work and Stop remain available.'
       }
      }
     }
@@ -244,6 +256,8 @@ $timer.Add_Tick({
   }
   if ($script:stopPending -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(2);Begin-StationAction 'status'
+  } elseif ($script:running -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
+   $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15);Begin-StationAction 'status'
   }
  } catch { Show-Failure $_.Exception.Message;Sync-Buttons }
 })

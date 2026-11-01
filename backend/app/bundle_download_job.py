@@ -3,7 +3,6 @@
 import asyncio
 import json
 import os
-import shutil
 import stat
 import tempfile
 import time
@@ -14,6 +13,7 @@ from sqlalchemy import select
 from app.artifacts import register_file
 from app.config import get_settings
 from app.db import utcnow
+from app.download_storage import DownloadStorage
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.model_bundles import Bundle
@@ -100,6 +100,7 @@ class BundleDownloadExecutor:
             require(run.effective_permissions, permission)
         worker, claim = run.worker_id, run.claimed_at
         release = True
+        storage = None
 
         def check(*, commit=True):
             session.refresh(run)
@@ -112,6 +113,8 @@ class BundleDownloadExecutor:
                     raise Stopped("Bundle preparation account authority changed")
             if run.status not in {"claimed", "preparing", "running"}:
                 raise Stopped("Bundle preparation was stopped")
+            if storage is not None:
+                storage.check()
             if commit:
                 session.commit()
 
@@ -122,7 +125,8 @@ class BundleDownloadExecutor:
                 raise ValueError("The reviewed bundle manifest changed")
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             session.commit()
-            hardware = RunnerClient(timeout=15).hardware()
+            runner = RunnerClient(timeout=15)
+            hardware = runner.hardware()
             check()
             available = (hardware.get("memory") or {}).get("available_mib")
             if not reserve_memory(session, run, available, 256):
@@ -132,16 +136,20 @@ class BundleDownloadExecutor:
             session.commit()
             root = get_settings().data_dir
             folder = directory(root)
-            needed = 0
-            for item in entry.files:
-                final = folder / item.file.sha256
-                if final.exists() or final.is_symlink():
-                    continue  # obtain still validates and hashes every cached object.
-                partial = folder / (item.file.sha256 + ".part")
-                existing = partial.lstat().st_size if partial.exists() and not partial.is_symlink() else 0
-                needed += max(0, item.file.size_bytes - existing)
-            if shutil.disk_usage(folder).free < needed + 256 * 1024**2:
-                raise ValueError("Not enough application storage for all bundle files and download headroom")
+
+            def remaining():
+                needed = 0
+                for item in entry.files:
+                    final = folder / item.file.sha256
+                    if final.exists() or final.is_symlink():
+                        continue  # obtain still validates and hashes every cached object.
+                    partial = folder / (item.file.sha256 + ".part")
+                    existing = partial.lstat().st_size if partial.exists() and not partial.is_symlink() else 0
+                    needed += max(0, item.file.size_bytes - existing)
+                return needed
+
+            storage = DownloadStorage(folder, hardware, runner, remaining)
+            storage.check()
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
             session.commit()
             started = time.monotonic()

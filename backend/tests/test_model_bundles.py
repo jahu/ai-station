@@ -111,6 +111,30 @@ def bundle_source(monkeypatch):
     return state
 
 
+def test_windows_unknown_capacity_preserves_bundle_partial_without_network(bundle_source, monkeypatch):
+    entry = bundle_source["entry"]
+    partial = files.directory(get_settings().data_dir) / (entry.files[0].file.sha256 + ".part")
+    partial.write_bytes(b"ver")
+    monkeypatch.setattr(
+        RunnerClient,
+        "hardware",
+        lambda _: {
+            "memory": {"available_mib": 16384},
+            "disk": {"physical_storage": {"status": "unavailable", "source": "windows_volume"}},
+        },
+    )
+    with TestClient(app) as api:
+        assert api.get("/api/setup/bundles/catalog").json()["storage"] is None
+        created = api.post("/api/setup/bundles/downloads", json=body(entry))
+        assert created.status_code == 202
+        work()
+        result = api.get("/api/setup/bundles/downloads/" + created.json()["id"]).json()
+        assert result["run"]["status"] == "failed"
+        assert "Windows controls" in result["run"]["error_message"]
+        assert not bundle_source["calls"]
+        assert partial.read_bytes() == b"ver"
+
+
 def test_complete_bundle_is_durable_idempotent_shared_files_with_private_receipt(bundle_source):
     with TestClient(app) as api:
         entry = bundle_source["entry"]

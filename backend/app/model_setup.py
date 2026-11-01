@@ -39,12 +39,21 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def storage_info():
+def storage_info(hardware=None):
     # Inspect the actual application volume, not an unrelated host model root.
     try:
+        if hardware is None:
+            from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+
+            try:
+                hardware = RunnerClient(timeout=10).hardware()
+            except (RunnerError, RunnerUnavailable):
+                return None
         usage = shutil.disk_usage(get_settings().data_dir)
-        return {"free_bytes": usage.free, "total_bytes": usage.total, "headroom_bytes": 256 * 1024**2}
-    except OSError:
+        from app.download_storage import capacity
+
+        return capacity(usage, hardware)
+    except (OSError, ValueError):
         return None
 
 
@@ -179,7 +188,7 @@ def catalog(session: DB):
     try:
         hardware = RunnerClient(timeout=10).hardware()
     except (RunnerError, RunnerUnavailable):
-        hardware = {}
+        hardware = {"storage_unavailable": True}
     scope = getattr(session, "scope", None)
     can_prepare = not accounts_enabled() or bool(scope and scope.administrator and not scope.read_only)
     entries = []
@@ -219,7 +228,7 @@ def catalog(session: DB):
         "can_prepare": can_prepare,
         "entries": entries,
         "hardware": {"memory": hardware.get("memory"), "gpus": hardware.get("gpus", [])},
-        "storage": storage_info(),
+        "storage": storage_info(hardware),
         "scope": "These are downloadable conversation models; other capability/runtime setup follows its own qualified recipes.",
     }
 

@@ -73,7 +73,7 @@ def setup(tmp_path, monkeypatch, request):
             "data_root": str(tmp_path),
         },
     )
-    monkeypatch.setattr(native.shutil, "disk_usage", lambda _: SimpleNamespace(free=20 * 1024**3))
+    monkeypatch.setattr(native, "disk_usage", lambda _: SimpleNamespace(free=20 * 1024**3))
 
     class Manager:
         def start(self, **values):
@@ -297,7 +297,7 @@ def test_catalog_distinguishes_existing_configured_image_and_pinned_install_stor
     assert value["installation_available"] is True
     assert value["storage"]["free_bytes"] == 20 * 1024**3
     assert "data_root" not in value
-    monkeypatch.setattr(native.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024))
+    monkeypatch.setattr(native, "disk_usage", lambda _: SimpleNamespace(free=1024))
     value = setup.api.get("/v1/setup/runtimes", params={"profile": setup.frozen["profile"]}).json()
     assert (
         value["usable_image"] is (setup.frozen["profile"] != "llamacpp-cpu-linux-amd64-v1")

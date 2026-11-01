@@ -2,7 +2,6 @@
 
 import os
 import platform
-import shutil
 import stat
 import sys
 import time as time
@@ -19,6 +18,7 @@ from ai_station_runner.environment_prepare import OwnedEnvironmentPreparation
 from ai_station_runner.memory_scope import available
 from ai_station_runner.memory_scope import scope_environment as scope_environment
 from ai_station_runner.memory_scope import scope_prefix as scope_prefix
+from ai_station_runner.windows_storage import disk_usage
 
 QUALIFIED = True
 PERMISSIONS = {"manage_models", "network_read", "workspace_write"}
@@ -127,7 +127,7 @@ def catalog():
             else "This speech profile requires a supported Linux workstation and an NVIDIA GPU with at least 6 GiB VRAM.",
         },
         "storage": {
-            "free_bytes": shutil.disk_usage(root).free,
+            "free_bytes": disk_usage(root).free,
             "download_bytes": total,
             "cached_bytes_estimate": cached,
             "required_bytes": total - cached + 8 * 1024**3,

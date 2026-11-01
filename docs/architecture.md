@@ -1171,4 +1171,12 @@ replaces only a verified application package inside the same owned WSL guest.
 Its private native Update UI owns the bounded transport, with no workload
 API connection; the existing desktop/supervisor owns idle/Stop, while private
 kernel locks, a backup and exact update journal protect the retained state.
+
+Windows capacity admission uses an ordinary native quota observation for the
+owned WSL volume. A fixed helper stores only bounded byte counts in a private,
+boot-bound file outside shared data. Telemetry, catalog download workers and
+native preparation take the physical ceiling instead of trusting virtual WSL
+capacity. Native lifecycle refresh keeps it current without another server or
+Windows-drive mount. Actual platform qualification remains separate from this
+implementation; see the Windows installation contract.
 No second execution architecture or application root service is introduced.
