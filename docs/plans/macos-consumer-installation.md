@@ -191,6 +191,53 @@ RAM/Metal contention and privacy. These results do not qualify Mach-O execution,
 Metal inference, shared Docker Desktop transport, Gatekeeper or a complete Mac
 installation. Actual hardware, package integration and signing remain required.
 
+### Developer native inference qualification command
+
+On a native macOS 13.3+ host, the installed developer Python environment can run:
+
+```sh
+PYTHONPATH=host-runner:scripts python scripts/macos_inference_probe.py \
+  --data-root /absolute/private/fixture-data \
+  --output /absolute/private/new-proof \
+  --model-sha256 <verified-GGUF-SHA256> --compute cpu \
+  --run-native-inference
+```
+
+Use a dedicated private fixture data directory containing only the previously
+obtained immutable `models/store/<sha256>` inputs: the matching pinned SDK archive
+listed above and a supported GGUF. The tool downloads nothing and verifies the
+entire model hash as well as native engine bytes. It rejects existing runtime
+storage, reused proof directories, root execution, other platforms and unsupported
+architectures. A concurrent runtime claim fails without adoption or cleanup.
+Do not point it at a running/previous station or move its models to make this pass.
+The dedicated inputs/root and private proof remain after the experiment; failed
+or interrupted experiments require inspection rather than automatic replay.
+
+`--compute metal` separately exercises the reviewed Apple Silicon/single unified
+device path. Intel accepts CPU only. `--context-size` defaults to 4096; explicit
+larger context still needs actual GGUF geometry and fresh RAM admission. The tool
+does not change swap/OS policy or claim a hard memory ceiling. Models may use
+native CPU/Metal resources only after the explicit inference flag is supplied.
+
+The probe prepares only its pinned engine, waits for exact alias/context readiness,
+obtains a bounded complete SSE reply, replaces the manager object while retaining
+the original PID, obtains another reply and stops only that owned instance. A
+confirmed Stop removes only the newly created short private socket directory;
+uncertain ownership/Stop retains it with a private inspection proof. The report
+stores response lengths/hashes rather than text, OS/architecture and source/input
+identities, and never raw upstream errors. A native-model pass still explicitly
+records `macos_installer_qualified=false`, `cross_process_restart_tested=false`
+and `other_os_user_tested=false`. It does not qualify Docker Desktop transport,
+a complete station/process restart, GUI installation, updates or Gatekeeper.
+Ordinary Ctrl+C/SIGTERM attempts that same scoped Stop before exit. A hard crash
+still requires inspecting the retained instance/process journal and private proof;
+the command never deletes uncertain resources or repeats inference automatically.
+
+Normal tests simulate native inference/SDK/platform facts and test this command's
+protocol, refusal, cleanup and evidence rules. No actual Mac run is claimed by
+those tests. Run the separate kernel/bridge probes and complete consumer journey
+on actual hardware before enabling any Mac installer or catalog capability.
+
 ### Native observations and ownership
 
 Native hardware snapshots now include a separate `metal` observation on Darwin.
