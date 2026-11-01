@@ -104,6 +104,26 @@ def test_atomic_refresh_retains_private_mode_and_only_updates_capacity(guest):
     assert sorted(p.name for p in guest.iterdir()) == ["windows-volume.json"]
 
 
+def test_concurrent_atomic_refresh_does_not_interrupt_an_admitted_download(guest, monkeypatch):
+    target = guest / "windows-volume.json"
+    original_open = os.open
+
+    def refresh_then_open(path, flags, *args, **kwargs):
+        if Path(path) == target:
+            value = json.loads(target.read_text())
+            value["free_bytes"] = 10 * GIB
+            replacement = guest / "new-observation"
+            replacement.write_text(json.dumps(value))
+            replacement.chmod(0o600)
+            os.replace(replacement, target)
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(os, "open", refresh_then_open)
+    report = storage.physical(guest)
+    assert report["status"] == "ready"
+    assert report["free_bytes"] == 10 * GIB - storage.HEADROOM
+
+
 def test_linux_keeps_its_actual_filesystem_policy(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "GUEST", tmp_path / "absent")
     expected = storage.shutil.disk_usage(tmp_path)

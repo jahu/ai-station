@@ -76,7 +76,8 @@ $menu=[Windows.Forms.ContextMenuStrip]::new();$showItem=$menu.Items.Add('Open AI
 function Sync-Buttons {
  $preparing=$null -ne $script:worker -and $script:worker.Action -eq 'prepare'
  $busy=$null -ne $script:worker -or ($null -ne $script:station -and $null -eq $script:ready) -or $script:stopPending
- $progress.Visible=$busy -and ($null -eq $script:worker -or $script:worker.Action -ne 'status')
+ $initialCheck=$null -ne $script:worker -and $script:worker.Action -eq 'status' -and -not $script:prepared -and -not $script:running
+ $progress.Visible=$busy -and ($null -eq $script:worker -or $script:worker.Action -ne 'status' -or $initialCheck -or $script:stopPending)
  $prepare.Enabled=-not $busy -and -not $script:running
  $checkOnly=$script:attention -and $null -ne $script:station -and $null -eq $script:ready
  $start.Text=$(if ($checkOnly) {'Check status'} elseif ($script:updateAvailable) {'Finish work'} else {'Start'})
@@ -119,6 +120,9 @@ function Begin-StationAction([string]$Action) {
   if ($Action -ne 'status') {
    $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} else {'Starting AI Station'})
    $description.Text='Your saved conversations, models and creations stay in place.'
+  } elseif (-not $script:prepared -and -not $script:running) {
+   $status.Text='Checking your saved workspace'
+   $description.Text='Finding your existing installation. Your models, conversations and creations stay on this computer.'
   }
  }
  $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation;Updating=($Action -eq 'prepare' -and $script:updateAvailable)}

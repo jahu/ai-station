@@ -101,9 +101,11 @@ def physical(path):
                 or opened.st_uid != os.getuid()
                 or opened.st_mode & 0o077
                 or opened.st_nlink != 1
-                or (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino)
             ):
                 raise ValueError("The Windows capacity file changed during inspection")
+            # The native writer publishes by atomic replacement. Validate the
+            # opened file itself; a legitimate refresh may change its inode
+            # between lstat and open without invalidating its observation.
             with os.fdopen(descriptor, "rb", closefd=False) as stream:
                 raw = stream.read(4097)
             if len(raw) > 4096:
