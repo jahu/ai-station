@@ -99,6 +99,7 @@ jobs:
           .venv/bin/python -m pytest -q -W error::pytest.PytestUnhandledThreadExceptionWarning \
             host-runner/tests/test_darwin_process_identity.py \
             host-runner/tests/test_darwin_processes.py \
+            host-runner/tests/test_runner_platform.py \
             host-runner/tests/test_darwin_telemetry.py \
             host-runner/tests/test_darwin_metal.py
       - name: Assemble fixed native Python layer

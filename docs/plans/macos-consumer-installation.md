@@ -422,8 +422,14 @@ hardware/OS versions.
 The native process candidate extends the existing ProcessManager through narrow
 boot/capture/liveness/launch hooks; it reuses the same journal, idempotency,
 deadline, cancellation and recovery implementation. Normal Runner construction
-continues to select the qualified Linux manager. The Darwin class is an internal
-candidate, not an exposed capability or a new execution engine.
+now selects the Darwin adapter on macOS, the unchanged Linux manager on Linux,
+and refuses unsupported platforms before creating storage/recovery timers.
+The FastAPI application's global operation dependency restricts Darwin to health,
+read-only hardware, owned-process inspection and Stop. It matches method and
+registered route template, not URL prefixes or caller-supplied platform fields;
+included/future adapters remain unavailable by default. Native model setup,
+inference API routing, CUDA/media and the consumer launcher are not activated.
+The Linux-only userspace-tailnet service is not restored at Mac startup.
 
 Darwin launch starts a fixed isolated Python barrier in its own session. It
 cannot exec the already-validated workload until the parent captures its actual
@@ -435,8 +441,14 @@ effective UID, start time, group and session authorize cancellation; surviving
 group members require bounded native enumeration and independent snapshots.
 Denied or truncated enumeration requires inspection, rather than reporting the
 group gone. The barrier is native lifecycle code, not an HTTP/agent shell tool.
-Real Mac Stop/deadline/recovery qualification is still required before selecting
-this adapter in the consumer launcher; memory policy and Metal remain separate.
+The earlier owner-dispatched Mac Stop/deadline/recovery results qualify these
+ownership primitives. The new normal-Runner integration adds both simulated
+platform-policy tests and an explicitly opted-in native private-UDS experiment:
+start the actual runner main, reject a second owner, inspect/recover the same
+owned process, refuse unknown IDs, Stop only that group and remove the socket on
+normal shutdown. The Linux control also runs in ordinary validation. Record actual
+Mac integration results separately; memory policy, Metal, Docker Desktop and the
+complete consumer launcher remain independent gates.
 
 The independent read-only Darwin identity probe reads a fixed kernel boot UUID and the public
 `PROC_PIDTBSDINFO` ABI, including the effective UID, group and microsecond process

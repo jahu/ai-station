@@ -1,4 +1,4 @@
-"""Internal Mac ProcessManager candidate; not selected by the normal Runner."""
+"""Native Mac ownership hooks for the shared process lifecycle engine."""
 
 import ctypes
 import errno

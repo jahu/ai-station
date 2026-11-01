@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
@@ -74,6 +74,7 @@ from ai_station_runner.publication import (
 from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_report, start_reconcile
 from ai_station_runner.python_runs import PythonRequest
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
+from ai_station_runner.runner_platform import create_process_manager, require_qualified_operation
 from ai_station_runner.runtime_install import router as runtime_setup_router
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
@@ -93,7 +94,9 @@ from ai_station_runner.video_prepare import router as video_setup_router
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
-app = FastAPI(title="AI Station Host Runner", version=__version__)
+app = FastAPI(
+    title="AI Station Host Runner", version=__version__, dependencies=[Depends(require_qualified_operation)]
+)
 
 
 @app.exception_handler(RequestValidationError)
@@ -123,7 +126,7 @@ def manager() -> ProcessManager:
     settings = get_settings()
     with _manager_lock:
         if _manager is None:
-            _manager = ProcessManager(settings.host_data_dir(), settings.cancel_grace_seconds)
+            _manager = create_process_manager(settings.host_data_dir(), settings.cancel_grace_seconds)
     return _manager
 
 
@@ -572,7 +575,7 @@ def inspect_process(
     stdout_offset: Annotated[int | None, Query(ge=0)] = None,
     stderr_offset: Annotated[int | None, Query(ge=0)] = None,
 ):
-    if managed_image_job.owns(run_id):
+    if sys.platform == "linux" and managed_image_job.owns(run_id):
         return managed_image_job.inspect(
             run_id, stdout_offset=stdout_offset or 0, stderr_offset=stderr_offset or 0
         )
@@ -580,16 +583,20 @@ def inspect_process(
         return manager().inspect(run_id, stdout_offset=stdout_offset, stderr_offset=stderr_offset)
     except ProcessNotOwned as exc:
         raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, "Owned process identity requires inspection") from exc
 
 
 @app.post("/v1/process/cancel")
 def cancel(body: CancelBody):
-    if managed_image_job.owns(body.run_id):
+    if sys.platform == "linux" and managed_image_job.owns(body.run_id):
         return managed_image_job.cancel(body.run_id, permissions=sorted(managed_image_job.PERMISSIONS))
     try:
         return manager().cancel(body.run_id)
     except ProcessNotOwned as exc:
         raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, "Owned process identity requires inspection") from exc
 
 
 @app.post("/v1/git/validate")
