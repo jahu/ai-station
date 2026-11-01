@@ -7,6 +7,12 @@ workflows; the complete cross-platform launcher and other media installations
 remain required.
 Production release status is separate from the evidence below.
 
+The [content-preserving source recovery](catalog-source-recovery.md) worker
+increment handles missing reviewed HF links without user-selected URLs or model
+replacement. Recovery records a normal Run event and retains the original
+manifest/hash, partial file and final verification. It applies to individual
+weights and companion bundles; it does not download additional models on startup.
+
 ## User journey
 
 1. The desktop launcher checks prerequisites and starts the existing Docker

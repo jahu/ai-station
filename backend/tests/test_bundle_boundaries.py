@@ -16,7 +16,14 @@ from test_model_bundles import body, work
 from test_model_bundles import bundle_source as bundle_source
 
 
-def test_bundle_history_and_receipts_private_while_model_files_shared(accounts, bundle_source):
+def test_bundle_history_and_receipts_private_while_model_files_shared(accounts, bundle_source, monkeypatch):
+    original = job.obtain
+
+    async def obtain(root, spec, *, check, progress, source_recovered):
+        source_recovered("https://huggingface.co/publisher/model/resolve/" + "a" * 40 + "/weights.gguf")
+        return await original(root, spec, check=check, progress=progress)
+
+    monkeypatch.setattr(job, "obtain", obtain)
     owner, alice, bob = accounts
     request = body(bundle_source["entry"])
     assert alice.post("/api/setup/bundles/downloads", json=request).status_code == 403
@@ -31,6 +38,8 @@ def test_bundle_history_and_receipts_private_while_model_files_shared(accounts, 
     value = owner.get("/api/setup/bundles/downloads/" + identity).json()
     assert value["run"]["status"] == "succeeded", value["run"]["error_message"]
     assert bob.get("/api/runs/" + run_id).status_code == 404
+    assert bob.get("/api/runs/" + run_id + "/events").status_code == 404
+    assert owner.get("/api/runs/" + run_id + "/events").status_code == 200
     for model_id in value["model_file_ids"]:
         assert bob.get("/api/models/" + model_id).status_code == 200
     with control_session_factory()() as db:
@@ -61,7 +70,7 @@ def test_revoked_administrator_cannot_finish_bundle(accounts, bundle_source, fie
 
 
 @pytest.mark.parametrize("same_worker", [False, True])
-@pytest.mark.parametrize("boundary", ["progress", "publication", "deferral", "failure"])
+@pytest.mark.parametrize("boundary", ["progress", "publication", "deferral", "failure", "source_recovery"])
 def test_stale_bundle_worker_never_mutates_replacement(bundle_source, monkeypatch, boundary, same_worker):
     state = {}
 
@@ -85,11 +94,14 @@ def test_stale_bundle_worker_never_mutates_replacement(bundle_source, monkeypatc
 
     original, original_lock = job.obtain, job.lock_task
 
-    async def obtain(root, spec, *, check, progress):
+    async def obtain(root, spec, *, check, progress, source_recovered=lambda url: None):
+        if boundary == "source_recovery":
+            transfer()
+            source_recovered("https://huggingface.co/publisher/model/resolve/" + "a" * 40 + "/weights.gguf")
         if boundary in {"failure", "deferral"}:
             transfer()
             raise DownloadBusy() if boundary == "deferral" else ValueError("Old transfer ended")
-        return await original(root, spec, check=check, progress=progress)
+        return await original(root, spec, check=check, progress=progress, source_recovered=source_recovered)
 
     def publication(session, task):
         if boundary == "publication":

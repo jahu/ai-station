@@ -110,8 +110,20 @@ class DownloadExecutor:
                 append_event(session, run.id, "model.download.progress", value)
                 session.commit()
 
+            def recovered(url):
+                check()
+                append_event(
+                    session,
+                    run.id,
+                    "model.download.source_refreshed",
+                    {"sha256": entry.file.sha256, "source_url": url},
+                )
+                session.commit()
+
             try:
-                path = asyncio.run(obtain(root, entry.file, check=check, progress=progress))
+                path = asyncio.run(
+                    obtain(root, entry.file, check=check, progress=progress, source_recovered=recovered)
+                )
             except DownloadBusy:
                 return self.defer(session, run, worker=worker, claim=claim)
             check()

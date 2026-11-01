@@ -15,7 +15,7 @@ from test_model_setup import setup_bridge as setup_bridge
 
 
 @pytest.mark.parametrize("same_worker", [False, True])
-@pytest.mark.parametrize("boundary", ["progress", "publication", "deferral", "failure"])
+@pytest.mark.parametrize("boundary", ["progress", "publication", "deferral", "failure", "source_recovery"])
 def test_lost_download_claim_never_cancels_publishes_or_releases_new_owners_resources(
     setup_bridge, monkeypatch, boundary, same_worker
 ):
@@ -43,7 +43,10 @@ def test_lost_download_claim_never_cancels_publishes_or_releases_new_owners_reso
     original = job.obtain
     original_lock = job.lock_task
 
-    async def obtain(root, spec, *, check, progress):
+    async def obtain(root, spec, *, check, progress, source_recovered=lambda url: None):
+        if boundary == "source_recovery":
+            transfer()
+            source_recovered("https://huggingface.co/publisher/model/resolve/" + "a" * 40 + "/weights.gguf")
         if boundary == "failure":
             transfer()
             raise ValueError("The old worker's transfer connection ended")
@@ -56,7 +59,7 @@ def test_lost_download_claim_never_cancels_publishes_or_releases_new_owners_reso
                 transfer()
             progress(received, total)
 
-        return await original(root, spec, check=check, progress=report)
+        return await original(root, spec, check=check, progress=report, source_recovered=source_recovered)
 
     def publication_lock(session, task):
         if boundary == "publication":

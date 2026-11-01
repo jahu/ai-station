@@ -179,8 +179,21 @@ class BundleDownloadExecutor:
                     session.commit()
 
                 progress(0, item.file.size_bytes)
+
+                def recovered(url):
+                    check()
+                    append_event(
+                        session,
+                        run.id,
+                        "model.download.source_refreshed",
+                        {"sha256": item.file.sha256, "filename": item.filename, "source_url": url},
+                    )
+                    session.commit()
+
                 try:
-                    path = asyncio.run(obtain(root, item.file, check=check, progress=progress))
+                    path = asyncio.run(
+                        obtain(root, item.file, check=check, progress=progress, source_recovered=recovered)
+                    )
                 except DownloadBusy:
                     previous = run.metadata_json.get("model_download", {})
                     result = DownloadExecutor.defer(session, run, worker=worker, claim=claim)

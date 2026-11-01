@@ -1180,3 +1180,10 @@ capacity. Native lifecycle refresh keeps it current without another server or
 Windows-drive mount. Actual platform qualification remains separate from this
 implementation; see the Windows installation contract.
 No second execution architecture or application root service is introduced.
+
+Reviewed model downloads can recover a missing Hugging Face locator inside the
+existing worker Run. Bounded public metadata may locate the same filename at a
+new immutable commit only when its LFS hash and size equal the frozen manifest.
+Normal verification/publication, cancellation, resource admission and private
+events remain authoritative. Catalog fingerprints and model coordinates do not
+change. [Content-preserving recovery](plans/catalog-source-recovery.md).

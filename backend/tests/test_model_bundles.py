@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.db import control_session_factory, utcnow
 from app.engine import tick
 from app.model_bundles import BUNDLES, Bundle, BundleFile
-from app.models import Artifact, ModelDefinition, ModelFile, ResourceLock, Run
+from app.models import Artifact, ModelDefinition, ModelFile, ResourceLock, Run, RunEvent
 from app.runner_client import RunnerClient
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -133,6 +133,68 @@ def test_windows_unknown_capacity_preserves_bundle_partial_without_network(bundl
         assert "Windows controls" in result["run"]["error_message"]
         assert not bundle_source["calls"]
         assert partial.read_bytes() == b"ver"
+
+
+def test_bundle_source_recovery_uses_verified_bytes_and_audits_the_original_snapshot(
+    bundle_source, monkeypatch
+):
+    entry = bundle_source["entry"]
+    first = entry.files[0]
+    repository, old, new = "publisher/model-bundle", "1" * 40, "2" * 40
+    missing = f"https://huggingface.co/{repository}/resolve/{old}/{first.filename}"
+    recovered = f"https://huggingface.co/{repository}/resolve/{new}/{first.filename}"
+    metadata_url = f"https://huggingface.co/api/models/{repository}/revision/main?blobs=true"
+    changed = first.model_copy(update={"file": first.file.model_copy(update={"urls": (missing,)})})
+    entry = entry.model_copy(update={"files": (changed, *entry.files[1:])})
+    monkeypatch.setattr(bundle_setup, "BUNDLES", (entry,))
+    monkeypatch.setattr(bundle_setup, "bundle", lambda identity: entry if identity == entry.id else None)
+    original = files.response
+
+    @asynccontextmanager
+    async def source(url, offset, check):
+        if url in {missing, metadata_url}:
+            data = {
+                "sha": new,
+                "siblings": [
+                    {
+                        "rfilename": first.filename,
+                        "lfs": {"sha256": first.file.sha256, "size": first.file.size_bytes},
+                    }
+                ],
+            }
+            result = httpx.Response(
+                404 if url == missing else 200,
+                stream=httpx.ByteStream(json.dumps(data).encode()),
+                request=httpx.Request("GET", url),
+            )
+            try:
+                yield result
+            finally:
+                await result.aclose()
+        else:
+            async with original(url, offset, check) as result:
+                yield result
+
+    monkeypatch.setattr(files, "response", source)
+    with TestClient(app) as api:
+        created = api.post("/api/setup/bundles/downloads", json=body(entry)).json()
+        work()
+        result = api.get("/api/setup/bundles/downloads/" + created["id"]).json()
+        assert result["run"]["status"] == "succeeded", result
+        with control_session_factory()() as db:
+            run = db.get(Run, created["run"]["id"])
+            assert run.parameters["entry"] == entry.model_dump(mode="json")
+            assert run.parameters["manifest_sha256"] == bundle_setup.fingerprint(run.parameters["entry"])
+            event = db.scalar(
+                select(RunEvent).where(
+                    RunEvent.run_id == run.id, RunEvent.event_type == "model.download.source_refreshed"
+                )
+            )
+            assert event.payload == {
+                "sha256": first.file.sha256,
+                "filename": first.filename,
+                "source_url": recovered,
+            }
 
 
 def test_complete_bundle_is_durable_idempotent_shared_files_with_private_receipt(bundle_source):
