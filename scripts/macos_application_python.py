@@ -158,7 +158,12 @@ def prepare(output, layer, architecture, *, allow_dirty=False):
         added = set(after) - set(before)
         if not added or any(not name.startswith((SITE + PACKAGE, SITE + DIST)) for name in added):
             raise ValueError("Application installation added unexpected interpreter files")
-        if any(after.get(SITE + PACKAGE + name) != value for name, value in sources.items()):
+        installed = {
+            name.removeprefix(SITE + PACKAGE): value
+            for name, value in after.items()
+            if name.startswith(SITE + PACKAGE)
+        }
+        if installed != sources:
             raise ValueError("Installed Host Runner bytes differ from reviewed source")
         receipt = {
             "schema": 1,

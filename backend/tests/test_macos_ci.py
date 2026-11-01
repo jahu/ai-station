@@ -38,6 +38,20 @@ def test_native_mac_job_is_owner_manual_public_only_on_standard_free_labels():
     )
     assert imports["if"] == "inputs.operation == 'macos-native-checks'"
     assert "--run-native-inference" not in imports["run"]
+    installed = next(
+        step
+        for step in job["steps"]
+        if step.get("name") == "Execute installed Runner with exact bundled interpreter"
+    )
+    assert (
+        installed["run"]
+        == '.native-mac/application-python/bin/python3.12 -IB scripts/macos_application_probe.py "$TARGET_ARCHITECTURE"'
+    )
+    application_build = next(
+        step for step in job["steps"] if step.get("name") == "Assemble regular installed Host Runner layer"
+    )
+    assert "--allow-dirty" not in application_build["run"]
+    assert "scripts/macos_application_python.py" in application_build["run"]
     for name in ("python", "windows-contracts", "frontend", "docker"):
         assert value["jobs"][name]["if"] == "inputs.operation == 'checks'"
 
