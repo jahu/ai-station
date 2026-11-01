@@ -106,6 +106,15 @@ checks are explicit admission estimates, not hard cgroups or a no-swap guarantee
 This adds no endpoint, HTTP-controlled process-output option or qualified Mac
 capability. Actual platform, transport and consumer-package gates remain open.
 
+The developer-only native recovery experiment can launch one fixed isolated
+Python owner entry with an explicit real-inference flag. Only a private bounded
+frozen model request crosses that process boundary; ambient application secrets
+are omitted. A validated response hash/instance/PID handoff and reaped successful
+owner exit precede reattachment. Timed-out helpers are signaled only through their
+immediate child handle; the existing native journal/Stop fence governs model
+cleanup. This adds no HTTP/agent operation or arbitrary command, and does not
+qualify the application launcher, Docker bridge or full station restart.
+
 The trusted Mac Python package builder fetches only built-in public checksum/size
 coordinates when explicitly requested. Immutable inputs are verified again before
 offline, hash-pinned, binary-only cross-target assembly; no target Mac interpreter,

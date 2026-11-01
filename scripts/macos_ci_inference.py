@@ -26,6 +26,7 @@ SAFE_FIELDS = {
     "zero_swap_guaranteed",
     "macos_installer_qualified",
     "cross_process_restart_tested",
+    "owner_process_exit_confirmed",
     "other_os_user_tested",
     "probe_sha256",
     "lifecycle_sha256",
@@ -108,7 +109,13 @@ def experiment(root, *, opted_in=False):
     )
     try:
         result = run(
-            data, root / "proof", frozen["model"]["sha256"], "cpu", frozen["context_size"], opted_in=True
+            data,
+            root / "proof",
+            frozen["model"]["sha256"],
+            "cpu",
+            frozen["context_size"],
+            opted_in=True,
+            cross_process=True,
         )
     except BaseException:
         proof = root / "proof/proof.json"

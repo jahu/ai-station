@@ -10,6 +10,8 @@ import re
 import shutil
 import signal
 import stat
+import subprocess
+import sys
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
@@ -17,6 +19,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from ai_station_runner import darwin_llama as native
+from ai_station_runner.environment_files import read_json
 from ai_station_runner.local_model import Completion
 from ai_station_runner.runtime_install import atomic_json
 from ai_station_runner.speech_environment import verified_object
@@ -86,7 +89,136 @@ async def reply(manager, identity):
     return {"characters": len(content), "sha256": hashlib.sha256(content.encode()).hexdigest()}
 
 
-def run(data_root, output, digest, compute, context_size, *, opted_in=False):
+def ready(manager, body, check, proof):
+    while True:
+        check()
+        snapshot = manager.inspect(body.instance_id)
+        if snapshot["status"] == "ready":
+            return snapshot
+        if snapshot["status"] != "loading":
+            proof["native_failure"] = {
+                key: snapshot.get(key) for key in ("status", "alive", "exit_code", "error")
+            }
+            raise RuntimeError("Native probe requires inspection before continuation")
+        time.sleep(0.1)
+
+
+def owner(request):
+    """Fixed isolated child: publish a handoff, then exit without stopping its model."""
+    if platform.system() != "Darwin" or os.geteuid() == 0:
+        raise RuntimeError("Native owner qualification requires an ordinary Mac user")
+    request = Path(request)
+    private_directory(request.parent)
+    value = read_json(request)
+    if set(value) != {"data_root", "socket_root", "load"}:
+        raise ValueError("Invalid native owner fixture")
+    root, sockets = private_directory(value["data_root"]), private_directory(value["socket_root"])
+    body = native.NativeLoad.model_validate(value["load"])
+    manager = native.NativeLlamaManager(root, sockets)
+    proof = {}
+    deadline = time.monotonic() + 720
+
+    def check():
+        if time.monotonic() > deadline:
+            raise TimeoutError("Native owner qualification deadline exceeded")
+
+    try:
+        manager.load(body)
+        snapshot = ready(manager, body, check, proof)
+        result = {
+            "instance_id": str(body.instance_id),
+            "model_pid": snapshot["pid"],
+            "owner_pid": os.getpid(),
+            "reply": asyncio.run(reply(manager, body.instance_id)),
+        }
+        atomic_json(request.parent, "owner-result.json", result)
+    except BaseException as exc:
+        proof["error_type"] = type(exc).__name__
+        atomic_json(request.parent, "owner-failure.json", proof)
+        manager.stop(body.instance_id, ["manage_models"])
+        raise
+    finally:
+        manager.close()
+
+
+def owner_process(root, sockets, body, output, check, proof):
+    request = output / "owner-request.json"
+    atomic_json(
+        output,
+        request.name,
+        {
+            "data_root": str(root),
+            "socket_root": str(sockets),
+            "load": body.model_dump(mode="json"),
+        },
+    )
+    child = subprocess.Popen(
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            str(Path(__file__).with_name("macos_inference_owner.py")),
+            "--run-native-inference",
+            str(request),
+        ],
+        cwd=output,
+        env={
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(root),
+            "LANG": "C.UTF-8",
+            "AI_STATION_DATA_HOST_PATH": str(root),
+        },
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        umask=0o077,
+    )
+    try:
+        while child.poll() is None:
+            check()
+            time.sleep(0.05)
+        if child.returncode != 0:
+            failure = output / "owner-failure.json"
+            if failure.exists():
+                value = read_json(failure)
+                if isinstance(value.get("native_failure"), dict):
+                    proof["native_failure"] = {
+                        key: value["native_failure"].get(key)
+                        for key in ("status", "alive", "exit_code", "error")
+                    }
+            raise RuntimeError("Native owner process failed; inspect the retained private proof")
+        result = read_json(output / "owner-result.json")
+        if (
+            set(result) != {"instance_id", "model_pid", "owner_pid", "reply"}
+            or result["instance_id"] != str(body.instance_id)
+            or type(result["owner_pid"]) is not int
+            or result["owner_pid"] != child.pid
+            or type(result["model_pid"]) is not int
+            or result["model_pid"] <= 0
+            or result["model_pid"] == child.pid
+            or not isinstance(result["reply"], dict)
+            or set(result["reply"]) != {"characters", "sha256"}
+            or type(result["reply"]["characters"]) is not int
+            or not 0 < result["reply"]["characters"] <= 262144
+            or not re.fullmatch(r"[a-f0-9]{64}", str(result["reply"]["sha256"]))
+        ):
+            raise ValueError("The native owner handoff identity or reply changed")
+        proof["owner_process_exit_confirmed"] = True
+        return result
+    finally:
+        if child.poll() is None:
+            # Only this immediate, unreaped helper is signaled. The separately
+            # journaled model is stopped by run() through its native identity.
+            child.terminate()
+            try:
+                child.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=2)
+
+
+def run(data_root, output, digest, compute, context_size, *, opted_in=False, cross_process=False):
     architecture = platform.machine()
     version = platform.mac_ver()[0]
     if (
@@ -184,28 +316,29 @@ def run(data_root, output, digest, compute, context_size, *, opted_in=False):
             socket_root=str(sockets),
         )
         atomic_json(output, "proof.json", proof)
-        manager.load(body)
-        while True:
-            check()
-            snapshot = manager.inspect(body.instance_id)
-            if snapshot["status"] == "ready":
-                break
-            if snapshot["status"] != "loading":
-                proof["native_failure"] = {
-                    key: snapshot.get(key) for key in ("status", "alive", "exit_code", "error")
-                }
-                raise RuntimeError("Native probe requires inspection before continuation")
-            time.sleep(0.1)
-        proof["first_reply"] = asyncio.run(reply(manager, body.instance_id))
-        pid = snapshot["pid"]
-        manager.close()
+        if cross_process:
+            manager.close()
+            first = owner_process(root, sockets, body, output, check, proof)
+            if proof.get("owner_process_exit_confirmed") is not True:
+                raise ValueError("The original native owner has not exited")
+            proof["first_reply"], pid = first["reply"], first["model_pid"]
+        else:
+            manager.load(body)
+            snapshot = ready(manager, body, check, proof)
+            proof["first_reply"] = asyncio.run(reply(manager, body.instance_id))
+            pid = snapshot["pid"]
+            manager.close()
         replacement = native.NativeLlamaManager(root, sockets)
         managers.append(replacement)
         attached = replacement.load(body)
         if attached["status"] != "ready" or attached["pid"] != pid:
             raise ValueError("Native observer replacement did not retain the original ready model")
         proof["retained_reply"] = asyncio.run(reply(replacement, body.instance_id))
-        proof.update(observer_replacement=True, native_inference_passed=True)
+        proof.update(
+            observer_replacement=True,
+            native_inference_passed=True,
+            cross_process_restart_tested=cross_process,
+        )
     except BaseException as exc:
         proof.update(status="failed", error_type=type(exc).__name__)
         raise
@@ -255,6 +388,7 @@ def main():
     parser.add_argument("--compute", choices=["cpu", "metal"], required=True)
     parser.add_argument("--context-size", type=int, default=4096)
     parser.add_argument("--run-native-inference", action="store_true")
+    parser.add_argument("--cross-process-recovery", action="store_true")
     args = parser.parse_args()
 
     def interrupted(*_):
@@ -269,6 +403,7 @@ def main():
             args.compute,
             args.context_size,
             opted_in=args.run_native_inference,
+            cross_process=args.cross_process_recovery,
         )
     except KeyboardInterrupt:
         print(json.dumps({"status": "interrupted"}))
