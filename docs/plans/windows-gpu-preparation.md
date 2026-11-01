@@ -166,10 +166,10 @@ during this test, without changing global WSL configuration. Earlier observer
 failures did not dispatch an update. The update used the same native coordinator
 as the UI; this run does not qualify an additional UI-button interaction.
 
-The retained VM has no GPU. Actual Windows GPU selection/inference, a fresh import
-of this GPU-prepared image, native accessibility/signing gates and the complete
-cross-platform release remain separate acceptance work. Linux inference and a
-Windows CPU result cannot substitute for those observations.
+The retained VM has no GPU. Actual Windows GPU selection/inference, remaining
+native accessibility/signing gates and the complete cross-platform release remain
+separate acceptance work. Fresh prepared-image import is recorded below. Linux
+inference and a Windows CPU result cannot substitute for GPU observations.
 
 ### Busy data-disk diagnostics
 
@@ -199,3 +199,46 @@ PowerShell scope also passes 89 coordinator and 34 guest-update assertions;
 57 desktop/guest packaging tests and the Docker image/configuration checks pass.
 An explicitly dispatched CI job runs these PowerShell contracts with the built-in
 Windows shell. Hosted Actions remain manual; no hosted execution is claimed.
+
+### Retained-disk recovery and fresh-image import
+
+The original disk became usable after a normal restart of the private Windows
+QA VM. Before requesting it, read-only native observations confirmed the only
+registered distribution was stopped, no WSL command client or old QA agent
+remained, and the original registration, disk and installation receipt matched.
+The unfinished read-only observer was retained outside the dispatch queue to
+prevent an unintended replay on login; no successful result was invented.
+The restart did not force-close applications, reset/recreate the VM, unregister
+the original guest, invoke global `wsl --shutdown`, or restart Ubuntu.
+Afterward the same original guest opened as UID 1001, its installation receipt
+matched, and SQLite's integrity check passed on the retained user database.
+
+A separate, fresh test import then qualified the prepared image with SHA-256
+`712b26148ef4fdcd0fa3c868ab64e95ca4dc118bd12de53930c5b0b43dca6ee6`
+(457,478,124 compressed bytes), built from source `30abf9d`.
+The actual native import and guest-description checks passed. Its default account
+was UID 1001, its private home remained protected, and the new installation had
+no user database or containers. Docker 29.1.3 reported `runc` as default,
+the registered NVIDIA runtime and live restore. The ordinary user could not read
+the root-only toolkit receipt. Repeating completed toolkit activation returned
+ready without changing the daemon PID. The bounded QA lifetime client exited
+normally after its cooperative release.
+
+The original guest's registration, base path and installation receipt remained
+unchanged; nine logical private-data table hashes matched before and after the
+fresh-image experiment. No additional model download occurred. This qualifies
+fresh prepared-image import/ordinary daemon preparation, separately from the
+already recorded preserving-update/CPU conversation evidence. It does not
+qualify an additional native UI first-run journey, GPU inference, all Windows
+hardware, or a permanent fix for the intermittent WSL disk lock.
+
+After qualification, cleanup rechecked the new test registration, directory,
+completed receipt, absent user database/lifetime marker and empty container
+inventory before removing only that empty AI-created import. The original
+registration and installation receipt were checked again afterward. The Windows
+VM, its disk/TPM, original account/history/models and compact proof were retained.
+
+An [upstream WSL report](https://github.com/microsoft/WSL/issues/41966)
+describes similar stopped-distribution/retained-disk symptoms during VM teardown.
+That is a diagnostic lead, not a proven kernel root cause for this QA fixture;
+no kernel stack was collected here and no global WSL settings were altered.
