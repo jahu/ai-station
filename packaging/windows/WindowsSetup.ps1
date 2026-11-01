@@ -36,6 +36,7 @@ try { $uiLease=Open-StationUiLease } catch { [void][Windows.Forms.MessageBox]::S
 $script:worker=$null;$script:station=$null;$script:reader=$null;$script:stderr=$null
 $script:ready=$null;$script:running=$false;$script:prepared=$false;$script:stopPending=$false;$script:exitAfterStop=$false;$script:allowExit=$false
 $script:nextCheck=[DateTime]::UtcNow;$script:lastError='';$script:attention=$false
+$script:updateAvailable=$false;$script:updatePending=$false;$script:refreshAfterFailure=$false
 
 $form=[Windows.Forms.Form]::new()
 $form.Text='AI Station';$form.ClientSize=[Drawing.Size]::new(620,422)
@@ -78,11 +79,11 @@ function Sync-Buttons {
  $progress.Visible=$busy
  $prepare.Enabled=-not $busy -and -not $script:running
  $checkOnly=$script:attention -and $null -ne $script:station -and $null -eq $script:ready
- $start.Text=$(if ($checkOnly) {'Check status'} else {'Start'})
+ $start.Text=$(if ($checkOnly) {'Check status'} elseif ($script:updateAvailable) {'Finish work'} else {'Start'})
  $start.Enabled=($null -eq $script:worker) -and ($checkOnly -or ($script:prepared -and -not $busy -and -not $script:running))
- $prepare.Text=$(if ($script:prepared) {'Check setup'} else {'Prepare AI Station'})
+ $prepare.Text=$(if ($script:updateAvailable) {'Update AI Station'} elseif ($script:prepared) {'Check setup'} else {'Prepare AI Station'})
  $open.Enabled=-not $busy -and $script:running
- $stop.Text=$(if ($preparing) {'Cancel setup'} else {'Stop'})
+ $stop.Text=$(if ($preparing -and $script:updateAvailable) {'Cancel update'} elseif ($preparing) {'Cancel setup'} else {'Stop'})
  $stop.Enabled=($preparing -and -not $script:worker.Cancellation.IsCancellationRequested) -or ($null -eq $script:worker -and $script:running -and -not $script:stopPending)
  $support.Enabled=-not $busy -and -not $script:running
  $known=$script:prepared -or $script:running
@@ -92,7 +93,7 @@ function Sync-Buttons {
   $button.AccessibleName=$button.Text
   $button.BackColor=[Drawing.ColorTranslator]::FromHtml('#203327');$button.ForeColor=$form.ForeColor
  }
- $primary=$(if ($open.Enabled) {$open} elseif ($start.Enabled) {$start} else {$prepare})
+ $primary=$(if ($open.Enabled) {$open} elseif ($prepare.Enabled -and $script:updateAvailable) {$prepare} elseif ($start.Enabled) {$start} else {$prepare})
  $primary.BackColor=[Drawing.ColorTranslator]::FromHtml('#B9ED98');$primary.ForeColor=[Drawing.ColorTranslator]::FromHtml('#142015')
  $form.AcceptButton=$primary
  $background.Visible=$script:running -or $preparing
@@ -110,13 +111,15 @@ function Begin-StationAction([string]$Action) {
  [void]$engine.AddStatement()
  if ($Action -eq 'prepare') {
   [void]$engine.AddCommand('Invoke-StationSetup').AddParameter('PackageFolder',$PackageFolder).AddParameter('CancellationToken',$cancellation.Token)
-  $status.Text='Preparing your private workspace';$description.Text='Checking the package and preparing the local environment. You can leave this window in the background.'
+  if ($script:updateAvailable) { [void]$engine.AddParameter('AllowUpdate',$true) }
+  $status.Text=$(if ($script:updateAvailable) {'Updating your station'} else {'Preparing your private workspace'})
+  $description.Text=$(if ($script:updateAvailable) {'Checking the new version and preserving your accounts, models and saved work. You can leave this window in the background.'} else {'Checking the package and preparing the local environment. You can leave this window in the background.'})
  } else {
-  [void]$engine.AddCommand('Invoke-StationDesktop').AddParameter('Action',$Action)
+  [void]$engine.AddCommand('Invoke-StationDesktop').AddParameter('Action',$Action).AddParameter('PackageFolder',$PackageFolder)
   $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} elseif ($Action -eq 'start') {'Starting AI Station'} else {'Checking your station'})
   $description.Text='Your saved conversations, models and creations stay in place.'
  }
- $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation}
+ $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation;Updating=($Action -eq 'prepare' -and $script:updateAvailable)}
  Sync-Buttons
 }
 function Open-ReadyTarget($Ready) {
@@ -165,7 +168,7 @@ $timer.Add_Tick({
     $value=Receive-StationActionResult $job.Engine $job.Handle
     if ($job.Action -eq 'prepare') { $job.Cancellation.Token.ThrowIfCancellationRequested() }
     switch ($job.Action) {
-     'prepare' { $script:prepared=$true;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
+     'prepare' { $script:prepared=$true;$script:updateAvailable=$false;$script:updatePending=$false;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
      'start' {
       $script:station=$value;$script:ready=$null
       $script:reader=$value.StandardOutput.ReadLineAsync();$script:stderr=$value.StandardError.ReadToEndAsync()
@@ -182,14 +185,22 @@ $timer.Add_Tick({
       $body=([string]$value) | ConvertFrom-Json -ErrorAction Stop
       if ($body.running -isnot [bool]) { throw 'Invalid station lifecycle response.' }
       if ($body.PSObject.Properties.Name -contains 'inspection_required' -and $body.inspection_required) { throw 'The previous supervisor is still active and requires inspection. It was not replaced or stopped indiscriminately.' }
-      $script:prepared=$true;$script:running=$body.running
+      if ($body.update_available -isnot [bool] -or $body.update_pending -isnot [bool]) { throw 'Invalid native update state.' }
+      $script:updateAvailable=$body.update_available;$script:updatePending=$body.update_pending
+      $script:prepared=-not $body.update_pending;$script:running=$body.running
       if (-not $body.running) {
-       $script:stopPending=$false;$script:ready=$null;$status.Text='Stopped';$description.Text='Your saved workspace is ready for next time.'
+       $script:stopPending=$false;$script:ready=$null
+       $status.Text=$(if ($script:updateAvailable) {'Update available'} else {'Stopped'})
+       $description.Text=$(if ($script:updatePending) {'An update needs to finish. Choose Update AI Station to inspect or resume it. Your saved work is preserved.'} elseif ($script:updateAvailable) {'Install the new version while keeping your accounts, models and saved work. Use Finish work first if you still have queued tasks.'} else {'Your saved workspace is ready for next time.'})
        if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }
-      } else { $status.Text=$(if ($script:stopPending) {'Stopping AI Station'} else {'Running locally'}) }
+      } else {
+       $status.Text=$(if ($script:stopPending) {'Stopping AI Station'} elseif ($script:updateAvailable) {'Running · update available'} else {'Running locally'})
+       if ($script:updateAvailable) { $description.Text='Finish your current work, choose Stop, then Update AI Station. Nothing will be interrupted automatically.' }
+      }
      }
     }
    } catch {
+    if ($job.Updating) { $script:refreshAfterFailure=$true }
     $cause=$_.Exception;$canceled=$false;$restart=$false
     while ($null -ne $cause) {
      if ($cause -is [OperationCanceledException]) { $canceled=$true }
@@ -205,6 +216,9 @@ $timer.Add_Tick({
     } else { Show-Failure $_.Exception.Message }
    } finally { $job.Engine.Dispose();$job.Cancellation.Dispose() }
    Sync-Buttons
+  }
+  if ($script:refreshAfterFailure -and $null -eq $script:worker) {
+   $script:refreshAfterFailure=$false;Begin-StationAction 'status'
   }
   if ($null -ne $script:reader -and $script:reader.IsCompleted) {
    $line=$script:reader.GetAwaiter().GetResult();$script:reader=$null

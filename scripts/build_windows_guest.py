@@ -64,6 +64,7 @@ def build(package, expected, output):
         source_head=head,
         base=BASE,
         package_sha256=expected,
+        package_bytes=package.stat().st_size,
         package=fields,
         sources=source_hashes,
         qualification="private-build-only; Windows WSL acceptance pending",
@@ -129,6 +130,9 @@ def build(package, expected, output):
         published = stage / "published"
         published.mkdir()
         shutil.move(archive, published / archive.name)
+        shutil.copy2(context / "station.deb", published / "station.deb")
+        if digest(published / "station.deb") != expected:
+            raise ValueError("The published update package differs from its accepted identity")
         receipt.update(
             image_id=image_id,
             image_tag=image,

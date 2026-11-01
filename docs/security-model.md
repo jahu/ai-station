@@ -1228,12 +1228,12 @@ Desktop browser readiness binds the private URL to a per-launch nonsecret UUID e
 
 ### Offline Windows application-update candidate
 
-The unconnected guest updater is a trusted installer layer, not a Runner/API or
+The candidate guest updater is a trusted installer layer, not a Runner/API or
 agent capability. Its entry refuses the development host and another WSL
 identity. Root authority is restricted to the owned guest's fixed package update;
 the application remains ordinary-user. Exact previous/target recipes, bounded
 hash-checked package input, private kernel locks, idle Run checks, a preserved
 SQLite backup and durable operation identity precede receipt publication.
 No commands, URLs, paths, distro import/unregister, downloads or host OS settings
-are accepted. Native transport and real Windows recovery qualification remain
-open; see [the update contract](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract).
+are accepted. Native transport is implemented in the private candidate; real Windows recovery
+qualification remains open; see [the update contract](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract).

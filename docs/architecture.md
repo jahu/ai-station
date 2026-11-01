@@ -1168,7 +1168,7 @@ The Windows consumer packaging increment keeps the same control-plane/Runner Uni
 
 The offline [Windows preserving-update candidate](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract)
 replaces only a verified application package inside the same owned WSL guest.
-It is not connected to the UI or workload APIs yet. The native installer will
-own transport; the existing desktop/supervisor owns idle/Stop, while private
+Its private native Update UI owns the bounded transport, with no workload
+API connection; the existing desktop/supervisor owns idle/Stop, while private
 kernel locks, a backup and exact update journal protect the retained state.
 No second execution architecture or application root service is introduced.

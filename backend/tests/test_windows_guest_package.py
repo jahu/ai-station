@@ -211,6 +211,8 @@ def test_built_guest_has_source_package_and_archive_receipts_and_only_its_stoppe
     output = tmp_path / "out"
     result = builder.build(package, desktop.digest(package), output)
     assert result["package_sha256"] == desktop.digest(package)
+    assert result["package_bytes"] == package.stat().st_size
+    assert (output / "station.deb").read_bytes() == package.read_bytes()
     assert result["rootfs_sha256"] == desktop.digest(output / "ai-station-wsl-rootfs.tar.gz")
     assert (
         gzip.decompress((output / "ai-station-wsl-rootfs.tar.gz").read_bytes())
@@ -342,3 +344,24 @@ def test_old_package_without_required_desktop_protocol_is_rejected(fake_build, m
     with pytest.raises(ValueError, match="protocol 2"):
         builder.package_identity(package, desktop.digest(package))
     assert not calls
+
+
+def test_changed_published_update_package_never_leaves_a_valid_guest_payload(
+    fake_build, tmp_path, monkeypatch
+):
+    package, calls = fake_build
+    original = builder.shutil.copy2
+
+    def tamper(source, target):
+        result = original(source, target)
+        if Path(target).name == "station.deb" and Path(target).parent.name == "published":
+            Path(target).write_bytes(b"Changed update package after export")
+        return result
+
+    monkeypatch.setattr(builder.shutil, "copy2", tamper)
+    with pytest.raises(ValueError, match="published update package"):
+        builder.build(package, desktop.digest(package), tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+    assert not list(tmp_path.glob(".wsl-build-*"))
+    assert calls[-1][0:2] == ["docker", "rm"]
+    assert package.read_bytes() == b"audited private package fixture"

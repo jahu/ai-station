@@ -324,7 +324,8 @@ trusted caller; no application/agent/Runner HTTP action gains root or package
 installation authority. The normal application continues to run as `station`.
 
 The offline root helper (`packaging/windows/guest_update.py`) is an isolated
-implementation layer, not yet wired into the installer or advertised as ready.
+implementation layer connected to the private installer candidate, not yet
+qualified or advertised as ready.
 Its entry requires root **inside the exact named AIStation WSL guest**, not the
 Linux development host. A bounded private input carries old/new immutable guest
 identities and the verified package bytes, never commands, paths or URLs. Admit
@@ -344,11 +345,13 @@ the completed target and do not reinstall it; a different pending pair requires
 inspection. Partial transfers are removed only if this operation created them;
 existing files, backups, distributions and application data are never cleared.
 
-Next delivery steps remain required: package the same checked Debian file with
-the Windows payload; add its bounded native stdin transport; reconcile the
-Windows receipt only after the exact guest target verifies; present an explicit
-Update/finish-work flow; exercise preserving updates, cancellation/lost-client
-recovery and uninstall/reinstall on the retained actual Windows fixture. Native
+The candidate now packages the same checked Debian file with the Windows
+payload and binds its length/hash. A bounded native stdin transfer carries the
+package without Windows-drive mounts. The Windows receipt advances only after
+exact-target confirmation. Update is explicit; Finish work can start the old
+version before an update begins, and pending-update inspection keeps status/Stop
+while refusing a new start. Actual preserving updates, cancellation/lost-client
+recovery and uninstall/reinstall on the retained Windows fixture remain required. Native
 sharing/ACL, physical Windows-volume admission, accessibility and signing remain
 separate acceptance gates. Normal tests use temporary databases and fake package
 installation, never root installation on the workstation.
@@ -365,4 +368,11 @@ cleanup. A pending root marker blocks startup in the new desktop version while
 retaining status/Stop. The Windows coordinator must still qualify admission from
 an older installed launcher; these tests do not prove that platform transition.
 Private evidence remains in `data/acceptance/windows-native-qualification-20261031/`.
-This is not a qualified or enabled Windows update flow.
+This is not a Windows-qualified or published update flow.
+
+Native binding verification adds 20 pure plan/refusal and real binary stdin
+transport assertions plus 59 coordinator assertions with fake WSL. These cover
+explicit Update, preserving registry identity, confirmation before Windows-state
+publication, lost-acknowledgement reconciliation, previous-version work, pending
+start refusal and status/Stop. The actual private Windows PS5.1 journey still
+needs to qualify these sources; PowerShell7/Linux is not its substitute.

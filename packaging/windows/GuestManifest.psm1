@@ -5,6 +5,9 @@ function Assert-StationGuestManifest {
     param([Parameter(Mandatory=$true)]$Manifest)
     if ($Manifest.schema -ne 1 -or $Manifest.desktop_protocol -ne 2 -or $Manifest.source_head -cnotmatch '^[a-f0-9]{40}$' -or $Manifest.base -cnotmatch '^ubuntu:24\.04@sha256:[a-f0-9]{64}$' -or $Manifest.package_sha256 -cnotmatch '^[a-f0-9]{64}$' -or $Manifest.rootfs_sha256 -cnotmatch '^[a-f0-9]{64}$' -or $Manifest.image_id -cnotmatch '^sha256:[a-f0-9]{64}$') { throw 'The published guest identity is invalid.' }
     if ($Manifest.rootfs_bytes -is [bool] -or $Manifest.rootfs_bytes -le 0 -or $Manifest.rootfs_bytes -gt 17179869184 -or $Manifest.package.Package -cne 'ai-station' -or $Manifest.package.Architecture -cne 'amd64' -or $Manifest.package.Version -isnot [string]) { throw 'The guest size or package architecture is invalid.' }
+    if ($Manifest.PSObject.Properties.Name -contains 'package_bytes') {
+        if ($Manifest.package_bytes -is [bool] -or ($Manifest.package_bytes -isnot [int] -and $Manifest.package_bytes -isnot [long]) -or $Manifest.package_bytes -le 0 -or $Manifest.package_bytes -ge 1073741824 -or $Manifest.package_bytes -ne [long]$Manifest.package_bytes) { throw 'Invalid update package length.' }
+    }
     $names=[string[]]@($Manifest.sources.PSObject.Properties.Name); [Array]::Sort($names,[StringComparer]::Ordinal)
     if (($names -join '|') -cne 'guest.Dockerfile|guest_control.py|wsl.conf') { throw 'The reviewed guest sources are incomplete.' }
     foreach ($name in $names) { if ($Manifest.sources.$name -cnotmatch '^[a-f0-9]{64}$') { throw 'A reviewed guest source hash is invalid.' } }

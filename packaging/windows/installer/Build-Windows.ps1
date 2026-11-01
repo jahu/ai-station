@@ -21,10 +21,13 @@ if ($InnoCompiler -and ([IO.Directory]::Exists($Output+'.installer') -or [IO.Fil
 $manifest=[IO.File]::ReadAllText((Join-Path $GuestPackage 'windows-guest-manifest.json'),[Text.UTF8Encoding]::new($false,$true)) | ConvertFrom-Json -ErrorAction Stop
 Assert-StationGuestManifest $manifest
 $archive=Open-StationVerifiedArchive (Join-Path $GuestPackage 'ai-station-wsl-rootfs.tar.gz') $manifest.rootfs_sha256 $manifest.rootfs_bytes
+$updatePackage=$null
 $stage=$Output+'.building-'+[guid]::NewGuid().ToString('N')
 try {
+ if ($manifest.PSObject.Properties.Name -notcontains 'package_bytes') { throw 'Build the complete update-capable guest payload.' }
+ $updatePackage=Open-StationVerifiedArchive (Join-Path $GuestPackage 'station.deb') $manifest.package_sha256 $manifest.package_bytes
  [void][IO.Directory]::CreateDirectory($stage)
- $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','Uninstall-Check.ps1')
+ $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','GuestUpdate.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','Uninstall-Check.ps1')
  foreach ($name in $files) {
   # A BOM keeps built-in Windows PowerShell 5.1 source decoding unambiguous.
   $text=[IO.File]::ReadAllText((Join-Path $source $name),[Text.UTF8Encoding]::new($false,$true))
@@ -34,6 +37,9 @@ try {
  [IO.File]::WriteAllText((Join-Path $stage 'windows-guest-manifest.json'),($manifest|ConvertTo-Json -Depth 8),[Text.UTF8Encoding]::new($false,$true))
  $target=[IO.File]::Open((Join-Path $stage 'ai-station-wsl-rootfs.tar.gz'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
  try { $archive.Stream.CopyTo($target);$target.Flush($true) } finally { $target.Dispose() }
+ $target=[IO.File]::Open((Join-Path $stage 'station.deb'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+ try { $updatePackage.Stream.CopyTo($target);$target.Flush($true) } finally { $target.Dispose() }
+ [IO.File]::Copy((Join-Path $source 'guest_update.py'),(Join-Path $stage 'guest_update.py'),$false)
  foreach ($name in @('LICENSE','NOTICE','COMMERCIAL.md')) { [IO.File]::Copy((Join-Path $repo $name),(Join-Path $stage $name),$false) }
  $parameters=[CodeDom.Compiler.CompilerParameters]::new()
  $parameters.CompilerOptions='/platform:x64 /target:winexe';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
@@ -67,5 +73,6 @@ try {
  }
 } finally {
  $archive.Stream.Dispose()
+ if ($null -ne $updatePackage) { $updatePackage.Stream.Dispose() }
  if ([IO.Directory]::Exists($stage)) { [IO.Directory]::Delete($stage,$true) }
 }
