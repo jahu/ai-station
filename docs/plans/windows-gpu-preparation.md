@@ -35,8 +35,15 @@ Docker GPU access or qualify a workload.
 2. Configure only the owned guest's Docker daemon. Preserve its ordinary runc
    default so a CPU-only installation stays usable. Do not modify Docker Desktop,
    another distro, the host, global `.wslconfig`, drive mounts or Windows interop.
-   Runtime registration can be [reloaded by Docker](https://docs.docker.com/reference/cli/dockerd/#configure-runtimes-using-daemonjson);
-   actual owned-service reload and surviving CPU workloads must be verified.
+   Runtime configuration can be [reloaded by Docker](https://docs.docker.com/reference/cli/dockerd/#configure-runtimes-using-daemonjson),
+   but do not assume this registers a newly installed NVIDIA device driver.
+   [Moby 27.5.1's NVIDIA integration](https://github.com/moby/moby/blob/v27.5.1/daemon/nvidia_linux.go)
+   registers that driver at daemon initialization only when its hook is already
+   on PATH. Inspect the packaged engine version and verify actual selected-device
+   requests. A first-import image must install the hook before Docker starts.
+   A preserving update must handle any necessary owned-daemon restart through
+   the explicit idle-update lifecycle, retaining or safely stopping only verified
+   owned workloads. A successful reload or runtime listing alone is insufficient.
 3. Qualify a preserving upgrade for already-installed guests. The current updater
    deliberately rejects a changed guest Dockerfile/OS recipe. Merely changing
    the first-import image would leave existing users without the prerequisite.
