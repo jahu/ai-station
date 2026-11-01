@@ -572,3 +572,61 @@ families with five opt-in skips, then the final complete Metal family40/one skip
 after a test-fixture refinement; other checked source stayed unchanged. Whole
 Python lint/format passed983 files. This closes the bundled-interpreter inference
 and immutability gap, not consumer GUI/bridge/Metal/station restart/minOS/signing.
+
+### Control-plane image production
+
+Apple Silicon needs the actual `linux/arm64` application image alongside native
+Darwin Python; an amd64-only Linux package is not a Mac ARM bundle. The trusted
+developer helper `scripts/build_control_plane_image.py` reuses the canonical
+Dockerfile and changes only its frontend stage to BuildKit's native
+`$BUILDPLATFORM`. JavaScript assets are architecture independent; backend Python,
+native wheels and the final image still target the explicitly selected platform.
+The ordinary Dockerfile, legacy/local build and end-user startup stay unchanged.
+This avoids spending the entire Node install/typecheck/build under emulation.
+
+Use an existing local Buildx builder (ordinary developer Docker authority):
+
+```sh
+python scripts/build_control_plane_image.py --platform linux/arm64   --builder <local-builder-name> --tag ai-station:<new-package-tag>   --output /absolute/new/package-image-proof
+```
+
+An optional `--buildx` selects an already verified standalone developer tool.
+The helper refuses dirty source, existing tags, uncertain image absence and
+existing proof directories. It freezes the source head and both Dockerfile hashes,
+loads locally without pushing, and verifies target OS/architecture, non-root user
+and the Buildx image digest before publishing an image-only receipt. Interrupted
+or inconsistent output remains for inspection. It changes no daemon, OS/emulator,
+GPU configuration or running application and does not grant a Runner/agent API.
+
+Actual API/worker/first-admin/restart qualification is separate from image
+production. Userspace-emulated ARM checks on Linux do not qualify Docker Desktop
+socket sharing or the complete Mac consumer journey. Package the verified target
+image only after those platform and application gates are satisfied.
+
+The producer was actually exercised at `c20560373c176bd9bc21947f9ef00384f0da6d9a`:
+local `linux/arm64` and `linux/amd64` images built and passed target/digest/non-root
+inspection. The ARM image `sha256:01418ede41ab3337df8d854d29f2b786793390e533c323a0edf939ebc875e487`
+then ran under project-owned userspace QEMU on Linux, with unchanged host binfmt.
+Its real API created the first administrator, served compiled UI, executed an
+ordinary fake Run through the separate production worker/spawn path, streamed
+SSE and observed the separate scheduler heartbeat. Restarting only that owned API
+retained its cookie/account and completed Run. All three private test containers
+were stopped/removed afterward; production was untouched and no real AI model ran.
+This qualifies the ARM image/application fixture, not a Mac installation or bridge.
+
+The first fixture's console read exceeded a 30-second QA observation budget.
+That failed result was retained; all old containers were confirmed absent and the
+unactivated first-admin database passed integrity/schema inspection. A separate
+fresh fixture with a bounded 120-second console budget completed the full journey;
+its actual console read took 28.5 seconds under emulation. No product timeout or
+failed assertion was waived. The superseded all-emulated frontend comparison was
+intentionally canceled after the native-frontend ARM candidate had built; it is
+not a successful baseline image claim. Its locked `npm ci` took 842.7 seconds versus
+40.6 seconds natively, one local build observation rather than an AI speed promise.
+
+Validation: 58 cases across three complete package families, whole Python
+lint/format of 985 files, production/development Compose validation, both actual target
+image builds and the scoped ARM API/worker qualification above. Evidence remains
+in the private `arm64-control-plane-20261101` acceptance directory. Full consumer
+Mac app/launcher, Docker Desktop transport, Metal, station restart/update/removal,
+minimum OS and signing remain independent NR-13/14 gates.
