@@ -158,6 +158,20 @@ def main():
     after = file_manifest(layer)
     after.pop("native-python.json")
     if after != actual:
+        added = set(after) - set(actual)
+        bytecode = sum("/__pycache__/" in name and name.endswith(".pyc") for name in added)
+        print(
+            json.dumps(
+                {
+                    "stage": "layer_inventory_changed",
+                    "added_bytecode": bytecode,
+                    "other_added": len(added) - bytecode,
+                    "removed": len(set(actual) - set(after)),
+                    "modified": sum(after[name] != actual[name] for name in set(actual) & set(after)),
+                }
+            ),
+            flush=True,
+        )
         raise ValueError("Native execution changed the shipped layer")
     print(json.dumps(result, sort_keys=True))
     return result

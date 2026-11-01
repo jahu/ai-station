@@ -4,6 +4,7 @@ import ctypes
 import errno
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -322,6 +323,29 @@ def test_native_child_socket_is_private_even_when_parent_umask_is_public(tmp_pat
         assert os.umask(0o022) == 0o022  # Only the child policy changes.
     finally:
         os.umask(previous)
+        manager.shutdown()
+
+
+def test_native_launch_barrier_does_not_write_interpreter_cache(tmp_path, monkeypatch, candidate_kernel):
+    cache = tmp_path / "bytecode"
+    wrapper = tmp_path / "isolated-python"
+    wrapper.write_text(
+        "#!/bin/sh\nexec "
+        + shlex.quote(sys.executable)
+        + " -X "
+        + shlex.quote("pycache_prefix=" + str(cache))
+        + ' "$@"\n'
+    )
+    wrapper.chmod(0o700)
+    monkeypatch.setattr(darwin, "sys", SimpleNamespace(executable=str(wrapper), platform=sys.platform))
+    manager = darwin.DarwinProcessManager(tmp_path)
+    run_id = str(uuid4())
+    try:
+        manager.start(run_id=run_id, executor="test", cwd=tmp_path, argv=["/usr/bin/true"])
+        result = await_done(manager, run_id)
+        assert result["exit_code"] == 0
+        assert not cache.exists()  # New bytecode must not mutate the shipped interpreter.
+    finally:
         manager.shutdown()
 
 

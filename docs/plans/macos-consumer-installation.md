@@ -544,3 +544,11 @@ checked again after inference. No developer/user Python site or PYTHONPATH can
 supply missing package dependencies. Ordinary native checks retain their no-model
 path. This closes a package/runtime integration gap; it does not add or enable a
 consumer launcher, full station restart, Docker bridge, Metal or signing.
+
+The first bundled-interpreter run41349185644 failed its final unchanged-inventory
+gate on both architectures, despite successful model replies/recovery/Stop.
+A regression reproduced interpreter-cache writes by the native exec barrier in
+an isolated temporary bytecode prefix. The Darwin barrier now also uses `-B`,
+preventing those writes instead of accepting new files or rewriting the receipt.
+Failure reports include only added-bytecode/other-file counts, not file paths or
+contents. This fixes the candidate launch path only; Linux launch is unchanged.
