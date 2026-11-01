@@ -1,15 +1,91 @@
 """Real private IPC has only status and generation-bound stop, never host tools."""
 
+import builtins
+import ctypes
+import errno
 import json
 import os
 import socket
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import desktop_control as control
 import pytest
 from ai_station_runner.unix_sockets import unix_address
+
+
+@pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="Native supported Unix peer credentials")
+def test_native_socket_pair_authenticates_the_peer_in_both_directions():
+    first, second = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        assert control.same_user(first) is True
+        assert control.same_user(second) is True
+    finally:
+        first.close()
+        second.close()
+
+
+@pytest.mark.parametrize("peer_uid", [0, 501, 2**31 + 9])
+def test_darwin_uses_kernel_effective_peer_uid_for_both_sides(monkeypatch, peer_uid):
+    monkeypatch.setattr(control.sys, "platform", "darwin")
+    monkeypatch.setattr(control.os, "geteuid", lambda: peer_uid)
+    observed = []
+
+    class Query:
+        def __call__(self, descriptor, uid, gid):
+            observed.append(descriptor)
+            ctypes.cast(uid, ctypes.POINTER(ctypes.c_uint)).contents.value = peer_uid
+            ctypes.cast(gid, ctypes.POINTER(ctypes.c_uint)).contents.value = 900
+            return 0
+
+    query = Query()
+
+    def library(name, *, use_errno):
+        assert name is None and use_errno is True
+        return SimpleNamespace(getpeereid=query)
+
+    monkeypatch.setattr(ctypes, "CDLL", library)
+    connection = SimpleNamespace(fileno=lambda: 17)
+    assert control.same_user(connection) is True
+    assert observed == [17]
+    monkeypatch.setattr(control.os, "geteuid", lambda: peer_uid + 1)
+    assert control.same_user(connection) is False
+
+
+@pytest.mark.parametrize("failure", ["import", "missing_symbol", "library", "syscall"])
+def test_darwin_unavailable_peer_credentials_never_authorize_the_connection(monkeypatch, failure):
+    monkeypatch.setattr(control.sys, "platform", "darwin")
+
+    class FailedQuery:
+        def __call__(self, descriptor, uid, gid):
+            return -1
+
+    def library(*args, **kwargs):
+        if failure == "library":
+            raise OSError("unavailable")
+        return SimpleNamespace() if failure == "missing_symbol" else SimpleNamespace(getpeereid=FailedQuery())
+
+    monkeypatch.setattr(ctypes, "CDLL", library)
+    monkeypatch.setattr(ctypes, "get_errno", lambda: errno.EBADF)
+    if failure == "import":
+        original = builtins.__import__
+
+        def unavailable(name, *args, **kwargs):
+            if name == "ctypes":
+                raise ImportError("unavailable")
+            return original(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", unavailable)
+    with pytest.raises(OSError, match="peer credential"):
+        control.same_user(SimpleNamespace(fileno=lambda: -1))
+
+
+def test_unknown_platform_does_not_fall_back_to_trusting_the_socket_file(monkeypatch):
+    monkeypatch.setattr(control.sys, "platform", "unknown")
+    with pytest.raises(OSError, match="unavailable on this platform"):
+        control.same_user(SimpleNamespace())
 
 
 def raw(root, value):

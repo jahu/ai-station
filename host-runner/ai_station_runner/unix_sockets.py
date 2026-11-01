@@ -1,8 +1,8 @@
-"""Linux addresses for already-validated owned sockets under long data roots.
+"""Addresses for validated owned sockets, with Linux long-path support.
 
-The server binds and clients connect through an open parent-directory descriptor.
-The socket file stays at its real owned location. Callers retain their existing
-path/ownership validation; this helper does not authorize a filesystem path.
+Linux long addresses use an open parent-directory descriptor. The socket file
+stays at its real owned location. Callers retain their existing path/ownership
+validation; this helper does not authorize a filesystem path.
 """
 
 import os
@@ -13,7 +13,8 @@ from pathlib import Path
 
 @contextmanager
 def unix_address(path: Path):
-    if len(os.fsencode(path)) < 108:
+    limit = 104 if sys.platform == "darwin" else 108
+    if len(os.fsencode(path)) < limit:
         yield str(path)
         return
     if sys.platform != "linux":

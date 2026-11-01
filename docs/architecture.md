@@ -24,6 +24,12 @@ application image; no second application API is introduced. Installed code is
 copied into a retained version directory before supervision so OS package
 replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
 
+The [Mac delivery contract](plans/macos-consumer-installation.md) retains the same
+control plane and private native bridge. Initial changes cover kernel-derived
+desktop peer credentials and Darwin socket lengths; native transport, process
+ownership, CPU/Metal, packaging and actual-platform acceptance remain required.
+The existing Linux launcher does not admit macOS based on these primitives alone.
+
 The desktop owner can supervise in the background without keeping a window
 open. A private same-OS-user control socket supports only status and
 instance-bound Stop; the existing supervisor remains responsible for shutdown.

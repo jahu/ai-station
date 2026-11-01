@@ -105,6 +105,11 @@ transport and macOS native CPU/Metal execution still require their advertised
 platform journeys. Package signing/public release follows the owner-controlled
 release policy; development artifacts stay private until reviewed.
 
+The [Mac delivery contract](macos-consumer-installation.md) records the native
+ownership, private Docker Desktop socket experiment, CPU/Metal runtime, package
+and preserving-update gates. Initial lifecycle portability work does not enable
+the Linux launcher on macOS or qualify a Mac installer.
+
 ## Build and current qualification
 
 Build from a clean reviewed checkout with Docker, `uv` and `dpkg-deb`:

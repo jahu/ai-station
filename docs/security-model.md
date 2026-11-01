@@ -46,6 +46,13 @@ desktop instance; only its supervisor signals its owned child. This local
 lifecycle channel carries no setup link, caller-selected PID, URL or command
 and is never exposed to web users, agents or HTTP clients.
 
+The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
+`getpeereid` for native Mac peers. Missing/failed credential inspection and
+unknown platforms deny access; file ownership alone cannot authorize a peer.
+Darwin enforces its shorter socket address bound without a Linux `/proc`
+fallback. These primitives add no listener or endpoint and do not enable the
+unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local
