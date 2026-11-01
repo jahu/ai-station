@@ -169,6 +169,20 @@ estimate free plus inactive pages, enforce the child socket umask, and retain
 only fixed native status/error/exit metadata on failed startup. Neither the RAM
 budget nor private-socket validation is bypassed to obtain a passing test.
 
+The corrected [actual CPU inference run](https://github.com/jahu/ai-station/actions/runs/41347047301)
+passed on both architectures at `f5095590971bc83781d3c3a9aff274bcc012c0e7`.
+Each native kernel/observation cohort passed 149 cases with one skip; bundled
+CPython/native imports and audio checks also passed. The fixed verified Qwen
+fixture loaded with its inspected 1756 MiB admission budget and 512-token context,
+completed two bounded SSE replies across observer replacement with the same
+process, then confirmed owned Stop and private socket cleanup on both hosts.
+ARM observed 3112.8 MiB available (84.7 free + 3028.1 inactive, rounded); Intel
+observed 9630.2 MiB available. Neither forced allocation nor a socket-policy waiver
+was needed. Normal checks passed 456 cases across 18 affected families, with eight
+opt-in skips, plus whole Python lint/format. This qualifies the native CPU fixture
+only: complete cross-process/station restart, Metal inference, Docker Desktop
+bridge, consumer installation/minimum OS and signing remain unqualified.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
