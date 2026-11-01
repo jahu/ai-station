@@ -112,11 +112,17 @@ weak-linked, rather than a required external/Homebrew installation.
 
 Preparation reuses the existing immutable store, canonical private directories,
 fingerprints and cooperative deadline/cancellation checks. It copies only the
-reviewed server, libraries and license; in-tree library aliases become independent
-immutable regular files, and other upstream command utilities are omitted.
+reviewed server, libraries and license; in-tree library aliases become controlled
+hardlinks to the same immutable file, and command utilities are omitted.
 Exact source/output hashes, architecture, minimum OS, executable permissions,
 library dependencies/search paths and the complete output inventory are verified.
 No archive path or link can publish outside the new owned operation directory.
+The v2 candidate retains alias file identity because
+[dyld checks existing file identities](https://github.com/apple-oss-distributions/dyld/blob/main/dyld/Loader.cpp)
+when handling alternate library paths. Its exact in-bundle link counts and shared
+device/inode groups are verified; an external hardlink or independent alias copy
+is rejected. This also avoids duplicate library storage. The earlier unqualified
+v1 recipes/prepared directories are retained, without overwrite or activation.
 Interrupted/changed operations remain for inspection instead of being overwritten;
 a final receipt is published only after complete verified byte assembly.
 
@@ -135,10 +141,12 @@ Normal tests use synthetic native bytes and malformed archives. The opt-in
 the already verified archives checks both actual distributions without network,
 native binary execution or model weights.
 
-This increment passed 225 affected tests across twelve complete families, plus
+Initial byte preparation passed 225 affected tests across twelve families, plus
 two opt-in assemblies of the actual ARM/Intel archives. Whole-tree Ruff/format
 checks cover 971 Python files. The Linux builder verified 37 ARM and 34 Intel
 immutable output files and their native load metadata; it did not execute them.
+The v2 alias-identity correction passes 227 affected tests and both actual archive
+assemblies; independent-copy and outside-hardlink changes are rejected.
 
 ### Native observations and ownership
 

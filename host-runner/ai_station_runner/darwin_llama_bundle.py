@@ -11,6 +11,7 @@ import re
 import stat
 import struct
 import tarfile
+from collections import Counter
 from pathlib import Path
 from uuid import UUID
 
@@ -25,7 +26,7 @@ MAX_BYTES = 256 * 1024**2
 def recipe(architecture):
     if architecture not in {"arm64", "x86_64"}:
         raise ValueError("Select a reviewed native Mac architecture")
-    profile = f"llamacpp-native-darwin-{architecture}-{RELEASE}-v1"
+    profile = f"llamacpp-native-darwin-{architecture}-{RELEASE}-v2"
     value = json.loads((RECIPES / (profile + ".json")).read_text())
     if (
         value["profile"] != profile
@@ -34,6 +35,7 @@ def recipe(architecture):
         or value["inference_qualified"] is not False
         or value["minimum_os"] != [13, 3, 0]
         or len(value["inputs"]) != 1
+        or value["file_identity_policy"] != "in-tree-hardlinks-v1"
     ):
         raise ValueError("The built-in native Mac recipe changed")
     return value
@@ -132,14 +134,14 @@ def _resolve(members, name):
         name = value.linkname
 
 
-def _private_file(path, expected, check):
+def _private_file(path, expected, check, *, links=1):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(fd, "rb") as source:
         before = os.fstat(source.fileno())
         if (
             not stat.S_ISREG(before.st_mode)
             or before.st_uid != os.geteuid()
-            or before.st_nlink != 1
+            or before.st_nlink != links
             or before.st_mode & 0o222
             or before.st_size != expected["size_bytes"]
         ):
@@ -166,6 +168,25 @@ def _private_file(path, expected, check):
             raise ValueError("The native runtime inventory changed")
 
 
+def _verify_engine(engine, frozen, architecture, check):
+    if {p.name for p in engine.iterdir()} != set(frozen["files"]):
+        raise ValueError("Native bundle library inventory differs")
+    counts = Counter(item["source"] for item in frozen["files"].values())
+    identities = {}
+    for name, item in frozen["files"].items():
+        path = engine / name
+        _private_file(path, item, check, links=counts[item["source"]])
+        info = path.stat()
+        coordinate = info.st_dev, info.st_ino
+        previous = identities.setdefault(item["source"], coordinate)
+        if previous != coordinate or len(set(identities.values())) != len(identities):
+            raise ValueError("Native library aliases must retain their exact in-bundle file identity")
+        if stat.S_IMODE(info.st_mode) != (0o555 if name == "llama-server" else 0o444):
+            raise ValueError("Native executable/library permissions changed")
+        if name != "LICENSE":
+            _macho(path, architecture, frozen["files"], executable=name == "llama-server")
+
+
 def inspect(root, operation_id, architecture, *, check=lambda: None):
     root = Path(root).resolve(strict=True)
     frozen = recipe(architecture)
@@ -182,14 +203,7 @@ def inspect(root, operation_id, architecture, *, check=lambda: None):
     if {p.name for p in folder.iterdir()} != {"preparing.json", "bundle.json", "engine"}:
         raise ValueError("Native bundle publication is incomplete or changed")
     engine = folder / "engine"
-    if {p.name for p in engine.iterdir()} != set(frozen["files"]):
-        raise ValueError("Native bundle library inventory differs")
-    for name, item in frozen["files"].items():
-        _private_file(engine / name, item, check)
-        if stat.S_IMODE((engine / name).stat().st_mode) != (0o555 if name == "llama-server" else 0o444):
-            raise ValueError("Native executable/library permissions changed")
-        if name != "LICENSE":
-            _macho(engine / name, architecture, frozen["files"], executable=name == "llama-server")
+    _verify_engine(engine, frozen, architecture, check)
     expected = {
         "schema": 1,
         "profile": frozen["profile"],
@@ -233,6 +247,7 @@ def prepare(root, operation_id, architecture, *, check=lambda: None, progress=la
     engine = directory(folder, "engine")
     with tarfile.open(source) as archive:
         members = _members(archive, frozen)
+        materialized = {}
         for index, (name, expected) in enumerate(frozen["files"].items()):
             check()
             item = _resolve(members, name)
@@ -241,18 +256,19 @@ def prepare(root, operation_id, architecture, *, check=lambda: None, progress=la
                 or item.size != expected["size_bytes"]
             ):
                 raise ValueError("Native archive source identity differs")
-            # Materialize in-tree alias chains as independent immutable bytes.
-            # No tar extraction, output symlinks/hardlinks or utility executables.
-            with archive.extractfile(item) as data, (engine / name).open("xb") as output:
-                while chunk := data.read(1024**2):
-                    check()
-                    output.write(chunk)
-                output.flush()
-                os.fsync(output.fileno())
-                os.fchmod(output.fileno(), 0o555 if name == "llama-server" else 0o444)
-            _private_file(engine / name, expected, check)
-            if name != "LICENSE":
-                _macho(engine / name, architecture, frozen["files"], executable=name == "llama-server")
+            # Preserve alias identity without installing archive-controlled links.
+            # Only a verified in-bundle regular file can be the hardlink source.
+            if item.name in materialized:
+                os.link(materialized[item.name], engine / name, follow_symlinks=False)
+            else:
+                with archive.extractfile(item) as data, (engine / name).open("xb") as output:
+                    while chunk := data.read(1024**2):
+                        check()
+                        output.write(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                    os.fchmod(output.fileno(), 0o555 if name == "llama-server" else 0o444)
+                materialized[item.name] = engine / name
             progress(
                 {
                     "phase": "assembling_native_engine",
@@ -260,6 +276,7 @@ def prepare(root, operation_id, architecture, *, check=lambda: None, progress=la
                     "file_count": len(frozen["files"]),
                 }
             )
+    _verify_engine(engine, frozen, architecture, check)
     value = {
         "schema": 1,
         "profile": frozen["profile"],

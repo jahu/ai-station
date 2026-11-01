@@ -63,8 +63,10 @@ runtime, memory policy and actual Mac qualification remain independent gates.
 
 The internal Darwin llama.cpp assembler accepts only built-in hash-pinned
 archives from the existing immutable store. It materializes reviewed server,
-library and license bytes into a new private operation directory; source links
-are resolved only inside the fixed archive and are never installed as links.
+library and license bytes into a new private operation directory. Archive link
+targets are resolved only inside the fixed archive, never passed to filesystem
+extraction. The app creates only its own in-bundle hardlinks to copied regular
+files and checks exact link counts/device-inode groups, rejecting external links.
 Output hashes, Mach-O architecture/library search boundaries, permissions and
 inventory are rechecked before a private relative-path receipt is accepted.
 Interrupted directories are retained, never silently overwritten. This prepares
