@@ -13,6 +13,7 @@ import uuid
 from pathlib import Path
 
 from desktop import digest
+from windows_gpu_bundle import RECIPE as GPU_RECIPE
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "packaging/windows"
@@ -33,6 +34,7 @@ def package_identity(package, expected):
             "Version",
             "Architecture",
             "X-AI-Station-Desktop-Protocol",
+            "X-AI-Station-WSL-GPU-Recipe",
         ],
         capture_output=True,
         text=True,
@@ -44,6 +46,8 @@ def package_identity(package, expected):
         raise ValueError("The Windows x64 guest requires the AI Station amd64 package")
     if fields.get("X-AI-Station-Desktop-Protocol") != "2":
         raise ValueError("The Windows guest requires desktop protocol 2 (browser identity and host port)")
+    if fields.get("X-AI-Station-WSL-GPU-Recipe") != GPU_RECIPE:
+        raise ValueError("The Windows guest requires the explicit verified offline GPU input package")
     return fields
 
 

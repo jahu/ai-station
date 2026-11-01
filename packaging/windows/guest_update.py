@@ -30,6 +30,10 @@ STORE = Path("/var/lib/ai-station-updates")
 PENDING_MARKER = Path("/usr/lib/ai-station-wsl-update-pending.json")
 STABLE_PYTHON = STORE / "python"
 TERMINAL = ("succeeded", "failed", "canceled", "interrupted")
+GPU_RECIPE = "nvidia-container-toolkit-1.20.1-amd64-v1"
+CPU_GUEST_RECIPE = "b6a35aa0a71b8f2b2a63c3878bfabc7ac9f88bee43606f2d0f501bc32002c9ae"
+GPU_GUEST_RECIPE = "107874c759815048c404edcf116e0c38ef8f00abbaa60b24ce67241555b36d63"
+GPU_GUEST_BASE = "ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
 
 
 def regular(path, uid, *, private=False):
@@ -249,12 +253,18 @@ def identity(value):
 
 def plan(previous, target):
     previous, target = identity(previous), identity(target)
-    if previous["base"] != target["base"] or any(
-        previous["sources"][name] != target["sources"][name] for name in ("guest.Dockerfile", "wsl.conf")
-    ):
+    if previous["base"] != target["base"] or previous["sources"]["wsl.conf"] != target["sources"]["wsl.conf"]:
         raise ValueError("This update requires a different guest OS recipe; preserve the existing distro")
     if previous["sources"]["guest_control.py"] != target["sources"]["guest_control.py"]:
         raise ValueError("A bridge protocol update requires its separately qualified migration")
+    old, new = previous["sources"]["guest.Dockerfile"], target["sources"]["guest.Dockerfile"]
+    gpu = target["package"].get("X-AI-Station-WSL-GPU-Recipe")
+    if gpu is not None and (gpu != GPU_RECIPE or new != GPU_GUEST_RECIPE or target["base"] != GPU_GUEST_BASE):
+        raise ValueError("GPU activation requires its exact reviewed guest recipe")
+    if new == GPU_GUEST_RECIPE and gpu != GPU_RECIPE:
+        raise ValueError("The GPU guest requires its verified offline input package")
+    if old != new and not (old == CPU_GUEST_RECIPE and new == GPU_GUEST_RECIPE and gpu == GPU_RECIPE):
+        raise ValueError("This guest OS recipe change has no qualified preserving migration")
     return {"previous": previous, "target": target}
 
 
@@ -378,6 +388,7 @@ def check_package(path, target, previous):
         "Version",
         "Architecture",
         "X-AI-Station-Desktop-Protocol",
+        *(["X-AI-Station-WSL-GPU-Recipe"] if "X-AI-Station-WSL-GPU-Recipe" in target["package"] else []),
     )
     actual = dict(line.split(": ", 1) for line in fields.splitlines())
     if actual != target["package"]:
@@ -507,6 +518,21 @@ def update(source, previous, target, size, uid):
             if current != target:
                 run("/usr/bin/dpkg", "--install", str(stage))
             installed(target)
+            if target["package"].get("X-AI-Station-WSL-GPU-Recipe") == GPU_RECIPE:
+                prepared = json.loads(
+                    run(
+                        str(APP / "python/bin/python3"),
+                        "-IBS",
+                        str(APP / "scripts/windows_gpu_install.py"),
+                        "--distribution",
+                        os.environ.get("WSL_DISTRO_NAME", ""),
+                    )
+                )
+                if (
+                    prepared != {"status": "ready", "recipe": GPU_RECIPE, "gpu_inference_verified": False}
+                    or prepared.get("gpu_inference_verified") is not False
+                ):
+                    raise ValueError("The guest toolkit did not confirm its exact completed preparation")
             atomic_json(RECEIPT, target, public=True)
             atomic_json(
                 STORE / (operation + ".json"), {"operation": operation, "phase": "complete", **accepted}

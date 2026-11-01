@@ -14,6 +14,16 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+The Windows GPU activation candidate is confined to the application-owned WSL
+image and its explicit preserving installer update. Its root-only fixed helper
+installs verified offline toolkit packages, retains runc as default and validates
+owned Docker live-restore/process identities before completing an update. It
+rejects native-host activation and unknown guest recipe/bridge transitions;
+failure preserves the existing pending-update fence and database backup. No
+HTTP/Runner/agent operation or new privilege grant is introduced. Host drivers,
+other distributions and Docker Desktop remain outside this operation.
+[Candidate and qualification gates](plans/windows-gpu-preparation.md).
+
 The Linux package's optional one-time Docker access action runs only through
 fresh OS administrator authentication. A root-owned, argument-free helper uses
 the bundled interpreter in isolated, no-site mode and standard library only.

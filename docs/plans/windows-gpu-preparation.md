@@ -96,7 +96,36 @@ python scripts/build_linux_package.py --output /private/build/windows-app \
   --deb --windows-gpu --gpu-cache /private/build/toolkit-inputs
 ```
 
-These inputs are not yet activated by the guest builder or preserving updater.
-The remaining installation/configuration and actual Windows GPU gates above
-still apply; including files does not make a GPU profile ready. No host package,
-driver, Docker daemon or model is changed by preparing this bundle.
+Preparing inputs does not change any host package, driver, Docker daemon or model.
+
+## Owned-guest activation candidate
+
+The Windows guest builder now requires the explicit offline GPU package variant.
+Its fixed image recipe installs the four verified packages while service startup
+is disabled, validates Docker configuration and registers the NVIDIA runtime
+before the first daemon start. The default runtime remains runc. A root-owned
+receipt distinguishes image preparation from a verified real GPU workload.
+
+Existing private guests use one explicit forward migration between the reviewed
+CPU and GPU Dockerfile hashes. The base image, disabled drive/interop settings
+and ordinary-user bridge remain exact; arbitrary OS/bridge changes and a reverse
+migration are rejected by both native PowerShell and the Linux updater. The
+updater holds its existing idle/database/desktop locks, verifies the new package
+and runs only its fixed root-owned toolkit helper before publishing the target
+guest identity. A failed or interrupted activation retains the pending-start
+fence, original database backup and previous guest receipt for inspection/resume.
+
+The helper runs only in the owned WSL installer or daemon-free image build. It
+accepts no command, URL, filesystem destination, package choice or Docker context.
+It rechecks immutable toolkit bytes and protects private root-owned journal,
+configuration and locks. Existing conflicting runtime configuration is preserved.
+It validates the merged config, enables live restore before any required owned
+daemon restart, and compares every running container's exact ID, PID and start
+time before and after activation. Changed processes prevent completion. Repeated
+completed operations verify readiness without reinstalling or restarting Docker.
+Subcommands use owned groups, bounded output/time and scoped cancellation.
+
+This remains a qualification candidate. Actual image construction, preserving
+Windows update, CPU conversation/recovery and GPU isolation/inference gates must
+be reported separately. Neither successful toolkit installation nor a runtime
+listing qualifies Windows GPU generation or the complete NR-13/14 requirement.
