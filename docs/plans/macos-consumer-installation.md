@@ -123,6 +123,20 @@ the GUI installer or a complete station journey. Retain exact job/head/results
 before claiming any native acceptance. Account/service refusal is not a pass and
 must not be worked around by selecting a paid runner or weakening a failed test.
 
+The first complete [actual native run](https://github.com/jahu/ai-station/actions/runs/41343995954)
+passed at reviewed source `47430a0f575310819a48dee81d38e68cdb3bbb05` on
+macOS 15.8.2 ARM64 and macOS 15.7.9 Intel. Each complete native-family cohort
+passed 147 cases with one skip. The explicit native ownership/deadline/recovery,
+kernel identity, RAM/CPU and Metal-observation gates ran against the Mac APIs.
+Both actually assembled and executed pinned CPython 3.12.14; native dependencies,
+source Runner import, the 160-sample PCM FFmpeg round trip and unchanged complete
+layer inventory passed. This does not qualify model/Metal inference, Docker
+Desktop transport, the declared minimum OS versions, signing or consumer setup.
+The initial setup failures remain recorded: the old developer lock lacked hashes,
+and optional Linux media QA required an unavailable Intel ONNX Runtime wheel.
+The final native check graph retains the shared pinned versions and all four
+native test families; no tested contract or failure was waived.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
