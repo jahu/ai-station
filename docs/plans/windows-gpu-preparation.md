@@ -60,3 +60,36 @@ Normal tests use simulated CLI output and temporary files. The retained Windows
 VM has no GPU passthrough; it can verify CPU/update behavior, not physical GPU
 discovery or inference. No unsupported cross-platform completion claim follows
 from those tests. NR-13/14 and the complete release goal remain open.
+
+## Offline package inputs
+
+`scripts/windows_gpu_bundle.py` prepares only four pinned amd64 toolkit packages
+at version `1.20.1-1` (8,751,700 bytes). Their lengths and SHA-256 hashes were
+checked against the publisher's Packages index, whose SHA-512 matches an
+InRelease signature verified with NVIDIA's public signing key
+`C95B321B61E88C1809C4F759DDCAE044F796ECB0`. The source identity is frozen in code;
+preparation never selects a floating latest release. Package copyright files
+retain Apache-2.0 and component notices inside the original Debian archives.
+
+The developer builder uses fixed HTTPS sources without ambient proxies or
+redirects, bounded transfers, complete verification before publication and a
+fresh destination. A verified local bundle can be reused offline. Unexpected
+files, shared-writable files, links, changed receipts/hashes and incomplete
+transfers are rejected. Failed preparation removes only its own staging directory.
+
+The Linux package builder's explicit `--windows-gpu` option includes these inputs
+and the verifier in the immutable application inventory. `--gpu-cache` reuses
+an existing verified bundle. Ordinary Linux packages omit them. Only an inspected
+bundle earns the `X-AI-Station-WSL-GPU-Recipe` package field; the package has no
+automatic install hook. Example developer build:
+
+```bash
+python scripts/windows_gpu_bundle.py --output /private/build/toolkit-inputs
+python scripts/build_linux_package.py --output /private/build/windows-app \
+  --deb --windows-gpu --gpu-cache /private/build/toolkit-inputs
+```
+
+These inputs are not yet activated by the guest builder or preserving updater.
+The remaining installation/configuration and actual Windows GPU gates above
+still apply; including files does not make a GPU profile ready. No host package,
+driver, Docker daemon or model is changed by preparing this bundle.

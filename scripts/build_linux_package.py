@@ -14,6 +14,9 @@ import urllib.request
 from pathlib import Path
 
 from desktop import DESKTOP_PROTOCOL, digest
+from windows_gpu_bundle import RECIPE as WINDOWS_GPU_RECIPE
+from windows_gpu_bundle import prepare as prepare_windows_gpu
+from windows_gpu_bundle import verify as verify_windows_gpu
 
 ROOT = Path(__file__).resolve().parent.parent
 PYTHON_URL = "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
@@ -71,7 +74,9 @@ def file_manifest(root):
     return result
 
 
-def build(output, *, allow_dirty=False, python_tar=None):
+def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, gpu_cache=None):
+    if gpu_cache is not None and not windows_gpu:
+        raise ValueError("A Windows GPU cache requires the explicit Windows guest package option")
     if platform.system() != "Linux" or platform.machine().lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("Build this package on Linux x86-64")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
@@ -88,6 +93,9 @@ def build(output, *, allow_dirty=False, python_tar=None):
         bundle = stage / "bundle"
         bundle.mkdir()
         copy_sources(bundle)
+        if windows_gpu:
+            shutil.copy2(ROOT / "scripts/windows_gpu_bundle.py", bundle / "scripts/windows_gpu_bundle.py")
+            prepare_windows_gpu(bundle / "windows-gpu", cache=gpu_cache)
         shutil.copy2(ROOT / "packaging/linux/requirements.lock", bundle / "native-requirements.lock")
         files = file_manifest(bundle)
         patch = subprocess.check_output(["git", "diff", "HEAD"], cwd=ROOT)
@@ -174,6 +182,8 @@ def build(output, *, allow_dirty=False, python_tar=None):
             "python_source": {"url": PYTHON_URL, "sha256": PYTHON_SHA256},
             "files": file_manifest(bundle),
         }
+        if windows_gpu:
+            metadata["windows_gpu_recipe"] = WINDOWS_GPU_RECIPE
         (bundle / "desktop-manifest.json").write_text(json.dumps(metadata, indent=2) + "\n")
         os.rename(bundle, output)
     return metadata
@@ -204,6 +214,12 @@ def deb(bundle, metadata):
     result = bundle.with_suffix(".deb")
     if result.exists():
         raise ValueError("The Debian package already exists")
+    gpu_field = ""
+    if "windows_gpu_recipe" in metadata:
+        if metadata["windows_gpu_recipe"] != WINDOWS_GPU_RECIPE:
+            raise ValueError("Only the reviewed Windows GPU input recipe can be packaged")
+        verify_windows_gpu(bundle / "windows-gpu")
+        gpu_field = "X-AI-Station-WSL-GPU-Recipe: " + WINDOWS_GPU_RECIPE + "\n"
     with tempfile.TemporaryDirectory(prefix=".desktop-deb-", dir=bundle.parent) as temporary:
         root = Path(temporary)
         shutil.copytree(bundle, root / "usr/lib/ai-station", symlinks=True)
@@ -220,8 +236,11 @@ def deb(bundle, metadata):
         control.mkdir()
         (control / "control").write_text(
             "Package: ai-station\nVersion: " + debian_version(metadata) + "\nArchitecture: amd64\n"
-            "X-AI-Station-Desktop-Protocol: " + str(DESKTOP_PROTOCOL) + "\n"
-            "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
+            "X-AI-Station-Desktop-Protocol: "
+            + str(DESKTOP_PROTOCOL)
+            + "\n"
+            + gpu_field
+            + "Maintainer: AI Station contributors\nSection: utils\nPriority: optional\n"
             "Depends: zenity, pkexec, passwd, login, libc6 (>= 2.35), docker.io | docker-ce-cli | docker-desktop, docker-compose-v2 | docker-compose-plugin | docker-desktop\n"
             "Description: Local AI workstation with a bundled native Python runner\n"
             " Development package. Docker must be available to the current user.\n"
@@ -247,8 +266,20 @@ def main():
     parser.add_argument("--python-archive", type=Path, help="Reuse the same pinned, hash-verified archive")
     parser.add_argument("--allow-dirty", action="store_true")
     parser.add_argument("--deb", action="store_true")
+    parser.add_argument(
+        "--windows-gpu",
+        action="store_true",
+        help="Bundle offline toolkit inputs; never install them on the build host",
+    )
+    parser.add_argument("--gpu-cache", type=Path, help="Reuse a verified Windows GPU input bundle")
     args = parser.parse_args()
-    metadata = build(args.output.resolve(), allow_dirty=args.allow_dirty, python_tar=args.python_archive)
+    metadata = build(
+        args.output.resolve(),
+        allow_dirty=args.allow_dirty,
+        python_tar=args.python_archive,
+        windows_gpu=args.windows_gpu,
+        gpu_cache=args.gpu_cache,
+    )
     if args.deb:
         print(deb(args.output.resolve(), metadata))
 
