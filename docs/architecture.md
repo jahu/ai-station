@@ -1187,3 +1187,5 @@ new immutable commit only when its LFS hash and size equal the frozen manifest.
 Normal verification/publication, cancellation, resource admission and private
 events remain authoritative. Catalog fingerprints and model coordinates do not
 change. [Content-preserving recovery](plans/catalog-source-recovery.md).
+The seven file-based media preparations share that storage/audit contract and
+retain their existing assembly reserve; no separate transfer engine is added.

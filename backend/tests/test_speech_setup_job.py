@@ -9,7 +9,7 @@ from app import runtime_setup_api
 from app.api import app
 from app.db import control_session_factory, utcnow
 from app.engine import tick
-from app.models import Artifact, ModelFile, ResourceLock, Run, User
+from app.models import Artifact, ModelFile, ResourceLock, Run, RunEvent, User
 from app.speech_setup_client import SpeechSetupClient
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -242,7 +242,7 @@ def test_private_speech_setup_history_and_receipt_with_shared_model_files(accoun
 
 
 @pytest.mark.parametrize("same_worker", [False, True])
-@pytest.mark.parametrize("boundary", ["download", "dispatch", "publication", "failure"])
+@pytest.mark.parametrize("boundary", ["download", "dispatch", "publication", "failure", "source_recovery"])
 def test_stale_speech_setup_cannot_publish_or_release_replacement(
     speech_source, monkeypatch, boundary, same_worker
 ):
@@ -271,7 +271,18 @@ def test_stale_speech_setup_cannot_publish_or_release_replacement(
         if boundary == "failure":
             raise ValueError("Synthetic old native request failure")
 
-    if boundary == "download":
+    if boundary == "source_recovery":
+        from app import speech_setup_job
+
+        original = speech_setup_job.obtain
+
+        async def obtain(root, spec, *, check, progress, source_recovered):
+            transfer()
+            source_recovered("https://huggingface.co/publisher/model/resolve/" + "a" * 40 + "/weights.gguf")
+            return await original(root, spec, check=check, progress=progress)
+
+        monkeypatch.setattr(speech_setup_job, "obtain", obtain)
+    elif boundary == "download":
         speech_source["source"]["hook"] = lambda _: transfer()
     elif boundary in {"dispatch", "failure"}:
         speech_source["at_start"] = dispatched
@@ -296,6 +307,15 @@ def test_stale_speech_setup_cannot_publish_or_release_replacement(
             assert not list(session.scalars(select(ModelFile))) and not list(
                 session.scalars(select(Artifact))
             )
+            if boundary == "source_recovery":
+                assert not list(
+                    session.scalars(
+                        select(RunEvent).where(
+                            RunEvent.run_id == run.id,
+                            RunEvent.event_type == "model.download.source_refreshed",
+                        )
+                    )
+                )
         assert not speech_source["adoptions"]
 
 

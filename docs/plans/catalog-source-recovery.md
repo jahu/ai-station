@@ -43,8 +43,10 @@ The resolver checks only the failed, already reviewed HF URLs, caches at most
 four repositories within the attempt and limits each metadata body to one MiB.
 It accepts exactly one matching LFS entry and a different 40-hex commit; mutable
 branches, ambiguous filenames and changed bytes cannot become download sources.
-Both existing workers publish the same private source-refresh event and recheck
-their claim/authority before doing so. No schema or catalog identity changes.
+Individual/bundle workers and the shared file-based runtime preparation path
+publish the same private source-refresh event and recheck their claim/authority
+before doing so. The latter serves speech, images, video, music, avatars, effects
+and Fish. No schema or catalog identity changes.
 
 A real public metadata-only probe resolved the first catalog 4B Q4 file's exact
 reviewed SHA-256 and 2,497,281,312-byte identity from its publisher metadata. The
@@ -52,3 +54,19 @@ probe used a synthetic old revision to exercise locator comparison and requested
 no model bytes. It does not establish that a real publisher URL had expired.
 Normal tests use tiny synthetic bytes and mocked metadata/HTTPS. Automated
 successes are development evidence, not prefilled operator QA answers.
+
+Full-path review found that the shared runtime input transfer also needed the
+existing physical-storage guard. A regression reproduced an incorrect successful
+speech setup when Windows reported unknown physical capacity. The repair uses
+`DownloadStorage` for all seven file-based preparations, credits retained partial
+bytes and preserves each profile's original assembly reserve (2/8/12 GiB), with
+ordinary cancellation and five-second Windows observation refresh. An unknown
+or insufficient quota rejects transfer before network; loss during transfer
+keeps the partial and never dispatches native assembly. This does not change
+model choices, permissions, recipe identity or the native transport.
+
+The seven preparation families, quota admission, partial resume, refresh loss,
+private receipt/cancellation/recovery and source-event claim fences passed 154
+focused cases after this review repair. The complete regression run for the
+initial source-recovery implementation is recorded separately; its result must
+be inspected before merging the feature. No new model or GPU work was used.

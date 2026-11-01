@@ -31,11 +31,12 @@ def capacity(usage, hardware):
 
 
 class DownloadStorage:
-    def __init__(self, folder, hardware, runner, remaining):
+    def __init__(self, folder, hardware, runner, remaining, *, headroom_bytes=HEADROOM):
         self.folder = folder
         self.hardware = hardware
         self.runner = runner
         self.remaining = remaining
+        self.headroom_bytes = max(HEADROOM, headroom_bytes)
         self.windows = (hardware.get("disk") or {}).get("physical_storage") is not None
         self.observed = time.monotonic()
         self.local_free = shutil.disk_usage(folder).free
@@ -59,5 +60,5 @@ class DownloadStorage:
                 report["free_bytes"] = max(0, report["free_bytes"] - max(0, self.local_free - usage.free))
             hardware = {**hardware, "disk": {"physical_storage": report}}
         value = capacity(usage, hardware)
-        if value["free_bytes"] < self.remaining() + HEADROOM:
+        if value["free_bytes"] < self.remaining() + self.headroom_bytes:
             raise ValueError("Not enough free application storage for model files and download headroom")

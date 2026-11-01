@@ -1257,3 +1257,8 @@ authority/deadline checks. Denied/private redirects propagate as failures;
 401/403/rate-limit failures do not trigger discovery. Original cache/success
 needs no lookup. The existing final byte verification still decides publication,
 and source-refresh events inherit the requesting Run's visibility.
+The shared file-based media preparation path enforces the same physical ceiling
+throughout its input transfer, with each profile's existing assembly reserve.
+It credits retained partial bytes without removing files and refuses stale or
+missing Windows observations before native dispatch. Source events recheck the
+current preparation claim and authority too.
