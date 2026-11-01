@@ -134,3 +134,40 @@ The model used the two discovered GPUs, Q8 cache and a 4096-token allocation for
 these short questions. The QA-owned instance was stopped afterward; temporary
 verification devices were revoked and no existing owner device or credentials
 were changed. Private evidence: `data/acceptance/search-preparation-20261030/`.
+
+## Contextual search necessity — observed regression
+
+The real Windows first-result test on 2026-11-01 sent
+`Reply with exactly WINDOWS_MODEL_OK.` with Web available by default. The selected
+local 4B model correctly returned the literal answer, but automatic query
+preparation first turned that instruction into `windows model ok` and retrieved
+five unrelated computer-model pages. Saved message metadata, the search artifact
+and the actual browser capture establish this failure; it is not inferred from a
+mock. Evidence: `data/acceptance/windows-native-qualification-20261031/`, result
+072. Existing actor/follow-up relevance qualification does not cover necessity.
+
+**Next implementation:** distinguish permission to search from a request that
+needs search. New automatic/contextual turns should ask the same admitted model
+for a bounded, tools-free structured decision: search with a concise public
+query, or continue without retrieval. Literal replies, greetings, transformations
+of supplied text and other self-contained requests should not acquire sources.
+Factual requests needing retrieval and subject-dependent follow-ups keep their
+existing bounded, privacy-filtered context. An explicit Search query still
+searches; Web off must invoke neither the planner nor the network.
+
+Freeze the new planning contract in new Run snapshots without changing canonical
+client-request receipts or reinterpreting old saved/retried Runs. A no-search
+decision emits an inspectable skip event and continues ordinary completion with
+the original messages: no search request, source cards, search artifact or claim
+that retrieval happened. Invalid/canceled preparation must not silently send raw
+private instructions or bypass the existing factual-search failure policy.
+Selected provider/model, external-AI grants, deadlines, cancellation and account
+isolation stay unchanged; do not add another planner runtime or shell surface.
+
+Verification must cover both branches, a literal containing an apparent search
+keyword, greetings and supplied-text transformations, a genuine search and its
+subject-free follow-up, explicit queries, Web off, invalid output, Stop, external
+permission, legacy Run/retry identity and cross-account boundaries. Use fake
+model/network calls for normal tests; then exercise one actual compiled
+API/worker flow and a bounded selected-model smoke test. This necessity change
+is planned here and **has not yet been implemented or deployed**.
