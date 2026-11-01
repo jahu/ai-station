@@ -532,3 +532,15 @@ case. No new model download or repeat CPU inference was needed for this incremen
 
 This qualifies the private CPU fixture's storage flow. Broader hardware,
 accessibility/DPI, signing and other platform release gates remain separate.
+
+### Native keyboard and display follow-up
+
+The [accessibility/display qualification](windows-desktop-accessibility.md)
+records actual inspection of the unchanged PR #556 native shell. The 1280 × 800
+Windows fixture offers standard 100%/125% scale choices; 125% rendered correctly
+and the initial 100% setting was restored. The native observer now registers
+Windows' built-in WinForms client providers, exposing real semantic actions
+without changing the application. Actual Tab/Shift+Tab skips disabled actions.
+The reusable owner-fenced probe and operator case SETUP-154 retain this evidence
+without another installer build or model download. Larger scales, Narrator,
+running-state focus and other platform gates remain open.

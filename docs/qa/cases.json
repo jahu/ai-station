@@ -1,5 +1,5 @@
 {
-  "version": 37,
+  "version": 38,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5157,6 +5157,31 @@
         "Ostrzeżenie o pomiarze miejsca nie odbiera dostępu do otwierania stacji ani Stop."
       ],
       "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 5
+    },
+    {
+      "id": "SETUP-154",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13"
+      ],
+      "title": "Windows: powiększenie okna i obsługa klawiaturą",
+      "prerequisites": [
+        "Osobny Windows 11 x64 z kwalifikowanym instalatorem. Zapisz początkowe ustawienie powiększenia ekranu. Nie zmieniaj sterowników ani ustawień innych aplikacji."
+      ],
+      "steps": [
+        "Otwórz okno sterowania AI Station. Klawiszami Tab i Shift+Tab przejdź po dostępnych działaniach; sprawdź widoczny fokus i pomijanie wyłączonych przycisków. Samo przechodzenie nie powinno niczego uruchamiać.",
+        "W ustawieniach ekranu Windows wybierz dostępne standardowe powiększenia, np. 100%, 125%, 150% lub 200%. Zapisz rzeczywiście dostępne i sprawdzone wartości; niedostępnych nie oznaczaj jako zaliczone.",
+        "Sprawdź czytelność nagłówka, opisów, przycisków i linków. Jeśli korzystasz z czytnika ekranu, zapisz oddzielnie jego nazwę i wynik.",
+        "Przywróć początkowe powiększenie. Zakończ okno normalnie przez menu zasobnika; nie wymuszaj zamknięcia procesu."
+      ],
+      "expected": [
+        "Każde dostępne działanie jest osiągalne z klawiatury, z widocznym fokusem; niedostępne działania są pomijane. Tab nie uruchamia przygotowania ani stacji.",
+        "Przy faktycznie sprawdzonym powiększeniu wszystkie działania pozostają dostępne, a opisy są czytelne. Niedostępne wartości oraz brak próby czytnika ekranu pozostają jawnie nieprzetestowane.",
+        "Początkowe ustawienie ekranu zostaje przywrócone. Rozmowy, modele i dane pozostają zachowane."
+      ],
+      "resources": "Osobny Windows 11 x64; klawiatura; opcjonalny czytnik ekranu. Bez nowych pobrań modeli lub generowania.",
       "minutes": 5
     }
   ]
