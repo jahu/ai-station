@@ -96,6 +96,47 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Acceptance evidence
 
+### Owner-dispatched public Mac checks
+
+The repository is now public. GitHub documents standard public-repository runners
+as [free and unlimited](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+The existing manual workflow gains `operation=macos-native-checks`, restricted to
+the owner and a public repository before runner allocation. It uses only fixed
+standard `macos-15` ARM and `macos-15-intel` labels, read-only repository permission
+and a 20-minute bound. Ordinary CI/release jobs do not run for this operation.
+It creates no uploaded artifacts/caches or larger/paid runner allocation, changes
+no billing setting and does not run on push or pull requests automatically.
+The native check lock contains the full Runner/developer and packaging dependency
+graph at the existing pinned versions. It does not install the control-plane/Linux
+media-QA environment on macOS: its optional ONNX Runtime pin has no Intel Mac wheel.
+That separate media runtime is not qualified or advertised by these kernel/import
+checks. All four selected native test families run unchanged on both architectures.
+
+The operation opts kernel ownership, CPU/RAM and Metal **observation** tests into
+actual native APIs, then assembles the pinned Python layer and executes its exact
+isolated interpreter. It verifies native imports, source Runner import, a tiny
+synthetic native FFmpeg audio round trip and unchanged layer bytes. Reports use
+only controlled public-fixture/platform/version/source facts, with no user data,
+credentials, real model, GPU inference or release/deployment. Successful hosted
+checks do not qualify Docker Desktop socket sharing, Metal inference, Gatekeeper,
+the GUI installer or a complete station journey. Retain exact job/head/results
+before claiming any native acceptance. Account/service refusal is not a pass and
+must not be worked around by selecting a paid runner or weakening a failed test.
+
+The first complete [actual native run](https://github.com/jahu/ai-station/actions/runs/41343995954)
+passed at reviewed source `47430a0f575310819a48dee81d38e68cdb3bbb05` on
+macOS 15.8.2 ARM64 and macOS 15.7.9 Intel. Each complete native-family cohort
+passed 147 cases with one skip. The explicit native ownership/deadline/recovery,
+kernel identity, RAM/CPU and Metal-observation gates ran against the Mac APIs.
+Both actually assembled and executed pinned CPython 3.12.14; native dependencies,
+source Runner import, the 160-sample PCM FFmpeg round trip and unchanged complete
+layer inventory passed. This does not qualify model/Metal inference, Docker
+Desktop transport, the declared minimum OS versions, signing or consumer setup.
+The initial setup failures remain recorded: the old developer lock lacked hashes,
+and optional Linux media QA required an unavailable Intel ONNX Runtime wheel.
+The final native check graph retains the shared pinned versions and all four
+native test families; no tested contract or failure was waived.
+
 ### Native llama.cpp byte preparation
 
 The internal offline assembler pins [llama.cpp b12032](https://github.com/ggml-org/llama.cpp/releases/tag/b12032)
