@@ -208,6 +208,7 @@ def test_application_copy_installs_runner_without_touching_base_or_claiming_exec
         "dependency",
         "lib/python3.12/site-packages/foreign.py",
         "lib/python3.12/site-packages/ai_station_runner/__init__.py",
+        "lib/python3.12/site-packages/ai_station_runner/extra.py",
     ],
 )
 def test_install_cannot_replace_dependencies_inject_other_packages_or_change_source(

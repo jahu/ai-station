@@ -24,4 +24,5 @@ ai-station-data/
 data/
 *.egg-info/
 .tools/
+.native-mac/
 /host-runner/build/

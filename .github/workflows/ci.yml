@@ -111,6 +111,17 @@ jobs:
           .venv/bin/python scripts/macos_desktop_python.py \
             --architecture "$TARGET_ARCHITECTURE" --cache "$PWD/.native-mac/inputs" \
             --output "$PWD/.native-mac/python" --download-inputs
+      - name: Assemble regular installed Host Runner layer
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          .venv/bin/python scripts/macos_application_python.py \
+            --architecture "$TARGET_ARCHITECTURE" --python-layer "$PWD/.native-mac/python" \
+            --output "$PWD/.native-mac/application-python"
+      - name: Execute installed Runner with exact bundled interpreter
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_application_probe.py "$TARGET_ARCHITECTURE"
       - name: Execute the actual bundled interpreter and native dependencies
         if: inputs.operation == 'macos-native-checks'
         env:

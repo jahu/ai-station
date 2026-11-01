@@ -708,3 +708,22 @@ No Mac code, real model, container or production process ran in this assembly.
 Evidence is retained in `macos-application-python-20261101`; next qualify the
 installed module/normal Runner under the exact isolated native interpreter before
 the consumer launcher and transport gates.
+
+Installed-module qualification must verify the full application/base inventories
+and tracked Runner bytes before importing it, and require the exact isolated
+Python 3.12.14 architecture. The probe adds no repository directory to sys.path:
+both imports and `-IB -m ai_station_runner.main` must resolve the installed wheel.
+Use only fresh private fixture data and fixed sleeping children to check UDS
+permissions, duplicate-owner refusal, recovered identity and scoped Stop. Preserve
+an uncertain ownership fixture instead of deleting its journal; compare the full
+application inventory again after execution. No model, Docker Desktop or consumer
+readiness follows from this bounded developer experiment.
+
+The installed-package experiment uses a separate fixed fixture-owner mode. It
+accepts only a fresh private `/private/tmp/ais-app-*` directory and canonical UUID,
+launches one fixed sleeping child with minimal environment, publishes a bounded
+handoff and exits normally. The original helper must be reaped with matching PID
+and successful exit before normal Runner main starts. This checks real owner
+loss without leaving the original manager/reaper as a concurrent journal writer.
+Unknown ownership retains the private fixture; helper cleanup signals only its
+own immediate child, while managed cleanup uses the native ownership journal.
