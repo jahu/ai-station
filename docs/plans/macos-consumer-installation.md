@@ -518,3 +518,14 @@ Docker control is separately opted into with
 Mac test requires `AI_STATION_REAL_MAC_TRANSPORT_TESTS=1` on a native Mac with
 the reviewed image already prepared. Retain its proof before enabling any Mac
 consumer path. [Python fixture publisher](https://hub.docker.com/_/python).
+
+The first actual [cross-process model recovery run](https://github.com/jahu/ai-station/actions/runs/41348077079)
+passed at `8981f2176623185e9c87ea5e780a9a3db9c00a72` on ARM macOS 15.8.2
+and Intel macOS 15.7.9. Both confirmed original-owner process exit, reattached the
+same live model PID, completed the second SSE reply, and confirmed owned Stop and
+private socket cleanup. Response lengths/hashes matched across recovery on each
+host. Native kernel/import/audio gates also passed. Normal validation passed
+250 cases across nine complete affected families, with six opt-in skips, plus
+whole Python lint/format. This qualifies the developer model-owner lifecycle,
+not a full station restart, Docker Desktop bridge, Metal inference, GUI installer,
+minimum OS or signing. The complete NR-13/14 consumer gates remain open.
