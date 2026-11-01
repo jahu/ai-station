@@ -184,7 +184,7 @@ $timer.Add_Tick({
      }
      'stop' { $script:stopPending=$true;$script:nextCheck=[DateTime]::UtcNow.AddSeconds(1) }
      'status' {
-      $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15)
+      $script:nextCheck=[DateTime]::UtcNow.AddSeconds($(if($script:stopPending){2}else{15}))
       $body=([string]$value) | ConvertFrom-Json -ErrorAction Stop
       if ($body.running -isnot [bool]) { throw 'Invalid station lifecycle response.' }
       if ($body.PSObject.Properties.Name -contains 'inspection_required' -and $body.inspection_required) { throw 'The previous supervisor is still active and requires inspection. It was not replaced or stopped indiscriminately.' }
