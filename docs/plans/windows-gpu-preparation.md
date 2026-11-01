@@ -129,3 +129,44 @@ This remains a qualification candidate. Actual image construction, preserving
 Windows update, CPU conversation/recovery and GPU isolation/inference gates must
 be reported separately. Neither successful toolkit installation nor a runtime
 listing qualifies Windows GPU generation or the complete NR-13/14 requirement.
+
+### Recorded installation and preserving-update evidence
+
+On 2026-11-01, source `30abf9d` passed 232 affected Python tests, whole-tree
+Ruff/format checks and production/development Compose validation. Actual Windows
+PowerShell 5.1 passed 34 guest-update, 89 update-coordinator and 14 physical-storage
+assertions. A clean application/Docker/Debian package, daemon-free guest image and
+686,044,667-byte native Windows installer were built. Inspection as guest UID 1001
+confirmed the installed toolkit and runc default without exposing the private
+root journal; this image inspection did not run GPU inference.
+
+The installed native setup coordinator then updated the retained Windows WSL
+installation in place. Its original registration, complete database byte hash,
+eleven private-data/registry table hashes and desktop configuration were retained.
+A separate owned diagnostic container kept its exact ID, PID and start time
+through toolkit activation and Docker restart. Repeating the completed helper
+kept the same Docker daemon PID and confirmed the runc default. Existing model
+weights were retained, without another model download.
+
+After the update, the original account authenticated and its four-message
+conversation remained available. An ordinary worker Run loaded the cached 4B
+GGUF with the explicit 4096-token CPU profile; a separate normal Chat Run returned
+the requested `WINDOWS_UPDATE_OK` response. A browser-automation acknowledgement
+timed out after its load request had already succeeded. The independent observer
+adopted that existing Run/instance instead of submitting another load. A bounded
+one-shot authenticated API check completed the reply test without restarting or
+terminating the existing browser, QA agent or station. This proves the CPU
+regression path, not Windows GPU inference or an additional browser-button gate.
+
+Normal application Stop intentionally shuts down its managed model. The diagnostic
+container tests preservation during the subsequent installer operation; it does
+not claim that a model remains running across an explicit Stop. A deadline-bound,
+cooperatively released QA foreground client prevented WSL's ordinary idle exit
+during this test, without changing global WSL configuration. Earlier observer
+failures did not dispatch an update. The update used the same native coordinator
+as the UI; this run does not qualify an additional UI-button interaction.
+
+The retained VM has no GPU. Actual Windows GPU selection/inference, a fresh import
+of this GPU-prepared image, native accessibility/signing gates and the complete
+cross-platform release remain separate acceptance work. Linux inference and a
+Windows CPU result cannot substitute for those observations.
