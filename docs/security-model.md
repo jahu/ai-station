@@ -61,6 +61,16 @@ memory limit or permission to launch a model. Metal identities stay separate fro
 CUDA indices, so observation cannot admit a Linux NVIDIA recipe on a Mac. Native
 runtime, memory policy and actual Mac qualification remain independent gates.
 
+The internal Darwin llama.cpp assembler accepts only built-in hash-pinned
+archives from the existing immutable store. It materializes reviewed server,
+library and license bytes into a new private operation directory; source links
+are resolved only inside the fixed archive and are never installed as links.
+Output hashes, Mach-O architecture/library search boundaries, permissions and
+inventory are rechecked before a private relative-path receipt is accepted.
+Interrupted directories are retained, never silently overwritten. This prepares
+bytes only: it launches no code, changes no API permissions and cannot mark a Mac
+runtime qualified or expose its private setup identity as shared model metadata.
+
 Darwin process facts use only fixed read-only kernel/library queries, require
 the effective OS user and reject incomplete or changing snapshots. No caller
 chooses a library path, sysctl key or command. These facts are not signal authority
