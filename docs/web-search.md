@@ -188,3 +188,15 @@ production and original model files were unchanged. This source-level real-model
 proof does not substitute for the compiled API/separate-worker/browser gate.
 Private evidence: `real-search-necessity.private.json` in the Windows
 qualification directory referenced above.
+
+The separately built application image also passed a disposable accounts API,
+separate worker and deterministic fake-provider/search flow. It verified the
+literal skip, factual retrieval, normal fake-executor completion/SSE and another
+account's denial. Actual compiled desktop/mobile browsers showed the literal
+reply without Sources, the researched reply with Sources, no page errors and no
+mobile horizontal overflow. Application Python and compiled frontend hashes
+matched the reviewed source inputs. An initial fixture used GET instead of the
+actual form-encoded POST search protocol; its failed synthetic Run was retained
+and explicitly regenerated after correcting only the fixture. This is separate
+from the real-model/public-search evidence above. Operator case WEB-008 is in
+catalog version 35; operator answers remain untested.

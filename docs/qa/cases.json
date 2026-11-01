@@ -1,5 +1,5 @@
 {
-  "version": 34,
+  "version": 35,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -30,7 +30,8 @@
     "docs/plans/managed-fish-setup.md",
     "docs/plans/guided-cpu-conversation.md",
     "docs/plans/linux-consumer-qualification.md",
-    "docs/plans/windows-consumer-installation.md"
+    "docs/plans/windows-consumer-installation.md",
+    "docs/web-search.md"
   ],
   "cases": [
     {
@@ -2894,6 +2895,33 @@
       "resources": "CPU; próba odczytu tylko własnej AI Station",
       "minutes": 10,
       "requirements": [
+        "spec-87"
+      ]
+    },
+    {
+      "id": "WEB-008",
+      "area": "Internet",
+      "title": "Web dostępny, ale wyszukiwanie tylko gdy potrzebne",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto QA i wybrany działający model lokalny. Web włączony, pole Search query puste."
+      ],
+      "steps": [
+        "Wyślij: Reply with exactly WINDOWS_MODEL_OK. Następnie wyślij zwykłe powitanie.",
+        "Sprawdź odpowiedzi, źródła i szczegóły Run; odśwież rozmowę.",
+        "Poproś o wyszukanie oficjalnej dokumentacji Pythona o venv. Następnie zapytaj, jak aktywować to środowisko na Windows, bez ponownego podawania nazwy Pythona.",
+        "Wpisz własne jawne Search query i wyślij wiadomość.",
+        "Wyłącz Web i wyślij zwykłe pytanie."
+      ],
+      "expected": [
+        "Odpowiedź literalna i powitanie nie wywołują wyszukiwarki, nie pokazują przypadkowych źródeł i nie tworzą artefaktu web-search.json. Pominięcie jest widoczne w historii Run; odpowiedzi zostają po odświeżeniu.",
+        "Pytanie wymagające wyszukania używa krótkiego zapytania przygotowanego przez wybrany model. Follow-up zachowuje temat Pythona i Windows; pokazane źródła dotyczą tego tematu.",
+        "Własne Search query rzeczywiście uruchamia wyszukiwanie. Web wyłączony nie uruchamia planowania wyszukiwania ani połączenia z wyszukiwarką."
+      ],
+      "resources": "Wybrany lokalny LLM; publiczne wyszukiwanie bez kluczy API tylko w próbach wymagających źródeł",
+      "minutes": 8,
+      "requirements": [
+        "NR-12",
         "spec-87"
       ]
     },
