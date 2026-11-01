@@ -19,6 +19,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from app.http_fetch import pinned_request, public_addresses, public_url
+from app.model_source_recovery import recover_sources
 
 CHUNK = 1024 * 1024
 RANGE = re.compile(r"bytes ([0-9]+)-([0-9]+)/([0-9]+)\Z")
@@ -45,7 +46,9 @@ class DownloadBusy(Exception):
 
 
 class SourceUnavailable(Exception):
-    pass
+    def __init__(self, message, *, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class VerificationFailed(ValueError):
@@ -148,7 +151,7 @@ async def response(url, offset, check):
 
 def _position(result, offset, spec):
     if result.status_code in {403, 404, 410}:
-        raise SourceUnavailable("The reviewed model source is unavailable")
+        raise SourceUnavailable("The reviewed model source is unavailable", status_code=result.status_code)
     result.raise_for_status()
     if result.headers.get("content-encoding", "identity").lower() != "identity":
         raise ValueError("Model byte ranges require identity encoding")
@@ -202,7 +205,12 @@ async def _transfer(url, partial, spec, check, progress):
 
 
 async def obtain(
-    root: Path, spec: FileSpec, *, check: Callable[[], None], progress: Callable[[int, int], None]
+    root: Path,
+    spec: FileSpec,
+    *,
+    check: Callable[[], None],
+    progress: Callable[[int, int], None],
+    source_recovered: Callable[[str], None] = lambda url: None,
 ) -> Path:
     """Retrieve one reviewed object; cancellation retains only unpublished partials.
 
@@ -230,7 +238,15 @@ async def obtain(
             os.chmod(final, 0o444, follow_symlinks=False)
             return final
         last_error = None
-        for url in spec.urls:
+        urls = list(spec.urls)
+        attempted, recovery_attempted = 0, False
+        missing_sources = []
+        while attempted < len(urls):
+            url = urls[attempted]
+            attempted += 1
+            if url not in spec.urls:
+                check()
+                source_recovered(url)
             try:
                 await _transfer(url, partial, spec, check, progress)
                 verify(partial, spec, check)
@@ -254,6 +270,20 @@ async def obtain(
                 last_error = exc
             except (httpx.HTTPError, TimeoutError, SourceUnavailable) as exc:
                 last_error = exc
+                status = (
+                    exc.response.status_code
+                    if isinstance(exc, httpx.HTTPStatusError)
+                    else getattr(exc, "status_code", None)
+                )
+                if status in {404, 410}:
+                    missing_sources.append(url)
+            if attempted == len(urls) and missing_sources and not recovery_attempted:
+                recovery_attempted = True
+                urls.extend(
+                    await recover_sources(
+                        spec, urls=missing_sources, check=check, response=response, wait=_wait
+                    )
+                )
         raise SourceUnavailable(
             "No reviewed model source completed; retry to resume the saved partial"
         ) from last_error

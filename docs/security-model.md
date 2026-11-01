@@ -1246,3 +1246,19 @@ SQLite backup and durable operation identity precede receipt publication.
 No commands, URLs, paths, distro import/unregister, downloads or host OS settings
 are accepted. Native transport is implemented in the private candidate; real Windows recovery
 qualification remains open; see [the update contract](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract).
+
+For reviewed model files, a 404/410 may trigger one content-preserving locator
+recovery through the same public-DNS-pinned HTTPS boundary. Only the same Hugging
+Face repository/filename and identical reviewed LFS SHA-256/length are eligible;
+metadata cannot replace a model, license, expected hash or destination. The new
+URL uses an immutable commit. Metadata is bounded to one MiB per repository,
+uses no credentials or ambient proxy, and observes the download Run's existing
+authority/deadline checks. Denied/private redirects propagate as failures;
+401/403/rate-limit failures do not trigger discovery. Original cache/success
+needs no lookup. The existing final byte verification still decides publication,
+and source-refresh events inherit the requesting Run's visibility.
+The shared file-based media preparation path enforces the same physical ceiling
+throughout its input transfer, with each profile's existing assembly reserve.
+It credits retained partial bytes without removing files and refuses stale or
+missing Windows observations before native dispatch. Source events recheck the
+current preparation claim and authority too.

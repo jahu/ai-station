@@ -14,7 +14,7 @@ from app import model_setup
 from app.api import app
 from app.db import control_session_factory, utcnow
 from app.engine import tick
-from app.models import Artifact, ModelDefinition, ModelFile, Run, RuntimeInstance, Task
+from app.models import Artifact, ModelDefinition, ModelFile, Run, RunEvent, RuntimeInstance, Task
 from app.runner_client import RunnerClient, RunnerError
 from app.setup_models import CANDIDATES
 from fastapi.testclient import TestClient
@@ -105,7 +105,7 @@ def setup_bridge(monkeypatch, request):
     )
     calls = []
 
-    async def obtain(root, spec, *, check, progress):
+    async def obtain(root, spec, *, check, progress, source_recovered=lambda url: None):
         check()
         calls.append(spec)
         path = root / "models/store" / spec.sha256
@@ -142,6 +142,35 @@ def request(item):
 def work():
     with control_session_factory()() as db:
         return tick(db, "model-setup-test")
+
+
+def test_source_recovery_is_auditable_without_changing_the_reviewed_run(setup_bridge, monkeypatch):
+    from app import model_download_job
+
+    original = model_download_job.obtain
+    recovered = "https://huggingface.co/publisher/model/resolve/" + "a" * 40 + "/weights.gguf"
+
+    async def obtain(root, spec, *, check, progress, source_recovered):
+        source_recovered(recovered)
+        return await original(root, spec, check=check, progress=progress)
+
+    monkeypatch.setattr(model_download_job, "obtain", obtain)
+    with TestClient(app) as api:
+        item = setup_bridge["entry"]
+        created = api.post("/api/setup/downloads", json=request(item)).json()
+        work()
+        result = api.get("/api/setup/downloads/" + created["id"]).json()
+        assert result["run"]["status"] == "succeeded", result
+        with control_session_factory()() as db:
+            run = db.get(Run, created["run"]["id"])
+            assert run.parameters["entry"] == item.model_dump(mode="json")
+            assert run.parameters["manifest_sha256"] == model_setup.fingerprint(run.parameters["entry"])
+            event = db.scalar(
+                select(RunEvent).where(
+                    RunEvent.run_id == run.id, RunEvent.event_type == "model.download.source_refreshed"
+                )
+            )
+            assert event.payload == {"sha256": item.file.sha256, "source_url": recovered}
 
 
 @pytest.mark.parametrize("setup_bridge", ["qwen3", "qwen35", "cpu"], indirect=True)

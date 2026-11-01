@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import shutil
 import tempfile
 from datetime import timedelta
 from pathlib import Path
@@ -10,6 +9,7 @@ from pathlib import Path
 from app.bundle_download_job import observation, publish_verified_models
 from app.config import get_settings
 from app.db import utcnow
+from app.download_storage import DownloadStorage
 from app.events import append_event
 from app.model_bundles import Bundle, BundleFile
 from app.model_download_files import DownloadBusy, FileSpec, directory, obtain
@@ -80,19 +80,35 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
         worker, claim = run.worker_id, run.claimed_at
         inputs = [(item, file_spec(item)) for item in recipe["inputs"]]
         total = sum(spec.size_bytes for _, spec in inputs)
-        needed = sum(spec.size_bytes for _, spec in inputs if not (folder / spec.sha256).exists())
-        if shutil.disk_usage(folder).free < needed + self.storage_headroom_bytes:
-            raise ValueError(
-                f"More free application storage is needed for {self.setup_label} files and runtime assembly"
-            )
         completed = 0
         observed_models = {}
+        storage = None
+
+        def remaining():
+            total = 0
+            for _, spec in inputs:
+                if (folder / spec.sha256).exists():
+                    continue
+                partial = folder / (spec.sha256 + ".part")
+                received = partial.stat().st_size if partial.exists() and not partial.is_symlink() else 0
+                total += max(0, spec.size_bytes - received)
+            return total
 
         def alive():
             if check():
                 raise Stopped(f"{self.setup_label.capitalize()} preparation was stopped")
+            if storage is not None:
+                storage.check()
 
         try:
+            alive()
+            runner = self.runner()
+            hardware = runner.hardware()
+            alive()
+            storage = DownloadStorage(
+                folder, hardware, runner, remaining, headroom_bytes=self.storage_headroom_bytes
+            )
+            storage.check()
             for index, (item, spec) in enumerate(inputs):
                 alive()
                 cached = (folder / spec.sha256).exists()
@@ -113,7 +129,19 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
                     append_event(session, run.id, "runtime.prepare.progress", value)
                     session.commit()
 
-                path = asyncio.run(obtain(root, spec, check=alive, progress=progress))
+                def recovered(url):
+                    alive()
+                    append_event(
+                        session,
+                        run.id,
+                        "model.download.source_refreshed",
+                        {"sha256": spec.sha256, "filename": item["filename"], "source_url": url},
+                    )
+                    session.commit()
+
+                path = asyncio.run(
+                    obtain(root, spec, check=alive, progress=progress, source_recovered=recovered)
+                )
                 alive()
                 if item["kind"] == "model":
                     observed_models[spec.sha256] = list(observation(path, spec))
