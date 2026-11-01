@@ -358,10 +358,24 @@ the original PID, obtains another reply and stops only that owned instance. A
 confirmed Stop removes only the newly created short private socket directory;
 uncertain ownership/Stop retains it with a private inspection proof. The report
 stores response lengths/hashes rather than text, OS/architecture and source/input
-identities, and never raw upstream errors. A native-model pass still explicitly
-records `macos_installer_qualified=false`, `cross_process_restart_tested=false`
-and `other_os_user_tested=false`. It does not qualify Docker Desktop transport,
+identities, and never raw upstream errors. The default in-process probe retains
+`cross_process_restart_tested=false`; only successful explicit process recovery
+can change it. Every native-model pass still records
+`macos_installer_qualified=false` and `other_os_user_tested=false`. It does not qualify Docker Desktop transport,
 a complete station/process restart, GUI installation, updates or Gatekeeper.
+`--cross-process-recovery` adds a separately isolated native owner process. It
+receives only a private frozen fixture request, starts the verified model and
+writes a bounded private handoff with its PID, model PID, instance and response
+hash. That process must exit successfully and be reaped before a new manager
+attaches the exact original model PID and streams the second reply. The helper
+uses isolated Python, a minimal fixture-only environment and private umask; raw
+stdout/stderr are discarded. A timeout signals only its immediate owned helper;
+the original run's durable native Stop still governs the separate model. Failed
+handoffs retain proof and never count as successful recovery. The explicit CI
+inference operation now requests this mode; normal checks run no real model.
+Only a completed native run can qualify that cross-process model recovery. It
+still does not qualify a whole station restart, consumer installer or bridge.
+
 Ordinary Ctrl+C/SIGTERM attempts that same scoped Stop before exit. A hard crash
 still requires inspecting the retained instance/process journal and private proof;
 the command never deletes uncertain resources or repeats inference automatically.
@@ -504,3 +518,14 @@ Docker control is separately opted into with
 Mac test requires `AI_STATION_REAL_MAC_TRANSPORT_TESTS=1` on a native Mac with
 the reviewed image already prepared. Retain its proof before enabling any Mac
 consumer path. [Python fixture publisher](https://hub.docker.com/_/python).
+
+The first actual [cross-process model recovery run](https://github.com/jahu/ai-station/actions/runs/41348077079)
+passed at `8981f2176623185e9c87ea5e780a9a3db9c00a72` on ARM macOS 15.8.2
+and Intel macOS 15.7.9. Both confirmed original-owner process exit, reattached the
+same live model PID, completed the second SSE reply, and confirmed owned Stop and
+private socket cleanup. Response lengths/hashes matched across recovery on each
+host. Native kernel/import/audio gates also passed. Normal validation passed
+250 cases across nine complete affected families, with six opt-in skips, plus
+whole Python lint/format. This qualifies the developer model-owner lifecycle,
+not a full station restart, Docker Desktop bridge, Metal inference, GUI installer,
+minimum OS or signing. The complete NR-13/14 consumer gates remain open.

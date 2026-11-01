@@ -67,7 +67,7 @@ def test_opted_in_fixture_uses_only_fixed_public_inputs_and_scoped_cpu_probe(fix
     assert root == fixture["root"] / "data" and frozen["inputs"][-1] == probe.fixture()["model"]
     args, kwargs = fixture["runs"][0]
     assert args[0] == root and args[1] == fixture["root"] / "proof" and args[-2:] == ("cpu", 512)
-    assert kwargs == {"opted_in": True}
+    assert kwargs == {"opted_in": True, "cross_process": True}
     assert "PRIVATE" not in capsys.readouterr().out and "socket_root" not in result
 
 

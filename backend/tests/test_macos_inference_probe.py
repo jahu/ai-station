@@ -4,9 +4,11 @@ import asyncio
 import hashlib
 import json
 import signal
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import macos_inference_probe as probe
 import pytest
@@ -325,3 +327,180 @@ def test_incomplete_or_invalid_stream_cannot_qualify_a_model(payload):
 
     with pytest.raises(ValueError):
         asyncio.run(probe.reply(Manager(), "fixture"))
+
+
+def test_cross_process_mode_uses_owner_handoff_and_retains_existing_cleanup(fixture, monkeypatch):
+    def launch(root, sockets, body, output, check, proof):
+        assert fixture["managers"][0].closed
+        request = output / "owner-request.json"
+        probe.atomic_json(
+            output,
+            request.name,
+            {
+                "data_root": str(root),
+                "socket_root": str(sockets),
+                "load": body.model_dump(mode="json"),
+            },
+        )
+        probe.owner(request)  # Simulated native manager, not actual process recovery evidence.
+        child = fixture["managers"][-1]
+        assert child.closed and not child.stopped
+        proof["owner_process_exit_confirmed"] = True  # Protocol simulation only.
+        return probe.read_json(output / "owner-result.json")
+
+    monkeypatch.setattr(probe, "owner_process", launch)
+    result = fixture["run"](cross_process=True)
+    assert result["cross_process_restart_tested"] and result["owner_process_exit_confirmed"]
+    assert result["native_inference_passed"] and result["owned_stop_confirmed"]
+    assert result["first_reply"] == result["retained_reply"]
+    assert not result["macos_installer_qualified"]
+
+
+def test_cross_process_failure_still_stops_the_original_instance(fixture, monkeypatch):
+    def fail(root, sockets, body, output, check, proof):
+        raise TimeoutError("PRIVATE helper failed")
+
+    monkeypatch.setattr(probe, "owner_process", fail)
+    with pytest.raises(TimeoutError):
+        fixture["run"](cross_process=True)
+    result = probe.read_json(fixture["output"] / "proof.json")
+    assert result["owned_stop_confirmed"] and not result["cross_process_restart_tested"]
+    assert "PRIVATE" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("failure", ["ack", "startup", "stream"])
+def test_failed_native_owner_closes_and_stops_before_publishing_success(fixture, monkeypatch, failure):
+    fixture["failure"] = failure
+
+    def launch(root, sockets, body, output, check, proof):
+        request = output / "owner-request.json"
+        probe.atomic_json(
+            output,
+            request.name,
+            {
+                "data_root": str(root),
+                "socket_root": str(sockets),
+                "load": body.model_dump(mode="json"),
+            },
+        )
+        probe.owner(request)
+
+    monkeypatch.setattr(probe, "owner_process", launch)
+    with pytest.raises((OSError, ValueError, RuntimeError)):
+        fixture["run"](cross_process=True)
+    assert not (fixture["output"] / "owner-result.json").exists()
+    result = probe.read_json(fixture["output"] / "owner-failure.json")
+    assert "PRIVATE" not in json.dumps(result)
+    assert all(manager.closed and manager.stopped for manager in fixture["managers"])
+
+
+@pytest.fixture
+def owner_fixture(tmp_path, monkeypatch):
+    output = tmp_path / "proof"
+    output.mkdir(mode=0o700)
+    body = SimpleNamespace(instance_id=uuid4(), model_dump=lambda **kw: {"frozen": True})
+    state = {"change": None, "events": []}
+    result = {
+        "instance_id": str(body.instance_id),
+        "model_pid": 37,
+        "owner_pid": 30001,
+        "reply": {"characters": 13, "sha256": "a" * 64},
+    }
+
+    class Child:
+        pid = 30001
+        returncode = 0
+
+        def __init__(self, argv, **kwargs):
+            assert argv[:3] == [sys.executable, "-I", "-B"]
+            assert Path(argv[3]).name == "macos_inference_owner.py"
+            assert argv[4] == "--run-native-inference"
+            assert kwargs["env"] == {
+                "PATH": "/usr/bin:/bin",
+                "HOME": str(tmp_path),
+                "LANG": "C.UTF-8",
+                "AI_STATION_DATA_HOST_PATH": str(tmp_path),
+            }
+            assert kwargs["umask"] == 0o077 and kwargs["start_new_session"] is True
+            assert all(kwargs[key] == subprocess.DEVNULL for key in ("stdout", "stderr", "stdin"))
+            if state["change"]:
+                state["change"](result)
+            probe.atomic_json(output, "owner-result.json", result)
+
+        def poll(self):
+            return self.returncode
+
+        def terminate(self):
+            state["events"].append("terminate")
+
+        def wait(self, timeout):
+            state["events"].append("wait")
+            if self.returncode is None:
+                raise subprocess.TimeoutExpired("fixed helper", timeout)
+            return self.returncode
+
+        def kill(self):
+            state["events"].append("kill")
+            self.returncode = -9
+
+    monkeypatch.setattr(probe.subprocess, "Popen", Child)
+    state.update(output=output, body=body, result=result, child=Child, root=tmp_path)
+    return state
+
+
+@pytest.mark.parametrize("change", [None, "instance", "owner", "same_pid", "model", "reply", "extra"])
+def test_private_owner_handoff_requires_exit_and_exact_identity(owner_fixture, change):
+    state = owner_fixture
+    changes = {
+        "instance": lambda r: r.update(instance_id=str(uuid4())),
+        "owner": lambda r: r.update(owner_pid=30002),
+        "same_pid": lambda r: r.update(model_pid=30001),
+        "model": lambda r: r.update(model_pid=True),
+        "reply": lambda r: r["reply"].update(sha256="invalid"),
+        "extra": lambda r: r.update(stdout="PRIVATE"),
+    }
+    state["change"] = changes.get(change)
+    proof = {}
+
+    def invoke():
+        return probe.owner_process(
+            state["root"], state["root"], state["body"], state["output"], lambda: None, proof
+        )
+
+    if change:
+        with pytest.raises(ValueError):
+            invoke()
+        assert "owner_process_exit_confirmed" not in proof
+    else:
+        assert invoke() == state["result"] and proof["owner_process_exit_confirmed"]
+    assert not state["events"]
+    assert (state["output"] / "owner-request.json").stat().st_mode & 0o777 == 0o600
+
+
+def test_timed_out_helper_signals_only_its_immediate_child_handle(owner_fixture):
+    state = owner_fixture
+    state["child"].returncode = None
+
+    def timeout():
+        raise TimeoutError("fixed deadline")
+
+    with pytest.raises(TimeoutError):
+        probe.owner_process(state["root"], state["root"], state["body"], state["output"], timeout, {})
+    assert state["events"] == ["terminate", "wait", "kill", "wait"]
+
+
+def test_actual_isolated_owner_entry_refuses_linux_before_reading_any_fixture(tmp_path):
+    if sys.platform != "linux":
+        pytest.skip("Linux refusal control; native Mac execution is separately opted in")
+    entry = Path(probe.__file__).with_name("macos_inference_owner.py")
+    folder = tmp_path / "isolated-owner"
+    folder.mkdir(mode=0o700)
+    result = subprocess.run(
+        [sys.executable, "-I", "-B", str(entry), "--run-native-inference", str(folder / "absent")],
+        cwd=folder,
+        env={"PATH": "/usr/bin:/bin", "HOME": str(folder)},
+        capture_output=True,
+        timeout=15,
+    )
+    assert result.returncode == 1 and not result.stdout and not result.stderr
+    assert not list(folder.iterdir())
