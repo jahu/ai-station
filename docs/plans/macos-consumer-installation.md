@@ -148,6 +148,49 @@ immutable output files and their native load metadata; it did not execute them.
 The v2 alias-identity correction passes 227 affected tests and both actual archive
 assemblies; independent-copy and outside-hardlink changes are rejected.
 
+### Internal native inference lifecycle candidate
+
+`darwin_llama.NativeLlamaManager` now composes the existing immutable SDK/model
+boundaries, GGUF context inspection, Darwin ProcessManager and completion proxy.
+It is internal: no normal Runner route, catalog profile or consumer launcher
+selects it. `inference_qualified` remains false until actual Mac acceptance.
+
+The frozen request selects matching macOS 13.3+ architecture, CPU or one observed
+unified Metal device, exact owned model/context/RAM estimate and an absolute
+startup deadline. Fixed argv uses the pinned source's `MTL0` device name for that
+single Metal device, or `--device none`, zero GPU layers and no KV offload for CPU.
+Both use offline mode, disabled automatic fit, one slot and Q8 KV caches. The
+Intel archive cannot admit Metal. No binary, command or model URL is caller chosen.
+
+Admission includes model bytes plus a 15% weight margin, inspected full-context
+Q8 KV/state geometry and 1 GiB headroom. It compares actual conservative free RAM
+and retains other live/uncertain reservations; this deliberately double-counts
+already allocated resident memory rather than promising aggressive packing.
+Metal also needs its exact registry identity, complete unambiguous inventory and
+sufficient advisory working set. This is admission, not a hard allocation limit
+or a no-swap guarantee; those facts remain explicit in every safe projection.
+
+Durable dispatch fencing precedes exec. A lost acknowledgement attaches the same
+owned process or requires inspection; it never starts a second model. Stop intent
+persists before signaling and a replacement observer delivers it. Startup timeout,
+wrong alias/context and invalid/oversized readiness metadata stop only the owned
+group. The startup deadline survives replacement; reaching ready does not create
+an artificial maximum model lifetime. Unknown ownership retains its reservation.
+
+Inference uses a short canonical, owned mode-0700 socket directory and a private
+Unix socket; HTTP proxy environment and redirects are disabled. The shared model
+inherits only fixed per-instance environment/cache paths. Its stdout/stderr are
+discarded at process creation, preventing another user's prompt or response from
+appearing in the loader owner's Run log. Ordinary executor output stays captured.
+The privacy policy is durable and cannot change on an idempotent process retry.
+
+Normal lifecycle tests use real disposable Linux processes and private sockets,
+real bounded GGUF headers and simulated native/SDK facts. They exercise readiness,
+streaming, ownership denial, acknowledgement loss, Stop/replacement, deadlines,
+RAM/Metal contention and privacy. These results do not qualify Mach-O execution,
+Metal inference, shared Docker Desktop transport, Gatekeeper or a complete Mac
+installation. Actual hardware, package integration and signing remain required.
+
 ### Native observations and ownership
 
 Native hardware snapshots now include a separate `metal` observation on Darwin.

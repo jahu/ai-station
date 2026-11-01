@@ -11,6 +11,50 @@ from ai_station_runner import processes
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 
 
+@pytest.mark.parametrize("capture", [True, False])
+def test_process_output_policy_is_durable_and_cannot_change_on_retry(tmp_path, capture):
+    manager = ProcessManager(tmp_path, grace_seconds=0.05)
+    run_id = str(uuid4())
+    kwargs = {
+        "run_id": run_id,
+        "cwd": tmp_path,
+        "executor": "test",
+        "argv": [
+            sys.executable,
+            "-c",
+            "import sys;print('PRIVATE-OUTPUT');print('PRIVATE-ERROR',file=sys.stderr)",
+        ],
+        "capture_output": capture,
+    }
+    try:
+        manager.start(**kwargs)
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            result = manager.inspect(run_id)
+            if not result["alive"] and not result["completion_pending"]:
+                break
+            time.sleep(0.01)
+        assert result["exit_code"] == 0
+        assert ("PRIVATE-OUTPUT" in result["stdout"]) is capture
+        assert ("PRIVATE-ERROR" in result["stderr_tail"]) is capture
+        if not capture:
+            assert result["stdout"] == result["stderr_tail"] == ""
+            assert result["logs_suppressed"] is True
+        replacement = ProcessManager(tmp_path)
+        assert replacement.start(**kwargs)["pid"] == result["pid"]
+        with pytest.raises(ValueError, match="output policy"):
+            replacement.start(**(kwargs | {"capture_output": not capture}))
+    finally:
+        manager.shutdown()
+
+
+def test_nonboolean_output_policy_is_rejected_before_launch(tmp_path):
+    manager = ProcessManager(tmp_path)
+    with pytest.raises(ValueError, match="output policy"):
+        manager.start(run_id=str(uuid4()), argv=["true"], cwd=tmp_path, executor="test", capture_output=0)
+    assert manager._load() == {} and not manager._live
+
+
 @pytest.mark.parametrize("failure", ["unreadable", "empty", "unsupported"])
 def test_boot_identity_failure_cannot_launch_an_unrecorded_child(tmp_path, monkeypatch, failure):
     manager = ProcessManager(tmp_path)

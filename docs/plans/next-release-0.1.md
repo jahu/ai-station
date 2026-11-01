@@ -419,4 +419,10 @@ Chatterbox remains authoritative. The compiled desktop/phone UI and saved WAV
 restore after restart. Remaining guided media recipes and real cross-platform
 consumer installation remain required; this is not release completion.
 
-The [Windows guest packaging increment](windows-consumer-installation.md) now builds a private checked WSL rootfs and qualifies its ordinary-user fixed desktop bridge in isolated container probes. This is guest-layer evidence only: native Windows onboarding, WSL boot/network/lifecycle and actual first-result/update/uninstall gates remain open. It does not narrow NR-13/14 or complete the release.
+The [Windows installation work](windows-consumer-installation.md) has now passed
+the retained Windows 11 CPU first-result, preserving update/removal and native
+UI/storage checks, plus fresh prepared-WSL-image import. Actual Windows GPU,
+broader hardware and signing remain open. The internal
+[Mac native model lifecycle](macos-consumer-installation.md) now has process/socket
+control tests; real Mac inference, consumer packaging and platform acceptance
+remain required. Neither increment narrows NR-13/14 or completes the release.

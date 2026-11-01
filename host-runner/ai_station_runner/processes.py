@@ -128,16 +128,21 @@ class ProcessManager:
         executor: str,
         env: dict | None = None,
         deadline_at: float | None = None,
+        capture_output: bool = True,
     ) -> dict:
         if str(UUID(run_id)) != run_id:
             raise ValueError("Canonical UUID required")
         if not argv or any(not isinstance(part, str) or not part for part in argv):
             raise ValueError("argv must be a non-empty list of non-empty strings")
+        if type(capture_output) is not bool:
+            raise ValueError("Choose an explicit process output policy")
         with self._lock:
             records = self._load()
             if run_id in records:
-                if records[run_id]["executor"] != executor:
-                    raise ValueError("Run already belongs to a different executor")
+                if records[run_id]["executor"] != executor or (
+                    records[run_id].get("logs_suppressed", False) is not (not capture_output)
+                ):
+                    raise ValueError("Run already belongs to a different executor or output policy")
                 return self.inspect(run_id)
             if deadline_at is not None and (
                 type(deadline_at) not in {int, float}
@@ -155,7 +160,13 @@ class ProcessManager:
             out = resolve_child(log_dir, "stdout.log")
             err = resolve_child(log_dir, "stderr.log")
             with out.open("ab") as stdout, err.open("ab") as stderr:
-                with self._launch(argv, cwd=cwd, env=env, stdout=stdout, stderr=stderr) as proc:
+                with self._launch(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    stdout=stdout if capture_output else subprocess.DEVNULL,
+                    stderr=stderr if capture_output else subprocess.DEVNULL,
+                ) as proc:
                     identity = self._capture_identity(proc.pid, boot_id)
                     record = {
                         "run_id": run_id,
@@ -171,6 +182,7 @@ class ProcessManager:
                         "status": "running",
                         "exit_code": None,
                         **({"deadline_at": deadline_at} if deadline_at is not None else {}),
+                        **({"logs_suppressed": True} if not capture_output else {}),
                     }
                     records[run_id] = record
                     try:

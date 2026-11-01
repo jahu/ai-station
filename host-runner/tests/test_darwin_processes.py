@@ -239,8 +239,9 @@ def await_done(manager, run_id):
     raise AssertionError("Owned process did not complete")
 
 
+@pytest.mark.parametrize("capture", [True, False])
 def test_candidate_gate_execs_only_after_durable_identity_and_keeps_original_pid(
-    tmp_path, monkeypatch, candidate_kernel
+    tmp_path, monkeypatch, candidate_kernel, capture
 ):
     manager = darwin.DarwinProcessManager(tmp_path)
     marker = tmp_path / "result"
@@ -261,14 +262,20 @@ def test_candidate_gate_execs_only_after_durable_identity_and_keeps_original_pid
     run_id = str(uuid4())
     manager.start(
         run_id=run_id,
-        argv=[sys.executable, "-c", "import os,pathlib;pathlib.Path('result').write_text(str(os.getpid()))"],
+        argv=[
+            sys.executable,
+            "-c",
+            "import os,pathlib;pathlib.Path('result').write_text(str(os.getpid()));print('GATED-OUTPUT')",
+        ],
         cwd=tmp_path,
         executor="test",
+        capture_output=capture,
     )
     monkeypatch.setattr(manager, "_dump", original)
     result = await_done(manager, run_id)
     assert result["status"] == "exited" and result["exit_code"] == 0
     assert int(marker.read_text()) == published[0] == result["pid"]
+    assert ("GATED-OUTPUT" in result["stdout"]) is capture
 
 
 def test_candidate_failed_publication_never_executes_workload(tmp_path, monkeypatch, candidate_kernel):
