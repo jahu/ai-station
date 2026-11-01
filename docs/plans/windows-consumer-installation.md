@@ -455,5 +455,27 @@ while the portable PowerShell probe returned within 0.6 seconds. Header/body
 writes now use cancellable owner polling, and cleanup reaps only its saved child
 before closing a potentially blocked pipe. Two real backpressure regressions
 also require an unrelated process to survive. The portable transport suite passes
-29 assertions; repaired PS5.1/native-payload qualification, cancellation Resume,
-removal/reinstall and the other platform gates remain required before release.
+29 assertions. The same repaired suite also passes all 29 assertions under
+ordinary Windows PowerShell 5.1; the coordinator passes 64 separately isolated
+assertions there. The previously stalled native input probe now cancels in
+630 ms while its unrelated control process survives.
+
+The rebuilt, actually installed native candidate passed Update/Cancel after its
+owned root client appeared. All 45 logical tables, seven persistent files and
+configuration again matched the stopped baseline. Resume through that installed
+window completed, published the target Windows receipt and started the existing
+application; the original database backup, package-manager log and application
+manifest retained their hashes, lengths and timestamps. Ordinary Stop and tray
+exit released the UI lease. These checks cover transport cancellation and a
+deliberately stale Windows receipt, not a power loss during package installation.
+
+The same ordinary account then uninstalled the native program and reinstalled
+the exact checked installer. Both operations returned success. Read-only
+snapshots after each operation matched a fresh stopped baseline across all
+45 logical tables, the seven persistent files and desktop configuration. The
+guest directory, distribution registration and private installation record were
+retained; no model download, guest import or account reset occurred. This
+qualifies this private CPU fixture's preserving update/removal lifecycle.
+Physical Windows-volume capacity admission, broader hardware, native
+accessibility/DPI, signing and the remaining platform gates are still required
+before public consumer release.
