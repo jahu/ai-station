@@ -16,12 +16,14 @@ $module=Get-Module Setup
  function script:Test-StationFixedGuestFile {param($Lease,$Record,$Executable,$Path,[switch]$ExecutableFile,[switch]$RootUser);Check ($Path -ceq '/usr/lib/ai-station/host-runner/ai_station_runner/windows_storage.py' -and -not $RootUser) 'Unexpected helper inspection';return $script:Present}
  function script:Start-StationWslProcess {param($Executable,$Arguments,$Directory);$script:Seen+=,@($Arguments);return [pscustomobject]@{Arguments=$Arguments}}
  function script:Wait-StationWslProcess {param($Process,[bool]$KeepOutput,$CancellationToken);Check $KeepOutput 'Missing fixed helper receipt';return $script:Reply}
- Update-StationPhysicalStorage $lease $record 'fixed-wsl.exe'
+ $observed=Update-StationPhysicalStorage $lease $record 'fixed-wsl.exe'
+ Check ($observed -is [bool] -and $observed) 'Successful observation was not confirmed'
  Check ($script:Seen.Count -eq 1) 'Missing capacity observation'
  $expected=@('--distribution','AIStation-private-fixture','--user','station','--exec','/usr/lib/ai-station/python/bin/python3','-IBS','/usr/lib/ai-station/host-runner/ai_station_runner/windows_storage.py','100000000000','20000000000')
  Check (($script:Seen[0] -join '|') -ceq ($expected -join '|')) 'Capacity operation exposed a path, shell or root execution'
  $script:Present=$false
- Update-StationPhysicalStorage $lease $record 'fixed-wsl.exe'
+ $observed=Update-StationPhysicalStorage $lease $record 'fixed-wsl.exe'
+ Check ($observed -is [bool] -and -not $observed) 'Old guest falsely confirmed a capacity observation'
  Check ($script:Seen.Count -eq 1) 'Old guest received an unsupported helper operation'
  $script:Present=$true;$script:Reply='{"status":"other"}';$failed=$false
  try{Update-StationPhysicalStorage $lease $record 'fixed-wsl.exe'}catch{$failed=$true}

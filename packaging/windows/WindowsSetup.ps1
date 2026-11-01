@@ -198,7 +198,12 @@ $timer.Add_Tick({
        if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() }
       } else {
        $status.Text=$(if ($script:stopPending) {'Stopping AI Station'} elseif ($script:updateAvailable) {'Running · update available'} else {'Running locally'})
-       if ($script:updateAvailable) { $description.Text='Finish your current work, choose Stop, then Update AI Station. Nothing will be interrupted automatically.' }
+       if ($script:stopPending) { $description.Text='Waiting for your station to stop. Your saved work stays in place.' }
+       elseif ($script:updateAvailable) { $description.Text='Finish your current work, choose Stop, then Update AI Station. Nothing will be interrupted automatically.' }
+       else { $description.Text='Your AI Station is open. Agents and generation keep working when this window is closed.' }
+      }
+      if (-not $script:updateAvailable -and $body.PSObject.Properties.Name -contains 'physical_storage_available' -and -not $body.physical_storage_available) {
+       $description.Text='Disk space could not be refreshed. Open the app to review storage. Your saved work and Stop remain available.'
       }
      }
     }

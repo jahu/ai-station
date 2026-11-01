@@ -498,6 +498,11 @@ downloads/preparation rather than falling back to the virtual disk. Linux
 filesystem behavior remains unchanged. Native status refreshes the observation
 while the station runs, including when its controls are hidden.
 
+A failed capacity refresh must not prevent status/Stop or opening the app to
+free space. Native status reports that failure separately; the guest's private
+observation still controls download admission. The controls show a recoverable
+storage notice and clear it after a successful refresh.
+
 The catalog and both single-model and companion-bundle download workers must
 use that effective budget, preserve verified/cache/partial files on refusal and
 recheck during transfer. Native runtime preparation must use the same underlying
