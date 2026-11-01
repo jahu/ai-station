@@ -13,9 +13,14 @@ SHA = re.compile(r"[a-f0-9]{64}\Z")
 
 
 def owned_model(relative, digest):
+    return verify_owned_model(get_settings().host_data_dir(), relative, digest)
+
+
+def verify_owned_model(root, relative, digest):
+    """The same immutable-model boundary for an explicitly owned native data root."""
     if not isinstance(digest, str) or not SHA.fullmatch(digest) or relative != "models/store/" + digest:
         raise HTTPException(422, "Choose a verified app-owned model reference")
-    root = get_settings().host_data_dir().resolve()
+    root = Path(root).resolve()
     path = root
     for part in Path(relative).parts:
         path = path / part

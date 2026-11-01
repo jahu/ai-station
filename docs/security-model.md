@@ -89,6 +89,18 @@ unknown inspection is not treated as process exit. This candidate has no new
 endpoint or user-configurable command/path and is not selected by the normal
 Runner. Native Mac qualification and a separate memory policy remain required.
 
+The internal native llama.cpp candidate reuses that ownership engine with fixed
+SDK/model references, private canonical inference sockets and a minimal environment.
+Its shared inference process discards stdout/stderr before exec; prompts from a
+second account must never enter the first loader's Run logs. The persisted output
+policy cannot change on retry. An immutable dispatch fence prevents duplicate
+starts after acknowledgement loss. Persisted Stop and the original startup
+deadline survive observer replacement; every cancellation rechecks owned identity.
+Incomplete ownership retains reservations and requires inspection. CPU/Metal RAM
+checks are explicit admission estimates, not hard cgroups or a no-swap guarantee.
+This adds no endpoint, HTTP-controlled process-output option or qualified Mac
+capability. Actual platform, transport and consumer-package gates remain open.
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local

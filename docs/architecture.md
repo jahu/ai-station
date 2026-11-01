@@ -53,6 +53,16 @@ Darwin start identities have a distinct journal format. The normal Runner still
 uses the qualified Linux manager. Actual Mac runtime/resource/installer gates
 must pass before selecting the candidate for workloads.
 
+An internal native llama.cpp lifecycle candidate composes that manager with the
+verified Mac SDK, owned GGUF/cache inspection and the existing completion proxy.
+Its durable dispatch/Stop journal, startup watchdog, explicit CPU/single-unified-
+Metal admission and private native inference socket preserve the shared execution
+boundary. Admission reports estimated RAM without a hard/no-swap promise. Shared
+model output is suppressed at process creation so loader-owned logs cannot retain
+other users' conversation content. Existing executors retain normal log capture.
+No public capability or Mac profile is enabled by this internal candidate;
+[actual platform/package acceptance](plans/macos-consumer-installation.md) remains.
+
 The desktop owner can supervise in the background without keeping a window
 open. A private same-OS-user control socket supports only status and
 instance-bound Stop; the existing supervisor remains responsible for shutdown.
