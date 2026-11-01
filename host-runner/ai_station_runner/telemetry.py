@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ai_station_runner import nvidia
 from ai_station_runner.windows_storage import physical
 
 _previous_cpu: tuple[int, int] | None = None
@@ -23,10 +24,12 @@ def collect(data_dir: Path) -> dict:
 
 
 def gpus() -> list[dict]:
+    binary = nvidia.executable()
+    basic = False
     try:
         completed = subprocess.run(
             [
-                "nvidia-smi",
+                binary,
                 "--query-gpu=index,uuid,name,utilization.gpu,memory.used,memory.total,temperature.gpu,fan.speed,power.draw",
                 "--format=csv,noheader,nounits",
             ],
@@ -35,13 +38,30 @@ def gpus() -> list[dict]:
             check=False,
             timeout=5,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+        if completed.returncode != 0 and nvidia.is_wsl():
+            # WSL's NVML has fewer sensors. Keep actual device/memory data
+            # even if its driver rejects the combined optional-sensor query.
+            basic = True
+            completed = subprocess.run(
+                [
+                    binary,
+                    "--query-gpu=index,uuid,name,memory.used,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+    except (OSError, subprocess.TimeoutExpired):
         return []
     if completed.returncode != 0:
         return []
     rows = []
     for line in completed.stdout.splitlines():
         parts = [part.strip() for part in line.split(",")]
+        if basic and len(parts) == 5:
+            parts = [*parts[:3], "N/A", *parts[3:], "N/A", "N/A", "N/A"]
         if len(parts) < 9:
             continue
         rows.append(

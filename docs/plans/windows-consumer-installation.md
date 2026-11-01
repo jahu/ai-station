@@ -27,6 +27,8 @@ Offer the documented OS action; never enable features, reboot or modify global
 `.wslconfig`, default distro, firewall, GPU drivers or another distro silently.
 CPU is the first proposed model profile. GPU support remains a distinct actual
 WSL/NVIDIA/container-runtime qualification, with no automatic driver installation.
+The [Windows GPU preparation contract](windows-gpu-preparation.md) tracks projected
+NVIDIA discovery, the missing guest toolkit and its preserving-upgrade gate.
 
 Microsoft documents [per-distribution versus global settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config),
 [scoped import/terminate commands](https://learn.microsoft.com/en-us/windows/wsl/basic-commands)

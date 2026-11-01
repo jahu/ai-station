@@ -8,13 +8,15 @@ from pathlib import Path
 
 import httpx
 
+from ai_station_runner import nvidia
+
 
 def check(name: str, status: str, detail: str = "") -> dict:
     return {"name": name, "status": status, "detail": detail}
 
 
 def command_version(binary: str, args: list[str] | None = None) -> dict:
-    path = shutil.which(binary)
+    path = shutil.which(nvidia.executable() if binary == "nvidia-smi" else binary)
     if not path:
         return check(binary, "unavailable", "Not on PATH")
     try:
