@@ -96,6 +96,36 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Acceptance evidence
 
+Native hardware snapshots now include a separate `metal` observation on Darwin.
+It enumerates all devices through fixed OS Metal/Foundation/Objective-C symbols,
+with a stable registry identity, bounded name, actual unified-memory flag and
+optional recommended working-set size. A successful empty array means no device
+was available; failed inspection remains unavailable, while missing optional
+properties remain null/partial. Metal devices do not enter the existing CUDA
+`gpus` list or authorize NVIDIA image/model profiles.
+
+Apple describes [the working-set value](https://developer.apple.com/documentation/metal/mtldevice/recommendedmaxworkingsetsize)
+as performance guidance. It is neither free/dedicated VRAM nor a hard memory or
+no-swap limit. [Unified memory](https://developer.apple.com/documentation/metal/mtldevice/hasunifiedmemory)
+shares CPU memory; do not add it to physical RAM or subtract this probe's own
+allocations to invent a system-wide free GPU budget. Native admission must still
+combine model/context overhead, current RAM/pressure and durable reservations;
+inference/readiness and memory enforcement are separate unqualified contracts.
+
+Framework loading is isolated in a fixed, five-second, no-site Python child.
+Only the installed observer file runs, with no caller-selected command/argument,
+inherited application secrets or raw diagnostic output. Output is bounded and
+validated; timeout, crash, malformed/duplicate identities or incomplete ABI facts
+cannot become successful empty hardware discovery. Each probe releases its copied
+device array and local autorelease pool. It requests no shader/buffer creation or
+model execution, changes no OS setting, and requires no end-user SDK or PyObjC.
+
+`python -m ai_station_runner.darwin_metal` is a developer read-only observation,
+not the consumer installer or proof of Metal inference. Native qualification is
+opt-in: `AI_STATION_REAL_MAC_METAL_TESTS=1 python -m pytest -q host-runner/tests/test_darwin_metal.py`.
+Normal tests simulate the native ABI and probe protocol; their real isolated Linux
+child is only a negative-platform control. Actual Mac hardware remains untested.
+
 The native process candidate extends the existing ProcessManager through narrow
 boot/capture/liveness/launch hooks; it reuses the same journal, idempotency,
 deadline, cancellation and recovery implementation. Normal Runner construction

@@ -37,6 +37,14 @@ memory. Missing values remain unknown. This supplies observations for the Mac
 installer work; it does not enable that installer, Metal, native execution or
 Linux-style memory enforcement. Linux telemetry remains unchanged.
 
+Darwin hardware snapshots also expose a separate bounded Metal device inventory.
+The native observer runs in a fixed isolated child; failed inspection stays
+unavailable and optional unknown properties stay null. Registry identity and the
+actual unified-memory flag distinguish devices without inventing dedicated VRAM.
+Recommended working-set bytes are advisory, separate from RAM/free memory and
+the CUDA GPU list. This supplies facts for native model admission; it grants no
+Metal workload/readiness capability before actual runtime/platform qualification.
+
 The internal Darwin process candidate subclasses the existing ProcessManager
 at its boot, identity, liveness and launch boundaries. Journal publication,
 idempotency, reaping, cancellation and deadline handling remain shared. A native
