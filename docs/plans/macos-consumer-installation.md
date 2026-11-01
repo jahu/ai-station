@@ -191,6 +191,48 @@ RAM/Metal contention and privacy. These results do not qualify Mach-O execution,
 Metal inference, shared Docker Desktop transport, Gatekeeper or a complete Mac
 installation. Actual hardware, package integration and signing remain required.
 
+### Native Python packaging layer
+
+The package builder now has separate fixed CPython 3.12.14 distributions and 26
+hash-pinned wheels for Apple Silicon and Intel, using the existing Runner/native
+dependency versions. Publisher input coordinates are in `packaging/macos/`.
+The Python archives come from the
+[20260901 standalone release](https://github.com/astral-sh/python-build-standalone/releases/tag/20260901);
+wheel files/versions/sizes/hashes were selected from their official PyPI release
+metadata. No source build or target interpreter execution is needed on the builder.
+
+The selected [PyAV 19.0.1 files](https://pypi.org/project/av/19.0.1/#files) require
+macOS 14 for Apple Silicon; that layer's minimum is 14.0. The Intel layer retains
+13.3, matching the native model SDK's floor. These are layer minima, not a complete
+consumer compatibility claim: Docker Desktop/bridge and application acceptance
+may require a newer OS and remain separate gates.
+
+`PYTHONPATH=host-runner:scripts python scripts/macos_desktop_python.py
+--architecture arm64 --cache /absolute/owned/cache --output /absolute/new/python`
+assembles only previously verified immutable inputs. The cache and output parent
+must already exist. Explicit `--download-inputs` permits fetching only the built-in
+public archives/wheels (59,430,685 compressed bytes for ARM; 75,088,774 for Intel,
+with common wheels reused). It never downloads models or changes the host Python.
+
+The builder reuses safe Python archive extraction and immutable object verification.
+Cross-target wheel installation is offline, no-index/no-dependency-resolution,
+hash-pinned and binary-only, with an isolated build environment. Build-path console
+scripts are omitted. Mach-O thin/universal slices and their actual minimum-OS
+commands are checked before publication; Linux/foreign/ambiguous/newer-OS binaries
+are rejected. Older compatible minimum-OS libraries are valid: the pinned Intel
+NumPy wheel contains a GCC runtime whose legacy minimum is 10.8. A complete file
+inventory and final receipt publish only after all output bytes verify. Existing
+outputs are not overwritten; failed publication is retained for inspection.
+
+Both actual layers have been assembled on the Linux builder: 3,687 files/130 native
+files for ARM and 3,688/134 for Intel. Installed distribution metadata has no missing
+or conflicting declared dependencies for the selected Mac targets. This is actual
+byte assembly, not execution/import qualification: the receipt explicitly retains
+`native_mac_code_executed=false`, `python_import_qualified=false` and
+`macos_installer_qualified=false`. The application bundle/launcher, exact target
+control-plane image, native imports, GUI/update/removal/signing and full consumer
+journey still require implementation/integration and actual Mac evidence.
+
 ### Developer native inference qualification command
 
 On a native macOS 13.3+ host, the installed developer Python environment can run:
