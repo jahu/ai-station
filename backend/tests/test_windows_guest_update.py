@@ -191,6 +191,52 @@ def test_complete_update_preserves_private_data_and_original_backup(fixture):
     assert backups[0].read_bytes() == old_backup
 
 
+def test_update_accepts_legacy_container_database_modes_under_private_data(fixture):
+    root, store, database, manifest, calls = fixture
+    database.parent.chmod(0o755)
+    database.chmod(0o644)
+    before = database.read_bytes()
+    assert apply()["backup_available"] is True
+    assert database.read_bytes() == before
+    assert database.parent.stat().st_mode & 0o777 == 0o755
+    assert database.stat().st_mode & 0o777 == 0o644
+    backup = next(store.glob("*.sqlite"))
+    assert backup.stat().st_mode & 0o777 == 0o600
+    with sqlite3.connect(backup) as db:
+        assert db.execute("SELECT value FROM private_data").fetchone() == (
+            "Synthetic account, library and memory bytes",
+        )
+
+
+@pytest.mark.parametrize(
+    "kind", ["public_data", "writable_directory", "writable_file", "symlink", "hardlink"]
+)
+def test_legacy_database_admission_preserves_private_boundary_and_rejects_links(fixture, kind):
+    root, store, database, manifest, calls = fixture
+    database.parent.chmod(0o755)
+    database.chmod(0o644)
+    before = database.read_bytes()
+    if kind == "public_data":
+        (root / "data").chmod(0o755)
+    elif kind == "writable_directory":
+        database.parent.chmod(0o775)
+    elif kind == "writable_file":
+        database.chmod(0o664)
+    else:
+        original = root / "retained-original.sqlite"
+        database.rename(original)
+        if kind == "symlink":
+            database.symlink_to(original)
+        else:
+            os.link(original, database)
+    with pytest.raises(ValueError, match="unsafe|trusted"):
+        apply()
+    assert database.read_bytes() == before
+    assert "installed" not in calls
+    assert not list(store.glob("*.sqlite"))
+    assert not guest.PENDING_MARKER.exists()
+
+
 @pytest.mark.parametrize("status", ["queued", "running", "cancel_requested", "waiting_for_approval"])
 def test_active_work_refuses_update_without_touching_package_or_database(fixture, status):
     root, store, database, manifest, calls = fixture

@@ -406,12 +406,17 @@ def backup_database(root, uid, operation):
     if root.exists() or root.is_symlink():
         for folder in [HOME / ".local", HOME / ".local/share", root]:
             directory(folder, uid, private=True)
-    for folder in [root / "data", path.parent]:
-        if folder.exists() or folder.is_symlink():
-            directory(folder, uid, private=True)
+    if (root / "data").exists() or (root / "data").is_symlink():
+        directory(root / "data", uid, private=True)
+    if path.parent.exists() or path.parent.is_symlink():
+        directory(path.parent, uid)
     if not path.exists() and not path.is_symlink():
         return False
-    regular(path, uid, private=True)
+    # Earlier container versions create db/ as 0755 and SQLite as 0644. The
+    # verified private desktop/data ancestors prevent traversal by other users;
+    # preserve those existing modes rather than changing user data to update.
+    # Ownership, symlink/hardlink and group/other-write refusals still apply.
+    regular(path, uid)
     backup = STORE / (operation + ".sqlite")
     with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as source:
         if source.execute("PRAGMA integrity_check").fetchone() != ("ok",):
