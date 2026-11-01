@@ -63,6 +63,14 @@ other users' conversation content. Existing executors retain normal log capture.
 No public capability or Mac profile is enabled by this internal candidate;
 [actual platform/package acceptance](plans/macos-consumer-installation.md) remains.
 
+Mac packaging now has a portable build-time Python layer with separately pinned
+standalone interpreters and native wheels for ARM/Intel. It reuses immutable input
+verification, safe extraction and the existing package file inventory; cross-target
+installation stays offline and executes no target Mac code. Binary architecture/OS
+checks and complete output receipts prepare dependencies for the future consumer
+bundle. This helper is not selected by the application, Runner or agents and does
+not enable an installer or qualify actual native imports/consumer operation.
+
 The desktop owner can supervise in the background without keeping a window
 open. A private same-OS-user control socket supports only status and
 instance-bound Stop; the existing supervisor remains responsible for shutdown.

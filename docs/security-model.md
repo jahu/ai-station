@@ -101,6 +101,15 @@ checks are explicit admission estimates, not hard cgroups or a no-swap guarantee
 This adds no endpoint, HTTP-controlled process-output option or qualified Mac
 capability. Actual platform, transport and consumer-package gates remain open.
 
+The trusted Mac Python package builder fetches only built-in public checksum/size
+coordinates when explicitly requested. Immutable inputs are verified again before
+offline, hash-pinned, binary-only cross-target assembly; no target Mac interpreter,
+source build, caller-supplied package index or global Python installation runs.
+The build child receives a minimal environment. Archive/output boundaries and
+native binary architecture/minimum OS are checked before final publication.
+This is developer packaging code, not an HTTP/Runner/agent tool or an installer
+privilege grant. Native imports and consumer qualification remain independent.
+
 Guided runtime preparation is an explicit administrator action with frozen
 license acceptance, source/hash/deadline and model/network/workspace permissions.
 The native operation accepts only a built-in profile, uses the configured local
