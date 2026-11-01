@@ -4,6 +4,7 @@ import fcntl
 import os
 import signal
 import socket
+import sys
 from pathlib import Path
 
 import uvicorn
@@ -49,13 +50,16 @@ def main() -> None:
 
                 signal.signal(signal.SIGTERM, terminate)
                 signal.signal(signal.SIGINT, terminate)
-                from ai_station_runner.tailnet_api import manager as private_manager
+                if sys.platform == "linux":
+                    # The userspace tailnet service has a Linux-only recipe.
+                    # Native process support must not activate it on macOS.
+                    from ai_station_runner.tailnet_api import manager as private_manager
 
-                try:
-                    private_manager().restore()
-                except (ValueError, OSError, KeyError, TypeError):
-                    # No private paths, auth links or node keys in ordinary logs.
-                    print("Private access recovery needs operator inspection", flush=True)
+                    try:
+                        private_manager().restore()
+                    except (ValueError, OSError, KeyError, TypeError):
+                        # No private paths, auth links or node keys in ordinary logs.
+                        print("Private access recovery needs operator inspection", flush=True)
                 uvicorn.Server(uvicorn.Config(app, log_level="info")).run(sockets=[listener])
             finally:
                 try:

@@ -87,8 +87,14 @@ code. The fixed Darwin barrier uses isolated/no-site/no-bytecode Python so
 startup cannot modify the shipped interpreter's cache inventory. Kernel boot/UID/start/session/group checks precede each owned signal.
 Bounded native group enumeration rejects denial, malformed data and truncation;
 unknown inspection is not treated as process exit. This candidate has no new
-endpoint or user-configurable command/path and is not selected by the normal
-Runner. Native Mac qualification and a separate memory policy remain required.
+endpoint or user-configurable command/path and is selected by the normal Runner
+only on Darwin. A platform dependency on the complete FastAPI application
+restricts Mac access to health, read-only hardware and existing owned process
+inspection/Stop; included and future routers do not implicitly gain execution
+authority. Unknown platforms are denied before manager storage/recovery. Linux
+keeps its existing API and process implementation. The Linux-only private-tailnet
+recipe is not restored at Mac startup. Native model setup/inference API admission,
+memory policy, transport and consumer installation remain separate requirements.
 
 The internal native llama.cpp candidate reuses that ownership engine with fixed
 SDK/model references, private canonical inference sockets and a minimal environment.

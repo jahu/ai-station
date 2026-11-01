@@ -47,13 +47,17 @@ Recommended working-set bytes are advisory, separate from RAM/free memory and
 the CUDA GPU list. This supplies facts for native model admission; it grants no
 Metal workload/readiness capability before actual runtime/platform qualification.
 
-The internal Darwin process candidate subclasses the existing ProcessManager
+The Darwin process adapter subclasses the existing ProcessManager
 at its boot, identity, liveness and launch boundaries. Journal publication,
 idempotency, reaping, cancellation and deadline handling remain shared. A native
 exec barrier keeps payload code stopped until ownership is durably recorded;
-Darwin start identities have a distinct journal format. The normal Runner still
-uses the qualified Linux manager. Actual Mac runtime/resource/installer gates
-must pass before selecting the candidate for workloads.
+Darwin start identities have a distinct journal format. The normal Runner now
+selects this adapter on Darwin and retains the original manager on Linux. An
+application-wide dependency admits only qualified Mac operations: health,
+read-only hardware and owned process inspection/Stop. All other typed operations,
+including later included routers, remain unavailable before their own native
+qualification. Internal native CPU inference is qualified separately; this change
+does not activate model setup, Linux media recipes or the consumer Mac launcher.
 
 An internal native llama.cpp lifecycle candidate composes that manager with the
 verified Mac SDK, owned GGUF/cache inspection and the existing completion proxy.
