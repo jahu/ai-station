@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ai_station_runner import avatar_environment, runtime_install
+from ai_station_runner import avatar_environment, nvidia, runtime_install
 from ai_station_runner.config import get_settings
 from ai_station_runner.environment_prepare import OwnedEnvironmentPreparation
 from ai_station_runner.memory_scope import available
@@ -54,7 +54,7 @@ def permitted(body):
 def driver_supported(minimum):
     try:
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+            [nvidia.executable(), "--query-gpu=driver_version", "--format=csv,noheader"],
             capture_output=True,
             text=True,
             timeout=5,
