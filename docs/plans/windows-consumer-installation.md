@@ -437,5 +437,23 @@ actual power failure. The native window then started the application and opened
 its browser connection. The retained account accepted its original fixture
 password and displayed the earlier conversation; no account reset or replacement
 was needed. Actual PS5.1 isolated transport/coordinator fixtures pass 21 and 64
-assertions. Post-update inference/Stop, transfer cancellation, removal/reinstall
-and the other platform gates above remain required before release.
+assertions. The updated app then loaded its cached 4B CPU model automatically,
+continued the preserved conversation with the expected literal reply and skipped
+unnecessary Web retrieval. Its real bounded, zero-swap/no-GPU container was
+verified and stopped through an ordinary Run. The installed Stop button and
+normal tray exit also completed without force-killing processes.
+
+An actual installed Update/Cancel test observed its owned root updater client
+before canceling. All 45 database tables, persistent files and configuration
+matched the stopped baseline afterward; the original backup remained intact,
+the update lock was free and no partial transfer or pending marker remained.
+This exercises native transport cancellation, not a mid-dpkg interruption.
+
+A separate harmless non-reading child exposed a .NET Framework-specific gap:
+Windows PowerShell 5.1 cancellation waited 11.3 seconds for that child to finish,
+while the portable PowerShell probe returned within 0.6 seconds. Header/body
+writes now use cancellable owner polling, and cleanup reaps only its saved child
+before closing a potentially blocked pipe. Two real backpressure regressions
+also require an unrelated process to survive. The portable transport suite passes
+29 assertions; repaired PS5.1/native-payload qualification, cancellation Resume,
+removal/reinstall and the other platform gates remain required before release.

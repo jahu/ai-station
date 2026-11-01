@@ -63,5 +63,41 @@ for($i=0;$i -lt $data.Length;$i++){if($data[$i] -ne [byte]($i%256)){throw 'Binar
   $result=Send-StationGuestUpdate $process ([pscustomobject]@{Stream=$memory}) ([Text.Encoding]::UTF8.GetBytes("{`"fixture`":true}`n"))
   Check ($result.status -ceq 'updated' -and $result.data_preserved -and -not $result.backup_available) 'Binary native transport did not confirm receipt'
  } finally {$memory.Dispose()}
+
+ # A token does not interrupt Windows PowerShell's pending anonymous-pipe write.
+ # Exercise both an oversized header and body backpressure against a real child
+ # that never reads stdin. A separate sleeping process must remain untouched.
+ function New-QuietSleeper([int]$Milliseconds) {
+  $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=(Get-Process -Id $PID).Path
+  $code='[Threading.Thread]::Sleep('+[string]$Milliseconds+')'
+  $info.Arguments='-NoLogo -NoProfile -NonInteractive -EncodedCommand '+[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code))
+  $info.UseShellExecute=$false;$info.CreateNoWindow=$true
+  $info.RedirectStandardInput=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
+  return [Diagnostics.Process]::Start($info)
+ }
+ foreach($blockHeader in @($false,$true)) {
+  $memory=[IO.MemoryStream]::new([byte[]]::new(4MB),$false)
+  $receiver=New-QuietSleeper 8000;$receiverId=$receiver.Id;$receiverBirth=$receiver.StartTime.Ticks
+  $unrelated=New-QuietSleeper 30000
+  $header=$(if($blockHeader){(@{fixture=$true;padding=('x'*8192)}|ConvertTo-Json -Compress)+"`n"}else{"{`"fixture`":true}`n"})
+  $cancel=[Threading.CancellationTokenSource]::new();$cancel.CancelAfter(500)
+  $watch=[Diagnostics.Stopwatch]::StartNew();$canceled=$false
+  try {
+   try { [void](Send-StationGuestUpdate $receiver ([pscustomobject]@{Stream=$memory}) ([Text.Encoding]::UTF8.GetBytes($header)) -CancellationToken $cancel.Token) }
+   catch { $cause=$_.Exception;while($null -ne $cause){if($cause -is [OperationCanceledException]){$canceled=$true};$cause=$cause.InnerException} }
+   $watch.Stop()
+   Check $canceled 'Blocked input did not report the requested cancellation'
+   Check ($watch.ElapsedMilliseconds -lt 3000) 'Blocked input defeated the cancellation bound'
+   Check (-not $unrelated.HasExited) 'Input cancellation touched an unrelated process'
+   $remaining=$null;try{$remaining=[Diagnostics.Process]::GetProcessById($receiverId)}catch [ArgumentException]{}
+   try { Check ($null -eq $remaining) 'Canceled input left its owned receiver alive' } finally { if($null -ne $remaining){$remaining.Dispose()} }
+  } finally {
+   $memory.Dispose();$cancel.Dispose()
+   # Only disposable handles created by this fixture; validate birth on lookup.
+   $remaining=$null;try{$remaining=[Diagnostics.Process]::GetProcessById($receiverId)}catch [ArgumentException]{}
+   if($null -ne $remaining){try{if($remaining.StartTime.Ticks -eq $receiverBirth -and -not $remaining.HasExited){$remaining.Kill();[void]$remaining.WaitForExit(5000)}}finally{$remaining.Dispose()}}
+   if(-not $unrelated.HasExited){$unrelated.Kill();[void]$unrelated.WaitForExit(5000)};$unrelated.Dispose()
+  }
+ }
 } finally {[IO.Directory]::Delete($folder,$true)}
 Write-Output ('PASS '+$script:Cases+' update plan/refusal and real binary transport assertions; no WSL or installation')

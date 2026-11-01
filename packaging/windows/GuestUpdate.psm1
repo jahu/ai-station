@@ -37,6 +37,19 @@ function Get-StationGuestUpdatePlan {
  return [pscustomobject]@{Arguments=$arguments;Header=$header}
 }
 
+function Wait-StationUpdateInput {
+ param([Threading.Tasks.Task]$Transfer,[Threading.CancellationToken]$CancellationToken)
+ # Windows PowerShell's synchronous anonymous pipes do not interrupt a pending
+ # WriteAsync/CopyToAsync when its token is canceled. Keep the owner responsive;
+ # its finally block closes the exact child, unblocking the pending pipe write.
+ while (-not $Transfer.IsCompleted) {
+  $CancellationToken.ThrowIfCancellationRequested()
+  [Threading.Thread]::Sleep(25)
+ }
+ $CancellationToken.ThrowIfCancellationRequested()
+ [void]$Transfer.GetAwaiter().GetResult()
+}
+
 function Send-StationGuestUpdate {
  param($Process,$Archive,[byte[]]$Header,[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
  $deadline=[Threading.CancellationTokenSource]::CreateLinkedTokenSource($CancellationToken)
@@ -44,9 +57,10 @@ function Send-StationGuestUpdate {
  $waiting=$false
  try {
   $deadline.Token.ThrowIfCancellationRequested()
-  $Process.StandardInput.BaseStream.Write($Header,0,$Header.Length)
+  $headerTransfer=$Process.StandardInput.BaseStream.WriteAsync($Header,0,$Header.Length,$deadline.Token)
+  Wait-StationUpdateInput $headerTransfer $deadline.Token
   $transfer=$Archive.Stream.CopyToAsync($Process.StandardInput.BaseStream,65536,$deadline.Token)
-  [void]$transfer.GetAwaiter().GetResult()
+  Wait-StationUpdateInput $transfer $deadline.Token
   $Process.StandardInput.Close()
   $waiting=$true # Wait owns this exact client and its disposal from this point.
   $text=Wait-StationWslProcess $Process -KeepOutput $true -CancellationToken $deadline.Token
@@ -56,10 +70,15 @@ function Send-StationGuestUpdate {
  } finally {
   if (-not $waiting) {
    try {
-    $Process.StandardInput.Close()
-    if (-not $Process.HasExited) { $Process.Kill() }
+    # Closing a stream first can itself wait for the blocked native pipe write.
+    # Reap only our saved process handle before disposing that stream.
+    if (-not $Process.HasExited) {
+     try { $Process.Kill() } catch { if (-not $Process.HasExited) { throw } }
+    }
     if (-not $Process.WaitForExit(10000)) { throw 'The update client is still stopping. Preserve its recorded operation and inspect.' }
-   } finally { $Process.Dispose() }
+   } finally {
+    try { $Process.StandardInput.Close() } finally { $Process.Dispose() }
+   }
   }
   $deadline.Dispose()
  }
