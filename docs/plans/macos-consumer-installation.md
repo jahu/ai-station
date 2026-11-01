@@ -28,6 +28,19 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
 
 ## Delivery sequence
 
+`scripts/macos_application_python.py` builds the application interpreter from the
+qualified dependency layer. It installs a regular pure-Python Host Runner wheel,
+built only from tracked source, into a separate copy without developer PYTHONPATH
+or mutation of the verified base layer. A separate application receipt covers
+source, wheel and final files, while checking the entire unchanged original
+inventory and exact installed Runner bytes. Wheel construction uses the normal
+project build backend in a minimal developer environment; target installation is
+offline and hash-pinned, with no dependency resolution or target Mac execution.
+Dirty input requires an explicit private-qualification flag and remains marked.
+Native acceptance must then use this interpreter's isolated
+`-m ai_station_runner.main`, without repository-source path injection. This is
+package preparation, not permission to bypass the transport/consumer gates below.
+
 1. **Private lifecycle primitives.** Retain Linux peer authentication and add
    Darwin's kernel-provided effective peer credentials for both desktop clients
    and servers. Use a short, owned private runtime directory and the actual
@@ -674,3 +687,24 @@ successful; the prior full baseline remains separate evidence. No UI, deployment
 or model files changed. Evidence is retained in private acceptance directory
 `native-runner-platform-20261101`. Consumer launcher, model API routing, Docker
 Desktop, Metal, complete station restart/update/removal and signing remain open.
+
+### Installed application Python preparation
+
+The application-layer producer passed 97 cases across six complete package
+families plus whole Python lint/format of 989 files. Tests cover source
+cleanliness, ignored/private-file exclusion, symlink escapes, package-byte
+substitution, dependency replacement, unexpected wheel files and recursive output
+inside the base layer. It accepts uv's exact one-byte `.gitignore` output marker;
+the first real attempt refused that harmless extra file, and that failure remains
+recorded rather than counted as success.
+
+Actual private ARM/Intel application layers were assembled on Linux using the
+previously verified native dependencies. Each contains all 210 tracked Runner
+package files with matching bytes; their final inventories contain 3902/3903
+files respectively, with every base file unchanged. Both receipts deliberately
+record `source_dirty=true` and `native_application_executed=false`: these are
+private preparation fixtures, not release artifacts or native consumer acceptance.
+No Mac code, real model, container or production process ran in this assembly.
+Evidence is retained in `macos-application-python-20261101`; next qualify the
+installed module/normal Runner under the exact isolated native interpreter before
+the consumer launcher and transport gates.
