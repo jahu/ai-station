@@ -549,6 +549,14 @@ The process inside the container listens on all container interfaces so Docker c
 
 ## Host Runner
 
+The Darwin telemetry branch reads only fixed public Mach CPU/VM statistics and
+the `hw.memsize`/`vm.swapusage` sysctls from the fixed system library. It sets no
+sysctl value, executes no command and releases its own host-port send right after
+each query. Short, denied or inconsistent observations remain unknown; they do
+not authorize uncapped execution. Free-page RAM is a conservative observation,
+not dedicated VRAM, Metal readiness or a hard zero-swap guarantee. Mac native
+execution and the consumer launcher remain separately gated.
+
 The runner is a user-level process. It does not use sudo. It binds a Unix socket created with mode `0600` and does not listen on TCP in this version.
 
 There is no `POST /shell`. Each operation has a schema. Subprocesses are started with an argv array (`shell=False`) in a new session so cancellation signals only that process group.

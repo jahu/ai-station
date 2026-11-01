@@ -50,6 +50,17 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
    Linux `/proc`/cgroup assumptions or signal an unverified reused PID. Measure
    unified-memory headroom, context/KV overhead and runtime contention. Do not
    report dedicated VRAM or a Linux hard zero-swap limit for unified memory.
+   The native read-only telemetry branch uses fixed public Mach CPU/VM queries
+   and `hw.memsize`/`vm.swapusage`. It reports only actually free pages as its
+   conservative available RAM observation, without adding inactive, purgeable,
+   speculative or compressed counts that can overlap. Used RAM means total
+   minus those free pages, including cache. Unavailable sensors remain null.
+   This observation is neither a hard resource limit nor a Metal memory budget;
+   no NVIDIA devices or CUDA/Metal capability are inferred from system RAM.
+   Normal Linux observations and their admission rules remain unchanged.
+   [Public VM layouts](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/vm_statistics.h),
+   [CPU/host layouts](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/host_info.h),
+   [swap layout](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/sysctl.h).
 4. **Local llama.cpp CPU and Metal.** Add independently pinned Darwin binaries,
    architecture/minimum-OS/source/hash/license receipts and compatible verified
    GGUF catalog profiles. Native dispatch constructs fixed argv and private local
