@@ -76,7 +76,7 @@ $menu=[Windows.Forms.ContextMenuStrip]::new();$showItem=$menu.Items.Add('Open AI
 function Sync-Buttons {
  $preparing=$null -ne $script:worker -and $script:worker.Action -eq 'prepare'
  $busy=$null -ne $script:worker -or ($null -ne $script:station -and $null -eq $script:ready) -or $script:stopPending
- $progress.Visible=$busy
+ $progress.Visible=$busy -and ($null -eq $script:worker -or $script:worker.Action -ne 'status')
  $prepare.Enabled=-not $busy -and -not $script:running
  $checkOnly=$script:attention -and $null -ne $script:station -and $null -eq $script:ready
  $start.Text=$(if ($checkOnly) {'Check status'} elseif ($script:updateAvailable) {'Finish work'} else {'Start'})
@@ -116,8 +116,10 @@ function Begin-StationAction([string]$Action) {
   $description.Text=$(if ($script:updateAvailable) {'Checking the new version and preserving your accounts, models and saved work. You can leave this window in the background.'} else {'Checking the package and preparing the local environment. You can leave this window in the background.'})
  } else {
   [void]$engine.AddCommand('Invoke-StationDesktop').AddParameter('Action',$Action).AddParameter('PackageFolder',$PackageFolder)
-  $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} elseif ($Action -eq 'start') {'Starting AI Station'} else {'Checking your station'})
-  $description.Text='Your saved conversations, models and creations stay in place.'
+  if ($Action -ne 'status') {
+   $status.Text=$(if ($Action -eq 'stop') {'Stopping AI Station'} else {'Starting AI Station'})
+   $description.Text='Your saved conversations, models and creations stay in place.'
+  }
  }
  $handle=$engine.BeginInvoke();$script:worker=[pscustomobject]@{Engine=$engine;Handle=$handle;Action=$Action;Cancellation=$cancellation;Updating=($Action -eq 'prepare' -and $script:updateAvailable)}
  Sync-Buttons
@@ -182,6 +184,7 @@ $timer.Add_Tick({
      }
      'stop' { $script:stopPending=$true;$script:nextCheck=[DateTime]::UtcNow.AddSeconds(1) }
      'status' {
+      $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15)
       $body=([string]$value) | ConvertFrom-Json -ErrorAction Stop
       if ($body.running -isnot [bool]) { throw 'Invalid station lifecycle response.' }
       if ($body.PSObject.Properties.Name -contains 'inspection_required' -and $body.inspection_required) { throw 'The previous supervisor is still active and requires inspection. It was not replaced or stopped indiscriminately.' }
@@ -244,6 +247,8 @@ $timer.Add_Tick({
   }
   if ($script:stopPending -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(2);Begin-StationAction 'status'
+  } elseif ($script:running -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
+   $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15);Begin-StationAction 'status'
   }
  } catch { Show-Failure $_.Exception.Message;Sync-Buttons }
 })

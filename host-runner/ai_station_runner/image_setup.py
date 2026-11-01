@@ -1,7 +1,6 @@
 """Read-only fixed image setup recipe/report; inference qualification gates setup."""
 
 import os
-import shutil
 from pathlib import Path
 
 import httpx
@@ -13,6 +12,7 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_environment import fingerprint
 from ai_station_runner.telemetry import collect
+from ai_station_runner.windows_storage import disk_usage
 
 router = APIRouter(prefix="/v1/setup/images", tags=["managed image setup"])
 
@@ -45,7 +45,7 @@ def catalog():
         daemon = runtime_install.daemon()
         with runtime_install.client(daemon["socket"]) as api:
             image = runtime_install.inspect_image(api, frozen)
-        docker_free = shutil.disk_usage(daemon["data_root"]).free
+        docker_free = disk_usage(daemon["data_root"]).free
     except (HTTPException, httpx.HTTPError, OSError, KeyError, TypeError, ValueError):
         pass
     cached = 0
@@ -75,7 +75,7 @@ def catalog():
         model_files_present = True
     except (HTTPException, OSError, ValueError):
         pass
-    free = shutil.disk_usage(root).free
+    free = disk_usage(root).free
     required = frozen["model_download_bytes"] - cached + 2 * 1024**3
     docker_storage_ok = bool(image) or docker_free is not None and docker_free >= frozen["minimum_free_bytes"]
     notice = (

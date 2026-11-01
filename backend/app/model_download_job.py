@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import shutil
 import tempfile
 import time
 from datetime import timedelta
@@ -13,6 +12,7 @@ from sqlalchemy import select
 from app.artifacts import register_file
 from app.config import get_settings
 from app.db import utcnow
+from app.download_storage import DownloadStorage
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.model_download_files import DownloadBusy, directory, obtain
@@ -43,6 +43,7 @@ class DownloadExecutor:
             require(run.effective_permissions, permission)
         worker, claim = run.worker_id, run.claimed_at
         release = True
+        storage = None
 
         def check(*, commit=True):
             session.refresh(run)
@@ -55,6 +56,8 @@ class DownloadExecutor:
                     raise Stopped("Model preparation account authority changed")
             if run.status not in {"claimed", "preparing", "running"}:
                 raise Stopped("Model preparation was stopped")
+            if storage is not None:
+                storage.check()
             if commit:
                 session.commit()
 
@@ -83,11 +86,14 @@ class DownloadExecutor:
             folder = directory(root)
             partial = folder / (entry.file.sha256 + ".part")
             # The kernel separately rejects symlinks, hard links and unsafe files.
-            already = partial.stat().st_size if partial.exists() and not partial.is_symlink() else 0
             final = folder / entry.file.sha256
-            needed = 0 if final.exists() else max(0, entry.file.size_bytes - already)
-            if shutil.disk_usage(folder).free < needed + 256 * 1024**2:
-                raise ValueError("Not enough free application storage for this model and download headroom")
+
+            def remaining():
+                already = partial.stat().st_size if partial.exists() and not partial.is_symlink() else 0
+                return 0 if final.exists() else max(0, entry.file.size_bytes - already)
+
+            storage = DownloadStorage(folder, hardware, runner, remaining)
+            storage.check()
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
             session.commit()
             started = time.monotonic()

@@ -116,7 +116,7 @@ function Invoke-StationGuestUpdate {
 }
 
 function Test-StationFixedGuestFile {
-    param($Lease,$Record,[string]$Executable,[ValidateSet('/var/lib/ai-station-updates/python/bin/python3','/usr/lib/ai-station-wsl-update-pending.json')][string]$Path,[switch]$ExecutableFile,[switch]$RootUser)
+    param($Lease,$Record,[string]$Executable,[ValidateSet('/var/lib/ai-station-updates/python/bin/python3','/usr/lib/ai-station-wsl-update-pending.json','/usr/lib/ai-station/host-runner/ai_station_runner/windows_storage.py')][string]$Path,[switch]$ExecutableFile,[switch]$RootUser)
     $arguments=@('--distribution',$Record.State.Distribution,'--user',$(if($RootUser){'root'}else{'station'}),'--exec','/usr/bin/test',$(if($ExecutableFile){'-x'}else{'-e'}),$Path)
     $process=Start-StationWslProcess $Executable $arguments $Lease.Root
     try {
@@ -195,6 +195,11 @@ function Invoke-StationDesktop {
         Confirm-StationGuest $lease $record $executable -AlternativeManifest $(if ($update) {$manifest} else {$null})
         $pending=Test-StationGuestUpdatePending $lease $record $executable
         if ($Action -ieq 'start' -and $pending) { throw 'Finish or inspect the pending application update before starting. Status and Stop remain available.' }
+        if ($Action -in @('start','status') -and -not $pending) {
+            # This ordinary-user, fixed helper accepts only numeric byte counts.
+            # Old guests without it retain their old behavior until updated.
+            Update-StationPhysicalStorage $lease $record $executable
+        }
         if ($Action -ieq 'start') {
             $statusArgs=Get-StationLifecyclePlan $record.State $lease.Root 'status'
             $status=(Wait-StationWslProcess (Start-StationWslProcess $executable $statusArgs $lease.Root) -KeepOutput $true) | ConvertFrom-Json -ErrorAction Stop
@@ -213,6 +218,30 @@ function Invoke-StationDesktop {
         }
         return $result
     } finally { $lease.Stream.Dispose() }
+}
+
+function Get-StationPhysicalVolume {
+    param([string]$Directory)
+    Assert-StationNoReparsePath $Directory
+    $drive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($Directory))
+    if (-not $drive.IsReady -or $drive.DriveFormat -ine 'NTFS') { throw 'Inspect the Windows volume containing this private guest.' }
+    $total=$drive.TotalSize;$free=$drive.AvailableFreeSpace
+    if ($total -le 0 -or $total -gt [long]1152921504606846976 -or $free -lt 0 -or $free -gt $total) { throw 'Windows returned an invalid physical volume capacity.' }
+    return [pscustomobject]@{Total=$total;Free=$free}
+}
+
+function Update-StationPhysicalStorage {
+    param($Lease,$Record,[string]$Executable)
+    $helper='/usr/lib/ai-station/host-runner/ai_station_runner/windows_storage.py'
+    if (-not (Test-StationFixedGuestFile $Lease $Record $Executable $helper)) { return }
+    $volume=Get-StationPhysicalVolume $Record.State.Directory
+    $arguments=@('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/lib/ai-station/python/bin/python3','-IBS',$helper,$volume.Total.ToString([Globalization.CultureInfo]::InvariantCulture),$volume.Free.ToString([Globalization.CultureInfo]::InvariantCulture))
+    $deadline=[Threading.CancellationTokenSource]::new();$deadline.CancelAfter(5000)
+    try {
+        $result=Wait-StationWslProcess (Start-StationWslProcess $Executable $arguments $Lease.Root) -KeepOutput $true -CancellationToken $deadline.Token
+        $body=$result|ConvertFrom-Json -ErrorAction Stop
+        if (($body.PSObject.Properties.Name -join '|') -cne 'status' -or $body.status -cne 'observed') { throw 'Refresh the Windows disk observation before downloading models.' }
+    } finally { $deadline.Dispose() }
 }
 
 Export-ModuleMember -Function Invoke-StationSetup,Invoke-StationDesktop

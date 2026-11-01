@@ -4,7 +4,6 @@ import fcntl
 import json
 import os
 import re
-import shutil
 import stat
 import sys
 import tempfile
@@ -22,6 +21,7 @@ from pydantic import ConfigDict, Field, model_validator
 from ai_station_runner import llama_runtime, runtime_setup
 from ai_station_runner.config import get_settings
 from ai_station_runner.processes import ProcessNotOwned
+from ai_station_runner.windows_storage import disk_usage
 
 router = APIRouter(prefix="/v1/setup/runtimes", tags=["runtime preparation"])
 INSTALLATION_QUALIFIED = True
@@ -272,7 +272,7 @@ def catalog(
         result["usable_image"] = result["usable_image"] or (present and profile != cpu.PROFILE)
         target = daemon()
         try:
-            free = shutil.disk_usage(target["data_root"]).free
+            free = disk_usage(target["data_root"]).free
             result["storage"] = {"free_bytes": free, "required_bytes": result["recipe"]["minimum_free_bytes"]}
         except (OSError, TypeError):
             free = None
@@ -364,7 +364,7 @@ def prepare(body: Prepare):
                             409, "Another owned runtime preparation is active or requires inspection"
                         )
         try:
-            free = shutil.disk_usage(target["data_root"]).free
+            free = disk_usage(target["data_root"]).free
         except (OSError, TypeError):
             raise HTTPException(409, "Free Docker storage could not be confirmed") from None
         if free < frozen["minimum_free_bytes"]:

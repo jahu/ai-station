@@ -23,6 +23,7 @@ $module=Get-Module Setup
  # fake, immutable manifests and the real typed planners/confirmation remain.
  function script:Assert-StationWindowsHost {}
  function script:Assert-StationWindowsPreparationReady {}
+ function script:Update-StationPhysicalStorage {param($Lease,$Record,$Executable)}
  function script:Assert-StationNoReparsePath {param($Path)}
  function script:Get-StationWslExecutable {return 'C:\Windows\System32\wsl.exe'}
  function script:Read-StationPublishedManifest {param($PackageFolder);return (Clone $script:Target)}

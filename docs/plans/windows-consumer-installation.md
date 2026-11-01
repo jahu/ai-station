@@ -479,3 +479,29 @@ qualifies this private CPU fixture's preserving update/removal lifecycle.
 Physical Windows-volume capacity admission, broader hardware, native
 accessibility/DPI, signing and the remaining platform gates are still required
 before public consumer release.
+
+### Physical Windows storage admission (in implementation)
+
+The virtual WSL filesystem can advertise much more free space than the NTFS
+volume backing its VHD. The trusted native launcher will measure the exact
+registered guest directory's volume using the current Windows account's
+available-space quota. Only bounded numeric capacity values cross into the
+same owned guest, through a fixed installed Python helper; no drive mount,
+Windows executable interoperability, shell or workload permission is added.
+
+The ordinary guest helper records a private, atomic observation outside mounted
+application data. It binds freshness to the current guest boot and monotonic
+clock, and records virtual free space at receipt. Admission subtracts subsequent
+guest growth from the physical budget and takes the smaller of physical and
+virtual capacity. Missing, stale or unsafe Windows observations block new
+downloads/preparation rather than falling back to the virtual disk. Linux
+filesystem behavior remains unchanged. Native status refreshes the observation
+while the station runs, including when its controls are hidden.
+
+The catalog and both single-model and companion-bundle download workers must
+use that effective budget, preserve verified/cache/partial files on refusal and
+recheck during transfer. Native runtime preparation must use the same underlying
+physical ceiling. Qualification must compare the displayed/admitted budget with
+actual Windows volume observations, exercise shortage and stale-report refusal,
+and preserve the existing guest/accounts/models. Until those tests pass this
+paragraph is an implementation contract, not a supported-release claim.

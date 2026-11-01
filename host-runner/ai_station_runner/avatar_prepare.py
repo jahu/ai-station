@@ -1,7 +1,6 @@
 """Fixed avatar preparation through the same owned offline lifecycle as speech."""
 
 import platform
-import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -18,6 +17,7 @@ from ai_station_runner.memory_scope import available
 from ai_station_runner.memory_scope import scope_environment as scope_environment
 from ai_station_runner.memory_scope import scope_prefix as scope_prefix
 from ai_station_runner.telemetry import collect
+from ai_station_runner.windows_storage import disk_usage
 
 # Fixed-profile preparation, inference, Stop/recovery and privacy are qualified.
 # Keep withdrawals outside the immutable recipe and inference implementation hash.
@@ -101,7 +101,7 @@ def catalog():
                 cached += item["size_bytes"]
         except OSError:
             pass
-    free = shutil.disk_usage(root).free
+    free = disk_usage(root).free
     required = total - cached + 12 * 1024**3
     configured = settings.sonic_whole_enabled or any(
         getattr(settings, key) for key in ("sonic_python", "sonic_dir", "sonic_models")

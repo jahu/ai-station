@@ -1,7 +1,6 @@
 """Fixed effects preparation through the same owned offline lifecycle as speech."""
 
 import platform
-import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -18,6 +17,7 @@ from ai_station_runner.memory_scope import available
 from ai_station_runner.memory_scope import scope_environment as scope_environment
 from ai_station_runner.memory_scope import scope_prefix as scope_prefix
 from ai_station_runner.telemetry import collect
+from ai_station_runner.windows_storage import disk_usage
 
 # Fixed offline assembly, inference/preview, editor, Stop/recovery and privacy passed.
 # Withdrawal policy stays outside the immutable recipe and inference observation.
@@ -123,7 +123,7 @@ def catalog():
                 cached += item["size_bytes"]
         except OSError:
             pass
-    free = shutil.disk_usage(root).free
+    free = disk_usage(root).free
     required = total - cached + 12 * 1024**3
     configured = settings.mmaudio_enabled or any(
         getattr(settings, key) for key in ("mmaudio_python", "mmaudio_dir", "mmaudio_models")

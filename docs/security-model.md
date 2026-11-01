@@ -1228,6 +1228,15 @@ Desktop browser readiness binds the private URL to a per-launch nonsecret UUID e
 
 ### Offline Windows application-update candidate
 
+The separate physical-volume observation is an ordinary-user, fixed installer
+operation accepting only two decimal byte counts. It exposes no command, path,
+drive or Windows process access to the API or agents. The guest report lives
+outside mounted application data; ownership, private permissions, single-link
+regular files, bounded JSON, boot identity and monotonic freshness are checked
+before admission. Stale/unsafe observations deny new model downloads and native
+preparation. The existing typed Runner telemetry carries only capacity/status.
+No Windows shell, automount or executable interoperability is enabled.
+
 The candidate guest updater is a trusted installer layer, not a Runner/API or
 agent capability. Its entry refuses the development host and another WSL
 identity. Root authority is restricted to the owned guest's fixed package update;

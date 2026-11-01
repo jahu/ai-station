@@ -1,7 +1,6 @@
 """Fixed music preparation through the same owned offline lifecycle as speech."""
 
 import platform
-import shutil
 import sys
 from datetime import datetime
 from typing import Literal
@@ -17,6 +16,7 @@ from ai_station_runner.memory_scope import available
 from ai_station_runner.memory_scope import scope_environment as scope_environment
 from ai_station_runner.memory_scope import scope_prefix as scope_prefix
 from ai_station_runner.telemetry import collect
+from ai_station_runner.windows_storage import disk_usage
 
 # Complete API/worker/native installation, real generation and owned
 # Stop/recovery are qualified for this fixed Linux profile; see its plan.
@@ -79,7 +79,7 @@ def catalog():
                 cached += item["size_bytes"]
         except OSError:
             pass
-    free = shutil.disk_usage(root).free
+    free = disk_usage(root).free
     required = total - cached + 8 * 1024**3
     configured = any((settings.music_python, settings.music_source_dir, settings.music_model_dir))
     # A path existing is configuration, not proof that imports/model inference work.
