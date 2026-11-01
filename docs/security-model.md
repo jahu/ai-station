@@ -54,8 +54,8 @@ fallback. These primitives add no listener or endpoint and do not enable the
 unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
 
 The read-only Metal inventory runs only a fixed installed Python observer in an
-isolated no-site child with a minimal environment, bounded duration and validated
-output. Native framework errors/stderr are not exposed, and retained device/pool
+isolated no-site/no-bytecode child with a minimal environment, bounded duration
+and validated output. Native framework errors/stderr are not exposed, and retained device/pool
 objects are released. Working-set guidance is not dedicated/free VRAM, a hard
 memory limit or permission to launch a model. Metal identities stay separate from
 CUDA indices, so observation cannot admit a Linux NVIDIA recipe on a Mac. Native
@@ -83,7 +83,8 @@ An internal Darwin ProcessManager candidate adds owned-session interpretation
 behind the existing lifecycle engine. A fixed isolated Python barrier execs an
 already-admitted argv only after native identity capture and durable journal
 publication; EOF, missing authority or failed publication cannot launch payload
-code. Kernel boot/UID/start/session/group checks precede each owned signal.
+code. The fixed Darwin barrier uses isolated/no-site/no-bytecode Python so
+startup cannot modify the shipped interpreter's cache inventory. Kernel boot/UID/start/session/group checks precede each owned signal.
 Bounded native group enumeration rejects denial, malformed data and truncation;
 unknown inspection is not treated as process exit. This candidate has no new
 endpoint or user-configurable command/path and is not selected by the normal

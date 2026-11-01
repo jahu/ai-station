@@ -3,6 +3,7 @@
 import ctypes
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -273,7 +274,7 @@ def test_probe_is_fixed_isolated_bounded_and_does_not_reflect_errors(monkeypatch
     report = metal._report([device()])
 
     def run(argv, **kwargs):
-        assert argv == [sys.executable, "-I", "-S", str(Path(metal.__file__).resolve())]
+        assert argv == [sys.executable, "-I", "-S", "-B", str(Path(metal.__file__).resolve())]
         assert kwargs["stdin"] == kwargs["stderr"] == subprocess.DEVNULL
         assert kwargs["env"] == {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LANG": "C.UTF-8"}
         assert kwargs["timeout"] == 5 and kwargs["check"] is False
@@ -312,11 +313,38 @@ def test_linux_never_loads_or_launches_a_metal_probe(monkeypatch):
         metal._Native()
 
 
+def test_native_observer_does_not_write_interpreter_cache(tmp_path, monkeypatch):
+    cache = tmp_path / "bytecode"
+    marker = tmp_path / "launched"
+    source = tmp_path / "observer.py"
+    source.write_text(
+        "import ctypes,json,pathlib\npathlib.Path("
+        + repr(str(marker))
+        + ").touch()\nprint("
+        + repr(json.dumps(metal.unavailable()))
+        + ")\nraise SystemExit(1)\n"
+    )
+    wrapper = tmp_path / "isolated-python"
+    wrapper.write_text(
+        "#!/bin/sh\nexec "
+        + shlex.quote(sys.executable)
+        + " -X "
+        + shlex.quote("pycache_prefix=" + str(cache))
+        + ' "$@"\n'
+    )
+    wrapper.chmod(0o700)
+    monkeypatch.setattr(metal, "sys", SimpleNamespace(platform="darwin", executable=str(wrapper)))
+    monkeypatch.setattr(metal, "__file__", str(source))  # No native hardware in ordinary cache tests.
+    result = metal.observe()
+    assert result == metal.unavailable() and marker.exists()
+    assert not cache.exists()
+
+
 def test_actual_isolated_cli_on_linux_reports_unavailable_not_mac_success():
     if sys.platform != "linux":
         pytest.skip("Linux negative control")
     result = subprocess.run(
-        [sys.executable, "-I", "-S", str(Path(metal.__file__).resolve())],
+        [sys.executable, "-I", "-S", "-B", str(Path(metal.__file__).resolve())],
         capture_output=True,
         timeout=5,
         check=False,

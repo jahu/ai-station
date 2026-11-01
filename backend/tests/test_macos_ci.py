@@ -27,6 +27,17 @@ def test_native_mac_job_is_owner_manual_public_only_on_standard_free_labels():
     inference = job["steps"][-1]
     assert inference["if"] == "inputs.operation == 'macos-native-inference'"
     assert "--run-native-inference" in inference["run"]
+    assert inference["run"].startswith(
+        ".native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "
+    )
+    assert inference["env"] == {"TARGET_ARCHITECTURE": "${{ matrix.architecture }}"}
+    imports = next(
+        step
+        for step in job["steps"]
+        if step.get("name") == "Execute the actual bundled interpreter and native dependencies"
+    )
+    assert imports["if"] == "inputs.operation == 'macos-native-checks'"
+    assert "--run-native-inference" not in imports["run"]
     for name in ("python", "windows-contracts", "frontend", "docker"):
         assert value["jobs"][name]["if"] == "inputs.operation == 'checks'"
 
@@ -35,6 +46,7 @@ def test_import_probe_cannot_run_target_acceptance_on_linux(monkeypatch):
     import macos_package_import_probe as probe
 
     monkeypatch.setattr(probe.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(probe.sys, "argv", ["probe", "arm64"])
     with pytest.raises(RuntimeError, match="native Mac"):
         probe.main()
 

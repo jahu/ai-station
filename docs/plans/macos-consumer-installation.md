@@ -529,3 +529,46 @@ host. Native kernel/import/audio gates also passed. Normal validation passed
 whole Python lint/format. This qualifies the developer model-owner lifecycle,
 not a full station restart, Docker Desktop bridge, Metal inference, GUI installer,
 minimum OS or signing. The complete NR-13/14 consumer gates remain open.
+
+### Bundled interpreter model gate
+
+Earlier actual native inference/recovery runs used the developer interpreter;
+the pinned CPython 3.12.14 package passed separate native-import/audio gates.
+The explicit inference workflow now executes `macos_package_import_probe.py`
+under the exact bundled interpreter with `-IB` and the architecture plus
+`--run-native-inference`. It first checks the complete pinned Python inventory,
+imports and native audio, then uses the existing fixed CPU fixture and isolated
+owner-process recovery. Both native owners use that same bundled interpreter.
+A complete model/recovery/Stop result is required, and the shipped inventory is
+checked again after inference. No developer/user Python site or PYTHONPATH can
+supply missing package dependencies. Ordinary native checks retain their no-model
+path. This closes a package/runtime integration gap; it does not add or enable a
+consumer launcher, full station restart, Docker bridge, Metal or signing.
+
+The first bundled-interpreter run41349185644 failed its final unchanged-inventory
+gate on both architectures, despite successful model replies/recovery/Stop.
+A regression reproduced interpreter-cache writes by the native exec barrier in
+an isolated temporary bytecode prefix. The Darwin barrier now also uses `-B`,
+preventing those writes instead of accepting new files or rewriting the receipt.
+Failure reports include only added-bytecode/other-file counts, not file paths or
+contents. This fixes the candidate launch path only; Linux launch is unchanged.
+
+The next actual run41349651754 retained the same failure gate after fixing the
+exec barrier. Its safe report showed 45 added bytecode files on Intel and 42
+on ARM, with three modified files on ARM and no other added files. The read-only
+Metal observer was a second child missing `-B`.
+A separate temporary-prefix regression failed before that fix as well. Both
+fixed native children now prohibit bytecode writes. No cache file is accepted
+into the receipt and no unrelated runtime or Linux launcher changes.
+
+The corrected [actual bundled-runtime run](https://github.com/jahu/ai-station/actions/runs/41350101602)
+passed at `79425827f43c36273d24415563bceb614ad37004` on ARM macOS15.8.2
+and Intel macOS15.7.9. Both used exact isolated CPython3.12.14 for imports/audio,
+model startup and the separate model-owner process. CPU replies, owner exit,
+same-model-PID recovery, owned Stop and socket cleanup passed, followed by an
+unchanged full Python file inventory. Each native kernel/observation cohort
+passed151 cases with one skip. Local validation passed313 cases/13 complete
+families with five opt-in skips, then the final complete Metal family40/one skip
+after a test-fixture refinement; other checked source stayed unchanged. Whole
+Python lint/format passed983 files. This closes the bundled-interpreter inference
+and immutability gap, not consumer GUI/bridge/Metal/station restart/minOS/signing.

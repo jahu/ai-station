@@ -128,7 +128,7 @@ class DarwinProcessManager(ProcessManager):
         try:
             gate = Path(__file__).with_name("process_gate.py").resolve(strict=True)
             proc = subprocess.Popen(
-                [sys.executable, "-I", "-S", str(gate), str(read), *argv],
+                [sys.executable, "-I", "-S", "-B", str(gate), str(read), *argv],
                 cwd=cwd,
                 env=env,
                 stdout=stdout,

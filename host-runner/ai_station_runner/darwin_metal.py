@@ -185,7 +185,7 @@ def observe():
     try:
         with tempfile.TemporaryFile() as output:
             process = subprocess.run(
-                [sys.executable, "-I", "-S", str(Path(__file__).resolve())],
+                [sys.executable, "-I", "-S", "-B", str(Path(__file__).resolve())],
                 stdin=subprocess.DEVNULL,
                 stdout=output,
                 stderr=subprocess.DEVNULL,

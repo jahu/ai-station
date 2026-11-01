@@ -10,13 +10,61 @@ import sys
 from pathlib import Path
 
 
+def inference_requested(arguments):
+    if len(arguments) not in {2, 3} or (len(arguments) == 3 and arguments[2] != "--run-native-inference"):
+        raise RuntimeError("Choose the native architecture and optional explicit inference flag")
+    return len(arguments) == 3
+
+
+def qualify_inference(layer, result):
+    """Called only after the exact isolated shipped interpreter passed its gates."""
+    from macos_ci_inference import experiment, fixture
+
+    proof = experiment(layer.parent / "inference", opted_in=True)
+    frozen = fixture()
+    if (
+        proof.get("status") != "passed_native_probe_only"
+        or proof.get("architecture") != result["architecture"]
+        or proof.get("compute") != "cpu"
+        or proof.get("context_size") != frozen["context_size"]
+        or proof.get("model_sha256") != frozen["model"]["sha256"]
+        or any(
+            proof.get(key) is not True
+            for key in (
+                "native_inference_passed",
+                "cross_process_restart_tested",
+                "owner_process_exit_confirmed",
+                "owned_stop_confirmed",
+                "socket_cleanup_confirmed",
+            )
+        )
+    ):
+        raise ValueError("Bundled native inference and process recovery were not fully confirmed")
+    result.update(
+        model_inference_tested=True,
+        bundled_native_inference={
+            key: proof[key]
+            for key in (
+                "compute",
+                "context_size",
+                "model_sha256",
+                "native_inference_passed",
+                "cross_process_restart_tested",
+                "owner_process_exit_confirmed",
+                "owned_stop_confirmed",
+                "socket_cleanup_confirmed",
+            )
+        },
+    )
+
+
 def main():
+    inference = inference_requested(sys.argv)
     if (
         platform.system() != "Darwin"
         or sys.version_info[:3] != (3, 12, 14)
         or not sys.flags.isolated
         or not sys.dont_write_bytecode
-        or len(sys.argv) != 2
         or sys.argv[1] not in {"arm64", "x86_64"}
         or platform.machine() != sys.argv[1]
     ):
@@ -87,10 +135,6 @@ def main():
             container.mux(packet)
     with av.open(io.BytesIO(output.getvalue())) as container:
         assert sum(frame.samples for frame in container.decode(audio=0)) == 160
-    after = file_manifest(layer)
-    after.pop("native-python.json")
-    if after != actual:
-        raise ValueError("Native import changed the shipped layer")
     head = os.environ.get("GITHUB_SHA", "")
     result = {
         "platform": "Darwin",
@@ -109,6 +153,26 @@ def main():
         "Metal_inference_tested": False,
         "macos_installer_qualified": False,
     }
+    if inference:
+        qualify_inference(layer, result)
+    after = file_manifest(layer)
+    after.pop("native-python.json")
+    if after != actual:
+        added = set(after) - set(actual)
+        bytecode = sum("/__pycache__/" in name and name.endswith(".pyc") for name in added)
+        print(
+            json.dumps(
+                {
+                    "stage": "layer_inventory_changed",
+                    "added_bytecode": bytecode,
+                    "other_added": len(added) - bytecode,
+                    "removed": len(set(actual) - set(after)),
+                    "modified": sum(after[name] != actual[name] for name in set(actual) & set(after)),
+                }
+            ),
+            flush=True,
+        )
+        raise ValueError("Native execution changed the shipped layer")
     print(json.dumps(result, sort_keys=True))
     return result
 
