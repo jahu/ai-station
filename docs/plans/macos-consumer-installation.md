@@ -727,3 +727,26 @@ and successful exit before normal Runner main starts. This checks real owner
 loss without leaving the original manager/reaper as a concurrent journal writer.
 Unknown ownership retains the private fixture; helper cleanup signals only its
 own immediate child, while managed cleanup uses the native ownership journal.
+
+Actual owner-dispatched run
+[`41359243590`](https://github.com/jahu/ai-station/actions/runs/41359243590)
+passed this installed-package contract at implementation head
+`47cd414b349b2ec4f57f28f96f2ea85d2b472621` on ARM macOS 15.8.2 and Intel macOS
+15.7.9. Both used the exact bundled Python 3.12.14, a regular installed Runner
+wheel, no repository sys.path injection and normal `-IB -m ai_station_runner.main`.
+The original owner helper actually exited and was reaped before same-process-ID
+recovery; private UDS, duplicate/unknown-owner refusal, scoped Stop, survival of an
+unrelated process, normal socket cleanup and unchanged complete application
+inventory all passed. Existing native kernel/observation families passed 243 cases
+with one skip on each architecture; base Python imports/audio remained unchanged.
+
+Local validation passed 118 cases across seven complete package families and
+whole Python lint/format of 991 files. The installed package now requires exact
+tracked file-set equality as well as matching bytes; an added untracked module is
+rejected. An initial new unit test incorrectly expected an entirely empty pytest
+directory despite the backend's existing data fixture; it was corrected to assert
+no additional files, and the complete selected validation then passed. No failure
+was waived. Evidence remains in `macos-installed-runner-20261101`. This no-model
+experiment qualifies the installed native Runner component; the .app/launcher,
+native model API/catalog, Docker Desktop transport, Metal, whole-station preserving
+update/removal, minimum OS and signing remain full NR-13/14 acceptance gates.
