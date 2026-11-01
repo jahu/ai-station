@@ -95,6 +95,7 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, gpu_
         copy_sources(bundle)
         if windows_gpu:
             shutil.copy2(ROOT / "scripts/windows_gpu_bundle.py", bundle / "scripts/windows_gpu_bundle.py")
+            shutil.copy2(ROOT / "scripts/windows_gpu_install.py", bundle / "scripts/windows_gpu_install.py")
             prepare_windows_gpu(bundle / "windows-gpu", cache=gpu_cache)
         shutil.copy2(ROOT / "packaging/linux/requirements.lock", bundle / "native-requirements.lock")
         files = file_manifest(bundle)

@@ -10,9 +10,17 @@ function Assert-StationUpdateRecipe {
  Assert-StationGuestManifest $Previous
  Assert-StationGuestManifest $Target
  if ($Previous.base -cne $Target.base) { throw 'This package needs a different guest OS. The existing distribution was preserved.' }
- foreach($name in @('guest.Dockerfile','wsl.conf','guest_control.py')) {
+ foreach($name in @('wsl.conf','guest_control.py')) {
   if ($Previous.sources.$name -cne $Target.sources.$name) { throw 'A guest OS or bridge change needs its separately qualified migration.' }
  }
+ $old=$Previous.sources.'guest.Dockerfile';$new=$Target.sources.'guest.Dockerfile'
+ $recipe='nvidia-container-toolkit-1.20.1-amd64-v1'
+ $oldRecipe='b6a35aa0a71b8f2b2a63c3878bfabc7ac9f88bee43606f2d0f501bc32002c9ae'
+ $newRecipe='107874c759815048c404edcf116e0c38ef8f00abbaa60b24ce67241555b36d63'
+ $gpu=$(if($Target.package.PSObject.Properties.Name -contains 'X-AI-Station-WSL-GPU-Recipe'){$Target.package.'X-AI-Station-WSL-GPU-Recipe'}else{$null})
+ if ($null -ne $gpu -and ($gpu -cne $recipe -or $new -cne $newRecipe -or $Target.base -cne 'ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852')) { throw 'GPU activation requires its exact reviewed guest recipe.' }
+ if ($new -ceq $newRecipe -and $gpu -cne $recipe) { throw 'The GPU guest requires its verified offline input package.' }
+ if ($old -cne $new -and -not ($old -ceq $oldRecipe -and $new -ceq $newRecipe -and $gpu -ceq $recipe)) { throw 'This guest OS change has no qualified preserving migration.' }
 }
 
 function Get-StationGuestUpdatePlan {

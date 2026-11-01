@@ -30,6 +30,18 @@ Check ($header.package_bytes -eq 100 -and $header.previous.package_sha256 -ceq $
 foreach($name in @('guest.Dockerfile','wsl.conf','guest_control.py')) {
  $bad=Fixture 'c';$bad.sources.$name='0'*64;Refuses { Get-StationGuestUpdatePlan $state $root $old $bad $program }
 }
+$gpuOld=Fixture;$gpuTarget=Fixture 'c'
+$gpuOld.base=$gpuTarget.base='ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
+$gpuOld.sources.'guest.Dockerfile'='b6a35aa0a71b8f2b2a63c3878bfabc7ac9f88bee43606f2d0f501bc32002c9ae'
+$gpuTarget.sources.'guest.Dockerfile'='107874c759815048c404edcf116e0c38ef8f00abbaa60b24ce67241555b36d63'
+$gpuTarget.package|Add-Member -NotePropertyName 'X-AI-Station-WSL-GPU-Recipe' -NotePropertyValue 'nvidia-container-toolkit-1.20.1-amd64-v1'
+Assert-StationUpdateRecipe $gpuOld $gpuTarget
+Check $true 'The one reviewed forward GPU migration must be accepted'
+Assert-StationUpdateRecipe $gpuTarget $gpuTarget
+Refuses { Assert-StationUpdateRecipe $gpuTarget $gpuOld }
+$wrong=($gpuTarget|ConvertTo-Json -Depth 8|ConvertFrom-Json);$wrong.package.'X-AI-Station-WSL-GPU-Recipe'='unreviewed';Refuses { Assert-StationUpdateRecipe $gpuOld $wrong }
+$wrong=($gpuTarget|ConvertTo-Json -Depth 8|ConvertFrom-Json);$wrong.sources.'guest_control.py'='0'*64;Refuses { Assert-StationUpdateRecipe $gpuOld $wrong }
+$wrong=($gpuTarget|ConvertTo-Json -Depth 8|ConvertFrom-Json);$wrong.sources.'wsl.conf'='0'*64;Refuses { Assert-StationUpdateRecipe $gpuOld $wrong }
 foreach($bytes in @($true,0,-1,1073741824,'100',1.5,1.0)) {
  $bad=Fixture 'c';$bad.package_bytes=$bytes;Refuses { Get-StationGuestUpdatePlan $state $root $old $bad $program }
 }

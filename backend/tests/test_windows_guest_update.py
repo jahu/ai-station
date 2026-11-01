@@ -55,6 +55,54 @@ def test_guest_os_and_bridge_changes_require_a_separately_qualified_migration(ke
         guest.plan(receipt(1), target)
 
 
+def gpu_receipt(epoch):
+    value = receipt(epoch)
+    value["base"] = guest.GPU_GUEST_BASE
+    value["sources"]["guest.Dockerfile"] = guest.GPU_GUEST_RECIPE
+    value["package"]["X-AI-Station-WSL-GPU-Recipe"] = guest.GPU_RECIPE
+    return value
+
+
+def test_only_the_exact_forward_toolkit_guest_migration_is_admitted():
+    old, target = receipt(1), gpu_receipt(2)
+    old["base"] = guest.GPU_GUEST_BASE
+    old["sources"]["guest.Dockerfile"] = guest.CPU_GUEST_RECIPE
+    assert guest.plan(old, target) == {"previous": old, "target": target}
+    assert guest.plan(gpu_receipt(1), target)["target"] == target
+    with pytest.raises(ValueError):
+        guest.plan(target, old)
+
+
+@pytest.mark.parametrize(
+    "change", ["unknown_old", "wrong_new", "missing_recipe", "wrong_recipe", "wrong_base", "bridge", "mounts"]
+)
+def test_toolkit_migration_cannot_relax_other_guest_identity_checks(change):
+    old, target = receipt(1), gpu_receipt(2)
+    old["base"] = guest.GPU_GUEST_BASE
+    old["sources"]["guest.Dockerfile"] = guest.CPU_GUEST_RECIPE
+    if change == "unknown_old":
+        old["sources"]["guest.Dockerfile"] = "f" * 64
+    elif change == "wrong_new":
+        target["sources"]["guest.Dockerfile"] = "f" * 64
+    elif change == "missing_recipe":
+        target["package"].pop("X-AI-Station-WSL-GPU-Recipe")
+    elif change == "wrong_recipe":
+        target["package"]["X-AI-Station-WSL-GPU-Recipe"] = "unreviewed"
+    elif change == "wrong_base":
+        old["base"] = target["base"] = "ubuntu:24.04@sha256:" + "f" * 64
+    elif change == "bridge":
+        target["sources"]["guest_control.py"] = "f" * 64
+    else:
+        target["sources"]["wsl.conf"] = "f" * 64
+    with pytest.raises(ValueError):
+        guest.plan(old, target)
+
+
+def test_toolkit_migration_hash_is_the_actual_reviewed_guest_build_file():
+    path = Path(__file__).parents[2] / "packaging/windows/guest.Dockerfile"
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == guest.GPU_GUEST_RECIPE
+
+
 def test_update_receipts_do_not_reinterpret_windows_archive_metadata():
     old, new = receipt(1), receipt(2)
     new["rootfs_sha256"] = "d" * 64
@@ -166,6 +214,54 @@ def fixture(tmp_path, monkeypatch):
 
 def apply():
     return guest.update(io.BytesIO(BYTES), receipt(1), receipt(2), len(BYTES), os.getuid())
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_toolkit_activation_precedes_identity_publication_and_recovers_the_same_data(
+    fixture, monkeypatch, interrupted
+):
+    import subprocess
+
+    root, store, database, manifest, calls = fixture
+    old, target = receipt(1), gpu_receipt(2)
+    old["base"] = guest.GPU_GUEST_BASE
+    old["sources"]["guest.Dockerfile"] = guest.CPU_GUEST_RECIPE
+    manifest.write_text(json.dumps(old))
+    original = database.read_bytes()
+    ordinary_install = guest.run
+    distribution = "AIStation-" + "e" * 32
+    monkeypatch.setenv("WSL_DISTRO_NAME", distribution)
+    failing = [interrupted]
+
+    def install(*args):
+        if args[0] != str(guest.APP / "python/bin/python3"):
+            return ordinary_install(*args)
+        assert args == (
+            str(guest.APP / "python/bin/python3"),
+            "-IBS",
+            str(guest.APP / "scripts/windows_gpu_install.py"),
+            "--distribution",
+            distribution,
+        )
+        assert json.loads(manifest.read_text()) == old
+        assert guest.PENDING_MARKER.is_file() and (store / "pending.json").is_file()
+        calls.append("toolkit_activation")
+        if failing[0]:
+            raise subprocess.CalledProcessError(1, args)
+        return json.dumps({"status": "ready", "recipe": guest.GPU_RECIPE, "gpu_inference_verified": False})
+
+    monkeypatch.setattr(guest, "run", install)
+    if interrupted:
+        with pytest.raises(subprocess.CalledProcessError):
+            guest.update(io.BytesIO(BYTES), old, target, len(BYTES), os.getuid())
+        assert json.loads(manifest.read_text()) == old and database.read_bytes() == original
+        assert guest.PENDING_MARKER.is_file()
+        failing[0] = False
+    result = guest.update(io.BytesIO(BYTES), old, target, len(BYTES), os.getuid())
+    assert result["data_preserved"] and json.loads(manifest.read_text()) == target
+    assert database.read_bytes() == original and not guest.PENDING_MARKER.exists()
+    assert len(list(store.glob("*.sqlite"))) == 1
+    assert calls[-1] == "toolkit_activation"
 
 
 def test_complete_update_preserves_private_data_and_original_backup(fixture):

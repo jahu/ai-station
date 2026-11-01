@@ -153,7 +153,7 @@ def fake_build(tmp_path, monkeypatch):
         calls.append(argv)
         if argv[0] == "dpkg-deb":
             return SimpleNamespace(
-                stdout="Package: ai-station\nVersion: 0.1.0~preview.42\nArchitecture: amd64\nX-AI-Station-Desktop-Protocol: 2\n"
+                stdout="Package: ai-station\nVersion: 0.1.0~preview.42\nArchitecture: amd64\nX-AI-Station-Desktop-Protocol: 2\nX-AI-Station-WSL-GPU-Recipe: nvidia-container-toolkit-1.20.1-amd64-v1\n"
             )
         return SimpleNamespace(returncode=0)
 
