@@ -44,6 +44,13 @@ profiles, never an invisible fallback. [Docker GPU scope](https://docs.docker.co
    If this transport fails, stop setup with an actionable
    local prerequisite; design and review an authenticated alternative separately,
    without an automatic public/TCP listener.
+   Include the eventual inference socket and long Application Support paths in
+   this experiment. Desktop lifecycle, Runner transport and model inference are
+   separate connections; one successful short test socket does not qualify all
+   three. Inspect the pinned llama.cpp build's socket arguments rather than
+   assuming relative names work. Any short private runtime directory or typed
+   inference proxy needs its own reviewed path/ownership/mount contract; never
+   bypass canonical path checks with an unchecked alias.
 3. **Native process/resource adapter.** Separate platform-specific ownership,
    start identity and memory observation from executor logic. Reuse owned process
    groups, durable journals, deadlines, Stop and recovery. Darwin must not import

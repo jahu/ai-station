@@ -93,7 +93,7 @@ def _read(query, pid):
         raise OSError(error, "Darwin process identity is incomplete or unavailable")
     if (
         result.pid != pid
-        or not 0 < result.pgid < 2**31
+        or not 0 <= result.pgid < 2**31
         or not 1 <= result.prefix[1] <= 5
         or not 0 < result.started_seconds < 2**63
         or result.started_microseconds >= 1_000_000
@@ -113,7 +113,7 @@ def snapshot(pid: int) -> DarwinIdentity:
     session = os.getsid(pid)
     after = _read(query, pid)
     fields = ("pid", "uid", "pgid", "started_seconds", "started_microseconds")
-    if session <= 0 or any(getattr(before, field) != getattr(after, field) for field in fields):
+    if not 0 <= session < 2**31 or any(getattr(before, field) != getattr(after, field) for field in fields):
         raise OSError(errno.ESTALE, "Darwin process changed during identity inspection")
     return DarwinIdentity(
         boot_id=boot,

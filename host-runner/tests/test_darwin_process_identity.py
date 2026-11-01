@@ -107,6 +107,14 @@ def test_normal_process_state_changes_do_not_look_like_pid_reuse(kernel):
     assert darwin.snapshot(37).state == 3
 
 
+def test_zero_group_and_session_are_facts_not_permission_to_signal(kernel):
+    kernel["mutate"] = lambda value, count: setattr(value, "pgid", 0)
+    kernel["session"] = 0
+    value = darwin.snapshot(37)
+    assert value.pgid == 0 and value.session == 0
+    assert value.pid != value.pgid and value.pid != value.session
+
+
 def test_foreign_effective_user_is_rejected(kernel):
     kernel["mutate"] = lambda value, count: setattr(value, "uid", os.geteuid() + 1)
     with pytest.raises(PermissionError, match="another OS user"):
@@ -146,7 +154,7 @@ def test_gone_denied_and_short_snapshots_are_errors_not_empty_success(kernel, re
 
 
 @pytest.mark.parametrize(
-    "field,value", [("pgid", 0), ("started_seconds", 0), ("started_microseconds", 1_000_000)]
+    "field,value", [("pgid", 2**31), ("started_seconds", 0), ("started_microseconds", 1_000_000)]
 )
 def test_invalid_native_identity_does_not_become_an_owned_process(kernel, field, value):
     kernel["mutate"] = lambda record, count: setattr(record, field, value)
