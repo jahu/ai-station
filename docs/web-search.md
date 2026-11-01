@@ -146,7 +146,7 @@ and the actual browser capture establish this failure; it is not inferred from a
 mock. Evidence: `data/acceptance/windows-native-qualification-20261031/`, result
 072. Existing actor/follow-up relevance qualification does not cover necessity.
 
-**Implemented candidate:** distinguish permission to search from a request that
+**Deployed policy (PR #554):** distinguish permission to search from a request that
 needs search. New automatic/contextual turns ask the same admitted model
 for a bounded, tools-free structured decision: search with a concise public
 query, or continue without retrieval. Literal replies, greetings, transformations
@@ -173,8 +173,12 @@ keyword, greetings and supplied-text transformations, a genuine search and its
 subject-free follow-up, explicit queries, Web off, invalid output, Stop, external
 permission, legacy Run/retry identity and cross-account boundaries. Use fake
 model/network calls for normal tests; then exercise one actual compiled
-API/worker flow and a bounded selected-model smoke test. This candidate is
-**not yet deployed**; review and the complete local checks remain required.
+API/worker flow and a bounded selected-model smoke test. PR #554 was reviewed and squash-merged into `develop`, then deployed with the
+qualified application image. The rollout verified preservation of database
+content, accounts, configured engines, loaded-model identities and LAN/private
+access; the native Runner was not restarted. Actual production desktop/mobile
+controls and source hashes passed, and the temporary verification device was
+revoked. Detailed checks and remaining operator acceptance follow below.
 
 The actual same verified 4B Q4_K_M weights passed four isolated API/engine cases
 on CPU: a literal containing `WINDOWS_MODEL_OK`, a Polish greeting, an explicit

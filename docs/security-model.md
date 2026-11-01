@@ -1225,3 +1225,15 @@ account's setup, inputs, prompts, workspace, sound stems or films.
 The private Windows installer prototype uses a dedicated WSL2 guest with its own Docker daemon and an ordinary native Runner account. Guest configuration disables Windows-drive automounts and Windows executable interop. Its local desktop bridge accepts only fixed start/status/open/stop operations; account-bootstrap authority travels through a private parent pipe and is never an application API or ordinary log. The prototype does not establish Windows isolation or readiness before actual WSL acceptance. See [Windows consumer installation](plans/windows-consumer-installation.md).
 
 Desktop browser readiness binds the private URL to a per-launch nonsecret UUID echoed by public no-store health. The launcher checks it before requesting first-admin authority; the Windows helper independently checks it through direct loopback HTTP before invoking the OS browser. Setup fragments never enter readiness HTTP requests or ordinary installer/WSL diagnostics. This checks local routing and does not replace account authentication or establish a hostile-OS-process security boundary. The UUID is separate from private stop-channel identity.
+
+### Offline Windows application-update candidate
+
+The unconnected guest updater is a trusted installer layer, not a Runner/API or
+agent capability. Its entry refuses the development host and another WSL
+identity. Root authority is restricted to the owned guest's fixed package update;
+the application remains ordinary-user. Exact previous/target recipes, bounded
+hash-checked package input, private kernel locks, idle Run checks, a preserved
+SQLite backup and durable operation identity precede receipt publication.
+No commands, URLs, paths, distro import/unregister, downloads or host OS settings
+are accepted. Native transport and real Windows recovery qualification remain
+open; see [the update contract](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract).

@@ -314,3 +314,55 @@ The real conversation also exposed unnecessary automatic web searching for a
 literal-response instruction. That regression is tracked in
 [web search](../web-search.md#contextual-search-necessity--observed-regression),
 separately from successful native CPU inference.
+
+## Preserving guest update — implementation contract
+
+Update the application package in the existing owned WSL distribution. Do not
+replace/import its root filesystem, unregister it, reset Windows features or
+copy user data into a new installation. The native Windows installer is the
+trusted caller; no application/agent/Runner HTTP action gains root or package
+installation authority. The normal application continues to run as `station`.
+
+The offline root helper (`packaging/windows/guest_update.py`) is an isolated
+implementation layer, not yet wired into the installer or advertised as ready.
+Its entry requires root **inside the exact named AIStation WSL guest**, not the
+Linux development host. A bounded private input carries old/new immutable guest
+identities and the verified package bytes, never commands, paths or URLs. Admit
+only the same Ubuntu/Dockerfile/WSL/bridge recipe and a strictly newer AI Station
+amd64 package with desktop protocol 2. OS/bridge recipe changes need their own
+migration, rather than claiming that replacing the application updated the OS.
+
+Hold the updater, desktop and launcher kernel locks before package replacement;
+never signal an existing process or claim that an absent desktop window means
+idle. Refuse nonterminal saved Runs. A private, integrity-checked pre-update
+SQLite backup includes account/session/Library/memory history and retains its
+original bytes on Resume. Stream/hash/length/metadata admission precedes the
+fixed offline `dpkg --install`; verify the installed version and immutable
+application manifest before replacing the guest identity receipt. A pending
+journal binds the exact previous/target pair. Lost final acknowledgements inspect
+the completed target and do not reinstall it; a different pending pair requires
+inspection. Partial transfers are removed only if this operation created them;
+existing files, backups, distributions and application data are never cleared.
+
+Next delivery steps remain required: package the same checked Debian file with
+the Windows payload; add its bounded native stdin transport; reconcile the
+Windows receipt only after the exact guest target verifies; present an explicit
+Update/finish-work flow; exercise preserving updates, cancellation/lost-client
+recovery and uninstall/reinstall on the retained actual Windows fixture. Native
+sharing/ACL, physical Windows-volume admission, accessibility and signing remain
+separate acceptance gates. Normal tests use temporary databases and fake package
+installation, never root installation on the workstation.
+
+Candidate-layer verification: 213 cases in eight complete desktop/package/WSL
+families passed; after the last pending-receipt review correction, all 46 updater
+cases passed again. Whole-source Ruff/format covers 945 Python files. Real
+`dpkg-deb` metadata/version comparison was exercised using synthetic packages;
+installation itself used a fake `dpkg` and temporary private databases. Tests
+cover original backup retention, active desktop/launcher/Run refusal, link and
+permission boundaries, lost acknowledgement after the target receipt, matching
+operation hashes with a different pending target, and owned process-group timeout
+cleanup. A pending root marker blocks startup in the new desktop version while
+retaining status/Stop. The Windows coordinator must still qualify admission from
+an older installed launcher; these tests do not prove that platform transition.
+Private evidence remains in `data/acceptance/windows-native-qualification-20261031/`.
+This is not a qualified or enabled Windows update flow.

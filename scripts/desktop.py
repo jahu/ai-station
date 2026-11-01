@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 READY = "AI_STATION_READY "
 READY_FILE = "desktop-ready.json"
 DESKTOP_PROTOCOL = 2
+WSL_UPDATE_PENDING = Path("/usr/lib/ai-station-wsl-update-pending.json")
 # Isolated packaged Python deliberately ignores ambient Python module paths.
 sys.path.insert(0, str(ROOT / "scripts"))
 from desktop_control import DesktopControl  # noqa: E402
@@ -42,6 +43,14 @@ def digest(path):
         while block := handle.read(1024 * 1024):
             result.update(block)
     return result.hexdigest()
+
+
+def require_completed_guest_update():
+    try:
+        WSL_UPDATE_PENDING.lstat()
+    except FileNotFoundError:
+        return
+    raise RuntimeError("Finish or inspect the pending Windows application update before starting AI Station")
 
 
 def manifest(root):
@@ -583,6 +592,9 @@ def main():
     ):
         parser.error("--host-port requires console background startup and a port between 8765 and 8864")
     os.umask(0o077)
+
+    if not (args.status or args.stop):
+        require_completed_guest_update()
 
     def terminate(_signum, _frame):
         raise KeyboardInterrupt
