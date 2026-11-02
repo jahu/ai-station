@@ -370,6 +370,99 @@ def test_authenticated_candidate_mounts_only_client_credentials_and_owned_code(s
         assert value.owners[0].process.returncode == 0
 
 
+def volume_row(volume):
+    return {
+        "Name": volume.name,
+        "Driver": "local",
+        "Scope": "local",
+        "CreatedAt": "2026-11-02T12:00:00Z",
+        "Mountpoint": "/var/lib/docker/volumes/" + volume.name + "/_data",
+        "Labels": {"ai-station.probe": volume.identity},
+        "Options": None,
+    }
+
+
+def test_local_database_volume_initializes_only_its_new_empty_mount_with_narrow_ownership_capability(
+    docker, monkeypatch
+):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("volume", "create"):
+            assert json.loads((docker.root / "database-volume/owner.json").read_text())["name"] == volume.name
+            return 0, volume.name
+        if args[:2] == ("volume", "inspect"):
+            return 0, json.dumps([volume_row(volume)])
+        if args[:2] == ("container", "create"):
+            record = json.loads((docker.root / "database-volume/initializer.json").read_text())
+            assert record["probe_id"] == child.identity and record["reserved_name"] == args[3]
+            assert args[args.index("--user") + 1] == "0:0"
+            assert args[args.index("--cap-drop") + 1] == "ALL"
+            assert args[args.index("--cap-add") + 1] == "CHOWN"
+            assert args[args.index("--network") + 1] == "none" and "--privileged" not in args
+            mounts = [args[i + 1] for i, arg in enumerate(args) if arg == "--mount"]
+            assert mounts == [volume.mount()] and not any("type=bind" in arg for arg in mounts)
+            assert args[-2:] == (str(os.geteuid()), str(os.getegid()))
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(child), "user": "0:0"})
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        return 0, ""
+
+    monkeypatch.setattr(probe.Docker, "call", call)
+    volume.prepare()
+    assert volume.frozen == volume.owned() and not volume.uncertain
+    assert volume.cleanup()
+    assert calls.index(("container", "rm", "a" * 64)) < calls.index(("volume", "rm", volume.name))
+
+
+def test_lost_volume_create_acknowledgement_is_preserved_and_never_adopted_or_removed(docker, monkeypatch):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "create")
+        raise RuntimeError("Lost volume creation acknowledgement")
+
+    monkeypatch.setattr(docker, "call", call)
+    with pytest.raises(RuntimeError, match="Lost volume"):
+        volume.prepare()
+    assert volume.uncertain and not volume.cleanup() and len(calls) == 1
+    assert (docker.root / "database-volume/owner.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"Name": "existing-user-data"},
+        {"Driver": "nfs"},
+        {"Scope": "global"},
+        {"Labels": {"ai-station.probe": "other-owner"}},
+        {"Options": {"type": "none", "device": "/home/user", "o": "bind"}},
+        {"CreatedAt": "replacement-created-at"},
+        {"Mountpoint": "/replacement"},
+    ],
+)
+def test_replaced_or_foreign_database_volume_is_never_removed(docker, monkeypatch, changes):
+    volume = probe.DatabaseVolume(docker)
+    original = volume_row(volume)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "inspect")
+        return 0, json.dumps([{**original, **changes}])
+
+    volume.frozen = {key: original[key] for key in ("Name", "Driver", "Scope", "CreatedAt", "Mountpoint")}
+    monkeypatch.setattr(docker, "call", call)
+    assert not volume.cleanup() and calls == [("volume", "inspect", volume.name)]
+
+
 def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docker, tmp_path):
     calls = []
 

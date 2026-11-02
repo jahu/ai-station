@@ -122,7 +122,30 @@ assert (code==0 and r['transport_passed'] is True) or (
  and r.get('client_failures')==[{'probe_client_error':'OSError','errno':95}]
 ), 'Unexpected direct-socket failure; do not continue or waive it'
 PY
-/usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+if /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
     "$qa_python" -IB scripts/macos_transport_probe.py --authenticated-link \
-    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-tls-proof"
+    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-tls-proof"; then
+    qa_bind_status=0
+else
+    qa_bind_status=$?
+fi
+# Keep the observed unsafe bind-mount writer exclusion as a negative control.
+# Unknown errors, WAL/visibility failures and incomplete cleanup remain fatal.
+"$qa_python" -IB - "$qa_root/bridge-tls-proof/result.json" "$qa_bind_status" <<'PY'
+import json,sys
+from pathlib import Path
+r=json.loads(Path(sys.argv[1]).read_text());code=int(sys.argv[2])
+assert r['platform']=='Darwin' and r['cleanup_complete'] is True
+assert (code==0 and r['transport_passed'] is True) or (
+ code==1 and r['transport_passed'] is False and r['error_type']=='ValueError'
+ and r['error']=='The second container did not confirm SQLite writer exclusion'
+ and len(r.get('database_contenders',[]))==1
+ and r['database_contenders'][0]['failure_summary']==[{'probe_client_error':'SQLiteWriterNotExcluded','errno':None}]
+), 'Unexpected shared-filesystem failure; do not continue or waive it'
+PY
+# The selected persistent-filesystem alternative MUST pass the same database tests.
+/usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
+    "$qa_python" -IB scripts/macos_transport_probe.py --authenticated-link --native-database \
+    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-native-db-proof"

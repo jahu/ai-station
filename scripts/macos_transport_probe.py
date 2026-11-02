@@ -57,6 +57,7 @@ sys.excepthook=failed
 channel,root,config=map(Path,sys.argv[1:])
 cfg=json.loads(config.read_text())
 nonce=cfg['nonce'];stored=cfg['stored'];phase=cfg['phase']
+database=Path('/probe-db') if cfg.get('native_database') is True else root
 def require(condition):
  if not condition:raise ValueError('Fixed probe client verification failed')
 require(phase in {'write','read'} and all(re.fullmatch('[a-f0-9]{64}',v) for v in (nonce,stored)))
@@ -70,14 +71,14 @@ with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as s:
  send('connected');receive('files')
  if phase=='write':
   with (root/'artifact.bin').open('xb') as f:f.write(bytes.fromhex(stored))
-  c=sqlite3.connect(root/'probe.sqlite')
+  c=sqlite3.connect(database/'probe.sqlite')
   require(c.execute('PRAGMA journal_mode=WAL').fetchone()[0]=='wal')
   c.execute('CREATE TABLE probe(value TEXT NOT NULL)');c.commit()
   c.execute('BEGIN IMMEDIATE');c.execute('INSERT INTO probe VALUES (?)',(stored,))
   send('transaction-held');receive('commit');c.commit();c.close()
  else:
   require((root/'artifact.bin').read_bytes()==bytes.fromhex(stored))
-  c=sqlite3.connect((root/'probe.sqlite').as_uri()+'?mode=rw',uri=True)
+  c=sqlite3.connect((database/'probe.sqlite').as_uri()+'?mode=rw',uri=True)
   try:
    require(c.execute('SELECT value FROM probe').fetchall()==[(stored,)])
    require(c.execute('PRAGMA journal_mode').fetchone()==('wal',))
@@ -140,6 +141,7 @@ class Docker:
         self.packaged_image = packaged_image
         self.root = Path(root)
         self.contenders = []
+        self.database_volume = None
         self.image_reference = packaged_image or IMAGE
         self.architecture = architecture
         client = root / "client"
@@ -199,6 +201,21 @@ class Docker:
     def client_paths(self):
         return ["/probe-socket/channel.sock", "/probe-data", "/probe-socket/token.json"]
 
+    def user(self):
+        return f"{os.geteuid()}:{os.getegid()}"
+
+    def mounts(self, sockets, data):
+        mounts = [
+            "--mount",
+            bind_mount(sockets, "/probe-socket", readonly=True),
+            "--mount",
+            bind_mount(data, "/probe-data"),
+        ]
+        if self.database_volume is not None:
+            self.database_volume.owned()
+            mounts += ["--mount", self.database_volume.mount()]
+        return mounts
+
     def container(self, sockets, data, phase):
         if self.image_id is None:
             raise ValueError("Verify the fixed fixture image before creating a client")
@@ -217,7 +234,7 @@ class Docker:
                 "--pull",
                 "never",
                 "--user",
-                f"{os.geteuid()}:{os.getegid()}",
+                self.user(),
                 "--network",
                 self.NETWORK,
                 "--read-only",
@@ -233,10 +250,7 @@ class Docker:
                 "16",
                 "--cpus",
                 "0.5",
-                "--mount",
-                bind_mount(sockets, "/probe-socket", readonly=True),
-                "--mount",
-                bind_mount(data, "/probe-data"),
+                *self.mounts(sockets, data),
                 *self.extra_arguments(),
                 "--entrypoint",
                 "python3",
@@ -264,7 +278,7 @@ class Docker:
             or value.get("label") != self.identity
             or not isinstance(value.get("image"), str)
             or value.get("image") not in self.accepted_images()
-            or value.get("user") != f"{os.geteuid()}:{os.getegid()}"
+            or value.get("user") != self.user()
             or type(value.get("running")) is not bool
             or value.get("network") != self.NETWORK
             or value.get("readonly") is not True
@@ -297,6 +311,7 @@ class Docker:
             self.argv[0], self.argv[2], root, self.architecture, packaged_image=self.packaged_image
         )
         contender.image_id = self.image_id
+        contender.database_volume = self.database_volume
         self.contenders.append(contender)
         receipt(root / "owner.json", {"probe_id": contender.identity, "image": contender.image_reference})
         identity = contender.container(sockets, data, "contender")
@@ -355,6 +370,9 @@ class Docker:
 
 
 class DatabaseContender(Docker):
+    def client_paths(self):
+        return [*super().client_paths(), *(["native-db"] if self.database_volume is not None else [])]
+
     def client_code(self):
         return r"""
 import json,sqlite3,sys
@@ -362,7 +380,7 @@ from pathlib import Path
 def failed(kind,error,traceback):
  print(json.dumps({'probe_client_error':kind.__name__,'errno':getattr(error,'errno',None)}),flush=True)
 sys.excepthook=failed
-root=Path(sys.argv[2])
+root=Path('/probe-db') if sys.argv[4:]==['native-db'] else Path(sys.argv[2])
 class SQLiteWALMismatch(ValueError):pass
 class SQLiteUncommittedVisible(ValueError):pass
 class SQLiteWriterNotExcluded(ValueError):pass
@@ -379,6 +397,114 @@ try:
 finally:c.close()
 print(json.dumps({'sqlite_wal':True,'concurrent_writer_lock':True,'uncommitted_rows_visible':False}),flush=True)
 """
+
+
+class DatabaseInitializer(Docker):
+    """One fixed ownership action on a new empty QA volume, with no host mounts."""
+
+    def user(self):
+        return "0:0"
+
+    def mounts(self, sockets, data):
+        self.database_volume.owned()
+        return ["--mount", self.database_volume.mount()]
+
+    def extra_arguments(self):
+        return ["--cap-add", "CHOWN"]
+
+    def client_paths(self):
+        return [str(os.geteuid()), str(os.getegid())]
+
+    def client_code(self):
+        return (
+            "import os,sys; from pathlib import Path; p=Path('/probe-db'); "
+            "assert p.is_dir() and not list(p.iterdir()); "
+            "os.chmod(p,0o700); os.chown(p,int(sys.argv[1]),int(sys.argv[2]))"
+        )
+
+
+class DatabaseVolume:
+    """An attested disposable local filesystem, never an existing application volume."""
+
+    def __init__(self, docker):
+        self.docker = docker
+        self.identity = uuid4().hex
+        self.name = "ai-station-mac-probe-db-" + self.identity
+        self.frozen = None
+        self.uncertain = False
+        self.initializer = None
+
+    def owned(self):
+        _, raw = self.docker.call("volume", "inspect", self.name)
+        rows = json.loads(raw)
+        if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+            raise ValueError("Unexpected private database volume inventory")
+        row = rows[0]
+        if (
+            row.get("Name") != self.name
+            or row.get("Driver") != "local"
+            or row.get("Scope") != "local"
+            or row.get("Labels") != {"ai-station.probe": self.identity}
+            or row.get("Options") not in (None, {})
+            or not isinstance(row.get("CreatedAt"), str)
+            or not row["CreatedAt"]
+            or not isinstance(row.get("Mountpoint"), str)
+            or not row["Mountpoint"].startswith("/")
+        ):
+            raise ValueError("Private database volume identity differs; nothing was modified")
+        observed = {key: row[key] for key in ("Name", "Driver", "Scope", "CreatedAt", "Mountpoint")}
+        if self.frozen is not None and self.frozen != observed:
+            raise ValueError("Private database volume was replaced; replacement was preserved")
+        return observed
+
+    def mount(self):
+        return "type=volume,source=" + self.name + ",target=/probe-db,volume-nocopy"
+
+    def prepare(self):
+        root = self.docker.root / "database-volume"
+        root.mkdir(mode=0o700)
+        receipt(root / "owner.json", {"name": self.name, "probe_id": self.identity})
+        self.uncertain = True  # Never adopt a volume after a lost create acknowledgement.
+        _, name = self.docker.call(
+            "volume", "create", "--driver", "local", "--label", "ai-station.probe=" + self.identity, self.name
+        )
+        if name != self.name:
+            raise ValueError("The database volume creation was not acknowledged")
+        self.frozen = self.owned()
+        self.uncertain = False
+        init = DatabaseInitializer(
+            self.docker.argv[0],
+            self.docker.argv[2],
+            root,
+            self.docker.architecture,
+            packaged_image=self.docker.packaged_image,
+        )
+        self.initializer = init
+        init.image_id = self.docker.image_id
+        init.database_volume = self
+        receipt(
+            root / "initializer.json",
+            {
+                "probe_id": init.identity,
+                "reserved_name": "ai-station-mac-probe-" + init.identity + "-initialize",
+            },
+        )
+        identity = init.container(None, None, "initialize")
+        _, status = init.call("container", "wait", identity, timeout=15)
+        if status != "0":
+            raise ValueError("Private database volume ownership initialization failed")
+        init.owned(identity)
+
+    def cleanup(self):
+        complete = self.initializer.cleanup() if self.initializer is not None else True
+        if not complete or self.uncertain or self.frozen is None:
+            return False
+        try:
+            self.owned()
+            self.docker.call("volume", "rm", self.name)
+            return True
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            return False
 
 
 class AuthenticatedDocker(Docker):
@@ -486,7 +612,6 @@ def private_file(path):
 
 def artifact_checks(data, stored):
     private_file(data / "artifact.bin")
-    private_file(data / "probe.sqlite")
     if (data / "artifact.bin").read_bytes() != bytes.fromhex(stored):
         raise ValueError("Artifact bytes changed across the host/container mount")
 
@@ -494,6 +619,7 @@ def artifact_checks(data, stored):
 def file_checks(data, stored, *, locked):
     # Same-OS test control only. Real Mac DB writers stay inside Docker's VM.
     artifact_checks(data, stored)
+    private_file(data / "probe.sqlite")
     with closing(sqlite3.connect((data / "probe.sqlite").as_uri() + "?mode=rw", uri=True, timeout=0.1)) as db:
         if db.execute("PRAGMA journal_mode").fetchone() != ("wal",):
             raise ValueError("The shared database is not in WAL mode")
@@ -525,7 +651,12 @@ def experiment(docker, root, *, data_root=None):
     for phase in ("write", "read"):
         nonce = stored if phase == "write" else secrets.token_hex(32)
         token = sockets / "token.json"
-        token.write_text(json.dumps({"nonce": nonce, "stored": stored, "phase": phase}))
+        volume = getattr(docker, "database_volume", None)
+        token.write_text(
+            json.dumps(
+                {"nonce": nonce, "stored": stored, "phase": phase, "native_database": volume is not None}
+            )
+        )
         token.chmod(0o600)
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
             listener.bind(str(channel))
@@ -564,7 +695,11 @@ def experiment(docker, root, *, data_root=None):
         "long_path_artifact_sha256": hashlib.sha256(bytes.fromhex(stored)).hexdigest(),
         "sqlite_wal": True,
         "concurrent_writer_lock": True,
-        "database_writer_domain": docker.SQLITE_DOMAIN,
+        "database_writer_domain": (
+            "docker-local-volume"
+            if getattr(docker, "database_volume", None) is not None
+            else docker.SQLITE_DOMAIN
+        ),
         "chosen_data_filesystem": data_root is not None,
         "data_filesystem_device": data.stat().st_dev,
     }
@@ -611,9 +746,12 @@ def probe(
     packaged_image=None,
     expected_connection=None,
     authenticated_link=False,
+    native_database=False,
 ):
     if platform.system() != "Darwin" or os.geteuid() == 0:
         raise ValueError("This qualification requires a native, ordinary-user Mac")
+    if native_database and not authenticated_link:
+        raise ValueError("The native database candidate requires the authenticated connection")
     architecture = ARCHITECTURES.get(platform.machine().lower())
     if architecture not in IMAGE_IDS:
         raise ValueError("This Mac architecture has no reviewed fixture")
@@ -648,6 +786,7 @@ def probe(
     data_root = None
     data_original = None
     docker = None
+    storage = None
     result = {
         "platform": platform.system(),
         "architecture": architecture,
@@ -692,6 +831,10 @@ def probe(
         ):
             raise ValueError("The selected engine is not native-architecture Docker Desktop")
         result["image_id"] = docker.image(prepare=prepare_image)
+        if native_database:
+            storage = DatabaseVolume(docker)
+            storage.prepare()
+            docker.database_volume = storage
         result["checks"] = (
             experiment(docker, root, data_root=data_root) if data_root else experiment(docker, root)
         )
@@ -702,6 +845,20 @@ def probe(
             result["client_failures"] = docker.client_failures()
     finally:
         result["cleanup_complete"] = docker.cleanup() if docker else True
+        if storage is not None:
+            result["database_storage"] = {
+                "kind": "disposable-local-volume",
+                "name": storage.name,
+                "uncertain": storage.uncertain,
+                "initializer_container_ids": storage.initializer.ids if storage.initializer else [],
+                "initializer_reserved_names": storage.initializer.reserved_names
+                if storage.initializer
+                else [],
+                "initializer_uncertain": storage.initializer.uncertain if storage.initializer else False,
+            }
+            # Never remove storage before all confirmed data clients have stopped.
+            if result["cleanup_complete"]:
+                result["cleanup_complete"] = storage.cleanup()
         result["reserved_names"] = docker.reserved_names if docker else []
         result["container_ids"] = docker.ids if docker else []
         if docker is not None and getattr(docker, "contenders", []):
@@ -762,6 +919,9 @@ if __name__ == "__main__":
         action="store_true",
         help="Qualify the private mutual-TLS connection candidate",
     )
+    parser.add_argument(
+        "--native-database", action="store_true", help="Qualify the isolated local database volume candidate"
+    )
     args = parser.parse_args()
     coordinates = (args.expected_cli, args.expected_endpoint)
     if (any(coordinates) or args.packaged_image is not None) and not (
@@ -775,6 +935,7 @@ if __name__ == "__main__":
         packaged_image=args.packaged_image,
         expected_connection=coordinates if all(coordinates) else None,
         authenticated_link=args.authenticated_link,
+        native_database=args.native_database,
     )
     print(json.dumps(outcome, indent=2))
     raise SystemExit(0 if outcome["transport_passed"] else 1)

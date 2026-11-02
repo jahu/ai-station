@@ -34,6 +34,32 @@ ownership without opening SQLite. Keep the failed cross-kernel experiment as a
 documented constraint; do not report native/live-VM DB access as supported or
 silently ignore a failed container-writer check.
 
+The [follow-up with independent container writers](https://github.com/jahu/ai-station/actions/runs/41438708075)
+confirmed `SQLiteWriterNotExcluded`: the second Linux container could start a
+writer while the first held its transaction. The tested Mac bind mount is thus
+not admissible for the live application DB, even with all writers in Linux.
+Do not enable the consumer launcher on the assumption that the host-folder layout
+is safe. The next candidate keeps artifacts/models/uploads on the selected bind
+mount but places `/data/db` on a project-owned persistent local Docker volume.
+All API/worker/scheduler and quiescent upgrade DB commands must use that same
+attested volume. A new disposable probe volume first has to pass the unchanged
+writer exclusion/visibility/integrity/restart tests. One fixed isolated initializer
+may set ownership only on its just-created empty volume; it mounts no host path
+and has only the required ownership capability. Regular clients stay non-root.
+
+This storage change also requires explicit preserving-update, offline backup/export,
+restore and data-preserving uninstall/reinstall qualification before admission.
+An exported consistent backup belongs under the chosen app-data folder; a stale
+host DB must never be mistaken for the active volume DB. A copied host directory
+alone is not a complete Mac backup. Do not silently remove a volume on Stop,
+update or uninstall, import an existing host DB, or admit an unknown volume.
+
+SQLite's [locking requirements](https://www.sqlite.org/howtocorrupt.html)
+and [WAL shared-memory contract](https://www.sqlite.org/wal.html) explain why
+reported WAL mode alone is insufficient. The selected storage must demonstrate
+actual exclusion and shared visibility; a positive local Linux fixture cannot
+stand in for a failed Mac filesystem test.
+
 Do not change an existing user's VMM/settings to make socket sharing pass.
 Docker's [host-service networking](https://docs.docker.com/desktop/features/networking/networking-how-tos/)
 supplies a candidate local leg; verify it on the actual Mac before activation.
