@@ -27,6 +27,13 @@ cleanup() {
     qa_status=$?
     trap - EXIT
     set +e
+    if [[ "$qa_status" != 0 ]]; then
+        # Only this newly installed, account-free developer Desktop's logs.
+        for qa_log in "$HOME/Library/Containers/com.docker.docker/Data/log/host/com.docker.backend.log" \
+            "$HOME/Library/Containers/com.docker.docker/Data/log/host/Docker Desktop.log"; do
+            if [[ -f "$qa_log" ]]; then /usr/bin/tail -n 30 "$qa_log"; fi
+        done
+    fi
     if [[ -f "$qa_root/desktop-installed" ]]; then
         desktop_cli desktop stop --timeout 60
         if [[ "$?" != 0 && "$qa_status" == 0 ]]; then qa_status=1; fi
@@ -73,6 +80,11 @@ rm "$qa_root/mounted"
 # this exact installed app first; the vendor CLI locates it by bundle identity.
 /usr/bin/open -a /Applications/Docker.app
 desktop_cli desktop start --timeout 240
+# The vendor CLI returns success immediately when the GUI is already running;
+# this does not imply its desktop-linux context or daemon is ready yet.
+/usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
+    "$qa_python" -IB scripts/macos_desktop_qa_ready.py | /usr/bin/tee "$qa_root/engine-ready.json"
 mkdir -m 700 "$qa_root/Chosen data, Żółw"
 /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
