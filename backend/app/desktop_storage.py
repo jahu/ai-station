@@ -1,6 +1,7 @@
 """Fixed installer-only empty-volume ownership action and read-only attestation."""
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -91,16 +92,78 @@ def initialize(value):
         os.close(fd)
 
 
+def database_file(fd, name, *, optional=False, metadata_only=False):
+    try:
+        opened = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=fd)
+    except FileNotFoundError:
+        if optional:
+            return None
+        raise
+    with os.fdopen(opened, "rb") as source:
+        initial = os.fstat(source.fileno())
+        if (
+            not stat.S_ISREG(initial.st_mode)
+            or initial.st_uid != os.geteuid()
+            or initial.st_nlink != 1
+            or initial.st_mode & 0o022
+        ):
+            raise ValueError("Database fingerprint requires an ordinary owned non-shared-write file")
+        result = None if metadata_only else hashlib.file_digest(source, "sha256").hexdigest()
+        final = os.fstat(source.fileno())
+        current = os.stat(name, dir_fd=fd, follow_symlinks=False)
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+
+        def signature(info):
+            return tuple(getattr(info, key) for key in fields)
+
+        if signature(initial) != signature(final) or signature(initial) != signature(current):
+            raise ValueError("Database bytes changed during offline fingerprinting")
+        return None if optional and initial.st_size == 0 else result
+
+
+def fingerprint(value):
+    """The native caller must first prove all volume users have stopped."""
+    inspect(value)
+    fd = directory()
+    try:
+        owned_directory(fd, value)
+        database = {"main": database_file(fd, "ai-station.sqlite")}
+        for suffix in ("-wal", "-journal"):
+            database[suffix] = database_file(fd, "ai-station.sqlite" + suffix, optional=True)
+        # Validate SHM ownership too, but its transient bytes are not a version identity.
+        database_file(fd, "ai-station.sqlite-shm", optional=True, metadata_only=True)
+        if database["-journal"] is not None:
+            raise ValueError("Inspect the unfinished SQLite journal before activation")
+        return {"storage": value, "database": database}
+    finally:
+        os.close(fd)
+
+
+def empty(value):
+    """Prove there are no database or sidecar bytes; never create/open SQLite."""
+    inspect(value)
+    fd = directory()
+    try:
+        owned_directory(fd, value)
+        if os.listdir(fd) != [MARKER]:
+            raise ValueError("Existing database volume bytes need a verified version receipt")
+        return {"storage": value, "empty": True}
+    finally:
+        os.close(fd)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("initialize", "inspect"))
+    parser.add_argument("action", choices=("initialize", "inspect", "fingerprint", "empty"))
     parser.add_argument("--storage-id", required=True)
     parser.add_argument("--namespace", required=True)
     parser.add_argument("--uid", required=True, type=int)
     parser.add_argument("--gid", required=True, type=int)
     args = parser.parse_args()
     value = binding(args.storage_id, args.namespace, args.uid, args.gid)
-    result = {"initialize": initialize, "inspect": inspect}[args.action](value)
+    result = {"initialize": initialize, "inspect": inspect, "fingerprint": fingerprint, "empty": empty}[
+        args.action
+    ](value)
     print(json.dumps(result, sort_keys=True), flush=True)
 
 

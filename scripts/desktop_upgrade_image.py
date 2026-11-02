@@ -95,6 +95,15 @@ class UpgradeImage:
         if config.parent != root or root.is_relative_to(self.data):
             raise ValueError("Installer receipts must stay outside mounted application data")
         private_directory(root)
+        from macos_database_storage import RECEIPT as STORAGE_RECEIPT
+        from macos_database_storage import DatabaseStorage
+
+        storage_path = self.storage_path = root / "database-storage" / STORAGE_RECEIPT
+        self.storage = (
+            DatabaseStorage(root, config, engine, target)
+            if storage_path.exists() or storage_path.is_symlink()
+            else None
+        )
         self.runtime = self.data / "runtime"
         private_directory(self.runtime)
         self.project = dotenv_values(config, interpolate=False)["COMPOSE_PROJECT_NAME"]
@@ -113,6 +122,11 @@ class UpgradeImage:
             "project": self.project,
             "architecture": self.architecture,
             "engine": list(engine.identity),
+            **(
+                {"database_storage": self.storage.identity(allow_pending_readonly=True)}
+                if self.storage
+                else {}
+            ),
         }
         path = self.folder / "request.json"
         if path.exists() or path.is_symlink():
@@ -214,10 +228,17 @@ class UpgradeImage:
         write(self.folder / "state.json", state)
 
     def consistent(self):
+        if (self.storage_path.exists() or self.storage_path.is_symlink()) != (self.storage is not None):
+            raise ValueError("The desktop database storage receipt changed")
         if versions.namespace(self.config) != (self.data, self.namespace):
             raise ValueError("The desktop storage changed during image upgrade")
         if read_json(self.folder / "request.json") != self.request:
             raise ValueError("The image upgrade request changed")
+        if (
+            self.storage
+            and self.storage.identity(allow_pending_readonly=True) != self.request["database_storage"]
+        ):
+            raise ValueError("The image upgrade database volume changed")
 
     def call(self, *args, **kwargs):
         return command([*self.argv, *args], env=self.environment, **kwargs)
@@ -235,6 +256,35 @@ class UpgradeImage:
         )
         if output:
             raise RuntimeError("The configured Compose project still has containers; inspect its shutdown")
+        if self.storage:
+            state = self.state()
+            allowed = ()
+            if state["current"] is not None:
+                item = state["commands"][state["current"]]
+                if item["container_id"] is not None:
+                    allowed = (self.inspect(item)["Id"],)
+            self.storage.quiescent(allowed=allowed)
+
+    def valid_mounts(self, mounts):
+        expected = {"/data": ("bind", str(self.data))}
+        if self.storage:
+            self.storage.owned()
+            expected["/data/db"] = ("volume", self.storage.record["volume"]["Mountpoint"])
+        if not isinstance(mounts, list) or len(mounts) != len(expected):
+            return False
+        if any(not isinstance(m, dict) for m in mounts):
+            return False
+        if {m.get("Destination") for m in mounts} != set(expected):
+            return False
+        for m in mounts:
+            kind, source = expected[m["Destination"]]
+            if m.get("Type") != kind or m.get("Source") != source or m.get("RW") is not True:
+                return False
+            if kind == "volume" and (
+                m.get("Name") != self.storage.record["name"] or m.get("Driver") != "local"
+            ):
+                return False
+        return True
 
     def image(self):
         _, output = self.call("image", "inspect", self.target["image_id"])
@@ -302,12 +352,7 @@ class UpgradeImage:
             or host.get("Devices")
             or host.get("DeviceRequests")
             or host.get("PortBindings")
-            or not isinstance(mounts, list)
-            or len(mounts) != 1
-            or mounts[0].get("Type") != "bind"
-            or mounts[0].get("Source") != str(self.data)
-            or mounts[0].get("Destination") != "/data"
-            or mounts[0].get("RW") is not True
+            or not self.valid_mounts(mounts)
             or type(process.get("Running")) is not bool
             or type(process.get("ExitCode")) is not int
             or process.get("Status") not in ("created", "running", "exited")
@@ -391,6 +436,9 @@ class UpgradeImage:
                 self.save(state)
             if item["phase"] == "created":
                 self.quiescent()
+                if self.storage:
+                    self.storage.prepare()  # Read-only marker verification; never initialize ready storage.
+                    self.quiescent()
                 item["phase"] = "starting"  # Durable before the one permitted start request.
                 self.save(state)
                 self.call("container", "start", item["container_id"])
@@ -496,6 +544,7 @@ class UpgradeImage:
             "--no-healthcheck",
             "--mount",
             bind_mount(self.data, "/data"),
+            *(["--mount", self.storage.application_mount()] if self.storage else []),
             "--env",
             "AI_STATION_DATA_DIR=/data",
             "--entrypoint",
@@ -550,22 +599,16 @@ class UpgradeImage:
             or (self.runtime / "desktop-upgrade-pending.json").is_symlink()
         ):
             raise ValueError("The offline data transaction no longer confirms activation/abort")
-        database = versions.canonical(self.data / "db/ai-station.sqlite")
-        actual = data_digest(database)
+        observed = self.database_fingerprint()
+        actual = observed["main"]
         expected_hash = (
             backend_state.get("staged_sha256") if activate else backend_request.get("source", {}).get("main")
         )
         if actual != expected_hash:
             raise ValueError("The database changed after the acknowledged offline transaction")
-        for suffix in ("-wal", "-journal", "-shm"):
-            path = database.with_name(database.name + suffix)
-            actual_sidecar = None
-            if path.exists() or path.is_symlink():
-                info = data_info(path)
-                if suffix != "-shm" and info.st_size:
-                    actual_sidecar = data_digest(path)
+        for suffix in ("-wal", "-journal"):
             expected_sidecar = None if activate else backend_request.get("source", {}).get(suffix)
-            if suffix != "-shm" and actual_sidecar != expected_sidecar:
+            if observed[suffix] != expected_sidecar:
                 raise ValueError("Unexpected database sidecar writes require inspection before activation")
         old = self.request["previous_receipt"]
         expected = (
@@ -588,3 +631,19 @@ class UpgradeImage:
         (self.runtime / FENCE).unlink()
         sync(self.runtime)
         return state["final"]
+
+    def database_fingerprint(self):
+        if self.storage:
+            return self.storage.fingerprint()
+        database = versions.canonical(self.data / "db/ai-station.sqlite")
+        result = {"main": data_digest(database)}
+        for suffix in ("-wal", "-journal", "-shm"):
+            path = database.with_name(database.name + suffix)
+            value = None
+            if path.exists() or path.is_symlink():
+                info = data_info(path)
+                if suffix != "-shm" and info.st_size:
+                    value = data_digest(path)
+            if suffix != "-shm":
+                result[suffix] = value
+        return result

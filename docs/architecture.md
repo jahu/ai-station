@@ -72,8 +72,15 @@ and Docker daemon, verifies exact local-volume identity and preserves it across
 owner restarts. Its fixed image command initializes only a new empty volume;
 ordinary-user inspection reads a root-owned binding marker without opening
 SQLite. The host `db` path remains an empty owned mountpoint. This supplies the
-storage lifecycle primitive; connecting startup, version activation and
-export/restore remains required before Mac consumer admission.
+storage lifecycle primitive. Fixed offline upgrade commands now mount the same
+attested volume at `/data/db`; native activation compares a read-only image
+fingerprint with the acknowledged publication or original abort state. It never
+opens the VM database with native SQLite. Version namespaces now also bind the
+private ready volume identity, including its daemon, without mutable reader
+journals. First-version publication requires the fixed image to prove that the
+volume contains only its binding marker. Connecting consumer startup and
+consistent export/restore remains required
+before Mac consumer admission.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint

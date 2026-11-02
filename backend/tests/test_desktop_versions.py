@@ -211,3 +211,38 @@ def test_receipt_rejects_unknown_fields_and_preserves_original(installation):
     with pytest.raises(ValueError, match="receipt is invalid"):
         versions.begin(root, PACKAGE, config, OWNER)
     assert receipt.read_bytes() == before
+
+
+def test_legacy_namespace_retains_its_existing_serialized_identity(installation):
+    import hashlib
+
+    _, config, data = installation
+    info = data.stat()
+    legacy = {
+        "data": str(data),
+        "data_device": info.st_dev,
+        "data_inode": info.st_ino,
+        "uid": os.geteuid(),
+        "project": "ai-station-test",
+        "access": "accounts",
+        "runner_socket": str(config.parent / "native/runner/runner.sock"),
+    }
+    expected = hashlib.sha256(json.dumps(legacy, sort_keys=True).encode()).hexdigest()
+    assert versions.namespace(config) == versions.base_namespace(config) == (data, expected)
+
+
+def test_legacy_package_requires_no_mac_storage_module(installation, monkeypatch):
+    import builtins
+
+    root, config, _ = installation
+    original = builtins.__import__
+
+    def refuse_mac(name, *args, **kwargs):
+        if name == "macos_database_storage":
+            pytest.fail("Legacy Linux/WSL package must not import Mac-only storage")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", refuse_mac)
+    assert versions.namespace(config) == versions.base_namespace(config)
+    versions.begin(root, PACKAGE, config, OWNER)
+    assert versions.ready(root, PACKAGE, config, OWNER)["phase"] == "ready"

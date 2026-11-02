@@ -63,13 +63,34 @@ changed or unsafe receipts require inspection rather than automatic adoption.
 This adds no web/agent operation or permission to migrate/stop an installation.
 
 The offline image updater freezes its local Docker connection and exact package
-image. Its containers have one application-data mount, no network/GPU/Runner
+image. Its containers have the application-data mount and, for an installation
+with an attested persistent database, that exact local volume at `/data/db`.
+They have no network/GPU/Runner
 socket, non-root execution and bounded CPU/RAM/pids. Private journal intent precedes
 container creation/start; signals and cleanup require matching identity, labels,
 image, command and isolation. A dispatch fence blocks API/supervisor startup before
 the image can run. Native target activation follows verified database publication;
 uncertain dispatches remain fenced rather than replayed. This is trusted local
 installer code, with no HTTP/agent entry point. Full Mac acceptance remains gated.
+
+Volume-backed activation uses a separate fixed read-only image action to hash
+the main database and WAL without opening SQLite. It verifies the root-owned
+storage marker, ordinary file ownership and unchanged file identities; unsafe
+links, shared-write files and unfinished rollback journals are refused. Every
+container referencing the volume must be absent except independently verified
+owned helpers. A foreign reference is preserved and blocks dispatch/activation.
+Lost reader acknowledgements resume the journaled reader without replaying
+database publication. The previous version and startup fence remain on mismatch.
+
+Native version identity combines the existing filesystem namespace with the
+private ready volume/daemon binding. Mutable helper journals are excluded;
+existing Linux/WSL installations without volume receipts retain the exact old
+namespace. Reading this binding grants no Docker or native SQLite access. A
+missing version receipt never turns an existing VM database into a fresh install:
+first-version publication requires the attested owner and a fixed read-only
+image check proving a marker-only volume, with no other container references.
+The consumer launcher must prepare and attest storage before using this path;
+the Mac admission gate remains closed until the full journey is qualified.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and

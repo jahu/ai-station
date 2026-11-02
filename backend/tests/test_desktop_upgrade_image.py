@@ -70,6 +70,21 @@ class Daemon:
                 if v == "--label"
             }
             mount = dict(value.split("=", 1) for value in next(csv.reader([flag("--mount")])))
+            extra_mounts = []
+            for i, arg in enumerate(args):
+                if arg == "--mount" and i != args.index("--mount"):
+                    fields = dict(v.split("=", 1) for v in next(csv.reader([args[i + 1]])) if "=" in v)
+                    assert fields["type"] == "volume" and fields["target"] == "/data/db"
+                    extra_mounts.append(
+                        {
+                            "Type": "volume",
+                            "Name": fields["source"],
+                            "Source": "/var/lib/docker/volumes/" + fields["source"] + "/_data",
+                            "Destination": "/data/db",
+                            "RW": True,
+                            "Driver": "local",
+                        }
+                    )
             identifier = uuid4().hex * 2
             entry = args.index(TARGET["image_id"])
             self.containers[identifier] = {
@@ -104,7 +119,8 @@ class Daemon:
                 },
                 "Mounts": [
                     {"Type": "bind", "Source": mount["source"], "Destination": mount["target"], "RW": True}
-                ],
+                ]
+                + extra_mounts,
                 "State": {"Running": False, "Status": "created", "ExitCode": 0, "OOMKilled": False},
             }
             result = identifier
@@ -469,3 +485,183 @@ def test_abort_preserves_original_nonempty_wal_but_never_accepts_changed_wal(set
         assert not (setup.data / "runtime" / upgrade.FENCE).exists()
         assert wal.read_bytes() == b"original preserved WAL fixture"
     assert versions.load(setup.root)["package"] == PREVIOUS
+
+
+@pytest.fixture
+def volume_setup(setup, monkeypatch):
+    import macos_database_storage as storage
+
+    folder = setup.root / "database-storage"
+    folder.mkdir(mode=0o700)
+    (setup.data / "db").mkdir(mode=0o700)
+
+    class Volume:
+        record = {"name": "fixture-db", "volume": {"Mountpoint": "/var/lib/docker/volumes/fixture-db/_data"}}
+        binding = "b" * 64
+        changed = False
+        foreign = False
+        bad_marker = False
+        verified = 0
+        reads = 0
+        fail_read_once = False
+        observed = {
+            "main": hashlib.sha256(b"neutral volume database fixture").hexdigest(),
+            "-wal": None,
+            "-journal": None,
+        }
+
+        def identity(self, *, allow_pending_readonly=False):
+            return ("f" * 64) if self.changed else self.binding
+
+        def owned(self):
+            return self.record["volume"]
+
+        def quiescent(self, *, allowed=()):
+            assert set(allowed) == set(setup.daemon.containers), (
+                "Only the fully verified owned upgrade helper may be exempt"
+            )
+            if self.foreign:
+                raise ValueError("Foreign database container was preserved")
+
+        def prepare(self):
+            self.verified += 1
+            if self.bad_marker:
+                raise ValueError("Database ownership marker changed")
+
+        def application_mount(self):
+            return "type=volume,source=fixture-db,target=/data/db,volume-nocopy"
+
+        def fingerprint(self):
+            self.reads += 1
+            if self.fail_read_once:
+                self.fail_read_once = False
+                raise OSError("Lost read-only fingerprint acknowledgement")
+            return dict(self.observed)
+
+    value = Volume()
+    record = {
+        "schema": 1,
+        "namespace_sha256": versions.base_namespace(setup.config)[1],
+        "uid": os.geteuid(),
+        "gid": os.getegid(),
+        "engine": ["/fixed/docker", "unix:///fixed.sock", "fixture-daemon"],
+        "architecture": "amd64",
+        "storage_id": "a" * 32,
+        "name": "ai-station-database-" + "a" * 32,
+        "initialization_image": TARGET["image_id"],
+        "phase": "ready",
+        "command": None,
+        "volume": {
+            "Name": "ai-station-database-" + "a" * 32,
+            "Driver": "local",
+            "Scope": "local",
+            "CreatedAt": "fixture-created-at",
+            "Mountpoint": "/var/lib/docker/volumes/fixture-db/_data",
+        },
+    }
+    upgrade.write(folder / storage.RECEIPT, record)
+    value.binding = storage.stable_identity(record)
+    versions.save(
+        setup.root, versions.load(setup.root) | {"namespace_sha256": versions.namespace(setup.config)[1]}
+    )
+    monkeypatch.setattr(storage, "DatabaseStorage", lambda *args: value)
+    setup.identity = str(uuid4())
+    setup.client = upgrade.UpgradeImage(
+        setup.root, setup.config, setup.engine, PREVIOUS, TARGET, setup.identity
+    )
+    setup.volume = value
+    return setup
+
+
+def volume_publication(value):
+    value.client.run("prepare")
+    value.client.run("publish")
+    folder = value.data / "desktop-upgrades" / value.identity
+    folder.mkdir(parents=True, mode=0o700)
+    folder.parent.chmod(0o700)
+    request = {
+        "operation_id": value.identity,
+        "previous_bundle": PREVIOUS["bundle_id"],
+        "target_bundle": TARGET["bundle_id"],
+        "schema_before": "0041",
+        "schema_after": "0042",
+    }
+    state = {
+        "phase": "applied",
+        "request_identity": hashlib.sha256(
+            json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "staged_sha256": value.volume.observed["main"],
+    }
+    upgrade.write(folder / "request.json", request)
+    upgrade.write(folder / "state.json", state)
+
+
+def test_volume_commands_mount_verified_database_and_activate_without_host_sqlite(volume_setup, monkeypatch):
+    value = volume_setup
+    monkeypatch.setattr(
+        upgrade, "data_digest", lambda *_: pytest.fail("Native host must never hash the active volume DB")
+    )
+    volume_publication(value)
+    assert value.client.request["database_storage"] == value.volume.binding
+    assert value.volume.verified == 2 and not list((value.data / "db").iterdir())
+    assert value.client.finish(activate=True)["phase"] == "applied"
+    assert value.volume.reads == 1 and value.daemon.starts == 2
+    assert versions.load(value.root)["package"] == versions.package_identity(TARGET)
+
+
+@pytest.mark.parametrize("change", ["foreign", "binding", "marker", "missing_receipt"])
+def test_volume_change_or_foreign_reference_refuses_dispatch_without_stopping_it(volume_setup, change):
+    value = volume_setup
+    if change == "foreign":
+        value.volume.foreign = True
+    elif change == "binding":
+        value.volume.changed = True
+    elif change == "marker":
+        value.volume.bad_marker = True
+    else:
+        (value.root / "database-storage/database-storage.json").unlink()
+    with pytest.raises(ValueError):
+        value.client.run("prepare")
+    assert value.daemon.starts == 0
+    assert not any(c[:2] == ["container", "stop"] for c in value.daemon.calls)
+    assert versions.load(value.root)["package"] == PREVIOUS
+
+
+@pytest.mark.parametrize("field", ["missing", "name", "source", "readonly", "driver"])
+def test_changed_volume_mount_is_never_started(volume_setup, field):
+    value = volume_setup
+
+    def changed(row):
+        if field == "missing":
+            row["Mounts"].pop()
+        else:
+            key = {"name": "Name", "source": "Source", "readonly": "RW", "driver": "Driver"}[field]
+            row["Mounts"][-1][key] = False if field == "readonly" else "foreign"
+
+    value.daemon.mutate = changed
+    with pytest.raises(ValueError, match="identity or isolation"):
+        value.client.run("prepare")
+    assert value.daemon.starts == 0
+
+
+@pytest.mark.parametrize("field", ["main", "-wal", "-journal"])
+def test_changed_volume_bytes_cannot_activate_or_remove_fence(volume_setup, field):
+    value = volume_setup
+    volume_publication(value)
+    value.volume.observed = {**value.volume.observed, field: "f" * 64}
+    with pytest.raises(ValueError):
+        value.client.finish(activate=True)
+    assert versions.load(value.root)["package"] == PREVIOUS
+    assert (value.data / "runtime" / upgrade.FENCE).exists()
+
+
+def test_lost_volume_fingerprint_ack_reopens_without_replaying_publication(volume_setup):
+    value = volume_setup
+    volume_publication(value)
+    value.volume.fail_read_once = True
+    with pytest.raises(OSError, match="fingerprint acknowledgement"):
+        value.client.finish(activate=True)
+    resumed = upgrade.UpgradeImage(value.root, value.config, value.engine, PREVIOUS, TARGET, value.identity)
+    assert resumed.finish(activate=True)["phase"] == "applied" and value.daemon.starts == 2
+    assert not (value.data / "runtime" / upgrade.FENCE).exists()

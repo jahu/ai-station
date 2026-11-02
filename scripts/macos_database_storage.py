@@ -38,6 +38,126 @@ def write(path, value):
         Path(name).unlink(missing_ok=True)
 
 
+def validate_record(r, coordinates):
+    if (
+        not isinstance(r, dict)
+        or set(r)
+        != {*coordinates, "storage_id", "name", "initialization_image", "phase", "volume", "command"}
+        or {k: r.get(k) for k in coordinates} != coordinates
+        or type(r["schema"]) is not int
+        or not isinstance(r["storage_id"], str)
+        or not re.fullmatch(r"[a-f0-9]{32}", r["storage_id"])
+        or r["name"] != "ai-station-database-" + r["storage_id"]
+        or not isinstance(r["initialization_image"], str)
+        or not re.fullmatch(r"sha256:[a-f0-9]{64}", r["initialization_image"])
+        or r["phase"] not in ("creating", "created", "initialized", "ready")
+        or (r["volume"] is None) != (r["phase"] == "creating")
+    ):
+        raise ValueError("The private database storage binding changed; existing bytes preserved")
+    item = r["command"]
+    if item is not None and (
+        not isinstance(item, dict)
+        or set(item) != {"attempt", "action", "image", "phase", "container_id"}
+        or not isinstance(item["attempt"], str)
+        or not re.fullmatch(r"[a-f0-9]{32}", item["attempt"])
+        or item["action"] not in ("initialize", "inspect", "fingerprint", "empty")
+        or not isinstance(item["image"], str)
+        or not re.fullmatch(r"sha256:[a-f0-9]{64}", item["image"])
+        or item["phase"] not in ("creating", "created", "starting", "finished")
+        or item["container_id"] is not None
+        and (
+            not isinstance(item["container_id"], str)
+            or not re.fullmatch(r"[a-f0-9]{64}", item["container_id"])
+        )
+        or item["phase"] != "creating"
+        and item["container_id"] is None
+        or (item["action"], r["phase"])
+        not in (
+            (
+                ("initialize", "initialized"),
+                ("inspect", "ready"),
+                ("fingerprint", "ready"),
+                ("empty", "ready"),
+            )
+            if item["phase"] == "finished"
+            else (
+                ("initialize", "created"),
+                ("inspect", "initialized"),
+                ("inspect", "ready"),
+                ("fingerprint", "ready"),
+                ("empty", "ready"),
+            )
+        )
+    ):
+        raise ValueError("The database helper identity requires inspection")
+
+
+def stable_identity(record):
+    """Immutable storage coordinates only; helper journals never relocate data."""
+    volume = record["volume"]
+    if (
+        not isinstance(volume, dict)
+        or set(volume) != {"Name", "Driver", "Scope", "CreatedAt", "Mountpoint"}
+        or volume["Name"] != record["name"]
+        or volume["Driver"] != "local"
+        or volume["Scope"] != "local"
+        or not isinstance(volume["CreatedAt"], str)
+        or not volume["CreatedAt"]
+        or not isinstance(volume["Mountpoint"], str)
+        or not volume["Mountpoint"].startswith("/")
+    ):
+        raise ValueError("The database volume receipt is invalid")
+    frozen = {
+        k: record[k]
+        for k in (
+            "schema",
+            "storage_id",
+            "namespace_sha256",
+            "uid",
+            "gid",
+            "engine",
+            "architecture",
+            "volume",
+        )
+    }
+    return hashlib.sha256(json.dumps(frozen, sort_keys=True).encode()).hexdigest()
+
+
+def reference(root, base_namespace):
+    """Read private coordinates without contacting Docker or native SQLite."""
+    folder = root / "database-storage"
+    if not folder.exists() and not folder.is_symlink():
+        return None
+    private_directory(folder)
+    path = folder / RECEIPT
+    if not path.exists() and not path.is_symlink():
+        raise ValueError("The private database storage folder has no ownership receipt")
+    record = json.loads(versions.read_private(path, 16384))
+    engine = record.get("engine") if isinstance(record, dict) else None
+    if (
+        not isinstance(engine, list)
+        or len(engine) != 3
+        or not all(isinstance(v, str) for v in engine)
+        or not engine[0].startswith("/")
+        or not engine[1].startswith("unix:///")
+        or not re.fullmatch(r"[A-Za-z0-9:._-]{1,128}", engine[2])
+        or record.get("architecture") not in ("amd64", "arm64")
+    ):
+        raise ValueError("The database engine receipt is invalid")
+    coordinates = {
+        "schema": 1,
+        "namespace_sha256": base_namespace,
+        "uid": os.geteuid(),
+        "gid": os.getegid(),
+        "engine": engine,
+        "architecture": record["architecture"],
+    }
+    validate_record(record, coordinates)
+    if record["phase"] != "ready":
+        raise ValueError("Database storage is not ready for version activation")
+    return stable_identity(record)
+
+
 class DatabaseStorage:
     """Caller holds the native installation owner lock throughout preparation."""
 
@@ -50,7 +170,7 @@ class DatabaseStorage:
         binary, endpoint = engine.identity
         if tuple(engine.prefix) != (binary, "--host", endpoint):
             raise ValueError("The database Docker connection must remain pinned")
-        self.data, self.namespace = versions.namespace(config)
+        self.data, self.namespace = versions.base_namespace(config)
         if config.parent != root or root.is_relative_to(self.data):
             raise ValueError("Database receipts must remain outside mounted application data")
         private_directory(root)
@@ -116,54 +236,14 @@ class DatabaseStorage:
         return command([*self.argv, *args], env=self.environment, **kwargs)
 
     def validate(self):
-        r = self.record
-        if (
-            not isinstance(r, dict)
-            or set(r)
-            != {*self.coordinates, "storage_id", "name", "initialization_image", "phase", "volume", "command"}
-            or {k: r.get(k) for k in self.coordinates} != self.coordinates
-            or type(r["schema"]) is not int
-            or not isinstance(r["storage_id"], str)
-            or not re.fullmatch(r"[a-f0-9]{32}", r["storage_id"])
-            or r["name"] != "ai-station-database-" + r["storage_id"]
-            or not isinstance(r["initialization_image"], str)
-            or not re.fullmatch(r"sha256:[a-f0-9]{64}", r["initialization_image"])
-            or r["phase"] not in ("creating", "created", "initialized", "ready")
-            or (r["volume"] is None) != (r["phase"] == "creating")
-        ):
-            raise ValueError("The private database storage binding changed; existing bytes preserved")
-        item = r["command"]
-        if item is not None and (
-            not isinstance(item, dict)
-            or set(item) != {"attempt", "action", "image", "phase", "container_id"}
-            or not isinstance(item["attempt"], str)
-            or not re.fullmatch(r"[a-f0-9]{32}", item["attempt"])
-            or item["action"] not in ("initialize", "inspect")
-            or not isinstance(item["image"], str)
-            or not re.fullmatch(r"sha256:[a-f0-9]{64}", item["image"])
-            or item["phase"] not in ("creating", "created", "starting", "finished")
-            or item["container_id"] is not None
-            and (
-                not isinstance(item["container_id"], str)
-                or not re.fullmatch(r"[a-f0-9]{64}", item["container_id"])
-            )
-            or item["phase"] != "creating"
-            and item["container_id"] is None
-            or (item["action"], r["phase"])
-            not in (
-                (("initialize", "initialized"), ("inspect", "ready"))
-                if item["phase"] == "finished"
-                else (("initialize", "created"), ("inspect", "initialized"), ("inspect", "ready"))
-            )
-        ):
-            raise ValueError("The database helper identity requires inspection")
+        validate_record(self.record, self.coordinates)
 
     def save(self):
         write(self.path, self.record)
 
     def consistent(self):
         self.validate()
-        if versions.namespace(self.config) != (self.data, self.namespace):
+        if versions.base_namespace(self.config) != (self.data, self.namespace):
             raise ValueError("The selected data directory changed")
         self.placeholder()
         if json.loads(versions.read_private(self.path, 16384)) != self.record:
@@ -216,6 +296,58 @@ class DatabaseStorage:
             + ",target=/database,volume-nocopy"
             + (",readonly" if readonly else "")
         )
+
+    def application_mount(self):
+        self.owned()
+        return "type=volume,source=" + self.record["name"] + ",target=/data/db,volume-nocopy"
+
+    def quiescent(self, *, allowed=()):
+        """Trusted callers may exempt only their independently verified fixed helper IDs."""
+        self.owned()
+        if any(not isinstance(v, str) or not re.fullmatch(r"[a-f0-9]{64}", v) for v in allowed):
+            raise ValueError("Invalid owned helper reference")
+        permitted = set(allowed)
+        item = self.record["command"]
+        if item is not None:
+            permitted.add(self.inspect_container(item)["Id"])
+        _, users = self.call(
+            "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "volume=" + self.record["name"]
+        )
+        if any(v not in permitted for v in users.splitlines()):
+            raise ValueError("Another container references the database; nothing was stopped")
+
+    def result(self, action, raw):
+        value = json.loads(raw)
+        if action == "empty":
+            if (
+                not isinstance(value, dict)
+                or set(value) != {"storage", "empty"}
+                or value["storage"] != self.binding()
+                or value["empty"] is not True
+            ):
+                raise ValueError("The fixed empty-database acknowledgement changed")
+            return value
+        if action != "fingerprint":
+            if value != self.binding():
+                raise ValueError("The database ownership acknowledgement changed")
+            return value
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"storage", "database"}
+            or value["storage"] != self.binding()
+            or not isinstance(value["database"], dict)
+            or set(value["database"]) != {"main", "-wal", "-journal"}
+            or not isinstance(value["database"]["main"], str)
+            or not re.fullmatch(r"[a-f0-9]{64}", value["database"]["main"])
+            or value["database"]["-journal"] is not None
+            or value["database"]["-wal"] is not None
+            and (
+                not isinstance(value["database"]["-wal"], str)
+                or not re.fullmatch(r"[a-f0-9]{64}", value["database"]["-wal"])
+            )
+        ):
+            raise ValueError("The fixed database fingerprint acknowledgement changed")
+        return value
 
     def arguments(self, action):
         return [
@@ -299,6 +431,8 @@ class DatabaseStorage:
             ("initialize", "created"),
             ("inspect", "initialized"),
             ("inspect", "ready"),
+            ("fingerprint", "ready"),
+            ("empty", "ready"),
         ):
             raise ValueError("Only the fixed helper for the current storage phase may run")
         self.owned()
@@ -359,7 +493,7 @@ class DatabaseStorage:
                 "1",
                 "--no-healthcheck",
                 "--mount",
-                self.mount(readonly=action == "inspect"),
+                self.mount(readonly=action != "initialize"),
                 "--entrypoint",
                 "python",
             ]
@@ -376,18 +510,8 @@ class DatabaseStorage:
             item.update(container_id=v["Id"], phase="created")
             self.save()
         if item["phase"] == "created":
-            if action == "initialize":
-                _, users = self.call(
-                    "container",
-                    "ls",
-                    "--all",
-                    "--quiet",
-                    "--no-trunc",
-                    "--filter",
-                    "volume=" + self.record["name"],
-                )
-                if users != item["container_id"]:
-                    raise ValueError("Another container references the new database; nothing was stopped")
+            if action in ("initialize", "fingerprint", "empty"):
+                self.quiescent()
             item["phase"] = "starting"
             self.save()
             self.call("container", "start", item["container_id"])
@@ -405,14 +529,14 @@ class DatabaseStorage:
         if state["ExitCode"] != 0 or state["OOMKilled"]:
             raise ValueError("The database helper failed; its bytes and pending receipt were preserved")
         _, raw = self.call("container", "logs", item["container_id"])
-        if json.loads(raw) != self.binding():
-            raise ValueError("The database ownership acknowledgement changed")
+        result = self.result(action, raw)
         # Advance ownership before cleanup; a lost removal ACK can be reconciled
         # by exact ID, without ever reinitializing the persistent volume.
         self.record["phase"] = "initialized" if action == "initialize" else "ready"
         item["phase"] = "finished"
         self.save()
         self.cleanup()
+        return result
 
     def cleanup(self):
         """Remove only a verified finished helper; persistent volume is untouched."""
@@ -461,10 +585,31 @@ class DatabaseStorage:
         self.owned()
         return self.record["name"]
 
-    def identity(self):
-        if self.record["phase"] != "ready" or self.record["command"] is not None:
+    def fingerprint(self):
+        if self.record["command"] is not None and self.record["command"]["phase"] == "finished":
+            self.cleanup()
+        self.quiescent()
+        result = self.helper("fingerprint")
+        self.quiescent()
+        return result["database"]
+
+    def identity(self, *, allow_pending_readonly=False):
+        pending = self.record["command"]
+        if type(allow_pending_readonly) is not bool:
+            raise ValueError("Choose an explicit pending-reader policy")
+        if (
+            self.record["phase"] != "ready"
+            or pending is not None
+            and not (allow_pending_readonly and pending["action"] in ("inspect", "fingerprint", "empty"))
+        ):
             raise ValueError("Database storage is not ready")
         self.owned()
-        return hashlib.sha256(
-            json.dumps(self.record["volume"] | self.binding(), sort_keys=True).encode()
-        ).hexdigest()
+        return stable_identity(self.record)
+
+    def assert_empty(self):
+        """Only the fixed image can prove a marker-only VM volume before first start."""
+        if self.record["command"] is not None and self.record["command"]["phase"] == "finished":
+            self.cleanup()
+        self.quiescent()
+        self.helper("empty")
+        self.quiescent()
