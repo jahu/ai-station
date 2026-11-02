@@ -314,6 +314,19 @@ def main():
         if restored["messages"] != detail["messages"]:
             raise ValueError("The actual preserving restart changed its conversation")
         proof["restart_retained_history"] = True
+        progress("real_native_followup_after_restart")
+        followup = client.request(
+            "/api/chat/conversations/" + conversation["id"] + "/messages",
+            {"content": "What is 3+3? Reply only with the number. /no_think"},
+        )
+        client.wait("/api/runs/" + followup["id"], timeout=300)
+        continued = client.request("/api/chat/conversations/" + conversation["id"])
+        if not any(
+            row["role"] == "assistant" and row["run_id"] == followup["id"] and row["content"].strip()
+            for row in continued["messages"]
+        ):
+            raise ValueError("The restarted installation could not continue its conversation")
+        proof["native_reply_after_restart"] = True
         stop(executable, process)
         proof["clean_stop"] = True
         proof["passed"] = True
