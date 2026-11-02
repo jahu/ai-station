@@ -176,7 +176,9 @@ def main():
             "--platform",
             "linux/amd64",
             "--builder",
-            "desktop-linux",
+            # The fixed DOCKER_HOST selects the engine. Its context-named
+            # builder refuses that explicit endpoint; use the daemon's default.
+            "default",
             "--tag",
             tag,
             "--output",
