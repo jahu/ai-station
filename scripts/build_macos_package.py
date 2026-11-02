@@ -25,7 +25,14 @@ def git(*args):
 
 
 def docker(*args):
-    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=180, check=False)
+    return subprocess.run(
+        ["docker", *args],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+        env={key: value for key, value in os.environ.items() if key not in {"DOCKER_CONTEXT", "DOCKER_HOST"}},
+    )
 
 
 def application_python(path, architecture):
@@ -77,9 +84,9 @@ def image_identity(name, architecture, build_receipt):
         raise ValueError("Application image build receipt differs from reviewed source/target")
     # This is a trusted developer producer, never a Runner/API operation. It
     # creates only its new desktop tag and never changes global Docker settings.
-    endpoint = os.environ.get("DOCKER_HOST")
+    context = os.environ.get("DOCKER_CONTEXT")
+    endpoint = os.environ.get("DOCKER_HOST") if not context else None
     if not endpoint:
-        context = os.environ.get("DOCKER_CONTEXT")
         result = docker(
             "context",
             "inspect",
@@ -92,7 +99,7 @@ def image_identity(name, architecture, build_receipt):
         endpoint = result.stdout.strip()
     if not endpoint.startswith("unix:///"):
         raise ValueError("Mac packaging uses only a local Unix Docker endpoint")
-    result = docker("image", "inspect", name)
+    result = docker("--host", endpoint, "image", "inspect", name)
     if result.returncode:
         raise RuntimeError("Build the selected application image before packaging")
     rows = json.loads(result.stdout)
@@ -107,19 +114,19 @@ def image_identity(name, architecture, build_receipt):
         or rows[0].get("Id") != built.get("image_id")
     ):
         raise ValueError("Application image architecture, non-root user or identity differs")
-    return rows[0]["Id"]
+    return rows[0]["Id"], endpoint
 
 
-def export_image(identity, tag, destination):
-    previous = docker("image", "inspect", tag)
+def export_image(identity, tag, destination, *, endpoint):
+    previous = docker("--host", endpoint, "image", "inspect", tag)
     if previous.returncode == 0 or "no such image" not in previous.stderr.lower():
         raise ValueError("The desktop tag already exists or its absence is uncertain")
-    result = docker("image", "tag", identity, tag)
+    result = docker("--host", endpoint, "image", "tag", identity, tag)
     if result.returncode:
         raise RuntimeError("The desktop image tag was not prepared; inspect before retrying")
     # Retain this new project-owned tag if export fails; never replay an
     # uncertain operation or delete an existing developer image.
-    result = docker("image", "save", "--output", str(destination), tag)
+    result = docker("--host", endpoint, "image", "save", "--output", str(destination), tag)
     if result.returncode:
         raise RuntimeError("The desktop image export failed; inspect its retained tag")
 
@@ -145,7 +152,7 @@ def bundle(output, python_layer, native_layer, architecture, image, image_build,
     for source in (python_layer, binary.parent):
         if output.parent.is_relative_to(source):
             raise ValueError("Application output must remain outside its verified inputs")
-    image_id = image_identity(image, architecture, image_build)
+    image_id, endpoint = image_identity(image, architecture, image_build)
     identity = fingerprint(
         {
             "head": head,
@@ -188,7 +195,7 @@ def bundle(output, python_layer, native_layer, architecture, image, image_build,
             "NSHighResolutionCapable": True,
         }
         (contents / "Info.plist").write_bytes(plistlib.dumps(info))
-        export_image(image_id, tag, resources / "control-plane.tar")
+        export_image(image_id, tag, resources / "control-plane.tar", endpoint=endpoint)
         package_permissions(stage)
         metadata = {
             "schema": 1,

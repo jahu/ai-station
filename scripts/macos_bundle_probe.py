@@ -35,10 +35,14 @@ def main(architecture):
         def fixture_image(name, target, _receipt):
             if name != "ai-station:entry-probe" or target != architecture:
                 raise ValueError("Unexpected native entry fixture")
-            return identity
+            return identity, "unix:///private/neutral-entry-fixture.sock"
 
-        def fixture_export(image_id, tag, destination):
-            if image_id != identity or not tag.startswith("ai-station:desktop-"):
+        def fixture_export(image_id, tag, destination, *, endpoint):
+            if (
+                image_id != identity
+                or not tag.startswith("ai-station:desktop-")
+                or endpoint != "unix:///private/neutral-entry-fixture.sock"
+            ):
                 raise ValueError("Unexpected native entry export")
             destination.write_bytes(b"Neutral entry/verification fixture, never loaded into Docker.\n")
 

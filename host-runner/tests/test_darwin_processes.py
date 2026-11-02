@@ -502,18 +502,34 @@ def test_candidate_cancel_descendants_after_the_gated_leader_exits(tmp_path, can
     reason="Opt-in actual Mac kernel launch/Stop/recovery; Linux controls are not Mac evidence",
 )
 def test_actual_native_mac_launch_recovery_and_stop(tmp_path):
-    manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.1)
     run_id = str(uuid4())
+    # Production main holds one runner.lock. A second live manager in this
+    # process creates an impossible two-writer race with the first reaper.
+    # Recover only after the original owner has actually exited and been reaped.
+    helper = """
+import json,os,sys
+from pathlib import Path
+from ai_station_runner.darwin_processes import DarwinProcessManager
+root=Path(sys.argv[1]);manager=DarwinProcessManager(root,grace_seconds=0.1)
+result=manager.start(run_id=sys.argv[2],argv=[sys.executable,'-c','import time;time.sleep(30)'],cwd=root,executor='test')
+print(json.dumps(result),flush=True)
+os._exit(0)
+"""
+    recovered = None
     try:
-        result = manager.start(
-            run_id=run_id,
-            argv=[sys.executable, "-c", "import time;time.sleep(30)"],
-            cwd=tmp_path,
-            executor="test",
+        owner = subprocess.run(
+            [sys.executable, "-B", "-c", helper, str(tmp_path), run_id],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=15,
         )
+        result = json.loads(owner.stdout)
         assert result["pid"] == result["native_identity"]["pid"]
         assert result["native_identity"]["format"] == darwin.FORMAT
         recovered = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.1)
         assert recovered.cancel(run_id)["status"] == "canceled"
     finally:
-        manager.shutdown()
+        if recovered is None:
+            recovered = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.1)
+        recovered.shutdown()

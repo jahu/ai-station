@@ -117,6 +117,11 @@ def inputs(tmp_path, monkeypatch):
     commands = []
 
     def docker(*args):
+        if args[:1] == ("--host",):
+            assert args[1] == "unix:///private/neutral/docker.sock"
+            args = args[2:]
+        else:
+            assert args[:2] == ("context", "inspect"), "Every image operation must pin its local endpoint"
         commands.append(args)
         result = SimpleNamespace(returncode=0, stdout="", stderr="")
         if args[:2] == ("context", "inspect"):
@@ -232,7 +237,7 @@ def test_uncertain_desktop_tag_is_not_overwritten_or_exported(inputs, monkeypatc
     original = build.docker
 
     def docker(*args):
-        if args[:2] == ("image", "inspect") and args[2].startswith("ai-station:desktop-"):
+        if args[2:4] == ("image", "inspect") and args[4].startswith("ai-station:desktop-"):
             return SimpleNamespace(returncode=1, stdout="", stderr="daemon unavailable")
         return original(*args)
 
@@ -241,3 +246,17 @@ def test_uncertain_desktop_tag_is_not_overwritten_or_exported(inputs, monkeypatc
         assemble(inputs)
     assert not inputs.output.exists()
     assert not any(command[:2] in {("image", "tag"), ("image", "save")} for command in inputs.commands)
+
+
+def test_remote_context_cannot_hide_behind_a_local_host_environment(inputs, monkeypatch):
+    monkeypatch.setenv("DOCKER_HOST", "unix:///private/neutral/docker.sock")
+    monkeypatch.setenv("DOCKER_CONTEXT", "remote-context-fixture")
+
+    def docker(*args):
+        assert args[:3] == ("context", "inspect", "remote-context-fixture")
+        return SimpleNamespace(returncode=0, stdout="tcp://example.invalid:2375", stderr="")
+
+    monkeypatch.setattr(build, "docker", docker)
+    with pytest.raises(ValueError, match="local Unix"):
+        assemble(inputs)
+    assert not inputs.output.exists()
