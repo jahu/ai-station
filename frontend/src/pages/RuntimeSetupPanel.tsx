@@ -142,7 +142,7 @@ function RuntimePreparation({
             value={received}
           />
           <p className="muted setup-small">
-            {size(received)} of {size(expected)} prepared, including reused
+            {size(received)} of {size(expected)} prepared, including reused{" "}
             {native ? "files" : "layers"}.
           </p>
         </>
