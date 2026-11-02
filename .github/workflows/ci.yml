@@ -239,7 +239,13 @@ jobs:
             cat .tools/mac-consumer-experiment/result.json
           fi
           python - <<'PY'
+          import json
           from pathlib import Path
+          receipt = Path('.tools/mac-consumer-experiment/image/build.json')
+          if receipt.is_file():
+              value = json.loads(receipt.read_text())
+              print(json.dumps({key: value.get(key) for key in
+                  ('status', 'source_head', 'platform', 'image_id', 'error_type')}))
           for name in ('commands.private.log', 'image/build.log'):
               path = Path('.tools/mac-consumer-experiment') / name
               if not path.is_file():

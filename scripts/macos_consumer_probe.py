@@ -7,6 +7,7 @@ import platform
 import subprocess
 import sys
 import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,6 +29,21 @@ def producer():
     import build_macos_package
 
     return build_macos_package
+
+
+def failure(error):
+    detail = {"error_type": type(error).__name__}
+    frames = traceback.extract_tb(error.__traceback__)
+    if frames:
+        frame = frames[-1]
+        detail["failure_site"] = {
+            "file": Path(frame.filename).name,
+            "line": frame.lineno,
+            "function": frame.name,
+        }
+    if isinstance(error, ModuleNotFoundError):
+        detail["missing_module"] = error.name
+    return detail  # Never include exception messages, locals or source lines.
 
 
 def require_host():
@@ -303,9 +319,7 @@ def main():
         proof["passed"] = True
         progress("backend_experiment_passed_GUI_update_backup_removal_still_required")
     except BaseException as error:
-        proof.update(passed=False, error_type=type(error).__name__, stage=stage)
-        if isinstance(error, ModuleNotFoundError):
-            proof["missing_module"] = error.name
+        proof.update(passed=False, stage=stage, **failure(error))
         raise
     finally:
         for process in processes:
@@ -323,8 +337,5 @@ if __name__ == "__main__":
     try:
         main()
     except BaseException as error:
-        detail = {"experiment_failed": True, "error_type": type(error).__name__}
-        if isinstance(error, ModuleNotFoundError):
-            detail["missing_module"] = error.name
-        print(json.dumps(detail), flush=True)
+        print(json.dumps({"experiment_failed": True, **failure(error)}), flush=True)
         raise SystemExit(1) from None
