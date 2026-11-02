@@ -3,6 +3,7 @@
 import json
 
 import macos_consumer_probe as probe
+import macos_native_ui_probe as ui_probe
 import pytest
 
 
@@ -33,3 +34,12 @@ def test_missing_dependency_reports_only_its_module_identity():
         "error_type": "ModuleNotFoundError",
         "missing_module": "ai_station_runner",
     }
+
+
+def test_native_ui_fixture_refuses_normal_hosts_before_storage_or_processes(monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.setattr(ui_probe.Path, "mkdir", lambda *a, **kw: pytest.fail("Unexpected fixture storage"))
+    monkeypatch.setattr(ui_probe.subprocess, "run", lambda *a, **kw: pytest.fail("Unexpected compiler"))
+    monkeypatch.setattr(ui_probe.subprocess, "Popen", lambda *a, **kw: pytest.fail("Unexpected UI process"))
+    with pytest.raises(ValueError, match="explicit fresh public Intel"):
+        ui_probe.main()

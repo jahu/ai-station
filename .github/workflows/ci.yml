@@ -270,24 +270,7 @@ jobs:
           persist-credentials: false
       - name: Drive actual native windows through Apple UI automation
         timeout-minutes: 6
-        run: |
-          set -euo pipefail
-          mkdir -m 700 .native-mac
-          mkdir -m 700 .native-mac/ui-acceptance
-          # Match the standalone product helper; Xcode's app executable has an
-          # Info.plist-bound signature and is not a transplantable helper fixture.
-          /usr/bin/xcrun clang -fobjc-arc -fmodules -framework Cocoa \
-            -framework UniformTypeIdentifiers -arch x86_64 \
-            -mmacosx-version-min=13.3 -Werror=implicit-function-declaration \
-            -Werror=return-type packaging/macos/native.m \
-            -o "$PWD/.native-mac/ui-acceptance/ai-station-native"
-          /usr/bin/xcodebuild test \
-            -project packaging/macos/acceptance/NativeAcceptance.xcodeproj \
-            -scheme NativeAcceptance -configuration Debug \
-            -destination 'platform=macOS' -parallel-testing-enabled NO \
-            -derivedDataPath "$PWD/.native-mac/ui-acceptance/build" \
-            -resultBundlePath "$PWD/.native-mac/ui-acceptance/result.xcresult" \
-            CODE_SIGN_IDENTITY=-
+        run: python3 -IB scripts/macos_native_ui_probe.py
   macos-desktop-transport:
     # Explicit developer prerequisite install on a fresh standard free public VM.
     # Never run this job on an existing station, a private or a paid runner.
