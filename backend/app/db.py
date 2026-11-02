@@ -161,6 +161,12 @@ def alembic_config() -> Config:
 
 
 def require_upgrade_finished(data_dir: Path) -> None:
+    native_restore = data_dir / "runtime/desktop-restore-pending.json"
+    if native_restore.exists() or native_restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
+    restore = data_dir / "db/.ai-station-restore-pending.json"
+    if restore.exists() or restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
     snapshot = data_dir / "runtime/desktop-snapshot-pending.json"
     if snapshot.exists() or snapshot.is_symlink():
         raise RuntimeError("Finish or cancel the pending private backup before starting AI Station")

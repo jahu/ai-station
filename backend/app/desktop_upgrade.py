@@ -103,6 +103,12 @@ def canonical_root(root):
 @contextmanager
 def guard(root):
     root = canonical_root(root)
+    native_restore = root / "runtime/desktop-restore-pending.json"
+    if native_restore.exists() or native_restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before upgrading")
+    restore = root / "db/.ai-station-restore-pending.json"
+    if restore.exists() or restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before upgrading")
     descriptors = []
     try:
         for name in ("launcher.lock", "migrations.lock"):

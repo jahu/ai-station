@@ -95,6 +95,9 @@ def data_preserving_compose_down(compose: list[str]) -> list[str]:
 
 
 def ensure_recovery_finished(runtime: Path) -> None:
+    native_restore = runtime / "desktop-restore-pending.json"
+    if native_restore.exists() or native_restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
     snapshot = runtime / "desktop-snapshot-pending.json"
     if snapshot.exists() or snapshot.is_symlink():
         raise RuntimeError("Finish or cancel the pending private backup before starting AI Station")

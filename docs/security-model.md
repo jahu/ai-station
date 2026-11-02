@@ -121,6 +121,26 @@ inspected owned helper; completed snapshots and partial/canceled files remain.
 This primitive does not yet provide complete files backup/restoration or make
 the Mac consumer installer available.
 
+The image-local restore candidate binds a fixed backup hash, image, operation and
+target volume, with a volume-level marker blocking API/export/upgrade entry.
+Its private stage reuses offline account normalization: current credentials/MFA
+are preserved, sessions/node authority are revoked, schedules pause and active
+Runs require inspection. Unreadable authority needs a named administrator reset
+and explicit MFA acknowledgement from a private fixed-path file. Passwords never
+travel in argv or reports; only a salted normal password verifier binds a pending
+reset request. Original main/WAL copies stay private, and only a verified stage
+may atomically replace the target. Native dispatch reuses the existing verified
+storage helper lifecycle with fixed mounts/commands, cached completion and an
+explicit 512 MiB RAM/swap limit. Only owned preparation may be stopped; source
+disappearance cannot prevent its inspection/Stop. An unstarted payload is
+distinguished from a transaction with a durable request. Publication requires
+resume/inspection. Full native coordination now retains original files, stages
+on the same filesystem, preserves current credential/MFA files, refuses unknown
+file changes and fences startup until DB/files publication agree. Only the
+pre-database phase allows rollback. Historical execution/package receipts remain
+provenance. Consumer restore stays unavailable before native presentation and
+actual Mac qualification are integrated.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.

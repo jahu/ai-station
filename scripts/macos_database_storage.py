@@ -16,6 +16,37 @@ from macos_transport_probe import bind_mount, command
 RECEIPT = "database-storage.json"
 MEMORY = 128 * 1024**2
 LABEL = "ai-station.desktop-database"
+RESTORE_ACTIONS = tuple("restore_" + v for v in ("prepare", "publish", "abort", "status"))
+RESTORE_MEMORY = 512 * 1024**2
+
+
+def restore_request(value):
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != {
+            "operation_id",
+            "backup_id",
+            "snapshot_identity",
+            "database_sha256",
+            "backup_path",
+            "recover_admin",
+        }
+        or type(value["recover_admin"]) is not bool
+        or not isinstance(value["backup_path"], str)
+        or not value["backup_path"].startswith("/")
+        or "\x00" in value["backup_path"]
+        or str(Path(value["backup_path"])) != value["backup_path"]
+        or ".." in Path(value["backup_path"]).parts
+    ):
+        raise ValueError("The fixed restore request is invalid")
+    for key in ("operation_id", "backup_id"):
+        if not isinstance(value[key], str) or str(UUID(value[key])) != value[key]:
+            raise ValueError("Restore identities must be canonical UUIDs")
+    for key in ("snapshot_identity", "database_sha256"):
+        if not isinstance(value[key], str) or not re.fullmatch(r"[a-f0-9]{64}", value[key]):
+            raise ValueError("The fixed restore hash is invalid")
+    return value
 
 
 def write(path, value):
@@ -60,9 +91,10 @@ def validate_record(r, coordinates):
         or set(item)
         != {"attempt", "action", "image", "phase", "container_id"}
         | ({"export_id"} if item.get("action") == "export" else set())
+        | ({"restore", "restore_result", "interrupted"} if item.get("action") in RESTORE_ACTIONS else set())
         or not isinstance(item["attempt"], str)
         or not re.fullmatch(r"[a-f0-9]{32}", item["attempt"])
-        or item["action"] not in ("initialize", "inspect", "fingerprint", "empty", "export")
+        or item["action"] not in ("initialize", "inspect", "fingerprint", "empty", "export", *RESTORE_ACTIONS)
         or item["action"] == "export"
         and (
             not isinstance(item["export_id"], str)
@@ -86,6 +118,7 @@ def validate_record(r, coordinates):
                 ("fingerprint", "ready"),
                 ("empty", "ready"),
                 ("export", "ready"),
+                *((action, "ready") for action in RESTORE_ACTIONS),
             )
             if item["phase"] == "finished"
             else (
@@ -95,10 +128,26 @@ def validate_record(r, coordinates):
                 ("fingerprint", "ready"),
                 ("empty", "ready"),
                 ("export", "ready"),
+                *((action, "ready") for action in RESTORE_ACTIONS),
             )
         )
     ):
         raise ValueError("The database helper identity requires inspection")
+    if item is not None and item["action"] in RESTORE_ACTIONS:
+        restore_request(item["restore"])
+        if (
+            type(item["interrupted"]) is not bool
+            or item["interrupted"]
+            and (item["action"] != "restore_prepare" or item["phase"] != "finished")
+            or item["restore_result"] is not None
+            and not isinstance(item["restore_result"], dict)
+            or item["phase"] == "finished"
+            and not item["interrupted"]
+            and item["restore_result"] is None
+            or item["interrupted"]
+            and item["restore_result"] is not None
+        ):
+            raise ValueError("The restore helper completion receipt changed")
 
 
 def stable_identity(record):
@@ -318,7 +367,24 @@ class DatabaseStorage:
         permitted = set(allowed)
         item = self.record["command"]
         if item is not None:
-            permitted.add(self.inspect_container(item)["Id"])
+            present = True
+            if item["phase"] == "finished":
+                _, observed = self.call(
+                    "container",
+                    "ls",
+                    "--all",
+                    "--quiet",
+                    "--no-trunc",
+                    "--filter",
+                    "id=" + item["container_id"],
+                )
+                if observed not in ("", item["container_id"]):
+                    raise ValueError("The owned helper inventory changed")
+                present = bool(observed)
+                if item["action"] in RESTORE_ACTIONS and not item["interrupted"]:
+                    self.restore_result(item["action"], item["restore_result"])
+            if present:
+                permitted.add(self.inspect_container(item)["Id"])
         _, users = self.call(
             "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "volume=" + self.record["name"]
         )
@@ -327,6 +393,8 @@ class DatabaseStorage:
 
     def result(self, action, raw):
         value = json.loads(raw)
+        if action in RESTORE_ACTIONS:
+            return self.restore_result(action, value)
         if action == "export":
             expected = self.export_result(self.record["command"]["export_id"])
             if value != expected or expected["image_id"] != self.record["command"]["image"]:
@@ -362,6 +430,147 @@ class DatabaseStorage:
         ):
             raise ValueError("The fixed database fingerprint acknowledgement changed")
         return value
+
+    def restore_result(self, action, value):
+        item = self.record["command"]
+        request = item["restore"]
+        if action == "restore_status" and isinstance(value, dict) and value.get("phase") == "not_started":
+            expected = {
+                "schema": 1,
+                "operation_id": request["operation_id"],
+                "image_id": item["image"],
+                "storage": self.binding(),
+                "phase": "not_started",
+            }
+            if (
+                set(value) != {*expected, "source"}
+                or {key: value.get(key) for key in expected} != expected
+                or type(value["schema"]) is not int
+            ):
+                raise ValueError("The unstarted restore acknowledgement changed")
+            self.result("fingerprint", json.dumps({"storage": value["storage"], "database": value["source"]}))
+            return value
+        expected = {
+            "schema": 1,
+            "operation_id": request["operation_id"],
+            "backup_id": request["backup_id"],
+            "snapshot_identity": request["snapshot_identity"],
+            "image_id": item["image"],
+            "storage": self.binding(),
+        }
+        phases = {
+            "restore_prepare": {"prepared", "applied", "aborted"},
+            "restore_publish": {"applied"},
+            "restore_abort": {"aborted"},
+            "restore_status": {"preparing", "prepared", "publishing", "applied", "aborted"},
+        }
+        if (
+            not isinstance(value, dict)
+            or set(value) != {*expected, "source", "phase", "database_revision", "database_sha256", "actions"}
+            or {key: value.get(key) for key in expected} != expected
+            or type(value["schema"]) is not int
+            or value["phase"] not in phases[action]
+            or not isinstance(value["database_revision"], str)
+            or not re.fullmatch(r"[A-Za-z0-9_]{1,64}", value["database_revision"])
+            or value["database_sha256"] is not None
+            and (
+                not isinstance(value["database_sha256"], str)
+                or not re.fullmatch(r"[a-f0-9]{64}", value["database_sha256"])
+            )
+            or value["actions"] is not None
+            and (
+                not isinstance(value["actions"], dict)
+                or value["actions"].get("automatic_replay") is not False
+            )
+            or value["phase"] in {"prepared", "publishing", "applied"}
+            and (value["database_sha256"] is None or value["actions"] is None)
+        ):
+            raise ValueError("The fixed restore acknowledgement changed")
+        self.result("fingerprint", json.dumps({"storage": value["storage"], "database": value["source"]}))
+        return value
+
+    def restore_backup(self, request):
+        path = versions.canonical(Path(request["backup_path"]))
+        private_directory(path)
+        if path.is_relative_to(self.data) or self.data.is_relative_to(path):
+            raise ValueError("The standalone restore source must stay outside application data")
+        from desktop_upgrade_image import data_digest
+
+        receipt = json.loads(versions.read_private(path / "receipt.json", 16384))
+        if (
+            not isinstance(receipt, dict)
+            or receipt.get("operation_id") != request["backup_id"]
+            or receipt.get("database_sha256") != request["database_sha256"]
+            or data_digest(path / "database.sqlite") != request["database_sha256"]
+        ):
+            raise ValueError("The selected restore database changed")
+        return path
+
+    def restore_authority(self, request):
+        path = self.root / "restores" / request["operation_id"] / "authority"
+        private_directory(path)
+        if {p.name for p in path.iterdir()} != {"administrator.json"}:
+            raise ValueError("Use only the fixed private administrator recovery file")
+        versions.read_private(path / "administrator.json", 4096)
+        return path
+
+    def restore_database(self, action, request, *, canceled=lambda: False):
+        request = restore_request(request)
+        action = "restore_" + action
+        if action not in RESTORE_ACTIONS:
+            raise ValueError("Choose a fixed database restore action")
+        self.owned()
+        item = self.record["command"]
+        if item is not None:
+            if item["action"] not in RESTORE_ACTIONS or item["restore"] != request:
+                raise ValueError("Another database helper is pending")
+            if item["interrupted"]:
+                self.interrupt_restore(request)
+                item = None
+            elif item["action"] != action:
+                raise ValueError("Finish the previous fixed restore helper first")
+            elif item["phase"] == "finished":
+                result = self.restore_result(action, item["restore_result"])
+                self.cleanup()
+                self.quiescent()
+                return result
+        self.quiescent()
+        if action == "restore_prepare" and (item is None or item["phase"] in {"creating", "created"}):
+            self.restore_backup(request)
+            if request["recover_admin"]:
+                self.restore_authority(request)
+        if action == "restore_prepare" and canceled():
+            raise InterruptedError("Restore preparation cancellation requested")
+        result = self.helper(action, restore=request, canceled=canceled)
+        self.quiescent()
+        return result
+
+    def interrupt_restore(self, request):
+        """Stop only a verified staging helper; publication must be inspected/resumed."""
+        request = restore_request(request)
+        self.owned()
+        item = self.record["command"]
+        if item is None or item["action"] != "restore_prepare" or item["restore"] != request:
+            raise ValueError("Only this owned restore preparation may be interrupted")
+        present = True
+        if item["phase"] == "finished":
+            _, observed = self.call(
+                "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "id=" + item["container_id"]
+            )
+            if observed not in ("", item["container_id"]):
+                raise ValueError("The owned restore helper inventory changed")
+            present = bool(observed)
+        if present:
+            current = self.inspect_container(item)
+            item["container_id"] = current["Id"]
+            if current["State"]["Running"]:
+                self.call("container", "stop", "--time", "5", current["Id"])
+                if self.inspect_container(item)["State"]["Running"]:
+                    raise ValueError("The owned restore staging helper is still stopping")
+        item.update(phase="finished", interrupted=True, restore_result=None)
+        self.save()
+        self.cleanup()
+        return {"operation_id": request["operation_id"], "status": "inspection_required"}
 
     def export_path(self, operation):
         if not isinstance(operation, str) or str(UUID(operation)) != operation:
@@ -416,19 +625,28 @@ class DatabaseStorage:
 
     def valid_helper_mounts(self, item, mounts):
         exporting = item["action"] == "export"
-        if not isinstance(mounts, list) or len(mounts) != (2 if exporting else 1):
+        restoring = item["action"] in RESTORE_ACTIONS
+        preparing = item["action"] == "restore_prepare"
+        targets = {"/database"}
+        if exporting:
+            targets.add("/export")
+        if preparing:
+            targets.add("/restore")
+            if item["restore"]["recover_admin"]:
+                targets.add("/recovery-authority")
+        if not isinstance(mounts, list) or len(mounts) != len(targets):
             return False
         if any(not isinstance(m, dict) for m in mounts):
             return False
         destinations = {m.get("Destination"): m for m in mounts}
-        if set(destinations) != ({"/database", "/export"} if exporting else {"/database"}):
+        if set(destinations) != targets:
             return False
         database = destinations["/database"]
         if (
             database.get("Type") != "volume"
             or database.get("Name") != self.record["name"]
             or database.get("Source") != self.record["volume"]["Mountpoint"]
-            or database.get("RW") is not (item["action"] == "initialize")
+            or database.get("RW") is not (item["action"] == "initialize" or restoring)
         ):
             return False
         if exporting:
@@ -439,6 +657,23 @@ class DatabaseStorage:
                 or output.get("RW") is not True
             ):
                 return False
+        if preparing:
+            # Ownership must remain inspectable if a removable backup or the
+            # private password file disappears after dispatch. Content/private
+            # path checks run before creating/starting a new staging helper.
+            sources = {"/restore": Path(item["restore"]["backup_path"])}
+            if item["restore"]["recover_admin"]:
+                sources["/recovery-authority"] = (
+                    self.root / "restores" / item["restore"]["operation_id"] / "authority"
+                )
+            for target, source in sources.items():
+                mount = destinations[target]
+                if (
+                    mount.get("Type") != "bind"
+                    or mount.get("Source") != str(source)
+                    or mount.get("RW") is not False
+                ):
+                    return False
         return True
 
     def export_database(self, operation):
@@ -511,6 +746,32 @@ class DatabaseStorage:
         }
 
     def arguments(self, action):
+        if action in RESTORE_ACTIONS:
+            item = self.record["command"]
+            request = item["restore"]
+            args = [
+                "-B",
+                "-m",
+                "app.desktop_restore",
+                action.removeprefix("restore_"),
+                "--operation-id",
+                request["operation_id"],
+                "--image-id",
+                item["image"],
+                *self.arguments("inspect")[3:],
+            ]
+            if action == "restore_prepare":
+                args += [
+                    "--backup-id",
+                    request["backup_id"],
+                    "--snapshot-identity",
+                    request["snapshot_identity"],
+                    "--database-sha256",
+                    request["database_sha256"],
+                ]
+                if request["recover_admin"]:
+                    args.append("--recover-admin")
+            return args
         if action == "export":
             ordinary = self.arguments("inspect")
             return [
@@ -574,8 +835,8 @@ class DatabaseStorage:
             or host.get("SecurityOpt") not in (["no-new-privileges"], ["no-new-privileges:true"])
             or host.get("AutoRemove") is not False
             or host.get("RestartPolicy", {}).get("Name") != "no"
-            or host.get("Memory") != MEMORY
-            or host.get("MemorySwap") != MEMORY
+            or host.get("Memory") != (RESTORE_MEMORY if item["action"] in RESTORE_ACTIONS else MEMORY)
+            or host.get("MemorySwap") != (RESTORE_MEMORY if item["action"] in RESTORE_ACTIONS else MEMORY)
             or host.get("PidsLimit") != 16
             or host.get("NanoCpus") != 1_000_000_000
             or host.get("PidMode") != ""
@@ -594,7 +855,11 @@ class DatabaseStorage:
             raise ValueError("Database helper identity or isolation changed; nothing was signaled")
         return v
 
-    def helper(self, action, *, export_id=None):
+    def helper(self, action, *, export_id=None, restore=None, canceled=lambda: False):
+        if action in RESTORE_ACTIONS:
+            restore_request(restore)
+        elif restore is not None:
+            raise ValueError("Only fixed restore commands accept a restore request")
         if action == "export":
             if not isinstance(export_id, str) or str(UUID(export_id)) != export_id:
                 raise ValueError("Use a canonical export UUID")
@@ -607,6 +872,7 @@ class DatabaseStorage:
             ("fingerprint", "ready"),
             ("empty", "ready"),
             ("export", "ready"),
+            *((value, "ready") for value in RESTORE_ACTIONS),
         ):
             raise ValueError("Only the fixed helper for the current storage phase may run")
         self.owned()
@@ -635,6 +901,8 @@ class DatabaseStorage:
             }
             if action == "export":
                 item["export_id"] = export_id
+            if action in RESTORE_ACTIONS:
+                item.update(restore=dict(restore), restore_result=None, interrupted=False)
             self.record["command"] = item
             self.save()
             args = [
@@ -660,41 +928,61 @@ class DatabaseStorage:
                 "--security-opt",
                 "no-new-privileges",
                 "--memory",
-                str(MEMORY),
+                str(RESTORE_MEMORY if action in RESTORE_ACTIONS else MEMORY),
                 "--memory-swap",
-                str(MEMORY),
+                str(RESTORE_MEMORY if action in RESTORE_ACTIONS else MEMORY),
                 "--pids-limit",
                 "16",
                 "--cpus",
                 "1",
                 "--no-healthcheck",
                 "--mount",
-                self.mount(readonly=action != "initialize"),
+                self.mount(readonly=action != "initialize" and action not in RESTORE_ACTIONS),
                 "--entrypoint",
                 "python",
             ]
             if action == "export":
                 args += ["--mount", bind_mount(self.export_path(export_id), "/export")]
+            if action == "restore_prepare":
+                args += ["--mount", bind_mount(self.restore_backup(restore), "/restore") + ",readonly"]
+                if restore["recover_admin"]:
+                    args += [
+                        "--mount",
+                        bind_mount(self.restore_authority(restore), "/recovery-authority") + ",readonly",
+                    ]
             if action == "initialize":
                 args += ["--cap-add", "CHOWN"]
             _, identifier = self.call(*args, image, *self.arguments(action))
             if not re.fullmatch(r"[a-f0-9]{64}", identifier):
                 raise ValueError("The database helper creation acknowledgement is uncertain")
             item["container_id"] = identifier
-        elif item["action"] != action or action == "export" and item["export_id"] != export_id:
+        elif (
+            item["action"] != action
+            or action == "export"
+            and item["export_id"] != export_id
+            or action in RESTORE_ACTIONS
+            and item["restore"] != restore
+        ):
             raise ValueError("Another database helper is pending")
         v = self.inspect_container(item)
         if item["phase"] == "creating":
             item.update(container_id=v["Id"], phase="created")
             self.save()
         if item["phase"] == "created":
-            if action in ("initialize", "fingerprint", "empty", "export"):
+            if action in ("initialize", "fingerprint", "empty", "export", *RESTORE_ACTIONS):
                 self.quiescent()
+            if action == "restore_prepare":
+                self.restore_backup(restore)
+                if restore["recover_admin"]:
+                    self.restore_authority(restore)
             item["phase"] = "starting"
             self.save()
             self.call("container", "start", item["container_id"])
         deadline = time.monotonic() + 30
         while True:
+            if action == "restore_prepare" and canceled():
+                self.interrupt_restore(restore)
+                raise InterruptedError("Owned restore preparation stopped; inspect before aborting")
             v = self.inspect_container(item)
             state = v["State"]
             if state["Status"] == "created":
@@ -708,6 +996,8 @@ class DatabaseStorage:
             raise ValueError("The database helper failed; its bytes and pending receipt were preserved")
         _, raw = self.call("container", "logs", item["container_id"])
         result = self.result(action, raw)
+        if action in RESTORE_ACTIONS:
+            item["restore_result"] = result
         # Advance ownership before cleanup; a lost removal ACK can be reconciled
         # by exact ID, without ever reinitializing the persistent volume.
         self.record["phase"] = "initialized" if action == "initialize" else "ready"

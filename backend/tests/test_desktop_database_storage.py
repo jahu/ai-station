@@ -91,8 +91,8 @@ class Daemon:
                     "SecurityOpt": ["no-new-privileges"],
                     "AutoRemove": False,
                     "RestartPolicy": {"Name": "no"},
-                    "Memory": storage.MEMORY,
-                    "MemorySwap": storage.MEMORY,
+                    "Memory": int(flag("--memory")),
+                    "MemorySwap": int(flag("--memory-swap")),
                     "PidsLimit": 16,
                     "NanoCpus": 1_000_000_000,
                     "PidMode": "",
@@ -116,13 +116,15 @@ class Daemon:
             }
             for i, arg in enumerate(args):
                 if arg == "--mount" and i != args.index("--mount"):
-                    fields = dict(v.split("=", 1) for v in next(csv.reader([args[i + 1]])))
+                    fields = dict(
+                        v.split("=", 1) if "=" in v else (v, True) for v in next(csv.reader([args[i + 1]]))
+                    )
                     self.containers[identifier]["Mounts"].append(
                         {
                             "Type": "bind",
                             "Source": fields["source"],
                             "Destination": fields["target"],
-                            "RW": True,
+                            "RW": "readonly" not in fields,
                         }
                     )
             value = identifier

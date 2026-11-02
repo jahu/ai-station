@@ -130,6 +130,9 @@ jobs:
             backend/tests/test_desktop_update.py \
             backend/tests/test_desktop_native_storage.py \
             backend/tests/test_desktop_database_storage.py \
+            backend/tests/test_desktop_restore_owner.py \
+            backend/tests/test_desktop_restore_files.py \
+            backend/tests/test_desktop_restoration.py \
             backend/tests/test_desktop_database_fingerprint.py \
             backend/tests/test_desktop_snapshot.py \
             backend/tests/test_desktop_snapshot_files.py \
