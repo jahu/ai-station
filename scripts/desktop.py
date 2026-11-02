@@ -36,6 +36,7 @@ from desktop_control import request as control_request  # noqa: E402
 from desktop_docker_access import DockerAccessNeeded  # noqa: E402
 from desktop_docker_access import continue_setup as continue_docker_setup  # noqa: E402
 from desktop_docker_access import needed as docker_access_needed  # noqa: E402
+from desktop_engine import select as select_engine  # noqa: E402
 
 
 def digest(path):
@@ -264,9 +265,11 @@ def prerequisites():
             )
 
 
-def import_image(root, value, log):
+def import_image(root, value, log, *, engine=None):
+    engine = engine or select_engine(launch_environment())
     result = subprocess.run(
-        ["docker", "image", "inspect", value["image_tag"], "--format", "{{.Id}}"],
+        engine.command("image", "inspect", value["image_tag"], "--format", "{{.Id}}"),
+        env=engine.environment,
         capture_output=True,
         text=True,
         timeout=20,
@@ -289,9 +292,17 @@ def import_image(root, value, log):
             or manifests[0].get("RepoTags") != [value["image_tag"]]
         ):
             raise ValueError("The archive contains an unexpected application image")
-    subprocess.run(["docker", "load", "--input", str(archive)], stdout=log, stderr=log, check=True)
+    subprocess.run(
+        engine.command("load", "--input", str(archive)),
+        env=engine.environment,
+        stdout=log,
+        stderr=log,
+        check=True,
+    )
     observed = subprocess.check_output(
-        ["docker", "image", "inspect", value["image_tag"], "--format", "{{.Id}}"], text=True
+        engine.command("image", "inspect", value["image_tag"], "--format", "{{.Id}}"),
+        env=engine.environment,
+        text=True,
     ).strip()
     if observed != value["image_id"]:
         raise ValueError("The imported application image could not be verified")
@@ -418,11 +429,14 @@ def supervise(
     on_ready_url=lambda url: None,
     instance_id=None,
     host_port=None,
+    engine=None,
 ):
     instance_id = instance_id or uuid4().hex
     readiness("http://127.0.0.1:8765", instance_id)
     env = {
-        **launch_environment(),
+        **(
+            engine.environment if engine is not None and engine.identity is not None else launch_environment()
+        ),
         "AI_STATION_APP_IMAGE": value["image_tag"],
         "PYTHONNOUSERSITE": "1",
         "AI_STATION_DESKTOP_INSTANCE_ID": instance_id,
@@ -431,6 +445,16 @@ def supervise(
         if type(host_port) is not int or not 8765 <= host_port < 8865:
             raise ValueError("Choose a local desktop port between 8765 and 8864")
         env["AI_STATION_PORT"] = str(host_port)
+    docker_handoff = []
+    if engine is not None and engine.identity is not None:
+        # The child re-discovers and compares both coordinates before any engine
+        # operation. These are local routing coordinates, never credentials.
+        docker_handoff = [
+            "--docker-desktop-cli",
+            engine.identity[0],
+            "--docker-desktop-endpoint",
+            engine.identity[1],
+        ]
     proc = subprocess.Popen(
         [
             str(root / "python/bin/python3"),
@@ -440,6 +464,7 @@ def supervise(
             str(config),
             "--desktop",
             "--no-build",
+            *docker_handoff,
         ],
         env=env,
         cwd=root,
@@ -769,7 +794,8 @@ def main():
                 DesktopControl(control_directory(root)) as control,
             ):
                 progress.stage("Preparing the bundled application image…")
-                import_image(installed, value, log)
+                engine = select_engine(launch_environment())
+                import_image(installed, value, log, engine=engine)
                 if control.stop_requested.is_set():
                     return
                 progress.stage("Starting your local AI Station…")
@@ -786,6 +812,7 @@ def main():
                     on_ready_url=lambda url: publish_ready(root, url, instance_id=instance_id),
                     instance_id=instance_id,
                     host_port=args.host_port,
+                    engine=engine,
                 )
         finally:
             progress.close()

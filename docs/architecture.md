@@ -1268,3 +1268,11 @@ owned-file inspection without an SDK reports no runtime readiness, then ordinary
 verification binds the prepared opaque SDK reference before model use. The shared
 engine panel handles native SDK bytes/readiness/history separately from image
 layers while preserving the same license consent and Task/Run controls.
+
+Mac desktop image import and the existing Compose supervisor share process-local
+Docker Desktop routing: an installed application CLI and explicit local Unix
+endpoint. The child verifies the parent's discovered coordinates before starting
+or inspecting containers, and retains the same target through bootstrap and
+shutdown. No global context/settings, HTTP execution authority or Linux routing
+changes. This prepares the [Mac consumer path](plans/macos-consumer-installation.md);
+actual Docker Desktop transport and complete installation remain separate gates.

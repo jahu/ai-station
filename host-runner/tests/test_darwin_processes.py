@@ -414,38 +414,39 @@ def test_actual_gate_eof_or_wrong_acknowledgement_never_executes(tmp_path, ackno
 
 
 def test_candidate_restart_and_stop_only_the_owned_group(tmp_path, candidate_kernel):
-    manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
+    from test_runner_platform import exited_owner
+
+    manager = None
     unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)"])
     run_id = str(uuid4())
     try:
-        first = manager.start(
-            run_id=run_id,
-            argv=[sys.executable, "-c", "import time;time.sleep(30)"],
-            cwd=tmp_path,
-            executor="test",
-        )
+        # Recovery begins only after the real owner exits, not concurrently
+        # with its reaper writing the same journal under a different lock.
+        first = exited_owner(tmp_path, run_id, native_mode=True)
+        manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
         again = manager.start(
-            run_id=run_id, argv=[sys.executable, "-c", "raise Exception()"], cwd=tmp_path, executor="test"
+            run_id=run_id,
+            argv=[sys.executable, "-c", "raise Exception()"],
+            cwd=tmp_path,
+            executor="platform-fixture",
         )
         assert first["pid"] == again["pid"]
-        recovered = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
-        assert recovered.cancel(run_id)["status"] == "canceled"
+        assert manager.cancel(run_id)["status"] == "canceled"
         assert unrelated.poll() is None
     finally:
+        if manager is None:
+            manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
         manager.shutdown()
         unrelated.terminate()
         unrelated.wait(timeout=5)
 
 
 def test_candidate_reused_pid_in_journal_cannot_authorize_a_signal(tmp_path, monkeypatch, candidate_kernel):
-    manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
+    from test_runner_platform import exited_owner
+
     run_id = str(uuid4())
-    original = manager.start(
-        run_id=run_id,
-        argv=[sys.executable, "-c", "import time;time.sleep(30)"],
-        cwd=tmp_path,
-        executor="test",
-    )
+    original = exited_owner(tmp_path, run_id, native_mode=True)
+    manager = darwin.DarwinProcessManager(tmp_path, grace_seconds=0.05)
     records = manager._load()
     records[run_id]["native_identity"]["started_us"] += 1
     manager._dump(records)
@@ -453,9 +454,8 @@ def test_candidate_reused_pid_in_journal_cannot_authorize_a_signal(tmp_path, mon
     try:
         with monkeypatch.context() as patch:
             patch.setattr(os, "killpg", lambda *args: calls.append(args))
-            recovered = darwin.DarwinProcessManager(tmp_path)
-            assert recovered.cancel(run_id)["status"] == "interrupted"
-            assert not calls and manager._live[run_id].poll() is None
+            assert manager.cancel(run_id)["status"] == "interrupted"
+            assert not calls and manager._process_alive(original)
     finally:
         manager._dump({run_id: original})
         manager.shutdown()

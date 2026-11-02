@@ -1415,3 +1415,13 @@ it cannot relax the model-load SDK requirement or accept external files. Foreign
 native profiles are refused before transfer. Later metadata verification freezes
 the active prepared opaque SDK reference before registering the definition.
 No Docker-image readiness, Metal allocation or hard/no-swap guarantee is inferred.
+
+The trusted Mac desktop importer and supervisor pin every Docker command to the
+discovered installed application CLI and explicit local Unix endpoint. Context,
+TLS/config and builder environment overrides cannot redirect those commands.
+The supervisor re-discovers and matches the parent's coordinates before engine
+operations; a changed connection fails rather than cleaning up another station.
+Normal shutdown still targets only its Compose project without volume/image
+removal. These local installer arguments create no HTTP, Runner or agent tool.
+The consumer platform gate remains closed pending actual Mac transport/first-run
+qualification; successful neutral CLI tests alone do not enable Mac installation.

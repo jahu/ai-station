@@ -24,6 +24,21 @@ resources, while the consumer prerequisite gate remains closed pending actual
 transport and first-run acceptance.
 [Docker's default CLI locations and user permissions](https://docs.docker.com/desktop/setup/install/mac-permission-requirements/).
 
+The shared desktop importer and foreground supervisor now consume that discovery
+through `desktop_engine.py`. Mac image inspect/load/reinspection, Compose startup,
+first-admin console and data-preserving shutdown all use the selected absolute
+CLI and explicit `--host` Unix endpoint. Docker context/TLS/config and remote
+builder environment overrides are removed. The parent passes both coordinates;
+the child independently re-discovers them and refuses a changed connection before
+an engine operation. Linux/WSL retain their existing Docker configuration.
+Neutral executable fixtures exercise real child processes and failure cleanup;
+these checks do not qualify a Docker Desktop VM, native socket sharing or a
+complete Mac installation. The consumer prerequisite gate remains in place.
+The supervisor explicitly imports helpers from its own bundled scripts under
+isolated Python. The native bundle experiment also starts the actual installed
+supervisor with `-IB --help`, without Docker or station-data creation, to check
+this entry boundary independently of the `.app` manifest check.
+
 Docker's maintainer reports support for shared native Unix sockets with Docker
 Desktop 4.87, Docker VMM and its enabled socket-sharing component. This changes
 the older assumption that an extra TCP bridge is always necessary. Use an actual
