@@ -130,10 +130,14 @@ The application-image integration uses `compose.macos.yaml` and the internal
 service receives the client certificate directory; only that service writes
 the private tmpfs socket volume. API, worker and scheduler retain read-only
 socket mounts and wait for a health request that traverses the complete link.
-The supervisor must create the native owner after Runner identity/readiness,
-monitor its retained process and stop the owned Compose project before closing
-the helper. Until that lifecycle is connected and qualified, the overlay is an
-internal candidate and is not selected by the ordinary launcher.
+The supervisor creates the native owner only after Runner identity/readiness,
+monitors its retained process and stops the owned Compose project before closing
+the helper. Credentials remain outside container-mounted application data; a
+failed Compose shutdown retains them for inspection after the listener closes.
+The pinned Mac engine selects this overlay; Linux/WSL keep their existing direct
+socket and launch behavior. The full Mac consumer prerequisite gate stays closed,
+and database storage, backup/update and full application qualification remain
+required before admitting an installation.
 
 - Actual same-host UDS → mutual TLS → UDS with neutral HTTP/streaming. Reject
   absent/foreign certificates, wrong native peers, changed credential/socket

@@ -119,6 +119,12 @@ def stop_runner(proc: subprocess.Popen | None) -> None:
             proc.wait()
 
 
+def start_native_connection(env):
+    from macos_runner_link import NativeConnection
+
+    return NativeConnection(env).start()
+
+
 def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "") -> str:
     """Ask only the owned container console for pending first-admin setup."""
     if instance_id:
@@ -191,6 +197,15 @@ def main() -> None:
     runtime = Path(env["AI_STATION_DATA_HOST_PATH"]) / "runtime"
     runtime.mkdir(exist_ok=True)
     compose = engine.command("compose", "-f", str(ROOT / "compose.yaml"))
+    if engine.identity is not None:
+        # Read-only `compose ps` needs valid interpolation before the Runner
+        # starts. Zero cannot open the service; start_native_connection replaces
+        # both coordinates with a fresh owned generation before `compose up`.
+        env.update(
+            AI_STATION_NATIVE_CONNECTION_DIR=env["AI_STATION_RUNNER_SOCKET_DIR"],
+            AI_STATION_NATIVE_CONNECTION_PORT="0",
+        )
+        compose += ["-f", str(ROOT / "compose.macos.yaml")]
     if env.get("AI_STATION_LAN_HOST"):
         compose += ["-f", str(ROOT / "compose.lan.yaml")]
     if args.dev:
@@ -211,6 +226,7 @@ def main() -> None:
                 "This Compose project already has containers; inspect them before starting another supervisor"
             )
         proc = None
+        connection = None
         started = False
 
         def shutdown(_signum, _frame):
@@ -247,6 +263,8 @@ def main() -> None:
                     if proc.poll() is not None or time.monotonic() > deadline:
                         raise RuntimeError("Host Runner did not become healthy")
                     time.sleep(0.2)
+            if engine.identity is not None:
+                connection = start_native_connection(env)
             started = True
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
@@ -270,6 +288,8 @@ def main() -> None:
             if env.get("AI_STATION_LAN_HOST"):
                 print(f"Private LAN: http://{env['AI_STATION_LAN_HOST']}:{port}", flush=True)
             while True:
+                if connection is not None:
+                    connection.check()
                 if proc is not None and proc.poll() is not None:
                     raise RuntimeError("Host Runner exited unexpectedly")
                 time.sleep(1)
@@ -278,11 +298,17 @@ def main() -> None:
         finally:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            cleaned = not started
             try:
                 if started:
                     subprocess.run(data_preserving_compose_down(compose), env=env, check=True)
+                    cleaned = True
             finally:
-                stop_runner(proc)
+                try:
+                    if connection is not None:
+                        connection.close(remove_credentials=cleaned)
+                finally:
+                    stop_runner(proc)
 
 
 if __name__ == "__main__":
