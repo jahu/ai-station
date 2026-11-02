@@ -284,6 +284,33 @@ and complete preserving-update qualification remain required.
 
 ## Acceptance evidence
 
+### Fixed image dispatch and activation contract
+
+After the consented native handoff, require an empty inventory for the exact
+configured Compose project. Do not stop or adopt unknown containers. Freeze the
+local Docker connection, namespace, previous/target packages and operation UUID
+in private installer storage outside mounted data. Dispatch only the verified
+target image's `app.desktop_upgrade` prepare/publish/abort/status commands, with
+network disabled, no GPU/socket access, one data mount, non-root UID/GID, bounded
+CPU/RAM/pids and a read-only root filesystem. Never inherit a shell command or
+host environment as workload configuration.
+
+Journal container identity and command intent before creation/start. Inspect
+identity, labels, image, command and isolation before waiting, collecting output
+or stopping that exact container. A lost acknowledgement is inspected against
+the original container; never restart a command that may already have executed.
+Retain original/staged database files and private outcomes on failure. Remove
+only confirmed owned containers; uncertain creation or cleanup stays fenced.
+
+A separate data-root dispatch fence blocks API/supervisor startup before Docker
+receives a request, including the gap before SQLite preparation creates its own
+transaction fence. On successful publication, atomically activate the target's
+`starting` version receipt before removing the dispatch fence. An acknowledged
+abort preserves the previous receipt. A retry after completed activation reports
+its retained outcome without reverting a newer owner or replaying migration.
+This is internal installer infrastructure, not an Update button or qualification
+of the full Mac Docker Desktop/consumer journey.
+
 ### Owner-dispatched public Mac checks
 
 The repository is now public. GitHub documents standard public-repository runners

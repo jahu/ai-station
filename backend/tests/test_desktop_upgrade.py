@@ -113,11 +113,15 @@ def test_prepare_publish_preserves_all_rows_cookie_agents_jobs_and_artifact(save
     assert "synthetic upgrade account password" not in json.dumps(result)
 
 
-def test_pending_upgrade_blocks_api_migration_and_supervisor_start(saved):
+@pytest.mark.parametrize("marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json"])
+def test_pending_upgrade_blocks_api_migration_and_supervisor_start(saved, marker):
     from app.api import app
 
     root, _, _ = saved
-    prepare(saved)
+    if marker == upgrade.MARKER:
+        prepare(saved)
+    else:
+        (root / "runtime" / marker).write_text("Pre-dispatch installer fence")
     before = upgrade.fingerprint(root)
     with pytest.raises(RuntimeError, match="pending offline desktop upgrade"):
         migrate()
@@ -129,7 +133,8 @@ def test_pending_upgrade_blocks_api_migration_and_supervisor_start(saved):
     assert upgrade.fingerprint(root) == before
 
 
-def test_api_rechecks_pending_upgrade_after_waiting_for_migration_lock(saved, monkeypatch):
+@pytest.mark.parametrize("marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json"])
+def test_api_rechecks_pending_upgrade_after_waiting_for_migration_lock(saved, monkeypatch, marker):
     root, _, _ = saved
     reached, errors = threading.Event(), []
     original = database.require_upgrade_finished
@@ -151,7 +156,7 @@ def test_api_rechecks_pending_upgrade_after_waiting_for_migration_lock(saved, mo
         worker = threading.Thread(target=start)
         worker.start()
         assert reached.wait(5)
-        (root / "runtime" / upgrade.MARKER).write_text("pending fixture")
+        (root / "runtime" / marker).write_text("pending fixture")
     worker.join(timeout=10)
     assert not worker.is_alive() and len(errors) == 1 and isinstance(errors[0], RuntimeError)
     assert "pending offline desktop upgrade" in str(errors[0])

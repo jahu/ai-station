@@ -33,6 +33,14 @@ only after its matching API instance is ready. Changed packages/storage require
 an explicit verified upgrade. The consumer prerequisite gate remains closed
 until the complete Mac installation and preserving-update path is qualified.
 
+The internal desktop image-upgrade coordinator dispatches only the verified
+application image's fixed offline SQLite transaction commands. It journals owned
+container identity outside mounted data, checks the configured Compose project
+has shut down, and fences startup before dispatch. Publication activates a
+`starting` target version receipt before removing that fence; failed/uncertain
+requests retain their records and original database. No ordinary workload gains
+Docker authority, and the complete Mac installer remains gated.
+
 The [Mac delivery contract](plans/macos-consumer-installation.md) retains the same
 control plane and private native bridge. Native ownership, installed Python,
 AppKit presentation and application-bundle entry have passed ARM/Intel component

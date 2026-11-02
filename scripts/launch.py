@@ -95,9 +95,12 @@ def data_preserving_compose_down(compose: list[str]) -> list[str]:
 
 
 def ensure_recovery_finished(runtime: Path) -> None:
-    upgrade = runtime / "desktop-upgrade-pending.json"
-    if upgrade.exists() or upgrade.is_symlink():
-        raise RuntimeError("Finish or abort the pending offline desktop upgrade before starting AI Station")
+    for name in ("desktop-upgrade-pending.json", "desktop-upgrade-dispatch-pending.json"):
+        upgrade = runtime / name
+        if upgrade.exists() or upgrade.is_symlink():
+            raise RuntimeError(
+                "Finish or abort the pending offline desktop upgrade before starting AI Station"
+            )
     marker = runtime / "recovery-pending.json"
     if marker.exists() or marker.is_symlink():
         raise RuntimeError(

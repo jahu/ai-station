@@ -161,9 +161,12 @@ def alembic_config() -> Config:
 
 
 def require_upgrade_finished(data_dir: Path) -> None:
-    pending = data_dir / "runtime/desktop-upgrade-pending.json"
-    if pending.exists() or pending.is_symlink():
-        raise RuntimeError("Finish or abort the pending offline desktop upgrade before starting AI Station")
+    for name in ("desktop-upgrade-pending.json", "desktop-upgrade-dispatch-pending.json"):
+        pending = data_dir / "runtime" / name
+        if pending.exists() or pending.is_symlink():
+            raise RuntimeError(
+                "Finish or abort the pending offline desktop upgrade before starting AI Station"
+            )
 
 
 def migrate() -> None:

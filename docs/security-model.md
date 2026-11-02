@@ -54,6 +54,15 @@ coordinates must agree before a future updater can target an instance. Missing,
 changed or unsafe receipts require inspection rather than automatic adoption.
 This adds no web/agent operation or permission to migrate/stop an installation.
 
+The offline image updater freezes its local Docker connection and exact package
+image. Its containers have one application-data mount, no network/GPU/Runner
+socket, non-root execution and bounded CPU/RAM/pids. Private journal intent precedes
+container creation/start; signals and cleanup require matching identity, labels,
+image, command and isolation. A dispatch fence blocks API/supervisor startup before
+the image can run. Native target activation follows verified database publication;
+uncertain dispatches remain fenced rather than replayed. This is trusted local
+installer code, with no HTTP/agent entry point. Full Mac acceptance remains gated.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.
