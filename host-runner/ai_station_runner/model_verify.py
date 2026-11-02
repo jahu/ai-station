@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.gguf_context import inspect_context
@@ -28,8 +29,19 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
-    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
-        default=None, exclude_if=lambda v: v is None
+    runtime_profile: (
+        Literal[
+            "llamacpp-cpu-linux-amd64-v1",
+            "llamacpp-native-darwin-arm64-b12032-v2",
+            "llamacpp-native-darwin-x86_64-b12032-v2",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
+    context_size: StrictInt | None = Field(
+        default=None, ge=512, le=262144, multiple_of=256, exclude_if=lambda v: v is None
     )
     permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
 
@@ -38,6 +50,19 @@ class VerifyModel(BaseModel):
         from ai_station_runner.owned_models import validate_reference
 
         validate_reference(self.host_path, self.model_sha256, self.app_owned)
+        if self.runtime_profile and self.runtime_profile.startswith("llamacpp-native-darwin-"):
+            if (
+                not self.app_owned
+                or not self.check_context
+                or self.check_image
+                or not self.environment_id
+                or self.context_size is None
+            ):
+                raise ValueError(
+                    "Native model inspection requires owned weights, context and its opaque SDK reference"
+                )
+        elif self.environment_id is not None or self.context_size is not None:
+            raise ValueError("Native SDK coordinates require an explicit native model profile")
         return self
 
 
@@ -58,6 +83,12 @@ def _missing(path: Path, *, symlink: bool, error: str) -> dict:
 def verify_model(body: VerifyModel) -> dict:
     if set(body.permissions) != {"filesystem_read", "manage_models"}:
         raise HTTPException(403, "Model installation requires filesystem read and model management")
+    if body.environment_id is not None:
+        from ai_station_runner.native_model_verify import verify
+
+        return verify(body)
+    if sys.platform != "linux":
+        raise HTTPException(503, "This model inspection profile requires a Linux Host Runner")
     settings = get_settings()
     if body.app_owned:
         from ai_station_runner.owned_models import owned_model

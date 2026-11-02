@@ -152,7 +152,7 @@ def preset_of(row: ModelDefinition) -> dict:
         ],
         "context_size": context_size,
         "cache_type": cache_type,
-        **{k: meta[k] for k in ("runtime_profile", "ram_mib") if meta.get(k) is not None},
+        **{k: meta[k] for k in ("runtime_profile", "ram_mib", "environment_id") if meta.get(k) is not None},
     }
 
 
@@ -325,7 +325,9 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         )
     if active_install(session, row.id):
         raise HTTPException(409, "This definition already has an active installation Run")
-    check_image = needs_llama_image(file)
+    from app.native_models import native
+
+    check_image = needs_llama_image(file) and not native(row.metadata_json)
     task = create_task(
         session,
         title="Install " + row.name,
@@ -346,9 +348,10 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **({"context_size": preset_of(row)["context_size"]} if native(row.metadata_json) else {}),
             **{
                 k: row.metadata_json[k]
-                for k in ("runtime_profile", "ram_mib")
+                for k in ("runtime_profile", "ram_mib", "environment_id")
                 if row.metadata_json.get(k) is not None
             },
         },
@@ -373,7 +376,11 @@ def load_definition(definition_id: UUID, body: EmptyBody, session: DB):
     run = enqueue_load(
         LoadModel(
             model_file_id=file.id,
-            **{k: preset[k] for k in ("runtime_profile", "ram_mib") if preset.get(k) is not None},
+            **{
+                k: preset[k]
+                for k in ("runtime_profile", "ram_mib", "environment_id")
+                if preset.get(k) is not None
+            },
             gpus=preset["gpus"],
             context_size=preset["context_size"],
             cache_type=preset["cache_type"],
@@ -411,6 +418,8 @@ class ModelInstallExecutor:
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
+        from app.native_models import native, ready, verification
+
         try:
             report = RunnerClient(timeout=20).verify_model(
                 {
@@ -424,11 +433,7 @@ class ModelInstallExecutor:
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
-                    **(
-                        {"check_context": True, "runtime_profile": run.parameters["runtime_profile"]}
-                        if run.parameters.get("runtime_profile")
-                        else {}
-                    ),
+                    **(verification(run.parameters) if run.parameters.get("runtime_profile") else {}),
                     "permissions": run.effective_permissions,
                 }
             )
@@ -469,9 +474,11 @@ class ModelInstallExecutor:
                 == {
                     "runtime_profile": run.parameters["runtime_profile"],
                     "ram_mib": run.parameters["ram_mib"],
-                    "context_size": 4096,
+                    "context_size": run.parameters.get("context_size", 4096),
                 }
             )
+            if native(run.parameters):
+                ok = bool(ok and ready(report, run.parameters))
         image = report.get("image")
         if run.parameters.get("check_image"):
             ok = bool(ok and isinstance(image, dict) and image.get("present"))

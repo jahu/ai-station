@@ -23,6 +23,7 @@ _DARWIN_OPERATIONS = frozenset(
         ("POST", "/v1/setup/native-llama/{identity}/cancel"),
         ("POST", "/v1/setup/native-llama/{identity}/adopt"),
         ("POST", "/v1/llama/load"),
+        ("POST", "/v1/models/verify"),
         ("GET", "/v1/llama/{instance_id}"),
         ("POST", "/v1/llama/{instance_id}/stop"),
         ("POST", "/v1/llama/{instance_id}/chat/completions"),
