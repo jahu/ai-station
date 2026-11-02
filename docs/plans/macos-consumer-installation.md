@@ -32,6 +32,15 @@ automation. It uses a standard free public Intel host, no Docker/model and no
 OS permission changes. This establishes native UI automation availability and
 control behavior, not the complete distributed package or installed journey.
 
+[Actual system UI run 41531861624](https://github.com/jahu/ai-station/actions/runs/41531861624)
+passed all four tests on Intel macOS, without skips or OS permission changes.
+It exposed a real presentation defect: modal helper processes never entered
+`NSApplication.run`, so they had not completed application launch and their
+controls were unavailable to accessibility. Modal helpers now explicitly call
+`finishLaunching`; the main application and progress windows retain their normal
+event loops. Queries target the actual dialog, excluding duplicate Touch Bar
+buttons. This verifies the controls, not a successful full-package installation.
+
 The separate manual `macos-consumer-backend` job reuses the fresh-host, fixed
 Docker Desktop installer guards and builds the real native Python, Runner,
 interface, control-plane image and `.app`. Its explicit CPU model fixture is the
