@@ -99,6 +99,10 @@ if [[ -e '/Library/Application Support/com.docker.docker/install-settings.json' 
 fi
 /usr/bin/hdiutil detach "$qa_root/mount"
 rm "$qa_root/mounted"
+# The verified installer belongs only to this fresh QA VM. The signed installed
+# app and checksum evidence are retained; do not carry a second multi-GB copy
+# into the actual image/package/model experiment.
+rm "$qa_root/Docker.dmg"
 # A fresh headless installation has no Launch Services registration yet. Open
 # this exact installed app first; the vendor CLI locates it by bundle identity.
 /usr/bin/open -a /Applications/Docker.app
