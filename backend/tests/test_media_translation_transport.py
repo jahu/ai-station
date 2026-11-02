@@ -52,3 +52,44 @@ def test_translation_requires_a_complete_model_response_without_new_runner_field
         with pytest.raises(ProviderError, match="did not complete"):
             asyncio.run(consume())
     assert "tools" not in requests[0] and "require_complete" not in requests[0]
+
+
+def test_owned_preparation_transmits_bounded_fields_over_existing_runner_transport(monkeypatch):
+    original = httpx.AsyncClient
+    captured = []
+    answer = '{"prompt":"A red bicycle"}'
+
+    def reply(request):
+        captured.append((str(request.url), json.loads(request.content)))
+        chunks = [
+            {"choices": [{"delta": {"content": answer}}]},
+            {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+        ]
+        return httpx.Response(
+            200, content="".join("data: " + json.dumps(c) + "\n\n" for c in chunks) + "data: [DONE]\n\n"
+        )
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(reply)))
+
+    async def consume():
+        return "".join(
+            [
+                text
+                async for text in LocalChatProvider().stream(
+                    endpoint="llamacpp:00000000-0000-4000-8000-000000000001",
+                    model="llamacpp:00000000-0000-4000-8000-000000000002",
+                    messages=[{"role": "user", "content": "A bicycle"}],
+                    temperature=0.7,
+                    max_tokens=1024,
+                    json_output=True,
+                    require_complete=True,
+                    response_fields={"prompt": 512},
+                )
+            ]
+        )
+
+    assert asyncio.run(consume()) == answer
+    url, body = captured[0]
+    assert url == "http://runner/v1/llama/00000000-0000-4000-8000-000000000001/chat/completions"
+    assert body["response_fields"] == {"prompt": 512} and body["json_output"] is True
+    assert "response_format" not in body and "require_complete" not in body

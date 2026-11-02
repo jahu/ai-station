@@ -9,6 +9,7 @@ from app.image_schema import ImageRequest
 from app.media_translation import RECEIPT
 from app.media_translation_text import TranslationOptions
 from fastapi.testclient import TestClient
+from test_llama import managed as managed
 from test_media_translation import fake as fake
 from test_media_translation import read, settings, submit, work
 
@@ -31,6 +32,8 @@ def test_enhancement_runs_locally_even_when_translation_is_off_and_reaches_gener
     async def enhance(session, parameters):
         calls.append(parameters)
         assert parameters["provider"] == "local-openai-compatible" and parameters["location"] == "local"
+        assert parameters["temperature"] == 0.0
+        assert "This request has no protected placeholders" in parameters["system_prompt"]
         assert "Preserve each field's original language" in parameters["system_prompt"]
         fields = json.loads(parameters["messages"][-1]["content"])
         yield json.dumps({key: text + ", delikatne światło poranka" for key, text in fields.items()})
@@ -50,6 +53,18 @@ def test_enhancement_runs_locally_even_when_translation_is_off_and_reaches_gener
         assert prepared["metadata"][RECEIPT]["original"]["prompt"] == "czerwony rower"
         assert work() == media["id"]
         assert outputs[0]["prompt"] == prepared["parameters"]["prompt"]
+
+
+def test_managed_preparation_freezes_bounded_fields_without_changing_generation_inputs(fake, managed):
+    model_id, _ = managed
+    with TestClient(app) as api:
+        settings(api, enabled=False, model="llamacpp:" + model_id)
+        media = submit(api, translation={"enhance": True})
+        prep = read(api, media["metadata"][RECEIPT]["preparation_run_id"])
+        params = prep["parameters"]
+        assert params["response_fields"] == {"prompt": 512}
+        assert params["temperature"] == 0.7 and params["require_complete"] and params["json_output"]
+        assert media["parameters"]["prompt"] == "czerwony rower"
 
 
 def test_use_original_explicitly_bypasses_enhancement_on_recovery(fake):
