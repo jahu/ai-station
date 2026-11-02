@@ -132,6 +132,8 @@ jobs:
             backend/tests/test_macos_desktop_docker.py \
             backend/tests/test_desktop_bridge.py \
             backend/tests/test_desktop_link.py \
+            backend/tests/test_desktop_connection.py \
+            backend/tests/test_macos_runner_link.py \
             backend/tests/test_macos_transport_probe.py
       - name: Assemble fixed native Python layer
         env:

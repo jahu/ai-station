@@ -121,10 +121,11 @@ def test_native_import_load_reinspection_use_one_selected_engine(installed, tmp_
     assert len(rows) == 4
 
 
-@pytest.mark.parametrize("fail_up", [False, True])
-def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path, monkeypatch, fail_up):
+@pytest.mark.parametrize("failure", [None, "up", "down", "connection"])
+def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path, monkeypatch, failure):
     env = {
         "AI_STATION_DATA_HOST_PATH": str(tmp_path),
+        "AI_STATION_RUNNER_SOCKET_DIR": str(tmp_path / "native-runner"),
         "COMPOSE_PROJECT_NAME": "ai-station-neutral-test",
         "DOCKER_CONTEXT": "remote-fixture",
         "DOCKER_HOST": "tcp://remote.invalid:2375",
@@ -133,6 +134,12 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
     monkeypatch.setattr(launch.os, "chdir", lambda _: None)
     monkeypatch.setattr(launch.signal, "signal", lambda *args: None)
     monkeypatch.setattr(launch, "runner_health", lambda _: True)
+    # This test exercises actual CLI routing with a neutral Runner fixture.
+    # The native helper and real TLS lifecycle have separate process tests.
+    connection = Mock()
+    if failure == "connection":
+        connection.check.side_effect = RuntimeError("Owned native connection exited")
+    monkeypatch.setattr(launch, "start_native_connection", Mock(return_value=connection))
     monkeypatch.setattr(
         launch.sys,
         "argv",
@@ -151,7 +158,7 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
 
     def execute(argv, **kwargs):
         result = original_run(argv, **kwargs)
-        if fail_up and "up" in argv:
+        if failure in {"up", "down"} and failure in argv:
             raise launch.subprocess.CalledProcessError(7, argv)
         return result
 
@@ -175,8 +182,11 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
     monkeypatch.setattr(
         launch.httpx, "Client", lambda **kwargs: original_client(transport=httpx.MockTransport(reply))
     )
-    if fail_up:
+    if failure in {"up", "down"}:
         with pytest.raises(launch.subprocess.CalledProcessError):
+            launch.main()
+    elif failure == "connection":
+        with pytest.raises(RuntimeError, match="Owned native connection exited"):
             launch.main()
     else:
         launch.main()
@@ -187,7 +197,7 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
     assert commands[0][-3:] == ["ps", "--all", "--quiet"]
     assert commands[1][-6:] == ["up", "--no-build", "--detach", "--wait", "--wait-timeout", "120"]
     assert commands[-1][-3:] == ["down", "--timeout", "10"]
-    if not fail_up:
+    if failure != "up":
         assert commands[2][-8:] == [
             "exec",
             "-T",
@@ -202,6 +212,9 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
     assert all(row["args"][:2] == ["--host", installed.endpoint] for row in rows[1:])
     assert all(row["env"].get("DOCKER_CONTEXT") is None for row in rows[1:])
     assert all(row["env"]["COMPOSE_PROJECT_NAME"] == env["COMPOSE_PROJECT_NAME"] for row in rows[1:])
+    assert all(str(launch.ROOT / "compose.macos.yaml") in command for command in commands)
+    launch.start_native_connection.assert_called_once()
+    connection.close.assert_called_once_with(remove_credentials=failure != "down")
 
 
 @pytest.mark.parametrize("changed", ["binary", "endpoint"])
