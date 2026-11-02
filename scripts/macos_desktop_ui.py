@@ -92,7 +92,7 @@ def stop_window(process):
 
 
 class Preparation:
-    def __init__(self, root):
+    def __init__(self, root, *, heading=None):
         self.process = subprocess.Popen(
             [str(binary(root)), "--native-progress"],
             stdin=subprocess.PIPE,
@@ -100,6 +100,9 @@ class Preparation:
             stderr=subprocess.DEVNULL,
             env=environment(),
         )
+        if heading is not None:
+            self.process.stdin.write(payload({"heading": heading}))
+            self.process.stdin.flush()
 
     def stage(self, text):
         if self.process.poll() is None:

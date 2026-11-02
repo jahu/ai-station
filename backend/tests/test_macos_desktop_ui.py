@@ -70,6 +70,16 @@ def test_unexpected_dialog_failure_is_not_reported_as_user_approval(package, mon
         ui.dialog(root, "--question")
 
 
+def test_update_heading_uses_private_bounded_presentation_frames(package, monkeypatch):
+    root, _ = package
+    channel = io.BytesIO()
+    process = SimpleNamespace(stdin=channel, poll=lambda: 0, wait=lambda **kw: 0)
+    monkeypatch.setattr(ui.subprocess, "Popen", lambda *a, **kw: process)
+    progress = ui.Preparation(root, heading="Preparing your local update")
+    assert json.loads(channel.getvalue()) == {"heading": "Preparing your local update"}
+    progress.close()
+
+
 @pytest.mark.parametrize("action,expected", [("stop", "stop"), ("background", "background")])
 def test_running_window_returns_only_selected_action_and_never_passes_readiness_token(
     package, monkeypatch, action, expected

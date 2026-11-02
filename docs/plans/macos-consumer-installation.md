@@ -284,6 +284,33 @@ and complete preserving-update qualification remain required.
 
 ## Acceptance evidence
 
+### Native update entry point
+
+The running native launcher offers a local application-bundle chooser. Its
+existing verified Python validates the downloaded bundle's architecture, minimum
+OS, manifest and inventory, then copies an immutable retained payload. Import
+and disposable bridge checks use the current trusted installer before presenting
+the version-change/Stop consent. Cancel keeps the running owner. Accepted updates
+reuse the native handoff and fixed image transaction; they never replace a live
+checkout or unrelated application files.
+
+The native parent tracks the updater as its own child and adopts it as the new
+supervisor after the old owner exits. Quit signals only those owned tasks. The
+minimal original application bundle remains a bootstrap: cold launches verify
+the active private receipt and retained payload before executing its interpreter.
+The web application/runtime payload updates without rewriting `/Applications`
+or requiring administrator access. Bootstrap bundle replacement/signing remains
+part of complete distribution qualification, not an implicit filesystem action.
+
+A dispatch fence on cold launch offers to continue the exact retained operation;
+it cannot start the previous application against uncertain data. Reconstruct the
+same engine/namespace/request, inspect its existing command and only publish a
+confirmed prepared transaction. A confirmed abort returns to the previous
+payload. Uncertain starts or failed partial publication require inspection rather
+than automatic retries or data rollback. No setup token enters native UI frames.
+These candidate routes preserve the Mac consumer prerequisite gate until real
+Docker Desktop and complete first-run/update/removal qualification is available.
+
 ### Fixed image dispatch and activation contract
 
 After the consented native handoff, require an empty inventory for the exact

@@ -34,6 +34,8 @@ def build(output, architecture):
             "-fmodules",
             "-framework",
             "Cocoa",
+            "-framework",
+            "UniformTypeIdentifiers",
             "-arch",
             architecture,
             "-mmacosx-version-min=" + ".".join(map(str, minimum)),
