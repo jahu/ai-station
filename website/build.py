@@ -54,6 +54,8 @@ def build(output: Path) -> None:
         "LICENSE_URL": f"{repository}/blob/{branch}/LICENSE",
         "COMMERCIAL_URL": f"{repository}/blob/{branch}/COMMERCIAL.md",
         "CONTRIBUTING_URL": f"{repository}/blob/{branch}/CONTRIBUTING.md",
+        "ISSUES_URL": f"{repository}/issues/new",
+        "SUGGEST_URL": f"{repository}/issues/new?title=Suggestion%3A%20",
     }
     document = (ROOT / "src/index.html").read_text()
     for key, value in values.items():

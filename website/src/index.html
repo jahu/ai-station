@@ -5,20 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Your personal local AI workstation. Chat, create images and video, work with voice and music, and put agents to work on your own hardware."
+      content="Local AI, made simple. A familiar ChatGPT-style experience for conversations, images, video, voice, music and agents on your own computer."
     />
     <meta name="theme-color" content="#101310" />
     <meta property="og:type" content="website" />
-    <meta
-      property="og:title"
-      content="{{NAME}} — Your AI. Your hardware. Your rules."
-    />
+    <meta property="og:title" content="{{NAME}} — Local AI, made simple." />
     <meta
       property="og:description"
-      content="Chat. Create. Automate. One local workstation, powered by your own models."
+      content="Your own AI, in one familiar app. We are making local AI approachable, from installation to your first idea."
     />
     {{CANONICAL_META}}
-    <title>{{NAME}} — Your AI. Your hardware. Your rules.</title>
+    <title>{{NAME}} — Local AI, made simple.</title>
     <link rel="icon" href="assets/station.svg" type="image/svg+xml" />
     <link
       rel="preload"
@@ -49,7 +46,7 @@
         </button>
         <nav id="navigation" aria-label="Main navigation">
           <a href="#possibilities">Possibilities</a
-          ><a href="#local">Why local</a><a href="#benchmarks">The numbers</a>
+          ><a href="#local">Why local</a><a href="#feedback">Feedback</a>
           <a class="nav-github" href="{{REPO}}"
             ><svg width="18" height="18" aria-hidden="true">
               <use href="#icon-github" />
@@ -67,17 +64,16 @@
           <span class="pill-version">v{{VERSION}}</span
           ><span aria-hidden="true">↗</span></a
         >
-        <p class="eyebrow">YOUR PERSONAL AI WORKSTATION</p>
-        <h1 id="hero-title">
-          Big ideas.<br /><span>Local intelligence.</span>
-        </h1>
+        <p class="eyebrow">LOCAL AI. ONE SIMPLE APP.</p>
+        <h1 id="hero-title">Your own AI.<br /><span>Made simple.</span></h1>
         <p class="hero-copy">
-          Chat, create and put agents to work.<br />Your models. Your hardware.
-          One place for all of it.
+          A familiar ChatGPT-style experience, on your own computer.<br />
+          Chat, create images and videos, work with voice and music — in one
+          app.
         </p>
         <div class="hero-actions">
           <a class="button primary" href="#install"
-            >Build your station <span aria-hidden="true">↗</span></a
+            >Try {{NAME}} <span aria-hidden="true">↗</span></a
           ><a class="button secondary" href="assets/station-tour.mp4" data-tour
             ><span class="play-icon" aria-hidden="true">▶</span> Take a look
             around</a
@@ -186,7 +182,7 @@
         class="runtime-strip shell"
         aria-label="Compatible local runtimes"
       >
-        <p>Built around real local runtimes</p>
+        <p>Powerful local models. One simple workspace.</p>
         <div>
           <span>llama.cpp</span><span>Wan</span><span>EchoMimic</span
           ><span>Chatterbox</span><span>ACE-Step</span>
@@ -398,16 +394,60 @@
         <div class="install-card">
           <div class="install-intro">
             <span class="install-version">LINUX · v{{VERSION}}</span>
-            <h2 id="install-title">Your next idea<br />starts here.</h2>
-            <p>Bring a workstation. Make it your own.</p>
-            <a class="button dark-button" href="{{SETUP_URL}}"
-              >Follow the setup guide <span aria-hidden="true">↗</span></a
+            <h2 id="install-title">Download.<br />Install. Create.</h2>
+            <p>
+              You shouldn't need to understand AI to use it. We're making local
+              AI as approachable as installing an app and starting a
+              conversation.
+            </p>
+            <a class="button dark-button" href="{{RELEASE_URL}}"
+              >Try the early release <span aria-hidden="true">↗</span></a
             >
             <p class="install-requirements">
-              Today: Linux, Python 3.12+, Docker and configured models/runtimes.
-              Guided setup and in-app model downloads are on the roadmap.
+              Today: v{{VERSION}} uses Linux, Python, Docker and configured
+              models. Development builds offer guided model setup. Desktop
+              installers are still being tested.
+              <a href="{{SETUP_URL}}">Current setup guide →</a>
             </p>
           </div>
+          <div class="simple-start">
+            <p class="eyebrow">THE EXPERIENCE WE'RE BUILDING</p>
+            <ol class="setup-steps">
+              <li>
+                <span aria-hidden="true">01</span>
+                <div>
+                  <h3>Download one app</h3>
+                  <p>A single place for your local AI tools.</p>
+                </div>
+              </li>
+              <li>
+                <span aria-hidden="true">02</span>
+                <div>
+                  <h3>Follow a guided setup</h3>
+                  <p>
+                    Your hardware is checked. Models that fit are suggested. You
+                    choose what you want to create.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span aria-hidden="true">03</span>
+                <div>
+                  <h3>Start with an idea</h3>
+                  <p>
+                    Ask a question, make something or put an agent to work. No
+                    AI expertise needed.
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+        <details class="current-setup">
+          <summary>
+            Set up today's Linux release
+            <span>Early testers · v{{VERSION}}</span>
+          </summary>
           <div class="terminal">
             <div class="terminal-bar">
               <span><i aria-hidden="true"></i> GET STARTED</span
@@ -433,6 +473,35 @@ cp .env.example .env
               → http://127.0.0.1:8765
             </div>
             <p id="copy-status" role="status" aria-live="polite"></p>
+          </div>
+        </details>
+      </section>
+
+      <section
+        class="section shell feedback-section"
+        id="feedback"
+        aria-labelledby="feedback-title"
+      >
+        <div class="feedback-card">
+          <div>
+            <p class="eyebrow">BUILD THIS WITH US</p>
+            <h2 id="feedback-title">
+              Help make local AI<br /><span>effortless.</span>
+            </h2>
+            <p>
+              We especially need testers and honest feedback. Try it on your
+              hardware. Tell us what worked, what broke and where you got stuck.
+              Confusing setup is worth reporting, too.
+            </p>
+            <p>You don't need to write code to help.</p>
+          </div>
+          <div class="feedback-actions">
+            <a class="button primary" href="{{ISSUES_URL}}"
+              >Report a bug <span aria-hidden="true">↗</span></a
+            >
+            <a class="button secondary" href="{{SUGGEST_URL}}"
+              >Share an idea <span aria-hidden="true">↗</span></a
+            >
           </div>
         </div>
       </section>
@@ -490,10 +559,13 @@ cp .env.example .env
               >
             </summary>
             <p>
-              The destination is download, install, create. Today, v{{VERSION}}
-              needs Linux setup, Docker, Python and configured model/runtime
-              paths. It is a working early release for people comfortable with
-              that setup.
+              That's who we're building it for. The goal is simple: download the
+              app, follow the setup and start creating, without learning model
+              servers or technical configuration. The published v{{VERSION}}
+              release still needs Linux, Docker, Python and configured models.
+              Guided model setup is available in development builds; desktop
+              installers are still being tested. Your feedback will help us get
+              there.
               <a href="{{ROADMAP_URL}}">See the guided-setup plan.</a>
             </p>
           </details>
@@ -515,9 +587,10 @@ cp .env.example .env
               Can I contribute?<span aria-hidden="true">+</span>
             </summary>
             <p>
-              Absolutely. Report an issue, improve the docs or propose a
-              feature. Contributors retain copyright; external contributions
-              need a separate signed agreement permitting commercial relicensing
+              Yes — and testing is one of the most useful ways to help. Report a
+              bug, tell us what felt confusing, improve the docs or suggest a
+              feature. For code changes, contributors retain copyright and
+              provide a signed agreement permitting commercial relicensing
               before merge.
               <a href="{{CONTRIBUTING_URL}}"
                 >Start with the contribution guide.</a
@@ -547,7 +620,7 @@ cp .env.example .env
           alt=""
         />{{NAME}}</a
       >
-      <p>Your AI. Your hardware. Your rules.</p>
+      <p>Local AI, made simple.</p>
       <nav aria-label="Footer navigation">
         <a href="{{REPO}}">GitHub</a><a href="{{SETUP_URL}}">Docs</a
         ><a href="{{LICENSE_URL}}">License</a

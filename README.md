@@ -2,11 +2,11 @@
 
 # ✳ AI Station
 
-### Your AI. Your hardware. Your rules.
+### Your own AI. Without becoming an AI expert.
 
-**Chat. Create. Automate. One local workstation.**
+**A familiar ChatGPT-style experience, on your own computer.**
 
-Your models, images, videos, voices, music and agents — together, on your machine.
+Your conversations, images, videos, voices, music and agents — together, on your machine.
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
@@ -16,20 +16,32 @@ Your models, images, videos, voices, music and agents — together, on your mach
 
 </div>
 
-Imagine describing what you want and letting your own computer do the work.
-An answer. A photograph. A short film. A voiceover. A soundtrack. An agent that
-keeps working after you close the conversation.
+You bring the hardware. Our goal is to make the rest as simple as installing an app.
 
-**That is what we are building.** AI Station brings local AI into one workspace,
-with a familiar conversation at the center and dedicated tools when you want
-more control. Start with an idea; keep the conversation, files and results together.
+Ask a question. Make an image or video. Create a voiceover or a soundtrack.
+Put an agent to work. Keep your conversations, files and results in one familiar
+workspace — powered by your own computer.
 
-> **The destination:** download, install, create. Your hardware is detected,
-> compatible models are offered and the setup takes care of itself.
-> **Today:** v0.0.2 is a working, Linux-first workstation release. You still need
-> Docker, Python and configured local models/runtimes. Guided setup, model downloads
-> and broader GPU compatibility are on the roadmap — not hidden prerequisites
-> disguised as completed features.
+**The experience we're building:**
+
+| ① Download | ② Install | ③ Create |
+| --- | --- | --- |
+| Get one app for your workstation. | Guided setup checks your hardware and offers models that fit. | Open the conversation and describe what you want. |
+
+You should not have to learn how to run model servers, choose Python environments
+or assemble separate AI tools. **Making local AI approachable is the product.**
+
+> **Early access:** the published v0.0.2 release uses the Linux setup guide below.
+> Development builds already offer guided model setup; desktop installers for
+> Linux, Windows and macOS are being tested. The full download-and-install
+> experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
+
+**We especially need testers and feedback.** Try AI Station on your hardware and
+tell us what worked, what broke or what felt confusing. Setup friction and small
+usability problems matter just as much as bugs. You don't need to write code to help.
+[Report a bug](https://github.com/jahu/ai-station/issues/new) ·
+[Suggest an improvement](https://github.com/jahu/ai-station/issues/new?title=Suggestion%3A%20) ·
+[Contribution guide](CONTRIBUTING.md).
 
 ## 🎛 One station. Many ways to create.
 
@@ -141,6 +153,14 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 ## 🚀 Get started
 
+**[Try the current release →](https://github.com/jahu/ai-station/releases/latest)**
+
+Guided desktop installers are being tested. The published v0.0.2 release uses the
+Linux setup guide; its current installation steps are below.
+
+<details>
+<summary><strong>Set up today's Linux release (v0.0.2)</strong></summary>
+
 **Current release prerequisites:** Linux, Git, Python 3.12 with venv support,
 Docker Engine and Docker Compose. GPU media additionally requires a compatible
 configured runtime and model. The currently exercised media paths use NVIDIA/CUDA;
@@ -163,6 +183,11 @@ llama.cpp/Ollama services, optional media runtimes and development commands.
 [Download the latest release](https://github.com/jahu/ai-station/releases/latest).
 [What's new in 0.0.2](docs/releases/0.0.2.md). `master` is the release branch; contributors work through
 feature branches and PRs into `develop`.
+
+</details>
+
+<details>
+<summary><strong>Explore next-release features and guided model setup</strong></summary>
 
 Development toward **0.1.0** follows the [next-release plan](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
@@ -252,15 +277,15 @@ Stop/Resume use private ordinary Runs. Existing Fish/Whisper settings retain
 priority. Review the component licenses before installation.
 [Expressive voice setup and qualification](docs/plans/managed-fish-setup.md).
 
-An experimental **Linux x86-64 desktop package** is being qualified on `develop`.
-It bundles Python and the compiled application image, opens account/model setup
-in your browser, and keeps data outside the installed package. The Debian package
-installs its system dependencies through your package manager. If your account
-needs Docker access, a native dialog explains the permission and requests OS
-administrator authentication; AI Station keeps running as your normal user.
-Existing working Docker configurations are preserved. This is
-not yet the promised cross-platform consumer installer.
-[Desktop packaging and qualification](docs/plans/desktop-installation.md).
+Development desktop builds bundle Python and the application image, open
+account/model setup in your browser and keep data outside the installed package.
+Clean installation, a real first CPU conversation and preserving update/reinstall
+have been verified on [Linux x86-64](docs/plans/linux-consumer-qualification.md)
+and [Windows 11 / WSL2](docs/plans/windows-consumer-installation.md).
+The Linux package explains any required Docker permission through a native dialog
+and keeps the app running as your ordinary user. These are release candidates;
+the complete macOS installer and broader GPU qualification remain in progress.
+[Desktop packaging and status](docs/plans/desktop-installation.md).
 
 Development builds also retain creative sessions across Images, Video, Music,
 Speech and Avatars. Measured generation stages and scoped time estimates use
@@ -289,6 +314,43 @@ film, describe its sounds and keep both a reusable WAV track and a synchronized
 video preview. **Add sound** on a film opens the saved workspace with that source.
 The optional offline MMAudio runtime uses one GPU and retains its separate
 noncommercial model license. [Configuration and qualification](docs/plans/synchronized-sound.md).
+
+### Saved film editing (release 0.1 candidate)
+
+Video → **Edit a film** opens a saved editing workspace. Add inspected films and
+WAV speech, music or effects from Library; trim, move and reorder clips, adjust
+volume, mute and fades, and inspect measured waveforms. Save immutable edits and
+return to them later. **Preview this edit** renders the actual saved mix;
+**Export film** downloads that same verified result. Changing the draft marks an
+older preview and requires a new render before export. Source files and earlier
+results remain in Library. CPU rendering uses an owned four-GiB/zero-swap scope
+and does not unload GPU models. See [timeline contracts](docs/plans/media-timeline.md)
+for supported timing, private ownership and qualification gates.
+
+### Film sound agents
+
+In an agent's **Create media** settings choose **Sound effects**, select a film
+from your Library and describe what should be heard. Optional scene directions
+keep exact start/end times. Use the saved description each run, or let the
+selected local model write a new overall description from the reviewed goal.
+The film, scene directions and generation settings stay fixed. Review and enable
+the definition, then Run now or use its saved schedule. Each execution retains a
+separate effects WAV and a synchronized video preview; the original film remains
+unchanged. Missing sources or an unavailable local engine block activation.
+
+
+### Film sound in the conversation
+
+Ask **“Add sound to this film: rain on the leaves”** after a completed film,
+or choose **Attach files & choose tools → Add film sound** and select it from
+Library. Original audio is kept by default; replacing it is an explicit option.
+For a new film, choose **Generate video → Add sound to this film** and describe
+what should be heard. The conversation retains a synchronized movie, separate
+WAV and **Edit sound mix** link to its saved timeline. Film, effects and mixing
+share one inspectable, stoppable task. This uses the optional configured MMAudio
+runtime above; narration and music remain separate capabilities.
+
+</details>
 
 ## 🌱 Where we're going
 
@@ -398,39 +460,4 @@ Contributions are welcome; contributors retain their copyright and provide the
 separate permission needed for commercial licensing. Models and dependencies
 keep their own licenses. [Contribution guide](CONTRIBUTING.md) · [Required notice](NOTICE)
 
-**Build an AI workstation you want to come back to.** ✳
-
-### Saved film editing (release 0.1 candidate)
-
-Video → **Edit a film** opens a saved editing workspace. Add inspected films and
-WAV speech, music or effects from Library; trim, move and reorder clips, adjust
-volume, mute and fades, and inspect measured waveforms. Save immutable edits and
-return to them later. **Preview this edit** renders the actual saved mix;
-**Export film** downloads that same verified result. Changing the draft marks an
-older preview and requires a new render before export. Source files and earlier
-results remain in Library. CPU rendering uses an owned four-GiB/zero-swap scope
-and does not unload GPU models. See [timeline contracts](docs/plans/media-timeline.md)
-for supported timing, private ownership and qualification gates.
-
-### Film sound agents
-
-In an agent's **Create media** settings choose **Sound effects**, select a film
-from your Library and describe what should be heard. Optional scene directions
-keep exact start/end times. Use the saved description each run, or let the
-selected local model write a new overall description from the reviewed goal.
-The film, scene directions and generation settings stay fixed. Review and enable
-the definition, then Run now or use its saved schedule. Each execution retains a
-separate effects WAV and a synchronized video preview; the original film remains
-unchanged. Missing sources or an unavailable local engine block activation.
-
-
-### Film sound in the conversation
-
-Ask **“Add sound to this film: rain on the leaves”** after a completed film,
-or choose **Attach files & choose tools → Add film sound** and select it from
-Library. Original audio is kept by default; replacing it is an explicit option.
-For a new film, choose **Generate video → Add sound to this film** and describe
-what should be heard. The conversation retains a synchronized movie, separate
-WAV and **Edit sound mix** link to its saved timeline. Film, effects and mixing
-share one inspectable, stoppable task. This uses the optional configured MMAudio
-runtime above; narration and music remain separate capabilities.
+**Local AI, made simple.** ✳
