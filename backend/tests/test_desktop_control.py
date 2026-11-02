@@ -1,4 +1,4 @@
-"""Real private IPC has only status and generation-bound stop, never host tools."""
+"""Real private IPC carries status, package identity and bound Stop, never host tools."""
 
 import builtins
 import ctypes
@@ -8,12 +8,22 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import desktop_control as control
 import pytest
 from ai_station_runner.unix_sockets import unix_address
+
+
+@pytest.fixture
+def tmp_path():
+    # Native Darwin sockets have a 104-byte address bound. Pytest's descriptive
+    # per-case directory alone can exceed it; use private disposable IPC roots.
+    parent = "/private/tmp" if sys.platform == "darwin" else None
+    with tempfile.TemporaryDirectory(prefix="asc-", dir=parent) as temporary:
+        yield Path(temporary).resolve()
 
 
 @pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="Native supported Unix peer credentials")
@@ -94,14 +104,28 @@ def raw(root, value):
         with unix_address(root / control.CONTROL_FILE) as address:
             client.connect(address)
         client.sendall(value)
-        client.shutdown(socket.SHUT_WR)
+        try:
+            client.shutdown(socket.SHUT_WR)
+        except OSError as exc:
+            # Darwin can already observe the server's orderly close after a
+            # complete request. Still read and assert its response below.
+            if exc.errno != errno.ENOTCONN:
+                raise
         return client.recv(1024)
 
 
 @pytest.mark.parametrize("long", [False, True])
-def test_real_status_and_instance_bound_stop_from_an_independent_process(tmp_path, long):
+def test_real_status_and_instance_bound_stop_from_an_independent_process(tmp_path, long, monkeypatch):
     root = tmp_path / ("long-owned-desktop-folder-" * 5 if long else "owned")
     root.mkdir(mode=0o700)
+    if long and sys.platform == "darwin":
+        import desktop
+
+        monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", tmp_path)
+        data = root
+        root = desktop.control_directory(data)
+        assert len(os.fsencode(data)) > 104
+        assert len(os.fsencode(root / control.CONTROL_FILE)) < 104
     with control.DesktopControl(root) as owner:
         owner.ready.set()
         owner.background.set()
@@ -205,3 +229,33 @@ def test_stale_owned_socket_is_reused_but_foreign_peer_is_refused(tmp_path, monk
         with pytest.raises(ValueError, match="another OS user"):
             control.request(tmp_path, "stop", instance_id=owner.instance_id)
         assert not owner.stop_requested.is_set()
+
+
+def test_package_query_is_projected_frozen_and_separate_from_legacy_status(tmp_path):
+    package = {
+        "bundle_id": "a" * 64,
+        "image_id": "sha256:" + "b" * 64,
+        "version": "0.1.0",
+        "source_epoch": 123,
+        "setup_url": "private",
+        "files": {},
+    }
+    expected = {key: package[key] for key in ("bundle_id", "image_id", "version", "source_epoch")}
+    with control.DesktopControl(tmp_path, package=package) as owner:
+        package["bundle_id"] = "c" * 64
+        assert control.request(tmp_path, "identity") == {
+            "instance_id": owner.instance_id,
+            "package": expected,
+        }
+        assert set(control.request(tmp_path)) == {"instance_id", "ready", "background", "stopping"}
+        assert not owner.stop_requested.is_set()
+        response = json.loads(raw(tmp_path, b'{"action":"identity","command":"anything"}\n'))
+        assert "error" in response
+
+
+def test_legacy_owner_does_not_claim_a_package_identity(tmp_path):
+    with control.DesktopControl(tmp_path) as owner:
+        with pytest.raises(ValueError, match="instance changed"):
+            control.request(tmp_path, "identity")
+        assert not owner.stop_requested.is_set()
+        assert control.request(tmp_path) == owner.status()

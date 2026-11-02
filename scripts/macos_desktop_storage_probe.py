@@ -14,6 +14,7 @@ def main():
     source = Path(__file__).resolve().parent
     sys.path.insert(0, str(source))  # Reviewed desktop scripts, never Host Runner source.
     import desktop
+    import desktop_versions as versions
     from desktop_control import CONTROL_FILE, DesktopControl, request
     from dotenv import dotenv_values
 
@@ -37,10 +38,28 @@ def main():
             keep = root / "data/keep.txt"
             keep.write_text("neutral native storage fixture")
             before = config.read_bytes()
-            with DesktopControl(native) as control:
+            package = {
+                "bundle_id": "a" * 64,
+                "image_id": "sha256:" + "b" * 64,
+                "version": "0.0.0",
+                "source_epoch": 0,
+            }
+            with DesktopControl(native, package=package) as control:
+                versions.begin(root, package, config, control.instance_id)
                 status = request(native)
                 if status["instance_id"] != control.instance_id:
                     raise ValueError("Native desktop instance identity changed")
+                identity = request(native, "identity")
+                try:
+                    versions.ready(root, package, config, "0" * 32)
+                except ValueError:
+                    pass
+                else:
+                    raise ValueError("A stale native owner published readiness")
+                versions.ready(root, package, config, control.instance_id)
+                control.ready.set()
+                if versions.attest(root, config, request(native), identity) != package:
+                    raise ValueError("Native desktop version attestation failed")
                 try:
                     request(native, "stop", instance_id="0" * 32)
                 except ValueError:
@@ -75,6 +94,9 @@ def main():
         "runner_mount_separate": True,
         "stale_instance_refused": True,
         "matching_stop_accepted": True,
+        "private_version_receipt": True,
+        "live_version_attestation": True,
+        "stale_readiness_refused": True,
         "data_preserved": True,
         "socket_cleanup_confirmed": True,
         "macos_installer_qualified": False,

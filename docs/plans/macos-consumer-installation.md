@@ -241,6 +241,30 @@ the launcher locks; Linux-only flock tests do not qualify that Mac boundary.
 This transaction alone does not enable the Mac consumer prerequisite gate or
 qualify Finder/update/removal, Docker Desktop, Metal or signing.
 
+### Version identity and native ownership
+
+A separate same-OS-user `identity` query on the private desktop control channel
+preserves the existing status/Stop wire formats. It returns only the verified
+package's bundle/image identities, bounded version and
+source epoch, tied to the current desktop instance; never a PID, command, setup
+link, prompt or credential. Owners without this capability cannot be assumed
+safe update targets.
+
+Keep a private version receipt outside mounted app data. Bind it to the canonical
+data directory and its filesystem identity, Compose project, accounts profile
+and Runner socket path. Record `starting` before launch and mark `ready` only
+after the existing matching-instance API readiness check. A retry of the same
+verified package is allowed; changed storage/package or untracked existing data
+requires inspection/explicit upgrade rather than silent migration. Ephemeral
+socket directories may be recreated after reboot without changing installation
+identity. Model endpoint/worker-count changes do not relocate the installation.
+
+The later updater must attest status, identity and ready receipt together before
+instance-bound Stop, then use the offline image transaction and controlled
+version activation. These primitives do not offer an unbacked Update button or
+remove the consumer gate; actual Mac/Docker Desktop and preserving-update
+qualification remain required.
+
 ## Acceptance evidence
 
 ### Owner-dispatched public Mac checks

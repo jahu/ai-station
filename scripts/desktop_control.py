@@ -10,6 +10,8 @@ import sys
 import threading
 from uuid import uuid4
 
+from desktop_versions import package_identity
+
 CONTROL_FILE = "desktop-control.sock"
 
 
@@ -58,7 +60,8 @@ def same_user(connection):
 
 
 class DesktopControl:
-    def __init__(self, root):
+    def __init__(self, root, *, package=None):
+        self.package = package_identity(package) if package is not None else None
         self.path = root / CONTROL_FILE
         self.instance_id = uuid4().hex
         self.ready = threading.Event()
@@ -120,6 +123,8 @@ class DesktopControl:
                     value = json.loads(line)
                     if value == {"action": "status"}:
                         response = self.status()
+                    elif value == {"action": "identity"} and self.package is not None:
+                        response = {"instance_id": self.instance_id, "package": self.package}
                     elif value == {"action": "stop", "instance_id": self.instance_id}:
                         self.stop_requested.set()
                         response = {"accepted": True, "instance_id": self.instance_id}
@@ -148,7 +153,7 @@ class DesktopControl:
 
 def request(root, action="status", *, instance_id=None):
     if (
-        action not in {"status", "stop"}
+        action not in {"status", "stop", "identity"}
         or action == "stop"
         and not re.fullmatch(r"[a-f0-9]{32}", instance_id or "")
     ):
@@ -177,6 +182,13 @@ def request(root, action="status", *, instance_id=None):
                 set(response) == {"accepted", "instance_id"}
                 and response["accepted"] is True
                 and response["instance_id"] == instance_id
+            )
+        elif action == "identity":
+            valid = (
+                set(response) == {"instance_id", "package"}
+                and isinstance(response["instance_id"], str)
+                and re.fullmatch(r"[a-f0-9]{32}", response["instance_id"])
+                and package_identity(response["package"]) == response["package"]
             )
         else:
             valid = (

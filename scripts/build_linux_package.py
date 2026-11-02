@@ -27,6 +27,7 @@ SOURCE = (
     "scripts/desktop.py",
     "scripts/macos_desktop_ui.py",
     "scripts/desktop_control.py",
+    "scripts/desktop_versions.py",
     "scripts/desktop_docker_access.py",
     "scripts/desktop_engine.py",
     "packaging/linux/docker_access.py",

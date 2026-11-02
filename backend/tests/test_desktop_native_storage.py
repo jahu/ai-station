@@ -3,6 +3,8 @@
 import json
 import os
 import stat
+import sys
+import tempfile
 from pathlib import Path
 
 import desktop
@@ -10,17 +12,63 @@ import pytest
 from dotenv import dotenv_values
 
 
+@pytest.mark.parametrize("reaches_ready", [False, True])
+def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_instance(
+    native, monkeypatch, tmp_path, reaches_ready
+):
+    # Neutral coordinator test behind the unchanged consumer prerequisite gate.
+    import desktop_bridge
+    import desktop_versions
+    from test_desktop_package import fixture_bundle
+
+    root, _ = native
+    package = tmp_path / "candidate-package"
+    value = fixture_bundle(package)
+    value.update(version="0.1.0", source_epoch=1790000000)
+    (package / "desktop-manifest.json").write_text(json.dumps(value))
+    monkeypatch.setattr(desktop, "ROOT", package)
+    monkeypatch.setattr(desktop, "state_root", lambda: root)
+    monkeypatch.setattr(desktop, "install_copy", lambda *args: package)
+    monkeypatch.setattr(desktop, "prerequisites", lambda: None)
+    monkeypatch.setattr(desktop.signal, "signal", lambda *args: None)
+    monkeypatch.setattr(desktop, "select_engine", lambda *args: object())
+    monkeypatch.setattr(desktop_bridge, "check", lambda *args: True)
+    monkeypatch.setattr(sys, "argv", ["desktop.py", "--console"])
+
+    def import_image(*args, **kwargs):
+        assert desktop_versions.load(root)["phase"] == "starting"
+
+    monkeypatch.setattr(desktop, "import_image", import_image)
+
+    def supervise(*args, control, on_ready_url, instance_id, **kwargs):
+        assert desktop_versions.load(root)["owner_instance_id"] == control.instance_id
+        assert desktop_versions.load(root)["phase"] == "starting"
+        assert not control.ready.is_set()
+        assert control.instance_id != instance_id  # Native owner vs matching API instance.
+        if reaches_ready:
+            on_ready_url("http://127.0.0.1:8765")
+            assert desktop.ready_info(root)["instance_id"] == instance_id
+
+    monkeypatch.setattr(desktop, "supervise", supervise)
+    desktop.main()
+    assert desktop_versions.load(root)["phase"] == ("ready" if reaches_ready else "starting")
+    assert not (root / desktop.READY_FILE).exists()
+
+
 @pytest.fixture
 def native(tmp_path, monkeypatch):
-    parent = tmp_path / "runtime-parent"
-    parent.mkdir(mode=0o700)
     home = tmp_path / ("long-user-home-" + "a" * 80)
     home.mkdir()
     monkeypatch.setattr(desktop.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(desktop.Path, "home", lambda: home)
-    monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", parent)
     monkeypatch.setattr(desktop, "free_port", lambda: 8765)
-    return desktop.state_root(), parent
+    # Long data paths remain tested. Actual native IPC must use the production
+    # short private namespace, independent of pytest's long descriptive paths.
+    base = "/private/tmp" if sys.platform == "darwin" else None
+    with tempfile.TemporaryDirectory(prefix="asn-", dir=base) as temporary:
+        parent = Path(temporary).resolve()
+        monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", parent)
+        yield desktop.state_root(), parent
 
 
 def test_native_state_root_and_short_control_are_separate_from_runner_mount(native):

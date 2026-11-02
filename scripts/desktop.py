@@ -791,8 +791,14 @@ def main():
                 )
             with (
                 (root / "desktop.log").open("a", encoding="utf-8") as log,
-                DesktopControl(control_directory(root)) as control,
+                DesktopControl(
+                    control_directory(root), package=value if platform.system() == "Darwin" else None
+                ) as control,
             ):
+                if platform.system() == "Darwin":
+                    from desktop_versions import begin
+
+                    begin(root, value, config, control.instance_id)
                 progress.stage("Preparing the bundled application image…")
                 engine = select_engine(launch_environment())
                 import_image(installed, value, log, engine=engine)
@@ -806,6 +812,14 @@ def main():
                         return
                 progress.stage("Starting your local AI Station…")
                 instance_id = uuid4().hex
+
+                def on_ready_url(url):
+                    if platform.system() == "Darwin":
+                        from desktop_versions import ready
+
+                        ready(root, value, config, control.instance_id)
+                    publish_ready(root, url, instance_id=instance_id)
+
                 supervise(
                     installed,
                     config,
@@ -815,7 +829,7 @@ def main():
                     background=args.background,
                     control=control,
                     on_ready=progress.close,
-                    on_ready_url=lambda url: publish_ready(root, url, instance_id=instance_id),
+                    on_ready_url=on_ready_url,
                     instance_id=instance_id,
                     host_port=args.host_port,
                     engine=engine,
