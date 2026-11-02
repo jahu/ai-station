@@ -798,6 +798,12 @@ def main():
                 import_image(installed, value, log, engine=engine)
                 if control.stop_requested.is_set():
                     return
+                if platform.system() == "Darwin":
+                    from desktop_bridge import check as check_bridge
+
+                    progress.stage("Checking private communication and your data filesystem…")
+                    if not check_bridge(installed, root, config, value, engine, log, control):
+                        return
                 progress.stage("Starting your local AI Station…")
                 instance_id = uuid4().hex
                 supervise(

@@ -1276,3 +1276,11 @@ or inspecting containers, and retains the same target through bootstrap and
 shutdown. No global context/settings, HTTP execution authority or Linux routing
 changes. This prepares the [Mac consumer path](plans/macos-consumer-installation.md);
 actual Docker Desktop transport and complete installation remain separate gates.
+
+The Mac startup candidate checks its native bridge using the already verified
+bundled application image, never a downloaded test image. The existing bounded
+nonce/WAL/artifact protocol runs in an owned isolated child against fresh files
+on the configured data filesystem before Compose starts. Stop waits for owned
+cleanup. Private pending receipts prevent uncertain replay and allow recovery
+only from a matching confirmed-clean result. The Linux consumer path and Mac
+consumer admission gate remain unchanged.

@@ -34,6 +34,12 @@ an engine operation. Linux/WSL retain their existing Docker configuration.
 Neutral executable fixtures exercise real child processes and failure cleanup;
 these checks do not qualify a Docker Desktop VM, native socket sharing or a
 complete Mac installation. The consumer prerequisite gate remains in place.
+The next startup stage uses the verified bundled application image itself for
+the socket/artifact/WAL experiment, without downloading a separate QA image.
+It tests a new disposable child on the configured data filesystem. An owned
+isolated child permits Stop; a private pending marker blocks replay when cleanup
+cannot be confirmed. This stage must pass before starting Compose and does not
+replace actual native consumer qualification or remove the existing platform gate.
 The supervisor explicitly imports helpers from its own bundled scripts under
 isolated Python. The native bundle experiment also starts the actual installed
 supervisor with `-IB --help`, without Docker or station-data creation, to check

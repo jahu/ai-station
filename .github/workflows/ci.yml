@@ -108,7 +108,9 @@ jobs:
           # conftest out of the deliberately native-only dependency environment.
           .venv/bin/python -m pytest -q --noconftest \
             backend/tests/test_desktop_engine.py \
-            backend/tests/test_macos_desktop_docker.py
+            backend/tests/test_macos_desktop_docker.py \
+            backend/tests/test_desktop_bridge.py \
+            backend/tests/test_macos_transport_probe.py
       - name: Assemble fixed native Python layer
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}

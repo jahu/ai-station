@@ -95,6 +95,39 @@ def main(architecture):
         )
         if result.returncode or "--desktop" not in result.stdout or result.stderr:
             raise ValueError("The actual isolated package supervisor could not import its helpers")
+        result = subprocess.run(
+            [
+                str(resources / "python/bin/python3"),
+                "-IB",
+                str(resources / "scripts/macos_transport_probe.py"),
+                "--help",
+            ],
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode or "--data-directory" not in result.stdout or result.stderr:
+            raise ValueError("The actual isolated bridge child could not import its helpers")
+        result = subprocess.run(
+            [
+                str(resources / "python/bin/python3"),
+                "-IB",
+                "-c",
+                "import sys;sys.path.insert(0,sys.argv[1]);import desktop_bridge",
+                str(resources / "scripts"),
+            ],
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode or result.stdout or result.stderr:
+            raise ValueError("The actual isolated desktop bridge coordinator could not import")
         (output / "Contents/Resources/control-plane.tar").write_bytes(b"changed fixture")
         result = run("--package-check")
         if result.returncode != 1 or "missing or changed" not in result.stderr:
@@ -112,6 +145,7 @@ def main(architecture):
         "actual_installed_python": True,
         "package_check_passed": True,
         "isolated_packaged_supervisor_import_passed": True,
+        "isolated_packaged_bridge_import_passed": True,
         "tampering_refused": True,
         "conflicting_flags_refused": True,
         "python_inventory_unchanged": True,
