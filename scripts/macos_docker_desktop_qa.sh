@@ -4,6 +4,13 @@
 set -euo pipefail
 umask 077
 
+qa_stage=transport
+if [[ "$#" != 0 ]]; then
+    [[ "$#" == 1 && "$1" == --consumer ]]
+    [[ "${AI_STATION_REAL_MAC_CONSUMER_TESTS:-}" == 1 ]]
+    qa_stage=consumer
+fi
+
 [[ "${AI_STATION_REAL_MAC_DOCKER_TESTS:-}" == 1 ]]
 [[ "${GITHUB_ACTIONS:-}" == true && "${GITHUB_REPOSITORY:-}" == jahu/ai-station ]]
 [[ "${GITHUB_ACTOR:-}" == jahu && "${RUNNER_OS:-}" == macOS && "${RUNNER_ARCH:-}" == X64 ]]
@@ -101,6 +108,12 @@ desktop_cli desktop start --timeout 240
 /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
     "$qa_python" -IB scripts/macos_desktop_qa_ready.py | /usr/bin/tee "$qa_root/engine-ready.json"
+if [[ "$qa_stage" == consumer ]]; then
+    # Fixed fresh-host developer experiment. Actual package/engine/model; its
+    # explicit console path is NOT a complete consumer GUI qualification.
+    "$qa_python" -IB scripts/macos_consumer_probe.py
+    exit 0
+fi
 mkdir -m 700 "$qa_root/Chosen data, Żółw"
 if /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \

@@ -14,6 +14,7 @@ on:
           - macos-native-inference
           - macos-desktop-transport
           - macos-native-ui-checks
+          - macos-consumer-backend
 permissions:
   contents: read
 jobs:
@@ -142,6 +143,7 @@ jobs:
             backend/tests/test_desktop_snapshot_files.py \
             backend/tests/test_desktop_snapshots.py \
             backend/tests/test_macos_desktop_docker.py \
+            backend/tests/test_macos_desktop_prerequisites.py \
             backend/tests/test_desktop_bridge.py \
             backend/tests/test_desktop_link.py \
             backend/tests/test_desktop_connection.py \
@@ -203,6 +205,48 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
+  macos-consumer-backend:
+    # Explicit real 4B CPU model on a fresh PUBLIC standard-free Intel host.
+    if: inputs.operation == 'macos-consumer-backend' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    env:
+      AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
+      AI_STATION_REAL_MAC_CONSUMER_TESTS: '1'
+      PYTHONPATH: backend:host-runner:scripts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned developer build tools
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/checks.lock
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/build-tools.lock
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Fresh Docker Desktop and actual package backend
+        run: bash scripts/macos_docker_desktop_qa.sh --consumer
+      - name: Report bounded non-secret experiment status
+        if: always()
+        run: |
+          if [ -f .tools/mac-consumer-experiment/result.json ]; then
+            cat .tools/mac-consumer-experiment/result.json
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.tools/mac-consumer-experiment/commands.private.log')
+          if path.is_file():
+              lines = path.read_text(errors='replace').splitlines()
+              for line in lines[-100:]:
+                  text = line.casefold()
+                  if any(word in text for word in ('token','password','authorization','cookie','secret','private key')):
+                      continue
+                  if any(word in text for word in ('error','exception','failed','traceback')):
+                      print(line[:1000])
+          PY
   macos-native-ui:
     # Stock native source, system UI automation; no model/Docker/OS mutation.
     if: inputs.operation == 'macos-native-ui-checks' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'

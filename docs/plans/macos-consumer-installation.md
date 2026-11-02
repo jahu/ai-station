@@ -32,6 +32,17 @@ automation. It uses a standard free public Intel host, no Docker/model and no
 OS permission changes. This establishes native UI automation availability and
 control behavior, not the complete distributed package or installed journey.
 
+The separate manual `macos-consumer-backend` job reuses the fresh-host, fixed
+Docker Desktop installer guards and builds the real native Python, Runner,
+interface, control-plane image and `.app`. Its explicit CPU model fixture is the
+existing Huihui Qwen3 4B Q4_K_M catalog entry (2,497,281,312 bytes; pinned SHA256
+`b1324e2f1bd2e0610d591f54f93e38d90b187f69d1f215f4cace349eade678d7`).
+It exercises the existing console entry, real first-admin API setup, native engine
+and model preparation, first reply and preserving Stop/restart. It neither patches
+prerequisites nor installs into an existing station. Its result explicitly leaves
+consumer GUI, update/backup/restore/removal and complete installer qualification
+false; those remain required acceptance, not replaced by this backend evidence.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,
