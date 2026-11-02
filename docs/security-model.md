@@ -89,8 +89,14 @@ namespace. Reading this binding grants no Docker or native SQLite access. A
 missing version receipt never turns an existing VM database into a fresh install:
 first-version publication requires the attested owner and a fixed read-only
 image check proving a marker-only volume, with no other container references.
-The consumer launcher must prepare and attest storage before using this path;
-the Mac admission gate remains closed until the full journey is qualified.
+The native candidate prepares and attests storage before version publication.
+Its child independently verifies the package inventory, private version/storage
+receipts and quiescence before Compose interpolation. It overrides any ambient
+volume name with the attested identity and uses the exact verified image SHA.
+The startup probe requires authenticated UDS/TLS/UDS, local-volume SQLite locking
+with the original writer still held, restart and confirmed cleanup. Old direct
+socket proofs may confirm pending cleanup only; they cannot admit a new startup.
+The Mac admission gate remains closed until the full journey is qualified.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and

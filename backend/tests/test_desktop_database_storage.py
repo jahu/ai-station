@@ -517,3 +517,98 @@ def test_first_version_refuses_foreign_volume_user_without_stopping_it(factory):
         versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
     assert not (root / versions.RECEIPT).exists()
     assert not any(args[:2] in (["container", "create"], ["container", "stop"]) for args in d.calls[before:])
+
+
+@pytest.fixture
+def child_installation(factory, monkeypatch):
+    import desktop_versions as versions
+    import launch
+    from test_desktop_package import fixture_bundle
+    from test_desktop_versions import OWNER
+
+    create, daemon, root, data = factory
+    owner = create()
+    owner.prepare()
+    versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    bundle = root / "installed-package"
+    package = fixture_bundle(bundle)
+    package.update(version=PACKAGE["version"], source_epoch=PACKAGE["source_epoch"], architecture="x86_64")
+    (bundle / "desktop-manifest.json").write_text(json.dumps(package))
+    monkeypatch.setattr(launch, "ROOT", bundle)
+    engine = DockerEngine(
+        ("/fixed/docker", "--host", "unix:///fixed.sock"), {}, ("/fixed/docker", "unix:///fixed.sock")
+    )
+    env = {
+        "AI_STATION_DATA_HOST_PATH": str(data),
+        "AI_STATION_APP_IMAGE": package["image_tag"],
+        "AI_STATION_NATIVE_DATABASE_VOLUME": "ambient-foreign-volume",
+    }
+    return owner, daemon, root, bundle, engine, env
+
+
+def test_packaged_child_rechecks_binding_and_overwrites_ambient_volume_only_after_attestation(
+    child_installation,
+):
+    import launch
+
+    owner, daemon, _, _, engine, env = child_installation
+    before = len(daemon.calls)
+    launch.attest_native_database(owner.config, engine, env)
+    assert env["AI_STATION_NATIVE_DATABASE_VOLUME"] == owner.record["name"]
+    assert env["AI_STATION_APP_IMAGE"] == PACKAGE["image_id"]
+    assert not any(args[:2] == ["volume", "create"] or "initialize" in args for args in daemon.calls[before:])
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "no_config",
+        "missing_receipt",
+        "partial",
+        "tampered_package",
+        "wrong_data",
+        "wrong_image",
+        "ready_version",
+        "wrong_namespace",
+        "changed_daemon",
+        "foreign_reference",
+        "marker",
+    ],
+)
+def test_packaged_child_refuses_changed_or_unprepared_storage_before_compose(child_installation, change):
+    import desktop_versions as versions
+    import launch
+    from test_desktop_versions import OWNER
+
+    owner, daemon, root, bundle, engine, env = child_installation
+    config = owner.config
+    if change == "no_config":
+        config = None
+    elif change == "missing_receipt":
+        owner.path.unlink()
+    elif change == "partial":
+        storage.write(owner.path, owner.record | {"phase": "initialized"})
+    elif change == "tampered_package":
+        (bundle / "station").write_text("changed package bytes")
+    elif change == "wrong_data":
+        env["AI_STATION_DATA_HOST_PATH"] = str(root / "other-data")
+    elif change == "wrong_image":
+        env["AI_STATION_APP_IMAGE"] = "another-package:latest"
+    elif change == "ready_version":
+        versions.ready(root, PACKAGE, owner.config, OWNER)
+    elif change == "wrong_namespace":
+        versions.save(root, versions.load(root) | {"namespace_sha256": "f" * 64})
+    elif change == "changed_daemon":
+        daemon.id = "replacement-daemon"
+    elif change == "foreign_reference":
+        daemon.foreign = True
+    else:
+        daemon.output = lambda v: {**v, "storage_id": "f" * 32}
+    before = len(daemon.calls)
+    with pytest.raises((ValueError, RuntimeError)):
+        launch.attest_native_database(config, engine, env)
+    assert env["AI_STATION_NATIVE_DATABASE_VOLUME"] == "ambient-foreign-volume"
+    assert not any(
+        args[:1] == ["compose"] or args[:2] in (["volume", "create"], ["container", "stop"])
+        for args in daemon.calls[before:]
+    )

@@ -131,6 +131,9 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
         "DOCKER_HOST": "tcp://remote.invalid:2375",
     }
     monkeypatch.setattr(launch, "configuration", lambda: env)
+    # This family isolates CLI routing; actual volume/receipt checks have their
+    # own complete native storage family with the real coordinator and fake daemon.
+    monkeypatch.setattr(launch, "attest_native_database", lambda *args: None)
     monkeypatch.setattr(launch.os, "chdir", lambda _: None)
     monkeypatch.setattr(launch.signal, "signal", lambda *args: None)
     monkeypatch.setattr(launch, "runner_health", lambda _: True)

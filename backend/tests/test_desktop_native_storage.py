@@ -12,13 +12,18 @@ import pytest
 from dotenv import dotenv_values
 
 
-@pytest.mark.parametrize("reaches_ready", [False, True])
+@pytest.mark.parametrize(
+    "reaches_ready,blocked", [(False, None), (True, None), (False, "bridge"), (False, "storage")]
+)
 def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_instance(
-    native, monkeypatch, tmp_path, reaches_ready
+    native, monkeypatch, tmp_path, reaches_ready, blocked
 ):
     # Neutral coordinator test behind the unchanged consumer prerequisite gate.
+    from types import SimpleNamespace
+
     import desktop_bridge
     import desktop_versions
+    import macos_database_storage
     from test_desktop_package import fixture_bundle
 
     root, _ = native
@@ -32,15 +37,36 @@ def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_inst
     monkeypatch.setattr(desktop, "prerequisites", lambda: None)
     monkeypatch.setattr(desktop.signal, "signal", lambda *args: None)
     monkeypatch.setattr(desktop, "select_engine", lambda *args: object())
-    monkeypatch.setattr(desktop_bridge, "check", lambda *args: True)
+    stages = []
+
+    def bridge_checked(*args):
+        assert stages == ["image"] and not (root / desktop_versions.RECEIPT).exists()
+        stages.append("bridge")
+        return blocked != "bridge"
+
+    def prepare_database(*args):
+        assert stages == ["image", "bridge"]
+        stages.append("database")
+
+        def prepare():
+            if blocked == "storage":
+                raise ValueError("Synthetic storage refusal")
+            stages.append("prepared")
+
+        return SimpleNamespace(prepare=prepare, quiescent=lambda: None)
+
+    monkeypatch.setattr(desktop_bridge, "check", bridge_checked)
+    monkeypatch.setattr(macos_database_storage, "DatabaseStorage", prepare_database)
     monkeypatch.setattr(sys, "argv", ["desktop.py", "--console"])
 
     def import_image(*args, **kwargs):
-        assert desktop_versions.load(root)["phase"] == "starting"
+        assert not (root / desktop_versions.RECEIPT).exists()
+        stages.append("image")
 
     monkeypatch.setattr(desktop, "import_image", import_image)
 
     def supervise(*args, control, on_ready_url, instance_id, **kwargs):
+        assert stages == ["image", "bridge", "database", "prepared"]
         assert desktop_versions.load(root)["owner_instance_id"] == control.instance_id
         assert desktop_versions.load(root)["phase"] == "starting"
         assert not control.ready.is_set()
@@ -50,8 +76,15 @@ def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_inst
             assert desktop.ready_info(root)["instance_id"] == instance_id
 
     monkeypatch.setattr(desktop, "supervise", supervise)
-    desktop.main()
-    assert desktop_versions.load(root)["phase"] == ("ready" if reaches_ready else "starting")
+    if blocked == "storage":
+        with pytest.raises(ValueError, match="Synthetic storage refusal"):
+            desktop.main()
+    else:
+        desktop.main()
+    if blocked:
+        assert not (root / desktop_versions.RECEIPT).exists()
+    else:
+        assert desktop_versions.load(root)["phase"] == ("ready" if reaches_ready else "starting")
     assert not (root / desktop.READY_FILE).exists()
 
 

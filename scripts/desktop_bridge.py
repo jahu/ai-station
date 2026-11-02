@@ -37,7 +37,7 @@ def read_json(path):
 
 def completed(root, request):
     if (
-        request.get("schema") != 1
+        request.get("schema") not in (1, 2)
         or not isinstance(request.get("attempt"), str)
         or not re.fullmatch(r"[a-f0-9]{32}", request["attempt"])
         or not isinstance(request.get("image"), str)
@@ -57,6 +57,8 @@ def completed(root, request):
         or result.get("macos_installer_qualified") is not False
     ):
         raise ValueError("The previous bridge cleanup was not confirmed; inspect the desktop log")
+    if request["schema"] == 2 and request.get("transport") != "authenticated-local-database":
+        raise ValueError("The requested bridge/storage topology changed")
     if result.get("transport_passed") is True:
         checks = result.get("checks")
         if (
@@ -75,6 +77,20 @@ def completed(root, request):
             )
         ):
             raise ValueError("The bridge did not confirm the complete private socket/filesystem checks")
+        if request["schema"] == 2:
+            storage = result.get("database_storage")
+            if (
+                result.get("transport_kind") != "uds-mutual-tls-uds"
+                or checks.get("first_writer_verified_held") is not True
+                or checks.get("database_writer_domain") != "docker-local-volume"
+                or not isinstance(storage, dict)
+                or storage.get("kind") != "disposable-local-volume"
+                or storage.get("uncertain") is not False
+                or storage.get("initializer_uncertain") is not False
+            ):
+                raise ValueError(
+                    "The bridge did not confirm authenticated transport and local database storage"
+                )
     return result
 
 
@@ -112,7 +128,8 @@ def check(installed, state, config, value, engine, log, control):
     if control.stop_requested.is_set():
         return False
     request = {
-        "schema": 1,
+        "schema": 2,
+        "transport": "authenticated-local-database",
         "attempt": uuid4().hex,
         "image": value["image_id"],
         "data_directory": str(selected),
@@ -133,6 +150,8 @@ def check(installed, state, config, value, engine, log, control):
                 str(selected),
                 "--packaged-image",
                 request["image"],
+                "--authenticated-link",
+                "--native-database",
                 "--expected-cli",
                 engine.identity[0],
                 "--expected-endpoint",

@@ -166,6 +166,42 @@ def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "
     ).stdout.strip()
 
 
+def attest_native_database(config, engine, env):
+    """Trusted packaged child: reattest ready storage, never create/adopt it."""
+    if config is None:
+        raise RuntimeError("Native desktop startup requires its explicit private configuration")
+    import desktop
+    import desktop_versions as versions
+    from macos_database_storage import RECEIPT as STORAGE_RECEIPT
+    from macos_database_storage import DatabaseStorage
+
+    value = desktop.manifest(ROOT)
+    desktop.verify(ROOT, value)
+    root = config.parent
+    path = root / "database-storage" / STORAGE_RECEIPT
+    if not path.exists() and not path.is_symlink():
+        raise ValueError("The desktop parent must prepare persistent database storage before startup")
+    data, namespace = versions.namespace(config)
+    if str(data) != env["AI_STATION_DATA_HOST_PATH"]:
+        raise ValueError("The child database configuration differs from its private receipt")
+    current = versions.load(root)
+    if (
+        current["phase"] != "starting"
+        or current["package"] != versions.package_identity(value)
+        or current["namespace_sha256"] != namespace
+        or env.get("AI_STATION_APP_IMAGE") not in (value["image_tag"], value["image_id"])
+    ):
+        raise ValueError("The child package/version does not match the pending desktop startup")
+    owner = DatabaseStorage(root, config, engine, value)
+    owner.identity()  # Ready only; never initialize partial or foreign storage.
+    owner.quiescent()
+    owner.prepare()  # Fixed read-only marker inspection using the verified image.
+    owner.quiescent()
+    # These coordinates come only from the attested owner, never ambient settings.
+    env["AI_STATION_NATIVE_DATABASE_VOLUME"] = owner.record["name"]
+    env["AI_STATION_APP_IMAGE"] = value["image_id"]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dev", action="store_true")
@@ -198,6 +234,10 @@ def main() -> None:
     runtime.mkdir(exist_ok=True)
     compose = engine.command("compose", "-f", str(ROOT / "compose.yaml"))
     if engine.identity is not None:
+        if not args.desktop or not args.no_build or args.dev:
+            raise RuntimeError("Native Mac startup requires the packaged desktop supervisor")
+        ensure_recovery_finished(runtime)
+        attest_native_database(args.config, engine, env)
         # Read-only `compose ps` needs valid interpolation before the Runner
         # starts. Zero cannot open the service; start_native_connection replaces
         # both coordinates with a fresh owned generation before `compose up`.
