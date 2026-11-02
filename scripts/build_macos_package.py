@@ -18,7 +18,11 @@ from macos_desktop_python import fingerprint, native_file, recipe
 
 ROOT = Path(__file__).resolve().parent.parent
 ARCHITECTURES = {"arm64": "arm64", "x86_64": "amd64"}
-MAC_SOURCES = ("scripts/macos_desktop_docker.py", "scripts/macos_transport_probe.py")
+MAC_SOURCES = (
+    "scripts/macos_desktop_docker.py",
+    "scripts/macos_transport_probe.py",
+    "scripts/desktop_bridge.py",
+)
 
 
 def git(*args):

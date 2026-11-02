@@ -1425,3 +1425,12 @@ Normal shutdown still targets only its Compose project without volume/image
 removal. These local installer arguments create no HTTP, Runner or agent tool.
 The consumer platform gate remains closed pending actual Mac transport/first-run
 qualification; successful neutral CLI tests alone do not enable Mac installation.
+
+Mac startup bridge preparation accepts only the already verified application
+image identity and independently matched native Docker connection. Its clients
+have no network, host home, Docker socket or GPU access; only new private probe
+directories are mounted. The coordinator owns its child handle and never signals
+a persisted PID. A matching private clean receipt permits restart; unknown state
+retains its pending fence and resources. Neither a successful transport probe
+nor its result file grants workstation/HTTP execution authority or full Mac
+installer qualification.

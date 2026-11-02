@@ -1,4 +1,4 @@
-"""Developer-only private bridge experiment, not Mac installer qualification."""
+"""Private bridge checks; success alone is not Mac installer qualification."""
 
 import argparse
 import csv
@@ -15,13 +15,15 @@ import socket
 import sqlite3
 import stat
 import subprocess
+import sys
 import tempfile
 from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
 
-from desktop_control import same_user
-from macos_desktop_docker import connection
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from desktop_control import same_user  # noqa: E402
+from macos_desktop_docker import connection  # noqa: E402
 
 IMAGE = "docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"
 IMAGE_IDS = {
@@ -121,7 +123,13 @@ def bind_mount(path, target, *, readonly=False):
 
 
 class Docker:
-    def __init__(self, binary, endpoint, root, architecture):
+    def __init__(self, binary, endpoint, root, architecture, *, packaged_image=None):
+        if packaged_image is not None and (
+            not isinstance(packaged_image, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", packaged_image)
+        ):
+            raise ValueError("Use the verified bundled application image identity")
+        self.packaged_image = packaged_image
+        self.image_reference = packaged_image or IMAGE
         self.architecture = architecture
         client = root / "client"
         client.mkdir(mode=0o700)
@@ -136,6 +144,8 @@ class Docker:
         self.image_id = None
 
     def accepted_images(self):
+        if self.packaged_image is not None:
+            return {self.packaged_image}
         # Classic stores identify a config; containerd may identify the index
         # or selected manifest. Every accepted value belongs to this fixed
         # publisher index and architecture, not an arbitrary cached image.
@@ -145,8 +155,12 @@ class Docker:
         return command([*self.argv, *args], env=self.env, **kwargs)
 
     def image(self, *, prepare=False):
-        code, raw = self.call("image", "inspect", IMAGE, check=False)
+        if prepare and self.packaged_image is not None:
+            raise ValueError("A packaged bridge check never downloads an image")
+        code, raw = self.call("image", "inspect", self.image_reference, check=False)
         if code:
+            if self.packaged_image is not None:
+                raise RuntimeError("Import the verified bundled application image before checking its bridge")
             if not prepare:
                 raise RuntimeError("Prepare the fixed fixture image with --prepare-image first")
             self.call("image", "pull", "--platform", "linux/" + self.architecture, IMAGE, timeout=600)
@@ -205,7 +219,7 @@ class Docker:
                 bind_mount(data, "/probe-data"),
                 "--entrypoint",
                 "python3",
-                IMAGE,
+                self.image_reference,
                 "-IBS",
                 "-c",
                 CLIENT,
@@ -389,14 +403,31 @@ def removable(path, original):
     )
 
 
-def probe(output, *, prepare_image=False, data_directory=None):
+def probe(output, *, prepare_image=False, data_directory=None, packaged_image=None, expected_connection=None):
     if platform.system() != "Darwin" or os.geteuid() == 0:
         raise ValueError("This qualification requires a native, ordinary-user Mac")
     architecture = ARCHITECTURES.get(platform.machine().lower())
     if architecture not in IMAGE_IDS:
         raise ValueError("This Mac architecture has no reviewed fixture")
+    if packaged_image is not None:
+        if (
+            not isinstance(packaged_image, str)
+            or not re.fullmatch(r"sha256:[a-f0-9]{64}", packaged_image)
+            or expected_connection is None
+            or data_directory is None
+            or prepare_image
+        ):
+            raise ValueError(
+                "A packaged bridge requires its image identity, frozen connection and data folder"
+            )
+    elif expected_connection is not None:
+        raise ValueError("Frozen startup coordinates require the bundled application image")
     selected = data_parent(data_directory) if data_directory is not None else None
     binary, endpoint = connection(command)
+    if expected_connection is not None and expected_connection != (binary, endpoint):
+        raise ValueError(
+            "Docker Desktop changed before the packaged bridge check; no engine operation was sent"
+        )
     output = Path(output).absolute()
     if output.parent.resolve(strict=True) != output.parent:
         raise ValueError("The proof directory must not traverse symlinks")
@@ -414,14 +445,19 @@ def probe(output, *, prepare_image=False, data_directory=None):
         "architecture": architecture,
         "macos_installer_qualified": False,
         "other_os_user_tested": False,
-        "image": IMAGE,
+        "image": packaged_image or IMAGE,
+        "probe_kind": "packaged_application" if packaged_image else "developer_fixture",
         "chosen_data_directory": str(selected) if selected else None,
     }
     try:
         if selected is not None:
             data_root = Path(tempfile.mkdtemp(prefix=".ast-filesystem-", dir=selected))
             data_original = data_root.lstat()
-        docker = Docker(binary, endpoint, root, architecture)
+        docker = (
+            Docker(binary, endpoint, root, architecture, packaged_image=packaged_image)
+            if packaged_image
+            else Docker(binary, endpoint, root, architecture)
+        )
         result["probe_id"] = docker.identity
         receipt(
             output / "pending.json",
@@ -494,7 +530,21 @@ if __name__ == "__main__":
         action="store_true",
         help="Download only the fixed reviewed fixture image if absent",
     )
+    parser.add_argument("--packaged-image", help=argparse.SUPPRESS)
+    parser.add_argument("--expected-cli", help=argparse.SUPPRESS)
+    parser.add_argument("--expected-endpoint", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    outcome = probe(args.output, prepare_image=args.prepare_image, data_directory=args.data_directory)
+    coordinates = (args.expected_cli, args.expected_endpoint)
+    if (any(coordinates) or args.packaged_image is not None) and not (
+        all(coordinates) and args.packaged_image is not None
+    ):
+        parser.error("Packaged bridge checks require the image and both frozen connection coordinates")
+    outcome = probe(
+        args.output,
+        prepare_image=args.prepare_image,
+        data_directory=args.data_directory,
+        packaged_image=args.packaged_image,
+        expected_connection=coordinates if all(coordinates) else None,
+    )
     print(json.dumps(outcome, indent=2))
     raise SystemExit(0 if outcome["transport_passed"] else 1)

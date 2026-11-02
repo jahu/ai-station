@@ -236,6 +236,107 @@ def test_no_implicit_fixture_download(docker):
     assert calls == [("image", "inspect", probe.IMAGE)]
 
 
+def test_packaged_image_is_pinned_and_never_pulled_or_replaced(tmp_path):
+    image = "sha256:" + "c" * 64
+    docker = probe.Docker(
+        "/fixed/docker", "unix:///private/desktop.sock", tmp_path, "amd64", packaged_image=image
+    )
+    calls = []
+
+    def present(*args, **kwargs):
+        calls.append(args)
+        return 0, json.dumps([{"Id": image, "Os": "linux", "Architecture": "amd64"}])
+
+    docker.call = present
+    assert docker.image() == image and docker.accepted_images() == {image}
+    assert calls == [("image", "inspect", image)]
+    with pytest.raises(ValueError, match="never downloads"):
+        docker.image(prepare=True)
+    docker.call = lambda *a, **k: (1, "")
+    with pytest.raises(RuntimeError, match="Import the verified"):
+        docker.image()
+
+
+@pytest.mark.parametrize(
+    "image", ["ai-station:mutable", "sha256:bad", "docker.io/python:latest", "sha256:" + "A" * 64]
+)
+def test_packaged_image_must_be_an_immutable_verified_identity(tmp_path, image):
+    with pytest.raises(ValueError, match="verified bundled"):
+        probe.Docker("/fixed/docker", "unix:///private/desktop.sock", tmp_path, "amd64", packaged_image=image)
+    assert not (tmp_path / "client").exists()
+
+
+def test_packaged_probe_refuses_changed_connection_before_proof_or_engine_access(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(probe, "connection", lambda _: ("/fixed/docker", "unix:///changed.sock"))
+    with pytest.raises(ValueError, match="changed before"):
+        probe.probe(
+            tmp_path / "proof",
+            data_directory=tmp_path,
+            packaged_image="sha256:" + "c" * 64,
+            expected_connection=("/fixed/docker", "unix:///original.sock"),
+        )
+    assert not (tmp_path / "proof").exists()
+
+
+@pytest.mark.parametrize("missing", ["data", "connection", "image", "allow-download"])
+def test_packaged_probe_requires_complete_frozen_coordinates(tmp_path, monkeypatch, missing):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(
+        probe, "connection", lambda _: pytest.fail("Incomplete packaged request contacted Docker")
+    )
+    values = {
+        "data_directory": tmp_path,
+        "packaged_image": "sha256:" + "c" * 64,
+        "expected_connection": ("/fixed/docker", "unix:///fixed.sock"),
+    }
+    if missing == "data":
+        values.pop("data_directory")
+    elif missing == "connection":
+        values.pop("expected_connection")
+    elif missing == "image":
+        values.pop("packaged_image")
+    else:
+        values["prepare_image"] = True
+    with pytest.raises(ValueError):
+        probe.probe(tmp_path / "proof", **values)
+    assert not (tmp_path / "proof").exists()
+
+
+@pytest.mark.skipif(
+    os.getenv("AI_STATION_REAL_PACKAGED_TRANSPORT_CONTROL_TESTS") != "1" or sys.platform != "linux",
+    reason="Opt-in packaged-image Linux Docker control; never Mac qualification",
+)
+def test_real_linux_packaged_image_transport_control(short_root, tmp_path):
+    image = os.environ["AI_STATION_PACKAGED_TRANSPORT_IMAGE"]
+    docker = probe.Docker(
+        shutil.which("docker"), "unix:///var/run/docker.sock", short_root, "amd64", packaged_image=image
+    )
+    try:
+        assert docker.image() == image
+        data = tmp_path / 'Chosen użytkownik, "Application Support"'
+        data.mkdir(mode=0o700)
+        result = probe.experiment(docker, short_root, data_root=data)
+        assert result["chosen_data_filesystem"] and result["sqlite_wal"] and result["concurrent_writer_lock"]
+        print(
+            json.dumps(
+                {
+                    "scope": "actual packaged-image Linux control only",
+                    "macos_installer_qualified": False,
+                    "image_id": image,
+                    **result,
+                },
+                sort_keys=True,
+            )
+        )
+    finally:
+        if not docker.cleanup():
+            (short_root / "retain-for-inspection").touch()
+            pytest.fail("Owned cleanup incomplete; retained " + str(short_root))
+
+
 @pytest.mark.parametrize("store", ["configuration", "manifest", "index"])
 def test_only_the_fixed_publisher_chain_is_accepted_across_image_stores(docker, store):
     identifiers = {
