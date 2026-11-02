@@ -25,10 +25,13 @@ copied into a retained version directory before supervision so OS package
 replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
 
 The [Mac delivery contract](plans/macos-consumer-installation.md) retains the same
-control plane and private native bridge. Initial changes cover kernel-derived
-desktop peer credentials and Darwin socket lengths; native transport, process
-ownership, CPU/Metal, packaging and actual-platform acceptance remain required.
-The existing Linux launcher does not admit macOS based on these primitives alone.
+control plane and private native bridge. Native ownership, installed Python,
+AppKit presentation and application-bundle entry have passed ARM/Intel component
+checks. Read-only Docker Desktop discovery uses its fixed local context and
+installed application CLI; the transport experiment can test the chosen data
+filesystem with a separate disposable mount. Full Docker Desktop transport,
+model setup/inference, preserving updates/removal and signing acceptance remain
+required before the launcher admits Mac consumer operation.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint

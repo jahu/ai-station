@@ -20,7 +20,7 @@ def inputs(tmp_path, monkeypatch):
     source, layer, native = (tmp_path / name for name in ("repository", "python", "native"))
     original = build.ROOT
     source.mkdir()
-    for name in build_linux_package.SOURCE:
+    for name in (*build_linux_package.SOURCE, *build.MAC_SOURCES):
         if name == "host-runner/ai_station_runner":
             continue
         path = source / name
