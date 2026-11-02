@@ -23,6 +23,7 @@ type Catalog = {
   can_prepare: boolean;
   usable_image?: boolean;
   sdk_prepared?: boolean;
+  platform_supported?: boolean;
   installation_available: boolean;
   installation_notice?: string;
   manifest_sha256: string;
@@ -218,7 +219,11 @@ export default function RuntimeSetupPanel({
   const completed = useRef(new Set<string>());
   const data = catalog.data,
     recipe = data?.recipe;
-  const ready = native ? data?.sdk_prepared : data?.usable_image;
+  const ready = native
+    ? data
+      ? data.platform_supported === true && data.sdk_prepared === true
+      : undefined
+    : data?.usable_image;
   const active = history.data?.find((row) => !terminal.has(row.run.status));
   const existing = history.data?.find(
     (row) =>

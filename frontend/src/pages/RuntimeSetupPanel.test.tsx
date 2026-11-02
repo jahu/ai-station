@@ -41,6 +41,7 @@ function mount({
   ready = false,
   cpu = false,
   native = false,
+  supported = true,
   admin = true,
   rows = [] as ReturnType<typeof preparation>[],
 } = {}) {
@@ -88,6 +89,7 @@ function mount({
                 can_prepare: admin,
                 usable_image: native ? undefined : ready,
                 sdk_prepared: native ? ready : undefined,
+                platform_supported: supported,
                 installation_available: true,
                 storage: {
                   free_bytes: 30 * 1024 ** 3,
@@ -237,4 +239,11 @@ it("uses SDK readiness independently of image readiness and preserves native his
     screen.queryByRole("button", { name: "Prepare llama.cpp" }),
   ).toBeNull();
   await waitFor(() => expect(readiness).toHaveBeenLastCalledWith(true));
+});
+
+it("does not call a native engine ready when its host platform is unsupported", async () => {
+  const { readiness } = mount({ native: true, ready: true, supported: false });
+  await screen.findByRole("button", { name: "Prepare llama.cpp" });
+  expect(screen.queryByText("Native engine available")).toBeNull();
+  await waitFor(() => expect(readiness).toHaveBeenLastCalledWith(false));
 });

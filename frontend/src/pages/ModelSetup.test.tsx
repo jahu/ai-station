@@ -84,6 +84,7 @@ function mount(
             ...(native
               ? {
                   sdk_prepared: true,
+                  platform_supported: true,
                   recipe: {
                     profile: "llamacpp-native-darwin-arm64-b12032-v2",
                     inputs: [],
