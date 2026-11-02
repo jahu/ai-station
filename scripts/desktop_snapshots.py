@@ -30,8 +30,8 @@ def operation_id(value):
     return value
 
 
-def pending(root):
-    path = root / FENCE
+def pending(root, name=FENCE):
+    path = root / name
     if not path.exists() and not path.is_symlink():
         return None
     value = json.loads(versions.read_private(path, 4096))
@@ -49,6 +49,11 @@ def pending(root):
 
 
 def assert_finished(root, data):
+    if (
+        pending(root, "desktop-restore-pending.json") is not None
+        or pending(data / "runtime", "desktop-restore-pending.json") is not None
+    ):
+        raise ValueError("Finish or abort the pending private restore before starting AI Station")
     if pending(root) is not None or pending(data / "runtime") is not None:
         raise ValueError("Finish or cancel the pending private backup before starting AI Station")
 
@@ -86,7 +91,7 @@ def native_quiescent(data):
 def quiescent(storage):
     """Pinned daemon; inspect only mount/state metadata, never unrelated secrets."""
     item = storage.record["command"]
-    if item is not None and item["phase"] == "finished":
+    if item is not None and item["phase"] == "finished" and not item["action"].startswith("restore_"):
         # rm may have completed before its acknowledgement was lost. Inspect the
         # exact ID before the normal guard, which requires an existing helper.
         storage.owned()
@@ -137,7 +142,7 @@ def quiescent(storage):
 
 
 @contextmanager
-def offline(storage, *, owner_lock=None, require_quiescent=True):
+def offline(storage, *, owner_lock=None, require_quiescent=True, allow_restore=False):
     import fcntl
 
     with cold_handoff(storage.root, owner_lock=owner_lock):
@@ -155,7 +160,10 @@ def offline(storage, *, owner_lock=None, require_quiescent=True):
                 "desktop-upgrade-pending.json",
                 "desktop-upgrade-dispatch-pending.json",
                 "recovery-pending.json",
+                "desktop-restore-pending.json",
             ):
+                if name == "desktop-restore-pending.json" and allow_restore:
+                    continue  # The matching restore coordinator validates its own two fences.
                 path = runtime / name
                 if path.exists() or path.is_symlink():
                     raise ValueError("Finish the existing upgrade/recovery before backup")

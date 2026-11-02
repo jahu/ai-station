@@ -11,8 +11,8 @@ Linux/Windows backup behavior is unchanged. Mac consumer admission remains gated
 `scripts/desktop_backup.py` supplies a trusted, offline installer utility, not a
 web API or an agent tool. It accepts a verified installed package and the exact
 private desktop configuration. Missing storage ownership never creates a volume.
-The complete native UI and preserving restore journey remain to be delivered and
-qualified before consumer admission; the command below is a developer interface.
+The native UI and actual installed Mac journey remain to be delivered and
+qualified before consumer admission; the commands below are developer interfaces.
 
 The caller first stops the station and its owned model/native jobs normally.
 Export obtains the existing desktop/update and launcher locks, confirms the
@@ -71,7 +71,7 @@ to resume the same operation. Do not run it against a station with active jobs.
   <desktop-state>/database-exports/<UUID>
 ```
 
-## Remaining integration and acceptance
+## Implemented restoration candidate
 
 The image-local database restore candidate now supplies fixed `prepare`,
 `publish`, `abort` and read-only `status` commands. It packages only the existing
@@ -99,23 +99,48 @@ cannot repeat publication. Owned preparation can be stopped, then inspected and
 aborted; an unstarted payload is explicitly distinguishable from an interrupted
 transaction. Publication is inspected/resumed rather than blindly canceled.
 Disappearing removable input cannot prevent Stop or recovery of an already
-dispatched helper. This still needs retained-file publication, full native
-coordination/presentation and actual complete Mac consumer qualification.
+dispatched helper.
+
+The full restoration coordinator now joins that database transaction to a durable
+retained-file journal. Originals remain under
+`<data>/recovery/desktop-<UUID>/originals/`; incoming files are staged on that same
+filesystem. Per-root atomic renames and frozen content/directory identities allow
+interrupted publication or pre-database rollback to resume without overwriting
+unrelated edits. A missing coordinator state after preparation requires inspection.
+
+Current credential files, including newer MFA key files, are preserved. A changed
+credential with the same name requires explicit review/keep-current consent;
+credential contents never appear in reports. External links remain references,
+not permission to copy or modify their targets. Historical configuration, package,
+daemon, runtime and volume receipts never replace current installation authority.
+
+The coordinator fences the native parent and application startup until database
+and file publication agree. Cancellation before database publication restores
+original files and aborts the prepared database. Once database publication may
+have started, recovery resumes/inspects that operation instead of attempting a
+blind rollback. A verified prepared transaction can resume without its original
+removable backup source. Completed requests never rewrite later application data.
+
+```text
+<bundle>/python/bin/python3 -IB <bundle>/scripts/desktop_backup.py restore \
+  --package <bundle> --config <desktop-state>/desktop.env --backup <backup-folder>
+<bundle>/python/bin/python3 -IB <bundle>/scripts/desktop_backup.py resume-restore \
+  --package <bundle> --config <desktop-state>/desktop.env --operation <UUID>
+<bundle>/python/bin/python3 -IB <bundle>/scripts/desktop_backup.py abort-restore \
+  --package <bundle> --config <desktop-state>/desktop.env --operation <UUID>
+```
+
+Explicit credential conflict resolution adds `--keep-current-credentials` to a
+new restore. Unreadable current account authority instead requires the reviewed
+`--recover-administrator <username> --admin-password-stdin` path; the password
+travels through stdin into a private request file, never a command argument.
+These are trusted offline installer operations; they add no HTTP or agent tool.
+
+## Remaining integration and acceptance
 
 1. Add native backup selection/progress/cancel and restoration presentation.
    The end user must not need these developer commands.
-2. Connect the native helper candidate to the complete restoration coordinator
-   and its file journal/approvals. Its reused pure helpers
-   preserve current account/MFA authority, revoke sessions/invitations/node
-   credentials, pause schedules, interrupt active Runs and release reservations.
-   Unreadable present authority needs explicit reviewed administrator recovery.
-   Never run the Linux host Docker/proc guards inside the image or on Darwin.
-3. Restore retained files through a durable, resumable journal, retaining current
-   originals. Preserve newer credential files required by current MFA authority;
-   resolve conflicting secrets explicitly. Do not restore runtime/process/node
-   journals or adopt source package/daemon/volume identity. Keep startup fenced
-   until files and DB publication agree; support safe abort before publication.
-4. Qualify the whole installed Mac journey with real accounts, history, secrets,
+2. Qualify the whole installed Mac journey with real accounts, history, secrets,
    model files, first result, Stop/restart, two-package update, interruption,
    cancellation, backup/restore and data-preserving removal. Native component and
    Linux Docker tests do not prove this consumer journey, Metal or signing.

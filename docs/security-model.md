@@ -134,8 +134,12 @@ storage helper lifecycle with fixed mounts/commands, cached completion and an
 explicit 512 MiB RAM/swap limit. Only owned preparation may be stopped; source
 disappearance cannot prevent its inspection/Stop. An unstarted payload is
 distinguished from a transaction with a durable request. Publication requires
-resume/inspection. Consumer restore stays unavailable before retained-file
-recovery, complete coordination/presentation and Mac qualification are integrated.
+resume/inspection. Full native coordination now retains original files, stages
+on the same filesystem, preserves current credential/MFA files, refuses unknown
+file changes and fences startup until DB/files publication agree. Only the
+pre-database phase allows rollback. Historical execution/package receipts remain
+provenance. Consumer restore stays unavailable before native presentation and
+actual Mac qualification are integrated.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and

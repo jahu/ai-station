@@ -367,7 +367,24 @@ class DatabaseStorage:
         permitted = set(allowed)
         item = self.record["command"]
         if item is not None:
-            permitted.add(self.inspect_container(item)["Id"])
+            present = True
+            if item["phase"] == "finished":
+                _, observed = self.call(
+                    "container",
+                    "ls",
+                    "--all",
+                    "--quiet",
+                    "--no-trunc",
+                    "--filter",
+                    "id=" + item["container_id"],
+                )
+                if observed not in ("", item["container_id"]):
+                    raise ValueError("The owned helper inventory changed")
+                present = bool(observed)
+                if item["action"] in RESTORE_ACTIONS and not item["interrupted"]:
+                    self.restore_result(item["action"], item["restore_result"])
+            if present:
+                permitted.add(self.inspect_container(item)["Id"])
         _, users = self.call(
             "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "volume=" + self.record["name"]
         )
@@ -497,7 +514,7 @@ class DatabaseStorage:
         versions.read_private(path / "administrator.json", 4096)
         return path
 
-    def restore_database(self, action, request):
+    def restore_database(self, action, request, *, canceled=lambda: False):
         request = restore_request(request)
         action = "restore_" + action
         if action not in RESTORE_ACTIONS:
@@ -522,7 +539,9 @@ class DatabaseStorage:
             self.restore_backup(request)
             if request["recover_admin"]:
                 self.restore_authority(request)
-        result = self.helper(action, restore=request)
+        if action == "restore_prepare" and canceled():
+            raise InterruptedError("Restore preparation cancellation requested")
+        result = self.helper(action, restore=request, canceled=canceled)
         self.quiescent()
         return result
 
@@ -836,7 +855,7 @@ class DatabaseStorage:
             raise ValueError("Database helper identity or isolation changed; nothing was signaled")
         return v
 
-    def helper(self, action, *, export_id=None, restore=None):
+    def helper(self, action, *, export_id=None, restore=None, canceled=lambda: False):
         if action in RESTORE_ACTIONS:
             restore_request(restore)
         elif restore is not None:
@@ -961,6 +980,9 @@ class DatabaseStorage:
             self.call("container", "start", item["container_id"])
         deadline = time.monotonic() + 30
         while True:
+            if action == "restore_prepare" and canceled():
+                self.interrupt_restore(restore)
+                raise InterruptedError("Owned restore preparation stopped; inspect before aborting")
             v = self.inspect_container(item)
             state = v["State"]
             if state["Status"] == "created":

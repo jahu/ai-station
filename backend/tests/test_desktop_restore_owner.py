@@ -228,3 +228,19 @@ def test_dispatched_restore_ack_remains_recoverable_after_source_is_removed(setu
     path.rename(path.with_name(path.name + "-removed"))
     assert create().restore_database("prepare", request)["phase"] == "prepared"
     assert not daemon.containers
+
+
+def test_cooperative_cancellation_stops_running_staging_without_waiting_for_deadline(setup):
+    create, daemon, _, request, hang = setup
+    hang[0] = True
+    calls = 0
+
+    def canceled():
+        nonlocal calls
+        calls += 1
+        return calls > 1
+
+    with pytest.raises(InterruptedError, match="stopped"):
+        create().restore_database("prepare", request, canceled=canceled)
+    assert not daemon.containers
+    assert len([args for args in daemon.calls if args[:2] == ["container", "stop"]]) == 1

@@ -113,8 +113,12 @@ unreadable. Durable prepare/publish/abort/status receipts support interruption
 without native SQL or a new HTTP/agent capability. Native fixed dispatch reuses
 the storage owner's strict helper journal and inspection, caching completion
 before removal. Stop covers only owned preparation and requires subsequent
-inspection; publication is resumed instead of blindly rolled back. Retained-file
-publication, full coordination and the backup/restore UI remain unfinished.
+inspection; publication is resumed instead of blindly rolled back. The native
+full-restore coordinator now joins it to staged retained files, preserves originals
+and newer MFA key files, and fences startup until files and DB agree. Explicit
+credential conflicts require review. Package/runtime/volume receipts are not
+restored as execution authority. Native backup/restore presentation and the actual
+complete Mac consumer journey remain unfinished.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
