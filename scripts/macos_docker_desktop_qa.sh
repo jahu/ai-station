@@ -70,10 +70,23 @@ touch "$qa_root/mounted"
 # Docker's documented prerequisite install requires administrator setup. This
 # acts only inside the throwaway developer VM; it does not install on the user's
 # workstation. License acceptance here is confined to this explicit QA operation.
-/usr/bin/sudo -n /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
-    PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
-    "$qa_root/mount/Docker.app/Contents/MacOS/install" --accept-license --user="$qa_user"
+(
+    # The vendor creates root-owned shared application configuration. Inheriting
+    # our private QA umask makes it unreadable by its ordinary-user backend.
+    # Limit the ordinary installation umask to this one documented installer;
+    # all AI Station proof directories and subsequent operations stay private.
+    umask 022
+    /usr/bin/sudo -n /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+        PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
+        "$qa_root/mount/Docker.app/Contents/MacOS/install" --accept-license --user="$qa_user"
+)
 touch "$qa_root/desktop-installed"
+[[ -x '/Library/Application Support/com.docker.docker' ]]
+/usr/bin/stat -f '%Sp %Su:%Sg %N' '/Library/Application Support/com.docker.docker'
+if [[ -e '/Library/Application Support/com.docker.docker/install-settings.json' ]]; then
+    [[ -r '/Library/Application Support/com.docker.docker/install-settings.json' ]]
+    /usr/bin/stat -f '%Sp %Su:%Sg %N' '/Library/Application Support/com.docker.docker/install-settings.json'
+fi
 /usr/bin/hdiutil detach "$qa_root/mount"
 rm "$qa_root/mounted"
 # A fresh headless installation has no Launch Services registration yet. Open
