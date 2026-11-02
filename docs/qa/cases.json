@@ -1,5 +1,5 @@
 {
-  "version": 38,
+  "version": 39,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -31,7 +31,8 @@
     "docs/plans/guided-cpu-conversation.md",
     "docs/plans/linux-consumer-qualification.md",
     "docs/plans/windows-consumer-installation.md",
-    "docs/web-search.md"
+    "docs/web-search.md",
+    "docs/plans/macos-managed-llama.md"
   ],
   "cases": [
     {
@@ -5183,6 +5184,106 @@
       ],
       "resources": "Osobny Windows 11 x64; klawiatura; opcjonalny czytnik ekranu. Bez nowych pobrań modeli lub generowania.",
       "minutes": 5
+    },
+    {
+      "id": "SETUP-155",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: silnik natywny i pierwszy model",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "Na Macu Apple Silicon albo Intel otwórz kwalifikowaną aplikację i wybierz konfigurację modeli. Zapisz architekturę, RAM i wersję systemu.",
+        "Sprawdź, czy proponowany jest właściwy natywny silnik llama.cpp i mały model 4B CPU. Przejrzyj licencje i przygotuj silnik, a potem pobierz pasujący model.",
+        "Otwórz rozmowę i zadaj krótkie pytanie. Sprawdź odpowiedź, historię Runs i jawny wybór CPU."
+      ],
+      "expected": [
+        "Architektura pochodzi ze stacji Mac, a nie kontenera Linux. Wagi, RAM i rozmiar pobrania są widoczne; silnik nie udaje obrazu CUDA ani obsługi Metal.",
+        "Przygotowanie silnika i pobranie modelu mają zapisany postęp oraz własną historię. Gotowość samego silnika nie oznacza gotowej odpowiedzi modelu.",
+        "Wybrany model odpowiada lokalnie. Nie następuje niewidoczny wybór chmury ani innego urządzenia."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-156",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: najpierw wagi, potem silnik bez ponownego pobierania",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "W świeżej instalacji bez przygotowanego silnika wybierz pasujący model i jawnie zaznacz pobranie samych plików. Jeśli silnik jest już gotowy, nie usuwaj go dla testu; zapisz Nie dotyczy z powodem.",
+        "Po pobraniu sprawdź status plików. Przygotuj silnik, wróć do modelu i sprawdź jego gotowość istniejącym przyciskiem weryfikacji.",
+        "Otwórz rozmowę na tym modelu i zanotuj, czy wagi pobierano ponownie."
+      ],
+      "expected": [
+        "Bez silnika pliki mogą być pobrane i sprawdzone, ale model nie jest przedstawiany jako gotowy do uruchomienia.",
+        "Po przygotowaniu silnika weryfikacja aktywuje istniejące wagi bez ich powtórnego transferu. Poprzednie konfiguracje i pliki pozostają zachowane.",
+        "Gotowy model można wybrać w rozmowie. Historia przygotowania nie ujawnia prywatnych danych innego konta."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-157",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: większe modele, przerwane przygotowanie i Stop",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "Rozwiń wybór większych modeli, wyszukaj 14B i włącz Only models that fit this workstation. Porównaj wybory z widocznym RAM; nie pobieraj dużych wag tylko dla tego kroku.",
+        "Podczas rzeczywistego przygotowania małego silnika albo modelu użyj Stop. Przejdź do innej zakładki, wróć i sprawdź zachowaną historię. Wznów tylko przerwane przygotowanie.",
+        "Po odpowiedzi lokalnego modelu zatrzymaj ten model jego własnym działaniem w Models i sprawdź zwolnienie zasobów. Nie zatrzymuj innych usług Maca."
+      ],
+      "expected": [
+        "Lista jasno rozróżnia CPU i inne profile. Niepasujące profile nie są przedstawiane jako pasujące; ich wyświetlenie nie uruchamia pobrania.",
+        "Stop i Resume zachowują historię oraz sprawdzone pobrane pliki. Ponowne kliknięcia nie uruchamiają równoległych kopii tego samego przygotowania.",
+        "Zatrzymany jest wyłącznie model zarządzany przez AI Station. Zwolnienie RAM po zakończeniu modelu jest widoczne; nie jest obiecywany twardy limit pamięci ani brak swapu na Macu."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 10
+    },
+    {
+      "id": "SETUP-158",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: aktualizacja i reinstalacja z zachowaniem danych",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "W kwalifikowanej aplikacji zapisz rozmowę, plik i wpis pamięci. Zakończ zadania oraz jawnie zatrzymaj używane modele przed aktualizacją.",
+        "Zainstaluj nowszą wersję zwykłą ścieżką aplikacji, bez ręcznego zmieniania usług, sterowników ani zabezpieczeń systemu. Sprawdź wcześniejsze konto i dane.",
+        "Usuń samą aplikację z zachowaniem danych i zainstaluj ponownie. Sprawdź rozmowę, Library, pamięć i wcześniej pobrany model; zapisz ewentualne ponowne pobrania."
+      ],
+      "expected": [
+        "Aktualizacja respektuje trwające zadania i nie zmienia niepowiązanych usług ani plików.",
+        "Konto, rozmowy, Library, pamięć i modele pozostają zachowane. Ewentualny problem z podpisem lub Gatekeeper jest jawny i nie jest obchodzony automatycznie.",
+        "Ponowna instalacja odnajduje zachowane dane i nie pobiera poprawnych wag ponownie. Usunięcie danych wymaga osobnej jawnej decyzji."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 20
     }
   ]
 }
