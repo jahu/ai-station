@@ -13,8 +13,8 @@ static NSString *field(NSDictionary *value, NSString *key, NSString *fallback) {
 
 static void answer(NSString *action) {
     NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"action": action} options:0 error:NULL];
-    [[NSFileHandle standardOutput] writeData:data];
-    [[NSFileHandle standardOutput] writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+    [[NSFileHandle fileHandleWithStandardOutput] writeData:data];
+    [[NSFileHandle fileHandleWithStandardOutput] writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
 }
 
 static NSImage *stationIcon(void) {
@@ -49,7 +49,7 @@ static void prepareUI(NSApplicationActivationPolicy policy) {
 }
 
 static int showDialog(BOOL running) {
-    NSData *input = [[NSFileHandle standardInput] readDataOfLength:16385];
+    NSData *input = [[NSFileHandle fileHandleWithStandardInput] readDataOfLength:16385];
     if (input.length > 16384) return 2;
     id request = [NSJSONSerialization JSONObjectWithData:input options:0 error:NULL];
     if (![request isKindOfClass:NSDictionary.class]) return 2;

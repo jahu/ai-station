@@ -37,7 +37,7 @@ unrecognized contents, links, unsafe modes or a conflicting marker are refused.
 The Runner socket lives in a separate `runner` child, so its container mount
 cannot expose desktop Stop/readiness authority. Existing Linux XDG paths and
 control addresses remain unchanged. These storage primitives do not remove the
-Linux-only consumer prerequisite/GUI guard.
+Linux-only consumer prerequisite gate.
 
 Native presentation uses one small AppKit program and a bounded Python stdin
 protocol. Dialogs, an indeterminate preparation panel and status choices reuse
