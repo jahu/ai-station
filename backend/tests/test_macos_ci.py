@@ -65,6 +65,14 @@ def test_import_probe_cannot_run_target_acceptance_on_linux(monkeypatch):
         probe.main()
 
 
+def test_bundle_entry_probe_refuses_another_platform_before_any_package_or_process(monkeypatch):
+    import macos_bundle_probe as probe
+
+    monkeypatch.setattr(probe.platform, "system", lambda: "Linux")
+    with pytest.raises(RuntimeError, match="native Mac"):
+        probe.main("arm64")
+
+
 def test_native_builder_pin_is_a_valid_two_architecture_hash_lock():
     root = Path(__file__).resolve().parents[2]
     lines = (root / "packaging/macos/build-tools.lock").read_text().splitlines()

@@ -52,6 +52,39 @@ component qualification, not complete consumer acceptance.
 [AppKit termination contract](https://developer.apple.com/documentation/appkit/nsapplicationdelegate/applicationshouldterminate(_:)?language=objc),
 [indeterminate progress](https://developer.apple.com/documentation/appkit/nsprogressindicator/isindeterminate).
 
+The developer producer `scripts/build_macos_package.py` assembles a real `.app`
+layout around those components. It requires clean reviewed source, the exact
+installed application Python inventory, a matching compiled native interface,
+and a matching Linux control-plane image/build receipt for ARM or Intel. It
+creates only a fresh desktop image tag and output; existing tags/apps are never
+replaced. The native entry lives in `Contents/MacOS`, resources carry a checked
+desktop manifest, and `Info.plist` declares architecture and minimum OS. The
+Mac desktop/supervisor/Runner Python launches disable bytecode writes. This
+producer does not start Docker Desktop, install prerequisites or activate Mac
+consumer/model capabilities. Its output explicitly remains unsigned,
+unnotarized and unqualified for consumer distribution.
+
+Developer assembly, after producing all inputs at the same clean Git head:
+
+```bash
+.venv/bin/python scripts/build_macos_package.py \
+  --architecture arm64 \
+  --python-layer /absolute/path/application-python \
+  --native-interface /absolute/path/native-interface \
+  --image ai-station:reviewed-arm64 \
+  --image-build /absolute/path/control-plane-build/build.json \
+  --output '/absolute/new/path/AI Station.app'
+```
+
+The explicit native `macos_bundle_probe.py` exercises this producer and actual
+`.app` executable with the real installed interpreter and a **neutral image
+provider fixture**. It checks resource verification, tamper rejection,
+conflicting CLI flags, unchanged interpreter inventory and no account/data
+creation. Its fixed image bytes are never loaded or called a working control
+plane. Docker Desktop transport, Finder/first-run UX, model setup/inference,
+updates/removal and Gatekeeper/signing remain the independent acceptance gates
+below. This experiment runs only in the owner-dispatched native checks.
+
 `scripts/macos_application_python.py` builds the application interpreter from the
 qualified dependency layer. It installs a regular pure-Python Host Runner wheel,
 built only from tracked source, into a separate copy without developer PYTHONPATH

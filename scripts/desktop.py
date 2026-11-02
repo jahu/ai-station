@@ -434,7 +434,7 @@ def supervise(
     proc = subprocess.Popen(
         [
             str(root / "python/bin/python3"),
-            "-I",
+            "-IB" if platform.system() == "Darwin" else "-I",
             str(root / "scripts/launch.py"),
             "--config",
             str(config),
@@ -756,7 +756,12 @@ def main():
                 executable = str(installed / "python/bin/python3")
                 os.execve(
                     executable,
-                    [executable, "-I", str(installed / "scripts/desktop.py"), *sys.argv[1:]],
+                    [
+                        executable,
+                        "-IB" if platform.system() == "Darwin" else "-I",
+                        str(installed / "scripts/desktop.py"),
+                        *sys.argv[1:],
+                    ],
                     launch_environment(),
                 )
             with (
