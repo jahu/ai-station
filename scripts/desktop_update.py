@@ -104,8 +104,17 @@ def pending(root):
     previous = versions.package_identity(request.get("previous"))
     if request["target"] != target or request["previous"] != previous:
         raise ValueError("The pending version metadata is invalid")
+    engine = request.get("engine")
+    if not isinstance(engine, list) or len(engine) != 2 or not all(isinstance(v, str) for v in engine):
+        raise ValueError("The pending local Docker connection needs inspection")
     installed, value = retained(root, target)
-    return {"operation_id": identity, "installed": installed, "value": value, "previous": previous}
+    return {
+        "operation_id": identity,
+        "installed": installed,
+        "value": value,
+        "previous": previous,
+        "engine": tuple(engine),
+    }
 
 
 @contextmanager
@@ -191,6 +200,10 @@ def install_update(root, app, *, console, start):
         else:
             installed, value = existing["installed"], existing["value"]
         engine = desktop.select_engine(desktop.launch_environment())
+        if existing is not None and engine.identity != existing["engine"]:
+            raise RuntimeError(
+                "Docker Desktop changed during the interrupted update. Inspect the original local installation before continuing."
+            )
         log_path = root / "desktop.log"
         descriptor = os.open(
             log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600

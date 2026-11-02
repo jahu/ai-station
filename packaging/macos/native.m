@@ -256,7 +256,7 @@ static int updateChooserSmoke(void) {
 - (void)installUpdate:(id)sender {
     if (self.stopping || self.updateTask || !self.launcher.running) return;
     NSOpenPanel *panel = updatePanel();
-    if ([panel runModal] != NSModalResponseOK || !panel.URL) return;
+    if ([panel runModal] != NSModalResponseOK || !panel.URL || self.stopping || !self.launcher.running) return;
     NSTask *task = [self taskAt:[self retainedResources] arguments:@[@"--install-update", panel.URL.path, @"--background"]];
     __weak StationDelegate *weakSelf = self;
     task.terminationHandler = ^(NSTask *finished) {

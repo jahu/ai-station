@@ -229,7 +229,7 @@ def test_version_comparison_accepts_equivalent_patch_zero(setup, monkeypatch):
     update.compatible(setup.value | {"minimum_os": "13.3.0"})
 
 
-def test_cold_pending_update_uses_same_retained_operation_and_keeps_lock_through_start(setup, monkeypatch):
+def prepared_pending_update(setup, monkeypatch):
     import desktop_upgrade_image as image
     from test_desktop_upgrade_image import Daemon
 
@@ -247,6 +247,11 @@ def test_cold_pending_update_uses_same_retained_operation_and_keeps_lock_through
     )
     original.run("prepare")
     assert update.pending(setup.root)["operation_id"] == identity
+    return identity, installed
+
+
+def test_cold_pending_update_uses_same_retained_operation_and_keeps_lock_through_start(setup, monkeypatch):
+    identity, installed = prepared_pending_update(setup, monkeypatch)
 
     def opened(path):
         assert path == installed
@@ -258,6 +263,18 @@ def test_cold_pending_update_uses_same_retained_operation_and_keeps_lock_through
     assert update.install_update(setup.root, None, console=True, start=opened) == installed
     assert setup.clients[0].identity == identity
     assert setup.steps == ["image", "bridge", "status", "publish", "activate"]
+
+
+def test_changed_docker_connection_cannot_import_or_probe_an_interrupted_update(setup, monkeypatch):
+    prepared_pending_update(setup, monkeypatch)
+    other = DockerEngine(
+        ("/fixed/docker", "--host", "unix:///another.sock"), {}, ("/fixed/docker", "unix:///another.sock")
+    )
+    monkeypatch.setattr(desktop, "select_engine", lambda env: other)
+    with pytest.raises(RuntimeError, match="Docker Desktop changed"):
+        update.install_update(setup.root, None, console=True, start=lambda *_: pytest.fail("start"))
+    assert not setup.steps and not setup.clients
+    assert (setup.data / "runtime" / update.FENCE).exists()
 
 
 def test_active_payload_never_redirects_to_changed_code_or_changed_storage(setup):
