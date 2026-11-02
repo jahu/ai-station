@@ -212,6 +212,35 @@ package preparation, not permission to bypass the transport/consumer gates below
    credentials stay outside Git and application data. [Apple distribution guidance](https://developer.apple.com/documentation/xcode/preparing-your-app-for-distribution),
    [Developer ID](https://developer.apple.com/developer-id/).
 
+### Offline database upgrade transaction
+
+Implement the data transaction before wiring native update consent. A fixed,
+trusted installer command in the verified control-plane image uses its existing
+Alembic revisions with an explicitly supplied staging connection. The native
+Runner does not acquire SQLAlchemy, migration or database ownership. This is an
+offline installer operation, with no HTTP/agent entry point or arbitrary command.
+Custom database URL overrides are refused rather than backing up another file.
+
+Bind an operation UUID to previous/target bundle identities and the original
+database/WAL fingerprints. Hold the existing launcher and migration locks; a
+durable data-root marker blocks normal API/supervisor startup until publication
+or safe abort. Keep a verified standalone SQLite backup, migrate a separate copy,
+and check integrity/foreign keys before publishing. Preserve accounts, passwords,
+sessions, schedules, run history and every existing file; do not invoke restore's
+deliberate session/schedule normalization. Keep original configuration and models.
+
+Publication verifies that source bytes still match, records its intention before
+handling old SQLite sidecars, and atomically replaces only the database. An exact
+operation may resume an interrupted publication; changed input or unexpected
+writes require inspection. Abort before publication leaves the original database
+and all backups intact. Never silently roll back after the new version has made
+writes. The later native coordinator must verify the retained owner, obtain
+explicit update consent and confirm owned services are stopped before dispatch.
+Actual Docker Desktop acceptance must also prove native/container visibility of
+the launcher locks; Linux-only flock tests do not qualify that Mac boundary.
+This transaction alone does not enable the Mac consumer prerequisite gate or
+qualify Finder/update/removal, Docker Desktop, Metal or signing.
+
 ## Acceptance evidence
 
 ### Owner-dispatched public Mac checks
