@@ -432,3 +432,40 @@ def test_container_default_sqlite_mode_is_valid_inside_private_data_root(setup):
     staged_data(setup)
     (setup.data / "db/ai-station.sqlite").chmod(0o644)
     assert setup.client.finish(activate=True)["phase"] == "applied"
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_abort_preserves_original_nonempty_wal_but_never_accepts_changed_wal(setup, changed):
+    setup.client.run("prepare")
+    setup.client.run("abort")
+    folder = setup.data / "desktop-upgrades" / setup.identity
+    folder.mkdir(mode=0o700, parents=True)
+    folder.parent.chmod(0o700)
+    (setup.data / "db").mkdir(mode=0o700)
+    database = setup.data / "db/ai-station.sqlite"
+    database.write_bytes(b"original database fixture")
+    wal = database.with_name(database.name + "-wal")
+    wal.write_bytes(b"original preserved WAL fixture")
+    request = {
+        "operation_id": setup.identity,
+        "previous_bundle": PREVIOUS["bundle_id"],
+        "target_bundle": TARGET["bundle_id"],
+        "schema_before": "0041",
+        "schema_after": "0042",
+        "source": {"main": upgrade.data_digest(database), "-wal": upgrade.data_digest(wal), "-journal": None},
+    }
+    request_hash = hashlib.sha256(
+        json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    upgrade.write(folder / "request.json", request)
+    upgrade.write(folder / "state.json", {"phase": "aborted", "request_identity": request_hash})
+    if changed:
+        wal.write_bytes(b"unexpected later WAL writes")
+        with pytest.raises(ValueError, match="sidecar writes"):
+            setup.client.finish(activate=False)
+        assert (setup.data / "runtime" / upgrade.FENCE).exists()
+    else:
+        assert setup.client.finish(activate=False)["phase"] == "aborted"
+        assert not (setup.data / "runtime" / upgrade.FENCE).exists()
+        assert wal.read_bytes() == b"original preserved WAL fixture"
+    assert versions.load(setup.root)["package"] == PREVIOUS

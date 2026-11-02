@@ -59,6 +59,20 @@ def data_info(path):
     return info
 
 
+def data_digest(path):
+    original = data_info(path)
+    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as source:
+        opened = os.fstat(source.fileno())
+        if (
+            (original.st_dev, original.st_ino) != (opened.st_dev, opened.st_ino)
+            or opened.st_uid != os.geteuid()
+            or opened.st_nlink != 1
+            or opened.st_mode & 0o022
+        ):
+            raise ValueError("The database identity changed during activation")
+        return hashlib.file_digest(source, "sha256").hexdigest()
+
+
 class UpgradeImage:
     """Caller holds the consented native handoff for this entire transaction."""
 
@@ -537,17 +551,7 @@ class UpgradeImage:
         ):
             raise ValueError("The offline data transaction no longer confirms activation/abort")
         database = versions.canonical(self.data / "db/ai-station.sqlite")
-        original = data_info(database)
-        with os.fdopen(os.open(database, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as source:
-            opened = os.fstat(source.fileno())
-            if (
-                (original.st_dev, original.st_ino) != (opened.st_dev, opened.st_ino)
-                or opened.st_uid != os.geteuid()
-                or opened.st_nlink != 1
-                or opened.st_mode & 0o022
-            ):
-                raise ValueError("The database identity changed during activation")
-            actual = hashlib.file_digest(source, "sha256").hexdigest()
+        actual = data_digest(database)
         expected_hash = (
             backend_state.get("staged_sha256") if activate else backend_request.get("source", {}).get("main")
         )
@@ -555,12 +559,14 @@ class UpgradeImage:
             raise ValueError("The database changed after the acknowledged offline transaction")
         for suffix in ("-wal", "-journal", "-shm"):
             path = database.with_name(database.name + suffix)
+            actual_sidecar = None
             if path.exists() or path.is_symlink():
                 info = data_info(path)
                 if suffix != "-shm" and info.st_size:
-                    raise ValueError(
-                        "Unexpected database sidecar writes require inspection before activation"
-                    )
+                    actual_sidecar = data_digest(path)
+            expected_sidecar = None if activate else backend_request.get("source", {}).get(suffix)
+            if suffix != "-shm" and actual_sidecar != expected_sidecar:
+                raise ValueError("Unexpected database sidecar writes require inspection before activation")
         old = self.request["previous_receipt"]
         expected = (
             old
