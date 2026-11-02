@@ -6,6 +6,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 from contextlib import closing
 from pathlib import Path
@@ -111,6 +112,124 @@ def test_prepare_publish_preserves_all_rows_cookie_agents_jobs_and_artifact(save
     with control_session_factory()() as session:
         assert authenticate(session, token) is not None
     assert "synthetic upgrade account password" not in json.dumps(result)
+
+
+def test_existing_same_filesystem_upgrade_keeps_its_request_and_staging_layout(saved):
+    root, identity, _ = saved
+    prepare(saved)
+    folder = root / "desktop-upgrades" / identity
+    assert "staged_relative" not in upgrade.read(folder / "request.json")
+    assert (folder / "staged.sqlite").is_file()
+    assert not (root / "db/desktop-upgrade-staging").exists()
+
+
+def test_database_local_staging_preserves_cookie_rows_backup_and_exact_resume(saved, monkeypatch):
+    root, identity, token = saved
+    monkeypatch.setattr(upgrade, "separate_database_storage", lambda root, folder: True)
+    path = root / "db/ai-station.sqlite"
+    before = rows(path)
+    result = prepare(saved)
+    folder = root / "desktop-upgrades" / identity
+    request = upgrade.read(folder / "request.json")
+    expected = f"db/desktop-upgrade-staging/{identity}/staged.sqlite"
+    assert request["staged_relative"] == expected and (root / expected).is_file()
+    assert not (folder / "staged.sqlite").exists()
+    assert (root / expected).stat().st_mode & 0o777 == 0o600
+    backup = root / result["backup_relative"]
+    frozen = (backup.read_bytes(), backup.stat().st_mtime_ns)
+    assert prepare(saved) == result and (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen
+    assert upgrade.publish(root, identity)["phase"] == "applied" and rows(path) == before
+    assert (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen and rows(backup) == before
+    assert not (root / expected).exists()
+    migrate()
+    with control_session_factory()() as session:
+        assert authenticate(session, token) is not None
+
+
+@pytest.mark.parametrize("after_replace", [False, True])
+def test_database_local_migration_resumes_publication_without_rewriting_its_backup(
+    legacy_saved, monkeypatch, after_replace
+):
+    root, identity, _ = legacy_saved
+    monkeypatch.setattr(upgrade, "separate_database_storage", lambda root, folder: True)
+    before = rows(root / "db/ai-station.sqlite")
+    result = prepare(legacy_saved)
+    backup = root / result["backup_relative"]
+    frozen = (backup.read_bytes(), backup.stat().st_mtime_ns)
+    original = upgrade.os.replace
+
+    def crash(source, destination):
+        if Path(destination) == root / "db/ai-station.sqlite":
+            if after_replace:
+                original(source, destination)
+            raise SystemExit("synthetic exit during database-local publication")
+        return original(source, destination)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(upgrade.os, "replace", crash)
+        with pytest.raises(SystemExit, match="synthetic exit"):
+            upgrade.publish(root, identity)
+    assert (root / "runtime" / upgrade.MARKER).is_file()
+    assert upgrade.publish(root, identity)["phase"] == "applied"
+    after = rows(root / "db/ai-station.sqlite")
+    assert before.pop("alembic_version") == [("0041",)]
+    assert after.pop("alembic_version") == [("0042",)] and before == after
+    assert (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen
+
+
+@pytest.mark.parametrize("relative", ["../escape.sqlite", "/data/other.sqlite", "db/other/staged.sqlite"])
+def test_database_stage_cannot_select_another_location(saved, relative):
+    root, identity, _ = saved
+    with pytest.raises(ValueError, match="staging location changed"):
+        upgrade.staged_path(
+            root,
+            root / "desktop-upgrades" / identity,
+            {"operation_id": identity, "staged_relative": relative},
+            create=True,
+        )
+    assert not (root / "db/desktop-upgrade-staging").exists()
+
+
+def test_replaced_database_stage_directory_preserves_external_files_and_original_db(
+    saved, tmp_path, monkeypatch
+):
+    root, identity, _ = saved
+    monkeypatch.setattr(upgrade, "separate_database_storage", lambda root, folder: True)
+    prepare(saved)
+    before = upgrade.fingerprint(root)
+    parent = root / "db/desktop-upgrade-staging" / identity
+    parent.rename(parent.with_name(identity + "-retained"))
+    external = tmp_path / "external"
+    external.mkdir()
+    (external / "keep.txt").write_text("preserve unrelated data")
+    parent.symlink_to(external, target_is_directory=True)
+    with pytest.raises(ValueError, match="unsafe ownership or permissions"):
+        upgrade.publish(root, identity)
+    assert (
+        upgrade.fingerprint(root) == before
+        and (external / "keep.txt").read_text() == "preserve unrelated data"
+    )
+    assert upgrade.abort(root, identity)["phase"] == "aborted"
+
+
+def test_cross_device_stage_is_refused_before_publication_phase_or_database_change(saved, monkeypatch):
+    root, identity, _ = saved
+    shared = Path("/dev/shm")
+    if not shared.is_dir() or shared.stat().st_dev == (root / "db").stat().st_dev:
+        pytest.skip("This refusal control requires two actual filesystems")
+    prepare(saved)
+    folder = root / "desktop-upgrades" / identity
+    before = upgrade.fingerprint(root)
+    with tempfile.TemporaryDirectory(prefix="ast-upgrade-", dir=shared) as temporary:
+        foreign = Path(temporary) / "staged.sqlite"
+        foreign.write_bytes((folder / "staged.sqlite").read_bytes())
+        foreign.chmod(0o600)
+        monkeypatch.setattr(upgrade, "staged_path", lambda *a, **kw: foreign)
+        with pytest.raises(ValueError, match="another filesystem"):
+            upgrade.publish(root, identity)
+        assert upgrade.read(folder / "state.json")["phase"] == "prepared"
+        assert upgrade.fingerprint(root) == before
+        assert upgrade.abort(root, identity)["phase"] == "aborted"
 
 
 @pytest.mark.parametrize("marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json"])
