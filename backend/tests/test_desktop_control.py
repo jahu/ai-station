@@ -8,12 +8,22 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import desktop_control as control
 import pytest
 from ai_station_runner.unix_sockets import unix_address
+
+
+@pytest.fixture
+def tmp_path():
+    # Native Darwin sockets have a 104-byte address bound. Pytest's descriptive
+    # per-case directory alone can exceed it; use private disposable IPC roots.
+    parent = "/private/tmp" if sys.platform == "darwin" else None
+    with tempfile.TemporaryDirectory(prefix="asc-", dir=parent) as temporary:
+        yield Path(temporary).resolve()
 
 
 @pytest.mark.skipif(sys.platform not in {"linux", "darwin"}, reason="Native supported Unix peer credentials")
@@ -99,9 +109,17 @@ def raw(root, value):
 
 
 @pytest.mark.parametrize("long", [False, True])
-def test_real_status_and_instance_bound_stop_from_an_independent_process(tmp_path, long):
+def test_real_status_and_instance_bound_stop_from_an_independent_process(tmp_path, long, monkeypatch):
     root = tmp_path / ("long-owned-desktop-folder-" * 5 if long else "owned")
     root.mkdir(mode=0o700)
+    if long and sys.platform == "darwin":
+        import desktop
+
+        monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", tmp_path)
+        data = root
+        root = desktop.control_directory(data)
+        assert len(os.fsencode(data)) > 104
+        assert len(os.fsencode(root / control.CONTROL_FILE)) < 104
     with control.DesktopControl(root) as owner:
         owner.ready.set()
         owner.background.set()

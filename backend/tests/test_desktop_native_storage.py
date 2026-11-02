@@ -4,6 +4,7 @@ import json
 import os
 import stat
 import sys
+import tempfile
 from pathlib import Path
 
 import desktop
@@ -56,15 +57,18 @@ def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_inst
 
 @pytest.fixture
 def native(tmp_path, monkeypatch):
-    parent = tmp_path / "runtime-parent"
-    parent.mkdir(mode=0o700)
     home = tmp_path / ("long-user-home-" + "a" * 80)
     home.mkdir()
     monkeypatch.setattr(desktop.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(desktop.Path, "home", lambda: home)
-    monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", parent)
     monkeypatch.setattr(desktop, "free_port", lambda: 8765)
-    return desktop.state_root(), parent
+    # Long data paths remain tested. Actual native IPC must use the production
+    # short private namespace, independent of pytest's long descriptive paths.
+    base = "/private/tmp" if sys.platform == "darwin" else None
+    with tempfile.TemporaryDirectory(prefix="asn-", dir=base) as temporary:
+        parent = Path(temporary).resolve()
+        monkeypatch.setattr(desktop, "DARWIN_RUNTIME_PARENT", parent)
+        yield desktop.state_root(), parent
 
 
 def test_native_state_root_and_short_control_are_separate_from_runner_mount(native):
