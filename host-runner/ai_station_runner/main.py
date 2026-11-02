@@ -63,7 +63,15 @@ def main() -> None:
                 uvicorn.Server(uvicorn.Config(app, log_level="info")).run(sockets=[listener])
             finally:
                 try:
-                    manager().shutdown()
+                    from ai_station_runner.native_llama_api import close
+
+                    close()
+                    # Native shared models, like Linux model containers, outlive
+                    # Runner replacement. Explicit typed Stop owns their exit.
+                    if sys.platform == "darwin":
+                        manager().shutdown(preserve_executors=frozenset({"llama_native"}))
+                    else:
+                        manager().shutdown()
                 finally:
                     path.unlink(missing_ok=True)
 

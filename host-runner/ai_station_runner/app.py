@@ -133,6 +133,9 @@ def manager() -> ProcessManager:
 
 def reset_manager() -> None:
     global _manager
+    from ai_station_runner.native_llama_api import close
+
+    close()
     _manager = None
 
 

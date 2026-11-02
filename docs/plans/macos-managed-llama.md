@@ -62,3 +62,30 @@ Desktop transport or the complete installer.
    conversation through API/worker/Runner on both targets. Actual Docker Desktop
    socket/WAL transport, Finder UX, preserving update/removal, minimum OS, signing
    and Gatekeeper remain separate gates in [the consumer plan](macos-consumer-installation.md).
+
+## Typed CPU model lifecycle
+
+The existing `/v1/llama` load/inspect/Stop/chat/coding-completion routes dispatch
+native CPU requests explicitly by SDK profile and opaque `environment_id`.
+The native request requires verified owned weights, Q8 cache, an absolute startup
+deadline and the inspected RAM budget. No binary, private preparation UUID,
+model socket, argv or Metal device is caller selectable. Linux container requests
+retain their prior serialized identities and are refused on Mac; native requests
+are refused on Linux. There is no implicit platform or compute fallback.
+
+Runner privately resolves the SDK reference and injects its existing singleton
+ProcessManager into NativeLlamaManager. Installation-bound mode-0700 model socket
+storage under the short native temporary namespace is separate from the mounted
+Runner socket. Unknown/changing ownership returns an inspection-required error;
+model logs remain suppressed. Closing Runner detaches native observers and retains
+only shared native model processes, matching Linux model-container lifetime;
+other owned jobs are still canceled. Explicit typed Stop persists its fence and
+signals only the owned model. Replacement Runner reattaches the original process,
+readiness socket and context without launching another model.
+
+The explicit `macos-native-inference` operation additionally exercises this typed
+path using the installed wheel/interpreter and existing fixed 0.6B CPU fixture:
+SDK prepare/adopt, real load/reply, duplicate/mutated identity, graceful Runner
+replacement with the same model PID and another reply, observed-live Stop and
+pre-dispatch Stop. Ordinary SDK checks download no model. This is a component
+qualification, not yet guided consumer setup, Metal or Docker Desktop acceptance.

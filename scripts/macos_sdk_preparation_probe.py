@@ -25,7 +25,7 @@ def stop(child):
             child.wait(timeout=5)
 
 
-def main(architecture):
+def main(architecture, *, run_native_inference=False):
     if (
         platform.system() != "Darwin"
         or platform.machine() != architecture
@@ -56,6 +56,7 @@ def main(architecture):
     frozen = environment.recipe()
     item = frozen["inputs"][0]
     server = None
+    model_proof = {}
     with tempfile.TemporaryDirectory(prefix="ais-sdk-", dir="/private/tmp") as temporary:
         work = Path(temporary).resolve()
         data, socket = work / "data", work / "uds/runner.sock"
@@ -226,8 +227,18 @@ def main(architecture):
                 fenced.raise_for_status()
                 if fenced.json()["status"] != "canceled" or fenced.json().get("process"):
                     raise ValueError("Pre-dispatch Stop did not fence a delayed native launch")
-                if client.post("/v1/llama/load", json={}).status_code != 503:
-                    raise ValueError("SDK preparation accidentally admitted unqualified model loading")
+                if client.post("/v1/llama/load", json={}).status_code != 422:
+                    raise ValueError("Malformed model coordinates bypassed typed validation")
+                if run_native_inference:
+                    from macos_typed_model_probe import qualify
+
+                    def restart():
+                        nonlocal server
+                        stop(server)
+                        server = launch()
+                        healthy(server)
+
+                    model_proof = qualify(client, data, profile, adopted.json()["environment_id"], restart)
                 stop(server)
                 server = launch()
                 healthy(server)
@@ -257,7 +268,8 @@ def main(architecture):
         "runner_restart_same_sdk_identity": True,
         "private_operation_not_in_shared_catalog": True,
         "application_inventory_unchanged": True,
-        "model_inference_tested": False,
+        "model_inference_tested": bool(model_proof),
+        **model_proof,
         "macos_installer_qualified": False,
         "preparation_initially_alive": initial["alive"],
     }
@@ -266,6 +278,6 @@ def main(architecture):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in {2, 3} or (len(sys.argv) == 3 and sys.argv[2] != "--run-native-inference"):
         raise SystemExit("Choose the native architecture")
-    main(sys.argv[1])
+    main(sys.argv[1], run_native_inference=len(sys.argv) == 3)

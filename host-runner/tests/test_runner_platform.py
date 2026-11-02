@@ -110,7 +110,7 @@ def test_platform_policy_cannot_be_overridden_by_http_fields(client, monkeypatch
         json={"platform": "linux", "runtime_profile": "llamacpp-cpu-linux-amd64-v1"},
         headers={"X-Platform": "linux"},
     )
-    assert response.status_code == 503
+    assert response.status_code == (422 if platform == "darwin" else 503)
     assert host._manager is None
 
 

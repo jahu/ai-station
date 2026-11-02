@@ -81,6 +81,14 @@ def test_sdk_probe_requires_actual_installed_native_python_before_any_download(m
         probe.main("arm64")
 
 
+def test_typed_model_probe_cannot_download_or_launch_on_linux(monkeypatch):
+    import macos_typed_model_probe as probe
+
+    monkeypatch.setattr(probe.platform, "system", lambda: "Linux")
+    with pytest.raises(RuntimeError, match="actual Mac"):
+        probe.qualify(None, None, None, None, None)
+
+
 def test_native_builder_pin_is_a_valid_two_architecture_hash_lock():
     root = Path(__file__).resolve().parents[2]
     lines = (root / "packaging/macos/build-tools.lock").read_text().splitlines()

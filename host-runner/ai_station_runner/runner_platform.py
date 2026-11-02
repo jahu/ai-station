@@ -22,6 +22,11 @@ _DARWIN_OPERATIONS = frozenset(
         ("GET", "/v1/setup/native-llama/{identity}"),
         ("POST", "/v1/setup/native-llama/{identity}/cancel"),
         ("POST", "/v1/setup/native-llama/{identity}/adopt"),
+        ("POST", "/v1/llama/load"),
+        ("GET", "/v1/llama/{instance_id}"),
+        ("POST", "/v1/llama/{instance_id}/stop"),
+        ("POST", "/v1/llama/{instance_id}/chat/completions"),
+        ("POST", "/v1/llama/{instance_id}/coding/completions"),
     }
 )
 

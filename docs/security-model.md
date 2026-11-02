@@ -1384,3 +1384,16 @@ throughout its input transfer, with each profile's existing assembly reserve.
 It credits retained partial bytes without removing files and refuses stale or
 missing Windows observations before native dispatch. Source events recheck the
 current preparation claim and authority too.
+
+
+Native Mac model loading uses only the built-in SDK profile and opaque verified
+environment reference through the existing llama.cpp API. Callers cannot supply
+private SDK operations, binaries, commands or socket paths. Only verified owned
+text weights and explicitly budgeted CPU execution are admitted; Metal and
+external paths are not implicitly enabled. Native model sockets use separate
+private, installation-bound short storage outside the container Runner mount.
+Runner replacement detaches observers and preserves shared native model children;
+explicit model Stop remains durable and ownership-checked. Normal shutdown still
+cancels other owned jobs. Unknown ownership or changed SDK/model metadata cannot
+release reservations or authorize a signal. Native estimates declare no hard
+memory/no-swap guarantee. Full guided Mac installation remains separately gated.
