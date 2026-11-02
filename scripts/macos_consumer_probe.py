@@ -100,6 +100,9 @@ def main():
         proof["stage"] = stage
         save()
         print(json.dumps({"stage": stage}), flush=True)
+        # Fixed stage names only: expose live progress through check annotations
+        # without publishing private commands, setup URLs or account material.
+        print(f"::notice title=Mac package QA::{stage}", flush=True)
 
     def start(executable):
         import desktop
