@@ -354,6 +354,9 @@ def test_actual_isolated_cli_on_linux_reports_unavailable_not_mac_success():
 
 
 def test_collect_keeps_metal_separate_from_cuda_gpu_inventory(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        telemetry, "platform", SimpleNamespace(system=lambda: "Darwin", machine=lambda: "arm64")
+    )
     monkeypatch.setattr(telemetry, "sys", SimpleNamespace(platform="darwin"))
     monkeypatch.setattr(telemetry, "cpu", lambda: {})
     monkeypatch.setattr(telemetry, "memory", lambda: {})
@@ -362,6 +365,7 @@ def test_collect_keeps_metal_separate_from_cuda_gpu_inventory(tmp_path, monkeypa
     report = metal._report([device()])
     monkeypatch.setattr(metal, "observe", lambda: report)
     assert telemetry.collect(tmp_path) == {
+        "host": {"system": "Darwin", "architecture": "arm64"},
         "gpus": [],
         "metal": report,
         "cpu": {},

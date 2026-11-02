@@ -1,5 +1,6 @@
 """The normal typed Runner selects native ownership without enabling other adapters."""
 
+import json
 import os
 import stat
 import subprocess
@@ -19,6 +20,38 @@ from ai_station_runner.processes import ProcessManager
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.testclient import TestClient
 from test_darwin_processes import candidate_kernel as candidate_kernel
+
+
+def exited_owner(root, identity, *, native_mode=False):
+    """The original owner really exits; recovered managers never race its reaper."""
+    package = Path(__file__).resolve().parents[1]
+    tests = Path(__file__).resolve().parent
+    helper = f"""
+import sys,json,os
+from pathlib import Path
+sys.path[:0]=[{str(package)!r},{str(tests)!r}]
+from ai_station_runner.runner_platform import create_process_manager
+if {native_mode!r}:
+ if sys.platform=='linux':
+  import pytest
+  from test_darwin_processes import install_linux_control
+  install_linux_control(pytest.MonkeyPatch())
+ from ai_station_runner.darwin_processes import DarwinProcessManager
+ owner=DarwinProcessManager(Path(sys.argv[1]),grace_seconds=0.05)
+else:
+ owner=create_process_manager(Path(sys.argv[1]),grace_seconds=0.05)
+started=owner.start(run_id=sys.argv[2],argv=[sys.executable,'-IB','-c','import time;time.sleep(60)'],cwd=Path(sys.argv[1]),executor='platform-fixture')
+print(json.dumps(started),flush=True)
+os._exit(0)
+"""
+    result = subprocess.run(
+        [sys.executable, "-IB", "-c", helper, str(root), identity],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    )
+    return json.loads(result.stdout)
 
 
 @pytest.mark.parametrize("platform,kind", [("linux", ProcessManager), ("darwin", DarwinProcessManager)])
@@ -118,21 +151,12 @@ def test_normal_mac_runner_reattaches_and_http_stops_only_its_owned_process(
     client, tmp_path, monkeypatch, candidate_kernel
 ):
     monkeypatch.setattr(native, "sys", SimpleNamespace(platform="darwin"))
-    owner = host.manager()
-    assert type(owner) is DarwinProcessManager
-    assert host.manager() is owner
     identity = str(uuid4())
     unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)"])
     try:
-        started = owner.start(
-            run_id=identity,
-            argv=[sys.executable, "-c", "import time;time.sleep(30)"],
-            cwd=tmp_path,
-            executor="platform-fixture",
-        )
-        host.reset_manager()
+        started = exited_owner(tmp_path, identity, native_mode=True)
         recovered = host.manager()
-        assert recovered is not owner and type(recovered) is DarwinProcessManager
+        assert host.manager() is recovered and type(recovered) is DarwinProcessManager
         observed = client.get("/v1/process/" + identity)
         assert observed.status_code == 200
         assert observed.json()["pid"] == started["pid"] and observed.json()["alive"]
@@ -145,7 +169,8 @@ def test_normal_mac_runner_reattaches_and_http_stops_only_its_owned_process(
         assert not canceled.json()["alive"] and unrelated.poll() is None
         assert client.get("/v1/process/" + identity).json()["status"] == "canceled"
     finally:
-        owner.shutdown()
+        if host._manager is not None:
+            host._manager.shutdown()
         unrelated.terminate()
         unrelated.wait(timeout=5)
 
@@ -230,17 +255,11 @@ def test_actual_runner_main_private_socket_recovers_and_stops_native_owned_work(
             "AI_STATION_DATA_HOST_PATH": str(data),
             "AI_STATION_RUNNER_SOCKET": str(socket),
         }
-        owner = native.create_process_manager(data, grace_seconds=0.05)
         identity = str(uuid4())
         unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(60)"])
         server = None
         try:
-            started = owner.start(
-                run_id=identity,
-                argv=[sys.executable, "-IB", "-c", "import time;time.sleep(60)"],
-                cwd=root,
-                executor="platform-fixture",
-            )
+            started = exited_owner(data, identity)
             server = subprocess.Popen(
                 argv, cwd=root, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
@@ -285,6 +304,6 @@ def test_actual_runner_main_private_socket_recovers_and_stops_native_owned_work(
             if server is not None and server.poll() is None:
                 server.terminate()
                 server.wait(timeout=15)
-            owner.shutdown()
+            native.create_process_manager(data, grace_seconds=0.05).shutdown()
             unrelated.terminate()
             unrelated.wait(timeout=5)
