@@ -286,8 +286,8 @@ The Linux package explains any required Docker permission through a native dialo
 and keeps the app running as your ordinary user. These are release candidates;
 the complete macOS installer and broader GPU qualification remain in progress.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
-The Mac candidate now has offline full backup/restore coordination; its native
-interface and complete installed-device acceptance remain in progress.
+The Mac candidate now has full backup/restore coordination and a native menu;
+complete recovery presentation and installed-device acceptance remain in progress.
 [Backup and restoration status](docs/plans/desktop-snapshots.md).
 
 Development builds also retain creative sessions across Images, Video, Music,

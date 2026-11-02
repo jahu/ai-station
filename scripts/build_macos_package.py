@@ -33,6 +33,7 @@ MAC_SOURCES = (
     "scripts/desktop_snapshot_files.py",
     "scripts/desktop_restore_files.py",
     "scripts/desktop_restoration.py",
+    "scripts/desktop_backup_ui.py",
 )
 
 

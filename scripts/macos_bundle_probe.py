@@ -117,7 +117,7 @@ def main(architecture):
                 "-IB",
                 "-c",
                 "import sys,time;from pathlib import Path;sys.path.insert(0,sys.argv[1]);"
-                "import desktop_bridge,desktop_update;from macos_desktop_ui import Preparation;"
+                "import desktop_bridge,desktop_update,desktop_backup_ui;from macos_desktop_ui import Preparation;"
                 "p=Preparation(Path(sys.argv[2]),heading='Preparing your local update');"
                 "p.stage('Checking the downloaded application…');time.sleep(1);p.close()",
                 str(resources / "scripts"),

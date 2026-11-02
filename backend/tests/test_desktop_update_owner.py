@@ -86,6 +86,29 @@ def test_consent_stops_only_attested_owner_and_holds_native_startup_lock(install
     assert keep.read_text() == "original data"
 
 
+def test_same_version_maintenance_hands_off_desktop_lock_without_nesting_update_gate(installation, channel):
+    from desktop_update import cold_handoff
+
+    root, config, _ = installation
+    with start(root, config, channel) as (proc, instance):
+        with update.handoff(root, config, channel, PACKAGE, lambda *_: True, maintenance=True) as owned:
+            proc.wait(timeout=3)
+            assert (root / ("stop-" + instance)).exists()
+            with cold_handoff(root, owner_lock=owned["owner_lock"]):
+                with (root / "desktop.lock").open("a") as competing:
+                    with pytest.raises(BlockingIOError):
+                        fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def test_maintenance_never_accepts_a_different_package(installation, channel):
+    root, config, _ = installation
+    with start(root, config, channel) as (proc, instance):
+        with pytest.raises(ValueError, match="same verified desktop package"):
+            with update.handoff(root, config, channel, CANDIDATE, lambda *_: True, maintenance=True):
+                pytest.fail("A changed package was admitted as backup maintenance")
+        assert proc.poll() is None and not (root / ("stop-" + instance)).exists()
+
+
 @pytest.mark.parametrize("answer", [False, None, 1, "yes"])
 def test_no_explicit_native_consent_never_stops_or_changes_data(installation, channel, answer):
     root, config, _ = installation

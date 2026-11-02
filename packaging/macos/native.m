@@ -82,13 +82,23 @@ static int showDialog(BOOL running) {
 }
 
 @interface ProgressDelegate : NSObject <NSWindowDelegate>
+@property(strong) NSButton *cancelButton;
+@property(assign) BOOL canceled;
+- (void)cancel:(id)sender;
 @end
 @implementation ProgressDelegate
 - (void)windowWillClose:(NSNotification *)notification { [NSApp terminate:nil]; }
+- (void)cancel:(id)sender {
+    if (self.canceled || !self.cancelButton.enabled) return;
+    self.canceled = YES;
+    self.cancelButton.enabled = NO;
+    self.cancelButton.title = @"Canceling…";
+    answer(@"cancel");
+}
 @end
 static ProgressDelegate *progressDelegate;
 
-static int progressWindow(BOOL smoke) {
+static int progressWindow(BOOL smoke, BOOL cancelSmoke) {
     prepareUI(NSApplicationActivationPolicyAccessory);
     NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 480, 176)
         styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
@@ -116,11 +126,22 @@ static int progressWindow(BOOL smoke) {
     hint.textColor = NSColor.tertiaryLabelColor;
     hint.frame = NSMakeRect(28, 6, 424, 18);
     [window.contentView addSubview:hint];
+    NSButton *cancel = [NSButton buttonWithTitle:@"Cancel" target:progressDelegate action:@selector(cancel:)];
+    cancel.frame = NSMakeRect(354, 4, 98, 26);
+    cancel.hidden = YES;
+    progressDelegate.cancelButton = cancel;
+    [window.contentView addSubview:cancel];
     [window center];
     [window makeKeyAndOrderFront:nil];
-    if (smoke) {
+    if (smoke || cancelSmoke) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            answer(@"native-ui-smoke-passed");
+            if (cancelSmoke) {
+                cancel.hidden = NO;
+                cancel.enabled = YES;
+                [progressDelegate cancel:cancel];
+                if (!progressDelegate.canceled || cancel.enabled) exit(1);
+                answer(@"native-backup-progress-cancel-passed");
+            } else answer(@"native-ui-smoke-passed");
             [NSApp terminate:nil];
         });
     } else {
@@ -139,6 +160,25 @@ static int progressWindow(BOOL smoke) {
                     dispatch_async(dispatch_get_main_queue(), ^{
                         if (value[@"stage"]) stage.stringValue = text;
                         if (value[@"heading"]) heading.stringValue = title;
+                        if ([value[@"cancelable"] isKindOfClass:NSNumber.class]) {
+                            BOOL allowed = [value[@"cancelable"] boolValue];
+                            cancel.hidden = NO;
+                            cancel.enabled = allowed && !progressDelegate.canceled;
+                            hint.stringValue = allowed ? @"Closing this window keeps the operation running." : @"Finishing safely. Please wait.";
+                            hint.frame = NSMakeRect(28, 6, 320, 18);
+                        }
+                        if ([value[@"done"] isKindOfClass:NSNumber.class] && [value[@"total"] isKindOfClass:NSNumber.class]) {
+                            double done = [value[@"done"] doubleValue], total = [value[@"total"] doubleValue];
+                            if (total > 0 && total <= 1e12 && done >= 0 && done <= total) {
+                                indicator.indeterminate = NO;
+                                indicator.minValue = 0;
+                                indicator.maxValue = total;
+                                indicator.doubleValue = done;
+                            }
+                        } else if (value[@"total"]) {
+                            indicator.indeterminate = YES;
+                            [indicator startAnimation:nil];
+                        }
                     });
                 }
             }
@@ -173,6 +213,59 @@ static int updateChooserSmoke(void) {
     return 0;
 }
 
+static NSOpenPanel *backupPanel(void) {
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.title = @"Choose an AI Station backup";
+    panel.message = @"Select the complete backup folder. AI Station will check it before changing saved data.";
+    panel.prompt = @"Check backup";
+    panel.canChooseFiles = NO;
+    panel.canChooseDirectories = YES;
+    panel.allowsMultipleSelection = NO;
+    panel.resolvesAliases = NO;
+    return panel;
+}
+
+static int backupDialog(BOOL folder, BOOL smoke) {
+    prepareUI(NSApplicationActivationPolicyAccessory);
+    if (folder || smoke) {
+        NSOpenPanel *panel = backupPanel();
+        if (smoke) {
+            if (panel.canChooseFiles || !panel.canChooseDirectories || panel.allowsMultipleSelection || panel.resolvesAliases) return 1;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [panel cancel:nil]; });
+        }
+        if ([panel runModal] != NSModalResponseOK) {
+            answer(smoke ? @"native-backup-chooser-cancel-passed" : @"cancel");
+            return 0;
+        }
+        NSString *path = panel.URL.path;
+        if (!path || path.length > 8192) return 2;
+        NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"path":path} options:0 error:NULL];
+        [[NSFileHandle fileHandleWithStandardOutput] writeData:data];
+        return 0;
+    }
+    NSData *input = [[NSFileHandle fileHandleWithStandardInput] readDataOfLength:16385];
+    if (input.length > 16384) return 2;
+    id request = [NSJSONSerialization JSONObjectWithData:input options:0 error:NULL];
+    if (![request isKindOfClass:NSDictionary.class]) return 2;
+    NSString *pending = field(request, @"pending", @"");
+    BOOL restore = [pending isEqual:@"restore"], backup = [pending isEqual:@"backup"];
+    if (pending.length && !restore && !backup) return 2;
+    BOOL canAbort = [request[@"can_abort"] isKindOfClass:NSNumber.class] && [request[@"can_abort"] boolValue];
+    NSAlert *alert = [NSAlert new];
+    alert.icon = stationIcon();
+    alert.messageText = pending.length ? @"Continue an interrupted operation" : @"Back up your AI Station";
+    alert.informativeText = pending.length ? @"Your saved data and recovery records have been kept. Continue the same operation before starting AI Station." : @"Create a complete private backup of your conversations, files, models and accounts, or restore a previous backup. AI Station will stop briefly and reopen afterward.";
+    [alert addButtonWithTitle:restore ? @"Continue restore" : backup ? @"Continue backup" : @"Create backup"];
+    if (!pending.length || canAbort) [alert addButtonWithTitle:pending.length ? @"Cancel operation" : @"Restore backup…"];
+    [alert addButtonWithTitle:@"Close"];
+    alert.buttons.lastObject.keyEquivalent = @"\033";
+    NSModalResponse choice = [alert runModal];
+    if (choice == NSAlertFirstButtonReturn) answer(pending.length ? @"resume" : @"export");
+    else if (choice == NSAlertSecondButtonReturn && (!pending.length || canAbort)) answer(pending.length ? @"abort" : @"restore");
+    else answer(@"cancel");
+    return 0;
+}
+
 @interface StationDelegate : NSObject <NSApplicationDelegate, NSMenuItemValidation>
 @property(strong) NSTask *launcher;
 @property(strong) NSTask *updateTask;
@@ -185,8 +278,8 @@ static int updateChooserSmoke(void) {
 @implementation StationDelegate
 - (void)showUpdateFailure {
     NSAlert *alert = [NSAlert new];
-    alert.messageText = @"The update could not finish";
-    alert.informativeText = @"Your saved data has been kept. Open AI Station again to continue an interrupted update, or check the application package and Docker Desktop.";
+    alert.messageText = @"AI Station needs your attention";
+    alert.informativeText = @"Your saved data and recovery records have been kept. Open AI Station again to continue an interrupted operation, or check the application package and Docker Desktop.";
     alert.icon = stationIcon();
     [alert runModal];
 }
@@ -269,9 +362,22 @@ static int updateChooserSmoke(void) {
     }
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    if (item.action == @selector(openStation:) || item.action == @selector(installUpdate:))
+    if (item.action == @selector(openStation:) || item.action == @selector(installUpdate:) || item.action == @selector(manageBackups:))
         return !self.stopping && self.updateTask == nil && self.launcher.running;
     return YES;
+}
+- (void)manageBackups:(id)sender {
+    if (self.stopping || self.updateTask || !self.launcher.running) return;
+    NSTask *task = [self taskAt:[self retainedResources] arguments:@[@"--manage-backups", @"--background"]];
+    __weak StationDelegate *weakSelf = self;
+    task.terminationHandler = ^(NSTask *finished) {
+        dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf taskFinished:finished]; });
+    };
+    self.updateTask = task;
+    if (![task launchAndReturnError:NULL]) {
+        self.updateTask = nil;
+        [self showUpdateFailure];
+    }
 }
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     self.resources = NSBundle.mainBundle.resourceURL;
@@ -363,11 +469,15 @@ int main(int argc, const char *argv[]) {
         NSString *mode = argc > 1 ? [NSString stringWithUTF8String:argv[1]] : @"";
         if ([mode isEqual:@"--native-dialog"]) return showDialog(NO);
         if ([mode isEqual:@"--native-running"]) return showDialog(YES);
-        if ([mode isEqual:@"--native-progress"]) return progressWindow(NO);
-        if ([mode isEqual:@"--native-ui-smoke"]) return progressWindow(YES);
+        if ([mode isEqual:@"--native-progress"]) return progressWindow(NO, NO);
+        if ([mode isEqual:@"--native-ui-smoke"]) return progressWindow(YES, NO);
+        if ([mode isEqual:@"--native-backup-progress-smoke"]) return progressWindow(NO, YES);
         if ([mode isEqual:@"--native-update-smoke"]) return updateChooserSmoke();
+        if ([mode isEqual:@"--native-backups"]) return backupDialog(NO, NO);
+        if ([mode isEqual:@"--native-backup-folder"]) return backupDialog(YES, NO);
+        if ([mode isEqual:@"--native-backup-smoke"]) return backupDialog(YES, YES);
         if ([mode isEqual:@"--native-update-ownership-smoke"]) return updateOwnershipSmoke();
-        NSSet *allowed = [NSSet setWithArray:@[@"--console", @"--background", @"--status", @"--stop", @"--package-check"]];
+        NSSet *allowed = [NSSet setWithArray:@[@"--console", @"--background", @"--status", @"--stop", @"--package-check", @"--manage-backups"]];
         NSMutableArray *arguments = [NSMutableArray new];
         for (int i = 1; i < argc; i++) {
             NSString *value = [NSString stringWithUTF8String:argv[i]];
@@ -393,6 +503,9 @@ int main(int argc, const char *argv[]) {
         NSMenuItem *update = [[NSMenuItem alloc] initWithTitle:@"Install Update…" action:@selector(installUpdate:) keyEquivalent:@""];
         update.target = stationDelegate;
         [application addItem:update];
+        NSMenuItem *backups = [[NSMenuItem alloc] initWithTitle:@"Backups and Restore…" action:@selector(manageBackups:) keyEquivalent:@""];
+        backups.target = stationDelegate;
+        [application addItem:backups];
         [application addItem:NSMenuItem.separatorItem];
         [application addItemWithTitle:@"Quit AI Station" action:@selector(terminate:) keyEquivalent:@"q"];
         item.submenu = application;

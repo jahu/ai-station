@@ -11,8 +11,8 @@ Linux/Windows backup behavior is unchanged. Mac consumer admission remains gated
 `scripts/desktop_backup.py` supplies a trusted, offline installer utility, not a
 web API or an agent tool. It accepts a verified installed package and the exact
 private desktop configuration. Missing storage ownership never creates a volume.
-The native UI and actual installed Mac journey remain to be delivered and
-qualified before consumer admission; the commands below are developer interfaces.
+The native UI candidate is described below; actual installed Mac acceptance is
+still required before consumer admission. These commands are developer interfaces.
 
 The caller first stops the station and its owned model/native jobs normally.
 Export obtains the existing desktop/update and launcher locks, confirms the
@@ -138,8 +138,25 @@ These are trusted offline installer operations; they add no HTTP or agent tool.
 
 ## Remaining integration and acceptance
 
-1. Add native backup selection/progress/cancel and restoration presentation.
-   The end user must not need these developer commands.
+The Mac application now has a **Backups and Restore…** menu candidate. It selects
+the current verified installed payload, presents backup/restore consent, and uses
+the existing same-user desktop Stop handoff for that exact package. The file/DB
+coordinators borrow its desktop lock and independently recheck workload quiescence.
+No new lifecycle listener or Docker capability is exposed.
+
+The native folder picker verifies a complete backup before stopping the station.
+Progress shows actual stages/file counts; Cancel is cooperative and becomes
+unavailable once database publication starts. Closing the window keeps the
+operation running. On reopening after interruption, startup offers continuation
+or safe pre-publication cancellation. Current credential conflicts require a
+separate explicit keep-current decision. Successful exports can be revealed in
+Finder; terminal commands are not needed for this ordinary path.
+
+1. Qualify the native menu, selection, cancellation/restart and credential review
+   on both Mac architectures, then the real installed Docker Desktop journey.
+   The exceptional unreadable-authority administrator/MFA reset still uses the
+   developer recovery interface; add its secure native form before claiming the
+   complete consumer recovery journey.
 2. Qualify the whole installed Mac journey with real accounts, history, secrets,
    model files, first result, Stop/restart, two-package update, interruption,
    cancellation, backup/restore and data-preserving removal. Native component and
