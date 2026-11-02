@@ -79,11 +79,26 @@ class Completion(BaseModel):
     stream: Literal[True]
     reasoning: ReasoningOptions | None = None
     json_output: StrictBool = False
+    response_fields: (
+        dict[
+            Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,31}$")],
+            Annotated[StrictInt, Field(ge=1, le=32768)],
+        ]
+        | None
+    ) = Field(default=None, min_length=1, max_length=18)
 
     @model_validator(mode="after")
     def reasoning_budget(self):
         if self.reasoning and self.reasoning.enabled and self.max_tokens < self.reasoning.budget + 256:
             raise ValueError("Leave at least 256 output tokens for the final answer")
+        return self
+
+    @model_validator(mode="after")
+    def structured_fields(self):
+        if self.response_fields is not None and (
+            not self.json_output or self.reasoning is not None and self.reasoning.enabled
+        ):
+            raise ValueError("Bounded response fields require non-thinking JSON output")
         return self
 
     @model_validator(mode="after")
@@ -175,9 +190,20 @@ async def coding_completion(body: CodingCompletion, expected: ExpectedEndpoint, 
 async def forward_completion(body, incoming, url, client, request_headers):
     response = None
     try:
-        payload = body.model_dump(exclude={"reasoning", "json_output"})
+        payload = body.model_dump(exclude={"reasoning", "json_output", "response_fields"})
         if body.json_output:
             payload["response_format"] = {"type": "json_object"}
+        if body.response_fields is not None:
+            payload["response_format"]["schema"] = {
+                "type": "object",
+                "properties": {
+                    key: {"type": "string", "minLength": 1, "maxLength": limit}
+                    for key, limit in body.response_fields.items()
+                },
+                "required": list(body.response_fields),
+                "additionalProperties": False,
+            }
+            payload.update(chat_template_kwargs={"enable_thinking": False}, reasoning_effort="none")
         if body.reasoning is not None:
             payload.update(
                 chat_template_kwargs={"enable_thinking": body.reasoning.enabled},

@@ -255,6 +255,11 @@ def completion_stream(session, params):
         **({"reasoning": params["reasoning"]} if params.get("reasoning") is not None else {}),
         **({"json_output": True} if params.get("json_output") is True else {}),
         **({"require_complete": True} if params.get("require_complete") is True else {}),
+        **(
+            {"response_fields": params["response_fields"]}
+            if params.get("response_fields") is not None
+            else {}
+        ),
     )
 
 

@@ -267,6 +267,11 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     encoded, tokens = encode_fields(
         fields, options.protected_terms, max_fields=18 if media.executor_type == "mmaudio_effects" else 4
     )
+    # Bind the small response to this request instead of letting a greedy model
+    # spend the entire completion budget on an unconstrained JSON string.
+    system += " Return exactly these JSON fields: " + json.dumps(list(encoded)) + "."
+    if not any(tokens.values()):
+        system += " This request has no protected placeholders. Do not invent or output any placeholder."
     provider = ensure_builtin(session)
     child = create_run(
         session,
@@ -295,13 +300,22 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             "additional_consumers": targets,
             "field_limits": limits,
             "options": options.model_dump(),
-            "temperature": 0.0,
+            "temperature": 0.7 if policy["model"].startswith("llamacpp:") else 0.0,
             "system_prompt": system,
             "max_tokens": 8192
             if media.executor_type == "mmaudio_effects" and media.parameters.get("cues")
             else 4096,
             "json_output": True,
             "require_complete": True,
+            **(
+                {
+                    "response_fields": {
+                        key: min(32768, max(512, 2 * len(text))) for key, text in encoded.items()
+                    }
+                }
+                if policy["model"].startswith("llamacpp:")
+                else {}
+            ),
         },
     )
     from app.llama import prepare_consumer

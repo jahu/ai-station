@@ -89,3 +89,27 @@ follow-up covers enhancement by itself, with translation off and review disabled
 40 complete component-family cases and the compiled desktop/mobile path pass.
 Private evidence remains under `data/acceptance/prompt-enhancement-20261030/`,
 `account-refresh-fix-20261030/` and `image-prompt-checkbox-20261030/`.
+
+## Bounded owned-model output, 2026-11-02
+
+Two Recompose preparation Runs exhausted 4,096 output tokens without completing
+their JSON response; neither reached image execution. Preparation had forced
+greedy sampling and requested only a generic JSON object. New owned llama.cpp
+preparations use temperature 0.7, matching the selected
+[Qwen derivative's non-thinking recommendation](https://huggingface.co/HauhauCS/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive#recommended-settings),
+and freeze exact response field names and bounded string lengths in Run parameters.
+The Runner compiles those typed names/limits into a fixed JSON schema, with no
+additional properties and thinking disabled for this small transformation. It
+accepts no caller-supplied schema, grammar, reference or command. Names, field
+count and lengths have independent validation before inference. Ordinary Chat
+and legacy requests omit this optional contract; configured non-owned servers
+keep their existing sampling behavior.
+
+The stored system instruction identifies the exact output fields and explicitly
+states when no protected placeholders exist, avoiding invented placeholder text.
+Complete provider termination, exact decoded keys, protected-token counts,
+consumer limits and source identity remain mandatory. No incomplete response is
+accepted and no failed preparation silently falls back to the original prompt.
+Three neutral candidate-Runner requests against the existing Qwen runtime passed
+in 1.2–4.3 seconds, including exact quoted-text preservation. This is real local
+text-preparation coverage, not a new image-generation or user-content smoke test.

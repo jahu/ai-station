@@ -124,6 +124,7 @@ class LocalChatProvider:
         reasoning: dict | None = None,
         json_output: bool = False,
         require_complete: bool = False,
+        response_fields: dict[str, int] | None = None,
     ):
         managed = model.startswith("llamacpp:")
         if reasoning is not None and not managed:
@@ -159,6 +160,10 @@ class LocalChatProvider:
                 body["json_output"] = True
             else:
                 body["response_format"] = {"type": "json_object"}
+        if response_fields is not None:
+            if not managed or not json_output:
+                raise ProviderError("Bounded response fields require an owned JSON completion")
+            body["response_fields"] = response_fields
         if tools is not None:
             body["tools"] = _validated_tools(tools)
             body["tool_choice"] = "auto"

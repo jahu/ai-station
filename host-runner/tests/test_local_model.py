@@ -276,6 +276,74 @@ def test_json_output_rejects_untyped_flags(flag):
         local_model.Completion(**BODY, json_output=flag)
 
 
+def test_bounded_response_fields_compile_only_a_fixed_non_thinking_string_schema():
+    captured = []
+
+    def reply(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=b"data: [DONE]\n\n")
+
+    async def exercise():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(reply))
+        response = await local_model.forward_completion(
+            local_model.Completion(
+                **BODY, json_output=True, response_fields={"prompt": 512, "negative": 128}
+            ),
+            Request({"type": "http"}),
+            "http://llama/v1",
+            client,
+            {},
+        )
+        async for _ in response.body_iterator:
+            pass
+        assert client.is_closed
+
+    asyncio.run(exercise())
+    actual = captured[0]
+    assert actual["response_format"] == {
+        "type": "json_object",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "prompt": {"type": "string", "minLength": 1, "maxLength": 512},
+                "negative": {"type": "string", "minLength": 1, "maxLength": 128},
+            },
+            "required": ["prompt", "negative"],
+            "additionalProperties": False,
+        },
+    }
+    assert actual["chat_template_kwargs"] == {"enable_thinking": False}
+    assert actual["reasoning_effort"] == "none" and "response_fields" not in actual
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {},
+        {"prompt": True},
+        {"prompt": 32769},
+        {"../file": 10},
+        {"prompt": {"$ref": "http://example.com"}},
+        {"field" + str(i): 100 for i in range(19)},
+    ],
+)
+def test_response_fields_reject_unbounded_or_arbitrary_schema(fields):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        local_model.Completion(**BODY, json_output=True, response_fields=fields)
+
+
+@pytest.mark.parametrize(
+    "values", [{"json_output": False}, {"json_output": True, "reasoning": {"enabled": True, "budget": 32}}]
+)
+def test_response_fields_require_non_thinking_json(values):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="non-thinking JSON"):
+        local_model.Completion(**{**BODY, "max_tokens": 768}, response_fields={"prompt": 512}, **values)
+
+
 def test_typed_large_coding_route_forwards_json_without_relaxing_chat(monkeypatch):
     calls = []
 
