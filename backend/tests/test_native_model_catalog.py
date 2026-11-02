@@ -19,17 +19,23 @@ PROFILE = "llamacpp-native-darwin-arm64-b12032-v2"
 
 
 @pytest.fixture
-def native_catalog(setup_bridge, monkeypatch):
+def native_catalog(setup_bridge, monkeypatch, request):
+    architecture = getattr(request, "param", "arm64")
+    selected_profile = "llamacpp-native-darwin-" + architecture + "-b12032-v2"
     original = setup_bridge["entry"]
     item = original.model_copy(
-        update={"id": original.id + "-macos-arm64-cpu", "runtime_profile": PROFILE, "context_ceiling": 4096}
+        update={
+            "id": original.id + "-macos-" + architecture.replace("_", "-") + "-cpu",
+            "runtime_profile": selected_profile,
+            "context_ceiling": 4096,
+        }
     )
     monkeypatch.setattr(model_setup, "CANDIDATES", (item,))
     monkeypatch.setattr(model_setup, "candidate", lambda identity: item if identity == item.id else None)
-    setup_bridge["hardware"].update(host={"system": "Darwin", "architecture": "arm64"}, gpus=[])
+    setup_bridge["hardware"].update(host={"system": "Darwin", "architecture": architecture}, gpus=[])
     state = {**setup_bridge, "entry": item, "sdk": True, "wrong_profile": False}
     monkeypatch.setattr(
-        verifier, "platform", SimpleNamespace(system=lambda: "Darwin", machine=lambda: "arm64")
+        verifier, "platform", SimpleNamespace(system=lambda: "Darwin", machine=lambda: architecture)
     )
     monkeypatch.setattr(
         verifier.Environment,
@@ -53,11 +59,12 @@ def native_catalog(setup_bridge, monkeypatch):
     return state
 
 
+@pytest.mark.parametrize("native_catalog", ["arm64", "x86_64"], indirect=True)
 def test_native_download_registers_verified_engine_reference_without_an_image(native_catalog):
     state = native_catalog
     with TestClient(app) as api:
         catalog = api.get("/api/setup/catalog").json()
-        assert catalog["engine_profile"] == PROFILE
+        assert catalog["engine_profile"] == state["entry"].runtime_profile
         assert catalog["entries"][0]["recommendation"]["fits"] and catalog["entries"][0]["starter"]
         queued = api.post("/api/setup/downloads", json=request(state["entry"]))
         assert queued.status_code == 202, queued.text
@@ -137,3 +144,10 @@ def test_a_foreign_native_profile_is_rejected_before_even_a_files_only_transfer(
         result = api.get("/api/setup/downloads/" + response.json()["id"]).json()
         assert result["run"]["status"] == "failed"
         assert not state["calls"]
+
+
+def test_every_native_catalog_offer_survives_the_workers_strict_manifest_validation():
+    from app.setup_models import Candidate
+
+    for entry in CANDIDATES:
+        assert Candidate.model_validate(entry.model_dump(mode="json")).id == entry.id

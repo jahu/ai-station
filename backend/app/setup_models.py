@@ -211,9 +211,10 @@ CANDIDATES = (
 CANDIDATES = (
     *CANDIDATES,
     *(
-        entry.model_copy(
-            update={
-                "id": entry.id + "-macos-" + architecture + "-cpu",
+        Candidate.model_validate(
+            {
+                **entry.model_dump(),
+                "id": entry.id + "-macos-" + architecture.replace("_", "-") + "-cpu",
                 "name": entry.name + " · Mac CPU",
                 "runtime_profile": "llamacpp-native-darwin-" + architecture + "-b12032-v2",
                 "context_ceiling": 4096,
