@@ -50,6 +50,14 @@ filesystem with a separate disposable mount. Full Docker Desktop transport,
 guided model setup, Metal, preserving updates/removal and signing acceptance remain
 required before the launcher admits Mac consumer operation.
 
+The actual Intel Docker Desktop experiment starts its Linux engine but rejects
+the shared native Unix socket with `EOPNOTSUPP`. The
+[Mac connection contract](plans/macos-runner-transport.md) preserves typed HTTP
+and private Unix sockets at both ends through an authenticated local TLS leg and
+an optional connection process in the same application image. This alternative
+stays unavailable until actual transport, ownership, shutdown and full consumer
+checks pass; Linux/WSL retain the existing direct socket.
+
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
 free and inactive page queues, with both components reported; speculative pages

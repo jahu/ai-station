@@ -208,6 +208,9 @@ jobs:
           if [ -f .native-mac/bridge-proof/result.json ]; then
             cat .native-mac/bridge-proof/result.json
           fi
+          if [ -f .native-mac/bridge-tls-proof/result.json ]; then
+            cat .native-mac/bridge-tls-proof/result.json
+          fi
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

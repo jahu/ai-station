@@ -14,6 +14,14 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+The [Mac connection candidate](plans/macos-runner-transport.md) retains the private
+Runner Unix socket. A supervised loopback-only helper and a non-root process in
+the same application image use mutual TLS with fresh private certificates.
+Container peers keep private Unix HTTP and the ordinary typed Runner API; there
+is no unauthenticated TCP, public bind, shell or Docker authority. Credential
+files stay outside artifacts and server keys stay native. Consumer admission
+remains gated until real transport, lifetime/recovery and installation checks pass.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates

@@ -5,6 +5,7 @@ import io
 import json
 import os
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -217,6 +218,50 @@ def test_unrecognized_client_stdout_does_not_publish_arbitrary_logs(docker, monk
 
     monkeypatch.setattr(docker, "call", call)
     assert docker.client_failures() == [{"diagnostic_unavailable": True}]
+
+
+def test_authenticated_candidate_mounts_only_client_credentials_and_owned_code(short_root, monkeypatch):
+    value = probe.AuthenticatedDocker("/fixed/docker", "unix:///private/desktop.sock", short_root, "amd64")
+    value.image_id = probe.IMAGE_IDS["amd64"]
+    sockets, data = short_root / "sockets", short_root / "data"
+    sockets.mkdir(mode=0o700)
+    data.mkdir(mode=0o700)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "create"):
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(value), "network": "bridge"})
+        return 0, ""
+
+    monkeypatch.setattr(value, "call", call)
+    with socket.socket(socket.AF_UNIX) as native:
+        channel = sockets / "channel.sock"
+        native.bind(str(channel))
+        native.listen(1)
+        channel.chmod(0o600)
+        try:
+            assert value.container(sockets, data, "write") == "a" * 64
+            create = calls[0]
+            assert create[create.index("--network") + 1] == "bridge"
+            mounts = [create[i + 1] for i, item in enumerate(create) if item == "--mount"]
+            assert len(mounts) == 4
+            assert any(
+                "source=" + str(value.material / "client") in item and "readonly" in item for item in mounts
+            )
+            assert not any(str(value.material / "server") in item for item in mounts)
+            assert "--tmpfs" in create and "--init" in create
+            assert sorted(item.name for item in value.code.iterdir()) == [
+                "desktop_control.py",
+                "desktop_link.py",
+                "desktop_versions.py",
+            ]
+            assert value.owners[0].process.poll() is None
+        finally:
+            assert value.cleanup()
+        assert value.owners[0].process.returncode == 0
 
 
 def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docker, tmp_path):

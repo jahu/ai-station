@@ -126,6 +126,8 @@ def bind_mount(path, target, *, readonly=False):
 
 
 class Docker:
+    NETWORK = "none"
+
     def __init__(self, binary, endpoint, root, architecture, *, packaged_image=None):
         if packaged_image is not None and (
             not isinstance(packaged_image, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", packaged_image)
@@ -182,6 +184,15 @@ class Docker:
         self.image_id = value["Id"]
         return self.image_id
 
+    def extra_arguments(self):
+        return []
+
+    def client_code(self):
+        return CLIENT
+
+    def client_paths(self):
+        return ["/probe-socket/channel.sock", "/probe-data", "/probe-socket/token.json"]
+
     def container(self, sockets, data, phase):
         if self.image_id is None:
             raise ValueError("Verify the fixed fixture image before creating a client")
@@ -202,7 +213,7 @@ class Docker:
                 "--user",
                 f"{os.geteuid()}:{os.getegid()}",
                 "--network",
-                "none",
+                self.NETWORK,
                 "--read-only",
                 "--cap-drop",
                 "ALL",
@@ -220,15 +231,14 @@ class Docker:
                 bind_mount(sockets, "/probe-socket", readonly=True),
                 "--mount",
                 bind_mount(data, "/probe-data"),
+                *self.extra_arguments(),
                 "--entrypoint",
                 "python3",
                 self.image_reference,
                 "-IBS",
                 "-c",
-                CLIENT,
-                "/probe-socket/channel.sock",
-                "/probe-data",
-                "/probe-socket/token.json",
+                self.client_code(),
+                *self.client_paths(),
             )
             if re.fullmatch("[a-f0-9]{64}", identifier) is None:
                 raise ValueError("The probe did not confirm its exact container identity")
@@ -250,7 +260,7 @@ class Docker:
             or value.get("image") not in self.accepted_images()
             or value.get("user") != f"{os.geteuid()}:{os.getegid()}"
             or type(value.get("running")) is not bool
-            or value.get("network") != "none"
+            or value.get("network") != self.NETWORK
             or value.get("readonly") is not True
             or value.get("privileged") is not False
             or value.get("memory") != MEMORY
@@ -305,6 +315,84 @@ class Docker:
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 result.append({"diagnostic_unavailable": True})
         return result
+
+
+class AuthenticatedDocker(Docker):
+    """The same fixed experiment via local UDS → mutual TLS → native UDS."""
+
+    NETWORK = "bridge"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        import desktop_link
+
+        self.link = desktop_link
+        self.owners = []
+        root = Path(args[2])
+        self.material = root / "credentials"
+        self.code = root / "code"
+        self.code.mkdir(mode=0o700)
+        self.material_identity = desktop_link.prepare_credentials(self.material)
+        for name in ("desktop_link.py", "desktop_control.py", "desktop_versions.py"):
+            source = Path(__file__).resolve().parent / name
+            if source.resolve(strict=True) != source or not source.is_file():
+                raise ValueError("Use only the reviewed connection module files")
+            target = self.code / name
+            target.write_bytes(source.read_bytes())
+            target.chmod(0o400)
+
+    def container(self, sockets, data, phase):
+        owner = self.link.NativeOwner(self.material / "server", sockets / "channel.sock").start()
+        self.owners.append(owner)
+        port = sockets / ("link-" + phase + ".json")
+        with port.open("x") as file:
+            os.fchmod(file.fileno(), 0o600)
+            json.dump({"port": owner.port}, file)
+        return super().container(sockets, data, phase)
+
+    def extra_arguments(self):
+        return [
+            "--init",
+            "--tmpfs",
+            f"/bridge:rw,noexec,nosuid,size=16m,uid={os.geteuid()},gid={os.getegid()},mode=0700",
+            "--mount",
+            bind_mount(self.material / "client", "/probe-client", readonly=True),
+            "--mount",
+            bind_mount(self.code, "/probe-code", readonly=True),
+        ]
+
+    def client_paths(self):
+        return ["/bridge/runner.sock", "/probe-data", "/probe-socket/token.json"]
+
+    def client_code(self):
+        return r"""
+import asyncio,json,sys
+from pathlib import Path
+def failed(kind,error,traceback):
+ print(json.dumps({'probe_client_error':kind.__name__,'errno':getattr(error,'errno',None)}),flush=True)
+sys.excepthook=failed
+sys.path.insert(0,'/probe-code')
+import desktop_link
+async def main():
+ cfg=json.loads(Path('/probe-socket/token.json').read_text())
+ phase=cfg['phase']
+ if phase not in {'write','read'}:raise ValueError('Invalid fixed probe phase')
+ port=json.loads(Path('/probe-socket/link-'+phase+'.json').read_text())['port']
+ async with desktop_link.proxy(Path('/probe-client'),Path('/bridge/runner.sock'),port):
+  child=await asyncio.create_subprocess_exec(sys.executable,'-IBS','-c',CHILD,*sys.argv[1:],stderr=asyncio.subprocess.DEVNULL)
+  return await child.wait()
+raise SystemExit(asyncio.run(main()))
+""".replace("CHILD", repr(CLIENT))
+
+    def cleanup(self):
+        complete = super().cleanup()
+        for owner in reversed(self.owners):
+            try:
+                owner.close()
+                complete = complete and owner.process.returncode == 0
+            except (OSError, subprocess.SubprocessError):
+                complete = False
+        return complete
 
 
 def packet(connection, reader, nonce, expected):
@@ -442,7 +530,15 @@ def removable(path, original):
     )
 
 
-def probe(output, *, prepare_image=False, data_directory=None, packaged_image=None, expected_connection=None):
+def probe(
+    output,
+    *,
+    prepare_image=False,
+    data_directory=None,
+    packaged_image=None,
+    expected_connection=None,
+    authenticated_link=False,
+):
     if platform.system() != "Darwin" or os.geteuid() == 0:
         raise ValueError("This qualification requires a native, ordinary-user Mac")
     architecture = ARCHITECTURES.get(platform.machine().lower())
@@ -488,14 +584,17 @@ def probe(output, *, prepare_image=False, data_directory=None, packaged_image=No
         "probe_kind": "packaged_application" if packaged_image else "developer_fixture",
         "chosen_data_directory": str(selected) if selected else None,
     }
+    if authenticated_link:
+        result["transport_kind"] = "uds-mutual-tls-uds"
     try:
         if selected is not None:
             data_root = Path(tempfile.mkdtemp(prefix=".ast-filesystem-", dir=selected))
             data_original = data_root.lstat()
+        implementation = AuthenticatedDocker if authenticated_link else Docker
         docker = (
-            Docker(binary, endpoint, root, architecture, packaged_image=packaged_image)
+            implementation(binary, endpoint, root, architecture, packaged_image=packaged_image)
             if packaged_image
-            else Docker(binary, endpoint, root, architecture)
+            else implementation(binary, endpoint, root, architecture)
         )
         result["probe_id"] = docker.identity
         receipt(
@@ -574,6 +673,11 @@ if __name__ == "__main__":
     parser.add_argument("--packaged-image", help=argparse.SUPPRESS)
     parser.add_argument("--expected-cli", help=argparse.SUPPRESS)
     parser.add_argument("--expected-endpoint", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--authenticated-link",
+        action="store_true",
+        help="Qualify the private mutual-TLS connection candidate",
+    )
     args = parser.parse_args()
     coordinates = (args.expected_cli, args.expected_endpoint)
     if (any(coordinates) or args.packaged_image is not None) and not (
@@ -586,6 +690,7 @@ if __name__ == "__main__":
         data_directory=args.data_directory,
         packaged_image=args.packaged_image,
         expected_connection=coordinates if all(coordinates) else None,
+        authenticated_link=args.authenticated_link,
     )
     print(json.dumps(outcome, indent=2))
     raise SystemExit(0 if outcome["transport_passed"] else 1)

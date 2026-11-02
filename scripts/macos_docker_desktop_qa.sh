@@ -11,6 +11,9 @@ umask 077
 [[ ! -e /Applications/Docker.app && ! -L /Applications/Docker.app ]]
 [[ ! -e "$HOME/Applications/Docker.app" && ! -L "$HOME/Applications/Docker.app" ]]
 [[ ! -e "$HOME/.docker" && ! -L "$HOME/.docker" ]]
+[[ ! -e "$HOME/Library/Containers/com.docker.docker" && ! -L "$HOME/Library/Containers/com.docker.docker" ]]
+[[ ! -e '/Library/Application Support/com.docker.docker' && ! -L '/Library/Application Support/com.docker.docker' ]]
+[[ ! -e /Library/PrivilegedHelperTools/com.docker.vmnetd && ! -L /Library/PrivilegedHelperTools/com.docker.vmnetd ]]
 
 qa_python="$(command -v python)"
 qa_user="$(/usr/bin/id -un)"
@@ -99,7 +102,27 @@ desktop_cli desktop start --timeout 240
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
     "$qa_python" -IB scripts/macos_desktop_qa_ready.py | /usr/bin/tee "$qa_root/engine-ready.json"
 mkdir -m 700 "$qa_root/Chosen data, Żółw"
-/usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+if /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
     "$qa_python" -IB scripts/macos_transport_probe.py --prepare-image \
-    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-proof"
+    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-proof"; then
+    qa_direct_status=0
+else
+    qa_direct_status=$?
+fi
+# A specific observed unsupported direct mount is a negative control, never
+# qualification. Other failures remain fatal. The alternative MUST pass below.
+"$qa_python" -IB - "$qa_root/bridge-proof/result.json" "$qa_direct_status" <<'PY'
+import json,sys
+from pathlib import Path
+r=json.loads(Path(sys.argv[1]).read_text());code=int(sys.argv[2])
+assert r['platform']=='Darwin' and r['cleanup_complete'] is True
+assert (code==0 and r['transport_passed'] is True) or (
+ code==1 and r['transport_passed'] is False and r['error_type']=='TimeoutError'
+ and r.get('client_failures')==[{'probe_client_error':'OSError','errno':95}]
+), 'Unexpected direct-socket failure; do not continue or waive it'
+PY
+/usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
+    "$qa_python" -IB scripts/macos_transport_probe.py --authenticated-link \
+    --data-directory "$qa_root/Chosen data, Żółw" --output "$qa_root/bridge-tls-proof"
