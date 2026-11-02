@@ -110,7 +110,7 @@ def test_platform_policy_cannot_be_overridden_by_http_fields(client, monkeypatch
         json={"platform": "linux", "runtime_profile": "llamacpp-cpu-linux-amd64-v1"},
         headers={"X-Platform": "linux"},
     )
-    assert response.status_code == 503
+    assert response.status_code == (422 if platform == "darwin" else 503)
     assert host._manager is None
 
 
@@ -275,7 +275,8 @@ def test_actual_runner_main_private_socket_recovers_and_stops_native_owned_work(
                 assert stopped.status_code == 200 and not stopped.json()["alive"]
                 assert stopped.json()["status"] == "canceled" and unrelated.poll() is None
                 if sys.platform == "darwin":
-                    assert client.post("/v1/llama/load", json={}).status_code == 503
+                    assert client.post("/v1/llama/load", json={}).status_code == 422
+                    assert client.post("/v1/runs/photo", json={}).status_code == 503
                 assert client.get("/health").status_code == 200
             server.terminate()
             assert server.wait(timeout=15) == 0

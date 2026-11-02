@@ -305,9 +305,13 @@ class ProcessManager:
                     result[f"{stream}_more"] = path.stat().st_size > offset + len(chunk)
             return result
 
-    def shutdown(self) -> None:
+    def shutdown(self, *, preserve_executors: frozenset[str] = frozenset()) -> None:
         with self._lock:
-            run_ids = list(self._load())
+            run_ids = [
+                identity
+                for identity, record in self._load().items()
+                if record["executor"] not in preserve_executors
+            ]
         for run_id in run_ids:
             self.cancel(run_id)
 

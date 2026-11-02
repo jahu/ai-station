@@ -60,10 +60,14 @@ application-wide dependency admits qualified Mac health, read-only hardware,
 owned process inspection/Stop and fixed native SDK preparation operations.
 The [managed native SDK flow](plans/macos-managed-llama.md) reuses runtime setup
 Tasks/Runs, verified downloads and the owned environment controller, with opaque
-shared environment references and private preparation receipts. All other typed operations,
-including later included routers, remain unavailable before their own native
-qualification. Internal native CPU inference is qualified separately; this change
-does not activate model setup, Linux media recipes or the consumer Mac launcher.
+shared environment references and private preparation receipts. The existing typed llama.cpp routes also accept explicit native CPU model
+coordinates and resolve the opaque SDK identity privately. They reuse the same
+process owner, readiness/completion proxy, startup watchdog and durable Stop.
+Native model sockets remain outside the container-mounted Runner socket; shared
+model children outlive Runner replacement just as Linux model containers do.
+Other typed operations, including later included routers, remain unavailable
+before their own native qualification. Internal native CPU inference is qualified separately; this change
+does not activate guided model setup, Linux media recipes or the consumer Mac launcher.
 
 An internal native llama.cpp lifecycle candidate composes that manager with the
 verified Mac SDK, owned GGUF/cache inspection and the existing completion proxy.

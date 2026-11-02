@@ -7,6 +7,7 @@ import math
 import os
 import re
 import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
@@ -18,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_
 
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.local_model import CodingCompletion, forward_completion
+from ai_station_runner.native_llama_request import NativeModelLoad
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
 from ai_station_runner.unix_sockets import unix_address
@@ -285,7 +287,13 @@ def snapshot(instance_id):
 
 
 @router.post("/load")
-def load(body: Load):
+def load(body: Load | NativeModelLoad):
+    if isinstance(body, NativeModelLoad):
+        from ai_station_runner.native_llama_api import load as native_load
+
+        return native_load(body)
+    if sys.platform != "linux":
+        raise HTTPException(503, "Container llama.cpp profiles require a Linux Host Runner")
     if not {"manage_models", "filesystem_read"}.issubset(body.permissions):
         raise HTTPException(403, "Runtime loading requires model management and filesystem read")
     with locked():
@@ -500,6 +508,10 @@ def load(body: Load):
 
 @router.get("/{instance_id}")
 def inspect(instance_id: UUID):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import call
+
+        return call("inspect", instance_id)
     with locked():
         return snapshot(instance_id)
 
@@ -511,6 +523,10 @@ class Stop(BaseModel):
 
 @router.post("/{instance_id}/stop")
 def stop(instance_id: UUID, body: Stop):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import call
+
+        return call("stop", instance_id, body.permissions)
     if "manage_models" not in body.permissions:
         raise HTTPException(403, "Stopping a runtime requires model management")
     with locked():
@@ -535,6 +551,10 @@ def stop(instance_id: UUID, body: Stop):
 
 @router.post("/{instance_id}/chat/completions")
 async def completion(instance_id: UUID, body: VisionCompletion, incoming: Request):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import completion as native_completion
+
+        return await native_completion(instance_id, body, incoming)
     record = manifest(instance_id)
     if record.get("desired") != "running" or body.model != str(instance_id):
         raise HTTPException(409, "Runtime/model identity does not match")
