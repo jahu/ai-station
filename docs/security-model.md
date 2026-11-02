@@ -46,6 +46,14 @@ desktop instance; only its supervisor signals its owned child. This local
 lifecycle channel carries no setup link, caller-selected PID, URL or command
 and is never exposed to web users, agents or HTTP clients.
 
+Native package identity uses a separate same-user control action, preserving
+existing Status/Stop wire formats. It projects only bundle/image IDs, bounded
+version and source epoch. The private version receipt contains neither setup
+URLs nor process IDs; readiness, package, owner and canonical installation
+coordinates must agree before a future updater can target an instance. Missing,
+changed or unsafe receipts require inspection rather than automatic adoption.
+This adds no web/agent operation or permission to migrate/stop an installation.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.

@@ -205,3 +205,33 @@ def test_stale_owned_socket_is_reused_but_foreign_peer_is_refused(tmp_path, monk
         with pytest.raises(ValueError, match="another OS user"):
             control.request(tmp_path, "stop", instance_id=owner.instance_id)
         assert not owner.stop_requested.is_set()
+
+
+def test_package_query_is_projected_frozen_and_separate_from_legacy_status(tmp_path):
+    package = {
+        "bundle_id": "a" * 64,
+        "image_id": "sha256:" + "b" * 64,
+        "version": "0.1.0",
+        "source_epoch": 123,
+        "setup_url": "private",
+        "files": {},
+    }
+    expected = {key: package[key] for key in ("bundle_id", "image_id", "version", "source_epoch")}
+    with control.DesktopControl(tmp_path, package=package) as owner:
+        package["bundle_id"] = "c" * 64
+        assert control.request(tmp_path, "identity") == {
+            "instance_id": owner.instance_id,
+            "package": expected,
+        }
+        assert set(control.request(tmp_path)) == {"instance_id", "ready", "background", "stopping"}
+        assert not owner.stop_requested.is_set()
+        response = json.loads(raw(tmp_path, b'{"action":"identity","command":"anything"}\n'))
+        assert "error" in response
+
+
+def test_legacy_owner_does_not_claim_a_package_identity(tmp_path):
+    with control.DesktopControl(tmp_path) as owner:
+        with pytest.raises(ValueError, match="instance changed"):
+            control.request(tmp_path, "identity")
+        assert not owner.stop_requested.is_set()
+        assert control.request(tmp_path) == owner.status()

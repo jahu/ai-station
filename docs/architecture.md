@@ -24,6 +24,15 @@ application image; no second application API is introduced. Installed code is
 copied into a retained version directory before supervision so OS package
 replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
 
+The native Mac candidate keeps a private version receipt outside container-mounted
+data, binding its verified package to the data directory identity, Compose
+project, accounts profile and Runner socket coordinates. A separate same-user
+control query returns only package metadata and native owner identity; existing
+Status/Stop responses retain their format. The Mac candidate records readiness
+only after its matching API instance is ready. Changed packages/storage require
+an explicit verified upgrade. The consumer prerequisite gate remains closed
+until the complete Mac installation and preserving-update path is qualified.
+
 The [Mac delivery contract](plans/macos-consumer-installation.md) retains the same
 control plane and private native bridge. Native ownership, installed Python,
 AppKit presentation and application-bundle entry have passed ARM/Intel component
