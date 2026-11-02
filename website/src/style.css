@@ -241,6 +241,8 @@ h2 span {
   color: var(--green);
 }
 .hero-copy {
+  max-width: 720px;
+  margin-inline: auto;
   font-size: 18px;
   line-height: 1.6;
   letter-spacing: -0.025em;
@@ -803,6 +805,127 @@ details[open] summary > span:last-child {
 .install-card button:focus-visible {
   outline-color: #254c0d;
 }
+.simple-start {
+  align-self: center;
+}
+.simple-start > .eyebrow {
+  color: #526247;
+  font-size: 10px;
+  letter-spacing: 0.11em;
+}
+.setup-steps {
+  list-style: none;
+  padding: 0;
+  margin: 22px 0 0;
+}
+.setup-steps li {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 16px;
+  padding-block: 20px;
+  border-top: 1px solid #c9d2be;
+}
+.setup-steps li > span {
+  font-size: 11px;
+  color: #577147;
+  padding-top: 4px;
+  letter-spacing: 0.06em;
+}
+.setup-steps h3 {
+  font-size: 24px;
+  letter-spacing: -0.045em;
+}
+.setup-steps p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 8px;
+  color: #526247;
+  max-width: 340px;
+}
+.install-intro .install-requirements {
+  font-size: 12px;
+}
+.install-requirements a {
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.current-setup {
+  margin-top: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.current-setup > summary {
+  cursor: pointer;
+  padding: 20px 2px;
+  font-size: 14px;
+  color: var(--text);
+}
+.current-setup > summary > span {
+  float: right;
+  color: var(--muted);
+  font-size: 12px;
+}
+.current-setup[open] > .terminal {
+  margin-bottom: 20px;
+}
+.section.feedback-section {
+  padding-bottom: 0;
+}
+.feedback-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 40px;
+  border: 1px solid #384632;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1a2518, #141b13);
+  padding: 42px;
+}
+.feedback-card .eyebrow {
+  color: var(--green);
+  margin-bottom: 18px;
+}
+.feedback-card h2 {
+  font-size: clamp(32px, 4vw, 46px);
+}
+.feedback-card h2 span {
+  color: var(--green);
+}
+.feedback-card h2 + p {
+  max-width: 630px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.feedback-card p:last-child {
+  font-size: 13px;
+  margin-top: 12px;
+}
+.feedback-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .feedback-card {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 28px 24px;
+  }
+  .feedback-actions {
+    align-items: start;
+  }
+  .current-setup > summary > span {
+    float: none;
+    display: block;
+    margin-top: 6px;
+    margin-left: 16px;
+  }
+  .setup-steps h3 {
+    font-size: 22px;
+  }
+}
+
 .terminal {
   border-radius: 8px;
   overflow: hidden;
@@ -1491,7 +1614,7 @@ dialog > p a {
     margin-top: 23px;
   }
   .install-intro .install-requirements {
-    font-size: 11px;
+    font-size: 12px;
     max-width: 100%;
     margin-top: 20px;
   }

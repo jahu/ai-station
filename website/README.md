@@ -52,7 +52,12 @@ to `master` are created by the existing bot and remain for human-owner approval.
 
 ## Content, privacy and licensing
 
-- The site distinguishes current Linux/manual setup from the planned guided setup.
+- The main message is approachable local AI: download, guided installation and a
+  familiar conversation, with creation tools in the same app. The three-step
+  journey is explicitly presented as the experience being built; current release
+  prerequisites remain visible and working Linux commands stay in native details.
+- Testing and feedback have a dedicated section with direct issue/suggestion
+  links. No technical background or code contribution is required to help.
 - Benchmarks quote the existing recorded runs, with hardware, scope and a link to
   the full methodology. It does not invent user counts, testimonials or partners.
 - Only the previously owner-approved neutral screenshots and tour are included,
