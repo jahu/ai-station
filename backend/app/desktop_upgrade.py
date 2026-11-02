@@ -353,7 +353,10 @@ def abort(root, identity):
         return completed
     with guard(root) as root:
         folder, request, state = pending(root, identity)
-        if state["phase"] not in {"preparing", "prepared"} or fingerprint(root) != request["source"]:
+        if (
+            state["phase"] not in {"preparing", "prepared", "aborted"}
+            or fingerprint(root) != request["source"]
+        ):
             raise ValueError("Publication began or data changed; do not roll back without inspection")
         state["phase"] = "aborted"
         write(folder / "state.json", state)

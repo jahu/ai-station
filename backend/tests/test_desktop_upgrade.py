@@ -186,6 +186,31 @@ def test_lost_success_acknowledgement_is_read_only_after_new_application_writes(
     assert upgrade.fingerprint(root) == before
 
 
+@pytest.mark.parametrize("action,phase", [("abort", "aborted"), ("publish", "applied")])
+def test_completion_resumes_if_process_exits_after_receipt_before_fence_removal(
+    saved, monkeypatch, action, phase
+):
+    root, identity, _ = saved
+    prepare(saved)
+    before = rows(root / "db/ai-station.sqlite")
+    operation = {"abort": upgrade.abort, "publish": upgrade.publish}[action]
+    original = Path.unlink
+
+    def interrupted(path, *args, **kwargs):
+        if path == root / "runtime" / upgrade.MARKER:
+            raise SystemExit("synthetic exit after completion receipt")
+        return original(path, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", interrupted)
+        with pytest.raises(SystemExit):
+            operation(root, identity)
+    assert (root / "runtime" / upgrade.MARKER).exists()
+    assert operation(root, identity)["phase"] == phase
+    assert rows(root / "db/ai-station.sqlite") == before
+    assert not (root / "runtime" / upgrade.MARKER).exists()
+
+
 def test_unicode_spaces_and_uri_characters_use_only_explicit_staging_connection(saved):
     root, identity, _ = saved
     moved = root.with_name("Application Support Łódź, 100% #?")
