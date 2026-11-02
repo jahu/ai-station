@@ -18,6 +18,7 @@ from uuid import uuid4
 
 import httpx
 from ai_station_runner.unix_sockets import unix_address
+from desktop_engine import select as select_engine
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -155,9 +156,16 @@ def main() -> None:
     parser.add_argument("--no-build", action="store_true", help="Reuse the existing application image")
     parser.add_argument("--config", type=Path, help="Explicit local desktop installation configuration")
     parser.add_argument("--desktop", action="store_true", help="Report readiness to the local desktop parent")
+    parser.add_argument("--docker-desktop-cli", help=argparse.SUPPRESS)
+    parser.add_argument("--docker-desktop-endpoint", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    coordinates = (args.docker_desktop_cli, args.docker_desktop_endpoint)
+    if any(coordinates) and (not all(coordinates) or not args.desktop):
+        raise RuntimeError("Docker Desktop handoff requires both coordinates and the desktop supervisor")
     os.chdir(ROOT)
     env = configuration(args.config) if args.config else configuration()
+    engine = select_engine(env, expected=coordinates if all(coordinates) else None)
+    env = engine.environment
     if args.desktop and not env.get("AI_STATION_DESKTOP_INSTANCE_ID"):
         env["AI_STATION_DESKTOP_INSTANCE_ID"] = uuid4().hex
     if env.get("AI_STATION_LAN_HOST"):
@@ -172,7 +180,7 @@ def main() -> None:
         raise RuntimeError("LAN access uses the production UI; Vite development stays on loopback")
     runtime = Path(env["AI_STATION_DATA_HOST_PATH"]) / "runtime"
     runtime.mkdir(exist_ok=True)
-    compose = ["docker", "compose", "-f", str(ROOT / "compose.yaml")]
+    compose = engine.command("compose", "-f", str(ROOT / "compose.yaml"))
     if env.get("AI_STATION_LAN_HOST"):
         compose += ["-f", str(ROOT / "compose.lan.yaml")]
     if args.dev:
@@ -206,7 +214,9 @@ def main() -> None:
                 # One shared image; Docker build works even when the optional
                 # buildx plugin is absent from a workstation's Compose install.
                 subprocess.run(
-                    ["docker", "build", "-t", env.get("AI_STATION_APP_IMAGE", "ai-station:local"), str(ROOT)],
+                    engine.command(
+                        "build", "-t", env.get("AI_STATION_APP_IMAGE", "ai-station:local"), str(ROOT)
+                    ),
                     env=env,
                     check=True,
                 )

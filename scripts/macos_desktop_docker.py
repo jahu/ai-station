@@ -58,7 +58,7 @@ def connection(command):
     # Finder does not inherit shell startup files. Do not copy Docker/provider
     # routing or credentials from another station's environment.
     env = {"PATH": str(binary.parent) + os.pathsep + os.defpath, "HOME": str(Path.home()), "LANG": "C"}
-    _, endpoint = command(
+    code, endpoint = command(
         [
             str(binary),
             "context",
@@ -69,6 +69,8 @@ def connection(command):
         ],
         env=env,
     )
+    if code != 0:
+        raise RuntimeError("Open Docker Desktop and complete its local setup, then try again")
     parsed = urlsplit(endpoint)
     if (
         parsed.scheme != "unix"

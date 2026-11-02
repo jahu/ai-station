@@ -102,6 +102,11 @@ jobs:
             host-runner/tests/test_runner_platform.py \
             host-runner/tests/test_darwin_telemetry.py \
             host-runner/tests/test_darwin_metal.py
+      - name: Exercise desktop routing with neutral local CLI processes
+        run: |
+          .venv/bin/python -m pytest -q \
+            backend/tests/test_desktop_engine.py \
+            backend/tests/test_macos_desktop_docker.py
       - name: Assemble fixed native Python layer
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
