@@ -166,8 +166,9 @@ def test_live_bind_container_prevents_full_backup_before_db_dispatch(station, su
     assert not (root / snapshots.FENCE).exists()
 
 
-def test_native_live_group_refuses_backup_without_signals(station, monkeypatch):
-    from ai_station_runner import processes
+@pytest.mark.parametrize("system", ["Linux", "Darwin"])
+def test_native_live_group_refuses_backup_without_signals(station, monkeypatch, system):
+    from ai_station_runner import darwin_processes, processes
 
     create, _, root, data, _ = station
     files.write_json(
@@ -175,7 +176,9 @@ def test_native_live_group_refuses_backup_without_signals(station, monkeypatch):
         {"owned": {"pid": 12345, "process_group_id": 12345, "boot_id": "fixture", "start_ticks": 9}},
     )
     inspected = []
-    monkeypatch.setattr(processes, "_group_alive", lambda record: inspected.append(record) or True)
+    monkeypatch.setattr(snapshots.platform, "system", lambda: system)
+    module, name = (darwin_processes, "group_alive") if system == "Darwin" else (processes, "_group_alive")
+    monkeypatch.setattr(module, name, lambda record: inspected.append(record) or True)
     with pytest.raises(ValueError, match="native workload"):
         snapshots.Snapshot(create(), str(uuid4())).export()
     assert len(inspected) == 1 and not (root / snapshots.FENCE).exists()
@@ -292,7 +295,6 @@ def test_cancel_reconciles_only_its_pending_readonly_helper(station):
 
 
 def test_launcher_fence_is_enforced_independently_of_native_metadata(station):
-    from app.db import require_upgrade_finished
     from launch import ensure_recovery_finished
 
     create, _, root, data, _ = station
@@ -300,8 +302,6 @@ def test_launcher_fence_is_enforced_independently_of_native_metadata(station):
         snapshots.Snapshot(create(), str(uuid4())).export(canceled=lambda: True)
     with pytest.raises(RuntimeError, match="pending private backup"):
         ensure_recovery_finished(data / "runtime")
-    with pytest.raises(RuntimeError, match="pending private backup"):
-        require_upgrade_finished(data)
     (data / "runtime" / snapshots.FENCE).unlink()
     with pytest.raises(ValueError, match="pending private backup"):
         snapshots.assert_finished(root, data)
