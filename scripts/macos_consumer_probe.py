@@ -223,7 +223,6 @@ def main():
             "x86_64",
             tag,
             root / "image/build.json",
-            version="0.1.0-qa.1",
         )
         proof["package"] = {
             key: metadata[key] for key in ("bundle_id", "image_id", "source_head", "architecture")
