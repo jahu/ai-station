@@ -18,7 +18,7 @@ import pytest
 
 @pytest.fixture
 def short_root():
-    root = Path(tempfile.mkdtemp(prefix="ast-test-", dir="/tmp"))
+    root = Path(tempfile.mkdtemp(prefix="ast-test-", dir="/tmp")).resolve()
     try:
         yield root
     finally:
@@ -28,6 +28,8 @@ def short_root():
 
 class LocalClient:
     """Same fixed client in a separate Python process, without Docker or a Mac claim."""
+
+    SQLITE_DOMAIN = "same-host-test-fixture"
 
     def __init__(self):
         self.children = []
@@ -59,6 +61,9 @@ class LocalClient:
         code = self.children[int(args[2]) - 1].wait(timeout=10)
         return 0, str(code)
 
+    def database_checks(self, sockets, data, stored):
+        probe.file_checks(data, stored, locked=True)
+
     def close(self):
         for child in self.children:
             if child.poll() is None:
@@ -76,6 +81,65 @@ def test_separate_client_round_trip_real_wal_lock_and_restart(short_root):
         assert client.tokens[0]["nonce"] != client.tokens[1]["nonce"]
         assert client.tokens[0]["stored"] == client.tokens[1]["stored"]
         assert not (short_root / "sockets/channel.sock").exists()
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("locked", [False, True])
+def test_fixed_second_writer_requires_real_exclusion_and_no_uncommitted_visibility(short_root, locked):
+    database = short_root / "probe.sqlite"
+    controller = short_root / "controller"
+    controller.mkdir(mode=0o700)
+    command = probe.DatabaseContender("/unused/docker", "unix:///unused.sock", controller, "amd64")
+    with sqlite3.connect(database) as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE probe(value TEXT NOT NULL)")
+        db.commit()
+        if locked:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("INSERT INTO probe VALUES ('uncommitted')")
+        result = subprocess.run(
+            [sys.executable, "-IBS", "-c", command.client_code(), "/unused", str(short_root), "/unused"],
+            capture_output=True,
+            timeout=5,
+        )
+        if locked:
+            assert result.returncode == 0, result.stderr
+            assert json.loads(result.stdout) == {
+                "sqlite_wal": True,
+                "concurrent_writer_lock": True,
+                "uncommitted_rows_visible": False,
+            }
+            db.rollback()
+        else:
+            assert result.returncode != 0
+            assert json.loads(result.stdout) == {"probe_client_error": "ValueError", "errno": None}
+
+
+def test_native_controller_never_opens_the_live_database(short_root, monkeypatch):
+    class Pair(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            code = probe.DatabaseContender.client_code(None)
+            result = subprocess.run(
+                [sys.executable, "-IBS", "-c", code, "/unused", str(data), "/unused"],
+                capture_output=True,
+                timeout=5,
+            )
+            assert result.returncode == 0, result.stderr
+
+    client = Pair()
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(
+                probe.sqlite3,
+                "connect",
+                lambda *a, **k: pytest.fail("Native controller opened the live SQLite database"),
+            )
+            result = probe.experiment(client, short_root)
+        assert (
+            result["concurrent_writer_lock"] and result["database_writer_domain"] == "same-host-test-fixture"
+        )
+        assert len(client.children) == 2 and all(child.returncode == 0 for child in client.children)
     finally:
         client.close()
 
@@ -112,7 +176,8 @@ def test_other_native_peer_never_reaches_file_exchange(short_root, monkeypatch):
         client.close()
 
 
-def test_fixed_client_failure_reports_only_class_and_errno_without_private_payload(tmp_path):
+def test_fixed_client_failure_reports_only_class_and_errno_without_private_payload(short_root):
+    tmp_path = short_root
     token = tmp_path / "token.json"
     token.write_text(json.dumps({"nonce": "a" * 64, "stored": "b" * 64, "phase": "write"}))
     result = subprocess.run(
@@ -218,6 +283,44 @@ def test_unrecognized_client_stdout_does_not_publish_arbitrary_logs(docker, monk
 
     monkeypatch.setattr(docker, "call", call)
     assert docker.client_failures() == [{"diagnostic_unavailable": True}]
+
+
+@pytest.mark.parametrize("lost_ack", [False, True])
+def test_second_container_is_journaled_and_uses_the_same_frozen_engine_and_dataset(
+    docker, tmp_path, monkeypatch, lost_ack
+):
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("container", "create"):
+            assert (child.root / "owner.json").is_file()
+            assert args[args.index("--network") + 1] == "none"
+            assert probe.bind_mount(tmp_path / "data", "/probe-data") in args
+            if lost_ack:
+                raise RuntimeError("Lost contender create acknowledgement")
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(child))
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        if args[:2] == ("container", "logs"):
+            return 0, json.dumps(
+                {"sqlite_wal": True, "concurrent_writer_lock": True, "uncommitted_rows_visible": False}
+            )
+        return 0, ""
+
+    monkeypatch.setattr(probe.DatabaseContender, "call", call)
+    if lost_ack:
+        with pytest.raises(RuntimeError, match="Lost contender"):
+            docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.contenders[0].uncertain
+        assert not docker.cleanup()
+        assert not any(args[:2] in {("container", "start"), ("container", "rm")} for args in calls)
+    else:
+        docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.cleanup()
 
 
 def test_authenticated_candidate_mounts_only_client_credentials_and_owned_code(short_root, monkeypatch):

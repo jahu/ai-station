@@ -3,6 +3,7 @@
 import asyncio
 import fcntl
 import json
+import resource
 import shutil
 import socket
 import ssl
@@ -236,8 +237,11 @@ def test_native_child_stops_on_pipe_eof_and_preserves_the_runner(credentials, sh
         server.listen(1)
         path.chmod(0o600)
         original = path.stat().st_ino
+        before = resource.getrlimit(resource.RLIMIT_NOFILE)
         owner = link.NativeOwner(credentials / "server", path).start()
         assert owner.process.poll() is None
+        assert 96 <= owner.fd_limit <= 128
+        assert resource.getrlimit(resource.RLIMIT_NOFILE) == before
         owner.close()
         assert owner.process.returncode == 0 and path.stat().st_ino == original
         with socket.socket(socket.AF_INET) as client:

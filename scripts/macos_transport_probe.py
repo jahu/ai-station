@@ -80,6 +80,9 @@ with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as s:
   c=sqlite3.connect((root/'probe.sqlite').as_uri()+'?mode=rw',uri=True)
   try:
    require(c.execute('SELECT value FROM probe').fetchall()==[(stored,)])
+   require(c.execute('PRAGMA journal_mode').fetchone()==('wal',))
+   require(c.execute('PRAGMA integrity_check').fetchone()==('ok',))
+   c.execute('BEGIN IMMEDIATE');c.rollback()
   finally:c.close()
  send('committed');receive('finished');reader.close()
 """
@@ -127,6 +130,7 @@ def bind_mount(path, target, *, readonly=False):
 
 class Docker:
     NETWORK = "none"
+    SQLITE_DOMAIN = "docker-linux-vm"
 
     def __init__(self, binary, endpoint, root, architecture, *, packaged_image=None):
         if packaged_image is not None and (
@@ -134,6 +138,8 @@ class Docker:
         ):
             raise ValueError("Use the verified bundled application image identity")
         self.packaged_image = packaged_image
+        self.root = Path(root)
+        self.contenders = []
         self.image_reference = packaged_image or IMAGE
         self.architecture = architecture
         client = root / "client"
@@ -271,6 +277,8 @@ class Docker:
 
     def cleanup(self):
         complete = not self.uncertain
+        for contender in reversed(self.contenders):
+            complete = contender.cleanup() and complete
         for identifier in reversed(self.ids):
             try:
                 if self.owned(identifier)["running"]:
@@ -279,6 +287,31 @@ class Docker:
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 complete = False
         return complete
+
+    def database_checks(self, sockets, data, stored):
+        # Live SQLite access belongs to Linux control-plane writers, never the
+        # native Mac Runner. Exercise a second actual container/kernel peer.
+        root = self.root / ("database-check-" + uuid4().hex)
+        root.mkdir(mode=0o700)
+        contender = DatabaseContender(
+            self.argv[0], self.argv[2], root, self.architecture, packaged_image=self.packaged_image
+        )
+        contender.image_id = self.image_id
+        self.contenders.append(contender)
+        receipt(root / "owner.json", {"probe_id": contender.identity, "image": contender.image_reference})
+        identity = contender.container(sockets, data, "contender")
+        _, status = contender.call("container", "wait", identity, timeout=15)
+        if status != "0":
+            contender.failure_summary = contender.client_failures()
+            raise ValueError("The second container did not confirm SQLite writer exclusion")
+        contender.owned(identity)
+        _, raw = contender.call("container", "logs", "--tail", "1", identity)
+        if len(raw) > 1000 or json.loads(raw) != {
+            "sqlite_wal": True,
+            "concurrent_writer_lock": True,
+            "uncommitted_rows_visible": False,
+        }:
+            raise ValueError("The second container did not verify the live SQLite writer domain")
 
     def client_failures(self):
         """Inspect only our fixed client; retain error classes, never raw logs/data."""
@@ -317,6 +350,30 @@ class Docker:
         return result
 
 
+class DatabaseContender(Docker):
+    def client_code(self):
+        return r"""
+import json,sqlite3,sys
+from pathlib import Path
+def failed(kind,error,traceback):
+ print(json.dumps({'probe_client_error':kind.__name__,'errno':getattr(error,'errno',None)}),flush=True)
+sys.excepthook=failed
+root=Path(sys.argv[2])
+def require(value):
+ if not value:raise ValueError('Container SQLite exclusion verification failed')
+c=sqlite3.connect((root/'probe.sqlite').as_uri()+'?mode=rw',uri=True,timeout=0.2)
+try:
+ require(c.execute('PRAGMA journal_mode').fetchone()==('wal',))
+ require(c.execute('SELECT value FROM probe').fetchall()==[])
+ try:c.execute('BEGIN IMMEDIATE')
+ except sqlite3.OperationalError as error:require(error.sqlite_errorcode & 255 == sqlite3.SQLITE_BUSY)
+ else:
+  c.rollback();raise ValueError('An overlapping Linux writer was not blocked')
+finally:c.close()
+print(json.dumps({'sqlite_wal':True,'concurrent_writer_lock':True,'uncommitted_rows_visible':False}),flush=True)
+"""
+
+
 class AuthenticatedDocker(Docker):
     """The same fixed experiment via local UDS → mutual TLS → native UDS."""
 
@@ -353,6 +410,8 @@ class AuthenticatedDocker(Docker):
     def extra_arguments(self):
         return [
             "--init",
+            "--ulimit",
+            "nofile=128:128",
             "--tmpfs",
             f"/bridge:rw,noexec,nosuid,size=16m,uid={os.geteuid()},gid={os.getegid()},mode=0700",
             "--mount",
@@ -418,11 +477,16 @@ def private_file(path):
         raise ValueError("Probe files must remain private regular files owned by the native user")
 
 
-def file_checks(data, stored, *, locked):
+def artifact_checks(data, stored):
     private_file(data / "artifact.bin")
     private_file(data / "probe.sqlite")
     if (data / "artifact.bin").read_bytes() != bytes.fromhex(stored):
         raise ValueError("Artifact bytes changed across the host/container mount")
+
+
+def file_checks(data, stored, *, locked):
+    # Same-OS test control only. Real Mac DB writers stay inside Docker's VM.
+    artifact_checks(data, stored)
     with closing(sqlite3.connect((data / "probe.sqlite").as_uri() + "?mode=rw", uri=True, timeout=0.1)) as db:
         if db.execute("PRAGMA journal_mode").fetchone() != ("wal",):
             raise ValueError("The shared database is not in WAL mode")
@@ -473,10 +537,11 @@ def experiment(docker, root, *, data_root=None):
                     send(connection, nonce, "files")
                     if phase == "write":
                         packet(connection, reader, nonce, "transaction-held")
-                        file_checks(data, stored, locked=True)
+                        artifact_checks(data, stored)
+                        docker.database_checks(sockets, data, stored)
                         send(connection, nonce, "commit")
                     packet(connection, reader, nonce, "committed")
-                    file_checks(data, stored, locked=False)
+                    artifact_checks(data, stored)
                     send(connection, nonce, "finished")
             _, result = docker.call("container", "wait", identifier, timeout=30)
             if result != "0":
@@ -492,6 +557,7 @@ def experiment(docker, root, *, data_root=None):
         "long_path_artifact_sha256": hashlib.sha256(bytes.fromhex(stored)).hexdigest(),
         "sqlite_wal": True,
         "concurrent_writer_lock": True,
+        "database_writer_domain": docker.SQLITE_DOMAIN,
         "chosen_data_filesystem": data_root is not None,
         "data_filesystem_device": data.stat().st_dev,
     }
@@ -631,6 +697,17 @@ def probe(
         result["cleanup_complete"] = docker.cleanup() if docker else True
         result["reserved_names"] = docker.reserved_names if docker else []
         result["container_ids"] = docker.ids if docker else []
+        if docker is not None and getattr(docker, "contenders", []):
+            result["database_contenders"] = [
+                {
+                    "probe_id": child.identity,
+                    "container_ids": child.ids,
+                    "reserved_names": child.reserved_names,
+                    "uncertain": child.uncertain,
+                    "failure_summary": getattr(child, "failure_summary", []),
+                }
+                for child in docker.contenders
+            ]
         directories = [(root, original)]
         if data_root is not None:
             directories.append((data_root, data_original))

@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import json
 import os
+import resource
 import select
 import signal
 import socket
@@ -394,6 +395,7 @@ class NativeOwner:
         self.process = None
         self.parent = None
         self.port = None
+        self.fd_limit = None
 
     def start(self):
         if self.process is not None:
@@ -442,13 +444,16 @@ class NativeOwner:
             expected = hashlib.sha256((self.credentials / "ca.pem").read_bytes()).hexdigest()
             if (
                 not isinstance(value, dict)
-                or set(value) != {"port", "ca_sha256"}
+                or set(value) != {"port", "ca_sha256", "fd_limit"}
                 or type(value.get("port")) is not int
                 or not 1024 <= value["port"] <= 65535
                 or value.get("ca_sha256") != expected
+                or type(value.get("fd_limit")) is not int
+                or not 96 <= value["fd_limit"] <= 128
             ):
                 raise ValueError("The native connection readiness identity differs")
             self.port = value["port"]
+            self.fd_limit = value["fd_limit"]
             return self
         except BaseException:
             self.close()
@@ -482,6 +487,14 @@ async def native_main(args):
             or fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE != access
         ):
             raise ValueError("Native supervision requires its actual private parent pipes")
+    # TLS handshakes precede authenticated stream callbacks. Cap this child's
+    # complete descriptor budget as well as relay count and handshake time;
+    # unauthenticated local peers cannot accumulate unbounded accepted sockets.
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    limit = 128 if soft == resource.RLIM_INFINITY else min(128, soft)
+    if limit < 96:
+        raise RuntimeError("The private connection requires at least 96 file descriptors")
+    resource.setrlimit(resource.RLIMIT_NOFILE, (limit, hard))
     done = asyncio.Event()
     loop = asyncio.get_running_loop()
     os.set_blocking(args.parent_fd, False)
@@ -501,6 +514,7 @@ async def native_main(args):
             value = {
                 "port": port,
                 "ca_sha256": hashlib.sha256((args.credentials / "ca.pem").read_bytes()).hexdigest(),
+                "fd_limit": resource.getrlimit(resource.RLIMIT_NOFILE)[0],
             }
             os.write(args.ready_fd, json.dumps(value).encode() + b"\n")
             os.close(args.ready_fd)

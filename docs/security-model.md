@@ -1453,12 +1453,26 @@ qualification; successful neutral CLI tests alone do not enable Mac installation
 
 Mac startup bridge preparation accepts only the already verified application
 image identity and independently matched native Docker connection. Its clients
-have no network, host home, Docker socket or GPU access; only new private probe
-directories are mounted. The coordinator owns its child handle and never signals
+use no network on the direct-socket path, and have no host home, Docker socket
+or GPU access; only new private probe directories are mounted. The explicitly
+selected authenticated Mac candidate instead uses Docker's bridge network to
+reach the fixed native loopback TLS listener, with separate private client
+credentials mounted read-only. It adds no public listener or arbitrary target.
+The coordinator owns its child handle and never signals
 a persisted PID. A matching private clean receipt permits restart; unknown state
 retains its pending fence and resources. Neither a successful transport probe
 nor its result file grants workstation/HTTP execution authority or full Mac
 installer qualification.
+
+The Mac filesystem probe keeps all live SQLite connections inside Linux
+containers, matching the API/worker/scheduler architecture. A second independent
+container must demonstrate actual writer exclusion and no uncommitted-row
+visibility; a restarted client verifies commit, integrity and released locks.
+Native code checks artifact bytes and ownership without opening the live DB.
+The observed Mac/Linux lock-domain mismatch forbids treating native DB access
+as interchangeable. Mac offline upgrades retain the quiescent application-image
+path; the Linux host recovery CLI is not shipped in the Mac bundle. See the
+[actual transport observations](plans/macos-runner-transport.md).
 
 The offline desktop-upgrade command is confined to the verified application
 image and canonical user-owned app data. It has no HTTP/Runner/agent route or

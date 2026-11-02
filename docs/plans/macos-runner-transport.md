@@ -15,6 +15,25 @@ This does not qualify shared files/WAL, other backends or the consumer installer
 The observed ARM hosted host separately refuses empty VM creation, which is not
 a claim about all physical ARM Macs.
 
+The first authenticated [real Mac experiment](https://github.com/jahu/ai-station/actions/runs/41432615972)
+did reach the native nonce protocol, create/read its private shared artifact and
+hold a Linux SQLite writer transaction. It then found that an attempted native
+macOS SQLite writer was not excluded. Host/VM SQLite lock domains must therefore
+not be treated as interchangeable. The existing architecture keeps all live DB
+writers in the Docker control plane; the native Runner/launcher bundle contains
+no application DB backend, and preserving upgrades use the fixed application-image
+transaction command. Native `station_recovery` is not included in that bundle;
+Mac recovery must use the quiescent image path, not Linux `/proc` host checks.
+
+Qualify the actual writer topology: a second independently created, non-root,
+network-isolated container must observe WAL mode, no uncommitted row and an actual
+`SQLITE_BUSY` result while the first container holds its writer transaction.
+After commit, a fresh container must verify the stored value, integrity, WAL mode
+and released writer lock. Native inspection checks shared artifact bytes and
+ownership without opening SQLite. Keep the failed cross-kernel experiment as a
+documented constraint; do not report native/live-VM DB access as supported or
+silently ignore a failed container-writer check.
+
 Do not change an existing user's VMM/settings to make socket sharing pass.
 Docker's [host-service networking](https://docs.docker.com/desktop/features/networking/networking-how-tos/)
 supplies a candidate local leg; verify it on the actual Mac before activation.
