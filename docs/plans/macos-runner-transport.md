@@ -70,6 +70,22 @@ host DB must never be mistaken for the active volume DB. A copied host directory
 alone is not a complete Mac backup. Do not silently remove a volume on Stop,
 update or uninstall, import an existing host DB, or admit an unknown volume.
 
+The fixed image upgrade stages new operations inside `db/desktop-upgrade-staging`
+when its DB and exported-backup filesystems differ. A request-bound relative
+location prevents selecting arbitrary paths. Exported pre-update backups remain
+under `desktop-upgrades`, and existing same-filesystem/pending Linux operations
+retain their original location. Publication checks that the stage and target
+share a Linux mount identity before changing phase or removing WAL sidecars, then uses the
+existing atomic replace. This supplies the cross-filesystem backend primitive;
+native volume attestation, activation and complete Mac update acceptance remain
+separate integration requirements.
+
+The Linux image inspects its own open directory's `/proc/self/fdinfo` mount ID
+as well as the device number. Separate bind mounts may share `st_dev` but still
+reject cross-mount rename with `EXDEV`; device equality alone is insufficient.
+These mount IDs are compared within one command, never persisted or compared
+between containers or operating systems.
+
 SQLite's [locking requirements](https://www.sqlite.org/howtocorrupt.html)
 and [WAL shared-memory contract](https://www.sqlite.org/wal.html) explain why
 reported WAL mode alone is insufficient. The selected storage must demonstrate

@@ -188,6 +188,53 @@ def location(root, identity, *, create=False):
     return folder
 
 
+def filesystem_mount(path):
+    # A separate bind/volume mount can share st_dev yet still reject rename
+    # with EXDEV. Inspect this Linux image's actual open-directory mount ID;
+    # never compare ephemeral mount IDs between different containers.
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        with open(f"/proc/self/fdinfo/{fd}") as info:
+            data = info.read(4097)
+        mounts = re.findall(r"^mnt_id:\s+([0-9]+)$", data, re.MULTILINE)
+        if len(data) > 4096 or len(mounts) != 1:
+            raise ValueError("The offline image could not identify its database filesystem mount")
+        return os.fstat(fd).st_dev, int(mounts[0])
+    finally:
+        os.close(fd)
+
+
+def separate_database_storage(root, folder):
+    return filesystem_mount(root / "db") != filesystem_mount(folder)
+
+
+def staged_path(root, folder, request, *, create=False):
+    relative = request.get("staged_relative")
+    if relative is None:
+        return folder / "staged.sqlite"  # Existing Linux/pending operation layout.
+    if str(UUID(request["operation_id"])) != request["operation_id"]:
+        raise ValueError("Use a canonical upgrade operation UUID")
+    expected = f"db/desktop-upgrade-staging/{request['operation_id']}/staged.sqlite"
+    if relative != expected:
+        raise ValueError("The recorded upgrade staging location changed")
+    store = root / "db/desktop-upgrade-staging"
+    if create:
+        store.mkdir(mode=0o700, exist_ok=True)
+    directory(store, private=True)
+    parent = store / request["operation_id"]
+    if create:
+        parent.mkdir(mode=0o700)
+    directory(parent, private=True)
+    return parent / "staged.sqlite"
+
+
+def require_atomic_stage(stage, target):
+    if filesystem_mount(stage.parent) != filesystem_mount(target.parent):
+        raise ValueError(
+            "The prepared database is on another filesystem; abort and prepare again before publication"
+        )
+
+
 def pending(root, identity):
     folder = location(root, identity)
     request = read(folder / "request.json")
@@ -259,7 +306,7 @@ def prepare(root, identity, previous, target):
             if state["phase"] == "prepared" and fingerprint(root) == request["source"]:
                 if (
                     digest(folder / "original.sqlite") != state["backup_sha256"]
-                    or digest(folder / "staged.sqlite") != state["staged_sha256"]
+                    or digest(staged_path(root, folder, request)) != state["staged_sha256"]
                 ):
                     raise ValueError("Prepared upgrade bytes changed")
                 return report(request, state)
@@ -273,15 +320,18 @@ def prepare(root, identity, previous, target):
             "schema_before": verify(root / "db/ai-station.sqlite"),
             "schema_after": ScriptDirectory.from_config(alembic_config()).get_current_head(),
         }
+        if separate_database_storage(root, folder):
+            request["staged_relative"] = f"db/desktop-upgrade-staging/{identity}/staged.sqlite"
         write(folder / "request.json", request)
         state = {"phase": "preparing", "request_identity": hashlib.sha256(encode(request)).hexdigest()}
         write(folder / "state.json", state)
         write(marker, {"operation_id": identity, "identity": hashlib.sha256(encode(request)).hexdigest()})
-        original, stage = folder / "original.sqlite", folder / "staged.sqlite"
+        original = folder / "original.sqlite"
         copy(root / "db/ai-station.sqlite", original)
         verify(original, request["schema_before"])
         state["backup_sha256"] = digest(original)
         write(folder / "state.json", state)
+        stage = staged_path(root, folder, request, create=True)
         copy(original, stage)
         engine = create_engine(URL.create("sqlite", database=str(stage)))
         try:
@@ -317,19 +367,21 @@ def publish(root, identity):
         if state["phase"] == "prepared":
             if observed != original:
                 raise ValueError("Original database changed; upgrade publication was refused")
-            stage = folder / "staged.sqlite"
+            stage = staged_path(root, folder, request)
             if digest(stage) != state["staged_sha256"]:
                 raise ValueError("Staged database changed; nothing was replaced")
             verify(stage, request["schema_after"])
+            require_atomic_stage(stage, target)
             state["phase"] = "publishing"
             write(folder / "state.json", state)
         if observed["main"] == state["staged_sha256"] and observed["-wal"] is None:
             verify(target, request["schema_after"])
         elif observed["main"] == original["main"] and observed["-wal"] in {original["-wal"], None}:
-            stage = folder / "staged.sqlite"
+            stage = staged_path(root, folder, request)
             if digest(stage) != state["staged_sha256"]:
                 raise ValueError("Staged database changed; nothing was replaced")
             verify(stage, request["schema_after"])
+            require_atomic_stage(stage, target)
             for suffix in ("-wal", "-shm", "-journal"):
                 path = target.with_name(target.name + suffix)
                 if path.exists() or path.is_symlink():
