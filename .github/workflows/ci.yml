@@ -227,6 +227,9 @@ jobs:
           .venv/bin/python -m pip install --require-hashes -r packaging/macos/checks.lock
           .venv/bin/python -m pip install --require-hashes -r packaging/macos/build-tools.lock
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          # Exercise the actual isolated producer imports before installing
+          # Docker or spending time assembling layers and an application image.
+          .venv/bin/python -IB -c 'import sys; sys.path.insert(0, "scripts"); from macos_consumer_probe import producer; producer()'
       - name: Fresh Docker Desktop and actual package backend
         run: bash scripts/macos_docker_desktop_qa.sh --consumer
       - name: Report bounded non-secret experiment status

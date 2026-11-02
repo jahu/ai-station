@@ -20,6 +20,16 @@ MODEL_SHA = "b1324e2f1bd2e0610d591f54f93e38d90b187f69d1f215f4cace349eade678d7"
 PROFILE = "llamacpp-native-darwin-x86_64-b12032-v2"
 
 
+def producer():
+    # Developer build inputs belong to this reviewed checkout. The installed
+    # app still runs its own bundled interpreter with -IB and no source paths.
+    # Import before expensive work so missing build inputs fail immediately.
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "host-runner"))
+    import build_macos_package
+
+    return build_macos_package
+
+
 def require_host():
     required = {
         "GITHUB_ACTIONS": "true",
@@ -73,6 +83,7 @@ def main():
     require_host()
     os.umask(0o077)
     repo = Path(__file__).resolve().parent.parent
+    package_builder = producer()
     state = Path.home() / "Library/Application Support/AI Station"
     if state.exists() or state.is_symlink():
         raise ValueError("The actual package experiment refuses existing AI Station data")
@@ -187,10 +198,9 @@ def main():
             "--output",
             root / "image",
         )
-        import build_macos_package
-
+        progress("assemble_actual_application_bundle")
         app = root / "AI Station.app"
-        metadata = build_macos_package.bundle(
+        metadata = package_builder.bundle(
             app,
             root / "application-python",
             root / "native-interface",
@@ -294,6 +304,8 @@ def main():
         progress("backend_experiment_passed_GUI_update_backup_removal_still_required")
     except BaseException as error:
         proof.update(passed=False, error_type=type(error).__name__, stage=stage)
+        if isinstance(error, ModuleNotFoundError):
+            proof["missing_module"] = error.name
         raise
     finally:
         for process in processes:
@@ -311,5 +323,8 @@ if __name__ == "__main__":
     try:
         main()
     except BaseException as error:
-        print(json.dumps({"experiment_failed": True, "error_type": type(error).__name__}), flush=True)
+        detail = {"experiment_failed": True, "error_type": type(error).__name__}
+        if isinstance(error, ModuleNotFoundError):
+            detail["missing_module"] = error.name
+        print(json.dumps(detail), flush=True)
         raise SystemExit(1) from None
