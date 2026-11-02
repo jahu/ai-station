@@ -391,14 +391,6 @@ export default function ModelSetup() {
           onReadiness={setRuntimeReady}
         />
       )}
-      <SpeechSetupPanel />
-      <FishSetupPanel />
-      <ImageSetupPanel />
-      <VideoSetupPanel />
-      <AvatarSetupPanel />
-      <EffectsSetupPanel />
-      <MusicSetupPanel />
-      <MemorySetupPanel />
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>
@@ -771,7 +763,7 @@ export default function ModelSetup() {
                   <p>Your downloads will appear here.</p>
                   <small className="muted">
                     Conversation model downloads are saved here. Other
-                    installations keep their progress in the cards above.
+                    installations keep their progress in their own setup cards.
                   </small>
                 </div>
               )
@@ -789,6 +781,22 @@ export default function ModelSetup() {
           </section>
         </div>
       )}
+      <section className="setup-additional" aria-label="Other capabilities">
+        <div>
+          <h2>Other capabilities</h2>
+          <p className="muted">
+            Add images, video, voices, music and memory whenever you need them.
+          </p>
+        </div>
+        <SpeechSetupPanel />
+        <FishSetupPanel />
+        <ImageSetupPanel />
+        <VideoSetupPanel />
+        <AvatarSetupPanel />
+        <EffectsSetupPanel />
+        <MusicSetupPanel />
+        <MemorySetupPanel />
+      </section>
     </>
   );
 }

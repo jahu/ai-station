@@ -294,7 +294,7 @@ export default function RuntimeSetupPanel({
           : "First prepare llama.cpp, then choose your local model below."}
       </p>
       {cpu && (
-        <p className="notice">
+        <p className="muted setup-small">
           {native ? "Native Mac CPU execution" : "CPU execution"} · no NVIDIA
           GPU needed. This uses system RAM and is slower than GPU inference.
         </p>
