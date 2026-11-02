@@ -130,6 +130,10 @@ jobs:
             --architecture "$TARGET_ARCHITECTURE" --output "$PWD/.native-mac/native-interface"
           .native-mac/native-interface/ai-station-native --native-ui-smoke
           .native-mac/application-python/bin/python3.12 -IB scripts/macos_desktop_storage_probe.py
+      - name: Exercise actual application bundle entry with neutral image fixture
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_bundle_probe.py "$TARGET_ARCHITECTURE"
       - name: Execute the actual bundled interpreter and native dependencies
         if: inputs.operation == 'macos-native-checks'
         env:

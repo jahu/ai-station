@@ -214,7 +214,12 @@ def main() -> None:
             # or been replaced. Recheck before reusing it.
             if not runner_health(env):
                 proc = subprocess.Popen(
-                    [sys.executable, *(["-I"] if args.desktop else []), "-m", "ai_station_runner.main"],
+                    [
+                        sys.executable,
+                        *(["-IB" if sys.platform == "darwin" else "-I"] if args.desktop else []),
+                        "-m",
+                        "ai_station_runner.main",
+                    ],
                     env=env,
                 )
                 deadline = time.monotonic() + 20

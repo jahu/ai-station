@@ -124,7 +124,11 @@ def test_matching_existing_image_is_reused_and_mismatched_tag_is_not_overwritten
     assert run.call_count == 2
 
 
-def test_private_setup_link_is_consumed_without_ordinary_log_persistence(tmp_path, monkeypatch):
+@pytest.mark.parametrize("system,flags", [("Linux", "-I"), ("Darwin", "-IB")])
+def test_private_setup_link_is_consumed_without_ordinary_log_persistence(
+    tmp_path, monkeypatch, system, flags
+):
+    monkeypatch.setattr(desktop.platform, "system", lambda: system)
     proof = "http://127.0.0.1:8766/#/?setup_token=" + "a" * 43
     proc = Mock()
     proc.stdout = io.StringIO(
@@ -147,7 +151,7 @@ def test_private_setup_link_is_consumed_without_ordinary_log_persistence(tmp_pat
     browser.assert_called_once_with(proof.replace("/#/?", "/#/setup/models?"))
     assert log.getvalue() == "starting\n" and "setup_token" not in log.getvalue()
     command = spawn.call_args.args[0]
-    assert command[:3] == [str(tmp_path / "python/bin/python3"), "-I", str(tmp_path / "scripts/launch.py")]
+    assert command[:3] == [str(tmp_path / "python/bin/python3"), flags, str(tmp_path / "scripts/launch.py")]
     assert "--config" in command and "--no-build" in command and "--desktop" in command
     assert spawn.call_args.kwargs["start_new_session"] is True
     proc.terminate.assert_called_once()
