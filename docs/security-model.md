@@ -121,6 +121,17 @@ inspected owned helper; completed snapshots and partial/canceled files remain.
 This primitive does not yet provide complete files backup/restoration or make
 the Mac consumer installer available.
 
+The image-local restore candidate binds a fixed backup hash, image, operation and
+target volume, with a volume-level marker blocking API/export/upgrade entry.
+Its private stage reuses offline account normalization: current credentials/MFA
+are preserved, sessions/node authority are revoked, schedules pause and active
+Runs require inspection. Unreadable authority needs a named administrator reset
+and explicit MFA acknowledgement from a private fixed-path file. Passwords never
+travel in argv or reports; only a salted normal password verifier binds a pending
+reset request. Original main/WAL copies stay private, and only a verified stage
+may atomically replace the target. No adapter or consumer restore entry is made
+operational before native ownership/cancellation/files recovery is integrated.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.

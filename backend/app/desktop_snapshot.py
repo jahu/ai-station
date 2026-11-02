@@ -55,6 +55,9 @@ def copy_fixed(source, target):
 
 def export_database(value, operation, image_id):
     """Clone raw DB/WAL first; SQLite never writes to the mounted source volume."""
+    pending = storage.ROOT / ".ai-station-restore-pending.json"
+    if pending.exists() or pending.is_symlink():
+        raise ValueError("Finish or abort the pending private restore before exporting")
     if str(UUID(operation)) != operation:
         raise ValueError("Use a canonical snapshot UUID")
     if not isinstance(image_id, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", image_id):

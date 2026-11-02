@@ -103,6 +103,9 @@ def canonical_root(root):
 @contextmanager
 def guard(root):
     root = canonical_root(root)
+    restore = root / "db/.ai-station-restore-pending.json"
+    if restore.exists() or restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before upgrading")
     descriptors = []
     try:
         for name in ("launcher.lock", "migrations.lock"):

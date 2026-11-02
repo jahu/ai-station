@@ -73,10 +73,28 @@ to resume the same operation. Do not run it against a station with active jobs.
 
 ## Remaining integration and acceptance
 
+The image-local database restore candidate now supplies fixed `prepare`,
+`publish`, `abort` and read-only `status` commands. It packages only the existing
+pure `station_recovery.storage`/`.accounts` helpers. Staging and retained raw
+original main/WAL copies live on the attested database volume; no native SQLite,
+host Docker/proc guards, HTTP or agent restore entry is introduced.
+
+Preparation preserves current account/password/MFA authority and deliberately
+revokes sessions, pauses agents, interrupts nonterminal Runs and denies pending
+approvals. An unreadable authority requires an explicit named administrator
+recovery through a private fixed-path file; passwords never enter argv, reports
+or journals. A salted normal account password verifier freezes that request.
+Stage migrations and integrity/foreign-key checks finish before atomic DB
+publication. Durable source/stage fingerprints and phases allow interrupted
+preparation/publication and lost acknowledgements to resume; abort is available
+only before publication. A separate volume marker blocks API migration, export
+and upgrades while recovery is unfinished. This candidate still needs native
+dispatch/ownership, retained-file publication and the complete consumer flow.
+
 1. Add native backup selection/progress/cancel and restoration presentation.
    The end user must not need these developer commands.
-2. Stage and normalize the restored database inside the verified image on its
-   attested volume. Reuse `station_recovery.storage` and `.accounts` pure helpers:
+2. Integrate the image-local restoration candidate with native owned dispatch,
+   cancellation and inspection on its attested volume. Its reused pure helpers
    preserve current account/MFA authority, revoke sessions/invitations/node
    credentials, pause schedules, interrupt active Runs and release reservations.
    Unreadable present authority needs explicit reviewed administrator recovery.
