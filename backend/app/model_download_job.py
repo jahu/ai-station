@@ -71,6 +71,17 @@ class DownloadExecutor:
             runner = RunnerClient(timeout=30)
             hardware = runner.hardware()
             check()
+            from app.native_models import active_environment, host_profile, native, ready, verification
+
+            is_native = native(entry.model_dump())
+            if is_native and entry.runtime_profile != host_profile(hardware):
+                raise ValueError("Choose the native model profile for this Mac before downloading")
+            environment_id = active_environment(entry.runtime_profile) if is_native else None
+            native_preset = {
+                "runtime_profile": entry.runtime_profile,
+                "context_size": 4096,
+                "environment_id": environment_id,
+            }
             planned = recommendation(entry, hardware)
             if not planned["fits"] and not run.parameters.get("download_only", False):
                 raise ValueError(
@@ -149,6 +160,8 @@ class DownloadExecutor:
                     "check_context": True,
                     "check_image": True,
                     **({"runtime_profile": entry.runtime_profile} if entry.runtime_profile else {}),
+                    **(verification(native_preset) if is_native else {}),
+                    **({"allow_unprepared_sdk": True} if is_native and environment_id is None else {}),
                     "permissions": ["filesystem_read", "manage_models"],
                 }
             )
@@ -187,8 +200,9 @@ class DownloadExecutor:
                     "context_size": 4096,
                 }:
                     raise ValueError("The native CPU profile/budget differs from the reviewed model")
-            image_present = bool(report.get("image", {}).get("present"))
-            if report.get("error") and image_present:
+            image_present = bool((report.get("image") or {}).get("present"))
+            runtime_present = ready(report, native_preset) if is_native else image_present
+            if report.get("error") and runtime_present:
                 raise ValueError("Native model inspection did not succeed")
             preset = recommendation(entry, hardware)
             # Stop and registry/receipt publication use the same task fence.
@@ -243,7 +257,7 @@ class DownloadExecutor:
                     category="llm",
                     family=entry.architecture,
                     capabilities=["chat"],
-                    status="registered" if image_present else "downloaded",
+                    status="registered" if runtime_present else "downloaded",
                     last_verify_run_id=run.id,
                     metadata_json={
                         "gpus": preset["gpus"],
@@ -255,6 +269,7 @@ class DownloadExecutor:
                             if entry.runtime_profile
                             else {}
                         ),
+                        **({"environment_id": environment_id} if is_native and environment_id else {}),
                         "catalog_id": entry.id,
                         "catalog_manifest_sha256": run.parameters["manifest_sha256"],
                         "source_sha256": entry.file.sha256,
@@ -276,7 +291,10 @@ class DownloadExecutor:
                 "source_revision": entry.revision,
                 "context_profile": profile,
                 "runtime_image_present": image_present,
-                "ready_to_try": bool(image_present and preset["fits"]),
+                "runtime_present": runtime_present,
+                "ready_to_try": bool(
+                    runtime_present and preset["fits"] and definition.status == "registered"
+                ),
                 "preset": preset,
             }
             with tempfile.NamedTemporaryFile("w", suffix=".json") as receipt:
@@ -300,6 +318,7 @@ class DownloadExecutor:
                     "expected_bytes": entry.file.size_bytes,
                     "ready_to_try": result["ready_to_try"],
                     "runtime_image_present": image_present,
+                    "runtime_present": runtime_present,
                     "preset": preset,
                 },
             }

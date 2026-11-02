@@ -90,3 +90,17 @@ def test_legacy_linux_inspection_is_not_implicitly_enabled_on_mac(coordinates, m
     monkeypatch.setattr(model_verify, "sys", SimpleNamespace(platform="darwin"))
     legacy = {k: v for k, v in body.items() if k not in {"runtime_profile", "environment_id", "context_size"}}
     assert api.post("/v1/models/verify", json=legacy).status_code == 503
+
+
+def test_explicit_files_only_inspection_never_claims_an_unprepared_engine(coordinates, rig):
+    api, body = coordinates
+    response = api.post(
+        "/v1/models/verify", json={**body, "environment_id": None, "allow_unprepared_sdk": True}
+    )
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert report["present"] and report["matches_observation"]
+    assert report["native"]["present"] is False and report["native"]["environment_id"] is None
+    assert report["image"] is None and not rig["owner"].processes._live
+    ambiguous = api.post("/v1/models/verify", json={**body, "allow_unprepared_sdk": True})
+    assert ambiguous.status_code == 422

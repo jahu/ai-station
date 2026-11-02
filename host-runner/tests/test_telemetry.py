@@ -117,3 +117,19 @@ def test_compute_process_endpoint_is_operational_and_accepts_no_command(monkeypa
         assert client.get("/v1/gpu-processes").json()["status"] == "available"
         assert client.post("/v1/gpu-processes", json={"command": "unrestricted"}).status_code == 405
     assert calls == [True]
+
+
+def test_hardware_reports_runner_platform_instead_of_control_plane_platform(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    from ai_station_runner import telemetry
+
+    monkeypatch.setattr(
+        telemetry, "platform", SimpleNamespace(system=lambda: "Darwin", machine=lambda: "arm64")
+    )
+    monkeypatch.setattr(telemetry, "sys", SimpleNamespace(platform="linux"))
+    for name in ("gpus", "cpu", "memory", "load"):
+        monkeypatch.setattr(telemetry, name, lambda: {})
+    monkeypatch.setattr(telemetry, "disk", lambda _: {})
+    result = telemetry.collect(tmp_path)
+    assert result["host"] == {"system": "Darwin", "architecture": "arm64"}

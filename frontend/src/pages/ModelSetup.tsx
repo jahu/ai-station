@@ -55,8 +55,11 @@ type Entry = {
 };
 type Catalog = {
   can_prepare: boolean;
+  engine_profile?: string | null;
+  platform_notice?: string;
   entries: Entry[];
   hardware: {
+    host?: { system: string; architecture: string } | null;
     memory?: { total_mib?: number } | null;
     gpus: { index: number; name?: string; memory_total_mib?: number }[];
   };
@@ -374,11 +377,20 @@ export default function ModelSetup() {
         Start with a local conversation model, images, video, speech, music or
         memory. AI Station downloads, checks and prepares the files for you.
       </PageTitle>
-      <RuntimeSetupPanel
-        key={current?.runtime_profile ?? "cuda"}
-        profile={current?.runtime_profile}
-        onReadiness={setRuntimeReady}
-      />
+      {catalog.data?.platform_notice && (
+        <p className="notice">{catalog.data.platform_notice}</p>
+      )}
+      {catalog.data && !catalog.data.platform_notice && (
+        <RuntimeSetupPanel
+          key={
+            current?.runtime_profile ?? catalog.data.engine_profile ?? "cuda"
+          }
+          profile={
+            current?.runtime_profile ?? catalog.data.engine_profile ?? undefined
+          }
+          onReadiness={setRuntimeReady}
+        />
+      )}
       <SpeechSetupPanel />
       <FishSetupPanel />
       <ImageSetupPanel />
@@ -397,6 +409,15 @@ export default function ModelSetup() {
               : catalog.data?.hardware.memory?.total_mib
                 ? `${Math.round(catalog.data.hardware.memory.total_mib / 1024)} GiB RAM`
                 : "Hardware inspection unavailable"}
+            {catalog.data?.hardware.host?.system === "Darwin" && (
+              <span>
+                {" "}
+                · Mac{" "}
+                {catalog.data.hardware.host.architecture === "arm64"
+                  ? "Apple Silicon"
+                  : "Intel"}
+              </span>
+            )}
             {catalog.data?.hardware.gpus.map((gpu) => (
               <span key={gpu.index}>
                 {" "}

@@ -331,7 +331,9 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
     task = create_task(
         session,
         title="Install " + row.name,
-        prompt="Verify a local model file and any already-installed llama.cpp image",
+        prompt="Verify a local model file and its prepared native llama.cpp engine"
+        if native(row.metadata_json)
+        else "Verify a local model file and any already-installed llama.cpp image",
         capability="models.install",
     )
     run = create_run(
@@ -418,8 +420,20 @@ class ModelInstallExecutor:
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
-        from app.native_models import native, ready, verification
+        from app.native_models import active_environment, native, ready, verification
 
+        if native(run.parameters) and not run.parameters.get("environment_id"):
+            environment_id = active_environment(run.parameters["runtime_profile"])
+            if not environment_id:
+                mark_failed(
+                    session,
+                    run,
+                    "NativeEngineMissing",
+                    "Prepare the native llama.cpp engine before checking this model",
+                )
+                return "done"
+            run.parameters = {**run.parameters, "environment_id": environment_id}
+            session.commit()
         try:
             report = RunnerClient(timeout=20).verify_model(
                 {
@@ -500,6 +514,8 @@ class ModelInstallExecutor:
                 session, run, "ModelInstallFailed", report.get("error") or "Local model installation failed"
             )
             return "done"
+        if native(run.parameters):
+            row.metadata_json = {**row.metadata_json, "environment_id": run.parameters["environment_id"]}
         row.status = "registered"
         row.updated_at = utcnow()
         run.summary = (

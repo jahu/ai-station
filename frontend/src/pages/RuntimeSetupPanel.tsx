@@ -9,16 +9,20 @@ import { randomId } from "../lib/random-id";
 
 type Recipe = {
   profile: string;
-  name: string;
-  download_bytes: number;
+  name?: string;
+  download_bytes?: number;
+  inputs?: { size_bytes: number }[];
+  source_revision?: string;
+  release?: string;
   license: string;
   license_url: string;
   cuda_license_url?: string;
-  image_reference: string;
+  image_reference?: string;
 };
 type Catalog = {
   can_prepare: boolean;
   usable_image?: boolean;
+  sdk_prepared?: boolean;
   installation_available: boolean;
   installation_notice?: string;
   manifest_sha256: string;
@@ -47,6 +51,13 @@ const size = (bytes: number) =>
   bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(2)} GiB`
     : `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
+
+const nativeProfile = (profile: string) =>
+  profile.startsWith("llamacpp-native-darwin-");
+const downloadBytes = (recipe: Recipe) =>
+  recipe.download_bytes ??
+  recipe.inputs?.reduce((total, item) => total + item.size_bytes, 0) ??
+  0;
 
 function RuntimePreparation({
   value,
@@ -77,22 +88,31 @@ function RuntimePreparation({
     },
     onSuccess: refresh,
   });
-  const expected = value.progress.expected_bytes ?? value.recipe.download_bytes;
+  const native = nativeProfile(value.recipe.profile);
+  const expected = value.progress.expected_bytes ?? downloadBytes(value.recipe);
   const received = Math.max(
     0,
     Math.min(expected, value.progress.received_bytes ?? 0),
   );
   const label =
     value.run.status === "succeeded"
-      ? "Runtime image verified"
+      ? native
+        ? "Native engine prepared"
+        : "Runtime image verified"
       : value.run.status === "canceled"
-        ? "Stopped · cached layers are kept"
+        ? native
+          ? "Stopped · downloaded files are kept"
+          : "Stopped · cached layers are kept"
         : value.run.status === "queued"
           ? "Queued"
           : value.progress.phase === "unpacking"
-            ? "Preparing downloaded layers"
+            ? native
+              ? "Preparing the native engine"
+              : "Preparing downloaded layers"
             : value.progress.phase === "verifying"
-              ? "Checking the runtime image"
+              ? native
+                ? "Checking the native engine"
+                : "Checking the runtime image"
               : value.run.status === "cancel_requested"
                 ? "Stopping the transfer"
                 : active
@@ -122,7 +142,7 @@ function RuntimePreparation({
           />
           <p className="muted setup-small">
             {size(received)} of {size(expected)} prepared, including reused
-            layers.
+            {native ? "files" : "layers"}.
           </p>
         </>
       )}
@@ -171,16 +191,20 @@ export default function RuntimeSetupPanel({
   onReadiness: (ready: boolean | undefined) => void;
 }) {
   const cache = useQueryClient();
-  const cpu = profile === "llamacpp-cpu-linux-amd64-v1";
-  const suffix = cpu ? "?profile=" + profile : "";
+  const native = nativeProfile(profile);
+  const cpu = native || profile === "llamacpp-cpu-linux-amd64-v1";
+  const profileSpecific = profile !== "llamacpp-cuda-linux-amd64-v1";
+  const suffix = profileSpecific
+    ? "?profile=" + encodeURIComponent(profile)
+    : "";
   const catalog = useQuery({
-    queryKey: cpu
+    queryKey: profileSpecific
       ? ["runtime-setup-catalog", profile]
       : ["runtime-setup-catalog"],
     queryFn: () => api<Catalog>("/setup/runtimes" + suffix),
   });
   const history = useQuery({
-    queryKey: cpu
+    queryKey: profileSpecific
       ? ["runtime-preparations", profile]
       : ["runtime-preparations"],
     queryFn: () => api<Preparation[]>("/setup/runtimes/preparations" + suffix),
@@ -194,6 +218,7 @@ export default function RuntimeSetupPanel({
   const completed = useRef(new Set<string>());
   const data = catalog.data,
     recipe = data?.recipe;
+  const ready = native ? data?.sdk_prepared : data?.usable_image;
   const active = history.data?.find((row) => !terminal.has(row.run.status));
   const existing = history.data?.find(
     (row) =>
@@ -201,13 +226,11 @@ export default function RuntimeSetupPanel({
       (!terminal.has(row.run.status) || row.resume_allowed),
   );
   useEffect(() => {
-    if (data?.usable_image) token.current = null;
-  }, [data?.usable_image]);
+    if (ready) token.current = null;
+  }, [ready]);
   useEffect(() => {
-    onReadiness(
-      typeof data?.usable_image === "boolean" ? data.usable_image : undefined,
-    );
-  }, [data?.usable_image, onReadiness]);
+    onReadiness(typeof ready === "boolean" ? ready : undefined);
+  }, [ready, onReadiness]);
   useEffect(() => {
     for (const row of history.data ?? [])
       if (
@@ -258,29 +281,29 @@ export default function RuntimeSetupPanel({
           <Box size={20} />
           <h2>Local conversation engine</h2>
         </div>
-        {data?.usable_image && (
+        {ready && (
           <span className="setup-fit">
             <Check size={14} />
-            Image available
+            {native ? "Native engine available" : "Image available"}
           </span>
         )}
       </div>
       <p className="muted">
-        {data?.usable_image
+        {ready
           ? "llama.cpp is available. Choose a local model below; it loads when you send a message."
           : "First prepare llama.cpp, then choose your local model below."}
       </p>
       {cpu && (
         <p className="notice">
-          CPU execution · no NVIDIA GPU needed. This uses system RAM and is
-          slower than GPU inference.
+          {native ? "Native Mac CPU execution" : "CPU execution"} · no NVIDIA
+          GPU needed. This uses system RAM and is slower than GPU inference.
         </p>
       )}
       <ErrorNotice error={catalog.error ?? history.error ?? prepare.error} />
-      {!data?.usable_image && recipe && (
+      {!ready && recipe && (
         <>
           <p>
-            {size(recipe.download_bytes)} download · runs locally on this
+            {size(downloadBytes(recipe))} download · runs locally on this
             station.
           </p>
           {data?.storage && (
@@ -310,7 +333,11 @@ export default function RuntimeSetupPanel({
               )}
             </p>
             <p className="setup-small muted">{recipe.license}</p>
-            <p className="setup-small model-path">{recipe.image_reference}</p>
+            <p className="setup-small model-path">
+              {native
+                ? `${recipe.release ?? "llama.cpp"} · ${recipe.source_revision ?? ""}`
+                : recipe.image_reference}
+            </p>
           </details>
           {!data?.can_prepare ? (
             <p className="notice">
@@ -355,7 +382,7 @@ export default function RuntimeSetupPanel({
           )}
         </>
       )}
-      {existing && !data?.usable_image && (
+      {existing && !ready && (
         <Button
           variant="secondary"
           onClick={() => {
@@ -370,7 +397,7 @@ export default function RuntimeSetupPanel({
         </Button>
       )}
       {!!history.data?.length && (
-        <details open={Boolean(active) || !data?.usable_image}>
+        <details open={Boolean(active) || !ready}>
           <summary>Runtime preparation history</summary>
           {history.data.map((row) => (
             <RuntimePreparation

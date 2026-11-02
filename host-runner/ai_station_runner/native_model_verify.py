@@ -17,7 +17,7 @@ def verify(body):
         raise HTTPException(503, "The native model profile requires its matching Mac Host Runner")
     root = get_settings().host_data_dir().resolve(strict=True)
     try:
-        checked = environment.resolve_id(root, body.environment_id)
+        checked = environment.resolve_id(root, body.environment_id) if body.environment_id else None
         path = verify_owned_model(root, body.host_path, body.model_sha256)
         info = path.stat()
         matches = info.st_size == body.size_bytes and abs(info.st_mtime - body.mtime) <= 0.001
@@ -39,10 +39,10 @@ def verify(body):
         "context_profile": context,
         "image": None,
         "native": {
-            "present": True,
+            "present": checked is not None,
             "runtime_profile": body.runtime_profile,
             "environment_id": body.environment_id,
-            "manifest_sha256": checked["observation"]["manifest_sha256"],
+            "manifest_sha256": checked["observation"]["manifest_sha256"] if checked else None,
             "architecture": environment.architecture,
             "compute_target": "cpu",
             "memory_enforcement": "admission_only",

@@ -38,6 +38,7 @@ function mount(
   freeBytes = 20 * 1024 ** 3,
   selectedEntry?: Record<string, unknown>,
   additionalEntries: Record<string, unknown>[] = [],
+  native = false,
 ) {
   const writes: { url: string; body: Record<string, unknown> }[] = [];
   let rows = initial;
@@ -80,6 +81,17 @@ function mount(
           ok: true,
           json: async () => ({
             usable_image: true,
+            ...(native
+              ? {
+                  sdk_prepared: true,
+                  recipe: {
+                    profile: "llamacpp-native-darwin-arm64-b12032-v2",
+                    inputs: [],
+                    license: "MIT",
+                    license_url: "https://example.com/license",
+                  },
+                }
+              : {}),
             installation_available: false,
             ...(url.includes("llamacpp-cpu-linux-amd64-v1")
               ? {
@@ -103,6 +115,9 @@ function mount(
           url.endsWith("/setup/catalog")
             ? {
                 can_prepare: canPrepare,
+                ...(native
+                  ? { engine_profile: "llamacpp-native-darwin-arm64-b12032-v2" }
+                  : {}),
                 entries: [
                   {
                     ...(selectedEntry ?? entry),
@@ -111,10 +126,19 @@ function mount(
                   ...additionalEntries,
                 ],
                 hardware: {
+                  ...(native
+                    ? { host: { system: "Darwin", architecture: "arm64" } }
+                    : {}),
                   memory: { total_mib: 32768 },
-                  gpus: [
-                    { index: 7, name: "Detected GPU", memory_total_mib: 12288 },
-                  ],
+                  gpus: native
+                    ? []
+                    : [
+                        {
+                          index: 7,
+                          name: "Detected GPU",
+                          memory_total_mib: 12288,
+                        },
+                      ],
                 },
                 storage: {
                   free_bytes: freeBytes,
@@ -407,4 +431,18 @@ it("keeps the visible CPU starter selected when RAM is insufficient", async () =
   expect(
     await screen.findByText(/CPU execution · no NVIDIA GPU needed/),
   ).toBeTruthy();
+});
+
+it("selects the host Mac engine even before a model has been selected", async () => {
+  mount(true, [], 20 * 1024 ** 3, undefined, [], true);
+  await screen.findByText("Native engine available");
+  expect(screen.getByText(/Mac Apple Silicon/)).toBeTruthy();
+  const calls = vi.mocked(fetch).mock.calls.map((call) => String(call[0]));
+  expect(
+    calls.some((url) =>
+      url.includes(
+        "/setup/runtimes?profile=llamacpp-native-darwin-arm64-b12032-v2",
+      ),
+    ),
+  ).toBe(true);
 });

@@ -514,7 +514,11 @@ def test_catalog_exposes_distinct_larger_quantizations_without_network_or_new_ru
         report = api.get("/api/setup/catalog")
         assert report.status_code == 200
         entries = report.json()["entries"]
-        assert len(entries) == len(CANDIDATES) == 9
+        assert (
+            len(entries)
+            == len([item for item in CANDIDATES if "darwin" not in (item.runtime_profile or "")])
+            == 9
+        )
         assert {row["id"] for row in entries if row["starter"]} == {"huihui-qwen3-4b-2507-q4km-cpu"}
         for row in entries:
             if row["starter"] or row["id"] in STARTER_CANDIDATE_IDS:
