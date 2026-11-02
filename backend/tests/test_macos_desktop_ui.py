@@ -128,3 +128,23 @@ def test_package_check_validates_code_before_any_ui_or_data_directory(tmp_path, 
     (root / "station").write_text("tampered")
     with pytest.raises(ValueError, match="missing or changed"):
         desktop.main()
+
+
+def test_failed_package_check_exits_without_opening_an_error_dialog(tmp_path, monkeypatch):
+    import runpy
+    import sys
+    from pathlib import Path
+
+    from test_desktop_package import fixture_bundle
+
+    root = tmp_path / "bundle"
+    fixture_bundle(root)
+    script = root / "scripts/desktop.py"
+    script.parent.mkdir()
+    script.write_bytes(Path(desktop.__file__).read_bytes())
+    (root / "station").write_text("tampered")
+    monkeypatch.setattr(sys, "argv", [str(script), "--package-check"])
+    monkeypatch.setattr(desktop.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(ui, "dialog", lambda *_: pytest.fail("Opened UI during package check failure"))
+    with pytest.raises(SystemExit, match="missing or changed"):
+        runpy.run_path(str(script), run_name="__main__")

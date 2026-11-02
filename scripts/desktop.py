@@ -798,7 +798,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, queue.Empty) as error:
-        if not {"--console", "--status", "--stop"}.intersection(sys.argv) and (
+        if not {"--console", "--status", "--stop", "--package-check"}.intersection(sys.argv) and (
             platform.system() == "Darwin" or shutil.which("zenity")
         ):
             dialog("--error", "--text=" + str(error))
