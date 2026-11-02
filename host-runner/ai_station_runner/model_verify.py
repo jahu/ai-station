@@ -43,6 +43,7 @@ class VerifyModel(BaseModel):
     context_size: StrictInt | None = Field(
         default=None, ge=512, le=262144, multiple_of=256, exclude_if=lambda v: v is None
     )
+    allow_unprepared_sdk: StrictBool = Field(default=False, exclude_if=lambda v: not v)
     permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
 
     @model_validator(mode="after")
@@ -55,13 +56,14 @@ class VerifyModel(BaseModel):
                 not self.app_owned
                 or not self.check_context
                 or self.check_image
-                or not self.environment_id
+                or (not self.environment_id and not self.allow_unprepared_sdk)
+                or (self.environment_id is not None and self.allow_unprepared_sdk)
                 or self.context_size is None
             ):
                 raise ValueError(
                     "Native model inspection requires owned weights, context and its opaque SDK reference"
                 )
-        elif self.environment_id is not None or self.context_size is not None:
+        elif self.environment_id is not None or self.context_size is not None or self.allow_unprepared_sdk:
             raise ValueError("Native SDK coordinates require an explicit native model profile")
         return self
 
@@ -83,7 +85,7 @@ def _missing(path: Path, *, symlink: bool, error: str) -> dict:
 def verify_model(body: VerifyModel) -> dict:
     if set(body.permissions) != {"filesystem_read", "manage_models"}:
         raise HTTPException(403, "Model installation requires filesystem read and model management")
-    if body.environment_id is not None:
+    if body.runtime_profile and body.runtime_profile.startswith("llamacpp-native-darwin-"):
         from ai_station_runner.native_model_verify import verify
 
         return verify(body)

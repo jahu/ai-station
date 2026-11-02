@@ -55,8 +55,11 @@ type Entry = {
 };
 type Catalog = {
   can_prepare: boolean;
+  engine_profile?: string | null;
+  platform_notice?: string;
   entries: Entry[];
   hardware: {
+    host?: { system: string; architecture: string } | null;
     memory?: { total_mib?: number } | null;
     gpus: { index: number; name?: string; memory_total_mib?: number }[];
   };
@@ -374,19 +377,20 @@ export default function ModelSetup() {
         Start with a local conversation model, images, video, speech, music or
         memory. AI Station downloads, checks and prepares the files for you.
       </PageTitle>
-      <RuntimeSetupPanel
-        key={current?.runtime_profile ?? "cuda"}
-        profile={current?.runtime_profile}
-        onReadiness={setRuntimeReady}
-      />
-      <SpeechSetupPanel />
-      <FishSetupPanel />
-      <ImageSetupPanel />
-      <VideoSetupPanel />
-      <AvatarSetupPanel />
-      <EffectsSetupPanel />
-      <MusicSetupPanel />
-      <MemorySetupPanel />
+      {catalog.data?.platform_notice && (
+        <p className="notice">{catalog.data.platform_notice}</p>
+      )}
+      {catalog.data && !catalog.data.platform_notice && (
+        <RuntimeSetupPanel
+          key={
+            current?.runtime_profile ?? catalog.data.engine_profile ?? "cuda"
+          }
+          profile={
+            current?.runtime_profile ?? catalog.data.engine_profile ?? undefined
+          }
+          onReadiness={setRuntimeReady}
+        />
+      )}
       <div className="setup-machine panel" aria-label="Detected workstation">
         <Cpu size={20} />
         <div>
@@ -397,6 +401,15 @@ export default function ModelSetup() {
               : catalog.data?.hardware.memory?.total_mib
                 ? `${Math.round(catalog.data.hardware.memory.total_mib / 1024)} GiB RAM`
                 : "Hardware inspection unavailable"}
+            {catalog.data?.hardware.host?.system === "Darwin" && (
+              <span>
+                {" "}
+                · Mac{" "}
+                {catalog.data.hardware.host.architecture === "arm64"
+                  ? "Apple Silicon"
+                  : "Intel"}
+              </span>
+            )}
             {catalog.data?.hardware.gpus.map((gpu) => (
               <span key={gpu.index}>
                 {" "}
@@ -750,7 +763,7 @@ export default function ModelSetup() {
                   <p>Your downloads will appear here.</p>
                   <small className="muted">
                     Conversation model downloads are saved here. Other
-                    installations keep their progress in the cards above.
+                    installations keep their progress in their own setup cards.
                   </small>
                 </div>
               )
@@ -768,6 +781,22 @@ export default function ModelSetup() {
           </section>
         </div>
       )}
+      <section className="setup-additional" aria-label="Other capabilities">
+        <div>
+          <h2>Other capabilities</h2>
+          <p className="muted">
+            Add images, video, voices, music and memory whenever you need them.
+          </p>
+        </div>
+        <SpeechSetupPanel />
+        <FishSetupPanel />
+        <ImageSetupPanel />
+        <VideoSetupPanel />
+        <AvatarSetupPanel />
+        <EffectsSetupPanel />
+        <MusicSetupPanel />
+        <MemorySetupPanel />
+      </section>
     </>
   );
 }

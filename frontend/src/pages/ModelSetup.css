@@ -369,3 +369,8 @@
     gap: 0.5rem;
   }
 }
+
+.setup-additional {
+  display: grid;
+  gap: 1rem;
+}

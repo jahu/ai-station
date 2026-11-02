@@ -43,9 +43,14 @@ class Candidate(BaseModel):
     # Omit legacy defaults so existing durable download identities do not change.
     state_reserve_mib: int = Field(default=0, ge=0, le=4096, exclude_if=lambda v: v == 0)
     context_ceiling: int = Field(default=32768, ge=4096, le=131072, exclude_if=lambda v: v == 32768)
-    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
-        default=None, exclude_if=lambda v: v is None
-    )
+    runtime_profile: (
+        Literal[
+            "llamacpp-cpu-linux-amd64-v1",
+            "llamacpp-native-darwin-arm64-b12032-v2",
+            "llamacpp-native-darwin-x86_64-b12032-v2",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
     description: str = Field(default="", max_length=240, exclude_if=lambda v: not v)
 
 
@@ -197,6 +202,27 @@ CANDIDATES = (
             "context_ceiling": 4096,
             "description": "Runs on your CPU without NVIDIA. Uses system RAM and is slower than GPU inference.",
         }
+    ),
+)
+
+
+# Reuse the reviewed bytes and licenses, preserving every legacy manifest.
+# Native CPU offers do not assert Metal or dedicated GPU-memory support.
+CANDIDATES = (
+    *CANDIDATES,
+    *(
+        Candidate.model_validate(
+            {
+                **entry.model_dump(),
+                "id": entry.id + "-macos-" + architecture.replace("_", "-") + "-cpu",
+                "name": entry.name + " · Mac CPU",
+                "runtime_profile": "llamacpp-native-darwin-" + architecture + "-b12032-v2",
+                "context_ceiling": 4096,
+                "description": "Native llama.cpp on Mac. Uses system RAM; CPU inference is slower than GPU inference.",
+            }
+        )
+        for architecture in ("arm64", "x86_64")
+        for entry in CANDIDATES[:6]
     ),
 )
 

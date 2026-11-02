@@ -114,3 +114,26 @@ platform-matched first-run catalog. Guided selection/download and actual full
 Docker Desktop installation remain the next integration step. Real native metadata
 inspection is covered by the explicit installed-Runner CPU fixture; normal queue,
 RAM, account/privacy and lost-ack tests use fake model execution.
+
+## Guided native model selection
+
+Read platform/architecture from Host Runner hardware facts, never from the Linux
+control-plane container. On a matching Mac the existing setup page selects its
+native SDK profile and offers pinned Qwen3 uncensored 4/8/14B CPU quantizations
+with explicit estimated RAM/context. The 4B Q4 option is the starter; larger
+choices remain under advanced model selection. Linux catalog identities stay
+unchanged. Do not represent unified RAM as CUDA VRAM or select Metal implicitly.
+
+Keep engine and weights independently preparable. An explicit files-only native
+inspection can verify an owned GGUF/context without an SDK and reports runtime
+unavailable. It cannot admit a model load. Downloads register a frozen SDK reference
+only when actually prepared; otherwise they register downloaded files. After SDK
+setup, ordinary model verification resolves/fixes the active opaque SDK identity
+before registering the definition. Existing conflicting presets are preserved.
+
+The engine panel derives native display names/download size from the immutable
+recipe without changing its hash, has profile-specific query/history state and
+license consent, and shows engine preparation instead of Docker-image/layer labels.
+Readiness resets when switching profiles; completion refreshes model choices.
+Existing progress, cancellation, resume, private history and admin authority remain.
+Full Docker Desktop/Finder consumer acceptance and Metal are independent gates.

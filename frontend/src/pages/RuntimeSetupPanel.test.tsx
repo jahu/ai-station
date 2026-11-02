@@ -23,10 +23,10 @@ const recipe = {
   cuda_license_url: "https://example.com/cuda",
   image_reference: "ghcr.io/ggml-org/llama.cpp@sha256:" + "a".repeat(64),
 };
-function preparation(status: string) {
+function preparation(status: string, profile = recipe.profile) {
   return {
     id: "runtime-prep",
-    recipe,
+    recipe: { ...recipe, profile },
     attempt: 1,
     run: { id: "runtime-run", status, created_at: "2026-10-31T00:00:00Z" },
     resume_allowed: status === "canceled",
@@ -40,6 +40,8 @@ function preparation(status: string) {
 function mount({
   ready = false,
   cpu = false,
+  native = false,
+  supported = true,
   admin = true,
   rows = [] as ReturnType<typeof preparation>[],
 } = {}) {
@@ -67,16 +69,27 @@ function mount({
         json: async () =>
           url.split("?")[0].endsWith("/setup/runtimes")
             ? {
-                recipe: cpu
+                recipe: native
                   ? {
-                      ...recipe,
-                      profile: "llamacpp-cpu-linux-amd64-v1",
-                      cuda_license_url: undefined,
+                      profile: "llamacpp-native-darwin-arm64-b12032-v2",
+                      inputs: [{ size_bytes: 16 * 1024 ** 2 }],
+                      license: "MIT",
+                      license_url: recipe.license_url,
+                      release: "b12032",
+                      source_revision: "a".repeat(40),
                     }
-                  : recipe,
+                  : cpu
+                    ? {
+                        ...recipe,
+                        profile: "llamacpp-cpu-linux-amd64-v1",
+                        cuda_license_url: undefined,
+                      }
+                    : recipe,
                 manifest_sha256: "b".repeat(64),
                 can_prepare: admin,
-                usable_image: ready,
+                usable_image: native ? undefined : ready,
+                sdk_prepared: native ? ready : undefined,
+                platform_supported: supported,
                 installation_available: true,
                 storage: {
                   free_bytes: 30 * 1024 ** 3,
@@ -100,7 +113,13 @@ function mount({
     >
       <MemoryRouter>
         <RuntimeSetupPanel
-          profile={cpu ? "llamacpp-cpu-linux-amd64-v1" : undefined}
+          profile={
+            native
+              ? "llamacpp-native-darwin-arm64-b12032-v2"
+              : cpu
+                ? "llamacpp-cpu-linux-amd64-v1"
+                : undefined
+          }
           onReadiness={readiness}
         />
       </MemoryRouter>
@@ -191,4 +210,40 @@ it("prepares the explicit CPU engine without CUDA terms or a GPU readiness short
   fireEvent.click(screen.getByRole("button", { name: "Prepare llama.cpp" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0].body.profile).toBe("llamacpp-cpu-linux-amd64-v1");
+});
+
+it("prepares the native SDK profile with actual archive size and engine labels", async () => {
+  const { writes } = mount({ native: true });
+  const button = await screen.findByRole("button", {
+    name: "Prepare llama.cpp",
+  });
+  expect(screen.getByText(/16.0 MiB download/)).toBeTruthy();
+  expect(screen.getByText(/Native Mac CPU execution/)).toBeTruthy();
+  expect(screen.queryByText(/Image available|CUDA component terms/)).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(button);
+  await waitFor(() => expect(writes.length).toBe(1));
+  expect(writes[0].body.profile).toBe("llamacpp-native-darwin-arm64-b12032-v2");
+});
+
+it("uses SDK readiness independently of image readiness and preserves native history", async () => {
+  const { readiness } = mount({
+    native: true,
+    ready: true,
+    rows: [preparation("succeeded", "llamacpp-native-darwin-arm64-b12032-v2")],
+  });
+  await screen.findByText("Native engine available");
+  expect(screen.getByText("Native engine prepared")).toBeTruthy();
+  expect(screen.queryByText("Runtime image verified")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Prepare llama.cpp" }),
+  ).toBeNull();
+  await waitFor(() => expect(readiness).toHaveBeenLastCalledWith(true));
+});
+
+it("does not call a native engine ready when its host platform is unsupported", async () => {
+  const { readiness } = mount({ native: true, ready: true, supported: false });
+  await screen.findByRole("button", { name: "Prepare llama.cpp" });
+  expect(screen.queryByText("Native engine available")).toBeNull();
+  await waitFor(() => expect(readiness).toHaveBeenLastCalledWith(false));
 });

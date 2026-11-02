@@ -1259,3 +1259,12 @@ events remain authoritative. Catalog fingerprints and model coordinates do not
 change. [Content-preserving recovery](plans/catalog-source-recovery.md).
 The seven file-based media preparations share that storage/audit contract and
 retain their existing assembly reserve; no separate transfer engine is added.
+
+Guided model setup now receives explicit Runner host OS/architecture facts and
+selects its matching native Mac engine profile. The existing pinned Qwen3 4/8/14B
+weights have separate native CPU offers and RAM estimates; Linux catalog identities
+remain unchanged. Engine and weight preparation remain independent: explicit
+owned-file inspection without an SDK reports no runtime readiness, then ordinary
+verification binds the prepared opaque SDK reference before model use. The shared
+engine panel handles native SDK bytes/readiness/history separately from image
+layers while preserving the same license consent and Task/Run controls.

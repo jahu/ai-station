@@ -1406,3 +1406,12 @@ deadline and reuses it after a lost acknowledgement; shared RAM remains reserved
 until owned exit is confirmed. Account-scoped automatic loads validate the actual
 relative model source/hash and complete native preset before gaining permission
 to create shared runtime metadata. Existing foreign-history and Stop guards apply.
+
+Guided Mac model setup reads the Runner's OS/architecture, not the container's.
+Pinned native CPU offers reuse reviewed weights/licenses and estimated system-RAM
+budgets. A separate, explicit files-only metadata flag permits owned GGUF/context
+inspection without a prepared SDK and always reports native runtime unavailable;
+it cannot relax the model-load SDK requirement or accept external files. Foreign
+native profiles are refused before transfer. Later metadata verification freezes
+the active prepared opaque SDK reference before registering the definition.
+No Docker-image readiness, Metal allocation or hard/no-swap guarantee is inferred.

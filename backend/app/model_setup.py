@@ -59,7 +59,19 @@ def storage_info(hardware=None):
 
 def recommendation(entry, hardware):
     from app.llama import fit_coding_context, kv_budget_mib
+    from app.native_models import host_profile, native
 
+    is_native = native(entry.model_dump())
+    mac = (hardware.get("host") or {}).get("system") == "Darwin"
+    if (is_native and entry.runtime_profile != host_profile(hardware)) or (mac and not is_native):
+        return {
+            "fits": False,
+            "reason": "Choose a native Mac CPU model for this workstation"
+            if mac
+            else "This model profile requires its matching Mac Host Runner",
+            "gpus": [],
+            "context_size": None,
+        }
     if entry.runtime_profile:
         from app.cpu_models import estimate
 
@@ -192,7 +204,17 @@ def catalog(session: DB):
     scope = getattr(session, "scope", None)
     can_prepare = not accounts_enabled() or bool(scope and scope.administrator and not scope.read_only)
     entries = []
+    from app.native_models import active_environment, host_profile, native
+
+    mac_profile = host_profile(hardware)
+    mac = (hardware.get("host") or {}).get("system") == "Darwin"
+    environment_id = active_environment(mac_profile) if mac_profile else None
     for item in CANDIDATES:
+        is_native = native(item.model_dump())
+        if is_native and item.runtime_profile != mac_profile:
+            continue
+        if mac and item.runtime_profile and not is_native:
+            continue
         installed = session.scalar(
             select(ModelFile).where(
                 ModelFile.relative_path == "models/store/" + item.file.sha256,
@@ -208,7 +230,9 @@ def catalog(session: DB):
         entries.append(
             {
                 **item.model_dump(mode="json"),
-                "starter": bool(item.runtime_profile)
+                "starter": (item.id.startswith("huihui-qwen3-4b-") and item.quantization == "Q4_K_M")
+                if is_native
+                else bool(item.runtime_profile) and not mac
                 if not hardware.get("gpus")
                 else item.id in STARTER_CANDIDATE_IDS,
                 "manifest_sha256": fingerprint(item.model_dump(mode="json")),
@@ -218,6 +242,11 @@ def catalog(session: DB):
                     and definition
                     and definition.status == "registered"
                     and preset["fits"]
+                    and (
+                        not is_native
+                        or bool(environment_id)
+                        and bool(definition.metadata_json.get("environment_id"))
+                    )
                     and (definition.metadata_json or {}).get("runtime_profile") == item.runtime_profile
                 ),
                 "model_file_id": installed.id if installed else None,
@@ -227,7 +256,19 @@ def catalog(session: DB):
     return {
         "can_prepare": can_prepare,
         "entries": entries,
-        "hardware": {"memory": hardware.get("memory"), "gpus": hardware.get("gpus", [])},
+        "hardware": {
+            "host": hardware.get("host"),
+            "memory": hardware.get("memory"),
+            "gpus": hardware.get("gpus", []),
+        },
+        "engine_profile": mac_profile
+        if mac
+        else "llamacpp-cpu-linux-amd64-v1"
+        if not hardware.get("gpus")
+        else "llamacpp-cuda-linux-amd64-v1",
+        "platform_notice": "This Mac architecture does not yet have a qualified native conversation engine"
+        if mac and not mac_profile
+        else "",
         "storage": storage_info(hardware),
         "scope": "These are downloadable conversation models; other capability/runtime setup follows its own qualified recipes.",
     }

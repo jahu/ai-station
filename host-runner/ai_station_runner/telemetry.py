@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,7 @@ _previous_cpu: tuple[int, int] | None = None
 
 def collect(data_dir: Path) -> dict:
     result = {
+        "host": {"system": platform.system(), "architecture": platform.machine()},
         "gpus": gpus(),
         "cpu": cpu(),
         "memory": memory(),
