@@ -1,4 +1,4 @@
-"""Real private IPC has only status and generation-bound stop, never host tools."""
+"""Real private IPC carries status, package identity and bound Stop, never host tools."""
 
 import builtins
 import ctypes
@@ -104,7 +104,13 @@ def raw(root, value):
         with unix_address(root / control.CONTROL_FILE) as address:
             client.connect(address)
         client.sendall(value)
-        client.shutdown(socket.SHUT_WR)
+        try:
+            client.shutdown(socket.SHUT_WR)
+        except OSError as exc:
+            # Darwin can already observe the server's orderly close after a
+            # complete request. Still read and assert its response below.
+            if exc.errno != errno.ENOTCONN:
+                raise
         return client.recv(1024)
 
 

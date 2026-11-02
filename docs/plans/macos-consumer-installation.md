@@ -243,9 +243,9 @@ qualify Finder/update/removal, Docker Desktop, Metal or signing.
 
 ### Version identity and native ownership
 
-Before native update consent, add a separate same-OS-user `identity` query to the
-private desktop control channel. Keep the existing status/Stop wire formats.
-Return only the verified package's bundle/image identities, bounded version and
+A separate same-OS-user `identity` query on the private desktop control channel
+preserves the existing status/Stop wire formats. It returns only the verified
+package's bundle/image identities, bounded version and
 source epoch, tied to the current desktop instance; never a PID, command, setup
 link, prompt or credential. Owners without this capability cannot be assumed
 safe update targets.
