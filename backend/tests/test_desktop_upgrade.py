@@ -232,7 +232,9 @@ def test_cross_device_stage_is_refused_before_publication_phase_or_database_chan
         assert upgrade.abort(root, identity)["phase"] == "aborted"
 
 
-@pytest.mark.parametrize("marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json"])
+@pytest.mark.parametrize(
+    "marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json", "desktop-snapshot-pending.json"]
+)
 def test_pending_upgrade_blocks_api_migration_and_supervisor_start(saved, marker):
     from app.api import app
 
@@ -241,18 +243,25 @@ def test_pending_upgrade_blocks_api_migration_and_supervisor_start(saved, marker
         prepare(saved)
     else:
         (root / "runtime" / marker).write_text("Pre-dispatch installer fence")
+    message = (
+        "pending private backup"
+        if marker == "desktop-snapshot-pending.json"
+        else "pending offline desktop upgrade"
+    )
     before = upgrade.fingerprint(root)
-    with pytest.raises(RuntimeError, match="pending offline desktop upgrade"):
+    with pytest.raises(RuntimeError, match=message):
         migrate()
-    with pytest.raises(RuntimeError, match="pending offline desktop upgrade"):
+    with pytest.raises(RuntimeError, match=message):
         ensure_recovery_finished(root / "runtime")
-    with pytest.raises(RuntimeError, match="pending offline desktop upgrade"):
+    with pytest.raises(RuntimeError, match=message):
         with TestClient(app):
             pass
     assert upgrade.fingerprint(root) == before
 
 
-@pytest.mark.parametrize("marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json"])
+@pytest.mark.parametrize(
+    "marker", [upgrade.MARKER, "desktop-upgrade-dispatch-pending.json", "desktop-snapshot-pending.json"]
+)
 def test_api_rechecks_pending_upgrade_after_waiting_for_migration_lock(saved, monkeypatch, marker):
     root, _, _ = saved
     reached, errors = threading.Event(), []
@@ -278,7 +287,12 @@ def test_api_rechecks_pending_upgrade_after_waiting_for_migration_lock(saved, mo
         (root / "runtime" / marker).write_text("pending fixture")
     worker.join(timeout=10)
     assert not worker.is_alive() and len(errors) == 1 and isinstance(errors[0], RuntimeError)
-    assert "pending offline desktop upgrade" in str(errors[0])
+    message = (
+        "pending private backup"
+        if marker == "desktop-snapshot-pending.json"
+        else "pending offline desktop upgrade"
+    )
+    assert message in str(errors[0])
 
 
 def test_safe_abort_keeps_source_and_original_backup(saved):

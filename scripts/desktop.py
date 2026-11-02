@@ -857,6 +857,13 @@ def main():
             progress.stage("Checking and preparing your private application folder…")
             installed = install_copy(root, ROOT, value)
             config = configuration(root)
+            if platform.system() == "Darwin":
+                from desktop_snapshots import assert_finished
+                from dotenv import dotenv_values
+
+                assert_finished(
+                    root, Path(dotenv_values(config, interpolate=False)["AI_STATION_DATA_HOST_PATH"])
+                )
             if installed.resolve() != ROOT.resolve():
                 progress.close()
                 reexecute(installed, args)

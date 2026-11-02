@@ -132,6 +132,8 @@ jobs:
             backend/tests/test_desktop_database_storage.py \
             backend/tests/test_desktop_database_fingerprint.py \
             backend/tests/test_desktop_snapshot.py \
+            backend/tests/test_desktop_snapshot_files.py \
+            backend/tests/test_desktop_snapshots.py \
             backend/tests/test_macos_desktop_docker.py \
             backend/tests/test_desktop_bridge.py \
             backend/tests/test_desktop_link.py \
