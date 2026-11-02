@@ -1284,3 +1284,13 @@ on the configured data filesystem before Compose starts. Stop waits for owned
 cleanup. Private pending receipts prevent uncertain replay and allow recovery
 only from a matching confirmed-clean result. The Linux consumer path and Mac
 consumer admission gate remain unchanged.
+
+Desktop update preparation has a trusted offline image command, separate from
+workload/HTTP execution. It uses the existing launcher/migration locks, a verified
+SQLite backup and an explicitly supplied Alembic staging connection. A durable
+operation marker blocks supervisor and API startup, including a recheck after
+waiting for the migration lock. Prepared data publishes only against its frozen
+source fingerprints; interrupted publication can resume without re-execution.
+Accounts, live login cookies, schedules and queued work are preserved rather than
+normalized as in an explicit disaster restore. Native update consent, ownership
+handoff and complete Mac qualification remain later installer steps.

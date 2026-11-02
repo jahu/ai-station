@@ -160,8 +160,15 @@ def alembic_config() -> Config:
     return cfg
 
 
+def require_upgrade_finished(data_dir: Path) -> None:
+    pending = data_dir / "runtime/desktop-upgrade-pending.json"
+    if pending.exists() or pending.is_symlink():
+        raise RuntimeError("Finish or abort the pending offline desktop upgrade before starting AI Station")
+
+
 def migrate() -> None:
     settings = get_settings()
+    require_upgrade_finished(settings.data_dir)
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     (settings.data_dir / "db").mkdir(parents=True, exist_ok=True)
     for name in (
@@ -180,4 +187,5 @@ def migrate() -> None:
     # Multiple containers can start together. Only one may migrate at a time.
     with (settings.data_dir / "runtime" / "migrations.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        require_upgrade_finished(settings.data_dir)
         command.upgrade(alembic_config(), "head")
