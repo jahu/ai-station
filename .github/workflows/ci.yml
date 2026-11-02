@@ -88,6 +88,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Observe actual ordinary-user hypervisor availability
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          mkdir -m 700 .native-mac
+          mkdir -m 700 .native-mac/hypervisor-probe
+          /usr/bin/xcrun clang -Wall -Wextra -Werror -framework Hypervisor \
+            packaging/macos/hypervisor-probe.c -o .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --force --sign - \
+            --entitlements packaging/macos/hypervisor-probe.entitlements .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --verify --strict .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --display --entitlements - .native-mac/hypervisor-probe/check
+          /usr/bin/sw_vers -productVersion
+          .native-mac/hypervisor-probe/check | tee .native-mac/hypervisor-probe/result.json
       - name: Install checked developer dependencies and native package tool
         run: |
           python -m venv .venv
@@ -121,7 +135,6 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: |
-          mkdir -m 700 .native-mac
           mkdir -m 700 .native-mac/inputs
           .venv/bin/python scripts/macos_desktop_python.py \
             --architecture "$TARGET_ARCHITECTURE" --cache "$PWD/.native-mac/inputs" \

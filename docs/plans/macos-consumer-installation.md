@@ -13,6 +13,31 @@ Runner components have passed the platform checks below. Consumer .app packaging
 the Docker Desktop bridge and model setup/catalog are still separate requirements.
 Removing the launcher's platform check alone cannot produce a correct Mac package.
 
+The owner-dispatched native checks also compile a fixed Hypervisor-framework
+prerequisite probe on each standard free Mac host. It is ad-hoc signed with only
+Apple's required `com.apple.security.hypervisor` entitlement, runs as an ordinary
+user, and creates/destroys one empty owned VM without a guest, vCPU or disks.
+It reports raw create/destroy results and optional kernel observations; failed
+compilation, signing, execution or destruction remains a failed check. A refused
+VM creation records unavailable virtualization on that host, not a passing Docker
+test or a claim about all Macs. No Docker software, license acceptance, OS settings
+or paid runner is involved. This diagnostic binary is not shipped in the app and
+its ad-hoc signature does not satisfy consumer signing/notarization.
+[Required Apple entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.hypervisor).
+GitHub explicitly documents missing nested virtualization on its ARM hosts;
+Intel is observed separately rather than inferred from ARM.
+[Hosted runner limitations](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners).
+
+The actual [2026-11-02 native run](https://github.com/jahu/ai-station/actions/runs/41420278249)
+compiled, signed and executed this probe on both architectures. Intel macOS
+15.7.9 created and destroyed its empty VM (both return codes zero); ARM macOS
+15.8.2 refused creation (raw return code 4209590287; no VM existed to destroy).
+Both report an outer VMM. Therefore an Intel Docker Desktop experiment is the
+next available test, while the observed ARM host cannot supply this prerequisite.
+Neither observation verifies Docker Desktop, shared native sockets, first-run,
+Metal or the consumer installer. Do not generalize either result to every host
+with that architecture.
+
 `macos_desktop_docker.py` supplies read-only prerequisite discovery for a Finder
 launch: it locates the installed Docker Desktop CLI in the system/user
 Applications bundle, accepts only an executable inside that bundle, and reads
