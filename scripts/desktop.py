@@ -715,6 +715,7 @@ def main():
     parser.add_argument(
         "--install-update", type=Path, help="Install a selected native Mac application bundle"
     )
+    parser.add_argument("--manage-backups", action="store_true", help="Open native Mac backup and restore")
     parser.add_argument("--host-port", type=int, help="Private desktop-parent loopback port, 8765–8864")
     parser.add_argument(
         "--package-check",
@@ -733,6 +734,7 @@ def main():
             or args.stop
             or args.host_port is not None
             or args.install_update
+            or args.manage_backups
         ):
             parser.error("--package-check must be used on its own")
         value = manifest(ROOT)
@@ -753,6 +755,15 @@ def main():
     ):
         parser.error("--host-port requires console background startup and a port between 8765 and 8864")
     os.umask(0o077)
+    if args.manage_backups and (
+        platform.system() != "Darwin"
+        or args.status
+        or args.stop
+        or args.host_port is not None
+        or args.install_update
+        or args.console
+    ):
+        parser.error("--manage-backups requires the native Mac interface on its own")
     if args.install_update and (
         platform.system() != "Darwin" or args.status or args.stop or args.host_port is not None
     ):
@@ -779,6 +790,13 @@ def main():
     if platform.system() == "Darwin" and not (args.status or args.stop):
         from desktop_update import active_payload, install_update, pending
 
+        if args.manage_backups:
+            from desktop_backup_ui import manage
+
+            prerequisites()  # Same consumer qualification gate as ordinary startup/update.
+            verify(ROOT, value)
+            manage(root, start=lambda installed: reexecute(installed, args))
+            return
         if args.install_update:
             prerequisites()  # The unqualified Mac consumer path remains closed.
             verify(ROOT, value)
@@ -843,6 +861,15 @@ def main():
                 owner_lock=lock,
             )
             return
+        if platform.system() == "Darwin" and (root / "desktop.env").exists():
+            from desktop_backup_ui import manage
+            from desktop_backup_ui import pending as pending_backup
+            from desktop_versions import namespace
+
+            if pending_backup(root, namespace(root / "desktop.env")[0]) is not None:
+                verify(ROOT, value)
+                manage(root, start=lambda installed: reexecute(installed, args), owner_lock=lock)
+                return
         if not args.console and not (root / "desktop.env").exists():
             answer = dialog(
                 "--question",

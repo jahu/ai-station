@@ -70,6 +70,48 @@ def test_unexpected_dialog_failure_is_not_reported_as_user_approval(package, mon
         ui.dialog(root, "--question")
 
 
+def test_backup_selection_uses_private_stdin_and_bounded_replies(package, monkeypatch):
+    root, binary = package
+    seen = {}
+
+    def run(argv, **kwargs):
+        seen.update(argv=argv, **kwargs)
+        return SimpleNamespace(returncode=0, stdout=b'{"action":"resume"}')
+
+    monkeypatch.setattr(ui.subprocess, "run", run)
+    assert ui.backup_selection(root, pending="restore", can_abort=False) == {"action": "resume"}
+    assert seen["argv"] == [str(binary), "--native-backups"]
+    assert json.loads(seen["input"]) == {"pending": "restore", "can_abort": False}
+    monkeypatch.setattr(
+        ui.subprocess, "run", lambda *a, **kw: SimpleNamespace(returncode=0, stdout=b"x" * 16385)
+    )
+    with pytest.raises(RuntimeError, match="could not complete"):
+        ui.backup_folder(root)
+
+
+def test_cancelable_progress_reads_only_its_own_bounded_cancel_frame(package, monkeypatch):
+    import os
+
+    root, _ = package
+    reader, writer = os.pipe()
+    output = os.fdopen(reader, "rb")
+    channel = io.BytesIO()
+    process = SimpleNamespace(stdin=channel, stdout=output, poll=lambda: None, wait=lambda **kw: 0)
+    monkeypatch.setattr(ui.subprocess, "Popen", lambda *a, **kw: process)
+    progress = ui.Preparation(root, cancelable=True)
+    try:
+        assert not progress.canceled()
+        os.write(writer, b'{"action":"cancel"}\n')
+        assert progress.canceled() and progress.canceled()
+        progress.update("Finishing safely", done=0, total=1, cancelable=False)
+        frames = [json.loads(line) for line in channel.getvalue().splitlines()]
+        assert frames[-1] == {"cancelable": False, "done": 0, "total": 1}
+    finally:
+        os.close(writer)
+        progress.close()
+    assert output.closed
+
+
 def test_update_heading_uses_private_bounded_presentation_frames(package, monkeypatch):
     root, _ = package
     channel = io.BytesIO()

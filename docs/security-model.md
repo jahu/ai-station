@@ -138,8 +138,12 @@ resume/inspection. Full native coordination now retains original files, stages
 on the same filesystem, preserves current credential/MFA files, refuses unknown
 file changes and fences startup until DB/files publication agree. Only the
 pre-database phase allows rollback. Historical execution/package receipts remain
-provenance. Consumer restore stays unavailable before native presentation and
-actual Mac qualification are integrated.
+provenance. Native backup presentation uses the same verified current package and
+same-user Stop handoff, borrowing the desktop lock while the coordinator holds its
+own offline gate. Folder choices and cancellation travel over private child pipes,
+not HTTP or command arguments. Cancel is disabled for database publication;
+closing presentation does not signal workloads. Consumer restore remains gated
+on complete native recovery presentation and actual Mac qualification.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and

@@ -117,8 +117,10 @@ inspection; publication is resumed instead of blindly rolled back. The native
 full-restore coordinator now joins it to staged retained files, preserves originals
 and newer MFA key files, and fences startup until files and DB agree. Explicit
 credential conflicts require review. Package/runtime/volume receipts are not
-restored as execution authority. Native backup/restore presentation and the actual
-complete Mac consumer journey remain unfinished.
+restored as execution authority. The native menu candidate now presents ordinary
+backup/restore, progress, credential conflict review and interruption continuation
+over those same coordinators. The exceptional administrator recovery form and
+actual complete Mac consumer journey remain unfinished.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint

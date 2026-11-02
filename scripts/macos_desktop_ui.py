@@ -92,14 +92,21 @@ def stop_window(process):
 
 
 class Preparation:
-    def __init__(self, root, *, heading=None):
+    def __init__(self, root, *, heading=None, cancelable=False):
+        self.cancelable = cancelable
+        self.cancel_requested = False
+        self.response = b""
         self.process = subprocess.Popen(
             [str(binary(root)), "--native-progress"],
             stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE if cancelable else subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             env=environment(),
         )
+        if cancelable:
+            os.set_blocking(self.process.stdout.fileno(), False)
+            self.process.stdin.write(payload({"cancelable": True}))
+            self.process.stdin.flush()
         if heading is not None:
             self.process.stdin.write(payload({"heading": heading}))
             self.process.stdin.flush()
@@ -112,6 +119,31 @@ class Preparation:
             except BrokenPipeError:
                 pass  # Closing presentation does not cancel the owned supervisor.
 
+    def update(self, text, *, done=None, total=None, cancelable=True):
+        self.stage(text)
+        if self.process.poll() is None:
+            try:
+                self.process.stdin.write(payload({"cancelable": cancelable, "done": done, "total": total}))
+                self.process.stdin.flush()
+            except BrokenPipeError:
+                pass
+
+    def canceled(self):
+        if not self.cancelable or self.cancel_requested or self.process.stdout.closed:
+            return self.cancel_requested
+        try:
+            chunk = os.read(self.process.stdout.fileno(), 257)
+        except BlockingIOError:
+            return False
+        self.response += chunk
+        if len(self.response) > 256:
+            raise ValueError("The native cancellation reply exceeds its bounded frame")
+        if b"\n" in self.response:
+            if json.loads(self.response) != {"action": "cancel"}:
+                raise ValueError("The native progress window returned an unknown action")
+            self.cancel_requested = True
+        return self.cancel_requested
+
     def close(self):
         if self.process.stdin is not None and not self.process.stdin.closed:
             self.process.stdin.close()
@@ -119,6 +151,33 @@ class Preparation:
             self.process.wait(timeout=3)
         except subprocess.TimeoutExpired:
             stop_window(self.process)
+        if self.cancelable and self.process.stdout is not None:
+            self.process.stdout.close()
+
+
+def backup_selection(root, *, pending=None, can_abort=True):
+    return backup_reply(root, "--native-backups", {"pending": pending, "can_abort": can_abort})
+
+
+def backup_folder(root):
+    return backup_reply(root, "--native-backup-folder", {})
+
+
+def backup_reply(root, mode, request):
+    result = subprocess.run(
+        [str(binary(root)), mode],
+        input=payload(request),
+        env=environment(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if result.returncode != 0 or len(result.stdout) > 16384:
+        raise RuntimeError("The native backup dialog could not complete")
+    value = json.loads(result.stdout)
+    if not isinstance(value, dict):
+        raise ValueError("The native backup dialog returned an invalid selection")
+    return value
 
 
 def running_window(root, url, *, active):

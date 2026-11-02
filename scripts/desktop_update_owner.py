@@ -48,7 +48,7 @@ def require_lock(root, name, descriptor):
 
 
 @contextmanager
-def handoff(root, config, channel, candidate, consent, *, timeout=90):
+def handoff(root, config, channel, candidate, consent, *, timeout=90, maintenance=False):
     """Consent, re-attest, Stop that instance and hold desktop.lock for the updater.
 
     The trusted caller verifies candidate package bytes first. This function does
@@ -73,7 +73,9 @@ def handoff(root, config, channel, candidate, consent, *, timeout=90):
         else:
             raise RuntimeError("The desktop owner already stopped; inspect its pending update")
         instance, previous, receipt = observe(root, config, channel)
-        if candidate == previous:
+        if type(maintenance) is not bool or maintenance and candidate != previous:
+            raise ValueError("Backup maintenance requires the same verified desktop package")
+        if candidate == previous and not maintenance:
             raise ValueError("This verified desktop version is already installed")
         if candidate["source_epoch"] < previous["source_epoch"]:
             raise ValueError("An older desktop package requires explicit recovery inspection")
@@ -107,7 +109,14 @@ def handoff(root, config, channel, candidate, consent, *, timeout=90):
             raise ValueError("The stopped desktop version or storage no longer matches")
         # Holding the lock prevents normal desktop startup until the caller exits.
         # This is deliberately not a claim about Docker/container-side locks.
-        yield {"instance_id": instance, "previous": previous, "candidate": candidate, "data": before[0]}
+        result = {"instance_id": instance, "previous": previous, "candidate": candidate, "data": before[0]}
+        if maintenance:
+            # The backup coordinator borrows desktop.lock and acquires its own
+            # update gate. Keep ownership across this handoff without nesting
+            # two separately opened flock descriptors for that same gate.
+            fcntl.flock(gate, fcntl.LOCK_UN)
+            result["owner_lock"] = owner_lock
+        yield result
     finally:
         if owner_lock is not None:
             os.close(owner_lock)
