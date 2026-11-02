@@ -7,6 +7,22 @@ control plane, native user Runner and Task → Run → Events → Artifacts life
 
 ## Current code and verified upstream constraints
 
+The separate manual `macos-native-ui-checks` experiment compiles the unchanged
+native source into an Xcode test application and drives secure fields, explicit
+MFA acknowledgement, restore review and folder-picker Cancel using system UI
+automation. It uses a standard free public Intel host, no Docker/model and no
+OS permission changes. This establishes native UI automation availability and
+control behavior, not the complete distributed package or installed journey.
+
+[Actual system UI run 41531861624](https://github.com/jahu/ai-station/actions/runs/41531861624)
+passed all four tests on Intel macOS, without skips or OS permission changes.
+It exposed a real presentation defect: modal helper processes never entered
+`NSApplication.run`, so they had not completed application launch and their
+controls were unavailable to accessibility. Modal helpers now explicitly call
+`finishLaunching`; the main application and progress windows retain their normal
+event loops. Queries target the actual dialog, excluding duplicate Touch Bar
+buttons. This verifies the controls, not a successful full-package installation.
+
 `scripts/desktop.py` retains the Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

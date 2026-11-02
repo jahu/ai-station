@@ -1,0 +1,36 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+  A00000000000000000000001 = { isa = PBXProject; buildConfigurationList = A00000000000000000000002; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A00000000000000000000003; productRefGroup = A00000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000010, A00000000000000000000020); attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = { A00000000000000000000020 = { TestTargetID = A00000000000000000000010; }; }; }; };
+  A00000000000000000000002 = { isa = XCConfigurationList; buildConfigurations = (A00000000000000000000005); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A00000000000000000000003 = { isa = PBXGroup; children = (A00000000000000000000030, A00000000000000000000031, A00000000000000000000032, A00000000000000000000033, A00000000000000000000004); sourceTree = "<group>"; };
+  A00000000000000000000004 = { isa = PBXGroup; children = (A00000000000000000000013, A00000000000000000000023); name = Products; sourceTree = "<group>"; };
+  A00000000000000000000005 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 13.3; CLANG_ENABLE_OBJC_ARC = YES; CLANG_ENABLE_MODULES = YES; SWIFT_VERSION = 5.0; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; CODE_SIGNING_ALLOWED = YES; ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = NO; }; };
+  A00000000000000000000010 = { isa = PBXNativeTarget; name = NativeSubject; productName = NativeSubject; productType = "com.apple.product-type.application"; productReference = A00000000000000000000013; buildConfigurationList = A00000000000000000000011; buildPhases = (A00000000000000000000014, A00000000000000000000015); buildRules = (); dependencies = (); };
+  A00000000000000000000011 = { isa = XCConfigurationList; buildConfigurations = (A00000000000000000000012); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A00000000000000000000012 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = "org.ai-station.qa.NativeSubject"; PRODUCT_NAME = "$(TARGET_NAME)"; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_NSPrincipalClass = NSApplication; }; };
+  A00000000000000000000013 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NativeSubject.app; sourceTree = BUILT_PRODUCTS_DIR; };
+  A00000000000000000000014 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000040); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000015 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000042, A00000000000000000000043); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000020 = { isa = PBXNativeTarget; name = NativeAcceptanceTests; productName = NativeAcceptanceTests; productType = "com.apple.product-type.bundle.ui-testing"; productReference = A00000000000000000000023; buildConfigurationList = A00000000000000000000021; buildPhases = (A00000000000000000000024, A00000000000000000000025); buildRules = (); dependencies = (A00000000000000000000051); };
+  A00000000000000000000021 = { isa = XCConfigurationList; buildConfigurations = (A00000000000000000000022); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
+  A00000000000000000000022 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = "org.ai-station.qa.NativeAcceptanceTests"; PRODUCT_NAME = "$(TARGET_NAME)"; GENERATE_INFOPLIST_FILE = YES; TEST_TARGET_NAME = NativeSubject; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks"); }; };
+  A00000000000000000000023 = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NativeAcceptanceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+  A00000000000000000000024 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000041); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000025 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A00000000000000000000030 = { isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ../native.m; sourceTree = "<group>"; };
+  A00000000000000000000031 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAcceptanceTests.swift; sourceTree = "<group>"; };
+  A00000000000000000000032 = { isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+  A00000000000000000000033 = { isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
+  A00000000000000000000040 = { isa = PBXBuildFile; fileRef = A00000000000000000000030; };
+  A00000000000000000000041 = { isa = PBXBuildFile; fileRef = A00000000000000000000031; };
+  A00000000000000000000042 = { isa = PBXBuildFile; fileRef = A00000000000000000000032; };
+  A00000000000000000000043 = { isa = PBXBuildFile; fileRef = A00000000000000000000033; };
+  A00000000000000000000050 = { isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = A00000000000000000000010; remoteInfo = NativeSubject; };
+  A00000000000000000000051 = { isa = PBXTargetDependency; target = A00000000000000000000010; targetProxy = A00000000000000000000050; };
+ };
+ rootObject = A00000000000000000000001;
+}
