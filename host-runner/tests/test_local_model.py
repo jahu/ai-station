@@ -344,6 +344,15 @@ def test_response_fields_require_non_thinking_json(values):
         local_model.Completion(**{**BODY, "max_tokens": 768}, response_fields={"prompt": 512}, **values)
 
 
+def test_bounded_fields_never_reach_the_unqualified_configured_server():
+    response = TestClient(app).post(
+        "/v1/llm/chat/completions",
+        headers=HEADERS,
+        json={**BODY, "json_output": True, "response_fields": {"prompt": 512}},
+    )
+    assert response.status_code == 422 and "owned llama.cpp" in response.json()["detail"]
+
+
 def test_typed_large_coding_route_forwards_json_without_relaxing_chat(monkeypatch):
     calls = []
 

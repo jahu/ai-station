@@ -177,6 +177,8 @@ async def send_until_disconnect(client, upstream, incoming):
 async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Request):
     if body.reasoning is not None:
         raise HTTPException(422, "Reasoning controls require an owned llama.cpp runtime")
+    if body.response_fields is not None:
+        raise HTTPException(422, "Bounded response fields require an owned llama.cpp runtime")
     url = endpoint(expected)
     client = upstream_client()
     return await forward_completion(body, incoming, url, client, headers())
