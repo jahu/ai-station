@@ -216,6 +216,17 @@ only to reconcile completed cleanup before a new, stronger probe. The consumer
 gate remains closed pending full journey, preserving export/restore and native
 hardware/signing qualification.
 
+The database part of offline export now has a fixed image primitive. It takes a
+read-only attested volume and a private native output directory outside app data,
+copies main/WAL to its own stage, and produces a standalone integrity/FK-checked
+SQLite snapshot plus source hashes, schema revision and exact image identity.
+This also handles a committed WAL without source SHM. Create/start/removal losses
+resume the same owned helper rather than rewriting a completed export. Explicit
+cancellation retains a durable canceled identity and partial files; another
+container's reference or changed export bytes causes refusal. Full retained-file
+export, private version/storage receipts, restoration and desktop presentation
+still need integration before calling this a consistent whole-station backup.
+
 Before enabling Mac installation:
 
 1. Wire the persistent owner into native startup and offline operations before

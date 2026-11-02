@@ -7,11 +7,11 @@ import re
 import tempfile
 import time
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import desktop_versions as versions
 from desktop_bridge import private_directory
-from macos_transport_probe import command
+from macos_transport_probe import bind_mount, command
 
 RECEIPT = "database-storage.json"
 MEMORY = 128 * 1024**2
@@ -57,10 +57,17 @@ def validate_record(r, coordinates):
     item = r["command"]
     if item is not None and (
         not isinstance(item, dict)
-        or set(item) != {"attempt", "action", "image", "phase", "container_id"}
+        or set(item)
+        != {"attempt", "action", "image", "phase", "container_id"}
+        | ({"export_id"} if item.get("action") == "export" else set())
         or not isinstance(item["attempt"], str)
         or not re.fullmatch(r"[a-f0-9]{32}", item["attempt"])
-        or item["action"] not in ("initialize", "inspect", "fingerprint", "empty")
+        or item["action"] not in ("initialize", "inspect", "fingerprint", "empty", "export")
+        or item["action"] == "export"
+        and (
+            not isinstance(item["export_id"], str)
+            or not re.fullmatch(r"[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}", item["export_id"])
+        )
         or not isinstance(item["image"], str)
         or not re.fullmatch(r"sha256:[a-f0-9]{64}", item["image"])
         or item["phase"] not in ("creating", "created", "starting", "finished")
@@ -78,6 +85,7 @@ def validate_record(r, coordinates):
                 ("inspect", "ready"),
                 ("fingerprint", "ready"),
                 ("empty", "ready"),
+                ("export", "ready"),
             )
             if item["phase"] == "finished"
             else (
@@ -86,6 +94,7 @@ def validate_record(r, coordinates):
                 ("inspect", "ready"),
                 ("fingerprint", "ready"),
                 ("empty", "ready"),
+                ("export", "ready"),
             )
         )
     ):
@@ -318,6 +327,11 @@ class DatabaseStorage:
 
     def result(self, action, raw):
         value = json.loads(raw)
+        if action == "export":
+            expected = self.export_result(self.record["command"]["export_id"])
+            if value != expected or expected["image_id"] != self.record["command"]["image"]:
+                raise ValueError("The snapshot acknowledgement differs from its private files/image")
+            return expected
         if action == "empty":
             if (
                 not isinstance(value, dict)
@@ -349,7 +363,167 @@ class DatabaseStorage:
             raise ValueError("The fixed database fingerprint acknowledgement changed")
         return value
 
+    def export_path(self, operation):
+        if not isinstance(operation, str) or str(UUID(operation)) != operation:
+            raise ValueError("Use a canonical export UUID")
+        path = self.root / "database-exports"
+        private_directory(path)
+        path /= operation
+        private_directory(path)
+        return path
+
+    def export_result(self, operation):
+        path = self.export_path(operation)
+        value = json.loads(versions.read_private(path / "receipt.json", 16384))
+        if (
+            not isinstance(value, dict)
+            or set(value)
+            != {
+                "schema",
+                "operation_id",
+                "image_id",
+                "storage",
+                "source",
+                "database_sha256",
+                "database_bytes",
+                "database_revision",
+            }
+            or type(value["schema"]) is not int
+            or value["schema"] != 1
+            or value["operation_id"] != operation
+            or not isinstance(value["image_id"], str)
+            or not re.fullmatch(r"sha256:[a-f0-9]{64}", value["image_id"])
+            or value["storage"] != self.binding()
+            or type(value["database_bytes"]) is not int
+            or value["database_bytes"] < 1
+            or not isinstance(value["database_sha256"], str)
+            or not re.fullmatch(r"[a-f0-9]{64}", value["database_sha256"])
+            or not isinstance(value["database_revision"], str)
+            or not re.fullmatch(r"[A-Za-z0-9_]{1,64}", value["database_revision"])
+        ):
+            raise ValueError("The private database snapshot receipt changed")
+        # Reuse the strict fixed-source hash shape, without opening SQLite natively.
+        self.result("fingerprint", json.dumps({"storage": value["storage"], "database": value["source"]}))
+        from desktop_upgrade_image import data_digest, data_info
+
+        database = path / "database.sqlite"
+        if (
+            data_info(database).st_size != value["database_bytes"]
+            or data_digest(database) != value["database_sha256"]
+        ):
+            raise ValueError("The exported database bytes changed")
+        return value
+
+    def valid_helper_mounts(self, item, mounts):
+        exporting = item["action"] == "export"
+        if not isinstance(mounts, list) or len(mounts) != (2 if exporting else 1):
+            return False
+        if any(not isinstance(m, dict) for m in mounts):
+            return False
+        destinations = {m.get("Destination"): m for m in mounts}
+        if set(destinations) != ({"/database", "/export"} if exporting else {"/database"}):
+            return False
+        database = destinations["/database"]
+        if (
+            database.get("Type") != "volume"
+            or database.get("Name") != self.record["name"]
+            or database.get("Source") != self.record["volume"]["Mountpoint"]
+            or database.get("RW") is not (item["action"] == "initialize")
+        ):
+            return False
+        if exporting:
+            output = destinations["/export"]
+            if (
+                output.get("Type") != "bind"
+                or output.get("Source") != str(self.export_path(item["export_id"]))
+                or output.get("RW") is not True
+            ):
+                return False
+        return True
+
+    def export_database(self, operation):
+        """A standalone DB snapshot only; full files export/restore is separate."""
+        if not isinstance(operation, str) or str(UUID(operation)) != operation:
+            raise ValueError("Use a canonical export UUID")
+        self.owned()
+        pending = self.record["command"]
+        if pending is not None and (pending["action"] != "export" or pending["export_id"] != operation):
+            raise ValueError("Another database helper is pending")
+        folder = self.root / "database-exports"
+        folder.mkdir(mode=0o700, exist_ok=True)
+        private_directory(folder)
+        path = folder / operation
+        if pending is None and path.exists():
+            self.export_path(operation)
+            if list(path.iterdir()):
+                return self.export_result(operation)  # Completed or partial, never replay a write.
+        elif pending is None:
+            path.mkdir(mode=0o700)
+        self.export_path(operation)
+        if pending is not None and pending["phase"] == "finished":
+            value = self.export_result(operation)
+            self.cleanup()
+        else:
+            self.quiescent()
+            value = self.helper("export", export_id=operation)
+        self.quiescent()
+        return value
+
+    def cancel_export(self, operation):
+        """Stop only this exact owned helper; keep completed/partial export bytes."""
+        if not isinstance(operation, str) or str(UUID(operation)) != operation:
+            raise ValueError("Use a canonical export UUID")
+        self.owned()
+        item = self.record["command"]
+        if item is None or item["action"] != "export" or item["export_id"] != operation:
+            raise ValueError("There is no matching owned database export to cancel")
+        present = True
+        if item["phase"] == "finished":
+            _, observed = self.call(
+                "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "id=" + item["container_id"]
+            )
+            if observed not in ("", item["container_id"]):
+                raise ValueError("The owned export inventory changed")
+            present = bool(observed)
+        if present:
+            current = self.inspect_container(item)
+            item["container_id"] = current["Id"]
+            if current["State"]["Running"]:
+                self.call("container", "stop", "--time", "5", current["Id"])
+                if self.inspect_container(item)["State"]["Running"]:
+                    raise ValueError("The owned export is still stopping; nothing else was signaled")
+        if item["phase"] != "finished":
+            item["phase"] = "finished"
+            self.save()
+        # Root/file/marker validation still applies; no SQLite is opened natively.
+        completed = (self.export_path(operation) / "receipt.json").exists()
+        value = self.export_result(operation) if completed else None
+        if not completed:
+            write(
+                self.export_path(operation) / "canceled.json",
+                {"schema": 1, "operation_id": operation, "storage": self.binding()},
+            )
+        self.cleanup()
+        return {
+            "operation_id": operation,
+            "status": "completed" if completed else "canceled",
+            "database": value,
+        }
+
     def arguments(self, action):
+        if action == "export":
+            ordinary = self.arguments("inspect")
+            return [
+                "-B",
+                "-m",
+                "app.desktop_snapshot",
+                "export",
+                "--operation-id",
+                self.record["command"]["export_id"],
+                "--image-id",
+                self.record["command"]["image"],
+                *ordinary[3:],
+            ]
         return [
             "-IB",
             "/app/backend/app/desktop_storage.py",
@@ -411,13 +585,7 @@ class DatabaseStorage:
             or host.get("PortBindings")
             or host.get("Binds")
             or host.get("Tmpfs")
-            or not isinstance(mounts, list)
-            or len(mounts) != 1
-            or mounts[0].get("Type") != "volume"
-            or mounts[0].get("Name") != self.record["name"]
-            or mounts[0].get("Source") != self.record["volume"]["Mountpoint"]
-            or mounts[0].get("Destination") != "/database"
-            or mounts[0].get("RW") is not initialize
+            or not self.valid_helper_mounts(item, mounts)
             or state.get("Status") not in ("created", "running", "exited")
             or state.get("Running") is not (state.get("Status") == "running")
             or type(state.get("ExitCode")) is not int
@@ -426,13 +594,19 @@ class DatabaseStorage:
             raise ValueError("Database helper identity or isolation changed; nothing was signaled")
         return v
 
-    def helper(self, action):
+    def helper(self, action, *, export_id=None):
+        if action == "export":
+            if not isinstance(export_id, str) or str(UUID(export_id)) != export_id:
+                raise ValueError("Use a canonical export UUID")
+        elif export_id is not None:
+            raise ValueError("Only the fixed snapshot action accepts an export UUID")
         if (action, self.record["phase"]) not in (
             ("initialize", "created"),
             ("inspect", "initialized"),
             ("inspect", "ready"),
             ("fingerprint", "ready"),
             ("empty", "ready"),
+            ("export", "ready"),
         ):
             raise ValueError("Only the fixed helper for the current storage phase may run")
         self.owned()
@@ -459,6 +633,8 @@ class DatabaseStorage:
                 "phase": "creating",
                 "container_id": None,
             }
+            if action == "export":
+                item["export_id"] = export_id
             self.record["command"] = item
             self.save()
             args = [
@@ -497,20 +673,22 @@ class DatabaseStorage:
                 "--entrypoint",
                 "python",
             ]
+            if action == "export":
+                args += ["--mount", bind_mount(self.export_path(export_id), "/export")]
             if action == "initialize":
                 args += ["--cap-add", "CHOWN"]
             _, identifier = self.call(*args, image, *self.arguments(action))
             if not re.fullmatch(r"[a-f0-9]{64}", identifier):
                 raise ValueError("The database helper creation acknowledgement is uncertain")
             item["container_id"] = identifier
-        elif item["action"] != action:
+        elif item["action"] != action or action == "export" and item["export_id"] != export_id:
             raise ValueError("Another database helper is pending")
         v = self.inspect_container(item)
         if item["phase"] == "creating":
             item.update(container_id=v["Id"], phase="created")
             self.save()
         if item["phase"] == "created":
-            if action in ("initialize", "fingerprint", "empty"):
+            if action in ("initialize", "fingerprint", "empty", "export"):
                 self.quiescent()
             item["phase"] = "starting"
             self.save()
