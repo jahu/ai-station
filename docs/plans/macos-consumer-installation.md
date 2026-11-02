@@ -171,6 +171,8 @@ package preparation, not permission to bypass the transport/consumer gates below
    ordinary owned Runs. Register shared model/runtime resources without exposing
    private conversation or setup identities. Qualify Apple Silicon and Intel
    independently; an arm64 result does not qualify Intel or every media engine.
+   The [managed native SDK contract](macos-managed-llama.md) connects the existing
+   verified binaries to ordinary setup Runs and private/opaque activation receipts.
 5. **Native package and guided first run.** Build a real application bundle with
    bundled Python, required native wheels, exact control-plane image and native
    launcher. Use the existing compiled web UI, account bootstrap and hardware/model

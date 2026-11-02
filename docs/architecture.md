@@ -56,8 +56,11 @@ idempotency, reaping, cancellation and deadline handling remain shared. A native
 exec barrier keeps payload code stopped until ownership is durably recorded;
 Darwin start identities have a distinct journal format. The normal Runner now
 selects this adapter on Darwin and retains the original manager on Linux. An
-application-wide dependency admits only qualified Mac operations: health,
-read-only hardware and owned process inspection/Stop. All other typed operations,
+application-wide dependency admits qualified Mac health, read-only hardware,
+owned process inspection/Stop and fixed native SDK preparation operations.
+The [managed native SDK flow](plans/macos-managed-llama.md) reuses runtime setup
+Tasks/Runs, verified downloads and the owned environment controller, with opaque
+shared environment references and private preparation receipts. All other typed operations,
 including later included routers, remain unavailable before their own native
 qualification. Internal native CPU inference is qualified separately; this change
 does not activate model setup, Linux media recipes or the consumer Mac launcher.

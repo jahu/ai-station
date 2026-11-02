@@ -127,6 +127,7 @@ class OwnedEnvironmentPreparation:
                 argv=[
                     *self.policy.scope_prefix(identity, 4096),
                     sys.executable,
+                    *(["-IB"] if getattr(self.policy, "isolated_child", False) else []),
                     "-m",
                     "ai_station_runner." + self.name + "_environment_job",
                     str(folder / (self.name + "-request.json")),
@@ -138,7 +139,11 @@ class OwnedEnvironmentPreparation:
                     "LANG": "C.UTF-8",
                     "PYTHONUNBUFFERED": "1",
                     "PYTHONNOUSERSITE": "1",
-                    "PYTHONPATH": str(Path(__file__).resolve().parent.parent),
+                    **(
+                        {}
+                        if getattr(self.policy, "isolated_child", False)
+                        else {"PYTHONPATH": str(Path(__file__).resolve().parent.parent)}
+                    ),
                     **self.policy.scope_environment(),
                 },
                 deadline_at=body.deadline_at.timestamp(),

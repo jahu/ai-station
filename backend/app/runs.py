@@ -318,6 +318,7 @@ def request_cancel(session: Session, run: Run) -> Run:
             "avatar_setup",
             "effects_setup",
             "fish_setup",
+            "native_llama_setup",
         }
         and run.metadata_json.get("dispatch_attempted")
     ):
