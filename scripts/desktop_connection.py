@@ -8,6 +8,7 @@ import os
 import signal
 import socket
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -52,6 +53,9 @@ async def serve():
     selected = port()
     done = asyncio.Event()
     loop = asyncio.get_running_loop()
+    # DNS uses the event loop's thread pool. Keep it below this service's
+    # 16-process/thread limit even on hosts with many CPUs and concurrent calls.
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=4, thread_name_prefix="station-dns"))
     for signum in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(signum, done.set)
     try:
