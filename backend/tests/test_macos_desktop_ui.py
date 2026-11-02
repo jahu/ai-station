@@ -3,11 +3,13 @@
 import hashlib
 import io
 import json
+import plistlib
 from types import SimpleNamespace
 
 import build_macos_native as native_build
 import desktop
 import macos_desktop_ui as ui
+import macos_native_bundle as helper_bundle
 import pytest
 
 
@@ -23,6 +25,78 @@ def package(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(ui.platform, "system", lambda: "Darwin")
     return root, binary
+
+
+@pytest.fixture
+def bundled_package(tmp_path, monkeypatch):
+    root = tmp_path / "new-package"
+    root.mkdir(mode=0o700)
+    source = tmp_path / "neutral-native-fixture"
+    source.write_bytes(b"neutral fixture, never executed")
+    source.chmod(0o700)
+    executable = helper_bundle.create(root, source)
+    (root / "desktop-manifest.json").write_text(
+        json.dumps(
+            {
+                "files": {
+                    name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+                    for name in (helper_bundle.EXECUTABLE, helper_bundle.INFO)
+                }
+            }
+        )
+    )
+    monkeypatch.setattr(ui.platform, "system", lambda: "Darwin")
+    return root, executable, source
+
+
+def test_new_helper_has_its_own_verified_application_identity(bundled_package):
+    root, executable, _ = bundled_package
+    assert ui.binary(root) == executable
+    info = plistlib.loads((root / helper_bundle.INFO).read_bytes())
+    assert info["CFBundleIdentifier"] == "io.ai-station.presentation"
+    assert info["LSUIElement"] is True
+    assert info["CFBundleExecutable"] == executable.name
+
+
+def test_changed_bundle_info_is_refused_before_execution(bundled_package):
+    root, _, _ = bundled_package
+    (root / helper_bundle.INFO).write_bytes(b"changed")
+    with pytest.raises(ValueError, match="bundle changed"):
+        ui.binary(root)
+
+
+def test_declared_wrong_bundle_identity_still_cannot_select_a_helper(bundled_package):
+    root, _, _ = bundled_package
+    info = root / helper_bundle.INFO
+    value = plistlib.loads(info.read_bytes())
+    value["CFBundleIdentifier"] = "unrelated.application"
+    info.write_bytes(plistlib.dumps(value))
+    receipt = root / "desktop-manifest.json"
+    value = json.loads(receipt.read_text())
+    value["files"][helper_bundle.INFO] = hashlib.sha256(info.read_bytes()).hexdigest()
+    receipt.write_text(json.dumps(value))
+    with pytest.raises(ValueError, match="bundle identity changed"):
+        ui.binary(root)
+
+
+def test_helper_bundle_cannot_escape_through_a_parent_link(bundled_package, tmp_path):
+    root, _, _ = bundled_package
+    directory = root / helper_bundle.BUNDLE
+    outside = tmp_path / "outside-helper"
+    directory.rename(outside)
+    directory.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ValueError, match="redirected"):
+        ui.binary(root)
+    assert (outside / "Contents/Info.plist").exists()
+
+
+def test_bundle_producer_never_overwrites_an_existing_helper(bundled_package):
+    root, executable, source = bundled_package
+    before = executable.read_bytes()
+    source.write_bytes(b"changed build input")
+    with pytest.raises(FileExistsError):
+        helper_bundle.create(root, source)
+    assert executable.read_bytes() == before
 
 
 def test_verified_interface_is_required_before_a_dialog_can_execute(package):

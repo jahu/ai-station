@@ -41,6 +41,22 @@ controls were unavailable to accessibility. Modal helpers now explicitly call
 event loops. Queries target the actual dialog, excluding duplicate Touch Bar
 buttons. This verifies the controls, not a successful full-package installation.
 
+The subsequent directly spawned helper check exposed a separate packaging gap:
+the old `Resources/bin/ai-station-native` process has no application bundle
+identifier. The actual host-launched check reports `Observed helper bundle: none`
+in [run 41544244142](https://github.com/jahu/ai-station/actions/runs/41544244142).
+Apple documents that [unbundled applications lack this identifier](https://developer.apple.com/documentation/appkit/nsrunningapplication/bundleidentifier).
+The candidate now uses a self-contained `AI Station Helper.app` with its own
+`io.ai-station.presentation` identity. Its pure packaging helper is shared by
+the product and system UI fixture; the test attaches to the actual host-launched
+PID and executable, without launching a substitute. XCTest's generated runner
+is sandboxed, so the ordinary QA host owns subprocess creation and cleanup;
+no sandbox/TCC entitlements or system permissions are changed. Hashes bind the
+helper binary and Info.plist, and old retained packages still use their original
+verified single binary. The helper stays inside the existing retained resource
+tree; complete outer-bundle code placement, signing/notarization and full native
+consumer acceptance remain required release gates.
+
 The separate manual `macos-consumer-backend` job reuses the fresh-host, fixed
 Docker Desktop installer guards and builds the real native Python, Runner,
 interface, control-plane image and `.app`. Its explicit CPU model fixture is the

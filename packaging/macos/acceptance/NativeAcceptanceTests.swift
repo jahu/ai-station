@@ -76,7 +76,7 @@ final class NativeAcceptanceTests: XCTestCase {
         let pid = number.int32Value
         XCTAssertGreaterThan(pid, 0)
         XCTAssertEqual(Int64(pid), number.int64Value)
-        let identity = "org.ai-station.qa.NestedHelper"
+        let identity = "io.ai-station.presentation"
         let registered = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == identity
         }, object: nil)
@@ -84,7 +84,7 @@ final class NativeAcceptanceTests: XCTestCase {
         XCTAssertEqual(registration, .completed,
                        "Observed helper bundle: \(NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "none")")
         let application = try XCTUnwrap(NSRunningApplication(processIdentifier: pid))
-        let helper = root.appendingPathComponent("Helper.app/Contents/Resources/bin/ai-station-native")
+        let helper = root.appendingPathComponent("bin/AI Station Helper.app/Contents/MacOS/ai-station-native")
         XCTAssertEqual(application.executableURL?.resolvingSymlinksInPath(), helper.resolvingSymlinksInPath())
         let proxy = XCUIApplication(bundleIdentifier: identity) // Attach; never launch a substitute.
         let dialog = proxy.dialogs.firstMatch

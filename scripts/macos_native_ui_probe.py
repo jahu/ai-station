@@ -3,9 +3,8 @@
 import json
 import os
 import platform
-import plistlib
-import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -26,6 +25,9 @@ def main():
         raise ValueError("Use the explicit fresh public Intel UI check")
     os.umask(0o077)
     repo = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(repo / "scripts"))
+    from macos_native_bundle import create
+
     parent = repo / ".native-mac"
     parent.mkdir(mode=0o700)  # Never adopt an uncertain prior fixture.
     root = parent / "ui-acceptance"
@@ -53,23 +55,7 @@ def main():
         check=True,
         timeout=120,
     )
-    contents = root / "Helper.app/Contents"
-    helper = contents / "Resources/bin/ai-station-native"
-    helper.parent.mkdir(parents=True, mode=0o700)
-    (contents / "MacOS").mkdir(mode=0o700)
-    shutil.copy2(binary, helper)
-    shutil.copy2(binary, contents / "MacOS/Helper")
-    (contents / "Info.plist").write_bytes(
-        plistlib.dumps(
-            {
-                "CFBundleExecutable": "Helper",
-                "CFBundleIdentifier": "org.ai-station.qa.NestedHelper",
-                "CFBundleName": "AI Station QA",
-                "CFBundlePackageType": "APPL",
-                "NSPrincipalClass": "NSApplication",
-            }
-        )
-    )
+    helper = create(root, binary)
     env = {
         "PATH": os.defpath,
         **{

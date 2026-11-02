@@ -15,6 +15,7 @@ from build_linux_package import copy_sources, digest, file_manifest, package_per
 from desktop import DESKTOP_PROTOCOL
 from macos_application_probe import receipt, verify_layer
 from macos_desktop_python import fingerprint, native_file, recipe
+from macos_native_bundle import create as create_native_bundle
 
 ROOT = Path(__file__).resolve().parent.parent
 ARCHITECTURES = {"arm64": "arm64", "x86_64": "amd64"}
@@ -26,6 +27,7 @@ MAC_SOURCES = (
     "scripts/desktop_update.py",
     "scripts/desktop_upgrade_image.py",
     "scripts/macos_desktop_docker.py",
+    "scripts/macos_native_bundle.py",
     "scripts/macos_transport_probe.py",
     "scripts/desktop_bridge.py",
     "scripts/desktop_backup.py",
@@ -197,10 +199,9 @@ def bundle(output, python_layer, native_layer, architecture, image, image_build,
         shutil.copytree(python_layer, resources / "python", symlinks=True)
         if file_manifest(resources / "python") != python_files:
             raise ValueError("Application Python changed while copying")
-        (resources / "bin").mkdir()
-        shutil.copy2(binary, resources / "bin/ai-station-native")
-        shutil.copy2(binary, executable)
         minimum = ".".join(map(str, recipe(architecture)["minimum_os"]))
+        create_native_bundle(resources, binary, version=version, minimum_os=minimum)
+        shutil.copy2(binary, executable)
         info = {
             "CFBundleExecutable": "AI Station",
             "CFBundleIdentifier": "io.ai-station.desktop",

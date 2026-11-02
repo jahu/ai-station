@@ -3,6 +3,7 @@
 import json
 import os
 import platform
+import plistlib
 import re
 import subprocess
 import time
@@ -13,14 +14,24 @@ from pathlib import Path
 def binary(root):
     if platform.system() != "Darwin":
         raise RuntimeError("Native Mac presentation requires macOS")
+    from macos_native_bundle import BUNDLE_ID, EXECUTABLE, INFO
+
     root = Path(root).resolve(strict=True)
     metadata = root / "desktop-manifest.json"
     if metadata.is_symlink() or not metadata.is_file() or metadata.stat().st_size > 8 * 1024**2:
         raise ValueError("The native interface requires its packaged manifest")
     value = json.loads(metadata.read_text())
     files = value.get("files") if isinstance(value, dict) else None
-    expected = files.get("bin/ai-station-native") if isinstance(files, dict) else None
-    path = root / "bin/ai-station-native"
+    # Old retained packages keep their exact original binary. New packages use
+    # an independently identifiable helper app; never select an ambiguous pair.
+    candidates = [
+        name for name in (EXECUTABLE, "bin/ai-station-native") if isinstance(files, dict) and name in files
+    ]
+    if len(candidates) != 1:
+        raise ValueError("The native interface requires one packaged executable")
+    relative = candidates[0]
+    expected = files[relative]
+    path = root / relative
     if (
         not isinstance(expected, str)
         or not re.fullmatch(r"[a-f0-9]{64}", expected)
@@ -35,6 +46,23 @@ def binary(root):
         actual = hashlib.file_digest(handle, "sha256").hexdigest()
     if actual != expected:
         raise ValueError("The native desktop interface changed")
+    if relative == EXECUTABLE:
+        info = root / INFO
+        if (
+            info.is_symlink()
+            or not info.resolve().is_relative_to(root)
+            or not info.is_file()
+            or info.stat().st_size > 16384
+            or hashlib.sha256(info.read_bytes()).hexdigest() != files.get(INFO)
+        ):
+            raise ValueError("The native interface bundle changed or was redirected")
+        identity = plistlib.loads(info.read_bytes())
+        if (
+            not isinstance(identity, dict)
+            or identity.get("CFBundleIdentifier") != BUNDLE_ID
+            or identity.get("CFBundleExecutable") != "ai-station-native"
+        ):
+            raise ValueError("The native interface bundle identity changed")
     return path
 
 
