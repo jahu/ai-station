@@ -11,6 +11,8 @@ from uuid import uuid4
 from dotenv import dotenv_values
 from macos_transport_probe import data_parent, private_file, receipt
 
+STARTUP_TIMEOUT = 180
+
 
 def private_directory(path):
     info = path.lstat()
@@ -118,6 +120,7 @@ def check(installed, state, config, value, engine, log, control):
     receipt(pending, request)
     child = None
     stopped = False
+    timed_out = False
     try:
         child = subprocess.Popen(
             [
@@ -141,18 +144,27 @@ def check(installed, state, config, value, engine, log, control):
             stderr=log,
             start_new_session=True,
         )
-        deadline = time.monotonic() + 180
+        deadline = time.monotonic() + STARTUP_TIMEOUT
         while child.poll() is None:
             if control.stop_requested.is_set() or time.monotonic() >= deadline:
                 stopped = True
+                timed_out = not control.stop_requested.is_set()
                 stop_child(child)
                 break
             time.sleep(0.1)
         output = root / request["attempt"]
         if stopped and not output.exists() and not output.is_symlink():
+            if timed_out:
+                raise RuntimeError(
+                    "The private Docker Desktop check timed out; inspect the desktop log and try again"
+                )
             return False  # Finally clears the confirmed pre-dispatch marker.
         result = completed(root, request)
         pending.unlink()
+        if timed_out:
+            raise RuntimeError(
+                "The private Docker Desktop check timed out; inspect the desktop log and try again"
+            )
         if stopped or control.stop_requested.is_set():
             return False
         if child.returncode or result.get("transport_passed") is not True:

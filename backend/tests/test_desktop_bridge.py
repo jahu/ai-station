@@ -127,6 +127,14 @@ def test_failed_but_confirmed_clean_probe_can_be_retried(setup):
     assert check(setup)
 
 
+def test_timeout_reports_failure_instead_of_silently_closing_setup(setup, monkeypatch):
+    child(setup, "wait")
+    monkeypatch.setattr(bridge, "STARTUP_TIMEOUT", 0.15)
+    with pytest.raises(RuntimeError, match="timed out"):
+        check(setup)
+    assert not (setup.state / "bridge-checks/pending.json").exists()
+
+
 def test_uncertain_probe_is_not_replayed_and_its_files_are_preserved(setup, monkeypatch):
     child(setup, "fail-uncertain")
     with pytest.raises(ValueError, match="cleanup was not confirmed"):
