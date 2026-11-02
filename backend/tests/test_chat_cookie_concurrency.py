@@ -71,8 +71,13 @@ def test_failed_delta_flush_keeps_original_error_and_last_saved_answer(monkeypat
     closed = []
 
     async def stream(self, **params):
+        import asyncio
+
         try:
             yield "Saved prefix. "
+            # Let the first live delivery become durable before forcing a
+            # failure on the next delivery, regardless of provider chunk size.
+            await asyncio.sleep(0.15)
             yield "Uncommitted suffix."
         finally:
             closed.append(True)
