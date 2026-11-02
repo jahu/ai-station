@@ -342,10 +342,16 @@ def test_active_payload_never_redirects_to_changed_code_or_changed_storage(setup
 
 
 def test_native_update_entry_does_not_bypass_the_consumer_prerequisite_gate(setup, monkeypatch):
+    import macos_desktop_docker
+
+    def unavailable(*args):
+        raise RuntimeError("Required Docker Desktop is unavailable")
+
+    monkeypatch.setattr(macos_desktop_docker, "prerequisites", unavailable)
     monkeypatch.setattr(sys, "argv", ["desktop.py", "--console", "--install-update", str(setup.app)])
     monkeypatch.setattr(desktop.signal, "signal", lambda *a: None)
     with owner(setup.root, setup.config, setup.channel) as (process, _):
-        with pytest.raises(RuntimeError, match="Linux x86-64"):
+        with pytest.raises(RuntimeError, match="Required Docker Desktop is unavailable"):
             desktop.main()
         assert process.poll() is None
     assert not setup.steps and not setup.clients
