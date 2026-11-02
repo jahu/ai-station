@@ -132,6 +132,8 @@ class Daemon:
             )
             if "fingerprint" in args:
                 value = {"storage": value, "database": {"main": "e" * 64, "-wal": None, "-journal": None}}
+            elif "empty" in args:
+                value = {"storage": value, "empty": True}
             return 0, json.dumps(self.output(value))
         elif pair == ("container", "rm"):
             del self.containers[args[-1]]
@@ -380,3 +382,138 @@ def test_fingerprint_never_accepts_incorrect_binding_or_hash_shape(factory, chan
     with pytest.raises(ValueError, match="fingerprint acknowledgement"):
         owner.fingerprint()
     assert owner.record["command"] is not None and len(d.volumes) == 1
+
+
+def test_storage_namespace_preserves_legacy_then_binds_the_ready_volume(factory):
+    import desktop_versions as versions
+
+    create, d, root, _ = factory
+    owner = create()
+    config = owner.config
+    legacy = versions.base_namespace(config)
+    with pytest.raises(ValueError, match="not ready"):
+        versions.namespace(config)
+    owner.prepare()
+    bound = versions.namespace(config)
+    assert bound[0] == legacy[0] and bound[1] != legacy[1]
+    assert storage.reference(root, legacy[1]) == owner.identity()
+    # Read-only operation journals never relocate an installation.
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        owner.fingerprint()
+    assert versions.namespace(config) == bound
+    assert create().fingerprint()["main"] == "e" * 64
+    assert versions.namespace(config) == bound
+
+
+@pytest.mark.parametrize(
+    "field", ["daemon", "architecture", "volume", "storage_id", "uid", "namespace", "missing"]
+)
+def test_changed_private_storage_cannot_adopt_an_existing_version(factory, field):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, _, root, _ = factory
+    owner = create()
+    owner.prepare()
+    versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    before = (root / versions.RECEIPT).read_bytes()
+    value = json.loads(owner.path.read_text())
+    if field == "daemon":
+        value["engine"][-1] = "other-daemon"
+    elif field == "architecture":
+        value["architecture"] = "arm64"
+    elif field == "volume":
+        value["volume"]["CreatedAt"] = "replacement-created"
+    elif field == "storage_id":
+        value["storage_id"] = "f" * 32
+        value["name"] = value["volume"]["Name"] = "ai-station-database-" + "f" * 32
+    elif field == "uid":
+        value["uid"] += 1
+    elif field == "namespace":
+        value["namespace_sha256"] = "f" * 64
+    else:
+        owner.path.unlink()
+    if field != "missing":
+        storage.write(owner.path, value)
+    with pytest.raises(ValueError):
+        versions.begin(root, PACKAGE, owner.config, OWNER)
+    assert (root / versions.RECEIPT).read_bytes() == before
+
+
+def test_first_volume_version_requires_fixed_empty_proof_then_restart_keeps_identity(factory):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, d, root, _ = factory
+    owner = create()
+    owner.prepare()
+    with pytest.raises(ValueError, match="empty-database check"):
+        versions.begin(root, PACKAGE, owner.config, OWNER)
+    assert not (root / versions.RECEIPT).exists()
+    versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    value = versions.ready(root, PACKAGE, owner.config, OWNER)
+    count = len(d.calls)
+    restarted = versions.begin(root, PACKAGE, owner.config, "d" * 32)
+    assert restarted["namespace_sha256"] == value["namespace_sha256"]
+    assert len(d.calls) == count  # Namespace reads have no Docker/SQLite authority.
+
+
+@pytest.mark.parametrize("pair", [("container", "create"), ("container", "start"), ("container", "rm")])
+def test_first_version_lost_empty_ack_keeps_no_receipt_and_resumes_without_initializing(factory, pair):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, d, root, _ = factory
+    owner = create()
+    owner.prepare()
+    d.lose = pair
+    with pytest.raises(RuntimeError, match="lost acknowledgement"):
+        versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    assert not (root / versions.RECEIPT).exists()
+    resumed = create()
+    versions.begin(root, PACKAGE, resumed.config, OWNER, storage=resumed)
+    assert versions.load(root)["phase"] == "starting" and not d.containers
+    assert sum(args[:2] == ["container", "create"] and "initialize" in args for args in d.calls) == 1
+
+
+def test_nonempty_volume_cannot_be_adopted_without_a_version_receipt(factory):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, d, root, _ = factory
+    owner = create()
+    owner.prepare()
+    d.exit = 1  # Fixed image refused existing database/sidecar/unknown bytes.
+    with pytest.raises(ValueError, match="helper failed"):
+        versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    assert not (root / versions.RECEIPT).exists() and len(d.volumes) == 1
+
+
+@pytest.mark.parametrize("value", [False, 1, None])
+def test_first_version_rejects_inexact_empty_proof(factory, value):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, d, root, _ = factory
+    owner = create()
+    owner.prepare()
+    d.output = lambda v: {**v, "empty": value}
+    with pytest.raises(ValueError, match="empty-database acknowledgement"):
+        versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    assert not (root / versions.RECEIPT).exists()
+
+
+def test_first_version_refuses_foreign_volume_user_without_stopping_it(factory):
+    import desktop_versions as versions
+    from test_desktop_versions import OWNER
+
+    create, d, root, _ = factory
+    owner = create()
+    owner.prepare()
+    d.foreign = True
+    before = len(d.calls)
+    with pytest.raises(ValueError, match="Another container"):
+        versions.begin(root, PACKAGE, owner.config, OWNER, storage=owner)
+    assert not (root / versions.RECEIPT).exists()
+    assert not any(args[:2] in (["container", "create"], ["container", "stop"]) for args in d.calls[before:])

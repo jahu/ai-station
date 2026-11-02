@@ -63,7 +63,7 @@ def read_private(path, limit):
     return value
 
 
-def namespace(config):
+def base_namespace(config):
     from dotenv import dotenv_values
 
     directory(config.parent)
@@ -108,6 +108,25 @@ def namespace(config):
     }
     digest = hashlib.sha256(json.dumps(frozen, sort_keys=True).encode()).hexdigest()
     return data, digest
+
+
+def database_reference(root, base):
+    folder = root / "database-storage"
+    if not folder.exists() and not folder.is_symlink():
+        return None  # Linux/WSL packages need no Mac-only helper imports.
+    from macos_database_storage import reference
+
+    return reference(root, base)
+
+
+def namespace(config):
+    data, base = base_namespace(config)
+    storage = database_reference(config.parent, base)
+    if storage is None:
+        return data, base  # Preserve existing Linux/WSL identity byte for byte.
+    return data, hashlib.sha256(
+        json.dumps({"base": base, "database_storage": storage}, sort_keys=True).encode()
+    ).hexdigest()
 
 
 def load(root):
@@ -155,7 +174,7 @@ def save(root, value):
         Path(temporary).unlink(missing_ok=True)
 
 
-def begin(root, package, config, owner):
+def begin(root, package, config, owner, *, storage=None):
     package = package_identity(package)
     if not isinstance(owner, str) or not re.fullmatch(OWNER, owner):
         raise ValueError("Desktop owner identity is invalid")
@@ -167,6 +186,13 @@ def begin(root, package, config, owner):
             raise ValueError(
                 "Existing desktop data needs a verified version receipt before updating"
             ) from None
+        expected_storage = database_reference(root, base_namespace(config)[1])
+        if expected_storage is not None:
+            if storage is None or storage.identity(allow_pending_readonly=True) != expected_storage:
+                raise ValueError("A new volume installation needs its attested empty-database check")
+            storage.assert_empty()
+            if namespace(config) != (data, digest):
+                raise ValueError("Desktop storage changed before first-version publication")
         previous = {"last_ready_at": None}
     else:
         if previous["package"] != package or previous["namespace_sha256"] != digest:

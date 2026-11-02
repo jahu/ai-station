@@ -82,6 +82,16 @@ owned helpers. A foreign reference is preserved and blocks dispatch/activation.
 Lost reader acknowledgements resume the journaled reader without replaying
 database publication. The previous version and startup fence remain on mismatch.
 
+Native version identity combines the existing filesystem namespace with the
+private ready volume/daemon binding. Mutable helper journals are excluded;
+existing Linux/WSL installations without volume receipts retain the exact old
+namespace. Reading this binding grants no Docker or native SQLite access. A
+missing version receipt never turns an existing VM database into a fresh install:
+first-version publication requires the attested owner and a fixed read-only
+image check proving a marker-only volume, with no other container references.
+The consumer launcher must prepare and attest storage before using this path;
+the Mac admission gate remains closed until the full journey is qualified.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.

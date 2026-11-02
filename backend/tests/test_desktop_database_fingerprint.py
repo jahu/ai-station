@@ -87,3 +87,25 @@ def test_database_mutation_or_replacement_during_hashing_is_not_attested(files, 
     monkeypatch.setattr(storage.hashlib, "file_digest", modified)
     with pytest.raises(ValueError, match="bytes changed"):
         storage.fingerprint(value)
+
+
+def test_empty_volume_proof_requires_only_the_binding_marker_and_never_creates_sqlite(files):
+    root, value = files
+    (root / "ai-station.sqlite").unlink()
+    (root / storage.MARKER).write_bytes(storage.encoded(value))
+    before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in root.iterdir()}
+    assert storage.empty(value) == {"storage": value, "empty": True}
+    assert {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in root.iterdir()} == before
+
+
+@pytest.mark.parametrize(
+    "name", ["ai-station.sqlite", "ai-station.sqlite-wal", "ai-station.sqlite-shm", "unexpected"]
+)
+def test_any_nonmarker_volume_entry_prevents_first_install_adoption(files, name):
+    root, value = files
+    (root / "ai-station.sqlite").unlink()
+    (root / storage.MARKER).write_bytes(storage.encoded(value))
+    (root / name).touch()
+    with pytest.raises(ValueError, match="verified version receipt"):
+        storage.empty(value)
+    assert (root / name).exists()

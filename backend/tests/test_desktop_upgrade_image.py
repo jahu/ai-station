@@ -493,7 +493,6 @@ def volume_setup(setup, monkeypatch):
 
     folder = setup.root / "database-storage"
     folder.mkdir(mode=0o700)
-    upgrade.write(folder / storage.RECEIPT, {"synthetic": "private owner fixture"})
     (setup.data / "db").mkdir(mode=0o700)
 
     class Volume:
@@ -540,6 +539,31 @@ def volume_setup(setup, monkeypatch):
             return dict(self.observed)
 
     value = Volume()
+    record = {
+        "schema": 1,
+        "namespace_sha256": versions.base_namespace(setup.config)[1],
+        "uid": os.geteuid(),
+        "gid": os.getegid(),
+        "engine": ["/fixed/docker", "unix:///fixed.sock", "fixture-daemon"],
+        "architecture": "amd64",
+        "storage_id": "a" * 32,
+        "name": "ai-station-database-" + "a" * 32,
+        "initialization_image": TARGET["image_id"],
+        "phase": "ready",
+        "command": None,
+        "volume": {
+            "Name": "ai-station-database-" + "a" * 32,
+            "Driver": "local",
+            "Scope": "local",
+            "CreatedAt": "fixture-created-at",
+            "Mountpoint": "/var/lib/docker/volumes/fixture-db/_data",
+        },
+    }
+    upgrade.write(folder / storage.RECEIPT, record)
+    value.binding = storage.stable_identity(record)
+    versions.save(
+        setup.root, versions.load(setup.root) | {"namespace_sha256": versions.namespace(setup.config)[1]}
+    )
     monkeypatch.setattr(storage, "DatabaseStorage", lambda *args: value)
     setup.identity = str(uuid4())
     setup.client = upgrade.UpgradeImage(

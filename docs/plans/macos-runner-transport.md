@@ -198,6 +198,16 @@ They preserve accounts, password records, private settings, rows and artifacts
 across schema 0041 to 0042. Both logical package versions used the same verified
 image; this is component qualification, not a complete two-package Mac update.
 
+Version namespaces now include the ready persistent volume and daemon binding.
+The storage owner itself uses the unchanged base filesystem namespace to avoid
+circular identity. Helper operation/phase changes cannot relocate an existing
+installation; replacing the volume/daemon, removing its receipt or changing the
+user/base coordinates prevents adoption. A first version needs the exact owner
+and the fixed read-only image's marker-only emptiness proof; zero-byte database,
+sidecar or unrelated entries are sufficient to refuse it. First-version reader
+acknowledgements can be recovered without publishing a version prematurely.
+Consumer startup ordering and child reattestation still need integration below.
+
 Before enabling Mac installation:
 
 1. Wire the persistent owner into native startup and offline operations before

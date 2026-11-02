@@ -139,16 +139,31 @@ def fingerprint(value):
         os.close(fd)
 
 
+def empty(value):
+    """Prove there are no database or sidecar bytes; never create/open SQLite."""
+    inspect(value)
+    fd = directory()
+    try:
+        owned_directory(fd, value)
+        if os.listdir(fd) != [MARKER]:
+            raise ValueError("Existing database volume bytes need a verified version receipt")
+        return {"storage": value, "empty": True}
+    finally:
+        os.close(fd)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("initialize", "inspect", "fingerprint"))
+    parser.add_argument("action", choices=("initialize", "inspect", "fingerprint", "empty"))
     parser.add_argument("--storage-id", required=True)
     parser.add_argument("--namespace", required=True)
     parser.add_argument("--uid", required=True, type=int)
     parser.add_argument("--gid", required=True, type=int)
     args = parser.parse_args()
     value = binding(args.storage_id, args.namespace, args.uid, args.gid)
-    result = {"initialize": initialize, "inspect": inspect, "fingerprint": fingerprint}[args.action](value)
+    result = {"initialize": initialize, "inspect": inspect, "fingerprint": fingerprint, "empty": empty}[
+        args.action
+    ](value)
     print(json.dumps(result, sort_keys=True), flush=True)
 
 
