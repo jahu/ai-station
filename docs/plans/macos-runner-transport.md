@@ -178,12 +178,12 @@ Before enabling Mac installation:
    SQLite or mistake an empty/stale `db` folder on the Mac for the active database.
    A consistent backup/export remains under the selected host data folder and
    must explicitly include the DB, retained files and storage receipt.
-3. Stage migrated/restored SQLite bytes **inside the DB volume** before atomic
-   publication. Existing `desktop_upgrade.py` staging under host-backed
-   `desktop-upgrades` would cross filesystems and make `os.replace` fail with
-   `EXDEV`. Keep exported pre-update backups host-backed, preserve existing Linux
-   pending-operation layouts, and verify the new publication path across two
-   actual filesystems. No non-atomic copy over an active database is acceptable.
+3. Use the backend's DB-local upgrade staging when metadata and exported backups
+   have different mounts. It binds the relative stage location into the request,
+   preserves legacy pending operations and refuses cross-mount publication before
+   changing phase or touching WAL. Keep exported pre-update backups host-backed.
+   Native integration and later restoration must follow the same atomic-publication
+   rule; no non-atomic copy over an active database is acceptable.
 4. Native upgrade activation consumes the fixed image's attested database
    fingerprint; it cannot hash a nonexistent native `db/ai-station.sqlite`.
    Quiescence includes the owned station and every container using the volume;
