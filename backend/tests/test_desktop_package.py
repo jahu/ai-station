@@ -27,6 +27,46 @@ def fixture_bundle(folder):
     return value
 
 
+@pytest.mark.parametrize("kind", ["symlink", "fifo", "oversized"])
+def test_package_metadata_is_bounded_and_never_follows_special_files(tmp_path, kind):
+    source = tmp_path / "package"
+    fixture_bundle(source)
+    path = source / "desktop-manifest.json"
+    if kind == "symlink":
+        path.rename(source / "original.json")
+        path.symlink_to(source / "original.json")
+    elif kind == "fifo":
+        path.unlink()
+        os.mkfifo(path, mode=0o600)
+    else:
+        with path.open("wb") as output:
+            output.truncate(8 * 1024**2 + 1)
+    with pytest.raises((ValueError, OSError)):
+        desktop.manifest(source)
+
+
+@pytest.mark.parametrize(
+    "field,value", [("schema", True), ("bundle_id", 1), ("image_id", None), ("files", {"station": 1})]
+)
+def test_malformed_downloaded_metadata_has_a_validation_error(tmp_path, field, value):
+    source = tmp_path / "package"
+    metadata = fixture_bundle(source) | {field: value}
+    (source / "desktop-manifest.json").write_text(json.dumps(metadata))
+    with pytest.raises(ValueError):
+        desktop.manifest(source)
+
+
+def test_retained_code_is_verified_without_silently_overwriting_changed_files(tmp_path):
+    source, root = tmp_path / "package", tmp_path / "state"
+    value = fixture_bundle(source)
+    root.mkdir(mode=0o700)
+    installed = desktop.install_copy(root, source, value)
+    (installed / "station").write_text("unexpected retained payload change")
+    with pytest.raises(ValueError, match="changed"):
+        desktop.install_copy(root, source, value)
+    assert (installed / "station").read_text() == "unexpected retained payload change"
+
+
 def test_verified_version_copy_never_replaces_existing_application_or_user_data(tmp_path):
     source, state = tmp_path / "package", tmp_path / "owned"
     value = fixture_bundle(source)

@@ -56,10 +56,22 @@ def require_completed_guest_update():
 
 
 def manifest(root):
-    value = json.loads((root / "desktop-manifest.json").read_text())
+    metadata = root / "desktop-manifest.json"
+    with os.fdopen(os.open(metadata, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 8 * 1024**2:
+            raise ValueError("The desktop package manifest is not a bounded regular file")
+        raw = source.read(8 * 1024**2 + 1)
+    if len(raw) > 8 * 1024**2:
+        raise ValueError("The desktop package manifest exceeded its bound")
+    value = json.loads(raw)
     if (
-        value.get("schema") != 1
+        not isinstance(value, dict)
+        or type(value.get("schema")) is not int
+        or value.get("schema") != 1
+        or not isinstance(value.get("bundle_id"), str)
         or not re.fullmatch(r"[a-f0-9]{64}", value.get("bundle_id", ""))
+        or not isinstance(value.get("image_id"), str)
         or not re.fullmatch(r"sha256:[a-f0-9]{64}", value.get("image_id", ""))
         or value.get("image_tag") != "ai-station:desktop-" + value["bundle_id"][:16]
         or not isinstance(value.get("files"), dict)
@@ -75,6 +87,7 @@ def manifest(root):
             or str(relative) != name
             or "\\" in name
             or not path.resolve().is_relative_to(root.resolve())
+            or not isinstance(expected, str)
             or not re.fullmatch(r"[a-f0-9]{64}", expected)
         ):
             raise ValueError("The desktop package contains an invalid file reference")
@@ -154,6 +167,8 @@ def owned_folder(root, name):
 
 
 def install_copy(root, source, value):
+    if manifest(source) != value:
+        raise ValueError("The selected package manifest changed before installation")
     if root.resolve().is_relative_to(source.resolve()):
         raise ValueError("Desktop data must be outside the application package")
     releases = owned_folder(root, "releases")
@@ -163,11 +178,14 @@ def install_copy(root, source, value):
     if target.exists():
         if manifest(target) != value:
             raise ValueError("The installed version differs from this package")
+        verify(target, value)
         return target
     verify(source, value)
     temporary = Path(tempfile.mkdtemp(prefix=".install-", dir=releases))
     try:
         shutil.copytree(source, temporary, dirs_exist_ok=True, symlinks=True)
+        if manifest(temporary) != value:
+            raise ValueError("The selected package manifest changed while copying")
         verify(temporary, value)
         os.rename(temporary, target)
     finally:
@@ -610,13 +628,13 @@ def dialog(*args):
 class Preparation:
     """An indeterminate stage display, never a fabricated transfer percentage."""
 
-    def __init__(self, console):
+    def __init__(self, console, *, heading=None):
         self.proc = None
         self.native = None
         if not console and platform.system() == "Darwin":
             from macos_desktop_ui import Preparation as NativePreparation
 
-            self.native = NativePreparation(ROOT)
+            self.native = NativePreparation(ROOT, heading=heading)
             return
         if not console:
             self.proc = subprocess.Popen(
@@ -667,12 +685,36 @@ def unowned_supervisor_active(root):
         os.close(descriptor)
 
 
+def reexecute(installed, args):
+    """Only startup flags cross into the verified retained payload."""
+    executable = str(installed / "python/bin/python3")
+    startup = [
+        flag for flag, enabled in (("--console", args.console), ("--background", args.background)) if enabled
+    ]
+    if args.host_port is not None:
+        startup += ["--host-port", str(args.host_port)]
+    os.execve(
+        executable,
+        [
+            executable,
+            "-IB" if platform.system() == "Darwin" else "-I",
+            str(installed / "scripts/desktop.py"),
+            *startup,
+        ],
+        launch_environment(),
+    )
+    raise RuntimeError("The retained application did not start")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--console", action="store_true", help="Explicit terminal supervision instead of desktop dialogs"
     )
     parser.add_argument("--background", action="store_true", help="Run without a native status window")
+    parser.add_argument(
+        "--install-update", type=Path, help="Install a selected native Mac application bundle"
+    )
     parser.add_argument("--host-port", type=int, help="Private desktop-parent loopback port, 8765–8864")
     parser.add_argument(
         "--package-check",
@@ -684,7 +726,14 @@ def main():
     operation.add_argument("--stop", action="store_true", help="Request this desktop installation to stop")
     args = parser.parse_args()
     if args.package_check:
-        if args.console or args.background or args.status or args.stop or args.host_port is not None:
+        if (
+            args.console
+            or args.background
+            or args.status
+            or args.stop
+            or args.host_port is not None
+            or args.install_update
+        ):
             parser.error("--package-check must be used on its own")
         value = manifest(ROOT)
         verify(ROOT, value)
@@ -704,6 +753,12 @@ def main():
     ):
         parser.error("--host-port requires console background startup and a port between 8765 and 8864")
     os.umask(0o077)
+    if args.install_update and (
+        platform.system() != "Darwin" or args.status or args.stop or args.host_port is not None
+    ):
+        parser.error(
+            "--install-update requires a native Mac update and cannot be combined with status/Stop/host-port"
+        )
 
     if not (args.status or args.stop):
         require_completed_guest_update()
@@ -721,6 +776,22 @@ def main():
             raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
     value = manifest(ROOT)
     root = state_root()
+    if platform.system() == "Darwin" and not (args.status or args.stop):
+        from desktop_update import active_payload, install_update, pending
+
+        if args.install_update:
+            prerequisites()  # The unqualified Mac consumer path remains closed.
+            verify(ROOT, value)
+            install_update(
+                root,
+                args.install_update,
+                console=args.console,
+                start=lambda installed: reexecute(installed, args),
+            )
+            return
+        active = active_payload(root, value)
+        if active is not None and active.resolve() != ROOT.resolve():
+            reexecute(active, args)
     lock = os.open(root / "desktop.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     acquired = False
     try:
@@ -762,6 +833,16 @@ def main():
                 raise
             if not continue_docker_setup(dialog, background=args.background):
                 return
+        if platform.system() == "Darwin" and pending(root) is not None:
+            verify(ROOT, value)
+            install_update(
+                root,
+                None,
+                console=args.console,
+                start=lambda installed: reexecute(installed, args),
+                owner_lock=lock,
+            )
+            return
         if not args.console and not (root / "desktop.env").exists():
             answer = dialog(
                 "--question",
@@ -778,17 +859,7 @@ def main():
             config = configuration(root)
             if installed.resolve() != ROOT.resolve():
                 progress.close()
-                executable = str(installed / "python/bin/python3")
-                os.execve(
-                    executable,
-                    [
-                        executable,
-                        "-IB" if platform.system() == "Darwin" else "-I",
-                        str(installed / "scripts/desktop.py"),
-                        *sys.argv[1:],
-                    ],
-                    launch_environment(),
-                )
+                reexecute(installed, args)
             with (
                 (root / "desktop.log").open("a", encoding="utf-8") as log,
                 DesktopControl(
