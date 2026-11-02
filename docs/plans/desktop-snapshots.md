@@ -88,13 +88,24 @@ Stage migrations and integrity/foreign-key checks finish before atomic DB
 publication. Durable source/stage fingerprints and phases allow interrupted
 preparation/publication and lost acknowledgements to resume; abort is available
 only before publication. A separate volume marker blocks API migration, export
-and upgrades while recovery is unfinished. This candidate still needs native
-dispatch/ownership, retained-file publication and the complete consumer flow.
+and upgrades while recovery is unfinished.
+
+Native dispatch now reuses the existing storage owner's fixed command journal,
+isolation checks and exact helper identities. Restore helpers use a bounded
+512 MiB RAM/swap budget, no network/GPU/capabilities, a writable attested volume
+and read-only backup/optional private authority input only during preparation.
+Completion is cached before helper removal so a lost removal acknowledgement
+cannot repeat publication. Owned preparation can be stopped, then inspected and
+aborted; an unstarted payload is explicitly distinguishable from an interrupted
+transaction. Publication is inspected/resumed rather than blindly canceled.
+Disappearing removable input cannot prevent Stop or recovery of an already
+dispatched helper. This still needs retained-file publication, full native
+coordination/presentation and actual complete Mac consumer qualification.
 
 1. Add native backup selection/progress/cancel and restoration presentation.
    The end user must not need these developer commands.
-2. Integrate the image-local restoration candidate with native owned dispatch,
-   cancellation and inspection on its attested volume. Its reused pure helpers
+2. Connect the native helper candidate to the complete restoration coordinator
+   and its file journal/approvals. Its reused pure helpers
    preserve current account/MFA authority, revoke sessions/invitations/node
    credentials, pause schedules, interrupt active Runs and release reservations.
    Unreadable present authority needs explicit reviewed administrator recovery.

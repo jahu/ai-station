@@ -110,8 +110,11 @@ retains raw current main/WAL bytes on the attested volume. Current account/MFA
 authority survives; sessions and autonomous execution do not resume. An explicit
 named administrator reset uses a separate private file when authority is
 unreadable. Durable prepare/publish/abort/status receipts support interruption
-without native SQL or a new HTTP/agent capability. Native dispatch, retained-file
-publication and the complete backup/restore UI remain separate unfinished work.
+without native SQL or a new HTTP/agent capability. Native fixed dispatch reuses
+the storage owner's strict helper journal and inspection, caching completion
+before removal. Stop covers only owned preparation and requires subsequent
+inspection; publication is resumed instead of blindly rolled back. Retained-file
+publication, full coordination and the backup/restore UI remain unfinished.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint

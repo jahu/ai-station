@@ -384,3 +384,45 @@ def test_cross_filesystem_stage_is_rejected_before_publication_intent(setup, mon
     assert restore.status(setup.value, setup.operation, IMAGE)["phase"] == "prepared"
     assert current(setup) == before
     assert restore.abort(setup.value, setup.operation, IMAGE)["phase"] == "aborted"
+
+
+def test_cancellation_before_payload_request_is_confirmed_without_starting_sql(setup):
+    before = current(setup)
+    result = restore.status(setup.value, setup.operation, IMAGE)
+    assert result["phase"] == "not_started" and result["source"] == before
+    assert not (storage.ROOT / restore.STORE).exists() and current(setup) == before
+
+
+def test_missing_request_cannot_hide_a_pending_publication_fence(setup):
+    restore.upgrade.write(storage.ROOT / restore.MARKER, {"unknown": True})
+    before = current(setup)
+    with pytest.raises(ValueError, match="without its request"):
+        restore.status(setup.value, setup.operation, IMAGE)
+    assert current(setup) == before
+
+
+def test_unstarted_inspection_refuses_redirected_journal_parent(setup, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir(mode=0o700)
+    (storage.ROOT / restore.STORE).symlink_to(outside)
+    with pytest.raises(ValueError):
+        restore.status(setup.value, setup.operation, IMAGE)
+    assert not list(outside.iterdir())
+
+
+def test_exit_after_request_before_state_can_be_inspected_and_safely_aborted(setup, monkeypatch):
+    before = current(setup)
+    original = restore.upgrade.write
+
+    def interrupted(path, value):
+        if path.name == "state.json":
+            raise RuntimeError("synthetic exit after request")
+        return original(path, value)
+
+    monkeypatch.setattr(restore.upgrade, "write", interrupted)
+    with pytest.raises(RuntimeError, match="after request"):
+        prepare(setup)
+    assert restore.status(setup.value, setup.operation, IMAGE)["phase"] == "preparing"
+    monkeypatch.setattr(restore.upgrade, "write", original)
+    assert restore.abort(setup.value, setup.operation, IMAGE)["phase"] == "aborted"
+    assert current(setup) == before and not (storage.ROOT / restore.MARKER).exists()

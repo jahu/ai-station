@@ -147,9 +147,14 @@ def check_stage(path, revision):
             raise ValueError("Restored work, schedules and approvals must remain stopped")
 
 
-def load(value, operation, image_id):
+def load(value, operation, image_id, *, allow_missing_state=False):
     path = folder(operation)
-    request, state = (private_read(path / name) for name in ("request.json", "state.json"))
+    request = private_read(path / "request.json")
+    state_path = path / "state.json"
+    if allow_missing_state and not state_path.exists() and not state_path.is_symlink():
+        state = {"phase": "preparing", "request_sha256": encoded_hash(request)}
+    else:
+        state = private_read(state_path)
     if (
         set(request)
         != {
@@ -435,10 +440,10 @@ def publish(value, operation, image_id):
 
 def abort(value, operation, image_id):
     with guard(value):
-        parent, request, state = load(value, operation, image_id)
+        parent, request, state = load(value, operation, image_id, allow_missing_state=True)
         if state["phase"] == "aborted":
             return finish(request, state)
-        require_marker(request)
+        require_marker(request, create=state["phase"] == "preparing")
         if (
             state["phase"] not in {"preparing", "prepared"}
             or storage.fingerprint(value)["database"] != request["source"]
@@ -451,7 +456,36 @@ def abort(value, operation, image_id):
 
 def status(value, operation, image_id):
     with guard(value):
-        _, request, state = load(value, operation, image_id)
+        identity(operation)
+        if not isinstance(image_id, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", image_id):
+            raise ValueError("Restore inspection requires the verified image identity")
+        parent = storage.ROOT / STORE
+        if parent.exists() or parent.is_symlink():
+            upgrade.directory(parent, private=True)
+            if parent.resolve() != parent:
+                raise ValueError("Restore inspection cannot cross a symlink")
+        path = parent / operation
+        if path.exists() or path.is_symlink():
+            folder(operation)
+        if not (path / "request.json").exists() and not (path / "request.json").is_symlink():
+            # A staging container can be canceled before Python has persisted a
+            # request. Absence is safe only without any volume publication fence.
+            pending = storage.ROOT / MARKER
+            if pending.exists() or pending.is_symlink():
+                raise ValueError("A pending restore without its request requires inspection")
+            if path.exists() or path.is_symlink():
+                folder(operation)
+                if list(path.iterdir()):
+                    raise ValueError("Unknown restore staging files require inspection")
+            return {
+                "schema": 1,
+                "operation_id": operation,
+                "image_id": image_id,
+                "storage": value,
+                "phase": "not_started",
+                "source": storage.fingerprint(value)["database"],
+            }
+        _, request, state = load(value, operation, image_id, allow_missing_state=True)
         return report(request, state)
 
 

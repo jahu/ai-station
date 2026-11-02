@@ -129,8 +129,13 @@ Runs require inspection. Unreadable authority needs a named administrator reset
 and explicit MFA acknowledgement from a private fixed-path file. Passwords never
 travel in argv or reports; only a salted normal password verifier binds a pending
 reset request. Original main/WAL copies stay private, and only a verified stage
-may atomically replace the target. No adapter or consumer restore entry is made
-operational before native ownership/cancellation/files recovery is integrated.
+may atomically replace the target. Native dispatch reuses the existing verified
+storage helper lifecycle with fixed mounts/commands, cached completion and an
+explicit 512 MiB RAM/swap limit. Only owned preparation may be stopped; source
+disappearance cannot prevent its inspection/Stop. An unstarted payload is
+distinguished from a transaction with a durable request. Publication requires
+resume/inspection. Consumer restore stays unavailable before retained-file
+recovery, complete coordination/presentation and Mac qualification are integrated.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
