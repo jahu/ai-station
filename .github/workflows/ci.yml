@@ -129,6 +129,7 @@ jobs:
             backend/tests/test_desktop_upgrade_image.py \
             backend/tests/test_desktop_update.py \
             backend/tests/test_desktop_native_storage.py \
+            backend/tests/test_desktop_database_storage.py \
             backend/tests/test_macos_desktop_docker.py \
             backend/tests/test_desktop_bridge.py \
             backend/tests/test_desktop_link.py \

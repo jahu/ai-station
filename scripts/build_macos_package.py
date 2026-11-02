@@ -22,6 +22,7 @@ MAC_SOURCES = (
     "compose.macos.yaml",
     "scripts/desktop_link.py",
     "scripts/macos_runner_link.py",
+    "scripts/macos_database_storage.py",
     "scripts/desktop_update.py",
     "scripts/desktop_upgrade_image.py",
     "scripts/macos_desktop_docker.py",

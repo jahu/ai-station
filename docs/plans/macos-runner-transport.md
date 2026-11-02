@@ -165,9 +165,31 @@ name manually to bypass installation.
 
 ### Remaining persistent-storage integration
 
+The native `macos_database_storage.DatabaseStorage` owner now supplies a private,
+namespace/UID/GID/daemon-bound volume receipt and fixed application-image
+ownership helpers. Initialization runs once on an empty root-owned local volume
+with only `CHOWN`, no network or host mounts. It writes and syncs a root-owned,
+read-only binding marker before publishing mode-0700 ownership to the ordinary
+user. Normal inspection mounts only that volume read-only and verifies both the
+marker and directory ownership, without opening SQLite. Completed lost helper
+acknowledgements are inspected by exact frozen identity rather than reexecuted;
+an explicit nonce-bound creation inspection can reconcile a lost volume-create
+acknowledgement. Partial/failed initialization stays fenced and preserves bytes.
+This owner has no volume-removal operation; Stop, update and uninstall cannot
+delete storage through it. Native launch, version activation and export/restore
+still need the integration and actual journey qualification below.
+
+The actual Linux Docker lifecycle check passes native receipt recreation,
+first-admin/fake Task/Run/SSE, independent-container WAL writer exclusion with
+the original writer still held, no uncommitted-row visibility, commit/integrity,
+fresh-client login/history/artifact preservation and ordinary-user refusal to
+overwrite the root marker. It uses only newly created synthetic storage and
+cleans it up separately. This is not a Mac installer or real-model test.
+
 Before enabling Mac installation:
 
-1. Bind a private storage receipt outside app data to the selected directory
+1. Wire the persistent owner into native startup and offline operations before
+   version readiness. Bind its private receipt outside app data to the selected directory
    identity, Compose project, UID/GID and pinned engine. Attest the exact local
    volume's name, labels, creation identity and driver options on every startup
    and offline operation. Lost creation acknowledgements keep their pending

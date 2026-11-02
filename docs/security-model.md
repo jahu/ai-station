@@ -1476,12 +1476,26 @@ path; the Linux host recovery CLI is not shipped in the Mac bundle. See the
 
 The strengthened actual Intel probe confirms missing shared-folder writer
 exclusion while its original transaction remains live; a disposable local Docker
-DB volume passes the same checks. The fixed QA initializer is the sole root
-exception: no host paths, network, Docker socket or GPU, all capabilities dropped
+DB volume passes the same checks. The fixed QA initializer is that probe's sole
+root exception: no host paths, network, Docker socket or GPU, all capabilities dropped
 except `CHOWN`, and an emptiness check before setting ownership on its newly
 created, attested volume. Normal DB clients remain non-root. Unknown or replaced
 volume identities are preserved; uncertain creation is not replayed. Production
 Mac storage/upgrade/backup integration must be qualified before consumer admission.
+
+The native persistent database owner separately binds its private receipt to the
+selected directory identity, UID/GID, Compose namespace and pinned Docker daemon.
+Its fixed application-image initializer has only `CHOWN`, an empty local volume,
+no network and no host mounts. It syncs a root-owned mode-0444 binding marker
+before publishing mode-0700 directory ownership. The ordinary-user verifier
+mounts that volume read-only and reads only this marker, never SQLite. The empty
+host `db` mountpoint is created by the native user before Docker runs; stale host
+DB bytes fence startup rather than being treated as the active database. Exact
+helper image/argv/labels/mounts/isolation are checked before start or cleanup.
+Completed lost acknowledgements are inspected; failed or uncertain initialization
+is preserved. The owner exposes no volume deletion, arbitrary command, import,
+web API, agent tool or additional Docker access. Full launch/update/export
+integration and actual Mac consumer qualification remain required.
 
 The offline desktop-upgrade command is confined to the verified application
 image and canonical user-owned app data. It has no HTTP/Runner/agent route or
