@@ -265,6 +265,23 @@ version activation. These primitives do not offer an unbacked Update button or
 remove the consumer gate; actual Mac/Docker Desktop and preserving-update
 qualification remain required.
 
+### Consented native owner handoff
+
+The internal installer handoff serializes update attempts with a separate private
+lock. It requires the live owner's ready package/storage receipt and held native
+desktop lock before presenting a local consent callback with safe version
+metadata. Recheck the same owner, storage and lock inodes after consent, then
+send Stop bound to that instance. A bounded wait never force-kills or substitutes
+a replacement owner. Hold the native desktop lock through the updater's context;
+replaced locks, changed storage or an older package require inspection.
+
+This primitive stops only the native owner. It does not assert that Docker
+services exited successfully, dispatch a migration, activate another version or
+offer an Update button. The next coordinator must inspect the exact owned
+Compose containers before dispatching the fixed offline image transaction and
+durably coordinating its result with version activation. Actual Docker Desktop
+and complete preserving-update qualification remain required.
+
 ## Acceptance evidence
 
 ### Owner-dispatched public Mac checks
