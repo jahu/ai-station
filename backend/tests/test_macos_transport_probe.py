@@ -111,6 +111,27 @@ def test_other_native_peer_never_reaches_file_exchange(short_root, monkeypatch):
         client.close()
 
 
+def test_fixed_client_failure_reports_only_class_and_errno_without_private_payload(tmp_path):
+    token = tmp_path / "token.json"
+    token.write_text(json.dumps({"nonce": "a" * 64, "stored": "b" * 64, "phase": "write"}))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-IBS",
+            "-c",
+            probe.CLIENT,
+            str(tmp_path / "missing.sock"),
+            str(tmp_path),
+            str(token),
+        ],
+        capture_output=True,
+        timeout=5,
+    )
+    assert result.returncode != 0
+    assert json.loads(result.stdout) == {"probe_client_error": "FileNotFoundError", "errno": 2}
+    assert not result.stderr and b"a" * 64 not in result.stdout and not list(tmp_path.glob("artifact.*"))
+
+
 @pytest.mark.parametrize("raw", [b"{}", b"x" * 257, b"[]\n", b'{"nonce":"wrong","stage":"connected"}\n'])
 def test_bad_or_unframed_packets_cannot_advance_protocol(raw):
     with pytest.raises(ValueError):
@@ -160,6 +181,42 @@ def state(docker, *, label=None):
         "swap": probe.MEMORY,
         "privileged": False,
     }
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_client_error_diagnostics_check_owned_identity_before_reading_fixed_stdout(
+    docker, monkeypatch, changed
+):
+    docker.ids = ["a" * 64]
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker, label="other-owner" if changed else None))
+        assert args == ("container", "logs", "--tail", "1", "a" * 64)
+        return 0, json.dumps({"probe_client_error": "ConnectionRefusedError", "errno": 111})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == (
+        [{"diagnostic_unavailable": True}]
+        if changed
+        else [{"probe_client_error": "ConnectionRefusedError", "errno": 111}]
+    )
+    if changed:
+        assert all(args[:2] != ("container", "logs") for args in calls)
+
+
+def test_unrecognized_client_stdout_does_not_publish_arbitrary_logs(docker, monkeypatch):
+    docker.ids = ["a" * 64]
+
+    def call(*args, **kwargs):
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker))
+        return 0, json.dumps({"probe_client_error": "PRIVATE_FIXTURE_SECRET", "errno": 13})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == [{"diagnostic_unavailable": True}]
 
 
 def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docker, tmp_path):

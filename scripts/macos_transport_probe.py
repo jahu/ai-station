@@ -51,6 +51,9 @@ CLIENT = r"""
 import json,os,re,socket,sqlite3,sys
 from pathlib import Path
 os.umask(0o077)
+def failed(kind,error,traceback):
+ print(json.dumps({'probe_client_error':kind.__name__,'errno':getattr(error,'errno',None)}),flush=True)
+sys.excepthook=failed
 channel,root,config=map(Path,sys.argv[1:])
 cfg=json.loads(config.read_text())
 nonce=cfg['nonce'];stored=cfg['stored'];phase=cfg['phase']
@@ -266,6 +269,42 @@ class Docker:
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 complete = False
         return complete
+
+    def client_failures(self):
+        """Inspect only our fixed client; retain error classes, never raw logs/data."""
+        result = []
+        for identifier in self.ids:
+            try:
+                state = self.owned(identifier)
+                if state["running"]:
+                    result.append({"client_running": True})
+                    continue
+                _, raw = self.call("container", "logs", "--tail", "1", identifier)
+                if len(raw) > 1000:
+                    raise ValueError("Unexpected probe diagnostic size")
+                value = json.loads(raw)
+                if (
+                    not isinstance(value, dict)
+                    or set(value) != {"probe_client_error", "errno"}
+                    or value["probe_client_error"]
+                    not in {
+                        "FileNotFoundError",
+                        "PermissionError",
+                        "ConnectionRefusedError",
+                        "TimeoutError",
+                        "OSError",
+                        "ValueError",
+                        "OperationalError",
+                    }
+                    or not (
+                        value["errno"] is None or type(value["errno"]) is int and 0 <= value["errno"] <= 4096
+                    )
+                ):
+                    raise ValueError("Unexpected probe diagnostic protocol")
+                result.append(value)
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                result.append({"diagnostic_unavailable": True})
+        return result
 
 
 def packet(connection, reader, nonce, expected):
@@ -487,6 +526,8 @@ def probe(output, *, prepare_image=False, data_directory=None, packaged_image=No
         result["transport_passed"] = True
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyboardInterrupt) as exc:
         result.update(transport_passed=False, error_type=type(exc).__name__, error=str(exc)[:500])
+        if docker is not None:
+            result["client_failures"] = docker.client_failures()
     finally:
         result["cleanup_complete"] = docker.cleanup() if docker else True
         result["reserved_names"] = docker.reserved_names if docker else []
