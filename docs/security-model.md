@@ -14,6 +14,14 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+The [Mac connection candidate](plans/macos-runner-transport.md) retains the private
+Runner Unix socket. A supervised loopback-only helper and a non-root process in
+the same application image use mutual TLS with fresh private certificates.
+Container peers keep private Unix HTTP and the ordinary typed Runner API; there
+is no unauthenticated TCP, public bind, shell or Docker authority. Credential
+files stay outside artifacts and server keys stay native. Consumer admission
+remains gated until real transport, lifetime/recovery and installation checks pass.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates
@@ -1445,12 +1453,35 @@ qualification; successful neutral CLI tests alone do not enable Mac installation
 
 Mac startup bridge preparation accepts only the already verified application
 image identity and independently matched native Docker connection. Its clients
-have no network, host home, Docker socket or GPU access; only new private probe
-directories are mounted. The coordinator owns its child handle and never signals
+use no network on the direct-socket path, and have no host home, Docker socket
+or GPU access; only new private probe directories are mounted. The explicitly
+selected authenticated Mac candidate instead uses Docker's bridge network to
+reach the fixed native loopback TLS listener, with separate private client
+credentials mounted read-only. It adds no public listener or arbitrary target.
+The coordinator owns its child handle and never signals
 a persisted PID. A matching private clean receipt permits restart; unknown state
 retains its pending fence and resources. Neither a successful transport probe
 nor its result file grants workstation/HTTP execution authority or full Mac
 installer qualification.
+
+The Mac filesystem probe keeps all live SQLite connections inside Linux
+containers, matching the API/worker/scheduler architecture. A second independent
+container must demonstrate actual writer exclusion and no uncommitted-row
+visibility; a restarted client verifies commit, integrity and released locks.
+Native code checks artifact bytes and ownership without opening the live DB.
+The observed Mac/Linux lock-domain mismatch forbids treating native DB access
+as interchangeable. Mac offline upgrades retain the quiescent application-image
+path; the Linux host recovery CLI is not shipped in the Mac bundle. See the
+[actual transport observations](plans/macos-runner-transport.md).
+
+The strengthened actual Intel probe confirms missing shared-folder writer
+exclusion while its original transaction remains live; a disposable local Docker
+DB volume passes the same checks. The fixed QA initializer is the sole root
+exception: no host paths, network, Docker socket or GPU, all capabilities dropped
+except `CHOWN`, and an emptiness check before setting ownership on its newly
+created, attested volume. Normal DB clients remain non-root. Unknown or replaced
+volume identities are preserved; uncertain creation is not replayed. Production
+Mac storage/upgrade/backup integration must be qualified before consumer admission.
 
 The offline desktop-upgrade command is confined to the verified application
 image and canonical user-owned app data. It has no HTTP/Runner/agent route or

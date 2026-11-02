@@ -5,10 +5,12 @@ import io
 import json
 import os
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import macos_transport_probe as probe
@@ -17,7 +19,7 @@ import pytest
 
 @pytest.fixture
 def short_root():
-    root = Path(tempfile.mkdtemp(prefix="ast-test-", dir="/tmp"))
+    root = Path(tempfile.mkdtemp(prefix="ast-test-", dir="/tmp")).resolve()
     try:
         yield root
     finally:
@@ -27,6 +29,8 @@ def short_root():
 
 class LocalClient:
     """Same fixed client in a separate Python process, without Docker or a Mac claim."""
+
+    SQLITE_DOMAIN = "same-host-test-fixture"
 
     def __init__(self):
         self.children = []
@@ -58,6 +62,9 @@ class LocalClient:
         code = self.children[int(args[2]) - 1].wait(timeout=10)
         return 0, str(code)
 
+    def database_checks(self, sockets, data, stored):
+        probe.file_checks(data, stored, locked=True)
+
     def close(self):
         for child in self.children:
             if child.poll() is None:
@@ -75,6 +82,85 @@ def test_separate_client_round_trip_real_wal_lock_and_restart(short_root):
         assert client.tokens[0]["nonce"] != client.tokens[1]["nonce"]
         assert client.tokens[0]["stored"] == client.tokens[1]["stored"]
         assert not (short_root / "sockets/channel.sock").exists()
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("locked", [False, True])
+def test_fixed_second_writer_requires_real_exclusion_and_no_uncommitted_visibility(short_root, locked):
+    database = short_root / "probe.sqlite"
+    controller = short_root / "controller"
+    controller.mkdir(mode=0o700)
+    command = probe.DatabaseContender("/unused/docker", "unix:///unused.sock", controller, "amd64")
+    with sqlite3.connect(database) as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE probe(value TEXT NOT NULL)")
+        db.commit()
+        if locked:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("INSERT INTO probe VALUES ('uncommitted')")
+        result = subprocess.run(
+            [sys.executable, "-IBS", "-c", command.client_code(), "/unused", str(short_root), "/unused"],
+            capture_output=True,
+            timeout=5,
+        )
+        if locked:
+            assert result.returncode == 0, result.stderr
+            assert json.loads(result.stdout) == {
+                "sqlite_wal": True,
+                "concurrent_writer_lock": True,
+                "uncommitted_rows_visible": False,
+            }
+            db.rollback()
+        else:
+            assert result.returncode != 0
+            assert json.loads(result.stdout) == {
+                "probe_client_error": "SQLiteWriterNotExcluded",
+                "errno": None,
+            }
+
+
+def test_native_controller_never_opens_the_live_database(short_root, monkeypatch):
+    class Pair(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            code = probe.DatabaseContender.client_code(None)
+            result = subprocess.run(
+                [sys.executable, "-IBS", "-c", code, "/unused", str(data), "/unused"],
+                capture_output=True,
+                timeout=5,
+            )
+            assert result.returncode == 0, result.stderr
+
+    client = Pair()
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(
+                probe.sqlite3,
+                "connect",
+                lambda *a, **k: pytest.fail("Native controller opened the live SQLite database"),
+            )
+            result = probe.experiment(client, short_root)
+        assert (
+            result["concurrent_writer_lock"] and result["database_writer_domain"] == "same-host-test-fixture"
+        )
+        assert len(client.children) == 2 and all(child.returncode == 0 for child in client.children)
+    finally:
+        client.close()
+
+
+def test_disappeared_writer_is_not_misreported_as_an_unsafe_shared_filesystem(short_root, monkeypatch):
+    class TimedOut(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            time.sleep(0.2)
+            raise ValueError("simulated contender check failure")
+
+    monkeypatch.setattr(probe, "CLIENT", probe.CLIENT.replace("settimeout(90)", "settimeout(0.03)"))
+    client = TimedOut()
+    try:
+        with pytest.raises((OSError, ValueError)) as error:
+            probe.experiment(client, short_root)
+        assert "simulated contender check failure" not in str(error.value)
+        assert not getattr(client, "first_writer_verified_held", False)
     finally:
         client.close()
 
@@ -109,6 +195,28 @@ def test_other_native_peer_never_reaches_file_exchange(short_root, monkeypatch):
         assert not list(short_root.rglob("artifact.bin"))
     finally:
         client.close()
+
+
+def test_fixed_client_failure_reports_only_class_and_errno_without_private_payload(short_root):
+    tmp_path = short_root
+    token = tmp_path / "token.json"
+    token.write_text(json.dumps({"nonce": "a" * 64, "stored": "b" * 64, "phase": "write"}))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-IBS",
+            "-c",
+            probe.CLIENT,
+            str(tmp_path / "missing.sock"),
+            str(tmp_path),
+            str(token),
+        ],
+        capture_output=True,
+        timeout=5,
+    )
+    assert result.returncode != 0
+    assert json.loads(result.stdout) == {"probe_client_error": "FileNotFoundError", "errno": 2}
+    assert not result.stderr and b"a" * 64 not in result.stdout and not list(tmp_path.glob("artifact.*"))
 
 
 @pytest.mark.parametrize("raw", [b"{}", b"x" * 257, b"[]\n", b'{"nonce":"wrong","stage":"connected"}\n'])
@@ -160,6 +268,217 @@ def state(docker, *, label=None):
         "swap": probe.MEMORY,
         "privileged": False,
     }
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_client_error_diagnostics_check_owned_identity_before_reading_fixed_stdout(
+    docker, monkeypatch, changed
+):
+    docker.ids = ["a" * 64]
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker, label="other-owner" if changed else None))
+        assert args == ("container", "logs", "--tail", "1", "a" * 64)
+        return 0, json.dumps({"probe_client_error": "ConnectionRefusedError", "errno": 111})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == (
+        [{"diagnostic_unavailable": True}]
+        if changed
+        else [{"probe_client_error": "ConnectionRefusedError", "errno": 111}]
+    )
+    if changed:
+        assert all(args[:2] != ("container", "logs") for args in calls)
+
+
+def test_unrecognized_client_stdout_does_not_publish_arbitrary_logs(docker, monkeypatch):
+    docker.ids = ["a" * 64]
+
+    def call(*args, **kwargs):
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker))
+        return 0, json.dumps({"probe_client_error": "PRIVATE_FIXTURE_SECRET", "errno": 13})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == [{"diagnostic_unavailable": True}]
+
+
+@pytest.mark.parametrize("lost_ack", [False, True])
+def test_second_container_is_journaled_and_uses_the_same_frozen_engine_and_dataset(
+    docker, tmp_path, monkeypatch, lost_ack
+):
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("container", "create"):
+            assert (child.root / "owner.json").is_file()
+            assert args[args.index("--network") + 1] == "none"
+            assert probe.bind_mount(tmp_path / "data", "/probe-data") in args
+            if lost_ack:
+                raise RuntimeError("Lost contender create acknowledgement")
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(child))
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        if args[:2] == ("container", "logs"):
+            return 0, json.dumps(
+                {"sqlite_wal": True, "concurrent_writer_lock": True, "uncommitted_rows_visible": False}
+            )
+        return 0, ""
+
+    monkeypatch.setattr(probe.DatabaseContender, "call", call)
+    if lost_ack:
+        with pytest.raises(RuntimeError, match="Lost contender"):
+            docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.contenders[0].uncertain
+        assert not docker.cleanup()
+        assert not any(args[:2] in {("container", "start"), ("container", "rm")} for args in calls)
+    else:
+        docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.cleanup()
+
+
+def test_authenticated_candidate_mounts_only_client_credentials_and_owned_code(short_root, monkeypatch):
+    value = probe.AuthenticatedDocker("/fixed/docker", "unix:///private/desktop.sock", short_root, "amd64")
+    value.image_id = probe.IMAGE_IDS["amd64"]
+    sockets, data = short_root / "sockets", short_root / "data"
+    sockets.mkdir(mode=0o700)
+    data.mkdir(mode=0o700)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "create"):
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(value), "network": "bridge"})
+        return 0, ""
+
+    monkeypatch.setattr(value, "call", call)
+    with socket.socket(socket.AF_UNIX) as native:
+        channel = sockets / "channel.sock"
+        native.bind(str(channel))
+        native.listen(1)
+        channel.chmod(0o600)
+        try:
+            assert value.container(sockets, data, "write") == "a" * 64
+            create = calls[0]
+            assert create[create.index("--network") + 1] == "bridge"
+            mounts = [create[i + 1] for i, item in enumerate(create) if item == "--mount"]
+            assert len(mounts) == 4
+            assert any(
+                "source=" + str(value.material / "client") in item and "readonly" in item for item in mounts
+            )
+            assert not any(str(value.material / "server") in item for item in mounts)
+            assert "--tmpfs" in create and "--init" in create
+            assert sorted(item.name for item in value.code.iterdir()) == [
+                "desktop_control.py",
+                "desktop_link.py",
+                "desktop_versions.py",
+            ]
+            assert value.owners[0].process.poll() is None
+        finally:
+            assert value.cleanup()
+        assert value.owners[0].process.returncode == 0
+
+
+def volume_row(volume):
+    return {
+        "Name": volume.name,
+        "Driver": "local",
+        "Scope": "local",
+        "CreatedAt": "2026-11-02T12:00:00Z",
+        "Mountpoint": "/var/lib/docker/volumes/" + volume.name + "/_data",
+        "Labels": {"ai-station.probe": volume.identity},
+        "Options": None,
+    }
+
+
+def test_local_database_volume_initializes_only_its_new_empty_mount_with_narrow_ownership_capability(
+    docker, monkeypatch
+):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("volume", "create"):
+            assert json.loads((docker.root / "database-volume/owner.json").read_text())["name"] == volume.name
+            return 0, volume.name
+        if args[:2] == ("volume", "inspect"):
+            return 0, json.dumps([volume_row(volume)])
+        if args[:2] == ("container", "create"):
+            record = json.loads((docker.root / "database-volume/initializer.json").read_text())
+            assert record["probe_id"] == child.identity and record["reserved_name"] == args[3]
+            assert args[args.index("--user") + 1] == "0:0"
+            assert args[args.index("--cap-drop") + 1] == "ALL"
+            assert args[args.index("--cap-add") + 1] == "CHOWN"
+            assert args[args.index("--network") + 1] == "none" and "--privileged" not in args
+            mounts = [args[i + 1] for i, arg in enumerate(args) if arg == "--mount"]
+            assert mounts == [volume.mount()] and not any("type=bind" in arg for arg in mounts)
+            assert args[-2:] == (str(os.geteuid()), str(os.getegid()))
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(child), "user": "0:0"})
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        return 0, ""
+
+    monkeypatch.setattr(probe.Docker, "call", call)
+    volume.prepare()
+    assert volume.frozen == volume.owned() and not volume.uncertain
+    assert volume.cleanup()
+    assert calls.index(("container", "rm", "a" * 64)) < calls.index(("volume", "rm", volume.name))
+
+
+def test_lost_volume_create_acknowledgement_is_preserved_and_never_adopted_or_removed(docker, monkeypatch):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "create")
+        raise RuntimeError("Lost volume creation acknowledgement")
+
+    monkeypatch.setattr(docker, "call", call)
+    with pytest.raises(RuntimeError, match="Lost volume"):
+        volume.prepare()
+    assert volume.uncertain and not volume.cleanup() and len(calls) == 1
+    assert (docker.root / "database-volume/owner.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"Name": "existing-user-data"},
+        {"Driver": "nfs"},
+        {"Scope": "global"},
+        {"Labels": {"ai-station.probe": "other-owner"}},
+        {"Options": {"type": "none", "device": "/home/user", "o": "bind"}},
+        {"CreatedAt": "replacement-created-at"},
+        {"Mountpoint": "/replacement"},
+    ],
+)
+def test_replaced_or_foreign_database_volume_is_never_removed(docker, monkeypatch, changes):
+    volume = probe.DatabaseVolume(docker)
+    original = volume_row(volume)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "inspect")
+        return 0, json.dumps([{**original, **changes}])
+
+    volume.frozen = {key: original[key] for key in ("Name", "Driver", "Scope", "CreatedAt", "Mountpoint")}
+    monkeypatch.setattr(docker, "call", call)
+    assert not volume.cleanup() and calls == [("volume", "inspect", volume.name)]
 
 
 def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docker, tmp_path):

@@ -12,6 +12,7 @@ on:
           - release-pr
           - macos-native-checks
           - macos-native-inference
+          - macos-desktop-transport
 permissions:
   contents: read
 jobs:
@@ -130,6 +131,7 @@ jobs:
             backend/tests/test_desktop_native_storage.py \
             backend/tests/test_macos_desktop_docker.py \
             backend/tests/test_desktop_bridge.py \
+            backend/tests/test_desktop_link.py \
             backend/tests/test_macos_transport_probe.py
       - name: Assemble fixed native Python layer
         env:
@@ -184,6 +186,35 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
+  macos-desktop-transport:
+    # Explicit developer prerequisite install on a fresh standard free public VM.
+    # Never run this job on an existing station, a private or a paid runner.
+    if: inputs.operation == 'macos-desktop-transport' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install fixed Docker Desktop and test actual native socket and chosen filesystem
+        env:
+          AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
+        run: bash scripts/macos_docker_desktop_qa.sh
+      - name: Report the owned bridge receipt if available
+        if: always()
+        run: |
+          if [ -f .native-mac/bridge-proof/result.json ]; then
+            cat .native-mac/bridge-proof/result.json
+          fi
+          if [ -f .native-mac/bridge-tls-proof/result.json ]; then
+            cat .native-mac/bridge-tls-proof/result.json
+          fi
+          if [ -f .native-mac/bridge-native-db-proof/result.json ]; then
+            cat .native-mac/bridge-native-db-proof/result.json
+          fi
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

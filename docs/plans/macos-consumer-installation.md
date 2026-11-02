@@ -38,6 +38,24 @@ Neither observation verifies Docker Desktop, shared native sockets, first-run,
 Metal or the consumer installer. Do not generalize either result to every host
 with that architecture.
 
+The separate explicit `macos-desktop-transport` developer workflow uses only the
+standard free public Intel host. It refuses an existing Docker app/configuration
+before changes, verifies Docker Desktop 4.97.0 build 244584 against the publisher's
+Intel DMG checksum and verifies its application signature. Docker's documented
+administrator installer/license action is confined to that new disposable QA VM;
+this never runs on an existing user's station or in ordinary native checks.
+The desktop is started/stopped through its fixed CLI, then the existing private
+socket/artifact/WAL probe tests a new chosen folder including Unicode and commas.
+The only container download is the probe's pinned Python fixture; there is no AI
+model, cloud credential, public listener or change to the consumer platform gate.
+Failures remain failures with an owned probe receipt when available. Full Mac
+installation, first result, updates/removal, Metal and signing require their own
+evidence even if this narrower bridge experiment succeeds.
+[Publisher release/checksum](https://docs.docker.com/desktop/release-notes/#4970),
+[documented prerequisite installation](https://docs.docker.com/desktop/setup/install/mac-install/#install-from-the-command-line),
+[bounded desktop start](https://docs.docker.com/reference/cli/docker/desktop/start/)
+and [stop](https://docs.docker.com/reference/cli/docker/desktop/stop/).
+
 `macos_desktop_docker.py` supplies read-only prerequisite discovery for a Finder
 launch: it locates the installed Docker Desktop CLI in the system/user
 Applications bundle, accepts only an executable inside that bundle, and reads
