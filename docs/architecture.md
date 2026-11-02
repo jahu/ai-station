@@ -95,6 +95,15 @@ resume the same owned operation; cancellation preserves partial output and never
 replays that identity. This is the database component of the planned consistent
 backup, not a completed files export/restore feature or an enabled consumer path.
 
+The [native full-export coordinator](plans/desktop-snapshots.md) now binds that
+database to retained files, private configuration and installation provenance.
+It holds the existing desktop/launcher locks, checks native and container file
+clients, and fences ordinary startup until completion or explicit cancellation.
+Interrupted copies and database reader acknowledgements resume the same backup;
+standalone verification does not need the original source. Restoring that full
+backup and presenting the complete native consumer flow remain required before
+Mac admission. Historical receipts never become target execution authority.
+
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
 free and inactive page queues, with both components reported; speculative pages

@@ -95,6 +95,9 @@ def data_preserving_compose_down(compose: list[str]) -> list[str]:
 
 
 def ensure_recovery_finished(runtime: Path) -> None:
+    snapshot = runtime / "desktop-snapshot-pending.json"
+    if snapshot.exists() or snapshot.is_symlink():
+        raise RuntimeError("Finish or cancel the pending private backup before starting AI Station")
     for name in ("desktop-upgrade-pending.json", "desktop-upgrade-dispatch-pending.json"):
         upgrade = runtime / name
         if upgrade.exists() or upgrade.is_symlink():
@@ -178,6 +181,9 @@ def attest_native_database(config, engine, env):
     value = desktop.manifest(ROOT)
     desktop.verify(ROOT, value)
     root = config.parent
+    from desktop_snapshots import assert_finished
+
+    assert_finished(root, Path(env["AI_STATION_DATA_HOST_PATH"]))
     path = root / "database-storage" / STORAGE_RECEIPT
     if not path.exists() and not path.is_symlink():
         raise ValueError("The desktop parent must prepare persistent database storage before startup")

@@ -257,6 +257,10 @@ package preparation, not permission to bypass the transport/consumer gates below
 
 ### Offline database upgrade transaction
 
+The separate [private desktop backup contract](desktop-snapshots.md) records the
+implemented full-export candidate and remaining preserving restore/native UI
+acceptance. A database-only export or a host-folder copy is insufficient.
+
 Implement the data transaction before wiring native update consent. A fixed,
 trusted installer command in the verified control-plane image uses its existing
 Alembic revisions with an explicitly supplied staging connection. The native

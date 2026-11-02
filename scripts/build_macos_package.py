@@ -28,6 +28,9 @@ MAC_SOURCES = (
     "scripts/macos_desktop_docker.py",
     "scripts/macos_transport_probe.py",
     "scripts/desktop_bridge.py",
+    "scripts/desktop_backup.py",
+    "scripts/desktop_snapshots.py",
+    "scripts/desktop_snapshot_files.py",
 )
 
 

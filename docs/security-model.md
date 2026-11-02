@@ -99,6 +99,16 @@ socket proofs may confirm pending cleanup only; they cannot admit a new startup.
 The Mac admission gate remains closed until the full journey is qualified.
 
 Database export is a fixed native-installer operation, not an HTTP/agent tool.
+The [full-export coordinator](plans/desktop-snapshots.md) extends this operation
+with private retained files and native configuration/provenance. It holds desktop
+and launcher locks, checks platform-owned process groups and bounded container
+mount/state metadata, and refuses active data clients without signaling them.
+Private source credentials are included for recovery, never served in Library or
+ordinary downloads. Live runtime/process authority is excluded; external links
+remain references. Startup fences survive interruption until verified completion
+or explicit cancellation. This does not yet authorize importing old security or
+execution authority during restore, or qualify the complete Mac consumer path.
+
 Its non-root image helper has no network, GPU, Runner socket or additional
 capabilities; only the attested database volume (read-only) and one fresh private
 output directory (writable) are mounted. The directory stays outside application
