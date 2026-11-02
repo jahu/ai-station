@@ -249,6 +249,17 @@ def configuration(root):
 
 
 def prerequisites():
+    if platform.system() == "Darwin":
+        from macos_desktop_docker import prerequisites as native_prerequisites
+
+        try:
+            package = manifest(ROOT)
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Open the complete Mac application package; Docker routing alone cannot start AI Station"
+            ) from None
+        native_prerequisites(package, launch_environment())
+        return
     if platform.system() != "Linux" or platform.machine().lower() not in {"amd64", "x86_64"}:
         raise RuntimeError("This desktop package is for Linux x86-64")
     if not shutil.which("docker"):

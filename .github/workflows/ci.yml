@@ -13,6 +13,7 @@ on:
           - macos-native-checks
           - macos-native-inference
           - macos-desktop-transport
+          - macos-native-ui-checks
 permissions:
   contents: read
 jobs:
@@ -202,6 +203,28 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
+  macos-native-ui:
+    # Stock native source, system UI automation; no model/Docker/OS mutation.
+    if: inputs.operation == 'macos-native-ui-checks' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    runs-on: macos-15-intel
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Drive actual native windows through Apple UI automation
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          mkdir -m 700 .native-mac
+          mkdir -m 700 .native-mac/ui-acceptance
+          /usr/bin/xcodebuild test \
+            -project packaging/macos/acceptance/NativeAcceptance.xcodeproj \
+            -scheme NativeAcceptance -configuration Debug \
+            -destination 'platform=macOS' -parallel-testing-enabled NO \
+            -derivedDataPath "$PWD/.native-mac/ui-acceptance/build" \
+            -resultBundlePath "$PWD/.native-mac/ui-acceptance/result.xcresult" \
+            CODE_SIGN_IDENTITY=-
   macos-desktop-transport:
     # Explicit developer prerequisite install on a fresh standard free public VM.
     # Never run this job on an existing station, a private or a paid runner.

@@ -7,7 +7,32 @@ control plane, native user Runner and Task → Run → Events → Artifacts life
 
 ## Current code and verified upstream constraints
 
-`scripts/desktop.py` retains the Linux-only consumer prerequisite gate. Independent
+The unmerged consumer-qualification candidate replaces the Linux-only preflight
+with a read-only Mac package/OS/architecture and pinned local Docker Desktop
+check. This is preparation for the actual installed journey, not qualification.
+Do not merge/admit that startup change based only on native unit or neutral-image
+bundle checks. Its next gate is the real verified package with Docker Desktop,
+first administrator, guided model preparation, first CPU reply, Stop/restart,
+preserving update, cancellation/recovery, full backup/restore and removal.
+
+Native end-to-end acceptance should drive the stock application using
+[Apple XCUIAutomation](https://developer.apple.com/documentation/XCUIAutomation),
+alongside the real browser/API flow. Do not add an automatic-consent switch to
+the shipped application or substitute patched dialogs/prerequisites for this
+gate. Apple documents a separate Xcode Helper accessibility consent for native
+[UI tests](https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/testing_with_xcode/chapters/09-ui_testing.html).
+Inspect the fresh QA host's actual capabilities; do not mutate an existing
+workstation or edit TCC databases to manufacture a passing result. Missing native
+UI permissions are an explicit qualification gap, not an inferred pass.
+
+The separate manual `macos-native-ui-checks` experiment compiles the unchanged
+native source into an Xcode test application and drives secure fields, explicit
+MFA acknowledgement, restore review and folder-picker Cancel using system UI
+automation. It uses a standard free public Intel host, no Docker/model and no
+OS permission changes. This establishes native UI automation availability and
+control behavior, not the complete distributed package or installed journey.
+
+The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,
 the Docker Desktop bridge and model setup/catalog are still separate requirements.

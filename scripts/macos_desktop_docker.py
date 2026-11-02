@@ -1,5 +1,6 @@
 """Read-only discovery of the installed local Mac Docker Desktop prerequisite."""
 
+import json
 import os
 import platform
 import shutil
@@ -83,3 +84,36 @@ def connection(command):
     ):
         raise ValueError("Only the local Docker Desktop Unix endpoint is accepted")
     return str(binary), endpoint
+
+
+def prerequisites(package, environment):
+    """Read-only preflight for the complete Mac package candidate.
+
+    Actual installed-consumer qualification is required before this branch can
+    replace the release's platform gate. This function never installs Docker.
+    """
+    from desktop_engine import context_command, select
+    from desktop_update import compatible
+    from macos_transport_probe import ARCHITECTURES, INFO
+
+    compatible(package)
+    engine = select(environment)
+    code, version = context_command(engine.command("compose", "version", "--short"), env=engine.environment)
+    if code or not version or len(version) > 128:
+        raise RuntimeError(
+            "Docker Desktop's Compose is unavailable. Finish Docker Desktop setup and try again."
+        )
+    code, raw = context_command(engine.command("info", "--format", INFO), env=engine.environment)
+    try:
+        observed = json.loads(raw) if not code and len(raw) <= 4096 else None
+    except (ValueError, TypeError):
+        observed = None
+    if (
+        not isinstance(observed, dict)
+        or set(observed) != {"os", "arch", "system"}
+        or observed["os"] != "linux"
+        or observed["system"] != "Docker Desktop"
+        or ARCHITECTURES.get(observed["arch"]) != ARCHITECTURES.get(package["architecture"])
+    ):
+        raise RuntimeError("Open Docker Desktop's matching local Linux engine, then try again.")
+    return engine

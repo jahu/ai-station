@@ -243,8 +243,8 @@ def test_linux_engine_keeps_existing_routing_without_macos_discovery(monkeypatch
         desktop_engine.select(env, expected=("/fixture", "unix:///fixture"))
 
 
-def test_consumer_gate_is_not_removed_by_docker_routing(installed):
-    with pytest.raises(RuntimeError, match="Linux x86-64"):
+def test_docker_routing_does_not_admit_an_unpackaged_mac_checkout(installed):
+    with pytest.raises(RuntimeError, match="complete Mac application package"):
         desktop.prerequisites()
     assert not installed.journal.exists()
 
