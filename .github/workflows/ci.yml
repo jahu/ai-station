@@ -122,6 +122,11 @@ jobs:
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}
         run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_application_probe.py "$TARGET_ARCHITECTURE"
+      - name: Exercise native SDK preparation through installed Runner
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          .native-mac/application-python/bin/python3.12 -IB scripts/macos_sdk_preparation_probe.py "$TARGET_ARCHITECTURE"
       - name: Compile and exercise native presentation and desktop storage
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}

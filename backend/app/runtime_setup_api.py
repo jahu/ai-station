@@ -17,6 +17,7 @@ from app.image_setup_client import ImageSetupClient
 from app.model_setup import DB, Resume, administrator, fingerprint
 from app.models import Run, Task
 from app.music_setup_client import MusicSetupClient
+from app.native_llama_setup_client import NativeLlamaSetupClient
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
 from app.speech_setup_client import SpeechSetupClient
@@ -33,6 +34,7 @@ EFFECTS_PROFILE = "mmaudio-large44-linux-x86-64-python312-v1"
 FISH_PROFILE = "fish-s2-pro-linux-x86-64-python312-v1"
 VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
+NATIVE_LLAMA_PROFILES = {"llamacpp-native-darwin-arm64-b12032-v2", "llamacpp-native-darwin-x86_64-b12032-v2"}
 Profile = Literal[
     "llamacpp-cuda-linux-amd64-v1",
     "llamacpp-cpu-linux-amd64-v1",
@@ -43,6 +45,8 @@ Profile = Literal[
     "sonic-whole-linux-x86-64-python310-v1",
     "mmaudio-large44-linux-x86-64-python312-v1",
     "fish-s2-pro-linux-x86-64-python312-v1",
+    "llamacpp-native-darwin-arm64-b12032-v2",
+    "llamacpp-native-darwin-x86_64-b12032-v2",
 ]
 
 
@@ -57,7 +61,9 @@ class Prepare(BaseModel):
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
         client = (
-            FishSetupClient(timeout=30)
+            NativeLlamaSetupClient(timeout=30)
+            if profile in NATIVE_LLAMA_PROFILES
+            else FishSetupClient(timeout=30)
             if profile == FISH_PROFILE
             else EffectsSetupClient(timeout=30)
             if profile == EFFECTS_PROFILE
@@ -75,7 +81,7 @@ def report(profile="llamacpp-cuda-linux-amd64-v1"):
         )
         return (
             client.runtime_setup_catalog(profile=profile)
-            if profile == "llamacpp-cpu-linux-amd64-v1"
+            if profile == "llamacpp-cpu-linux-amd64-v1" or profile in NATIVE_LLAMA_PROFILES
             else client.runtime_setup_catalog()
         )
     except (RunnerError, RunnerUnavailable):
@@ -125,13 +131,16 @@ def attempt(session, task, saved, previous=None):
     avatar = saved["recipe"]["profile"] == AVATAR_PROFILE
     effects = saved["recipe"]["profile"] == EFFECTS_PROFILE
     fish = saved["recipe"]["profile"] == FISH_PROFILE
-    inputs = speech or image or music or video or avatar or effects or fish
+    native_llama = saved["recipe"]["profile"] in NATIVE_LLAMA_PROFILES
+    inputs = speech or image or music or video or avatar or effects or fish or native_llama
     run = create_run(
         session,
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="fish_setup"
+        executor_type="native_llama_setup"
+        if native_llama
+        else "fish_setup"
         if fish
         else "effects_setup"
         if effects
@@ -155,7 +164,7 @@ def attempt(session, task, saved, previous=None):
             "execution_deadline_at": (utcnow() + timedelta(hours=24 if inputs else 2)).isoformat(),
         },
         permissions=[*PERMISSIONS, "filesystem_read"] if inputs else PERMISSIONS,
-        requested_resources={"ram_mib": 4096 if inputs else 1024},
+        requested_resources={"ram_mib": 1024 if native_llama else 4096 if inputs else 1024},
         retry_class="inspect",
         parent_run_id=previous.id if previous else None,
     )
@@ -191,7 +200,12 @@ def prepare(body: Prepare, session: DB):
         raise HTTPException(409, "The runtime recipe changed; refresh and review it")
     task = Task(
         id=str(body.client_request_id),
-        title="Prepare " + recipe.get("name", "Chatterbox speech"),
+        title="Prepare "
+        + (
+            "llama.cpp · macOS native SDK"
+            if body.profile in NATIVE_LLAMA_PROFILES
+            else recipe.get("name", "Chatterbox speech")
+        ),
         prompt="Prepare the explicitly reviewed local runtime",
         capability="runtime.prepare",
         intent=INTENT,

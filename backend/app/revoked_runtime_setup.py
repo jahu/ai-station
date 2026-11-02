@@ -34,6 +34,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             "avatar_setup",
             "effects_setup",
             "fish_setup",
+            "native_llama_setup",
         }
         and not image_job
     ) or run.owner_id is None:
@@ -46,11 +47,16 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         "avatar_setup",
         "effects_setup",
         "fish_setup",
+        "native_llama_setup",
     }
     if inputs:
         from app.speech_setup_job import SpeechSetupExecutor
 
-        if run.executor_type == "fish_setup":
+        if run.executor_type == "native_llama_setup":
+            from app.native_llama_setup_job import NativeLlamaSetupExecutor
+
+            input_contract = NativeLlamaSetupExecutor()
+        elif run.executor_type == "fish_setup":
             from app.fish_setup_job import FishSetupExecutor
 
             input_contract = FishSetupExecutor()

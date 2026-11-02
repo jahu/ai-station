@@ -17,6 +17,11 @@ _DARWIN_OPERATIONS = frozenset(
         ("GET", "/v1/hardware"),
         ("GET", "/v1/process/{run_id}"),
         ("POST", "/v1/process/cancel"),
+        ("GET", "/v1/setup/native-llama"),
+        ("POST", "/v1/setup/native-llama/prepare"),
+        ("GET", "/v1/setup/native-llama/{identity}"),
+        ("POST", "/v1/setup/native-llama/{identity}/cancel"),
+        ("POST", "/v1/setup/native-llama/{identity}/adopt"),
     }
 )
 

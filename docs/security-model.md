@@ -100,12 +100,20 @@ Bounded native group enumeration rejects denial, malformed data and truncation;
 unknown inspection is not treated as process exit. This candidate has no new
 endpoint or user-configurable command/path and is selected by the normal Runner
 only on Darwin. A platform dependency on the complete FastAPI application
-restricts Mac access to health, read-only hardware and existing owned process
-inspection/Stop; included and future routers do not implicitly gain execution
+restricts Mac access to health, read-only hardware, existing owned process
+inspection/Stop and fixed native SDK preparation. Included and future routers do not implicitly gain execution
 authority. Unknown platforms are denied before manager storage/recovery. Linux
 keeps its existing API and process implementation. The Linux-only private-tailnet
 recipe is not restored at Mac startup. Native model setup/inference API admission,
 memory policy, transport and consumer installation remain separate requirements.
+
+The [native SDK preparation](plans/macos-managed-llama.md) accepts only two fixed
+reviewed profiles and model/network/workspace permissions. An offline owned child
+uses installed isolated/no-bytecode Python, verified immutable archive bytes and
+canonical private storage. It installs no packages, changes no Docker/OS settings
+and receives no repository module paths. Shared readiness uses an opaque mapping;
+private operation IDs and receipts remain outside shared model metadata. SDK
+readiness cannot authorize model loading or unqualified platform operations.
 
 The internal native llama.cpp candidate reuses that ownership engine with fixed
 SDK/model references, private canonical inference sockets and a minimal environment.
