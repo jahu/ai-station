@@ -147,6 +147,39 @@ creation/attestation, offline upgrade commands and consistent export/restore mus
 still be connected before this candidate is admitted; do not set a foreign volume
 name manually to bypass installation.
 
+### Remaining persistent-storage integration
+
+Before enabling Mac installation:
+
+1. Bind a private storage receipt outside app data to the selected directory
+   identity, Compose project, UID/GID and pinned engine. Attest the exact local
+   volume's name, labels, creation identity and driver options on every startup
+   and offline operation. Lost creation acknowledgements keep their pending
+   fence; unknown volumes are never adopted, initialized or removed. Only the
+   fixed, empty-volume ownership initializer can run as root, without host mounts.
+2. All three application services and every fixed offline image command mount
+   that same volume at `/data/db`. Never inspect the active DB with native
+   SQLite or mistake an empty/stale `db` folder on the Mac for the active database.
+   A consistent backup/export remains under the selected host data folder and
+   must explicitly include the DB, retained files and storage receipt.
+3. Stage migrated/restored SQLite bytes **inside the DB volume** before atomic
+   publication. Existing `desktop_upgrade.py` staging under host-backed
+   `desktop-upgrades` would cross filesystems and make `os.replace` fail with
+   `EXDEV`. Keep exported pre-update backups host-backed, preserve existing Linux
+   pending-operation layouts, and verify the new publication path across two
+   actual filesystems. No non-atomic copy over an active database is acceptable.
+4. Native upgrade activation consumes the fixed image's attested database
+   fingerprint; it cannot hash a nonexistent native `db/ai-station.sqlite`.
+   Quiescence includes the owned station and every container using the volume;
+   a foreign user of that volume is refused, never stopped. Version namespaces
+   bind the storage receipt while existing Linux/WSL identities remain unchanged.
+5. Demonstrate first admin, guided CPU model, real streaming, owned Stop,
+   restart/history, preserving update/cancellation/recovery, consistent export,
+   offline restoration and uninstall/reinstall preserving the same database and
+   credentials. Compose Stop, update and uninstall never delete persistent DB
+   storage. Only then reconsider the consumer prerequisite gate; ARM/Metal,
+   signing and minimum OS remain separate qualification requirements.
+
 - Actual same-host UDS → mutual TLS → UDS with neutral HTTP/streaming. Reject
   absent/foreign certificates, wrong native peers, changed credential/socket
   files and public targets. Check concurrent streams, backpressure, parent exit,
