@@ -19,6 +19,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from desktop_control import same_user
+from macos_desktop_docker import connection
 
 IMAGE = "docker.io/library/python@sha256:2f17fc044b579bab302c2e8054d3a686e2cb9a83de48e70534b94cd8ebbe06a9"
 IMAGE_IDS = {
@@ -116,7 +117,7 @@ class Docker:
         (client / "config.json").write_text("{}")
         (client / "config.json").chmod(0o600)
         self.argv = [binary, "--host", endpoint, "--config", str(client)]
-        self.env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C"}
+        self.env = {"PATH": str(Path(binary).parent) + os.pathsep + os.defpath, "LANG": "C"}
         self.identity = uuid4().hex
         self.ids = []
         self.reserved_names = []
@@ -289,10 +290,10 @@ def file_checks(data, stored, *, locked):
                 raise ValueError("The shared database failed integrity inspection")
 
 
-def experiment(docker, root):
+def experiment(docker, root, *, data_root=None):
     sockets = root / "sockets"
     sockets.mkdir(mode=0o700)
-    data = root / ("long Application Support path " * 4) / "data"
+    data = (data_root or root) / ("long Application Support path " * 4) / "data"
     data.mkdir(mode=0o700, parents=True)
     stored = secrets.token_hex(32)
     channel = sockets / "channel.sock"
@@ -339,6 +340,8 @@ def experiment(docker, root):
         "long_path_artifact_sha256": hashlib.sha256(bytes.fromhex(stored)).hexdigest(),
         "sqlite_wal": True,
         "concurrent_writer_lock": True,
+        "chosen_data_filesystem": data_root is not None,
+        "data_filesystem_device": data.stat().st_dev,
     }
 
 
@@ -350,20 +353,39 @@ def receipt(path, value):
         os.fsync(target.fileno())
 
 
-def probe(output, *, prepare_image=False):
+def data_parent(path):
+    path = Path(path).absolute()
+    if path.resolve(strict=True) != path:
+        raise ValueError("Choose a canonical application data folder without symlink traversal")
+    info = path.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o022:
+        raise ValueError("Choose an owned application data folder without shared write access")
+    return path
+
+
+def removable(path, original):
+    if original is None:
+        return False
+    try:
+        current = path.lstat()
+    except FileNotFoundError:
+        return False
+    return (
+        (current.st_dev, current.st_ino) == (original.st_dev, original.st_ino)
+        and current.st_uid == os.geteuid()
+        and stat.S_ISDIR(current.st_mode)
+        and not current.st_mode & 0o077
+    )
+
+
+def probe(output, *, prepare_image=False, data_directory=None):
     if platform.system() != "Darwin" or os.geteuid() == 0:
         raise ValueError("This qualification requires a native, ordinary-user Mac")
     architecture = ARCHITECTURES.get(platform.machine().lower())
     if architecture not in IMAGE_IDS:
         raise ValueError("This Mac architecture has no reviewed fixture")
-    binary = shutil.which("docker")
-    if binary is None:
-        raise ValueError("Start the installed Docker Desktop prerequisite first")
-    _, endpoint = command(
-        [binary, "context", "inspect", "desktop-linux", "--format", '{{(index .Endpoints "docker").Host}}']
-    )
-    if not endpoint.startswith("unix:///"):
-        raise ValueError("Only the local Docker Desktop Unix endpoint is accepted")
+    selected = data_parent(data_directory) if data_directory is not None else None
+    binary, endpoint = connection(command)
     output = Path(output).absolute()
     if output.parent.resolve(strict=True) != output.parent:
         raise ValueError("The proof directory must not traverse symlinks")
@@ -373,6 +395,8 @@ def probe(output, *, prepare_image=False):
     output.mkdir(mode=0o700)  # Fresh, never overwrite or replay a prior proof.
     root = Path(tempfile.mkdtemp(prefix="ast-probe-", dir=str(Path("/tmp").resolve())))
     original = root.lstat()
+    data_root = None
+    data_original = None
     docker = None
     result = {
         "platform": platform.system(),
@@ -380,8 +404,12 @@ def probe(output, *, prepare_image=False):
         "macos_installer_qualified": False,
         "other_os_user_tested": False,
         "image": IMAGE,
+        "chosen_data_directory": str(selected) if selected else None,
     }
     try:
+        if selected is not None:
+            data_root = Path(tempfile.mkdtemp(prefix=".ast-filesystem-", dir=selected))
+            data_original = data_root.lstat()
         docker = Docker(binary, endpoint, root, architecture)
         result["probe_id"] = docker.identity
         receipt(
@@ -389,6 +417,7 @@ def probe(output, *, prepare_image=False):
             {
                 **result,
                 "root": str(root),
+                "data_root": str(data_root) if data_root else None,
                 "native_uid": os.geteuid(),
                 "reserved_names": [
                     "ai-station-mac-probe-" + docker.identity + "-" + phase for phase in ("write", "read")
@@ -405,7 +434,9 @@ def probe(output, *, prepare_image=False):
         ):
             raise ValueError("The selected engine is not native-architecture Docker Desktop")
         result["image_id"] = docker.image(prepare=prepare_image)
-        result["checks"] = experiment(docker, root)
+        result["checks"] = (
+            experiment(docker, root, data_root=data_root) if data_root else experiment(docker, root)
+        )
         result["transport_passed"] = True
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyboardInterrupt) as exc:
         result.update(transport_passed=False, error_type=type(exc).__name__, error=str(exc)[:500])
@@ -413,22 +444,20 @@ def probe(output, *, prepare_image=False):
         result["cleanup_complete"] = docker.cleanup() if docker else True
         result["reserved_names"] = docker.reserved_names if docker else []
         result["container_ids"] = docker.ids if docker else []
-        try:
-            current = root.lstat()
-        except FileNotFoundError:
-            current = None
-        if (
-            result["cleanup_complete"]
-            and current is not None
-            and (current.st_dev, current.st_ino) == (original.st_dev, original.st_ino)
-            and current.st_uid == os.geteuid()
-            and stat.S_ISDIR(current.st_mode)
-            and not current.st_mode & 0o077
-        ):
-            shutil.rmtree(root)
+        directories = [(root, original)]
+        if data_root is not None:
+            directories.append((data_root, data_original))
+        if result["cleanup_complete"] and all(removable(path, info) for path, info in directories):
+            try:
+                for path, _ in reversed(directories):
+                    shutil.rmtree(path)
+            except OSError:
+                result["cleanup_complete"] = False
         else:
             result["cleanup_complete"] = False
+        if not result["cleanup_complete"]:
             result["retained_root"] = str(root)
+            result["retained_data_root"] = str(data_root) if data_root else None
         result["transport_passed"] = result.get("transport_passed", False) and result["cleanup_complete"]
         receipt(output / "result.json", result)
         if result["cleanup_complete"]:
@@ -445,11 +474,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path, help="A fresh private proof directory")
     parser.add_argument(
+        "--data-directory",
+        type=Path,
+        help="Existing chosen app data folder; only a new disposable child is tested",
+    )
+    parser.add_argument(
         "--prepare-image",
         action="store_true",
         help="Download only the fixed reviewed fixture image if absent",
     )
     args = parser.parse_args()
-    outcome = probe(args.output, prepare_image=args.prepare_image)
+    outcome = probe(args.output, prepare_image=args.prepare_image, data_directory=args.data_directory)
     print(json.dumps(outcome, indent=2))
     raise SystemExit(0 if outcome["transport_passed"] else 1)

@@ -18,6 +18,7 @@ from macos_desktop_python import fingerprint, native_file, recipe
 
 ROOT = Path(__file__).resolve().parent.parent
 ARCHITECTURES = {"arm64": "arm64", "x86_64": "amd64"}
+MAC_SOURCES = ("scripts/macos_desktop_docker.py", "scripts/macos_transport_probe.py")
 
 
 def git(*args):
@@ -172,6 +173,8 @@ def bundle(output, python_layer, native_layer, architecture, image, image_build,
         executable.parent.mkdir(parents=True)
         resources.mkdir()
         copy_sources(resources)
+        for name in MAC_SOURCES:
+            shutil.copy2(ROOT / name, resources / name)
         shutil.copytree(python_layer, resources / "python", symlinks=True)
         if file_manifest(resources / "python") != python_files:
             raise ValueError("Application Python changed while copying")

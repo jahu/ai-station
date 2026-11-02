@@ -30,8 +30,10 @@ class LocalClient:
     def __init__(self):
         self.children = []
         self.tokens = []
+        self.data_roots = []
 
     def container(self, sockets, data, phase):
+        self.data_roots.append(data)
         self.tokens.append(json.loads((sockets / "token.json").read_text()))
         child = subprocess.Popen(
             [
@@ -72,6 +74,27 @@ def test_separate_client_round_trip_real_wal_lock_and_restart(short_root):
         assert client.tokens[0]["nonce"] != client.tokens[1]["nonce"]
         assert client.tokens[0]["stored"] == client.tokens[1]["stored"]
         assert not (short_root / "sockets/channel.sock").exists()
+    finally:
+        client.close()
+
+
+def test_chosen_data_filesystem_round_trip_keeps_existing_data_outside_the_mount(short_root, tmp_path):
+    selected = tmp_path / ("Long użytkownik Application Support " * 3)
+    selected.mkdir(mode=0o700)
+    keep = selected / "existing-data.txt"
+    keep.write_text("preserve existing user data")
+    owned = selected / ".owned-probe"
+    owned.mkdir(mode=0o700)
+    client = LocalClient()
+    try:
+        result = probe.experiment(client, short_root, data_root=owned)
+        assert result["chosen_data_filesystem"]
+        assert result["data_filesystem_device"] == selected.stat().st_dev
+        assert result["sqlite_wal"] and result["concurrent_writer_lock"]
+        assert client.data_roots[0] == client.data_roots[1]
+        assert client.data_roots[0].is_relative_to(owned)
+        assert not (short_root / "sockets").is_relative_to(selected)
+        assert keep.read_text() == "preserve existing user data"
     finally:
         client.close()
 
@@ -234,7 +257,9 @@ def test_other_fixture_bytes_or_emulated_architecture_are_not_admitted(docker, c
 def test_tcp_endpoint_is_denied_before_any_container_or_proof_write(tmp_path, monkeypatch):
     monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
-    monkeypatch.setattr(probe.shutil, "which", lambda _: "/docker")
+    import macos_desktop_docker
+
+    monkeypatch.setattr(macos_desktop_docker, "find_cli", lambda: Path("/docker"))
     calls = []
 
     def context(*args, **kwargs):
@@ -248,14 +273,20 @@ def test_tcp_endpoint_is_denied_before_any_container_or_proof_write(tmp_path, mo
 
 
 @pytest.mark.parametrize("complete", [True, False])
+@pytest.mark.parametrize("chosen", [True, False])
+@pytest.mark.parametrize("changed", [True, False])
 def test_fresh_proof_preserves_uncertain_resources_and_never_claims_installer_readiness(
-    tmp_path, monkeypatch, complete
+    tmp_path, monkeypatch, complete, chosen, changed
 ):
     monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
     monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
-    monkeypatch.setattr(probe.shutil, "which", lambda _: "/fixed/docker")
+    monkeypatch.setattr(probe, "connection", lambda _: ("/fixed/docker", "unix:///private/desktop.sock"))
     monkeypatch.setattr(probe, "command", lambda *a, **k: (0, "unix:///private/desktop.sock"))
     captured = {}
+    selected = tmp_path / "application-data"
+    selected.mkdir(mode=0o700)
+    keep = selected / "keep.txt"
+    keep.write_text("existing user data")
 
     class Fixture:
         identity = "fixed-test-identity"
@@ -275,21 +306,60 @@ def test_fresh_proof_preserves_uncertain_resources_and_never_claims_installer_re
             return complete
 
     monkeypatch.setattr(probe, "Docker", Fixture)
-    monkeypatch.setattr(probe, "experiment", lambda *a: {"synthetic_unit_case": True})
+
+    def experiment(*args, **kwargs):
+        captured["data_root"] = kwargs.get("data_root")
+        if changed:
+            original = args[1]
+            moved = original.with_name(original.name + "-original")
+            original.rename(moved)
+            captured["moved"] = moved
+            original.mkdir(mode=0o700)
+            (original / "unrecognized-content.txt").write_text("preserve replacement")
+        return {"synthetic_unit_case": True}
+
+    monkeypatch.setattr(probe, "experiment", experiment)
     output = tmp_path / "fresh"
     try:
-        result = probe.probe(output)
-        assert result["transport_passed"] is complete
+        result = probe.probe(output, data_directory=selected if chosen else None)
+        cleaned = complete and not changed
+        assert result["transport_passed"] is cleaned
         assert result["macos_installer_qualified"] is False and result["other_os_user_tested"] is False
         assert (output / "result.json").stat().st_mode & 0o777 == 0o600
         assert json.loads((output / "result.json").read_text()) == result
-        assert (output / "pending.json").exists() is (not complete)
-        assert captured["root"].exists() is (not complete)
+        assert (output / "pending.json").exists() is (not cleaned)
+        assert captured["root"].exists() is (not cleaned)
+        if changed:
+            assert captured["moved"].exists()
+            assert (captured["root"] / "unrecognized-content.txt").read_text() == "preserve replacement"
+        assert keep.read_text() == "existing user data"
+        if chosen:
+            assert captured["data_root"].parent == selected
+            assert captured["data_root"].exists() is (not cleaned)
+            if not cleaned:
+                assert result["retained_data_root"] == str(captured["data_root"])
         with pytest.raises(FileExistsError):
             probe.probe(output)
     finally:
         if captured["root"].exists():
             shutil.rmtree(captured["root"])
+        if captured.get("data_root") is not None and captured["data_root"].exists():
+            shutil.rmtree(captured["data_root"])
+        if captured.get("moved") is not None and captured["moved"].exists():
+            shutil.rmtree(captured["moved"])
+
+
+def test_data_selection_rejects_symlink_boundary_or_shared_write_without_changing_files(tmp_path):
+    actual = tmp_path / "actual"
+    actual.mkdir(mode=0o700)
+    link = tmp_path / "link"
+    link.symlink_to(actual, target_is_directory=True)
+    with pytest.raises(ValueError, match="canonical application data"):
+        probe.data_parent(link)
+    actual.chmod(0o777)
+    with pytest.raises(ValueError, match="without shared write"):
+        probe.data_parent(actual)
+    assert actual.stat().st_mode & 0o777 == 0o777 and not list(actual.iterdir())
 
 
 def test_non_mac_entry_refuses_before_any_docker_or_proof_write(tmp_path, monkeypatch):
@@ -304,13 +374,18 @@ def test_non_mac_entry_refuses_before_any_docker_or_proof_write(tmp_path, monkey
     os.getenv("AI_STATION_REAL_TRANSPORT_CONTROL_TESTS") != "1" or sys.platform != "linux",
     reason="Opt-in real Linux control, never Mac qualification",
 )
-def test_real_linux_docker_protocol_control(short_root):
+@pytest.mark.parametrize("chosen", [False, True])
+def test_real_linux_docker_protocol_control(short_root, tmp_path, chosen):
     binary = shutil.which("docker")
     assert binary is not None
     docker = probe.Docker(binary, "unix:///var/run/docker.sock", short_root, "amd64")
     try:
         assert docker.image() in docker.accepted_images()
-        result = probe.experiment(docker, short_root)
+        data_root = tmp_path / ("Chosen użytkownik Application Support " * 3) if chosen else None
+        if data_root:
+            data_root.mkdir(mode=0o700)
+        result = probe.experiment(docker, short_root, data_root=data_root)
+        assert result["chosen_data_filesystem"] is chosen
         result.update(
             scope="actual Linux control only",
             macos_installer_qualified=False,

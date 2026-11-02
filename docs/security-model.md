@@ -53,6 +53,17 @@ Darwin enforces its shorter socket address bound without a Linux `/proc`
 fallback. These primitives add no listener or endpoint and do not enable the
 unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
 
+Mac Docker Desktop discovery is a read-only local desktop prerequisite. Its CLI
+must remain inside the installed application bundle; context inspection receives
+only a minimal environment and selects the fixed local `desktop-linux` context.
+Probe commands pin the resulting Unix endpoint and cannot inherit another
+station's Docker/provider routing. An optional chosen-data-filesystem test mounts
+only a newly created private disposable child, separate from native socket and
+client storage. Existing application data is not mounted or opened. Uncertain
+container cleanup retains both probe roots and their private receipts; changed
+directory identities are preserved. This exposes no HTTP/agent operation and
+does not admit the unqualified Mac consumer startup path.
+
 The read-only Metal inventory runs only a fixed installed Python observer in an
 isolated no-site/no-bytecode child with a minimal environment, bounded duration
 and validated output. Native framework errors/stderr are not exposed, and retained device/pool

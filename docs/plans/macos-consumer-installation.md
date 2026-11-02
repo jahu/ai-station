@@ -13,6 +13,17 @@ Runner components have passed the platform checks below. Consumer .app packaging
 the Docker Desktop bridge and model setup/catalog are still separate requirements.
 Removing the launcher's platform check alone cannot produce a correct Mac package.
 
+`macos_desktop_docker.py` supplies read-only prerequisite discovery for a Finder
+launch: it locates the installed Docker Desktop CLI in the system/user
+Applications bundle, accepts only an executable inside that bundle, and reads
+the fixed `desktop-linux` context in a minimal environment. Another station's
+Docker/provider variables cannot redirect it. The resulting native Unix endpoint
+is frozen for the probe's commands; no global context, settings, license, service
+or software installation is changed. These helpers ship in the Mac application
+resources, while the consumer prerequisite gate remains closed pending actual
+transport and first-run acceptance.
+[Docker's default CLI locations and user permissions](https://docs.docker.com/desktop/setup/install/mac-permission-requirements/).
+
 Docker's maintainer reports support for shared native Unix sockets with Docker
 Desktop 4.87, Docker VMM and its enabled socket-sharing component. This changes
 the older assumption that an extra TCP bridge is always necessary. Use an actual
@@ -111,6 +122,14 @@ package preparation, not permission to bypass the transport/consumer gates below
    mount the Docker socket or host home. Successful file sharing alone is not a
    Runner transport result. Verify the native/container UID mapping, SQLite WAL
    locking and canonical artifact paths on the actual shared filesystem as well.
+   The developer probe accepts `--data-directory` for the chosen existing app
+   folder. It creates and mounts only a new private disposable child there,
+   keeping its native socket/client configuration under a separate short path.
+   Existing databases/artifacts are neither mounted nor opened. Probe receipts
+   retain both owned roots when container cleanup is uncertain; successful
+   cleanup checks original device/inode/UID/mode before removing either root.
+   Symlink traversal and shared-writable data folders fail before probe writes.
+   A successful `/tmp` test alone does not qualify the chosen data filesystem.
    If this transport fails, stop setup with an actionable
    local prerequisite; design and review an authenticated alternative separately,
    without an automatic public/TCP listener.
