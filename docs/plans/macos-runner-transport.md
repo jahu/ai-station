@@ -139,6 +139,14 @@ socket and launch behavior. The full Mac consumer prerequisite gate stays closed
 and database storage, backup/update and full application qualification remain
 required before admitting an installation.
 
+The overlay additionally requires the installer's verified persistent DB volume
+name and mounts it at `/data/db` in all three control-plane services. It is an
+external volume: Compose must not create an implicit empty replacement or remove
+it on shutdown. A missing name fails configuration before startup. Native storage
+creation/attestation, offline upgrade commands and consistent export/restore must
+still be connected before this candidate is admitted; do not set a foreign volume
+name manually to bypass installation.
+
 - Actual same-host UDS → mutual TLS → UDS with neutral HTTP/streaming. Reject
   absent/foreign certificates, wrong native peers, changed credential/socket
   files and public targets. Check concurrent streams, backpressure, parent exit,

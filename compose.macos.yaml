@@ -12,6 +12,11 @@ x-native-client-volumes: &native-client-volumes
     read_only: true
     volume:
       nocopy: true
+  - type: volume
+    source: native-database
+    target: /data/db
+    volume:
+      nocopy: true
 
 services:
   ai-station:
@@ -65,6 +70,11 @@ services:
       start_period: 3s
 
 volumes:
+  # The trusted installer must create and attest this persistent local volume;
+  # Compose neither adopts a default name nor creates/removes the DB storage.
+  native-database:
+    external: true
+    name: ${AI_STATION_NATIVE_DATABASE_VOLUME:?The native installer must prepare and verify its database storage}
   native-runner:
     driver: local
     driver_opts:
