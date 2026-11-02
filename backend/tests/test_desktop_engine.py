@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tarfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -51,6 +52,27 @@ def installed(tmp_path, monkeypatch):
 
 def observations(fixture):
     return [json.loads(line) for line in fixture.journal.read_text().splitlines()]
+
+
+def test_isolated_supervisor_imports_helper_from_its_own_bundle(tmp_path):
+    # The development venv may have an old editable Runner. Supply only the
+    # current Runner source as its installed-package stand-in; deliberately do
+    # not add scripts or backend to the isolated child's module search path.
+    root = Path(__file__).resolve().parents[2]
+    code = (
+        "import runpy,sys;sys.path.insert(0,sys.argv[1]);"
+        "source=sys.argv[2];sys.argv=[source,'--help'];runpy.run_path(source,run_name='__main__')"
+    )
+    result = desktop_engine.subprocess.run(
+        [sys.executable, "-IB", "-c", code, str(root / "host-runner"), str(root / "scripts/launch.py")],
+        cwd=tmp_path,
+        env={"PATH": os.defpath, "PYTHONPATH": "/not-an-import-source"},
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--desktop" in result.stdout and not result.stderr
 
 
 def test_native_import_load_reinspection_use_one_selected_engine(installed, tmp_path, monkeypatch):

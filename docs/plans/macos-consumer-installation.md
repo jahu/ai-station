@@ -34,6 +34,10 @@ an engine operation. Linux/WSL retain their existing Docker configuration.
 Neutral executable fixtures exercise real child processes and failure cleanup;
 these checks do not qualify a Docker Desktop VM, native socket sharing or a
 complete Mac installation. The consumer prerequisite gate remains in place.
+The supervisor explicitly imports helpers from its own bundled scripts under
+isolated Python. The native bundle experiment also starts the actual installed
+supervisor with `-IB --help`, without Docker or station-data creation, to check
+this entry boundary independently of the `.app` manifest check.
 
 Docker's maintainer reports support for shared native Unix sockets with Docker
 Desktop 4.87, Docker VMM and its enabled socket-sharing component. This changes

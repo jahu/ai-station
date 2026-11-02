@@ -18,10 +18,14 @@ from uuid import uuid4
 
 import httpx
 from ai_station_runner.unix_sockets import unix_address
-from desktop_engine import select as select_engine
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
+# Installed desktop Python is isolated: import only this verified bundle's
+# supervisor helper, never ambient script/module search paths.
+sys.path.insert(0, str(ROOT / "scripts"))
+from desktop_engine import select as select_engine  # noqa: E402
+
 # Bind-mounted application data must survive shutdown. Never pass --volumes/-v/--rmi.
 COMPOSE_DOWN = ("down", "--timeout", "10")
 VOLUME_WIPE_FLAGS = frozenset({"-v", "--volumes", "--rmi"})

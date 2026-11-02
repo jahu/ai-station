@@ -83,6 +83,18 @@ def main(architecture):
             "workloads_started": False,
         }:
             raise ValueError("The actual .app entry did not verify its own resources")
+        resources = output / "Contents/Resources"
+        result = subprocess.run(
+            [str(resources / "python/bin/python3"), "-IB", str(resources / "scripts/launch.py"), "--help"],
+            cwd=work,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode or "--desktop" not in result.stdout or result.stderr:
+            raise ValueError("The actual isolated package supervisor could not import its helpers")
         (output / "Contents/Resources/control-plane.tar").write_bytes(b"changed fixture")
         result = run("--package-check")
         if result.returncode != 1 or "missing or changed" not in result.stderr:
@@ -99,6 +111,7 @@ def main(architecture):
         "native_bundle_entry_passed": True,
         "actual_installed_python": True,
         "package_check_passed": True,
+        "isolated_packaged_supervisor_import_passed": True,
         "tampering_refused": True,
         "conflicting_flags_refused": True,
         "python_inventory_unchanged": True,
