@@ -86,6 +86,15 @@ volume references; Compose receives only the attested volume and exact image.
 Consistent export/restore and actual complete consumer qualification remain required
 before Mac consumer admission.
 
+The fixed native database-export primitive mounts that VM volume read-only and
+one new private installer output folder outside application data. It clones main
+and committed WAL bytes before opening SQLite, then publishes an integrity-checked
+standalone database and source/image/hash receipt. Native code hashes the exported
+file but never opens the VM database with SQLite. Lost helper acknowledgements
+resume the same owned operation; cancellation preserves partial output and never
+replays that identity. This is the database component of the planned consistent
+backup, not a completed files export/restore feature or an enabled consumer path.
+
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
 free and inactive page queues, with both components reported; speculative pages

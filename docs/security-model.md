@@ -98,6 +98,19 @@ with the original writer still held, restart and confirmed cleanup. Old direct
 socket proofs may confirm pending cleanup only; they cannot admit a new startup.
 The Mac admission gate remains closed until the full journey is qualified.
 
+Database export is a fixed native-installer operation, not an HTTP/agent tool.
+Its non-root image helper has no network, GPU, Runner socket or additional
+capabilities; only the attested database volume (read-only) and one fresh private
+output directory (writable) are mounted. The directory stays outside application
+data because a full-station DB contains every account's private records and
+credential metadata. The helper clones main/WAL before opening the private copy
+with SQLite; original bytes and ownership remain unchanged. Native inspection
+verifies the fixed image acknowledgement, source binding and exported-file hash.
+Foreign volume users block dispatch. Stop/removal target only a completely
+inspected owned helper; completed snapshots and partial/canceled files remain.
+This primitive does not yet provide complete files backup/restoration or make
+the Mac consumer installer available.
+
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and
 unknown platforms deny access; file ownership alone cannot authorize a peer.

@@ -1,8 +1,11 @@
 """Persistent storage fencing and lost acknowledgements without a real Docker daemon."""
 
 import copy
+import csv
+import hashlib
 import json
 import os
+from pathlib import Path
 from uuid import uuid4
 
 import macos_database_storage as storage
@@ -23,6 +26,8 @@ class Daemon:
         self.foreign = False
         self.exit = 0
         self.output = lambda value: value
+        self.hang_export = False
+        self.export_reports = {}
 
     def __call__(self, argv, **kwargs):
         assert argv[:4] == ["/fixed/docker", "--host", "unix:///fixed.sock", "--config"]
@@ -109,6 +114,17 @@ class Daemon:
                 ],
                 "State": {"Status": "created", "Running": False, "ExitCode": 0, "OOMKilled": False},
             }
+            for i, arg in enumerate(args):
+                if arg == "--mount" and i != args.index("--mount"):
+                    fields = dict(v.split("=", 1) for v in next(csv.reader([args[i + 1]])))
+                    self.containers[identifier]["Mounts"].append(
+                        {
+                            "Type": "bind",
+                            "Source": fields["source"],
+                            "Destination": fields["target"],
+                            "RW": True,
+                        }
+                    )
             value = identifier
         elif pair == ("container", "inspect"):
             found = next((v for v in self.containers.values() if args[-1] in (v["Id"], v["Name"][1:])), None)
@@ -123,9 +139,21 @@ class Daemon:
                 return 0, condition[3:] if condition[3:] in self.containers else ""
             return 0, "\n".join([*self.containers, *(["f" * 64] if self.foreign else [])])
         elif pair == ("container", "start"):
-            self.containers[args[-1]]["State"].update(Status="exited", ExitCode=self.exit)
+            row = self.containers[args[-1]]
+            exporting = "export" in row["Config"]["Cmd"]
+            if exporting and self.hang_export:
+                row["State"].update(Status="running", Running=True)
+            else:
+                row["State"].update(Status="exited", ExitCode=self.exit)
+                if exporting and self.exit == 0:
+                    self.make_export(row)
+            value = args[-1]
+        elif pair == ("container", "stop"):
+            self.containers[args[-1]]["State"].update(Status="exited", Running=False, ExitCode=143)
             value = args[-1]
         elif pair == ("container", "logs"):
+            if args[-1] in self.export_reports:
+                return 0, json.dumps(self.output(self.export_reports[args[-1]]))
             args = self.containers[args[-1]]["Config"]["Cmd"]
             value = helper.binding(
                 flag("--storage-id"), flag("--namespace"), int(flag("--uid")), int(flag("--gid"))
@@ -144,6 +172,32 @@ class Daemon:
             self.lose = None
             raise RuntimeError("fixture lost acknowledgement")
         return 0, value
+
+    def make_export(self, row):
+        args = row["Config"]["Cmd"]
+
+        def flag(name):
+            return args[args.index(name) + 1]
+
+        folder = Path(next(m["Source"] for m in row["Mounts"] if m["Destination"] == "/export"))
+        # Neutral trusted-image reply: native code hashes bytes but never opens SQLite.
+        database = folder / "database.sqlite"
+        database.write_bytes(b"neutral synthetic database export bytes")
+        database.chmod(0o600)
+        report = {
+            "schema": 1,
+            "operation_id": flag("--operation-id"),
+            "image_id": flag("--image-id"),
+            "storage": helper.binding(
+                flag("--storage-id"), flag("--namespace"), int(flag("--uid")), int(flag("--gid"))
+            ),
+            "source": {"main": "e" * 64, "-wal": None, "-journal": None},
+            "database_sha256": hashlib.sha256(database.read_bytes()).hexdigest(),
+            "database_bytes": database.stat().st_size,
+            "database_revision": "0042",
+        }
+        storage.write(folder / "receipt.json", report)
+        self.export_reports[row["Id"]] = report
 
 
 @pytest.fixture
@@ -612,3 +666,177 @@ def test_packaged_child_refuses_changed_or_unprepared_storage_before_compose(chi
         args[:1] == ["compose"] or args[:2] in (["volume", "create"], ["container", "stop"])
         for args in daemon.calls[before:]
     )
+
+
+def test_database_export_uses_readonly_volume_and_private_native_output_without_replay(factory):
+    create, d, root, data = factory
+    owner = create()
+    owner.prepare()
+    operation = str(uuid4())
+    report = owner.export_database(operation)
+    folder = root / "database-exports" / operation
+    assert not folder.is_relative_to(data) and report["database_revision"] == "0042"
+    stamp = (folder / "database.sqlite").stat().st_mtime_ns
+    before = len(d.calls)
+    assert create().export_database(operation) == report
+    assert (folder / "database.sqlite").stat().st_mtime_ns == stamp
+    assert not any(args[:2] == ["container", "create"] for args in d.calls[before:])
+    assert len(d.volumes) == 1 and not d.containers
+
+
+@pytest.mark.parametrize("pair", [("container", "create"), ("container", "start"), ("container", "rm")])
+def test_export_lost_ack_recovers_same_helper_and_never_rewrites_snapshot(factory, pair):
+    create, d, _, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.lose = pair
+    with pytest.raises(RuntimeError, match="lost acknowledgement"):
+        create().export_database(operation)
+    assert create().export_database(operation)["operation_id"] == operation
+    assert (
+        sum(args[:2] == ["container", "create"] and "app.desktop_snapshot" in args for args in d.calls) == 1
+    )
+    assert not d.containers
+
+
+@pytest.mark.parametrize("change", ["source", "readonly", "missing"])
+def test_changed_export_mount_never_starts_helper(factory, change):
+    create, d, _, _ = factory
+    create().prepare()
+
+    def mutate(row):
+        if "export" not in row["Config"]["Cmd"]:
+            return
+        output = next(m for m in row["Mounts"] if m["Destination"] == "/export")
+        if change == "missing":
+            row["Mounts"].remove(output)
+        elif change == "source":
+            output["Source"] = "/foreign/private"
+        else:
+            output["RW"] = False
+
+    d.mutate = mutate
+    before = len(d.calls)
+    with pytest.raises(ValueError, match="identity or isolation"):
+        create().export_database(str(uuid4()))
+    assert not any(args[:2] == ["container", "start"] for args in d.calls[before:])
+
+
+def test_foreign_volume_reference_prevents_export_before_dispatch(factory):
+    create, d, _, _ = factory
+    create().prepare()
+    d.foreign = True
+    before = len(d.calls)
+    with pytest.raises(ValueError, match="Another container"):
+        create().export_database(str(uuid4()))
+    assert not any(args[:2] in (["container", "create"], ["container", "stop"]) for args in d.calls[before:])
+
+
+def test_export_file_tampering_cannot_return_a_completed_snapshot(factory):
+    create, _, root, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    create().export_database(operation)
+    (root / "database-exports" / operation / "database.sqlite").write_bytes(b"changed exported data")
+    with pytest.raises(ValueError, match="exported database bytes"):
+        create().export_database(operation)
+
+
+def test_cancel_only_owned_export_after_lost_start_ack_preserves_partial_bytes(factory):
+    create, d, root, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.hang_export = True
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(operation)
+    outcome = create().cancel_export(operation)
+    assert outcome["status"] == "canceled" and not d.containers and len(d.volumes) == 1
+    assert (root / "database-exports" / operation).is_dir()
+    assert sum(args[:2] == ["container", "stop"] for args in d.calls) == 1
+
+
+def test_cancel_refuses_another_export_identity_without_signaling_it(factory):
+    create, d, _, _ = factory
+    create().prepare()
+    d.hang_export = True
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(str(uuid4()))
+    before = len(d.calls)
+    with pytest.raises(ValueError, match="matching owned"):
+        create().cancel_export(str(uuid4()))
+    assert not any(args[:2] == ["container", "stop"] for args in d.calls[before:])
+
+
+@pytest.mark.parametrize("pair", [("container", "stop"), ("container", "rm")])
+def test_export_cancellation_lost_ack_is_reconciled_without_signaling_again(factory, pair):
+    create, d, _, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.hang_export = True
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(operation)
+    d.lose = pair
+    with pytest.raises(RuntimeError, match="lost acknowledgement"):
+        create().cancel_export(operation)
+    assert create().cancel_export(operation)["status"] == "canceled"
+    assert not d.containers
+    assert sum(args[:2] == ["container", "stop"] for args in d.calls) == 1
+
+
+def test_completed_export_is_preserved_when_cancel_arrives_after_success(factory):
+    create, d, root, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(operation)
+    assert create().cancel_export(operation)["status"] == "completed"
+    assert not any(args[:2] == ["container", "stop"] for args in d.calls)
+    assert (root / "database-exports" / operation / "database.sqlite").exists()
+
+
+def test_empty_export_reservation_can_resume_after_foreign_reference_is_removed(factory):
+    create, d, _, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.foreign = True
+    with pytest.raises(ValueError):
+        create().export_database(operation)
+    d.foreign = False
+    assert create().export_database(operation)["operation_id"] == operation
+
+
+def test_canceled_export_identity_cannot_implicitly_start_another_snapshot(factory):
+    create, d, _, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.hang_export = True
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(operation)
+    create().cancel_export(operation)
+    before = len(d.calls)
+    with pytest.raises((ValueError, FileNotFoundError)):
+        create().export_database(operation)
+    assert not any(args[:2] == ["container", "create"] for args in d.calls[before:])
+
+
+def test_cancel_rechecks_a_live_helper_even_if_prior_cleanup_phase_is_finished(factory):
+    create, d, _, _ = factory
+    create().prepare()
+    operation = str(uuid4())
+    d.hang_export = True
+    d.lose = ("container", "start")
+    with pytest.raises(RuntimeError):
+        create().export_database(operation)
+    # A delayed start can win the created→cleanup race. A finished journal must
+    # not suppress inspection/Stop while that exact owned container still exists.
+    owner = create()
+    owner.record["command"]["phase"] = "finished"
+    owner.save()
+    assert create().cancel_export(operation)["status"] == "canceled"
+    assert sum(args[:2] == ["container", "stop"] for args in d.calls) == 1
+    assert not d.containers
