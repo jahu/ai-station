@@ -45,6 +45,18 @@ Do not enable the consumer launcher until the strengthened shared-folder test
 passes. If it instead confirms missing exclusion with a live holder, a fallback
 candidate keeps artifacts/models/uploads on the selected bind mount but places
 `/data/db` on a project-owned persistent local Docker volume.
+
+The [strengthened actual Mac run](https://github.com/jahu/ai-station/actions/runs/41441710314)
+now confirms that distinction: the bind-mount contender reported
+`SQLiteWriterNotExcluded` **and** the original writer subsequently acknowledged
+its still-open transaction. The same run's local-volume candidate passed writer
+exclusion, uncommitted-row isolation, live-holder acknowledgement, commit,
+integrity, client restart, native TLS/Unix nonce exchange, artifact ownership and
+cleanup. Docker Desktop stopped normally. Thus the selected tested Mac topology
+requires local Docker DB storage; a raw Mac bind mount is not an admissible DB
+substitute. This is evidence for the observed Intel backend, not a blanket claim
+about every Mac/VMM. It does not qualify the full installer or Metal.
+
 All API/worker/scheduler and quiescent upgrade DB commands must use that same
 attested volume. A new disposable probe volume first has to pass the unchanged
 writer exclusion/visibility/integrity/restart tests. One fixed isolated initializer

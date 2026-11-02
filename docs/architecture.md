@@ -58,6 +58,15 @@ an optional connection process in the same application image. This alternative
 stays unavailable until actual transport, ownership, shutdown and full consumer
 checks pass; Linux/WSL retain the existing direct socket.
 
+Actual Intel qualification also finds missing SQLite writer exclusion on its
+shared host folder, with the original writer verified live. The tested Mac
+candidate therefore keeps native-shared artifacts/models but places the control
+plane DB on project-owned local Docker storage at `/data/db`. The same stronger
+WAL/locking/integrity/restart test passes there. Full admission still requires
+the supervisor, preserving image upgrades, explicit consistent backup/export and
+data-preserving removal to use the attested DB volume. Linux/WSL storage is
+unchanged; copying only a Mac host folder must not be presented as a full backup.
+
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
 free and inactive page queues, with both components reported; speculative pages

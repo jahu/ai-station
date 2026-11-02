@@ -1474,6 +1474,15 @@ as interchangeable. Mac offline upgrades retain the quiescent application-image
 path; the Linux host recovery CLI is not shipped in the Mac bundle. See the
 [actual transport observations](plans/macos-runner-transport.md).
 
+The strengthened actual Intel probe confirms missing shared-folder writer
+exclusion while its original transaction remains live; a disposable local Docker
+DB volume passes the same checks. The fixed QA initializer is the sole root
+exception: no host paths, network, Docker socket or GPU, all capabilities dropped
+except `CHOWN`, and an emptiness check before setting ownership on its newly
+created, attested volume. Normal DB clients remain non-root. Unknown or replaced
+volume identities are preserved; uncertain creation is not replayed. Production
+Mac storage/upgrade/backup integration must be qualified before consumer admission.
+
 The offline desktop-upgrade command is confined to the verified application
 image and canonical user-owned app data. It has no HTTP/Runner/agent route or
 caller-selected command. UUID-bound previous/target identities, source/backup/
