@@ -57,6 +57,13 @@ verified single binary. The helper stays inside the existing retained resource
 tree; complete outer-bundle code placement, signing/notarization and full native
 consumer acceptance remain required release gates.
 
+[Run 41545584872](https://github.com/jahu/ai-station/actions/runs/41545584872)
+passed all five system UI cases with this shared helper bundle. The additional
+case verifies the host-launched PID, exact executable and application identity,
+then operates its actual recovery dialog and cancels it. The host independently
+checks clean exit and the private cancellation reply. This closes the helper's
+identity/accessibility gap, not the full installed consumer journey.
+
 The separate manual `macos-consumer-backend` job reuses the fresh-host, fixed
 Docker Desktop installer guards and builds the real native Python, Runner,
 interface, control-plane image and `.app`. Its explicit CPU model fixture is the

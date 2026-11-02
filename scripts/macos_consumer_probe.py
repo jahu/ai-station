@@ -82,9 +82,13 @@ class Client:
 
     def wait(self, path, *, timeout=900):
         deadline = time.monotonic() + timeout
+        observed_status = None
         while time.monotonic() < deadline:
             value = self.request(path)
             run = value.get("run", value)
+            if run["status"] != observed_status:
+                observed_status = run["status"]
+                print(json.dumps({"observed_run_status": observed_status}), flush=True)
             if run["status"] == "succeeded":
                 return value
             if run["status"] in {"failed", "interrupted", "canceled"}:
