@@ -68,13 +68,11 @@ final class NativeAcceptanceTests: XCTestCase {
         // The supervisor launches a nested binary directly, with a private pipe,
         // rather than launching the app's main executable through Launch Services.
         // Verify that exact process/bundle boundary before full-package UI tests.
-        let subject = launch()
-        XCTAssertTrue(subject.dialogs.firstMatch.buttons["OK"].waitForExistence(timeout: 15))
-        let source = try XCTUnwrap(NSWorkspace.shared.runningApplications.first {
-            $0.bundleIdentifier == "org.ai-station.qa.NativeSubject"
-        }?.executableURL)
-        subject.dialogs.firstMatch.buttons["OK"].click()
-        XCTAssertTrue(subject.wait(for: .notRunning, timeout: 10))
+        // Use the standalone product compile. The Xcode app executable is signed
+        // against its original Info.plist and cannot be transplanted as a helper.
+        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let source = repository.appendingPathComponent(".native-mac/ui-acceptance/ai-station-native")
 
         let files = FileManager.default
         let scratch = files.temporaryDirectory.appendingPathComponent("ai-station-native-ui-\(UUID().uuidString)")
@@ -109,7 +107,9 @@ final class NativeAcceptanceTests: XCTestCase {
         let registered = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             NSRunningApplication(processIdentifier: child.processIdentifier)?.bundleIdentifier == identity
         }, object: nil)
-        wait(for: [registered], timeout: 15)
+        let registration = XCTWaiter.wait(for: [registered], timeout: 15)
+        XCTAssertEqual(registration, .completed,
+                       "Observed helper bundle: \(NSRunningApplication(processIdentifier: child.processIdentifier)?.bundleIdentifier ?? "none")")
         let application = try XCTUnwrap(NSRunningApplication(processIdentifier: child.processIdentifier))
         XCTAssertEqual(application.executableURL?.resolvingSymlinksInPath(), helper.resolvingSymlinksInPath())
         let proxy = XCUIApplication(bundleIdentifier: identity) // Attach; never launch a substitute.
