@@ -113,7 +113,10 @@ def test_fixed_second_writer_requires_real_exclusion_and_no_uncommitted_visibili
             db.rollback()
         else:
             assert result.returncode != 0
-            assert json.loads(result.stdout) == {"probe_client_error": "ValueError", "errno": None}
+            assert json.loads(result.stdout) == {
+                "probe_client_error": "SQLiteWriterNotExcluded",
+                "errno": None,
+            }
 
 
 def test_native_controller_never_opens_the_live_database(short_root, monkeypatch):

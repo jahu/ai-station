@@ -338,6 +338,10 @@ class Docker:
                         "OSError",
                         "ValueError",
                         "OperationalError",
+                        "SQLiteWALMismatch",
+                        "SQLiteUncommittedVisible",
+                        "SQLiteWriterNotExcluded",
+                        "SQLiteUnexpectedLockError",
                     }
                     or not (
                         value["errno"] is None or type(value["errno"]) is int and 0 <= value["errno"] <= 4096
@@ -359,16 +363,19 @@ def failed(kind,error,traceback):
  print(json.dumps({'probe_client_error':kind.__name__,'errno':getattr(error,'errno',None)}),flush=True)
 sys.excepthook=failed
 root=Path(sys.argv[2])
-def require(value):
- if not value:raise ValueError('Container SQLite exclusion verification failed')
+class SQLiteWALMismatch(ValueError):pass
+class SQLiteUncommittedVisible(ValueError):pass
+class SQLiteWriterNotExcluded(ValueError):pass
+class SQLiteUnexpectedLockError(ValueError):pass
 c=sqlite3.connect((root/'probe.sqlite').as_uri()+'?mode=rw',uri=True,timeout=0.2)
 try:
- require(c.execute('PRAGMA journal_mode').fetchone()==('wal',))
- require(c.execute('SELECT value FROM probe').fetchall()==[])
+ if c.execute('PRAGMA journal_mode').fetchone()!=('wal',):raise SQLiteWALMismatch()
+ if c.execute('SELECT value FROM probe').fetchall()!=[]:raise SQLiteUncommittedVisible()
  try:c.execute('BEGIN IMMEDIATE')
- except sqlite3.OperationalError as error:require(error.sqlite_errorcode & 255 == sqlite3.SQLITE_BUSY)
+ except sqlite3.OperationalError as error:
+  if error.sqlite_errorcode & 255 != sqlite3.SQLITE_BUSY:raise SQLiteUnexpectedLockError()
  else:
-  c.rollback();raise ValueError('An overlapping Linux writer was not blocked')
+  c.rollback();raise SQLiteWriterNotExcluded()
 finally:c.close()
 print(json.dumps({'sqlite_wal':True,'concurrent_writer_lock':True,'uncommitted_rows_visible':False}),flush=True)
 """
