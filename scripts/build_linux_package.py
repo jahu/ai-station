@@ -25,6 +25,7 @@ SOURCE = (
     "host-runner/ai_station_runner",
     "scripts/launch.py",
     "scripts/desktop.py",
+    "scripts/macos_desktop_ui.py",
     "scripts/desktop_control.py",
     "scripts/desktop_docker_access.py",
     "packaging/linux/docker_access.py",

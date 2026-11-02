@@ -28,6 +28,7 @@ READY = "AI_STATION_READY "
 READY_FILE = "desktop-ready.json"
 DESKTOP_PROTOCOL = 2
 WSL_UPDATE_PENDING = Path("/usr/lib/ai-station-wsl-update-pending.json")
+DARWIN_RUNTIME_PARENT = Path("/private/tmp")
 # Isolated packaged Python deliberately ignores ambient Python module paths.
 sys.path.insert(0, str(ROOT / "scripts"))
 from desktop_control import DesktopControl  # noqa: E402
@@ -87,8 +88,12 @@ def verify(root, value):
 
 
 def state_root():
-    parent = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share").expanduser().resolve()
-    root = parent / "ai-station-desktop"
+    if platform.system() == "Darwin":
+        parent = (Path.home() / "Library/Application Support").resolve()
+        root = parent / "AI Station"
+    else:
+        parent = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share").expanduser().resolve()
+        root = parent / "ai-station-desktop"
     if root.is_symlink():
         raise ValueError("Desktop data must not be a symlink")
     root.mkdir(parents=True, mode=0o700, exist_ok=True)
@@ -96,6 +101,47 @@ def state_root():
     if info.st_uid != os.getuid() or info.st_mode & 0o022:
         raise ValueError("Desktop data must be owned by you and not writable by others")
     return root
+
+
+def control_directory(root):
+    """Short native-only Mac sockets; application data stays in its normal root."""
+    if platform.system() != "Darwin":
+        return root
+    root = root.resolve(strict=True)
+    identity = hashlib.sha256(os.fsencode(root)).hexdigest()
+    parent = DARWIN_RUNTIME_PARENT.resolve(strict=True)
+    directory = parent / f"ai-station-{os.getuid()}-{identity[:16]}"
+    try:
+        directory.mkdir(mode=0o700)
+    except FileExistsError:
+        pass
+    info = directory.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+        raise ValueError("Native desktop sockets require their private owned directory")
+    marker = directory / "desktop-owner.json"
+    expected = {"schema": 1, "uid": os.getuid(), "desktop_root_sha256": identity}
+    if not marker.exists() and not marker.is_symlink():
+        if any(directory.iterdir()):
+            raise ValueError("Inspect unrecognized native desktop socket storage")
+        fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "w") as output:
+            json.dump(expected, output, sort_keys=True)
+            output.flush()
+            os.fsync(output.fileno())
+    fd = os.open(marker, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "r") as handle:
+        info = os.fstat(handle.fileno())
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or info.st_nlink != 1
+            or info.st_size > 4096
+            or stat.S_IMODE(info.st_mode) != 0o600
+        ):
+            raise ValueError("Native desktop ownership marker changed")
+        if json.load(handle) != expected:
+            raise ValueError("Native desktop socket storage belongs to another installation")
+    return directory
 
 
 def owned_folder(root, name):
@@ -166,6 +212,10 @@ def configuration(root):
         "AI_STATION_PORT": str(free_port()),
         "COMPOSE_PROJECT_NAME": project,
     }
+    if platform.system() == "Darwin":
+        native = control_directory(root)
+        runner = owned_folder(native, "runner")
+        values["AI_STATION_RUNNER_SOCKET"] = str(runner / "runner.sock")
     descriptor, temporary = tempfile.mkstemp(prefix=".config-", dir=root)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
@@ -463,6 +513,10 @@ def supervise(
 
 def running_window(url, *, active):
     """Closing the native window leaves work running; Stop is always explicit."""
+    if platform.system() == "Darwin":
+        from macos_desktop_ui import running_window as native_running_window
+
+        return native_running_window(ROOT, url, active=active)
     wait = threading.Event()
     while active():
         window = subprocess.Popen(
@@ -499,7 +553,7 @@ def running_window(url, *, active):
 
 def existing_controls(root):
     try:
-        status = control_request(root)
+        status = control_request(control_directory(root))
     except (FileNotFoundError, ConnectionRefusedError):
         return  # A previous development package may not expose desktop controls.
     if not status.get("background") or status.get("stopping"):
@@ -508,7 +562,7 @@ def existing_controls(root):
 
     def active():
         try:
-            current = control_request(root)
+            current = control_request(control_directory(root))
         except (FileNotFoundError, ConnectionRefusedError):
             return False
         return current.get("instance_id") == instance_id and not current.get("stopping")
@@ -517,10 +571,14 @@ def existing_controls(root):
     if url is None:
         return
     if running_window(url, active=active) == "stop":
-        control_request(root, "stop", instance_id=instance_id)
+        control_request(control_directory(root), "stop", instance_id=instance_id)
 
 
 def dialog(*args):
+    if platform.system() == "Darwin":
+        from macos_desktop_ui import dialog as native_dialog
+
+        return native_dialog(ROOT, *args)
     return subprocess.run(["zenity", "--title=AI Station", "--width=540", *args], check=False).returncode
 
 
@@ -529,6 +587,12 @@ class Preparation:
 
     def __init__(self, console):
         self.proc = None
+        self.native = None
+        if not console and platform.system() == "Darwin":
+            from macos_desktop_ui import Preparation as NativePreparation
+
+            self.native = NativePreparation(ROOT)
+            return
         if not console:
             self.proc = subprocess.Popen(
                 ["zenity", "--progress", "--pulsate", "--no-cancel", "--title=AI Station", "--width=540"],
@@ -537,6 +601,9 @@ class Preparation:
             )
 
     def stage(self, text):
+        if self.native is not None:
+            self.native.stage(text)
+            return
         if self.proc is None:
             print(text, flush=True)
         elif self.proc.poll() is None:
@@ -547,6 +614,9 @@ class Preparation:
                 pass  # Closing this display does not interrupt image import.
 
     def close(self):
+        if self.native is not None:
+            self.native.close()
+            return
         if self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
             self.proc.wait(timeout=5)
@@ -579,10 +649,27 @@ def main():
     )
     parser.add_argument("--background", action="store_true", help="Run without a native status window")
     parser.add_argument("--host-port", type=int, help="Private desktop-parent loopback port, 8765–8864")
+    parser.add_argument(
+        "--package-check",
+        action="store_true",
+        help="Verify packaged files without starting or changing station data",
+    )
     operation = parser.add_mutually_exclusive_group()
     operation.add_argument("--status", action="store_true", help="Inspect this desktop installation")
     operation.add_argument("--stop", action="store_true", help="Request this desktop installation to stop")
     args = parser.parse_args()
+    if args.package_check:
+        if args.console or args.background or args.status or args.stop or args.host_port is not None:
+            parser.error("--package-check must be used on its own")
+        value = manifest(ROOT)
+        verify(ROOT, value)
+        print(
+            json.dumps(
+                {"package_verified": True, "bundle_id": value["bundle_id"], "workloads_started": False}
+            ),
+            flush=True,
+        )
+        return
     if args.host_port is not None and (
         not args.console
         or not args.background
@@ -600,8 +687,13 @@ def main():
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, terminate)
-    if not (args.console or args.status or args.stop) and not shutil.which("zenity"):
-        raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
+    if not (args.console or args.status or args.stop):
+        if platform.system() == "Darwin":
+            from macos_desktop_ui import binary as native_interface
+
+            native_interface(ROOT)
+        elif not shutil.which("zenity"):
+            raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
     value = manifest(ROOT)
     root = state_root()
     lock = os.open(root / "desktop.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
@@ -611,9 +703,11 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             if args.status or args.stop:
-                status = control_request(root)
+                status = control_request(control_directory(root))
                 if args.stop:
-                    status = control_request(root, "stop", instance_id=status["instance_id"])
+                    status = control_request(
+                        control_directory(root), "stop", instance_id=status["instance_id"]
+                    )
                 print(json.dumps({"running": True, **status}), flush=True)
                 return
             if not reopen(root, console=args.console):
@@ -665,7 +759,10 @@ def main():
                     [executable, "-I", str(installed / "scripts/desktop.py"), *sys.argv[1:]],
                     launch_environment(),
                 )
-            with (root / "desktop.log").open("a", encoding="utf-8") as log, DesktopControl(root) as control:
+            with (
+                (root / "desktop.log").open("a", encoding="utf-8") as log,
+                DesktopControl(control_directory(root)) as control,
+            ):
                 progress.stage("Preparing the bundled application image…")
                 import_image(installed, value, log)
                 if control.stop_requested.is_set():
@@ -701,7 +798,9 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, queue.Empty) as error:
-        if not {"--console", "--status", "--stop"}.intersection(sys.argv) and shutil.which("zenity"):
+        if not {"--console", "--status", "--stop", "--package-check"}.intersection(sys.argv) and (
+            platform.system() == "Darwin" or shutil.which("zenity")
+        ):
             dialog("--error", "--text=" + str(error))
         else:
             raise SystemExit(str(error))
