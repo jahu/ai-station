@@ -22,6 +22,7 @@ class Daemon:
         self.mutate = lambda value: None
         self.foreign = False
         self.exit = 0
+        self.output = lambda value: value
 
     def __call__(self, argv, **kwargs):
         assert argv[:4] == ["/fixed/docker", "--host", "unix:///fixed.sock", "--config"]
@@ -126,11 +127,12 @@ class Daemon:
             value = args[-1]
         elif pair == ("container", "logs"):
             args = self.containers[args[-1]]["Config"]["Cmd"]
-            return 0, json.dumps(
-                helper.binding(
-                    flag("--storage-id"), flag("--namespace"), int(flag("--uid")), int(flag("--gid"))
-                )
+            value = helper.binding(
+                flag("--storage-id"), flag("--namespace"), int(flag("--uid")), int(flag("--gid"))
             )
+            if "fingerprint" in args:
+                value = {"storage": value, "database": {"main": "e" * 64, "-wal": None, "-journal": None}}
+            return 0, json.dumps(self.output(value))
         elif pair == ("container", "rm"):
             del self.containers[args[-1]]
             value = args[-1]
@@ -321,3 +323,60 @@ def test_ordinary_user_cannot_initialize_or_forge_a_root_ownership_marker(tmp_pa
     with pytest.raises(ValueError, match="marker changed"):
         helper.inspect(value)
     assert (tmp_path / "keep.sqlite").read_bytes() == b"private existing bytes"
+
+
+def test_readonly_fingerprint_preserves_storage_identity_and_never_reinitializes(factory):
+    create, d, _, _ = factory
+    owner = create()
+    owner.prepare()
+    identity = owner.identity()
+    assert owner.fingerprint() == {"main": "e" * 64, "-wal": None, "-journal": None}
+    assert create().identity() == identity and not d.containers
+    creations = [args for args in d.calls if args[:2] == ["container", "create"] and "fingerprint" in args]
+    assert len(creations) == 1 and "readonly" in creations[0][creations[0].index("--mount") + 1]
+    assert "--cap-add" not in creations[0]
+
+
+def test_foreign_reference_refuses_fingerprint_before_dispatch_and_preserves_it(factory):
+    create, d, _, _ = factory
+    owner = create()
+    owner.prepare()
+    d.foreign = True
+    before = len(d.calls)
+    with pytest.raises(ValueError, match="Another container"):
+        owner.fingerprint()
+    assert not any(args[:2] in (["container", "create"], ["container", "stop"]) for args in d.calls[before:])
+
+
+@pytest.mark.parametrize("pair", [("container", "create"), ("container", "start"), ("container", "rm")])
+def test_readonly_fingerprint_lost_ack_resumes_without_write_replay(factory, pair):
+    create, d, _, _ = factory
+    create().prepare()
+    d.lose = pair
+    with pytest.raises(RuntimeError, match="lost acknowledgement"):
+        create().fingerprint()
+    assert create().fingerprint()["main"] == "e" * 64 and not d.containers
+    assert sum(args[:2] == ["container", "create"] and "initialize" in args for args in d.calls) == 1
+
+
+@pytest.mark.parametrize("change", ["wrong_storage", "missing_hash", "invalid_hash", "unfinished_journal"])
+def test_fingerprint_never_accepts_incorrect_binding_or_hash_shape(factory, change):
+    create, d, _, _ = factory
+    owner = create()
+    owner.prepare()
+
+    def changed(value):
+        if change == "wrong_storage":
+            value["storage"]["storage_id"] = "f" * 32
+        elif change == "missing_hash":
+            del value["database"]["main"]
+        elif change == "invalid_hash":
+            value["database"]["main"] = "not a digest"
+        else:
+            value["database"]["-journal"] = "f" * 64
+        return value
+
+    d.output = changed
+    with pytest.raises(ValueError, match="fingerprint acknowledgement"):
+        owner.fingerprint()
+    assert owner.record["command"] is not None and len(d.volumes) == 1

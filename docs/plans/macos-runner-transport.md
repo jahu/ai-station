@@ -186,6 +186,18 @@ fresh-client login/history/artifact preservation and ordinary-user refusal to
 overwrite the root marker. It uses only newly created synthetic storage and
 cleans it up separately. This is not a Mac installer or real-model test.
 
+Fixed offline image upgrades now reuse the attested volume for prepare, publish,
+abort and status. Activation reads a fixed image fingerprint through a separate
+read-only mount and compares main/WAL identity with the acknowledged transaction;
+the native host never opens that SQLite file. A foreign container reference or
+changed bytes keeps the prior version and startup fence. Lost helper create,
+start, removal and fingerprint acknowledgements are reconciled without replaying
+publication. Five real disposable Linux Docker cases passed: three activation
+recovery variants, abort preserving a live-format WAL, and changed-byte refusal.
+They preserve accounts, password records, private settings, rows and artifacts
+across schema 0041 to 0042. Both logical package versions used the same verified
+image; this is component qualification, not a complete two-package Mac update.
+
 Before enabling Mac installation:
 
 1. Wire the persistent owner into native startup and offline operations before

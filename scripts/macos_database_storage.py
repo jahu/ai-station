@@ -138,7 +138,7 @@ class DatabaseStorage:
             or set(item) != {"attempt", "action", "image", "phase", "container_id"}
             or not isinstance(item["attempt"], str)
             or not re.fullmatch(r"[a-f0-9]{32}", item["attempt"])
-            or item["action"] not in ("initialize", "inspect")
+            or item["action"] not in ("initialize", "inspect", "fingerprint")
             or not isinstance(item["image"], str)
             or not re.fullmatch(r"sha256:[a-f0-9]{64}", item["image"])
             or item["phase"] not in ("creating", "created", "starting", "finished")
@@ -151,9 +151,14 @@ class DatabaseStorage:
             and item["container_id"] is None
             or (item["action"], r["phase"])
             not in (
-                (("initialize", "initialized"), ("inspect", "ready"))
+                (("initialize", "initialized"), ("inspect", "ready"), ("fingerprint", "ready"))
                 if item["phase"] == "finished"
-                else (("initialize", "created"), ("inspect", "initialized"), ("inspect", "ready"))
+                else (
+                    ("initialize", "created"),
+                    ("inspect", "initialized"),
+                    ("inspect", "ready"),
+                    ("fingerprint", "ready"),
+                )
             )
         ):
             raise ValueError("The database helper identity requires inspection")
@@ -216,6 +221,49 @@ class DatabaseStorage:
             + ",target=/database,volume-nocopy"
             + (",readonly" if readonly else "")
         )
+
+    def application_mount(self):
+        self.owned()
+        return "type=volume,source=" + self.record["name"] + ",target=/data/db,volume-nocopy"
+
+    def quiescent(self, *, allowed=()):
+        """Trusted callers may exempt only their independently verified fixed helper IDs."""
+        self.owned()
+        if any(not isinstance(v, str) or not re.fullmatch(r"[a-f0-9]{64}", v) for v in allowed):
+            raise ValueError("Invalid owned helper reference")
+        permitted = set(allowed)
+        item = self.record["command"]
+        if item is not None:
+            permitted.add(self.inspect_container(item)["Id"])
+        _, users = self.call(
+            "container", "ls", "--all", "--quiet", "--no-trunc", "--filter", "volume=" + self.record["name"]
+        )
+        if any(v not in permitted for v in users.splitlines()):
+            raise ValueError("Another container references the database; nothing was stopped")
+
+    def result(self, action, raw):
+        value = json.loads(raw)
+        if action != "fingerprint":
+            if value != self.binding():
+                raise ValueError("The database ownership acknowledgement changed")
+            return value
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"storage", "database"}
+            or value["storage"] != self.binding()
+            or not isinstance(value["database"], dict)
+            or set(value["database"]) != {"main", "-wal", "-journal"}
+            or not isinstance(value["database"]["main"], str)
+            or not re.fullmatch(r"[a-f0-9]{64}", value["database"]["main"])
+            or value["database"]["-journal"] is not None
+            or value["database"]["-wal"] is not None
+            and (
+                not isinstance(value["database"]["-wal"], str)
+                or not re.fullmatch(r"[a-f0-9]{64}", value["database"]["-wal"])
+            )
+        ):
+            raise ValueError("The fixed database fingerprint acknowledgement changed")
+        return value
 
     def arguments(self, action):
         return [
@@ -299,6 +347,7 @@ class DatabaseStorage:
             ("initialize", "created"),
             ("inspect", "initialized"),
             ("inspect", "ready"),
+            ("fingerprint", "ready"),
         ):
             raise ValueError("Only the fixed helper for the current storage phase may run")
         self.owned()
@@ -359,7 +408,7 @@ class DatabaseStorage:
                 "1",
                 "--no-healthcheck",
                 "--mount",
-                self.mount(readonly=action == "inspect"),
+                self.mount(readonly=action != "initialize"),
                 "--entrypoint",
                 "python",
             ]
@@ -376,18 +425,8 @@ class DatabaseStorage:
             item.update(container_id=v["Id"], phase="created")
             self.save()
         if item["phase"] == "created":
-            if action == "initialize":
-                _, users = self.call(
-                    "container",
-                    "ls",
-                    "--all",
-                    "--quiet",
-                    "--no-trunc",
-                    "--filter",
-                    "volume=" + self.record["name"],
-                )
-                if users != item["container_id"]:
-                    raise ValueError("Another container references the new database; nothing was stopped")
+            if action in ("initialize", "fingerprint"):
+                self.quiescent()
             item["phase"] = "starting"
             self.save()
             self.call("container", "start", item["container_id"])
@@ -405,14 +444,14 @@ class DatabaseStorage:
         if state["ExitCode"] != 0 or state["OOMKilled"]:
             raise ValueError("The database helper failed; its bytes and pending receipt were preserved")
         _, raw = self.call("container", "logs", item["container_id"])
-        if json.loads(raw) != self.binding():
-            raise ValueError("The database ownership acknowledgement changed")
+        result = self.result(action, raw)
         # Advance ownership before cleanup; a lost removal ACK can be reconciled
         # by exact ID, without ever reinitializing the persistent volume.
         self.record["phase"] = "initialized" if action == "initialize" else "ready"
         item["phase"] = "finished"
         self.save()
         self.cleanup()
+        return result
 
     def cleanup(self):
         """Remove only a verified finished helper; persistent volume is untouched."""
@@ -461,8 +500,23 @@ class DatabaseStorage:
         self.owned()
         return self.record["name"]
 
-    def identity(self):
-        if self.record["phase"] != "ready" or self.record["command"] is not None:
+    def fingerprint(self):
+        if self.record["command"] is not None and self.record["command"]["phase"] == "finished":
+            self.cleanup()
+        self.quiescent()
+        result = self.helper("fingerprint")
+        self.quiescent()
+        return result["database"]
+
+    def identity(self, *, allow_pending_readonly=False):
+        pending = self.record["command"]
+        if type(allow_pending_readonly) is not bool:
+            raise ValueError("Choose an explicit pending-reader policy")
+        if (
+            self.record["phase"] != "ready"
+            or pending is not None
+            and not (allow_pending_readonly and pending["action"] in ("inspect", "fingerprint"))
+        ):
             raise ValueError("Database storage is not ready")
         self.owned()
         return hashlib.sha256(
