@@ -69,6 +69,9 @@ touch "$qa_root/mounted"
 touch "$qa_root/desktop-installed"
 /usr/bin/hdiutil detach "$qa_root/mount"
 rm "$qa_root/mounted"
+# A fresh headless installation has no Launch Services registration yet. Open
+# this exact installed app first; the vendor CLI locates it by bundle identity.
+/usr/bin/open -a /Applications/Docker.app
 desktop_cli desktop start --timeout 240
 mkdir -m 700 "$qa_root/Chosen data, Żółw"
 /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
