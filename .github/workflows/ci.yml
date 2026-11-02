@@ -237,8 +237,11 @@ jobs:
           fi
           python - <<'PY'
           from pathlib import Path
-          path = Path('.tools/mac-consumer-experiment/commands.private.log')
-          if path.is_file():
+          for name in ('commands.private.log', 'image/build.log'):
+              path = Path('.tools/mac-consumer-experiment') / name
+              if not path.is_file():
+                  continue
+              print('Bounded failure diagnostics:', name)
               lines = path.read_text(errors='replace').splitlines()
               for line in lines[-100:]:
                   text = line.casefold()
