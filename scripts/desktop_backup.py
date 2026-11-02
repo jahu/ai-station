@@ -59,25 +59,13 @@ def main(argv=None):
                     raise ValueError("Named administrator recovery requires its private password on stdin")
                 if args.recover_administrator:
                     password = sys.stdin.readline(2049).rstrip("\r\n")
-                    if not 12 <= len(password) <= 200:
-                        raise ValueError("Use a recovery password of 12 to 200 characters")
-                    from desktop_bridge import private_directory
-                    from desktop_snapshot_files import write_json
+                    from desktop_restore_authority import save
 
-                    authority = config.parent
-                    for name in ("restores", operation, "authority"):
-                        authority /= name
-                        authority.mkdir(mode=0o700, exist_ok=True)
-                        private_directory(authority)
-                    secret = {"username": args.recover_administrator, "password": password, "reset_mfa": True}
-                    credential = authority / "administrator.json"
-                    if credential.exists() or credential.is_symlink():
-                        if json.loads(versions.read_private(credential, 4096)) != secret:
-                            raise ValueError(
-                                "The saved private recovery request differs; it was not overwritten"
-                            )
-                    else:
-                        write_json(credential, secret)
+                    save(
+                        config.parent,
+                        operation,
+                        {"username": args.recover_administrator, "password": password, "reset_mfa": True},
+                    )
                 owner = Restoration(
                     storage,
                     operation,

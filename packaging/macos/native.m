@@ -251,17 +251,117 @@ static int backupDialog(BOOL folder, BOOL smoke) {
     BOOL restore = [pending isEqual:@"restore"], backup = [pending isEqual:@"backup"];
     if (pending.length && !restore && !backup) return 2;
     BOOL canAbort = [request[@"can_abort"] isKindOfClass:NSNumber.class] && [request[@"can_abort"] boolValue];
+    BOOL restoreOnly = [request[@"restore_only"] isKindOfClass:NSNumber.class] && [request[@"restore_only"] boolValue];
     NSAlert *alert = [NSAlert new];
     alert.icon = stationIcon();
-    alert.messageText = pending.length ? @"Continue an interrupted operation" : @"Back up your AI Station";
-    alert.informativeText = pending.length ? @"Your saved data and recovery records have been kept. Continue the same operation before starting AI Station." : @"Create a complete private backup of your conversations, files, models and accounts, or restore a previous backup. AI Station will stop briefly and reopen afterward.";
-    [alert addButtonWithTitle:restore ? @"Continue restore" : backup ? @"Continue backup" : @"Create backup"];
-    if (!pending.length || canAbort) [alert addButtonWithTitle:pending.length ? @"Cancel operation" : @"Restore backup…"];
+    alert.messageText = pending.length ? @"Continue an interrupted operation" : restoreOnly ? @"Restore your AI Station" : @"Back up your AI Station";
+    alert.informativeText = pending.length ? @"Your saved data and recovery records have been kept. Continue the same operation before starting AI Station." : restoreOnly ? @"This installation could not finish starting. Choose a complete backup to restore it. Your original files will be kept for recovery." : @"Create a complete private backup of your conversations, files, models and accounts, or restore a previous backup. AI Station will stop briefly and reopen afterward.";
+    [alert addButtonWithTitle:restore ? @"Continue restore" : backup ? @"Continue backup" : restoreOnly ? @"Restore backup…" : @"Create backup"];
+    if ((pending.length && canAbort) || (!pending.length && !restoreOnly)) [alert addButtonWithTitle:pending.length ? @"Cancel operation" : @"Restore backup…"];
     [alert addButtonWithTitle:@"Close"];
     alert.buttons.lastObject.keyEquivalent = @"\033";
     NSModalResponse choice = [alert runModal];
-    if (choice == NSAlertFirstButtonReturn) answer(pending.length ? @"resume" : @"export");
-    else if (choice == NSAlertSecondButtonReturn && (!pending.length || canAbort)) answer(pending.length ? @"abort" : @"restore");
+    if (choice == NSAlertFirstButtonReturn) answer(pending.length ? @"resume" : restoreOnly ? @"restore" : @"export");
+    else if (choice == NSAlertSecondButtonReturn && ((pending.length && canAbort) || (!pending.length && !restoreOnly))) answer(pending.length ? @"abort" : @"restore");
+    else answer(@"cancel");
+    return 0;
+}
+
+static int restoreReview(void) {
+    prepareUI(NSApplicationActivationPolicyAccessory);
+    NSAlert *alert = [NSAlert new];
+    alert.icon = stationIcon();
+    alert.messageText = @"Restore this backup?";
+    alert.informativeText = @"Saved conversations and files will return to the backup's state. Your current passwords and MFA keys are kept. Originals remain available for recovery.\n\nAI Station will stop briefly. Sessions will be signed out; agents and unfinished jobs remain paused for review.\n\nUse administrator recovery only if current account data cannot be read.";
+    [alert addButtonWithTitle:@"Restore backup"];
+    [alert addButtonWithTitle:@"Administrator recovery…"];
+    [alert addButtonWithTitle:@"Cancel"];
+    alert.buttons.lastObject.keyEquivalent = @"\033";
+    NSModalResponse choice = [alert runModal];
+    answer(choice == NSAlertFirstButtonReturn ? @"restore" : choice == NSAlertSecondButtonReturn ? @"recover" : @"cancel");
+    return 0;
+}
+
+@interface RecoveryForm : NSObject <NSTextFieldDelegate>
+@property(strong) NSTextField *username;
+@property(strong) NSSecureTextField *password;
+@property(strong) NSSecureTextField *confirmation;
+@property(strong) NSButton *acknowledgement;
+@property(strong) NSButton *submit;
+- (void)update:(id)sender;
+@end
+@implementation RecoveryForm
+- (void)controlTextDidChange:(NSNotification *)notification { [self update:nil]; }
+- (void)update:(id)sender {
+    NSString *name = [[self.username.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] precomposedStringWithCompatibilityMapping];
+    NSUInteger nameLength = [name lengthOfBytesUsingEncoding:NSUTF32LittleEndianStringEncoding] / 4;
+    NSUInteger passwordLength = [self.password.stringValue lengthOfBytesUsingEncoding:NSUTF32LittleEndianStringEncoding] / 4;
+    self.submit.enabled = nameLength >= 2 && nameLength <= 64 && passwordLength >= 12 && passwordLength <= 200 &&
+        [self.password.stringValue isEqual:self.confirmation.stringValue] && self.acknowledgement.state == NSControlStateValueOn;
+}
+@end
+
+static int administratorRecovery(BOOL smoke) {
+    prepareUI(NSApplicationActivationPolicyAccessory);
+    NSAlert *alert = [NSAlert new];
+    alert.icon = stationIcon();
+    alert.messageText = @"Recover administrator access";
+    alert.informativeText = @"Use this only when current account data cannot be read. Choose an administrator present in this backup.\n\nThis replaces that administrator's password and resets MFA. Other restored accounts will be disabled until reviewed. The original data and backup are kept.";
+    [alert addButtonWithTitle:@"Restore and reset MFA"];
+    [alert addButtonWithTitle:@"Cancel"];
+    alert.buttons[1].keyEquivalent = @"\033";
+    NSView *form = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 410, 200)];
+    RecoveryForm *controller = [RecoveryForm new];
+    NSArray<NSString *> *labels = @[@"Administrator username in this backup", @"New password (12–200 characters)", @"Confirm new password"];
+    NSMutableArray<NSTextField *> *fields = [NSMutableArray new];
+    for (NSUInteger index = 0; index < 3; index++) {
+        CGFloat y = 151 - index * 53;
+        NSTextField *label = [NSTextField labelWithString:labels[index]];
+        label.frame = NSMakeRect(0, y + 27, 410, 18);
+        label.font = [NSFont systemFontOfSize:12];
+        NSTextField *field = index == 0 ? [[NSTextField alloc] initWithFrame:NSMakeRect(0, y, 410, 24)] : [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0, y, 410, 24)];
+        field.delegate = controller;
+        [form addSubview:label]; [form addSubview:field]; [fields addObject:field];
+    }
+    controller.username = fields[0];
+    controller.password = (NSSecureTextField *)fields[1];
+    controller.confirmation = (NSSecureTextField *)fields[2];
+    controller.acknowledgement = [NSButton checkboxWithTitle:@"Reset MFA and suspend other restored accounts" target:controller action:@selector(update:)];
+    controller.acknowledgement.frame = NSMakeRect(0, 9, 410, 24);
+    [form addSubview:controller.acknowledgement];
+    controller.submit = alert.buttons[0];
+    controller.submit.enabled = NO;
+    alert.accessoryView = form;
+    alert.window.initialFirstResponder = controller.username;
+    __block BOOL smokePassed = NO;
+    if (smoke) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            BOOL emptyDisabled = !controller.submit.enabled;
+            controller.username.stringValue = @"Owner";
+            controller.password.stringValue = @"synthetic private test password";
+            controller.confirmation.stringValue = @"does not match";
+            controller.acknowledgement.state = NSControlStateValueOn;
+            [controller update:nil];
+            BOOL mismatchDisabled = !controller.submit.enabled;
+            controller.confirmation.stringValue = controller.password.stringValue;
+            controller.acknowledgement.state = NSControlStateValueOff;
+            [controller update:nil];
+            BOOL acknowledgementRequired = !controller.submit.enabled;
+            controller.acknowledgement.state = NSControlStateValueOn;
+            [controller update:nil];
+            smokePassed = emptyDisabled && mismatchDisabled && acknowledgementRequired && controller.submit.enabled &&
+                [controller.password isKindOfClass:NSSecureTextField.class] && [controller.confirmation isKindOfClass:NSSecureTextField.class];
+            [NSApp abortModal];
+        });
+    }
+    NSModalResponse choice = [alert runModal];
+    NSData *result = nil;
+    if (!smoke && choice == NSAlertFirstButtonReturn && controller.submit.enabled) {
+        result = [NSJSONSerialization dataWithJSONObject:@{@"username":controller.username.stringValue, @"password":controller.password.stringValue, @"reset_mfa":@YES} options:0 error:NULL];
+    }
+    controller.password.stringValue = @""; controller.confirmation.stringValue = @"";
+    if (smoke) { if (!smokePassed) return 1; answer(@"native-admin-recovery-form-passed"); }
+    else if (result && result.length <= 16384) [[NSFileHandle fileHandleWithStandardOutput] writeData:result];
     else answer(@"cancel");
     return 0;
 }
@@ -308,7 +408,12 @@ static int backupDialog(BOOL folder, BOOL smoke) {
         alert.messageText = @"AI Station could not start";
         alert.informativeText = @"Check the application package and Docker Desktop, then open AI Station again.";
         alert.icon = stationIcon();
-        [alert runModal];
+        [alert addButtonWithTitle:@"Close"];
+        [alert addButtonWithTitle:@"Backups and Restore…"];
+        if ([alert runModal] == NSAlertSecondButtonReturn) {
+            [self manageBackups:nil];
+            if (self.launcher.running || self.updateTask.running) return;
+        }
     }
     [NSApp terminate:nil];
 }
@@ -362,12 +467,13 @@ static int backupDialog(BOOL folder, BOOL smoke) {
     }
 }
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-    if (item.action == @selector(openStation:) || item.action == @selector(installUpdate:) || item.action == @selector(manageBackups:))
+    if (item.action == @selector(manageBackups:)) return !self.stopping && self.updateTask == nil;
+    if (item.action == @selector(openStation:) || item.action == @selector(installUpdate:))
         return !self.stopping && self.updateTask == nil && self.launcher.running;
     return YES;
 }
 - (void)manageBackups:(id)sender {
-    if (self.stopping || self.updateTask || !self.launcher.running) return;
+    if (self.stopping || self.updateTask) return;
     NSTask *task = [self taskAt:[self retainedResources] arguments:@[@"--manage-backups", @"--background"]];
     __weak StationDelegate *weakSelf = self;
     task.terminationHandler = ^(NSTask *finished) {
@@ -377,6 +483,9 @@ static int backupDialog(BOOL folder, BOOL smoke) {
     if (![task launchAndReturnError:NULL]) {
         self.updateTask = nil;
         [self showUpdateFailure];
+    } else if (!self.launcher.running) {
+        self.launcher = task;
+        self.updateTask = nil;
     }
 }
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -474,6 +583,9 @@ int main(int argc, const char *argv[]) {
         if ([mode isEqual:@"--native-backup-progress-smoke"]) return progressWindow(NO, YES);
         if ([mode isEqual:@"--native-update-smoke"]) return updateChooserSmoke();
         if ([mode isEqual:@"--native-backups"]) return backupDialog(NO, NO);
+        if ([mode isEqual:@"--native-restore-review"]) return restoreReview();
+        if ([mode isEqual:@"--native-admin-recovery"]) return administratorRecovery(NO);
+        if ([mode isEqual:@"--native-admin-recovery-smoke"]) return administratorRecovery(YES);
         if ([mode isEqual:@"--native-backup-folder"]) return backupDialog(YES, NO);
         if ([mode isEqual:@"--native-backup-smoke"]) return backupDialog(YES, YES);
         if ([mode isEqual:@"--native-update-ownership-smoke"]) return updateOwnershipSmoke();

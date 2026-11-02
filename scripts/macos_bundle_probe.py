@@ -118,6 +118,8 @@ def main(architecture):
                 "-c",
                 "import sys,time;from pathlib import Path;sys.path.insert(0,sys.argv[1]);"
                 "import desktop_bridge,desktop_update,desktop_backup_ui;from macos_desktop_ui import Preparation;"
+                "from desktop_restore_authority import validate;"
+                "assert validate({'username':'Owner','password':'synthetic native test password','reset_mfa':True})['username']=='Owner';"
                 "p=Preparation(Path(sys.argv[2]),heading='Preparing your local update');"
                 "p.stage('Checking the downloaded application…');time.sleep(1);p.close()",
                 str(resources / "scripts"),

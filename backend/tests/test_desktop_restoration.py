@@ -97,6 +97,32 @@ def test_full_restore_publishes_files_and_database_then_preserves_receipts_and_c
     snapshots.assert_finished(root, data)
 
 
+def test_failed_restart_can_restore_previously_ready_installation_without_claiming_readiness(setup):
+    create, _, root, data, backup, _, state, _ = setup
+    import desktop_versions as versions
+
+    previous = versions.load(root)
+    versions.begin(root, create().package, root / "desktop.env", "d" * 32)
+    pending = versions.load(root)
+    assert pending["phase"] == "starting" and pending["last_ready_at"] == previous["last_ready_at"]
+    assert restoration.Restoration(create(), str(uuid4()), backup).apply()["status"] == "applied"
+    assert state["main"] == "b" * 64 and versions.load(root) == pending
+    snapshots.assert_finished(root, data)
+
+
+def test_unqualified_first_start_does_not_become_restore_authority(setup):
+    create, daemon, root, _, backup, _, state, _ = setup
+    import desktop_versions as versions
+
+    pending = versions.load(root) | {"phase": "starting", "last_ready_at": None}
+    versions.save(root, pending)
+    before = len(daemon.calls)
+    with pytest.raises(ValueError, match="matching ready installation"):
+        restoration.Restoration(create(), str(uuid4()), backup)
+    assert state["main"] == "e" * 64 and versions.load(root) == pending
+    assert not any(args[:2] == ["container", "create"] for args in daemon.calls[before:])
+
+
 def test_interrupted_file_publication_resumes_same_transaction(setup):
     create, _, root, data, backup, _, _, _ = setup
     operation = str(uuid4())

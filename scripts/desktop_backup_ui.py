@@ -1,6 +1,8 @@
 """Native backup presentation over the existing trusted offline coordinators."""
 
+import fcntl
 import json
+import os
 import subprocess
 from uuid import uuid4
 
@@ -8,10 +10,10 @@ import desktop
 import desktop_snapshots as snapshots
 import desktop_versions as versions
 import macos_desktop_ui as ui
-from desktop_restoration import FENCE, Restoration
+from desktop_restoration import FENCE, Restoration, recoverable_version
 from desktop_restore_files import SecretConflict
 from desktop_update import retained
-from desktop_update_owner import handoff
+from desktop_update_owner import handoff, lock_file, require_lock
 from macos_database_storage import DatabaseStorage
 
 
@@ -77,7 +79,7 @@ def confirm(resources, *, restore=False, resume=False, cancel=False):
     )
 
 
-def execute(storage, resources, action, selected, existing, *, owner_lock=None):
+def execute(storage, resources, action, selected, existing, *, owner_lock=None, authority=None):
     """Caller retains desktop ownership; coordinators inspect actual workload quiescence."""
     operation = existing["operation"] if existing else str(uuid4())
     restoring = existing["kind"] == "restore" if existing else action == "restore"
@@ -104,7 +106,18 @@ def execute(storage, resources, action, selected, existing, *, owner_lock=None):
 
     try:
         if restoring:
-            owner = Restoration(storage, operation, selected if existing is None else None)
+            if authority is not None:
+                if existing is not None or action != "restore":
+                    raise ValueError("A pending restore keeps its original recovery request")
+                from desktop_restore_authority import save
+
+                save(storage.root, operation, authority)
+            owner = Restoration(
+                storage,
+                operation,
+                selected if existing is None else None,
+                recover_admin=authority is not None,
+            )
             if action == "abort":
                 progress.update("Canceling the interrupted restore safely…", cancelable=False)
                 return owner.abort(owner_lock=owner_lock)
@@ -127,7 +140,18 @@ def execute(storage, resources, action, selected, existing, *, owner_lock=None):
                     return owner.result()
                 progress = ui.Preparation(resources, heading="Restoring your AI Station", cancelable=True)
                 source = versions.canonical(owner.request["backup_path"])
-                owner = Restoration(storage, str(uuid4()), source, secrets_policy="keep_current")
+                recovery = owner.request["recover_admin"]
+                next_operation = str(uuid4())
+                if recovery:
+                    from desktop_restore_authority import save
+
+                    secret = json.loads(
+                        versions.read_private(owner.folder / "authority/administrator.json", 4096)
+                    )
+                    save(storage.root, next_operation, secret)
+                owner = Restoration(
+                    storage, next_operation, source, secrets_policy="keep_current", recover_admin=recovery
+                )
                 return owner.apply(canceled=progress.canceled, progress=report, owner_lock=owner_lock)
         owner = snapshots.Snapshot(storage, operation)
         if action == "abort":
@@ -145,9 +169,9 @@ def execute(storage, resources, action, selected, existing, *, owner_lock=None):
 
 def manage(root, *, start, owner_lock=None):
     config = root / "desktop.env"
-    data, _ = versions.namespace(config)
+    data, namespace = versions.namespace(config)
     current = versions.load(root)
-    if current["phase"] != "ready":
+    if not recoverable_version(current):
         raise ValueError("Finish the desktop installation or update before managing backups")
     resources, value = retained(root, current["package"])
     storage = DatabaseStorage(root, config, desktop.select_engine(desktop.launch_environment()), value)
@@ -156,6 +180,7 @@ def manage(root, *, start, owner_lock=None):
         resources,
         pending=existing["kind"] if existing else None,
         can_abort=not existing or existing["phase"] not in {"publishing_database", "applied"},
+        restore_only=current["phase"] != "ready",
     )
     if set(reply) != {"action"}:
         raise ValueError("The native backup selection changed")
@@ -164,6 +189,8 @@ def manage(root, *, start, owner_lock=None):
         return None
     if action not in ({"resume", "abort"} if existing else {"export", "restore"}):
         raise ValueError("Choose the operation offered for the current installation")
+    if action == "export" and current["phase"] != "ready":
+        raise ValueError("Restore this stopped installation before creating a new backup")
     selected = None
     if action == "restore":
         reply = ui.backup_folder(resources)
@@ -188,7 +215,20 @@ def manage(root, *, start, owner_lock=None):
         finally:
             checking.close()
 
+    authority = None
+
     def consent(*_):
+        nonlocal authority
+        if action == "restore":
+            review = ui.restore_review(resources)
+            if review == {"action": "restore"}:
+                return True
+            if review == {"action": "recover"}:
+                authority = ui.administrator_recovery(resources)
+                return authority is not None
+            if review == {"action": "cancel"}:
+                return False
+            raise ValueError("The native restoration review returned an unknown action")
         return confirm(
             resources,
             restore=action == "restore" or existing is not None and existing["kind"] == "restore",
@@ -201,14 +241,45 @@ def manage(root, *, start, owner_lock=None):
         # stopped. Each coordinator acquires/rechecks its own cold locks.
         if not consent():
             return None
-        result = execute(storage, resources, action, selected, existing, owner_lock=owner_lock)
+        result = execute(
+            storage, resources, action, selected, existing, owner_lock=owner_lock, authority=authority
+        )
+    elif current["phase"] == "starting":
+        # The failed supervisor has no live readiness/control channel. Borrow
+        # only a verified, uncontended local owner lock; never signal a PID.
+        descriptor = lock_file(root, "desktop.lock")
+        try:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise ValueError(
+                    "AI Station is still starting or stopping; let it finish before recovery"
+                ) from None
+            require_lock(root, "desktop.lock", descriptor)
+            if versions.load(root) != current or versions.namespace(config) != (data, namespace):
+                raise ValueError("The installation changed during recovery selection")
+            if not consent():
+                return None
+            result = execute(
+                storage, resources, action, selected, existing, owner_lock=descriptor, authority=authority
+            )
+        finally:
+            os.close(descriptor)
     else:
         with handoff(
             root, config, desktop.control_directory(root), value, consent, maintenance=True
         ) as owner:
             if owner is None:
                 return None
-            result = execute(storage, resources, action, selected, existing, owner_lock=owner["owner_lock"])
+            result = execute(
+                storage,
+                resources,
+                action,
+                selected,
+                existing,
+                owner_lock=owner["owner_lock"],
+                authority=authority,
+            )
     status = result.get("status")
     if status == "completed":
         path = storage.export_path(result["snapshot"]["operation_id"])
@@ -224,9 +295,16 @@ def manage(root, *, start, owner_lock=None):
         ):
             subprocess.run(["/usr/bin/open", str(path)], env=ui.environment(), check=False)
     elif status == "applied":
+        recovered = result.get("database", {}).get("actions", {}).get("administrator_mfa_reset", False)
         ui.dialog(
             resources,
-            "--text=Your backup has been restored.\n\nSign in with your current password. Agents and interrupted jobs remain paused so you can review them first.",
+            "--text=Your backup has been restored.\n\n"
+            + (
+                "Sign in with the administrator and new password you selected. Set up MFA again; other restored accounts remain disabled until reviewed. "
+                if recovered
+                else "Sign in with your current password. "
+            )
+            + "Agents and interrupted jobs remain paused so you can review them first.",
             "--ok-label=Open AI Station",
         )
     if status not in {"completed", "applied", "aborted", "canceled"}:

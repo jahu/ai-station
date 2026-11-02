@@ -34,6 +34,8 @@ MAC_SOURCES = (
     "scripts/desktop_restore_files.py",
     "scripts/desktop_restoration.py",
     "scripts/desktop_backup_ui.py",
+    "scripts/desktop_restore_authority.py",
+    "backend/app/account_credentials.py",
 )
 
 
@@ -190,6 +192,7 @@ def bundle(output, python_layer, native_layer, architecture, image, image_build,
         resources.mkdir()
         copy_sources(resources)
         for name in MAC_SOURCES:
+            (resources / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, resources / name)
         shutil.copytree(python_layer, resources / "python", symlinks=True)
         if file_manifest(resources / "python") != python_files:

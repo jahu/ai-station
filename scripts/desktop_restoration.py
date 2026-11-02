@@ -14,6 +14,12 @@ from macos_database_storage import RESTORE_ACTIONS, stable_identity
 FENCE = "desktop-restore-pending.json"
 
 
+def recoverable_version(value):
+    # A failed restart must not make an existing installation impossible to
+    # restore. This is recovery eligibility, never a claim of current readiness.
+    return value["phase"] == "ready" or (value["phase"] == "starting" and value["last_ready_at"] is not None)
+
+
 class Restoration:
     def __init__(self, storage, operation, backup=None, *, secrets_policy="review", recover_admin=False):
         self.storage = storage
@@ -93,7 +99,7 @@ class Restoration:
         current = versions.load(self.root)
         if (
             data != self.data
-            or current["phase"] != "ready"
+            or not recoverable_version(current)
             or current["package"] != self.storage.package
             or current["namespace_sha256"] != namespace
         ):

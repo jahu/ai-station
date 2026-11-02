@@ -287,7 +287,8 @@ and keeps the app running as your ordinary user. These are release candidates;
 the complete macOS installer and broader GPU qualification remain in progress.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
 The Mac candidate now has full backup/restore coordination and a native menu;
-complete recovery presentation and installed-device acceptance remain in progress.
+administrator recovery includes a secure form reachable after a failed start.
+Complete installed-device acceptance remains in progress.
 [Backup and restoration status](docs/plans/desktop-snapshots.md).
 
 Development builds also retain creative sessions across Images, Video, Music,
