@@ -88,6 +88,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Observe actual ordinary-user hypervisor availability
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          mkdir -m 700 .hypervisor-probe
+          /usr/bin/xcrun clang -Wall -Wextra -Werror -framework Hypervisor \
+            packaging/macos/hypervisor-probe.c -o .hypervisor-probe/check
+          /usr/bin/codesign --force --sign - \
+            --entitlements packaging/macos/hypervisor-probe.entitlements .hypervisor-probe/check
+          /usr/bin/codesign --verify --strict .hypervisor-probe/check
+          /usr/bin/codesign --display --entitlements - .hypervisor-probe/check
+          /usr/bin/sw_vers -productVersion
+          .hypervisor-probe/check | tee .hypervisor-probe/result.json
       - name: Install checked developer dependencies and native package tool
         run: |
           python -m venv .venv
