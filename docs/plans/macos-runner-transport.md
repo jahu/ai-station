@@ -125,6 +125,16 @@ recovery remain unchanged. Linux/WSL retain their working direct socket path.
 
 ## Qualification sequence
 
+The application-image integration uses `compose.macos.yaml` and the internal
+`desktop_connection.py` entry point from the same image. Only the connection
+service receives the client certificate directory; only that service writes
+the private tmpfs socket volume. API, worker and scheduler retain read-only
+socket mounts and wait for a health request that traverses the complete link.
+The supervisor must create the native owner after Runner identity/readiness,
+monitor its retained process and stop the owned Compose project before closing
+the helper. Until that lifecycle is connected and qualified, the overlay is an
+internal candidate and is not selected by the ordinary launcher.
+
 - Actual same-host UDS → mutual TLS → UDS with neutral HTTP/streaming. Reject
   absent/foreign certificates, wrong native peers, changed credential/socket
   files and public targets. Check concurrent streams, backpressure, parent exit,

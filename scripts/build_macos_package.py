@@ -19,6 +19,7 @@ from macos_desktop_python import fingerprint, native_file, recipe
 ROOT = Path(__file__).resolve().parent.parent
 ARCHITECTURES = {"arm64": "arm64", "x86_64": "amd64"}
 MAC_SOURCES = (
+    "compose.macos.yaml",
     "scripts/desktop_link.py",
     "scripts/desktop_update.py",
     "scripts/desktop_upgrade_image.py",
