@@ -3,6 +3,7 @@
 .env
 .env.*
 .tools
+.native-mac
 data
 ai-station-data
 **/node_modules
