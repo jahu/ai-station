@@ -277,6 +277,51 @@ def test_changed_docker_connection_cannot_import_or_probe_an_interrupted_update(
     assert (setup.data / "runtime" / update.FENCE).exists()
 
 
+def test_cold_resume_reuses_an_already_held_startup_lock_without_releasing_it(setup, monkeypatch):
+    prepared_pending_update(setup, monkeypatch)
+    with (setup.root / "desktop.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        update.install_update(
+            setup.root, None, console=True, start=lambda path: path, owner_lock=lock.fileno()
+        )
+        with (setup.root / "desktop.lock").open("a") as competing:
+            with pytest.raises(BlockingIOError):
+                fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def test_busy_bootstrap_reopens_owner_instead_of_attempting_cold_recovery(setup, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["desktop.py", "--console"])
+    monkeypatch.setattr(desktop.signal, "signal", lambda *a: None)
+    monkeypatch.setattr(update, "pending", lambda root: pytest.fail("Busy launch attempted cold recovery"))
+    with owner(setup.root, setup.config, setup.channel) as (process, _):
+        desktop.main()
+        assert process.poll() is None
+    assert "still starting" in capsys.readouterr().out
+    assert not setup.steps and not setup.clients
+
+
+def test_cold_bootstrap_routes_pending_update_while_retaining_its_existing_lock(setup, monkeypatch):
+    _, installed = prepared_pending_update(setup, monkeypatch)
+    monkeypatch.setattr(sys, "argv", ["desktop.py", "--console"])
+    monkeypatch.setattr(desktop.signal, "signal", lambda *a: None)
+    monkeypatch.setattr(desktop, "prerequisites", lambda: None)  # Candidate behind the unchanged gate.
+    opened = []
+
+    def reexecute(path, args):
+        assert path == installed and args.install_update is None
+        with (setup.root / "desktop.lock").open("a") as competing:
+            with pytest.raises(BlockingIOError):
+                fcntl.flock(competing, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        opened.append(path)
+
+    monkeypatch.setattr(desktop, "reexecute", reexecute)
+    desktop.main()
+    assert opened == [installed]
+    assert setup.steps == ["image", "bridge", "status", "publish", "activate"]
+    with (setup.root / "desktop.lock").open("a") as next_owner:
+        fcntl.flock(next_owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
 def test_active_payload_never_redirects_to_changed_code_or_changed_storage(setup):
     with owner(setup.root, setup.config, setup.channel) as (process, instance):
         request(setup.channel, "stop", instance_id=instance)

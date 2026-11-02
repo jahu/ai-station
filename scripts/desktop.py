@@ -779,7 +779,7 @@ def main():
     if platform.system() == "Darwin" and not (args.status or args.stop):
         from desktop_update import active_payload, install_update, pending
 
-        if args.install_update or pending(root) is not None:
+        if args.install_update:
             prerequisites()  # The unqualified Mac consumer path remains closed.
             verify(ROOT, value)
             install_update(
@@ -833,6 +833,16 @@ def main():
                 raise
             if not continue_docker_setup(dialog, background=args.background):
                 return
+        if platform.system() == "Darwin" and pending(root) is not None:
+            verify(ROOT, value)
+            install_update(
+                root,
+                None,
+                console=args.console,
+                start=lambda installed: reexecute(installed, args),
+                owner_lock=lock,
+            )
+            return
         if not args.console and not (root / "desktop.env").exists():
             answer = dialog(
                 "--question",

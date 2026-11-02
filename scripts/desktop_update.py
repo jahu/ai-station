@@ -118,22 +118,27 @@ def pending(root):
 
 
 @contextmanager
-def cold_handoff(root):
+def cold_handoff(root, *, owner_lock=None):
     descriptors = []
     try:
         for name in ("desktop-update.lock", "desktop.lock"):
-            descriptor = lock_file(root, name, create=name == "desktop-update.lock")
-            descriptors.append((name, descriptor))
+            borrowed = name == "desktop.lock" and owner_lock is not None
+            descriptor = (
+                owner_lock if borrowed else lock_file(root, name, create=name == "desktop-update.lock")
+            )
+            descriptors.append((name, descriptor, borrowed))
+            require_lock(root, name, descriptor)
             try:
                 fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 raise RuntimeError("AI Station is still stopping or another update is active") from None
         yield
-        for name, descriptor in descriptors:
+        for name, descriptor, _ in descriptors:
             require_lock(root, name, descriptor)
     finally:
-        for _, descriptor in reversed(descriptors):
-            os.close(descriptor)
+        for _, descriptor, borrowed in reversed(descriptors):
+            if not borrowed:
+                os.close(descriptor)
 
 
 def consent(previous, target, *, resume=False):
@@ -175,7 +180,7 @@ def apply(client, progress):
     raise RuntimeError("The interrupted update needs inspection; saved data was kept")
 
 
-def install_update(root, app, *, console, start):
+def install_update(root, app, *, console, start, owner_lock=None):
     """Native entry only; caller checks consumer prerequisites and trusted launcher."""
     config = root / "desktop.env"
     if not config.exists():
@@ -219,7 +224,7 @@ def install_update(root, app, *, console, start):
             if not check_bridge(desktop.ROOT, root, config, value, engine, log, control):
                 return None
             if existing is not None:
-                with cold_handoff(root):
+                with cold_handoff(root, owner_lock=owner_lock):
                     if not consent(existing["previous"], versions.package_identity(value), resume=True):
                         return None
                     client = UpgradeImage(
