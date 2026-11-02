@@ -1439,7 +1439,7 @@ The offline desktop-upgrade command is confined to the verified application
 image and canonical user-owned app data. It has no HTTP/Runner/agent route or
 caller-selected command. UUID-bound previous/target identities, source/backup/
 stage hashes and shared locks prevent adopting changed input. Symlinks, hardlinks,
-shared-write files and unknown SQLite sidecars are refused. Backups stay private;
+shared-write files and unexpected WAL/journal changes are refused. Backups stay private;
 reports contain no account records or credentials. Pending publication blocks
 normal startup, survives process exit and resumes only the original operation.
 Safe pre-publication abort retains the original data and copies; unexpected
