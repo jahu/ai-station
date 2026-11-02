@@ -28,6 +28,16 @@ GitHub explicitly documents missing nested virtualization on its ARM hosts;
 Intel is observed separately rather than inferred from ARM.
 [Hosted runner limitations](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#limitations-for-arm64-macos-runners).
 
+The actual [2026-11-02 native run](https://github.com/jahu/ai-station/actions/runs/41420278249)
+compiled, signed and executed this probe on both architectures. Intel macOS
+15.7.9 created and destroyed its empty VM (both return codes zero); ARM macOS
+15.8.2 refused creation (raw return code 4209590287; no VM existed to destroy).
+Both report an outer VMM. Therefore an Intel Docker Desktop experiment is the
+next available test, while the observed ARM host cannot supply this prerequisite.
+Neither observation verifies Docker Desktop, shared native sockets, first-run,
+Metal or the consumer installer. Do not generalize either result to every host
+with that architecture.
+
 `macos_desktop_docker.py` supplies read-only prerequisite discovery for a Finder
 launch: it locates the installed Docker Desktop CLI in the system/user
 Applications bundle, accepts only an executable inside that bundle, and reads
