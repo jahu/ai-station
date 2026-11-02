@@ -97,6 +97,33 @@ def qualify(client, data, profile, environment_id, restart):
 
     selection = {"permissions": ["manage_models"]}
     try:
+        metadata = {
+            key: body[key]
+            for key in (
+                "run_id",
+                "runtime_profile",
+                "environment_id",
+                "app_owned",
+                "model_sha256",
+                "size_bytes",
+                "mtime",
+                "context_size",
+                "permissions",
+            )
+        }
+        metadata.update(host_path=body["model_path"], check_context=True)
+        response = client.post("/v1/models/verify", json=metadata)
+        response.raise_for_status()
+        verified = response.json()
+        if (
+            not verified.get("matches_observation")
+            or verified.get("image") is not None
+            or (verified.get("native") or {}).get("environment_id") != environment_id
+            or (verified.get("cpu") or {}).get("ram_mib") != body["ram_mib"]
+            or str(data) in json.dumps(verified)
+            or "operation_id" in json.dumps(verified)
+        ):
+            raise ValueError("Native model/SDK metadata was not privately verified")
         denied = client.post("/v1/llama/load", json={**body, "permissions": []})
         if denied.status_code != 403:
             raise ValueError("Typed load accepted missing permissions")
@@ -129,6 +156,7 @@ def qualify(client, data, profile, environment_id, restart):
             raise ValueError("Stop did not fence the delayed native load")
         return {
             "typed_native_CPU_inference_passed": True,
+            "typed_native_model_metadata_verified": True,
             "typed_duplicate_same_PID": True,
             "typed_restart_same_PID_and_reply": True,
             "typed_live_Stop_confirmed": True,

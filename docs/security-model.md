@@ -1397,3 +1397,12 @@ explicit model Stop remains durable and ownership-checked. Normal shutdown still
 cancels other owned jobs. Unknown ownership or changed SDK/model metadata cannot
 release reservations or authorize a signal. Native estimates declare no hard
 memory/no-swap guarantee. Full guided Mac installation remains separately gated.
+
+Native model verification accepts only the owned model namespace plus an opaque
+SDK reference and bounded context. It exposes checked cache geometry and estimated
+RAM separately from container-image readiness, with no private SDK operation or
+absolute host path. The control-plane load Run freezes its first native startup
+deadline and reuses it after a lost acknowledgement; shared RAM remains reserved
+until owned exit is confirmed. Account-scoped automatic loads validate the actual
+relative model source/hash and complete native preset before gaining permission
+to create shared runtime metadata. Existing foreign-history and Stop guards apply.

@@ -181,11 +181,13 @@ def selected_model(run):
 
 
 def preset(instance):
+    from app.cpu_models import fields
     from app.llama import LoadModel
 
     meta = instance.metadata_json
     return LoadModel(
         model_file_id=meta["model_file_id"],
+        **fields(meta),
         gpus=meta["gpus"],
         context_size=meta["context_size"],
         cache_type=meta.get("cache_type", "f16"),

@@ -14,7 +14,11 @@ def estimate(entry):
 
 
 def fields(values):
-    return {key: values[key] for key in ("runtime_profile", "ram_mib") if values.get(key) is not None}
+    return {
+        key: values[key]
+        for key in ("runtime_profile", "ram_mib", "environment_id")
+        if values.get(key) is not None
+    }
 
 
 def compatible(definition, entry):

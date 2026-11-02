@@ -155,6 +155,7 @@ def add_runtime_intent(session, instance, run):
 def consume_runtime_intent(session, instance):
     """Flush-only check; an existing row or altered plan never gets this grant."""
     from app.llama import loadable_model
+    from app.model_sources import source_of
     from app.models import ModelFile, RuntimeInstance
 
     intent = session.info.get("_runtime_intents", {}).get(id(instance))
@@ -178,10 +179,9 @@ def consume_runtime_intent(session, instance):
         or instance.status != "queued"
         or instance.endpoint != "llamacpp:" + instance.id
         or instance.metadata_json != intent["metadata"]
-        or any(
-            run.parameters.get(key) != getattr(model, attr)
-            for key, attr in (("model_path", "host_path"), ("size_bytes", "size_bytes"), ("mtime", "mtime"))
-        )
+        or bool(run.parameters.get("app_owned")) != bool(model.relative_path)
+        or run.parameters.get("model_sha256") != (model.sha256 if model.relative_path else None)
+        or any(run.parameters.get(key) != value for key, value in source_of(model).items())
         or any(
             instance.metadata_json.get(key) != run.parameters.get(key)
             for key in (
@@ -191,6 +191,7 @@ def consume_runtime_intent(session, instance):
                 "requested_context_size",
                 "runtime_profile",
                 "ram_mib",
+                "environment_id",
             )
         )
     ):
@@ -261,6 +262,10 @@ OBSERVATION_FIELDS = {
     "n_params",
     "template_sha256",
     "checked_at",
+    "compute_target",
+    "ram_mib",
+    "memory_enforcement",
+    "zero_swap_guaranteed",
 }
 
 

@@ -89,3 +89,28 @@ SDK prepare/adopt, real load/reply, duplicate/mutated identity, graceful Runner
 replacement with the same model PID and another reply, observed-live Stop and
 pre-dispatch Stop. Ordinary SDK checks download no model. This is a component
 qualification, not yet guided consumer setup, Metal or Docker Desktop acceptance.
+
+## Control-plane model operations
+
+The normal `llama_load` Run accepts an explicit native CPU profile, owned model
+and opaque SDK environment reference. Before reserving/dispatching it, the worker
+uses `/v1/models/verify` to recheck the source observation, exact GGUF cache geometry,
+context/RAM budget and SDK identity. Native inspection never invokes Docker or
+inspects arbitrary host paths; its response distinguishes native readiness from
+an image and exposes no private preparation ID or host data path.
+
+The existing durable RAM lock survives model readiness and lost acknowledgements.
+A startup deadline is frozen on the first dispatch and reused after lease recovery.
+Definition loading, explicit restart, automatic conversation loading and saved
+handoff presets keep the same opaque environment reference. Native payloads omit
+container-only projector coordinates. Stop and unknown ownership retain their
+existing recovery semantics; a Mac RAM estimate is not hard/no-swap enforcement.
+Account-scoped runtime-intent validation now checks the portable owned model
+coordinate/hash as well as its preset. A private automatic load does not expose
+its Run, conversation or SDK preparation to another account using the shared model.
+
+This connects existing verified model definitions to the worker, not yet the
+platform-matched first-run catalog. Guided selection/download and actual full
+Docker Desktop installation remain the next integration step. Real native metadata
+inspection is covered by the explicit installed-Runner CPU fixture; normal queue,
+RAM, account/privacy and lost-ack tests use fake model execution.

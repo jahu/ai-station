@@ -30,7 +30,7 @@ AppKit presentation and application-bundle entry have passed ARM/Intel component
 checks. Read-only Docker Desktop discovery uses its fixed local context and
 installed application CLI; the transport experiment can test the chosen data
 filesystem with a separate disposable mount. Full Docker Desktop transport,
-model setup/inference, preserving updates/removal and signing acceptance remain
+guided model setup, Metal, preserving updates/removal and signing acceptance remain
 required before the launcher admits Mac consumer operation.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
@@ -60,14 +60,20 @@ application-wide dependency admits qualified Mac health, read-only hardware,
 owned process inspection/Stop and fixed native SDK preparation operations.
 The [managed native SDK flow](plans/macos-managed-llama.md) reuses runtime setup
 Tasks/Runs, verified downloads and the owned environment controller, with opaque
-shared environment references and private preparation receipts. The existing typed llama.cpp routes also accept explicit native CPU model
+shared environment references and private preparation receipts. The existing typed
+llama.cpp routes also accept explicit native CPU model
 coordinates and resolve the opaque SDK identity privately. They reuse the same
 process owner, readiness/completion proxy, startup watchdog and durable Stop.
 Native model sockets remain outside the container-mounted Runner socket; shared
 model children outlive Runner replacement just as Linux model containers do.
 Other typed operations, including later included routers, remain unavailable
-before their own native qualification. Internal native CPU inference is qualified separately; this change
-does not activate guided model setup, Linux media recipes or the consumer Mac launcher.
+before their own native qualification. Installed native CPU inference is qualified
+on ARM and Intel; Linux media recipes and the consumer Mac launcher remain gated.
+Native model inspection verifies only owned GGUF/context and the opaque SDK.
+Existing model load/install Runs preserve that environment reference, freeze
+startup deadlines and reserve RAM through readiness until confirmed Stop.
+Member-initiated automatic model loads validate relative model source coordinates;
+shared model readiness does not expose the initiating account's private history.
 
 An internal native llama.cpp lifecycle candidate composes that manager with the
 verified Mac SDK, owned GGUF/cache inspection and the existing completion proxy.
@@ -76,8 +82,9 @@ Metal admission and private native inference socket preserve the shared executio
 boundary. Admission reports estimated RAM without a hard/no-swap promise. Shared
 model output is suppressed at process creation so loader-owned logs cannot retain
 other users' conversation content. Existing executors retain normal log capture.
-No public capability or Mac profile is enabled by this internal candidate;
-[actual platform/package acceptance](plans/macos-consumer-installation.md) remains.
+The public typed adapter uses this lifecycle for native CPU models. Metal remains
+an internal candidate; [complete platform/package acceptance](plans/macos-consumer-installation.md)
+is still required before consumer Mac startup.
 
 Mac packaging now has a portable build-time Python layer with separately pinned
 standalone interpreters and native wheels for ARM/Intel. It reuses immutable input

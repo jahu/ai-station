@@ -45,19 +45,32 @@ class LoadModel(BaseModel):
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector_file_id: UUID | None = None
-    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
-        default=None, exclude_if=lambda v: v is None
-    )
+    runtime_profile: (
+        Literal[
+            "llamacpp-cpu-linux-amd64-v1",
+            "llamacpp-native-darwin-arm64-b12032-v2",
+            "llamacpp-native-darwin-x86_64-b12032-v2",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
     ram_mib: StrictInt | None = Field(default=None, ge=256, le=65536, exclude_if=lambda v: v is None)
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
 
     @model_validator(mode="after")
     def cpu_profile(self):
+        from app.native_models import native
+
+        is_native = native(self.model_dump())
+        if is_native != (self.environment_id is not None):
+            raise ValueError("A native CPU profile requires its opaque SDK environment reference")
         if self.runtime_profile:
             if (
                 self.gpus
                 or self.projector_file_id
                 or self.cache_type != "q8_0"
-                or self.context_size != 4096
+                or (not is_native and self.context_size != 4096)
                 or self.ram_mib is None
             ):
                 raise ValueError("Managed CPU requires its fixed context/cache and RAM budget, without GPUs")
@@ -330,7 +343,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "size_bytes": companion.size_bytes,
             "mtime": companion.mtime,
         }
-    if body.cache_type == "q8_0" and not _fitted_context:
+    if body.cache_type == "q8_0" and not _fitted_context and not body.runtime_profile:
         body = body.model_copy(
             update={
                 "context_size": coding_context_target(session, model, body.gpus, ceiling=body.context_size)
@@ -495,7 +508,11 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
         LoadModel(
             model_file_id=file_id,
             gpus=list(meta.get("gpus") or []),
-            **{key: meta[key] for key in ("runtime_profile", "ram_mib") if meta.get(key) is not None},
+            **{
+                key: meta[key]
+                for key in ("runtime_profile", "ram_mib", "environment_id")
+                if meta.get(key) is not None
+            },
             context_size=int(meta.get("context_size") or 4096),
             cache_type=meta.get("cache_type") if meta.get("cache_type") in {"f16", "q8_0"} else "f16",
         ),
@@ -635,25 +652,27 @@ class LlamaExecutor:
     def fit_context(self, session, run, instance, runner, hardware):
         require(run.effective_permissions, "filesystem_read")
         if run.parameters.get("runtime_profile"):
+            from app.native_models import ready, verification
+
             report = runner.verify_model(
                 {
                     "run_id": run.id,
                     **verify_source(run.parameters),
                     "check_context": True,
                     "check_image": True,
-                    "runtime_profile": run.parameters["runtime_profile"],
+                    **verification(run.parameters),
                     "permissions": run.effective_permissions,
                 }
             )
             expected = {
                 "runtime_profile": run.parameters["runtime_profile"],
                 "ram_mib": run.parameters["ram_mib"],
-                "context_size": 4096,
+                "context_size": run.parameters["context_size"],
             }
             if (
                 not report.get("matches_observation")
                 or report.get("cpu") != expected
-                or not report.get("image", {}).get("present")
+                or not ready(report, run.parameters)
             ):
                 instance.status = "failed"
                 run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
@@ -768,6 +787,13 @@ class LlamaExecutor:
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
         instance.status = "loading" if self.operation == "load" else "stopping"
+        from app.native_models import native
+
+        if native(run.parameters) and "startup_deadline_at" not in run.parameters:
+            run.parameters = {
+                **run.parameters,
+                "startup_deadline_at": (utcnow() + timedelta(minutes=10)).isoformat(),
+            }
         session.commit()
         request = {
             key: run.parameters[key]
@@ -784,10 +810,14 @@ class LlamaExecutor:
                 "projector",
                 "runtime_profile",
                 "ram_mib",
+                "environment_id",
+                "startup_deadline_at",
             )
             if key in run.parameters
         }
         request.update(run_id=run.id, permissions=run.effective_permissions)
+        if native(run.parameters):
+            request.pop("projector", None)
         deadline = time.monotonic() + max(
             0, 600 - (utcnow() - (run.started_at or run.created_at)).total_seconds()
         )
@@ -1089,7 +1119,7 @@ def prepare_consumer(session, run):
                     model_file_id=file_id,
                     **{
                         key: preset[key]
-                        for key in ("runtime_profile", "ram_mib")
+                        for key in ("runtime_profile", "ram_mib", "environment_id")
                         if preset.get(key) is not None
                     },
                     gpus=preset["gpus"],
