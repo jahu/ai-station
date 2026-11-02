@@ -111,6 +111,7 @@ jobs:
             backend/tests/test_desktop_control.py \
             backend/tests/test_desktop_versions.py \
             backend/tests/test_desktop_update_owner.py \
+            backend/tests/test_desktop_upgrade_image.py \
             backend/tests/test_desktop_native_storage.py \
             backend/tests/test_macos_desktop_docker.py \
             backend/tests/test_desktop_bridge.py \
