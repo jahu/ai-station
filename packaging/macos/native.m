@@ -49,12 +49,19 @@ static void prepareUI(NSApplicationActivationPolicy policy) {
     [NSApp activateIgnoringOtherApps:YES];
 }
 
+static void prepareModalUI(void) {
+    prepareUI(NSApplicationActivationPolicyAccessory);
+    // Modal helpers do not enter NSApplication.run(), which normally finishes
+    // launch/Launch Services registration before dispatching accessible events.
+    [NSApp finishLaunching];
+}
+
 static int showDialog(BOOL running) {
     NSData *input = [[NSFileHandle fileHandleWithStandardInput] readDataOfLength:16385];
     if (input.length > 16384) return 2;
     id request = [NSJSONSerialization JSONObjectWithData:input options:0 error:NULL];
     if (![request isKindOfClass:NSDictionary.class]) return 2;
-    prepareUI(NSApplicationActivationPolicyAccessory);
+    prepareModalUI();
     NSAlert *alert = [NSAlert new];
     alert.messageText = @"AI Station";
     alert.informativeText = field(request, @"text", @"");
@@ -204,7 +211,7 @@ static NSOpenPanel *updatePanel(void) {
 }
 
 static int updateChooserSmoke(void) {
-    prepareUI(NSApplicationActivationPolicyAccessory);
+    prepareModalUI();
     NSOpenPanel *panel = updatePanel();
     if (panel.allowsMultipleSelection || panel.canChooseDirectories || panel.allowedContentTypes.count != 1) return 1;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [panel cancel:nil]; });
@@ -226,7 +233,7 @@ static NSOpenPanel *backupPanel(void) {
 }
 
 static int backupDialog(BOOL folder, BOOL smoke) {
-    prepareUI(NSApplicationActivationPolicyAccessory);
+    prepareModalUI();
     if (folder || smoke) {
         NSOpenPanel *panel = backupPanel();
         if (smoke) {
@@ -268,7 +275,7 @@ static int backupDialog(BOOL folder, BOOL smoke) {
 }
 
 static int restoreReview(void) {
-    prepareUI(NSApplicationActivationPolicyAccessory);
+    prepareModalUI();
     NSAlert *alert = [NSAlert new];
     alert.icon = stationIcon();
     alert.messageText = @"Restore this backup?";
@@ -302,7 +309,7 @@ static int restoreReview(void) {
 @end
 
 static int administratorRecovery(BOOL smoke) {
-    prepareUI(NSApplicationActivationPolicyAccessory);
+    prepareModalUI();
     NSAlert *alert = [NSAlert new];
     alert.icon = stationIcon();
     alert.messageText = @"Recover administrator access";

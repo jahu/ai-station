@@ -5,12 +5,21 @@ final class NativeAcceptanceTests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launch(_ mode: String) -> XCUIApplication {
+    private func launch(_ mode: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = [mode]
+        app.launchArguments = mode.map { [$0] } ?? []
         app.launch()
         addTeardownBlock { if app.state != .notRunning { app.terminate() } }
         return app
+    }
+
+    func testApplicationEntryExposesItsStartupErrorToAccessibility() {
+        // The UI-only subject deliberately has no Python/image payload. Its
+        // ordinary application entry must expose the real missing-package alert.
+        let app = launch()
+        XCTAssertTrue(app.staticTexts["AI Station could not open"].waitForExistence(timeout: 15))
+        app.buttons["OK"].click()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
     }
 
     func testRecoveryRequiresMatchingSecureFieldsAndExplicitMFAAcknowledgement() {
