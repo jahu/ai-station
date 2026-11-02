@@ -142,8 +142,16 @@ provenance. Native backup presentation uses the same verified current package an
 same-user Stop handoff, borrowing the desktop lock while the coordinator holds its
 own offline gate. Folder choices and cancellation travel over private child pipes,
 not HTTP or command arguments. Cancel is disabled for database publication;
-closing presentation does not signal workloads. Consumer restore remains gated
-on complete native recovery presentation and actual Mac qualification.
+closing presentation does not signal workloads. The exceptional native recovery
+form uses secure password/confirmation controls and explicit MFA/account-reset
+acknowledgement. A private bounded reply supplies the existing fixed authority
+file; the application and native CLI/UI share the same pure credential rules.
+Passwords do not enter command arguments, ordinary reports or logs. A failed
+restart remains `starting`: recovery eligibility uses a prior-ready timestamp plus
+the currently verified package/storage binding, never inventing API readiness or
+adopting a first-start database. The stopped owner lock and offline workload
+guards are still mandatory. Consumer restore remains gated on actual Mac
+qualification.
 
 The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
 `getpeereid` for native Mac peers. Missing/failed credential inspection and

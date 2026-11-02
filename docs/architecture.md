@@ -119,8 +119,12 @@ and newer MFA key files, and fences startup until files and DB agree. Explicit
 credential conflicts require review. Package/runtime/volume receipts are not
 restored as execution authority. The native menu candidate now presents ordinary
 backup/restore, progress, credential conflict review and interruption continuation
-over those same coordinators. The exceptional administrator recovery form and
-actual complete Mac consumer journey remain unfinished.
+over those same coordinators. Exceptional administrator recovery now has secure
+native fields and explicit MFA/account-reset consent, using the existing private
+authority input and shared pure credential rules. Failed restarts can reach
+recovery without a live web/control instance, retaining their unready receipt;
+fresh unqualified installations cannot adopt that recovery authority. The actual
+complete Mac consumer journey remains unfinished.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint

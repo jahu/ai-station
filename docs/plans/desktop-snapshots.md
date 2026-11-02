@@ -152,11 +152,29 @@ or safe pre-publication cancellation. Current credential conflicts require a
 separate explicit keep-current decision. Successful exports can be revealed in
 Finder; terminal commands are not needed for this ordinary path.
 
+The exceptional administrator recovery candidate is also native. The restore
+review offers a separate recovery form for unreadable current account authority.
+It requires an administrator from the backup, a new password entered twice and
+explicit acknowledgement that MFA is reset and other restored accounts are
+disabled. Password fields are secure controls; their bounded JSON reply travels
+only through a private child pipe. The native utility reuses the application's
+pure username/password rules, packaged without database dependencies, and writes
+only the existing private fixed-path authority input. The developer CLI uses that
+same validator/writer. A frozen pending request cannot be overwritten with a
+different password.
+
+Startup failure offers **Backups and Restore…** even without the web interface.
+A stopped `starting` version with a recorded prior ready installation can be
+restored using the current verified package, volume and namespace. Native recovery
+must acquire its private desktop lock; it never signals an unready/unknown owner.
+An unqualified first start is refused. Recovery preserves the `starting` receipt;
+only a real API readiness acknowledgement can publish `ready`. Backup creation
+still requires a ready installation. Historical backup receipts remain provenance.
+
 1. Qualify the native menu, selection, cancellation/restart and credential review
    on both Mac architectures, then the real installed Docker Desktop journey.
-   The exceptional unreadable-authority administrator/MFA reset still uses the
-   developer recovery interface; add its secure native form before claiming the
-   complete consumer recovery journey.
+   Include the secure administrator form and recovery from a failed restart;
+   component tests do not replace actual installed-device qualification.
 2. Qualify the whole installed Mac journey with real accounts, history, secrets,
    model files, first result, Stop/restart, two-package update, interruption,
    cancellation, backup/restore and data-preserving removal. Native component and

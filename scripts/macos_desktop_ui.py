@@ -155,12 +155,26 @@ class Preparation:
             self.process.stdout.close()
 
 
-def backup_selection(root, *, pending=None, can_abort=True):
-    return backup_reply(root, "--native-backups", {"pending": pending, "can_abort": can_abort})
+def backup_selection(root, *, pending=None, can_abort=True, restore_only=False):
+    request = {"pending": pending, "can_abort": can_abort}
+    if restore_only:
+        request["restore_only"] = True
+    return backup_reply(root, "--native-backups", request)
 
 
 def backup_folder(root):
     return backup_reply(root, "--native-backup-folder", {})
+
+
+def restore_review(root):
+    return backup_reply(root, "--native-restore-review", {})
+
+
+def administrator_recovery(root):
+    from desktop_restore_authority import validate
+
+    value = backup_reply(root, "--native-admin-recovery", {})
+    return None if value == {"action": "cancel"} else validate(value)
 
 
 def backup_reply(root, mode, request):

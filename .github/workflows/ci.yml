@@ -134,6 +134,7 @@ jobs:
             backend/tests/test_desktop_restore_files.py \
             backend/tests/test_desktop_restoration.py \
             backend/tests/test_desktop_backup_ui.py \
+            backend/tests/test_desktop_restore_authority.py \
             backend/tests/test_macos_desktop_ui.py \
             backend/tests/test_desktop_database_fingerprint.py \
             backend/tests/test_desktop_snapshot.py \
@@ -184,6 +185,7 @@ jobs:
           .native-mac/native-interface/ai-station-native --native-update-smoke
           .native-mac/native-interface/ai-station-native --native-backup-smoke
           .native-mac/native-interface/ai-station-native --native-backup-progress-smoke
+          .native-mac/native-interface/ai-station-native --native-admin-recovery-smoke
           .native-mac/native-interface/ai-station-native --native-update-ownership-smoke
           .native-mac/application-python/bin/python3.12 -IB scripts/macos_desktop_storage_probe.py
       - name: Exercise actual application bundle entry with neutral image fixture

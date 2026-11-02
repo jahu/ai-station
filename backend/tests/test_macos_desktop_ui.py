@@ -89,6 +89,36 @@ def test_backup_selection_uses_private_stdin_and_bounded_replies(package, monkey
         ui.backup_folder(root)
 
 
+def test_recovery_password_is_a_private_child_reply_never_an_argument_or_log(package, monkeypatch):
+    root, binary = package
+    secret = {
+        "username": " Ｏｗｎｅｒ ",
+        "password": "synthetic private recovery password",
+        "reset_mfa": True,
+    }
+    seen = {}
+
+    def run(argv, **kwargs):
+        seen.update(argv=argv, **kwargs)
+        return SimpleNamespace(returncode=0, stdout=json.dumps(secret).encode())
+
+    monkeypatch.setattr(ui.subprocess, "run", run)
+    monkeypatch.setenv("AI_STATION_LLM_API_KEY", "PRIVATE_FIXTURE_TOKEN")
+    result = ui.administrator_recovery(root)
+    assert result == secret | {"username": "Owner"}
+    assert seen["argv"] == [str(binary), "--native-admin-recovery"] and seen["input"] == b"{}\n"
+    assert "AI_STATION_LLM_API_KEY" not in seen["env"]
+    assert secret["password"] not in repr(seen)
+
+
+def test_recovery_cancel_never_returns_partial_credentials(package, monkeypatch):
+    root, _ = package
+    monkeypatch.setattr(
+        ui.subprocess, "run", lambda *a, **kw: SimpleNamespace(returncode=0, stdout=b'{"action":"cancel"}')
+    )
+    assert ui.administrator_recovery(root) is None
+
+
 def test_cancelable_progress_reads_only_its_own_bounded_cancel_frame(package, monkeypatch):
     import os
 
