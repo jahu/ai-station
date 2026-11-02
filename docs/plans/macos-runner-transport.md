@@ -35,19 +35,23 @@ documented constraint; do not report native/live-VM DB access as supported or
 silently ignore a failed container-writer check.
 
 The [follow-up with independent container writers](https://github.com/jahu/ai-station/actions/runs/41438708075)
-confirmed `SQLiteWriterNotExcluded`: the second Linux container could start a
-writer while the first held its transaction. The tested Mac bind mount is thus
-not admissible for the live application DB, even with all writers in Linux.
-Do not enable the consumer launcher on the assumption that the host-folder layout
-is safe. The next candidate keeps artifacts/models/uploads on the selected bind
-mount but places `/data/db` on a project-owned persistent local Docker volume.
+reported `SQLiteWriterNotExcluded`. Review then found that the original holder's
+15-second socket deadline could expire during slow contender container creation.
+That result alone does not establish a filesystem locking defect. The strengthened
+protocol keeps a bounded 90-second holder and requires an explicit in-transaction
+acknowledgement after the contender's attempt, including failed attempts. A lost
+holder is a failed experiment, never an accepted unsafe-filesystem negative control.
+Do not enable the consumer launcher until the strengthened shared-folder test
+passes. If it instead confirms missing exclusion with a live holder, a fallback
+candidate keeps artifacts/models/uploads on the selected bind mount but places
+`/data/db` on a project-owned persistent local Docker volume.
 All API/worker/scheduler and quiescent upgrade DB commands must use that same
 attested volume. A new disposable probe volume first has to pass the unchanged
 writer exclusion/visibility/integrity/restart tests. One fixed isolated initializer
 may set ownership only on its just-created empty volume; it mounts no host path
 and has only the required ownership capability. Regular clients stay non-root.
 
-This storage change also requires explicit preserving-update, offline backup/export,
+Adopting that storage change also requires explicit preserving-update, offline backup/export,
 restore and data-preserving uninstall/reinstall qualification before admission.
 An exported consistent backup belongs under the chosen app-data folder; a stale
 host DB must never be mistaken for the active volume DB. A copied host directory

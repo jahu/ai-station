@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import macos_transport_probe as probe
@@ -143,6 +144,23 @@ def test_native_controller_never_opens_the_live_database(short_root, monkeypatch
             result["concurrent_writer_lock"] and result["database_writer_domain"] == "same-host-test-fixture"
         )
         assert len(client.children) == 2 and all(child.returncode == 0 for child in client.children)
+    finally:
+        client.close()
+
+
+def test_disappeared_writer_is_not_misreported_as_an_unsafe_shared_filesystem(short_root, monkeypatch):
+    class TimedOut(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            time.sleep(0.2)
+            raise ValueError("simulated contender check failure")
+
+    monkeypatch.setattr(probe, "CLIENT", probe.CLIENT.replace("settimeout(90)", "settimeout(0.03)"))
+    client = TimedOut()
+    try:
+        with pytest.raises((OSError, ValueError)) as error:
+            probe.experiment(client, short_root)
+        assert "simulated contender check failure" not in str(error.value)
+        assert not getattr(client, "first_writer_verified_held", False)
     finally:
         client.close()
 

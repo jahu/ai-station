@@ -75,7 +75,8 @@ with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as s:
   require(c.execute('PRAGMA journal_mode=WAL').fetchone()[0]=='wal')
   c.execute('CREATE TABLE probe(value TEXT NOT NULL)');c.commit()
   c.execute('BEGIN IMMEDIATE');c.execute('INSERT INTO probe VALUES (?)',(stored,))
-  send('transaction-held');receive('commit');c.commit();c.close()
+  send('transaction-held');s.settimeout(90);receive('verify-held')
+  require(c.in_transaction);send('transaction-still-held');receive('commit');c.commit();c.close()
  else:
   require((root/'artifact.bin').read_bytes()==bytes.fromhex(stored))
   c=sqlite3.connect((database/'probe.sqlite').as_uri()+'?mode=rw',uri=True)
@@ -599,6 +600,12 @@ def send(connection, nonce, stage):
     connection.sendall(json.dumps({"nonce": nonce, "stage": stage}).encode() + b"\n")
 
 
+def confirm_writer_held(docker, connection, reader, nonce):
+    send(connection, nonce, "verify-held")
+    packet(connection, reader, nonce, "transaction-still-held")
+    docker.first_writer_verified_held = True
+
+
 def private_file(path):
     info = path.lstat()
     if (
@@ -667,7 +674,7 @@ def experiment(docker, root, *, data_root=None):
             identifier = docker.container(sockets, data, phase)
             connection, _ = listener.accept()
             with connection:
-                connection.settimeout(15)
+                connection.settimeout(90)
                 if not same_user(connection):
                     raise ValueError("The bridge did not preserve the native peer user")
                 with connection.makefile("rb") as reader:
@@ -676,7 +683,14 @@ def experiment(docker, root, *, data_root=None):
                     if phase == "write":
                         packet(connection, reader, nonce, "transaction-held")
                         artifact_checks(data, stored)
-                        docker.database_checks(sockets, data, stored)
+                        try:
+                            docker.database_checks(sockets, data, stored)
+                        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                            # A contender error is not a storage diagnosis if
+                            # the original transaction timed out or disappeared.
+                            confirm_writer_held(docker, connection, reader, nonce)
+                            raise
+                        confirm_writer_held(docker, connection, reader, nonce)
                         send(connection, nonce, "commit")
                     packet(connection, reader, nonce, "committed")
                     artifact_checks(data, stored)
@@ -695,6 +709,7 @@ def experiment(docker, root, *, data_root=None):
         "long_path_artifact_sha256": hashlib.sha256(bytes.fromhex(stored)).hexdigest(),
         "sqlite_wal": True,
         "concurrent_writer_lock": True,
+        "first_writer_verified_held": docker.first_writer_verified_held,
         "database_writer_domain": (
             "docker-local-volume"
             if getattr(docker, "database_volume", None) is not None
@@ -842,6 +857,7 @@ def probe(
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyboardInterrupt) as exc:
         result.update(transport_passed=False, error_type=type(exc).__name__, error=str(exc)[:500])
         if docker is not None:
+            result["first_writer_verified_held"] = getattr(docker, "first_writer_verified_held", False)
             result["client_failures"] = docker.client_failures()
     finally:
         result["cleanup_complete"] = docker.cleanup() if docker else True

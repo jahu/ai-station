@@ -139,6 +139,7 @@ r=json.loads(Path(sys.argv[1]).read_text());code=int(sys.argv[2])
 assert r['platform']=='Darwin' and r['cleanup_complete'] is True
 assert (code==0 and r['transport_passed'] is True) or (
  code==1 and r['transport_passed'] is False and r['error_type']=='ValueError'
+ and r.get('first_writer_verified_held') is True
  and r['error']=='The second container did not confirm SQLite writer exclusion'
  and len(r.get('database_contenders',[]))==1
  and r['database_contenders'][0]['failure_summary']==[{'probe_client_error':'SQLiteWriterNotExcluded','errno':None}]
