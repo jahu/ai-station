@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 final class NativeAcceptanceTests: XCTestCase {
@@ -61,5 +62,63 @@ final class NativeAcceptanceTests: XCTestCase {
         XCTAssertTrue(dialog.buttons["Check backup"].waitForExistence(timeout: 15))
         dialog.buttons["Cancel"].click()
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 10))
+    }
+
+    func testNestedPresentationHelperCanBeControlledWithoutLaunchingAnotherInstance() throws {
+        // The supervisor launches a nested binary directly, with a private pipe,
+        // rather than launching the app's main executable through Launch Services.
+        // Verify that exact process/bundle boundary before full-package UI tests.
+        let subject = launch()
+        XCTAssertTrue(subject.dialogs.firstMatch.buttons["OK"].waitForExistence(timeout: 15))
+        let source = try XCTUnwrap(NSWorkspace.shared.runningApplications.first {
+            $0.bundleIdentifier == "org.ai-station.qa.NativeSubject"
+        }?.executableURL)
+        subject.dialogs.firstMatch.buttons["OK"].click()
+        XCTAssertTrue(subject.wait(for: .notRunning, timeout: 10))
+
+        let files = FileManager.default
+        let scratch = files.temporaryDirectory.appendingPathComponent("ai-station-native-ui-\(UUID().uuidString)")
+        try files.createDirectory(at: scratch, withIntermediateDirectories: false,
+                                  attributes: [.posixPermissions: 0o700])
+        let contents = scratch.appendingPathComponent("Helper.app/Contents")
+        let helper = contents.appendingPathComponent("Resources/bin/ai-station-native")
+        try files.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                  attributes: [.posixPermissions: 0o700])
+        try files.createDirectory(at: contents.appendingPathComponent("MacOS"), withIntermediateDirectories: true)
+        try files.copyItem(at: source, to: helper)
+        try files.copyItem(at: source, to: contents.appendingPathComponent("MacOS/Helper"))
+        let identity = "org.ai-station.qa.NestedHelper"
+        let info: [String: Any] = ["CFBundleExecutable": "Helper", "CFBundleIdentifier": identity,
+                                   "CFBundleName": "AI Station QA", "CFBundlePackageType": "APPL",
+                                   "NSPrincipalClass": "NSApplication"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+
+        let child = Process()
+        child.executableURL = helper
+        child.arguments = ["--native-admin-recovery"]
+        child.standardOutput = FileHandle.nullDevice
+        child.standardError = FileHandle.nullDevice
+        child.environment = ProcessInfo.processInfo.environment.filter {
+            ["HOME", "TMPDIR", "LANG", "PATH", "__CF_USER_TEXT_ENCODING"].contains($0.key)
+        }
+        let finished = expectation(description: "Owned presentation child exited")
+        child.terminationHandler = { _ in finished.fulfill() }
+        try child.run()
+        addTeardownBlock { if child.isRunning { child.terminate() } }
+        let registered = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            NSRunningApplication(processIdentifier: child.processIdentifier)?.bundleIdentifier == identity
+        }, object: nil)
+        wait(for: [registered], timeout: 15)
+        let application = try XCTUnwrap(NSRunningApplication(processIdentifier: child.processIdentifier))
+        XCTAssertEqual(application.executableURL?.resolvingSymlinksInPath(), helper.resolvingSymlinksInPath())
+        let proxy = XCUIApplication(bundleIdentifier: identity) // Attach; never launch a substitute.
+        let dialog = proxy.dialogs.firstMatch
+        XCTAssertTrue(dialog.buttons["Restore and reset MFA"].waitForExistence(timeout: 15))
+        XCTAssertFalse(dialog.buttons["Restore and reset MFA"].isEnabled)
+        dialog.buttons["Cancel"].click()
+        wait(for: [finished], timeout: 10)
+        XCTAssertEqual(child.terminationStatus, 0)
+        try files.removeItem(at: scratch)
     }
 }
