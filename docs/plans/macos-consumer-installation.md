@@ -236,6 +236,8 @@ writes require inspection. Abort before publication leaves the original database
 and all backups intact. Never silently roll back after the new version has made
 writes. The later native coordinator must verify the retained owner, obtain
 explicit update consent and confirm owned services are stopped before dispatch.
+Actual Docker Desktop acceptance must also prove native/container visibility of
+the launcher locks; Linux-only flock tests do not qualify that Mac boundary.
 This transaction alone does not enable the Mac consumer prerequisite gate or
 qualify Finder/update/removal, Docker Desktop, Metal or signing.
 
