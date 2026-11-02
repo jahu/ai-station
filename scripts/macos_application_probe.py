@@ -267,7 +267,11 @@ def exercise_runner():
                 or stopped.json().get("alive")
             ):
                 raise ValueError("Installed Runner did not confirm owned Stop")
-            if unrelated.poll() is not None or client.post("/v1/llama/load", json={}).status_code != 503:
+            if (
+                unrelated.poll() is not None
+                or client.post("/v1/llama/load", json={}).status_code != 422
+                or client.post("/v1/runs/photo", json={}).status_code != 503
+            ):
                 raise ValueError("Installed Runner changed unowned work or admitted an unqualified adapter")
         server.terminate()
         if server.wait(timeout=15) != 0 or socket.exists():

@@ -275,7 +275,8 @@ def test_actual_runner_main_private_socket_recovers_and_stops_native_owned_work(
                 assert stopped.status_code == 200 and not stopped.json()["alive"]
                 assert stopped.json()["status"] == "canceled" and unrelated.poll() is None
                 if sys.platform == "darwin":
-                    assert client.post("/v1/llama/load", json={}).status_code == 503
+                    assert client.post("/v1/llama/load", json={}).status_code == 422
+                    assert client.post("/v1/runs/photo", json={}).status_code == 503
                 assert client.get("/health").status_code == 200
             server.terminate()
             assert server.wait(timeout=15) == 0
