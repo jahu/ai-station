@@ -67,6 +67,14 @@ the supervisor, preserving image upgrades, explicit consistent backup/export and
 data-preserving removal to use the attested DB volume. Linux/WSL storage is
 unchanged; copying only a Mac host folder must not be presented as a full backup.
 
+The persistent native storage owner binds a private receipt to that installation
+and Docker daemon, verifies exact local-volume identity and preserves it across
+owner restarts. Its fixed image command initializes only a new empty volume;
+ordinary-user inspection reads a root-owned binding marker without opening
+SQLite. The host `db` path remains an empty owned mountpoint. This supplies the
+storage lifecycle primitive; connecting startup, version activation and
+export/restore remains required before Mac consumer admission.
+
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU
 counters, physical RAM and current swap. Available RAM estimates the disjoint
 free and inactive page queues, with both components reported; speculative pages
