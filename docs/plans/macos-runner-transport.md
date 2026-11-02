@@ -206,7 +206,15 @@ user/base coordinates prevents adoption. A first version needs the exact owner
 and the fixed read-only image's marker-only emptiness proof; zero-byte database,
 sidecar or unrelated entries are sufficient to refuse it. First-version reader
 acknowledgements can be recovered without publishing a version prematurely.
-Consumer startup ordering and child reattestation still need integration below.
+The native candidate now imports its image and runs the authenticated/local-volume
+probe before preparing persistent storage and publishing version state. Its child
+independently verifies the package inventory, starting version, ready volume and
+quiescence before any Compose operation, overrides ambient volume settings, and
+pins the application image SHA. The probe requires the original SQLite writer to
+remain held and the exact local-volume writer domain. Legacy proofs are accepted
+only to reconcile completed cleanup before a new, stronger probe. The consumer
+gate remains closed pending full journey, preserving export/restore and native
+hardware/signing qualification.
 
 Before enabling Mac installation:
 

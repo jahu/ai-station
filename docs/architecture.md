@@ -78,8 +78,12 @@ fingerprint with the acknowledged publication or original abort state. It never
 opens the VM database with native SQLite. Version namespaces now also bind the
 private ready volume identity, including its daemon, without mutable reader
 journals. First-version publication requires the fixed image to prove that the
-volume contains only its binding marker. Connecting consumer startup and
-consistent export/restore remains required
+volume contains only its binding marker. The native candidate imports the image,
+qualifies its private authenticated connection/local-volume filesystem, and
+prepares persistent storage before publishing that first version. Its child
+rechecks the package, ready storage, version receipt and absence of foreign
+volume references; Compose receives only the attested volume and exact image.
+Consistent export/restore and actual complete consumer qualification remain required
 before Mac consumer admission.
 
 Native Darwin telemetry now has a read-only platform branch for public Mach CPU

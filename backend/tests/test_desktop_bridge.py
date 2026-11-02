@@ -48,14 +48,17 @@ def child(setup, mode="pass", changes=None):
         "import argparse,json,os,signal,sys,time\nfrom pathlib import Path\n"
         "os.umask(0o077)\np=argparse.ArgumentParser()\n"
         "for k in ('output','data-directory','packaged-image','expected-cli','expected-endpoint'):p.add_argument('--'+k,required=True)\n"
+        "p.add_argument('--authenticated-link',action='store_true',required=True)\n"
+        "p.add_argument('--native-database',action='store_true',required=True)\n"
         "a=p.parse_args();out=Path(a.output)\n"
         f"mode={mode!r}\n"
         "if mode=='before-dispatch':time.sleep(30)\n"
         "out.mkdir(mode=0o700)\n"
         "result={'probe_kind':'packaged_application','platform':'Darwin','image':a.packaged_image,'image_id':a.packaged_image,"
         "'chosen_data_directory':a.data_directory,'cleanup_complete':True,'transport_passed':True,'macos_installer_qualified':False,"
+        "'transport_kind':'uds-mutual-tls-uds','database_storage':{'kind':'disposable-local-volume','uncertain':False,'initializer_uncertain':False},"
         "'checks':{'native_peer_uid':os.geteuid(),'socket_rebind':True,'client_restart':True,'sqlite_wal':True,"
-        "'concurrent_writer_lock':True,'chosen_data_filesystem':True}}\n"
+        "'concurrent_writer_lock':True,'chosen_data_filesystem':True,'first_writer_verified_held':True,'database_writer_domain':'docker-local-volume'}}\n"
         f"result.update({changes or {}!r})\n"
         "def publish():\n (out/'result.json').write_text(json.dumps(result))\n"
         "def stop(*args):\n result.update(transport_passed=False);publish();sys.exit(1)\n"
@@ -173,6 +176,9 @@ def test_completed_private_receipt_recovers_after_parent_exit_without_replay(set
         {"macos_installer_qualified": True},
         {"checks": {"sqlite_wal": True}},
         {"image_id": "sha256:" + "b" * 64},
+        {"transport_kind": "direct-shared-socket"},
+        {"database_storage": {"kind": "shared-host-folder"}},
+        {"database_storage": {"kind": "disposable-local-volume", "uncertain": True}},
     ],
 )
 def test_foreign_or_incomplete_receipt_cannot_admit_startup(setup, changes):
@@ -199,3 +205,28 @@ def test_unsafe_proof_directory_does_not_touch_external_files(setup, tmp_path):
     with pytest.raises(ValueError, match="private owned canonical"):
         check(setup)
     assert not list(outside.iterdir())
+
+
+@pytest.mark.parametrize("changed", ["writer_not_held", "wrong_writer_domain", "uncertain_initializer"])
+def test_optimistic_transport_success_cannot_replace_database_locking_and_cleanup_proof(setup, changed):
+    checks = {
+        "native_peer_uid": os.geteuid(),
+        "socket_rebind": True,
+        "client_restart": True,
+        "sqlite_wal": True,
+        "concurrent_writer_lock": True,
+        "chosen_data_filesystem": True,
+        "first_writer_verified_held": True,
+        "database_writer_domain": "docker-local-volume",
+    }
+    storage = {"kind": "disposable-local-volume", "uncertain": False, "initializer_uncertain": False}
+    if changed == "writer_not_held":
+        checks["first_writer_verified_held"] = False
+    elif changed == "wrong_writer_domain":
+        checks["database_writer_domain"] = "shared-host-folder"
+    else:
+        storage["initializer_uncertain"] = True
+    child(setup, changes={"checks": checks, "database_storage": storage})
+    with pytest.raises(ValueError, match="authenticated transport and local database"):
+        check(setup)
+    assert (setup.state / "bridge-checks/pending.json").exists()
