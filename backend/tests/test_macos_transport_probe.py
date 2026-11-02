@@ -1,5 +1,6 @@
 """Hardware-free protocol/policy checks; optional real Linux control is not Mac QA."""
 
+import csv
 import io
 import json
 import os
@@ -184,6 +185,15 @@ def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docke
     assert json.loads(Path(docker.argv[-1], "config.json").read_text()) == {}
     assert docker.cleanup()
     assert calls[-1] == ("container", "rm", "a" * 64)
+
+
+@pytest.mark.parametrize("name", ["data,readonly,source=elsewhere", 'data "quoted"', "data\nwith\rnewlines"])
+def test_folder_names_cannot_add_mount_options_or_redirect_the_source(tmp_path, name):
+    source = tmp_path / name
+    parsed = next(csv.reader(io.StringIO(probe.bind_mount(source, "/probe-data"))))
+    assert parsed == ["type=bind", "source=" + str(source), "target=/probe-data"]
+    protected = next(csv.reader(io.StringIO(probe.bind_mount(source, "/probe-socket", readonly=True))))
+    assert protected == ["type=bind", "source=" + str(source), "target=/probe-socket", "readonly"]
 
 
 def test_changed_owner_is_preserved_without_stop_or_remove(docker):
@@ -381,7 +391,7 @@ def test_real_linux_docker_protocol_control(short_root, tmp_path, chosen):
     docker = probe.Docker(binary, "unix:///var/run/docker.sock", short_root, "amd64")
     try:
         assert docker.image() in docker.accepted_images()
-        data_root = tmp_path / ("Chosen użytkownik Application Support " * 3) if chosen else None
+        data_root = tmp_path / ('Chosen użytkownik, "Application Support" ' * 3) if chosen else None
         if data_root:
             data_root.mkdir(mode=0o700)
         result = probe.experiment(docker, short_root, data_root=data_root)

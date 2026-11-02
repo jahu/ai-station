@@ -130,6 +130,8 @@ package preparation, not permission to bypass the transport/consumer gates below
    cleanup checks original device/inode/UID/mode before removing either root.
    Symlink traversal and shared-writable data folders fail before probe writes.
    A successful `/tmp` test alone does not qualify the chosen data filesystem.
+   Mount fields use CSV encoding so commas/quotes in a selected folder cannot
+   become extra Docker options or redirect its source.
    If this transport fails, stop setup with an actionable
    local prerequisite; design and review an authenticated alternative separately,
    without an automatic public/TCP listener.

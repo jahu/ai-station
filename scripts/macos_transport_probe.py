@@ -1,7 +1,9 @@
 """Developer-only private bridge experiment, not Mac installer qualification."""
 
 import argparse
+import csv
 import hashlib
+import io
 import json
 import os
 import platform
@@ -109,6 +111,15 @@ def command(argv, *, env=None, timeout=30, check=True):
         return child.returncode, data.decode().strip()
 
 
+def bind_mount(path, target, *, readonly=False):
+    buffer = io.StringIO()
+    fields = ["type=bind", f"source={path}", f"target={target}"]
+    if readonly:
+        fields.append("readonly")
+    csv.writer(buffer).writerow(fields)
+    return buffer.getvalue().removesuffix("\r\n")
+
+
 class Docker:
     def __init__(self, binary, endpoint, root, architecture):
         self.architecture = architecture
@@ -189,9 +200,9 @@ class Docker:
                 "--cpus",
                 "0.5",
                 "--mount",
-                f"type=bind,source={sockets},target=/probe-socket,readonly",
+                bind_mount(sockets, "/probe-socket", readonly=True),
                 "--mount",
-                f"type=bind,source={data},target=/probe-data",
+                bind_mount(data, "/probe-data"),
                 "--entrypoint",
                 "python3",
                 IMAGE,
