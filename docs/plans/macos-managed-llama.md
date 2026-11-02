@@ -39,7 +39,8 @@ Normal tests use synthetic Mach-O and fake processes, plus the API/worker/downlo
 private-artifact path with a fake Runner. The explicit Mac probe uses the installed
 wheel and normal Runner main over a private socket. It obtains only the pinned
 small public SDK dependency, then checks real owned preparation, duplicate IDs,
-permission denial, Stop, adoption privacy, restart and unchanged application Python.
+permission denial, pre-dispatch and observed-live Stop, stopped-operation activation
+denial, adoption privacy, restart and unchanged application Python.
 Ordinary native checks still run no model. These results do not qualify Docker
 Desktop transport or the complete installer.
 

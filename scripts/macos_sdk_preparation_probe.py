@@ -198,6 +198,28 @@ def main(architecture):
                 if not shared["sdk_prepared"] or identity in json.dumps(shared):
                     raise ValueError("SDK shared readiness leaked private preparation identity")
                 environment.resolve_id(data, adopted.json()["environment_id"])
+                canceled = str(uuid4())
+                live = client.post("/v1/setup/native-llama/prepare", json={**body, "run_id": canceled})
+                live.raise_for_status()
+                if live.json()["alive"] is not True:
+                    raise ValueError("The SDK live-Stop fixture did not observe a live owned child")
+                client.post(f"/v1/setup/native-llama/{canceled}/cancel", json=selection).raise_for_status()
+                stop_deadline = time.monotonic() + 15
+                while True:
+                    stopped = client.get("/v1/setup/native-llama/" + canceled)
+                    stopped.raise_for_status()
+                    stopped = stopped.json()
+                    if (
+                        stopped["status"] == "canceled"
+                        and not stopped["alive"]
+                        and not (stopped.get("process") or {}).get("completion_pending")
+                    ):
+                        break
+                    if time.monotonic() >= stop_deadline:
+                        raise TimeoutError("Live SDK Stop did not confirm process exit")
+                    time.sleep(0.1)
+                if client.post(f"/v1/setup/native-llama/{canceled}/adopt", json=selection).status_code != 409:
+                    raise ValueError("A stopped SDK operation was activated")
                 blocked = str(uuid4())
                 client.post(f"/v1/setup/native-llama/{blocked}/cancel", json=selection).raise_for_status()
                 fenced = client.post("/v1/setup/native-llama/prepare", json={**body, "run_id": blocked})
@@ -230,6 +252,8 @@ def main(architecture):
         "permission_denial_passed": True,
         "immutable_request_passed": True,
         "pre_dispatch_stop_passed": True,
+        "actual_live_sdk_stop_passed": True,
+        "stopped_sdk_activation_refused": True,
         "runner_restart_same_sdk_identity": True,
         "private_operation_not_in_shared_catalog": True,
         "application_inventory_unchanged": True,

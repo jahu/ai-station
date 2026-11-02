@@ -159,6 +159,8 @@ def test_corrupt_sdk_archive_never_starts_or_activates_native_environment(native
         work()
         assert api.get("/api/runs/" + created["run"]["id"]).json()["status"] == "failed"
         assert not native_source["starts"] and not native_source["adoptions"]
+        with control_session_factory()() as session:
+            assert not list(session.scalars(select(ResourceLock).where(ResourceLock.released_at.is_(None))))
 
 
 def test_native_sdk_requires_administrator_and_preserves_private_history(
