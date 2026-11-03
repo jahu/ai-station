@@ -32,6 +32,14 @@ timings and exit codes without command arguments, environment or raw messages.
 This needs no Docker/image/model preparation and must retain the 20-second gate;
 it is a diagnostic component check, never full consumer qualification.
 
+Native matrix 41612665516 at `e4d953d` passes that real AppKit/installed-layer
+component on ARM and Intel: readiness takes 2.07 and 2.74 seconds, respectively,
+with unchanged installed bytes and no model/Docker. This does not reproduce the
+full installer failure. The next component uses a relocated package copy with
+the producer's actual permissions. Full startup faults also distinguish an exited
+Runner (numeric exit code) from a live readiness timeout; neither outcome logs
+private messages or changes the existing deadline.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm

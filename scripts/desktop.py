@@ -70,6 +70,10 @@ def startup_failure(error):
         value["errno"] = error.errno
     if isinstance(error, subprocess.CalledProcessError) and type(error.returncode) is int:
         value["return_code"] = error.returncode
+    if getattr(error, "runner_readiness", None) in ("exited", "timed_out"):
+        value["runner_readiness"] = error.runner_readiness
+        if type(getattr(error, "returncode", None)) is int:
+            value["return_code"] = error.returncode
     print(json.dumps({"desktop_startup_error": value}), file=sys.stderr, flush=True)
 
 

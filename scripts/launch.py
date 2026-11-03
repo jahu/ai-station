@@ -44,6 +44,13 @@ DESKTOP_SERVICE_STAGES = frozenset(
 )
 
 
+class RunnerReadinessError(RuntimeError):
+    def __init__(self, returncode):
+        super().__init__("Host Runner did not become healthy")
+        self.returncode = returncode
+        self.runner_readiness = "timed_out" if returncode is None else "exited"
+
+
 def configuration(config_file: Path | None = None) -> dict[str, str]:
     load_dotenv(config_file or ROOT / ".env", override=False)
     env = dict(os.environ)
@@ -335,7 +342,7 @@ def main() -> None:
                 deadline = time.monotonic() + 20
                 while not runner_health(env):
                     if proc.poll() is not None or time.monotonic() > deadline:
-                        raise RuntimeError("Host Runner did not become healthy")
+                        raise RunnerReadinessError(proc.returncode)
                     time.sleep(0.2)
             if engine.identity is not None:
                 report_stage("starting_private_connection")

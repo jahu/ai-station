@@ -112,6 +112,7 @@ def startup_errors(state, *, log_name="desktop.log"):
             continue
         if not isinstance(value, dict) or value.get("error_type") not in {
             "RuntimeError",
+            "RunnerReadinessError",
             "ValueError",
             "OSError",
             "PermissionError",
@@ -126,6 +127,8 @@ def startup_errors(state, *, log_name="desktop.log"):
         }:
             continue
         item = {"error_type": value["error_type"], "frames": []}
+        if value.get("runner_readiness") in ("exited", "timed_out"):
+            item["runner_readiness"] = value["runner_readiness"]
         frames = value.get("frames")
         for frame in frames[-12:] if isinstance(frames, list) else []:
             if (

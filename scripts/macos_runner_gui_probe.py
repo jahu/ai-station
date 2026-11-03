@@ -21,7 +21,7 @@ state = Path(__STATE__)
 data = state / 'data'
 data.mkdir(mode=0o700)
 socket = state / 'runner.sock'
-environment = {k:v for k,v in os.environ.items() if k in {'HOME','PATH','LANG','TMPDIR','__CF_USER_TEXT_ENCODING'}}
+environment = dict(os.environ)  # Parent applies the stock desktop environment filter and drops CI authority.
 environment.update(AI_STATION_DATA_HOST_PATH=str(data), AI_STATION_RUNNER_SOCKET=str(socket))
 proof = {'component_only':True, 'consumer_gui_qualified':False, 'model_used':False, 'Docker_used':False}
 started = time.monotonic()
@@ -29,7 +29,7 @@ with (state/'runner.imports.private.log').open('wb') as log:
  child = subprocess.Popen([sys.executable,'-IB','-X','importtime','-m','ai_station_runner.main'],
      env=environment, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
  try:
-  with httpx.Client(transport=httpx.HTTPTransport(uds=str(socket)), base_url='http://runner', timeout=1, trust_env=False) as client:
+  with httpx.Client(transport=httpx.HTTPTransport(uds=str(socket)), base_url='http://runner', timeout=1) as client:
    while time.monotonic()-started<20:
     if child.poll() is not None: break
     try:
@@ -43,6 +43,8 @@ with (state/'runner.imports.private.log').open('wb') as log:
     except httpx.TransportError: pass
     time.sleep(.05)
   proof.update(elapsed_ms=round((time.monotonic()-started)*1000), return_code_before_cleanup=child.poll())
+ except Exception as error:
+  proof['client_error_type']=type(error).__name__
  finally:
   if child.poll() is None: child.terminate()
   try: child.wait(timeout=15)
@@ -74,7 +76,9 @@ def main():
     os.umask(0o077)
     repo = Path(__file__).resolve().parent.parent
     sys.path.insert(0, str(repo / "scripts"))
+    from build_linux_package import package_permissions
     from build_macos_package import native_interface
+    from desktop import launch_environment
     from macos_application_probe import inventory, stop_child, verify_layer
 
     layer = Path(sys.executable).resolve().parent.parent
@@ -90,7 +94,8 @@ def main():
         (resources / "scripts").mkdir(parents=True)
         executable = contents / "MacOS/AI Station"
         shutil.copy2(binary, executable)
-        (resources / "python").symlink_to(layer, target_is_directory=True)
+        copied = resources / "python"
+        shutil.copytree(layer, copied, symlinks=True)
         (contents / "Info.plist").write_bytes(
             plistlib.dumps(
                 {
@@ -108,13 +113,13 @@ def main():
             "from pathlib import Path\n"
             'subprocess.run([sys.executable,"-IB",str(Path(__file__).with_name("runner-fixture.py"))],check=True,start_new_session=True)\n'
         )
+        package_permissions(application)  # Same relocation/permissions as the actual package producer.
+        copied_before = inventory(copied)
         subprocess.run(
             ["/usr/bin/codesign", "--force", "--sign", "-", str(application)], check=True, timeout=30
         )
         environment = {
-            k: v
-            for k, v in os.environ.items()
-            if k in {"HOME", "PATH", "LANG", "TMPDIR", "__CF_USER_TEXT_ENCODING"}
+            k: v for k, v in launch_environment().items() if not k.startswith(("GH_", "GITHUB_", "ACTIONS_"))
         }
         with (state / "launcher.private.log").open("wb") as log:
             process = subprocess.Popen(
@@ -145,8 +150,13 @@ def main():
                     raise TimeoutError("The stock native parent did not complete its bounded Runner probe")
                 proof = json.loads(result.read_text())
                 proof["installed_layer_unchanged"] = inventory(layer) == before
+                proof["copied_layer_unchanged"] = inventory(copied) == copied_before
+                proof["payload_kind"] = "relocated_package_copy"
+                proof["environment_profile"] = "stock_desktop_without_CI_authority"
                 print(json.dumps(proof), flush=True)
-                if not proof["passed"] or not proof["installed_layer_unchanged"]:
+                if not all(
+                    proof[key] for key in ("passed", "installed_layer_unchanged", "copied_layer_unchanged")
+                ):
                     raise RuntimeError(
                         "The installed Runner did not become healthy under its native GUI parent"
                     )

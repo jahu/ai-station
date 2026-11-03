@@ -34,6 +34,43 @@ def test_failure_evidence_locates_code_without_exception_or_local_contents():
     assert "/home/" not in json.dumps(detail)
 
 
+@pytest.mark.parametrize("returncode,outcome", [(None, "timed_out"), (2, "exited"), (-15, "exited")])
+def test_runner_readiness_distinguishes_exit_from_timeout_without_exposing_messages(
+    tmp_path, capsys, returncode, outcome
+):
+    import desktop
+    import launch
+
+    error = launch.RunnerReadinessError(returncode)
+    desktop.startup_failure(error)
+    emitted = capsys.readouterr().err
+    assert "Host Runner did not become healthy" not in emitted
+    (tmp_path / "desktop.log").write_text('{"desktop_service_stage": "starting_runner"}\n' + emitted)
+    detail = probe.startup_errors(tmp_path)
+    item = detail["errors"][0]
+    assert detail["stage"] == "starting_runner" and item["runner_readiness"] == outcome
+    if returncode is None:
+        assert "return_code" not in item
+    else:
+        assert item["return_code"] == returncode
+
+
+@pytest.mark.parametrize("value", ["PRIVATE_VALUE", [], {"private": "value"}])
+def test_readiness_diagnostics_drop_unknown_or_malformed_outcomes(tmp_path, value):
+    (tmp_path / "desktop.log").write_text(
+        json.dumps(
+            {
+                "desktop_startup_error": {
+                    "error_type": "RunnerReadinessError",
+                    "runner_readiness": value,
+                    "frames": [],
+                }
+            }
+        )
+    )
+    assert probe.startup_errors(tmp_path)["errors"] == [{"error_type": "RunnerReadinessError", "frames": []}]
+
+
 def test_missing_dependency_reports_only_its_module_identity():
     error = ModuleNotFoundError("PRIVATE_EXCEPTION_MESSAGE", name="ai_station_runner")
     assert probe.failure(error) == {
