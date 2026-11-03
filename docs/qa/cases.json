@@ -1,5 +1,5 @@
 {
-  "version": 44,
+  "version": 45,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -34,7 +34,9 @@
     "docs/web-search.md",
     "docs/plans/macos-managed-llama.md",
     "docs/plans/expressive-speech.md",
-    "docs/plans/linux-gpu-onboarding.md"
+    "docs/plans/linux-gpu-onboarding.md",
+    "docs/plans/generation-progress.md",
+    "docs/plans/local-prompt-enhancement.md"
   ],
   "cases": [
     {
@@ -5420,6 +5422,574 @@
       "expected": [
         "Wyświetlony jest zrozumiały powód i dalszy krok; nie ma automatycznej zmiany kontekstu Docker, podmiany silnika, instalacji sterowników ani udawanej gotowości.",
         "CPU pozostaje świadomą opcją. Ponowne sprawdzenie rzeczywiście działającej konfiguracji potrafi potwierdzić GPU bez ponownej instalacji narzędzi."
+      ]
+    },
+    {
+      "id": "CREATIVE-101",
+      "area": "Historia prac kreatywnych",
+      "title": "Images: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil obrazów; neutralny prompt i jednorazowy obraz QA."
+      ],
+      "steps": [
+        "Otwórz Images, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 20,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-102",
+      "area": "Historia prac kreatywnych",
+      "title": "Video: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil wideo; krótka neutralna scena QA; wybierz najkrótszy obsługiwany film."
+      ],
+      "steps": [
+        "Otwórz Video, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 25,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-103",
+      "area": "Historia prac kreatywnych",
+      "title": "Audio → Music: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil muzyki; krótki opis instrumentalny QA."
+      ],
+      "steps": [
+        "Otwórz Audio → Music, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 20,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-104",
+      "area": "Historia prac kreatywnych",
+      "title": "Audio → Speech: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil mowy; tekst: To jest pierwsza próba. To jest ostatnie zdanie."
+      ],
+      "steps": [
+        "Otwórz Audio → Speech, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-105",
+      "area": "Historia prac kreatywnych",
+      "title": "Avatars: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil awatara; własny dozwolony portret i krótkie nagranie QA."
+      ],
+      "steps": [
+        "Otwórz Avatars, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 25,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "PROGRESS-101",
+      "area": "Postęp generowania",
+      "title": "Etapy, szacunek czasu i powrót do aktywnej pracy",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj w ramach istniejącej krótkiej generacji CREATIVE; nie zlecaj dodatkowego kosztownego filmu tylko dla paska."
+      ],
+      "steps": [
+        "Podczas jednego z testów CREATIVE obserwuj kolejkę, przygotowanie, generowanie i kończenie; zapisz ID Task/Run.",
+        "Przejdź do innej zakładki, wróć i odśwież; porównaj stan z Runs.",
+        "Jeśli profil wymaga przygotowania promptu lub łączenia segmentów, obserwuj przejścia tych etapów."
+      ],
+      "expected": [
+        "Postęp dotyczy całego zadania; zakończenie przygotowania lub pierwszego segmentu nie oznacza sukcesu całości.",
+        "Procent wynika z pomiaru; przy braku danych widoczny jest etap/nieokreślony postęp, a nie wymyślone 100%.",
+        "Szacunek czasu ma czytelny zakres albo informację o braku danych; powrót nie uruchamia zadania ponownie."
+      ],
+      "resources": "Bez dodatkowej generacji; obserwacja rzeczywistego zadania",
+      "minutes": 5,
+      "requirements": [
+        "NR-02"
+      ]
+    },
+    {
+      "id": "PROGRESS-102",
+      "area": "Postęp generowania",
+      "title": "Stop, błąd i zapisany stan zamiast pozornego sukcesu",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany model; jednorazowa krótka praca QA, nie cudze ani ważne aktywne zadanie."
+      ],
+      "steps": [
+        "Zleć jedno krótkie zadanie QA i użyj Stop podczas przygotowania lub generowania.",
+        "Odśwież historię i otwórz powiązane Runs; następnie użyj jawnego Retry/Resume, jeśli jest dostępne."
+      ],
+      "expected": [
+        "Zatrzymanie/błąd pozostaje czytelne po odświeżeniu; brak końcowego pliku nie jest sukcesem.",
+        "Retry/Resume jest jawną akcją; zachowuje poprzednią próbę i nie dubluje już zakończonej pracy."
+      ],
+      "resources": "Rzeczywisty profil; jedna krótka generacja i ewentualne wznowienie",
+      "minutes": 10,
+      "requirements": [
+        "NR-02"
+      ]
+    },
+    {
+      "id": "IMAGE-101",
+      "area": "Obrazy",
+      "title": "Auto: usunięcie przedmiotu i zmiana pozy",
+      "priority": "P1",
+      "prerequisites": [
+        "Dostępny kwalifikowany Qwen Edit; własny dozwolony portret QA, bez danych wrażliwych."
+      ],
+      "steps": [
+        "Użyj neutralnego własnego obrazu z osobą trzymającą wyraźny przedmiot; zachowaj oryginał.",
+        "W Auto zleć usunięcie przedmiotu; sprawdź wskazany model i rzeczywisty wynik.",
+        "Z tego samego oryginału zleć osobno wyraźną zmianę pozy; porównaj oba wyniki z oryginałem."
+      ],
+      "expected": [
+        "Auto pokazuje wybrany profil odpowiedni do zmiany strukturalnej; źródło i instrukcja są zachowane.",
+        "Przedmiot jest faktycznie usunięty, a poza w drugim wyniku faktycznie zmieniona; samo succeeded nie wystarcza.",
+        "Niepożądane zmiany twarzy/tła i niespełnione instrukcje opisz jako błąd/jakość z konkretnym modelem."
+      ],
+      "resources": "Dwie rzeczywiste krótkie edycje GPU; czas zależy od profilu",
+      "minutes": 25,
+      "requirements": [
+        "NR-03"
+      ]
+    },
+    {
+      "id": "IMAGE-102",
+      "area": "Obrazy",
+      "title": "Jawny wybór LUSTIFY i zapisane domyślne modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Dostępny LUSTIFY; jednorazowy obraz QA. Nie pobieraj alternatywnych wag tylko dla tego przypadku."
+      ],
+      "steps": [
+        "W ustawieniach obrazów wybierz jawnie dostępny LUSTIFY, zamiast Auto; zachowaj wcześniejsze ustawienie.",
+        "Zleć neutralną edycję QA, obejrzyj model/parametry wyniku i otwórz historię ponownie.",
+        "Przywróć wcześniejsze ustawienie."
+      ],
+      "expected": [
+        "Jawny wybór jest honorowany i widoczny w parametrach; aplikacja nie podmienia go po cichu na Qwen.",
+        "Historia pokazuje rzeczywisty użyty profil. Jakość zmiany oceniana jest oddzielnie od respektowania wyboru."
+      ],
+      "resources": "Jedna rzeczywista edycja GPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-03"
+      ]
+    },
+    {
+      "id": "PROMPT-101",
+      "area": "Ulepszanie promptów",
+      "title": "Sam checkbox: ulepszony prompt jest rzeczywiście używany",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny LLM i profil Images; neutralna krótka generacja QA."
+      ],
+      "steps": [
+        "W Images wpisz krótki neutralny prompt, włącz tylko Improve prompt; tłumaczenie pozostaw wyłączone.",
+        "Włącz przegląd przygotowania, uruchom i porównaj oryginał, wynik przygotowania oraz model.",
+        "Zatwierdź prompt i po generacji otwórz szczegóły oraz historię."
+      ],
+      "expected": [
+        "Powstaje lokalne przygotowanie z widocznym oryginałem i tekstem efektywnym, modelem i szablonem.",
+        "Generator używa zatwierdzonego tekstu efektywnego, a nie ponownie oryginału; wyłączenie tłumaczenia nie wyłącza ulepszania.",
+        "Powrót do historii zachowuje oba teksty i wynik; nie ma ukrytego zewnętrznego żądania."
+      ],
+      "resources": "Lokalny LLM oraz jedna generacja GPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-102",
+      "area": "Ulepszanie promptów",
+      "title": "Video, Music i Avatar: opis kontra dokładny tekst",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj przy okazji CREATIVE-102–105; nie dodawaj płatnego API ani długiego filmu."
+      ],
+      "steps": [
+        "Dla używanych w CREATIVE profili włącz Improve prompt, jeśli dany model obsługuje opis.",
+        "Dodaj jedno jawne ograniczenie, np. brak napisów; w muzyce zachowaj własny krótki tekst słów, a w mowie/awatarze dokładny skrypt.",
+        "Porównaj przygotowany opis, słowa/skrypt i parametry faktycznego generatora."
+      ],
+      "expected": [
+        "Opis pasuje do wybranego modelu i zachowuje instrukcję/ograniczenia, a dokładne słowa i skrypt nie są przepisywane.",
+        "Profil bez swobodnego promptu, np. stały Sonic, nie obiecuje ulepszania nieistniejącego wejścia.",
+        "Oceń każdy użyty profil osobno w uwagach; niedostępny profil to Nie dotyczy z wyjaśnieniem, nie OK."
+      ],
+      "resources": "W ramach istniejących generacji CREATIVE; lokalny LLM",
+      "minutes": 10,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-103",
+      "area": "Ulepszanie promptów",
+      "title": "Stop i błąd przygotowania; świadomy wybór oryginału",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny LLM; jednorazowy prompt QA. Nie wyłączaj cudzych runtimów ani sieci całej stacji."
+      ],
+      "steps": [
+        "W nowej krótkiej pracy włącz Improve prompt i użyj Stop podczas lokalnego przygotowania.",
+        "Odśwież historię; sprawdź, czy generator nie wystartował sam.",
+        "Użyj dostępnego ponowienia lub jawnego użycia oryginału; zapisz wybrany wariant."
+      ],
+      "expected": [
+        "Stop obejmuje przygotowanie i dalszą generację; aplikacja nie zleca duplikatu po odświeżeniu.",
+        "Błąd/Stop jest widoczny; użycie oryginału wymaga jawnej akcji i zachowuje pochodzenie próby."
+      ],
+      "resources": "Lokalny LLM; ewentualna jedna krótka generacja po świadomym ponowieniu",
+      "minutes": 10,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-104",
+      "area": "Ulepszanie promptów",
+      "title": "Poprawa wyłączona i zachowanie starej historii",
+      "priority": "P1",
+      "prerequisites": [
+        "Zachowana wcześniejsza praca QA; dostępny model. Można połączyć z CREATIVE."
+      ],
+      "steps": [
+        "Otwórz wcześniejszą pracę bez ulepszania; sprawdź prompt i zapisane ustawienia.",
+        "W nowej krótkiej pracy pozostaw Improve prompt wyłączone i zleć generowanie.",
+        "Otwórz Runs oraz historię obu prac."
+      ],
+      "expected": [
+        "Nie powstaje niezamówione przygotowanie/ulepszenie; generator dostaje oryginał zgodnie z jawnym wyborem tłumaczenia.",
+        "Starsza historia zachowuje swój prompt/wybory i nie otrzymuje po cichu nowej polityki."
+      ],
+      "resources": "Bez dodatkowej generacji, jeśli połączono z CREATIVE",
+      "minutes": 5,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "LIB-101",
+      "area": "Biblioteka",
+      "title": "Zamknięcie zakończonej karty trwałego usuwania",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj przy okazji LIB-005–008 na WYŁĄCZNIE jednorazowych plikach QA; nie opróżniaj prywatnej kolekcji."
+      ],
+      "steps": [
+        "Na jednorazowych plikach QA zakończ jedno trwałe usuwanie; zapisz ID Run.",
+        "Kliknij X na zakończonej karcie; zmień zakładkę, wróć i odśwież.",
+        "Sprawdź historię Run i, jeśli istnieją starsze karty, zachowanie widoku."
+      ],
+      "expected": [
+        "Dokładnie ta karta pozostaje zamknięta; jej miejsca nie zajmuje natychmiast kolejna stara identyczna karta.",
+        "Run i jego wynik nadal istnieją; zamknięcie karty nie anuluje aktywnych zadań.",
+        "Błąd zapisu zamknięcia, jeśli wystąpi, jest widoczny zamiast fałszywego sukcesu."
+      ],
+      "resources": "CPU; nieodwracalne usunięcie wyłącznie przygotowanych plików QA",
+      "minutes": 5,
+      "requirements": [
+        "NR-05"
+      ]
+    },
+    {
+      "id": "ACCOUNT-101",
+      "area": "Konta i prywatność",
+      "title": "Pierwszy administrator, zwykli użytkownicy i ostatni admin",
+      "priority": "P0",
+      "prerequisites": [
+        "Świeża odrębna instalacja QA; nie resetuj produkcyjnej bazy ani kont."
+      ],
+      "steps": [
+        "Na świeżej instalacji utwórz pierwszego administratora; w Settings → Users dodaj dwa zwykłe konta A/B.",
+        "Zaloguj A w prywatnym oknie; sprawdź brak zarządzania użytkownikami.",
+        "Jako administrator sprawdź ochronę wyłączenia/odebrania roli ostatniemu aktywnemu adminowi, bez zatwierdzania ryzykownych zmian."
+      ],
+      "expected": [
+        "Pierwsze konto jest administratorem; A/B mogą się zalogować, ale nie mają kontroli administracyjnych.",
+        "Aplikacja chroni ostatniego aktywnego administratora; hasła nie pojawiają się w zwykłych odpowiedziach/logach."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-102",
+      "area": "Konta i prywatność",
+      "title": "A/B: prywatne dane i odmowa bezpośrednich adresów",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako A utwórz oznaczone QA rozmowę, plik, pracę kreatywną, pamięć i wyłączony szkic agenta; zapisz ich adresy i ID Runs.",
+        "Jako B sprawdź listy, wyszukiwanie, historię, powiadomienia i liczniki; następnie otwórz zapisane adresy A, w tym plik/miniaturę.",
+        "Wróć do A i potwierdź, że jego dane pozostały dostępne."
+      ],
+      "expected": [
+        "B nie widzi ani nie pobiera danych A, promptów, zdarzeń i plików; same ID/adresy nie dają dostępu.",
+        "Wspólne modele i sprzęt pozostają widoczne bez cudzych promptów lub historii.",
+        "To kontrola operatora; pełne testy autoryzacji API są odrębnym dowodem wewnętrznym."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-103",
+      "area": "Konta i prywatność",
+      "title": "Zmiana konta: szkice, cache i ustawienia osobiste",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako A wpisz rozpoznawalny niewysłany szkic w rozmowie i formularzu kreatywnym; ustaw osobisty wybór modelu.",
+        "Wyloguj A i zaloguj B w tym samym oknie; użyj nawigacji i Wstecz, odśwież oraz otwórz Settings/Library/Memory.",
+        "Wyloguj B i wróć do A."
+      ],
+      "expected": [
+        "B nie otrzymuje szkiców, podglądów, wyników ani osobistych ustawień A; stare żądania nie dopisują ich po zmianie konta.",
+        "Prywatne połączenia i dane dostawców nie są ujawniane B; wspólne zasoby nie oznaczają wspólnych danych.",
+        "Powrót do A nie niszczy jego zapisanej historii."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-104",
+      "area": "Konta i prywatność",
+      "title": "Keep me logged in i niezależne sesje urządzeń",
+      "priority": "P1",
+      "prerequisites": [
+        "Jednorazowe konto QA; dwa urządzenia lub oddzielne profile przeglądarki; nie odwołuj sesji właściciela."
+      ],
+      "steps": [
+        "Zaloguj jednorazowe konto QA na dwóch urządzeniach/odrębnych profilach; na pierwszym zaznacz Keep me logged in.",
+        "Zamknij i otwórz przeglądarkę pierwszego urządzenia; sprawdź dostęp i listę sesji w ustawieniach bezpieczeństwa.",
+        "Wyloguj albo odwołaj tylko pierwszą sesję; sprawdź oba urządzenia."
+      ],
+      "expected": [
+        "Jawne zapamiętanie utrzymuje tę sesję po ponownym otwarciu; nie włącza automatycznie zapamiętania innych urządzeń.",
+        "Odwołana sesja traci dostęp, druga pozostaje aktywna; na telefonie kontrolki i komunikaty są czytelne."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-105",
+      "area": "Konta i prywatność",
+      "title": "Opcjonalne 2FA i jednorazowy kod odzyskiwania",
+      "priority": "P0",
+      "prerequisites": [
+        "Jednorazowe konto QA i własny authenticator; nie zmieniaj 2FA właściciela."
+      ],
+      "steps": [
+        "Na jednorazowym koncie QA otwórz Security, potwierdź hasło i skonfiguruj aplikację TOTP; bezpiecznie zachowaj kody odzyskiwania poza raportem.",
+        "Po wylogowaniu sprawdź odmowę błędnego kodu, następnie logowanie poprawnym kodem.",
+        "W odrębnej próbie użyj kodu odzyskiwania; po wylogowaniu sprawdź, że ten sam kod drugi raz nie działa.",
+        "Wyłącz 2FA na tym koncie zgodnie z ekranem, potwierdzając wymagane dane."
+      ],
+      "expected": [
+        "2FA jest opcjonalne i aktywuje się dopiero po potwierdzeniu; błędny/brakujący kod nie daje dostępu.",
+        "Kod odzyskiwania jest jednorazowy; tajny klucz, QR i kody nie trafiają do raportu ani zwykłych logów."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 12,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-106",
+      "area": "Konta i prywatność",
+      "title": "Wyłączenie konta i kontrolowany reset danych logowania",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Zaloguj jednorazowe A; jako admin wyłącz A i sprawdź jego dotychczasową sesję.",
+        "Użyj administracyjnego resetu hasła A z wymaganym potwierdzeniem własnego hasła/2FA; nie umieszczaj haseł w raporcie.",
+        "Włącz konto po poprawnym resecie; sprawdź stare i nowe dane logowania oraz zachowaną prywatną historię."
+      ],
+      "expected": [
+        "Wyłączone konto i odwołane sesje nie mają dostępu; reset jest jawną potwierdzoną operacją administracyjną.",
+        "Stare hasło nie działa, nowe działa po włączeniu; historia nie jest przekazana innemu użytkownikowi ani skasowana."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-107",
+      "area": "Konta i prywatność",
+      "title": "Jawny podgląd administratora bez przejęcia uprawnień agenta",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako admin użyj Users → Inspect workspace konta A; obejrzyj rozmowę, plik, Run i pamięć QA.",
+        "Zamknij podgląd i sprawdź własny workspace admina.",
+        "Jako A otwórz wyłączony szkic agenta bez uprawnień sieciowych i sprawdź, że ich nie otrzymał przez sam podgląd admina."
+      ],
+      "expected": [
+        "Podgląd wyraźnie wskazuje konto i jest tylko do odczytu; zwykły użytkownik nie ma tego widoku.",
+        "Własny kontekst admina i definicja/uprawnienia agenta A pozostają odrębne; podgląd nie uruchamia zadania."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "WEB-009",
+      "area": "Internet",
+      "title": "Zapytanie LLM na podstawie pytania i kontekstu follow-up",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany LLM, dozwolony Web i zwykły dostęp do publicznych bezpłatnych źródeł."
+      ],
+      "steps": [
+        "Z włączonym Web zapytaj: Kto zagrał Waltera White’a w Breaking Bad? Otwórz widoczne zapytanie i źródła.",
+        "Następnie zapytaj: W jakich innych serialach występował? Ponownie sprawdź zapytanie i źródła.",
+        "Wyłącz Web i zadaj inne pytanie; sprawdź brak nowego wyszukiwania."
+      ],
+      "expected": [
+        "Przygotowane zapytanie odnosi się do konkretnej osoby i pytania, a nie słownika słowa aktor lub przypadkowej awarii usługi.",
+        "Follow-up wykorzystuje właściwy kontekst; widoczne źródła odpowiadają pytaniu, a brak danych jest uczciwie opisany.",
+        "Wyłączony Web nie wykonuje wyszukiwania; domyślny lokalny model nie jest po cichu zastępowany chmurą."
+      ],
+      "resources": "Lokalny LLM i darmowe publiczne wyszukiwanie; bez kluczy i płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-12"
+      ]
+    },
+    {
+      "id": "DOC-101",
+      "area": "Dokumentacja wydania",
+      "title": "Spójna nazwa i rzeczywista wersja produktu",
+      "priority": "P1",
+      "prerequisites": [
+        "Dokumentacja właściwej wersji i jej manifest; nie porównuj starego publicznego release z innym prywatnym buildem."
+      ],
+      "steps": [
+        "Porównaj nazwę/wersję na ekranie startowym, w instalatorze, README i stronie projektu.",
+        "Porównaj wersję pakietu z manifestem przekazanego kandydata/release."
+      ],
+      "expected": [
+        "Nazwa AI Station i hasło Your own AI. Made simple. są spójne; 0.1.0 nie jest mylone ze starszym opublikowanym wydaniem.",
+        "Dokumentacja wskazuje Linux/Windows i odłożony macOS; nie wymaga zmiany prywatnych ścieżek ani kont."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "NR-09"
+      ]
+    },
+    {
+      "id": "DOC-102",
+      "area": "Dokumentacja wydania",
+      "title": "Wolność modeli i odpowiedzialność bez obietnicy wszystkiego",
+      "priority": "P1",
+      "prerequisites": [
+        "README z przekazanego wydania; test nie wymaga tworzenia materiałów NSFW."
+      ],
+      "steps": [
+        "Przeczytaj w README opis lokalnego działania, własnych modeli, licencji i odpowiedzialności.",
+        "Sprawdź, czy opis rozróżnia obsługiwane profile, opcjonalną chmurę i przyszłe możliwości."
+      ],
+      "expected": [
+        "README wyjaśnia możliwość wyboru zgodnych modeli, także uncensored, oraz odpowiedzialność użytkownika zgodnie z prawem i licencją modelu.",
+        "Nie obiecuje obsługi każdego formatu/GPU, automatycznego braku cenzury ani całkowitego zwolnienia z odpowiedzialności."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "NR-10"
       ]
     }
   ],
