@@ -211,9 +211,9 @@ def test_shared_offline_files_cannot_alias_different_OS_activation_policies():
 
     files, head, patch = {"same-offline-input": "a" * 64}, "b" * 40, b""
     choices = {
-        builder.bundle_identity(files, head, patch, windows_gpu=w, linux_gpu=l)
-        for w in (False, True)
-        for l in (False, True)
+        builder.bundle_identity(files, head, patch, windows_gpu=windows_enabled, linux_gpu=linux_enabled)
+        for windows_enabled in (False, True)
+        for linux_enabled in (False, True)
     }
     assert len(choices) == 4
     legacy = {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}
