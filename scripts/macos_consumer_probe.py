@@ -212,6 +212,11 @@ def startup_profile(tail):
         "PermissionError",
         "FileNotFoundError",
         "BlockingIOError",
+        "OperationalError",
+        "ConnectionRefusedError",
+        "ConnectionResetError",
+        "SSLError",
+        "TimeoutError",
     }
     errors = [
         name
@@ -238,7 +243,7 @@ def startup_profile(tail):
     return result
 
 
-def service_states(engine, state):
+def service_states(engine, state, *, errors=False):
     """Read only fixed service state codes in this fresh QA station's project."""
     from dotenv import dotenv_values
 
@@ -295,6 +300,22 @@ def service_states(engine, state):
         health = health.get("Status") if isinstance(health, dict) else None
         if health in {"healthy", "unhealthy", "starting"}:
             item["health"] = health
+        if errors and (
+            health in {"starting", "unhealthy"} or item.get("status") in {"exited", "dead", "restarting"}
+        ):
+            logs = subprocess.run(
+                engine.command("container", "logs", "--tail", "40", parts[0]),
+                env=engine.environment,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if logs.returncode == 0:
+                # Never retain raw logs or healthcheck output. Only the same
+                # fixed exception classes and basename frames as native faults.
+                diagnostic = startup_profile((logs.stdout + "\n" + logs.stderr)[-65536:])
+                if diagnostic:
+                    item["startup_diagnostics"] = diagnostic
         observed.append(item)
     return observed
 
@@ -678,6 +699,9 @@ def main():
                     observations = proof.setdefault("native_startup_processes", [])
                     observations.append(native_process_states(roots))
                     del observations[:-12]
+                    services = proof.setdefault("native_startup_services", [])
+                    services.append(service_states(engine, state, errors=True))
+                    del services[:-12]
                     save()
                 except (OSError, ValueError, subprocess.SubprocessError) as sample_error:
                     proof["process_observation_unavailable"] = type(sample_error).__name__

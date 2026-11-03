@@ -520,6 +520,38 @@ def test_missing_owned_project_cannot_query_any_docker_containers(tmp_path, monk
     assert probe.service_states(None, tmp_path) == {"unavailable": "NoOwnedProject"}
 
 
+def test_live_service_faults_keep_only_known_error_classes_and_basename_frames(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    (tmp_path / "desktop.env").write_text('COMPOSE_PROJECT_NAME="ai-station-desktop-0123456789ab"\n')
+    identity = "a" * 64
+    engine = SimpleNamespace(command=lambda *args: ["/fixed/docker", *args], environment={"PATH": "/bin"})
+    calls = []
+
+    def query(argv, **kwargs):
+        calls.append(argv)
+        if "ls" in argv:
+            return SimpleNamespace(returncode=0, stdout=identity + " ai-station\n")
+        if "inspect" in argv:
+            return SimpleNamespace(
+                returncode=0, stdout='{"Status":"running","Health":{"Status":"unhealthy"}}'
+            )
+        assert argv[1:] == ["container", "logs", "--tail", "40", identity]
+        return SimpleNamespace(
+            returncode=0,
+            stdout="PRIVATE_SETUP_URL\n",
+            stderr='  File "/PRIVATE_PATH/db.py", line 12, in migrate\nsqlalchemy.exc.OperationalError: PRIVATE_PASSWORD\n',
+        )
+
+    monkeypatch.setattr(probe.subprocess, "run", query)
+    item = probe.service_states(engine, tmp_path, errors=True)[0]
+    assert item["startup_diagnostics"]["unstructured_child_errors"] == {
+        "types": ["OperationalError"],
+        "frames": [{"file": "db.py", "line": 12, "function": "migrate"}],
+    }
+    assert len(calls) == 3 and "PRIVATE" not in json.dumps(item)
+
+
 def test_native_process_observation_keeps_owned_descendants_without_private_commands(monkeypatch):
     from types import SimpleNamespace
 

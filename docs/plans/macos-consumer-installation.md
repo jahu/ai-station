@@ -65,6 +65,14 @@ profiling flags are cleared. The experiment records this boolean separately from
 its consumer result. A default run and a diagnostic run can therefore use the
 same source without treating a timing-altered startup as proof of normal startup.
 
+Run 41625130875 at `3f0a810` starts the real Runner (app import about 6.36
+seconds), but reaches the native supervisor's service-readiness failure. Its
+post-failure container list is empty after cleanup; that cannot establish that
+no containers were created. Capture the owned project's fixed service/health
+states during startup, before cleanup, with known exception classes and basename
+frames from bounded startup logs. Raw logs, healthcheck output and private values
+remain excluded. The next default, unprofiled run must resolve this service gate.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm
