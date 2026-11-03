@@ -85,7 +85,7 @@ class Completion(BaseModel):
             Annotated[StrictInt, Field(ge=1, le=32768)],
         ]
         | None
-    ) = Field(default=None, min_length=1, max_length=18)
+    ) = Field(default=None, min_length=1, max_length=18, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def reasoning_budget(self):

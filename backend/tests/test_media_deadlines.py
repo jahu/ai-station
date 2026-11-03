@@ -143,6 +143,20 @@ def test_public_music_form_cannot_supply_an_internal_execution_deadline():
 
 
 def test_photo_pipeline_receives_the_same_owned_native_budget(bridge, monkeypatch):
+    from app import heartbeat
+    from app.photo_executor import PhotoPipeExecutor
+
+    deadline = utcnow() + timedelta(seconds=60)
+    original_start = PhotoPipeExecutor._start
+
+    def start_then_expire(self, runner, run, allocated, output):
+        # First prove the native child accepted the exact budget. A busy test
+        # host may correctly cancel a 0.5s budget before any process is started.
+        started = original_start(self, runner, run, allocated, output)
+        monkeypatch.setattr(heartbeat, "utcnow", lambda: deadline + timedelta(seconds=1))
+        return started
+
+    monkeypatch.setattr(PhotoPipeExecutor, "_start", start_then_expire)
     # The fixture configures a temporary fake pipeline; no real image model is
     # started. Keep typed request/path/permission handling and ProcessManager.
     monkeypatch.setattr(
@@ -157,11 +171,11 @@ def test_photo_pipeline_receives_the_same_owned_native_budget(bridge, monkeypatc
             run = session.get(Run, response.json()["id"])
             run.parameters = {
                 **run.parameters,
-                "execution_deadline_at": (utcnow() + timedelta(seconds=0.5)).isoformat(),
+                "execution_deadline_at": deadline.isoformat(),
             }
             session.commit()
             tick(session, "photo-budget")
             session.refresh(run)
             inspected = host_app.manager().inspect(run.id)
             assert run.status == "canceled" and not inspected["alive"]
-            assert inspected["deadline_at"] and not active_locks(session)
+            assert inspected["deadline_at"] == deadline.timestamp() and not active_locks(session)

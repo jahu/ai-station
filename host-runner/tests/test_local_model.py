@@ -20,6 +20,14 @@ BODY = {
 }
 
 
+@pytest.mark.parametrize("mode", ["python", "json"])
+def test_optional_response_bounds_preserve_legacy_serialization_and_explicit_opt_in(mode):
+    legacy = local_model.Completion(**BODY)
+    assert "response_fields" not in legacy.model_dump(mode=mode)
+    selected = local_model.Completion(**BODY, json_output=True, response_fields={"prompt": 512})
+    assert selected.model_dump(mode=mode)["response_fields"] == {"prompt": 512}
+
+
 @pytest.fixture(autouse=True)
 def local_settings(monkeypatch):
     monkeypatch.setenv("AI_STATION_LLM_BASE_URL", ENDPOINT)
