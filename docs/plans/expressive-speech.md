@@ -104,9 +104,42 @@ Sadness/fear and actual audible delivery remain listening qualification work.
 Audio → Speech offers **Speech model**, then **Voice direction** and **Speaking
 pace** when Fish is selected. Reviewed speech agents use the same controls.
 Direction tags are applied inside the fixed wrapper, separately from the saved
-script; every bounded chunk receives the selected direction and pace. Creative
+script. Every complete chunk receives the selected direction; speaking pace uses
+pitch-preserving processing of that complete PCM: Slower is 0.8× speed and Faster
+is 1.25×. Natural leaves the decoded PCM unchanged. This uses librosa already in
+the fixed offline Fish environment, inside the same owned process and resource
+budget, without another download. The report records the method, rate and original
+and final sample counts; complete EOS is still required before processing. Creative
 versions restore them. Chatterbox remains the default and its legacy requests
 retain their original serialized identities.
+
+The real seven-direction/pace API/worker/GPU matrix found that the old `[fast]`
+tag produced 4.92 seconds against 4.78 seconds for Natural on the same Polish
+script/seed; `[slowly]` produced 6.50 seconds. Tags alone therefore did not provide
+a reliable pace control. Emotions remain model-generated; the pace correction
+changes duration rather than asking the model to reinterpret the words. The
+seven outputs passed EOS, decoding and approximate offline ASR observations;
+those observations are not human listening acceptance.
+
+The correction at `43201f3` passed an actual private-account API → separate
+worker → Unix Runner → dual-GPU comparison, with no fake executor. The same
+Polish text, direction and seed yielded 210,944 model samples in all three Runs:
+
+| Speaking pace | Complete output | Speed |
+| --- | --- | --- |
+| Natural | 4.7833 seconds | 1.0×, unchanged PCM |
+| Slower | 5.9791 seconds | 0.8× |
+| Faster | 3.8266 seconds | 1.25× |
+
+All three ordinary private artifacts passed EOS, canonical WAV and recorded
+sample-count checks. GPU/RAM reservations were released and the temporary test
+services stopped. The idle AI Station-owned LLM was restored through ordinary
+audited Stop/load Runs to its saved model/image, GPU and 131,072-token Q8 cache
+preset; unrelated services were untouched. A separate bounded CPU check retained
+the exact 220-Hz tone peak at both rates and processed real generated speech.
+Evidence is private under `data/acceptance/fish-reliable-pace-20261103/`.
+Perceptual fidelity remains an explicit operator gate, covered by `VOICE-005`;
+these measurements do not establish audible quality for every voice or language.
 
 Configure only the native runner with `AI_STATION_FISH_SPEECH_ENABLED=true`,
 `AI_STATION_FISH_SPEECH_PYTHON`, `AI_STATION_FISH_SPEECH_DIR` and
