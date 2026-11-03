@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 PREREQUISITE_STAGES = {
     "hypervisor",
@@ -50,17 +51,37 @@ class Status:
             "target_url": self.url,
             "description": description[:140],
         }
-        result = subprocess.run(
-            ["gh", "api", "--method", "POST", "repos/jahu/ai-station/statuses/" + self.head, "--input", "-"],
-            input=json.dumps(payload).encode(),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=self.environment,
-            timeout=15,
-            check=False,
+        for attempt in range(3):
+            try:
+                result = subprocess.run(
+                    [
+                        "gh",
+                        "api",
+                        "--method",
+                        "POST",
+                        "repos/jahu/ai-station/statuses/" + self.head,
+                        "--input",
+                        "-",
+                    ],
+                    input=json.dumps(payload).encode(),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    env=self.environment,
+                    timeout=5,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    return True
+            except (OSError, subprocess.TimeoutExpired):
+                pass  # Diagnostics must not replace the actual package outcome.
+            if attempt < 2:
+                time.sleep(0.5)
+        print(
+            "::warning title=Mac QA status::Stage publication unavailable; "
+            "the actual experiment and job log remain authoritative",
+            flush=True,
         )
-        if result.returncode:
-            raise RuntimeError("Could not publish bounded Mac QA stage evidence")
+        return False
 
 
 if __name__ == "__main__":

@@ -724,6 +724,61 @@ def test_stage_publisher_refuses_an_ordinary_environment_without_network(monkeyp
         qa_status.Status("a" * 40)
 
 
+@pytest.fixture
+def stage_publisher(monkeypatch):
+    for key, value in {
+        "GITHUB_ACTIONS": "true",
+        "GITHUB_REPOSITORY": "jahu/ai-station",
+        "GITHUB_ACTOR": "jahu",
+        "GITHUB_RUN_ID": "12345",
+        "GH_TOKEN": "PRIVATE_CI_FIXTURE",
+    }.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(qa_status.time, "sleep", lambda _: None)
+    return qa_status.Status("a" * 40)
+
+
+def test_stage_publication_recovers_after_a_failed_attempt_without_repeating_the_workload(
+    monkeypatch, stage_publisher
+):
+    from unittest.mock import Mock
+
+    invoke = Mock(side_effect=[SimpleNamespace(returncode=1), SimpleNamespace(returncode=0)])
+    monkeypatch.setattr(qa_status.subprocess, "run", invoke)
+    assert stage_publisher.post("pending", "build_real_control_plane") is True
+    assert invoke.call_count == 2
+    assert invoke.call_args_list[0] == invoke.call_args_list[1]
+
+
+@pytest.mark.parametrize("failure", ["exit", "timeout", "missing_cli"])
+def test_exhausted_stage_publication_is_bounded_nonsecret_and_does_not_abort_actual_qa(
+    monkeypatch, capsys, stage_publisher, failure
+):
+    from unittest.mock import Mock
+
+    if failure == "exit":
+        invoke = Mock(return_value=SimpleNamespace(returncode=1))
+    else:
+        error = (
+            subprocess.TimeoutExpired("PRIVATE_CI_FIXTURE", 5, stderr="PRIVATE_SERVER_REPLY")
+            if failure == "timeout"
+            else OSError("PRIVATE_CI_FIXTURE")
+        )
+        invoke = Mock(side_effect=error)
+    monkeypatch.setattr(qa_status.subprocess, "run", invoke)
+    assert stage_publisher.post("pending", "build_real_control_plane") is False
+    assert invoke.call_count == 3
+    assert all(call.kwargs["timeout"] == 5 for call in invoke.call_args_list)
+    emitted = capsys.readouterr().out
+    assert "job log remain authoritative" in emitted and "PRIVATE" not in emitted
+
+
+def test_unknown_stage_state_still_fails_before_publication(monkeypatch, stage_publisher):
+    monkeypatch.setattr(qa_status.subprocess, "run", lambda *a, **kw: pytest.fail("Unexpected GitHub API"))
+    with pytest.raises(ValueError, match="Unknown stage status"):
+        stage_publisher.post("PRIVATE_VALUE", "not a permitted state")
+
+
 def test_prerequisite_breadcrumbs_publish_only_fixed_phases_on_the_workflow_head(monkeypatch):
     from unittest.mock import Mock
 

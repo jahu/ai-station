@@ -19,6 +19,16 @@ a synthetic conversation created after export. The backup must remain valid.
 These steps are unqualified until their real Mac run passes; preserving update,
 removal, signing and applicable hardware acceptance remain independent gates.
 
+Run 41641007361 at `fa1c29b` ended before the control-plane build: the optional
+GitHub stage publisher raised on a nonzero CLI result, aborting the actual
+experiment. Its evidence points to `macos_qa_status.py:post`, not a product
+startup fault; the underlying publication failure reason is unproven. Publication
+now has three five-second attempts and a fixed nonsecret warning on exhaustion.
+Its absence is recorded, but the experiment continues to its actual application
+outcome. Owner/repository/token guards still fail closed, and functional failures
+are still failures. The native UI component at that head passed all five fixtures;
+neither result qualifies the complete installed application.
+
 Real GUI run 41600426425 reaches `starting_services` with a live native Runner
 and Docker Compose still waiting; no project containers are observed. This
 narrows the startup failure but does not establish its complete root cause.

@@ -96,27 +96,41 @@ final class NativeAcceptanceTests: XCTestCase {
 }
 
 final class NativeMaintenanceAcceptanceTests: XCTestCase {
+    private func fixture() throws -> [String: String] {
+        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let descriptor = repository.appendingPathComponent(".tools/mac-consumer-experiment/maintenance-paths.private.json")
+        let value = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: descriptor)) as? [String: String])
+        let state = try XCTUnwrap(value["state"])
+        XCTAssertTrue(state.hasSuffix("/Library/Application Support/AI Station"))
+        return value
+    }
+
     private func click(_ label: String, timeout: TimeInterval = 60) throws {
+        let state = try XCTUnwrap(try fixture()["state"])
         let identity = "io.ai-station.presentation"
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            !NSRunningApplication.runningApplications(withBundleIdentifier: identity).isEmpty
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed)
-        let owners = NSRunningApplication.runningApplications(withBundleIdentifier: identity)
-        XCTAssertEqual(owners.count, 1)
-        let owner = try XCTUnwrap(owners.first)
-        let executable = try XCTUnwrap(owner.executableURL?.resolvingSymlinksInPath().path)
-        let retained = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/AI Station/releases").path
-        XCTAssertTrue(executable.hasPrefix(retained + "/"))
-        XCTAssertTrue(executable.hasSuffix("/bin/AI Station Helper.app/Contents/MacOS/ai-station-native"))
-        let app = XCUIApplication(bundleIdentifier: identity) // Attach to the retained product helper.
-        let button = app.dialogs.firstMatch.buttons[label]
-        XCTAssertTrue(button.waitForExistence(timeout: timeout))
-        XCTAssertTrue(button.isEnabled)
-        button.click()
-        let closed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in owner.isTerminated }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            let owners = NSRunningApplication.runningApplications(withBundleIdentifier: identity)
+            if owners.count == 1, let owner = owners.first {
+                // Preparation and each dialog are distinct processes. Reattach
+                // while waiting; never pin a completed progress window's PID.
+                let app = XCUIApplication(bundleIdentifier: identity)
+                let button = app.dialogs.firstMatch.buttons[label]
+                if button.exists && button.isEnabled {
+                    let executable = try XCTUnwrap(owner.executableURL?.resolvingSymlinksInPath().path)
+                    let retained = URL(fileURLWithPath: state).appendingPathComponent("releases").path
+                    XCTAssertTrue(executable.hasPrefix(retained + "/"))
+                    XCTAssertTrue(executable.hasSuffix("/bin/AI Station Helper.app/Contents/MacOS/ai-station-native"))
+                    button.click()
+                    let closed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in owner.isTerminated }, object: nil)
+                    XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+                    return
+                }
+            }
+            Thread.sleep(forTimeInterval: 1)
+        } while Date() < deadline
+        XCTFail("The retained helper did not present the expected maintenance action: \(label)")
     }
 
     func testCreateCompleteBackup() throws {
@@ -130,13 +144,10 @@ final class NativeMaintenanceAcceptanceTests: XCTestCase {
     func testRestoreCompleteBackup() throws {
         continueAfterFailure = false
         executionTimeAllowance = 480
-        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let descriptor = repository.appendingPathComponent(".tools/mac-consumer-experiment/backup-path.private.json")
-        let value = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: descriptor)) as? [String: String])
-        let path = try XCTUnwrap(value["path"])
-        let exports = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/AI Station/database-exports").path
+        let value = try fixture()
+        let path = try XCTUnwrap(value["backup"])
+        let state = try XCTUnwrap(value["state"])
+        let exports = URL(fileURLWithPath: state).appendingPathComponent("database-exports").path
         XCTAssertEqual(URL(fileURLWithPath: path).deletingLastPathComponent().path, exports)
         XCTAssertNotNil(UUID(uuidString: URL(fileURLWithPath: path).lastPathComponent))
         try click("Restore backup…")

@@ -650,11 +650,14 @@ def main():
         from ai_station_runner.darwin_telemetry import memory
 
         facts = memory()
-        status.post(
+        published = status.post(
             "pending",
             f"{stage}; RAM available={facts.get('available_mib')}MiB; "
             f"swap={facts.get('swap_used_mib')}MiB; disk={shutil.disk_usage(root).free // 1024**2}MiB",
         )
+        if not published:
+            proof["status_publication_unavailable"] = True
+            save()
 
     def launch_ui(selection, receipt):
         controller = subprocess.Popen(
@@ -979,7 +982,12 @@ def main():
         proof["native_reply_after_restart"] = True
         if gui:
             import desktop
+            import desktop_snapshot_files
             import desktop_snapshots
+            import desktop_versions
+
+            paths = root / "maintenance-paths.private.json"
+            paths.write_text(json.dumps({"state": str(state)}))
 
             def maintenance(method):
                 previous = desktop.ready_info(state)
@@ -1007,12 +1015,22 @@ def main():
             backup = exports.pop()
             UUID(backup.name)
             snapshot = desktop_snapshots.verify(backup)
-            if snapshot["file_count"] < 1:
-                raise ValueError("Native backup did not retain its installed files")
+            retained = json.loads(
+                desktop_versions.read_private(backup / "files.json", desktop_snapshot_files.LIMIT)
+            )
+            if not any(
+                entry.get("path") == "models/store/" + MODEL_SHA
+                and entry.get("kind") == "file"
+                and entry.get("sha256") == MODEL_SHA
+                and entry.get("size") == 2497281312
+                for entry in retained["entries"]
+            ):
+                raise ValueError("Native backup did not retain the exact installed model")
             if client.request("/api/chat/conversations/" + conversation["id"])["messages"] != saved_messages:
                 raise ValueError("Native backup changed its conversation history")
             proof["native_browser_full_backup"] = {
                 "verified_all_exported_files": True,
+                "pinned_model_included": True,
                 "file_count": snapshot["file_count"],
                 "history_preserved": True,
                 "new_desktop_owner": True,
@@ -1026,7 +1044,7 @@ def main():
                     "model": model,
                 },
             )
-            (root / "backup-path.private.json").write_text(json.dumps({"path": str(backup)}))
+            paths.write_text(json.dumps({"state": str(state), "backup": str(backup)}))
             progress("native_complete_restore_and_reauthentication")
             process = maintenance("testRestoreCompleteBackup")
             try:
@@ -1053,11 +1071,26 @@ def main():
                 "backup_still_verified": True,
                 "new_desktop_owner": True,
             }
+            progress("real_native_reply_after_full_restore")
+            turn = client.request(
+                "/api/chat/conversations/" + conversation["id"] + "/messages",
+                {"content": "What is 4+4? Reply only with the number. /no_think"},
+            )
+            client.wait("/api/runs/" + turn["id"], timeout=300)
+            restored = client.request("/api/chat/conversations/" + conversation["id"])
+            if not any(
+                row["role"] == "assistant" and row["run_id"] == turn["id"] and row["content"].strip()
+                for row in restored["messages"]
+            ):
+                raise ValueError("The fully restored station could not use its retained native model")
+            proof["native_browser_full_restore"]["real_model_followup"] = True
         stop(executable, process)
         proof["clean_stop"] = True
         proof["passed"] = True
         progress("backend_experiment_passed_full_installer_still_required")
-        status.post("success", "Backend scenario passed; full GUI/installer still unqualified")
+        if not status.post("success", "Backend scenario passed; full GUI/installer still unqualified"):
+            proof["status_publication_unavailable"] = True
+            save()
     except BaseException as error:
         proof.update(passed=False, stage=stage, **failure(error))
         proof["native_startup_stage"] = startup_stage(root / "commands.private.log", after=startup_offset)
@@ -1082,7 +1115,8 @@ def main():
                 proof["sdk_cache_inspection_unavailable"] = True
         save()
         try:
-            status.post("failure", f"{stage}: {type(error).__name__}")
+            if not status.post("failure", f"{stage}: {type(error).__name__}"):
+                proof["status_publish_failed"] = True
         except (OSError, RuntimeError, subprocess.SubprocessError):
             proof["status_publish_failed"] = True
         raise
