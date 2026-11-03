@@ -216,6 +216,19 @@ def apply():
     return guest.update(io.BytesIO(BYTES), receipt(1), receipt(2), len(BYTES), os.getuid())
 
 
+def test_preview_to_stable_retains_private_database_and_reconciles_acknowledgement(fixture):
+    _, store, database, manifest, calls = fixture
+    previous, target = receipt(1), receipt(2)
+    target["package"]["Version"] = "0.1.0"
+    before = database.read_bytes()
+    first = guest.update(io.BytesIO(BYTES), previous, target, len(BYTES), os.getuid())
+    assert first["data_preserved"] and json.loads(manifest.read_text()) == target
+    assert database.read_bytes() == before and len(list(store.glob("*.sqlite"))) == 1
+    second = guest.update(io.BytesIO(BYTES), previous, target, len(BYTES), os.getuid())
+    assert second["data_preserved"] and calls.count("installed") == 1
+    assert database.read_bytes() == before
+
+
 @pytest.mark.parametrize("interrupted", [False, True])
 def test_toolkit_activation_precedes_identity_publication_and_recovers_the_same_data(
     fixture, monkeypatch, interrupted
