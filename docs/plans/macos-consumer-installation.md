@@ -73,6 +73,19 @@ states during startup, before cleanup, with known exception classes and basename
 frames from bounded startup logs. Raw logs, healthcheck output and private values
 remain excluded. The next default, unprofiled run must resolve this service gate.
 
+That trace also exposes a composed-budget defect: the native child spends about
+72 seconds on package/storage attestation before starting the Runner and begins
+Compose around second 88. The original parent's 180-second whole-child window
+leaves only about 92 seconds for Compose's existing 120-second health budget.
+The candidate therefore bounds native preflight separately (180 seconds), then
+starts the existing 180-second application-readiness window on the first fixed
+`starting_runner` phase. Total startup remains bounded by 360 seconds; repeated,
+late or malformed phases cannot reset it. Runner readiness (20 seconds), Compose
+health (120 seconds), early child failure, Stop and Linux/WSL startup are unchanged.
+This permits the child to report its actual health outcome; it does not establish
+that the remaining service-health problem is fixed. Actual default installation
+must still pass all gates.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm

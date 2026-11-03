@@ -479,6 +479,37 @@ def stop(proc):
             ) from None
 
 
+class StartupBudget:
+    """Keep native preflight from consuming the application's readiness window."""
+
+    def __init__(self, *, native, started):
+        self.native = native
+        self.started = started
+        self.application_started = None
+        self.lock = threading.Lock()
+
+    def observe(self, line, observed_at):
+        if not self.native or len(line) > 256:
+            return
+        try:
+            phase = json.loads(line)
+        except ValueError:
+            return
+        if phase != {"desktop_service_stage": "starting_runner"}:
+            return
+        with self.lock:
+            # One transition, inside the original preflight limit. Repeated,
+            # late or unrelated output cannot keep extending startup.
+            if self.application_started is None and self.started <= observed_at <= self.started + 180:
+                self.application_started = observed_at
+
+    @property
+    def deadline(self):
+        with self.lock:
+            base = self.application_started if self.application_started is not None else self.started
+            return base + 180
+
+
 def supervise(
     root,
     config,
@@ -518,6 +549,10 @@ def supervise(
             "--docker-desktop-endpoint",
             engine.identity[1],
         ]
+    budget = StartupBudget(
+        native=engine is not None and engine.identity is not None,
+        started=time.monotonic(),
+    )
     proc = subprocess.Popen(
         [
             str(root / "python/bin/python3"),
@@ -540,6 +575,8 @@ def supervise(
 
     def read():
         for line in proc.stdout:
+            if line.startswith('{"desktop_service_stage":'):
+                budget.observe(line, time.monotonic())
             if line.startswith(READY):
                 try:
                     frame = json.loads(line[len(READY) :])
@@ -558,7 +595,6 @@ def supervise(
     reader.start()
     stopped = control.stop_requested if control is not None else threading.Event()
     try:
-        deadline = time.monotonic() + 180
         while True:
             if stopped.is_set():
                 return
@@ -566,7 +602,7 @@ def supervise(
                 url = ready.get(timeout=0.2)
                 break
             except queue.Empty:
-                if time.monotonic() >= deadline:
+                if time.monotonic() >= budget.deadline:
                     raise RuntimeError(
                         "AI Station did not become ready; inspect the private desktop log"
                     ) from None

@@ -19,6 +19,41 @@ from launch import local_entry_url
 from pydantic import ValidationError
 
 
+def test_native_attestation_does_not_consume_the_existing_application_readiness_budget():
+    budget = desktop.StartupBudget(native=True, started=100)
+    assert budget.deadline == 280
+    # Measured package preflight delayed the actual Runner by about 72s;
+    # Compose began at about 88s and needs its own existing 120s health bound.
+    budget.observe('{"desktop_service_stage": "starting_runner"}\n', 172)
+    assert budget.deadline == 352
+    assert 188 + 120 < budget.deadline
+    budget.observe('{"desktop_service_stage": "starting_runner"}\n', 250)
+    assert budget.deadline == 352  # A duplicate must never reset the clock.
+
+
+@pytest.mark.parametrize(
+    "line,observed_at",
+    [
+        ('{"desktop_service_stage": "starting_runner"}', 281),
+        ('{"desktop_service_stage": "starting_runner"}', 99),
+        ('{"desktop_service_stage": "starting_services"}', 172),
+        ('{"desktop_service_stage": "starting_runner", "extra": "PRIVATE"}', 172),
+        ('{"desktop_service_stage":', 172),
+        ('{"desktop_service_stage": "starting_runner"}' + " " * 256, 172),
+    ],
+)
+def test_late_malformed_or_unrelated_phases_cannot_extend_native_startup(line, observed_at):
+    budget = desktop.StartupBudget(native=True, started=100)
+    budget.observe(line, observed_at)
+    assert budget.deadline == 280
+
+
+def test_linux_and_windows_guest_keep_the_original_single_startup_window():
+    budget = desktop.StartupBudget(native=False, started=100)
+    budget.observe('{"desktop_service_stage": "starting_runner"}', 172)
+    assert budget.deadline == 280
+
+
 @pytest.mark.parametrize("bad", ["short", "A" * 32, "../" + "a" * 32, "a" * 33, "a" * 31 + "\n"])
 def test_desktop_environment_identity_rejects_unbounded_or_noncanonical_inputs(bad):
     with pytest.raises(ValidationError):
