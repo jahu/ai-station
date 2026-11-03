@@ -1169,6 +1169,75 @@ def main():
                 "session_and_history_retained": True,
                 "real_model_reply": True,
             }
+            progress("build_reviewed_version_update_fixture")
+            candidate_folder = root / "update-candidate"
+            candidate_folder.mkdir(mode=0o700)
+            candidate = candidate_folder / "AI Station.app"
+            target = package_builder.bundle(
+                candidate,
+                root / "application-python",
+                root / "native-interface",
+                "x86_64",
+                tag,
+                root / "image/build.json",
+                version="0.1.1",
+            )
+            if (
+                metadata["version"] != "0.1.0"
+                or target["version"] != "0.1.1"
+                or target["bundle_id"] == metadata["bundle_id"]
+                or target["image_id"] != metadata["image_id"]
+                or target["source_head"] != metadata["source_head"]
+            ):
+                raise ValueError("The fixed same-source version-update fixture changed")
+            previous = desktop.ready_info(state)
+            if not previous or not previous.get("instance_id"):
+                raise ValueError("The reviewed update requires its live native desktop owner")
+            before_namespace = desktop_versions.namespace(config)
+            before_models = desktop_restore_files.inventory(data, prefix="models")
+            paths.write_text(
+                json.dumps(
+                    {
+                        "state": str(state),
+                        "backup": str(backup),
+                        "update": str(candidate),
+                        "pid": str(process.pid),
+                    }
+                )
+            )
+            progress("native_preserving_version_update")
+            guided_action("testInstallReviewedVersionUpdate", suite="NativeMaintenanceAcceptanceTests")
+            maintenance_ready(process, state, previous)
+            current = desktop_versions.load(state)
+            if (
+                current["phase"] != "ready"
+                or current["package"] != desktop_versions.package_identity(target)
+                or desktop_versions.namespace(config) != before_namespace
+                or desktop_restore_files.inventory(data, prefix="models") != before_models
+            ):
+                raise ValueError("The native version update did not retain its owned namespace/models")
+            after_update = client.request("/api/chat/conversations/" + conversation["id"])
+            if after_update["messages"] != retained["messages"]:
+                raise ValueError("The native version update changed saved conversation history")
+            turn = client.request(
+                "/api/chat/conversations/" + conversation["id"] + "/messages",
+                {"content": "What is 6+6? Reply only with the number. /no_think"},
+            )
+            client.wait("/api/runs/" + turn["id"], timeout=300)
+            after_update = client.request("/api/chat/conversations/" + conversation["id"])
+            if not any(
+                row["role"] == "assistant" and row["run_id"] == turn["id"] and row["content"].strip()
+                for row in after_update["messages"]
+            ):
+                raise ValueError("The updated station could not use its retained native model")
+            proof["native_preserving_version_update"] = {
+                "versions": [metadata["version"], target["version"]],
+                "same_reviewed_source_and_control_plane_image": True,
+                "new_package_and_owner_verified": True,
+                "namespace_models_session_and_history_retained": True,
+                "real_model_reply": True,
+                "schema_evolution_exercised": False,
+            }
             stop(executable, process)
         proof["passed"] = True
         progress("backend_experiment_passed_full_installer_still_required")

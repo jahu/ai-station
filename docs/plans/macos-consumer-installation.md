@@ -29,6 +29,17 @@ reinstall copy, redirected app or data inside that app refuses removal. This is
 actual filesystem lifecycle acceptance on an owned disposable app, not Finder,
 Gatekeeper, signing, a preserving version update or a completed installer claim.
 
+The next candidate version-update gate uses the real producer to build 0.1.0 and
+0.1.1 bundles from the same reviewed source, Python/native layers and actual
+control-plane image. The second version is an internal QA fixture, not a released
+version or a substitute for later schema-evolution coverage. XCTest chooses it
+through the stock app's Install Update menu and native file picker, then confirms
+the ordinary local update dialog. The observer requires a new owner, the exact
+target version receipt, unchanged private namespace/model files/session/history
+and another real model answer. This actual update transaction remains unqualified
+until executed; it does not establish signing, Gatekeeper or future code/schema
+migration compatibility. Existing operation deadlines remain unchanged.
+
 Run 41641007361 at `fa1c29b` ended before the control-plane build: the optional
 GitHub stage publisher raised on a nonzero CLI result, aborting the actual
 experiment. Its evidence points to `macos_qa_status.py:post`, not a product

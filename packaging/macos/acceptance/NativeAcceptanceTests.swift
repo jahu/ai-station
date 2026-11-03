@@ -111,10 +111,10 @@ final class NativeMaintenanceAcceptanceTests: XCTestCase {
         let identity = "io.ai-station.presentation"
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
-            let owners = NSRunningApplication.runningApplications(withBundleIdentifier: identity)
-            if owners.count == 1, let owner = owners.first {
+            if let owner = NSWorkspace.shared.frontmostApplication, owner.bundleIdentifier == identity {
                 // Preparation and each dialog are distinct processes. Reattach
-                // while waiting; never pin a completed progress window's PID.
+                // to the foreground dialog while waiting; a progress helper
+                // may remain alive behind an ordinary confirmation dialog.
                 let app = XCUIApplication(bundleIdentifier: identity)
                 let button = app.dialogs.firstMatch.buttons[label]
                 if button.exists && button.isEnabled {
@@ -162,6 +162,38 @@ final class NativeMaintenanceAcceptanceTests: XCTestCase {
         panel.buttons["Check backup"].click()
         try click("Restore backup", timeout: 90) // Keep current password; no exceptional MFA reset.
         try click("Open AI Station", timeout: 300)
+    }
+
+    func testInstallReviewedVersionUpdate() throws {
+        continueAfterFailure = false
+        executionTimeAllowance = 480
+        let value = try fixture()
+        let path = try XCTUnwrap(value["update"])
+        let pid = try XCTUnwrap(Int32(try XCTUnwrap(value["pid"])))
+        XCTAssertGreaterThan(pid, 0)
+        let owner = try XCTUnwrap(NSRunningApplication(processIdentifier: pid))
+        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let root = repository.appendingPathComponent(".tools/mac-consumer-experiment")
+        XCTAssertEqual(owner.executableURL?.resolvingSymlinksInPath(),
+                       root.appendingPathComponent("AI Station.app/Contents/MacOS/AI Station").resolvingSymlinksInPath())
+        XCTAssertEqual(URL(fileURLWithPath: path).deletingLastPathComponent().path,
+                       root.appendingPathComponent("update-candidate").path)
+        let app = XCUIApplication(bundleIdentifier: "io.ai-station.desktop") // Attach to the real stock application.
+        app.activate()
+        app.menuBars.menuBarItems["AI Station"].click()
+        let install = app.menuBars.menuItems["Install Update…"]
+        XCTAssertTrue(install.isEnabled)
+        install.click()
+        let panel = app.dialogs["open-panel"]
+        XCTAssertTrue(panel.buttons["Choose update"].waitForExistence(timeout: 30))
+        app.typeKey("g", modifierFlags: [.command, .shift])
+        let location = app.sheets.textFields.firstMatch
+        XCTAssertTrue(location.waitForExistence(timeout: 15))
+        location.typeText(path + "\n")
+        XCTAssertTrue(panel.buttons["Choose update"].isEnabled)
+        panel.buttons["Choose update"].click()
+        try click("Install update", timeout: 300) // Ordinary consent, not an API or auto-approval.
     }
 }
 
