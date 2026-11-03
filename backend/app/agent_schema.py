@@ -202,6 +202,7 @@ class AgentSettings(BaseModel):
                 and self.media is not None
                 and self.media.kind == "speech"
                 and self.media.request.reference_artifact_id is None
+                and self.media.request.voice_source != "model"
             ):
                 raise ValueError("Select and review a Library voice reference before enabling speech")
             if (

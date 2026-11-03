@@ -80,11 +80,13 @@ def generate(body: SpeechRequest, session: DB):
 
 
 def create_audio_run(session, body, *, task=None, parent_run_id=None):
-    reference = session.get(Artifact, str(body.reference_artifact_id))
+    reference = session.get(Artifact, str(body.reference_artifact_id)) if body.reference_artifact_id else None
     if body.engine == "fish_s2_pro":
         from app.fish_speech import create_fish_run
         from app.recordings import FORMATS
 
+        if body.voice_source == "model":
+            return create_fish_run(session, body, None, task=task, parent_run_id=parent_run_id)
         if (
             reference is None
             or reference.artifact_type != "audio"

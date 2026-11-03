@@ -392,6 +392,11 @@ selection, saved scene cues, ordinary effects/preview Runs and existing workflow
 approvals/Stop. Conversation existing/new-film orchestration and default original-audio layering
 are reviewed, merged and deployed in PR #529; perceptual
 acceptance remains. See the conversation delivery contract below.
+The 2026-11-03 fresh two-second film → real MMAudio → saved timeline run also
+passed through a new account, separate ordinary worker and real private Runner,
+without fake inference or stopping operator models. Exact frame/sample accounting
+and final conversation projection passed; listening and multiple-scene quality
+acceptance remain separate. [Evidence scope](synchronized-sound.md#new-film-with-generated-sound-2026-11-03).
 NR-08 multitrack editing is reviewed, merged in PR #527 and deployed. Private
 revisions, trim/move/reorder, audio gain/fades/mute, measured waveforms and verified
 CPU preview/export pass API/worker/native and compiled desktop/mobile qualification.

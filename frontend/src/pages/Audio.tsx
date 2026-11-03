@@ -161,6 +161,15 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   );
   const [pace, setPace] = useState(String(restored.pace ?? "natural"));
   const fish = engine === "fish_s2_pro";
+  const [voiceSource, setVoiceSource] = useState<"reference" | "model">(
+    restored.voice_source === "model"
+      ? "model"
+      : restored.voice_source === "reference"
+        ? "reference"
+        : fish && !reference
+          ? "model"
+          : "reference",
+  );
   const [shapeDelivery, setShapeDelivery] = useState(!!restored.delivery);
   const [delivery, setDelivery] = useState<SpeechDelivery>(
     (restored.delivery as SpeechDelivery | undefined) ?? defaultSpeechDelivery,
@@ -175,6 +184,11 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         : false,
   });
   const fishReady = capabilities.data?.engines?.fish_s2_pro?.available === true;
+  const modelVoice = fish && voiceSource === "model";
+  const modelVoiceReady =
+    capabilities.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+      "model",
+    ) === true;
   const supportsDelivery =
     capabilities.data?.delivery?.version === "chatterbox-controls-v1";
   useCreativeDraft({
@@ -183,7 +197,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
       text,
       gpu,
       ...(fish
-        ? { engine, direction, pace }
+        ? { engine, direction, pace, voice_source: voiceSource }
         : shapeDelivery
           ? { delivery }
           : {}),
@@ -199,6 +213,8 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         throw new Error(
           "Expressive speech is unavailable or still being verified.",
         );
+      if (modelVoice && !modelVoiceReady)
+        throw new Error("Update AI Station or choose a voice recording.");
       if (!fish && shapeDelivery && !supportsDelivery)
         throw new Error(
           "Delivery controls are unavailable. Turn them off to use the standard voice.",
@@ -206,9 +222,14 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
       const parameters = {
         text,
         gpu,
-        reference_artifact_id: reference,
+        reference_artifact_id: modelVoice ? null : reference,
         ...(fish
-          ? { engine, direction, pace }
+          ? {
+              engine,
+              direction,
+              pace,
+              ...(modelVoice ? { voice_source: "model" } : {}),
+            }
           : shapeDelivery
             ? { delivery }
             : {}),
@@ -247,8 +268,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
           </span>
         }
       >
-        Local speech, shaped by your voice reference. Listen and refine right
-        here.
+        Create a voice or use a recording. Listen and refine the delivery here.
       </PageTitle>
       <div className="media-workspace">
         <form
@@ -269,6 +289,8 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
               direction={direction}
               pace={pace}
               capabilities={capabilities.data}
+              voiceSource={voiceSource}
+              onVoiceSource={setVoiceSource}
               onEngine={(next) => {
                 const selected = cache.getQueryData<Artifact>([
                   "artifact",
@@ -281,6 +303,10 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 )
                   setReference("");
                 setEngine(next);
+                if (next === "fish_s2_pro")
+                  setVoiceSource(
+                    reference || !modelVoiceReady ? "reference" : "model",
+                  );
                 if (search.has("engine")) {
                   setSearch(
                     (current) => {
@@ -309,21 +335,25 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 </Button>
               </div>
             )}
-            <MediaInput
-              kind="audio"
-              audioMode={fish ? "voice-recording" : "voice"}
-              uploadEndpoint={fish ? "/audio/transcription/uploads" : undefined}
-              label="Voice reference"
-              hint={
-                fish
-                  ? "WAV, M4A, MP3 or phone recording · best with 5–15 sec of clear speech · up to 60 sec / 20 MB. Prepared automatically on this workstation."
-                  : "WAV · 0.1–60 sec · up to 20 MB"
-              }
-              value={reference}
-              onChange={setReference}
-              disabled={uploading || busy}
-              onBusy={setUploading}
-            />
+            {!modelVoice && (
+              <MediaInput
+                kind="audio"
+                audioMode={fish ? "voice-recording" : "voice"}
+                uploadEndpoint={
+                  fish ? "/audio/transcription/uploads" : undefined
+                }
+                label="Voice reference"
+                hint={
+                  fish
+                    ? "WAV, M4A, MP3 or phone recording · best with 5–15 sec of clear speech · up to 60 sec / 20 MB. Prepared automatically on this workstation."
+                    : "WAV · 0.1–60 sec · up to 20 MB"
+                }
+                value={reference}
+                onChange={setReference}
+                disabled={uploading || busy}
+                onBusy={setUploading}
+              />
+            )}
             <label className="media-text-label">
               <span>
                 Text to speak <small>{text.length} / 1000</small>
@@ -374,7 +404,8 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
               type="submit"
               className="media-generate"
               disabled={
-                !reference ||
+                (!modelVoice && !reference) ||
+                (modelVoice && !modelVoiceReady) ||
                 !text.trim() ||
                 uploading ||
                 busy ||

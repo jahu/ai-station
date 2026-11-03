@@ -1,5 +1,5 @@
 {
-  "version": 39,
+  "version": 40,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -32,7 +32,8 @@
     "docs/plans/linux-consumer-qualification.md",
     "docs/plans/windows-consumer-installation.md",
     "docs/web-search.md",
-    "docs/plans/macos-managed-llama.md"
+    "docs/plans/macos-managed-llama.md",
+    "docs/plans/expressive-speech.md"
   ],
   "cases": [
     {
@@ -5284,6 +5285,96 @@
       ],
       "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
       "minutes": 20
+    },
+    {
+      "id": "VOICE-001",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06"
+      ],
+      "title": "Fish: wyraźny szept bez nagrania",
+      "steps": [
+        "Otwórz Audio → Speech, wybierz Fish i Generate a voice. Wpisz krótki polski tekst i wybierz Whisper.",
+        "Wygeneruj nagranie, odsłuchaj całość i porównaj ze stylem Natural. Zapisz jakość szeptu, kompletność słów oraz szumy."
+      ],
+      "expected": [
+        "Nagranie referencyjne nie jest wymagane; nie powstaje jego transkrypcja.",
+        "Wynik trafia do Library z informacją o wygenerowanym głosie. Nie obiecuje podobieństwa do konkretnej osoby. Ocena słyszalnej ekspresji pozostaje wynikiem tego testu."
+      ]
+    },
+    {
+      "id": "VOICE-002",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
+      "title": "Wybór głosu i historia wariantów",
+      "steps": [
+        "Utwórz wypowiedź Fish z Use a recording i własnym nagraniem. Opuść zakładkę, wróć i odśwież.",
+        "W tym samym workspace jawnie wybierz Generate a voice i utwórz kolejny wariant. Ponownie otwórz obie wersje."
+      ],
+      "expected": [
+        "Źródło głosu i ustawienia pozostają zapisane; tryb nagrania nie jest samoczynnie zmieniany.",
+        "Nowy wariant nie wykorzystuje nagrania jako źródła; starszy wariant zachowuje nagranie i historię. Pochodzenie tekstu agenta może pozostać odrębną relacją."
+      ]
+    },
+    {
+      "id": "VOICE-003",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06",
+        "NR-11"
+      ],
+      "title": "Agent z wygenerowanym głosem i prywatnym wynikiem",
+      "steps": [
+        "W definicji agenta wybierz mowę Fish, Generate a voice i tekst wypowiedzi. Sprawdź ustawienia i aktywuj agenta.",
+        "Uruchom agenta, obejrzyj powiadomienie, historię i nagranie. Z drugiego zwykłego konta spróbuj otworzyć zapisany link do wyniku."
+      ],
+      "expected": [
+        "Agent nie wymaga fikcyjnego nagrania i kończy się rzeczywistym wynikiem audio.",
+        "Powiadomienie prowadzi do właściwego wyniku. Drugie konto nie ma dostępu do nagrania, historii ani tekstu pierwszego użytkownika."
+      ]
+    },
+    {
+      "id": "VOICE-004",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06"
+      ],
+      "title": "Stop mowy Fish bez nagrania",
+      "steps": [
+        "Uruchom dłuższą wypowiedź z Generate a voice. Zatrzymaj ją w trakcie ładowania lub generacji.",
+        "Sprawdź końcowy status Run, Library i stan GPU. Uruchom następnie krótką nową wypowiedź."
+      ],
+      "expected": [
+        "Zatrzymywany jest wyłącznie proces tego Run; nie jest publikowany niedokończony WAV.",
+        "Zasoby zostają zwolnione, pozostałe modele i zadania zachowują swój stan, a nowa wypowiedź może zostać uruchomiona."
+      ]
     }
   ]
 }

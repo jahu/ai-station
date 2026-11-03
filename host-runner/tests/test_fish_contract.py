@@ -88,6 +88,28 @@ def test_native_request_rejects_unbounded_or_unowned_launch_settings(tmp_path, e
         contract.FishRequest(**{**body, **extra})
 
 
+def test_model_voice_is_explicit_and_never_silently_discards_a_reference(tmp_path):
+    fields = dict(
+        run_id=uuid4(),
+        text="Exact words",
+        observation="a" * 64,
+        gpus=[7, 9],
+        deadline_at=time.time() + 60,
+        permissions=["filesystem_read", "workspace_write"],
+    )
+    with pytest.raises(ValidationError, match="requires its recording"):
+        contract.FishRequest(**fields)
+    request = contract.FishRequest(**fields, voice_source="model")
+    assert request.reference is None and request.reference_text is None
+    assert request.model_dump(mode="json")["voice_source"] == "model"
+    voice = source(tmp_path)
+    for supplied in ({"reference": voice}, {"reference_text": "Private reference words"}):
+        with pytest.raises(ValidationError, match="cannot silently ignore"):
+            contract.FishRequest(**fields, voice_source="model", **supplied)
+    legacy = contract.FishRequest(**fields, reference=voice, reference_text="Reference words")
+    assert "voice_source" not in legacy.model_dump(mode="json")
+
+
 def test_source_and_model_hashes_and_symlink_boundaries_are_checked(tmp_path, monkeypatch):
     runtime = tmp_path / "runtime"
     models = tmp_path / "models"
@@ -116,15 +138,22 @@ def test_source_and_model_hashes_and_symlink_boundaries_are_checked(tmp_path, mo
         contract.installation_observation(runtime, models)
 
 
-@pytest.mark.parametrize("fault", [None, "scope", "profile", "reference", "missing_eos"])
-def test_owned_entry_validates_before_render_and_publishes_only_complete_pcm(tmp_path, monkeypatch, fault):
+@pytest.mark.parametrize(
+    "voice_source,fault",
+    [("reference", fault) for fault in [None, "scope", "profile", "reference", "missing_eos"]]
+    + [("model", fault) for fault in [None, "scope", "profile", "missing_eos"]],
+)
+def test_owned_entry_validates_before_render_and_publishes_only_complete_pcm(
+    tmp_path, monkeypatch, voice_source, fault
+):
     reference = source(tmp_path)
     rid = str(uuid4())
     request = contract.FishRequest(
         run_id=rid,
         text="First. Last.",
-        reference=reference,
-        reference_text="Reference words",
+        voice_source=voice_source,
+        reference=reference if voice_source == "reference" else None,
+        reference_text="Reference words" if voice_source == "reference" else None,
         observation="a" * 64,
         gpus=[7, 9],
         deadline_at=time.time() + 60,
@@ -158,6 +187,7 @@ def test_owned_entry_validates_before_render_and_publishes_only_complete_pcm(tmp
     calls = []
 
     def render(request, *, runtime, models, work, reference):
+        assert (reference is None) == (voice_source == "model")
         calls.append(request.text)
         parts = []
         for i, text in enumerate(["First.", "Last."]):
@@ -182,5 +212,10 @@ def test_owned_entry_validates_before_render_and_publishes_only_complete_pcm(tmp
         with wave.open(str(output)) as wav:
             assert wav.getnframes() == 8820
         assert output.stat().st_nlink == 1
+        report = json.loads((tmp_path / f"runs/{rid}/fish-speech/report.json").read_text())
+        assert report.get("voice_source", "reference") == voice_source
+        if voice_source == "model":
+            assert report["reference_sha256"] is None
+            assert not (tmp_path / f"runs/{rid}/fish-speech/reference.wav").exists()
         with pytest.raises(ValueError, match="existing speech"):
             fish_job.run(receipt)

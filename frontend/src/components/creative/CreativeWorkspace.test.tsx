@@ -117,6 +117,17 @@ function fixture(
           },
         });
       if (path.includes("/system/hardware")) return reply({ gpus: [] });
+      if (path.endsWith("/audio/capabilities"))
+        return reply({
+          available: true,
+          engines: {
+            fish_s2_pro: {
+              available: true,
+              readiness: "ready",
+              voice_sources: ["reference", "model"],
+            },
+          },
+        });
       if (path.endsWith("/whole-capabilities"))
         return reply({ available: true, backend: "sonic", readiness: "ready" });
       if (
@@ -608,4 +619,40 @@ it("retains the whole Sonic profile and exact script for an avatar continuation"
   expect(
     (backend.submissions[0].parameters as Record<string, unknown>).size,
   ).toBeUndefined();
+});
+
+it("restores generated voice and never attaches an old hidden recording to a variation", async () => {
+  const backend = fixture({
+    capability: "speech",
+    draft: {
+      formState: {
+        text: "Dokładny tekst.",
+        engine: "fish_s2_pro",
+        voice_source: "model",
+        reference: "voice-reference",
+        direction: "whisper",
+        pace: "slow",
+        gpu: "auto",
+      },
+    },
+  });
+  mount("speech");
+  const source = await screen.findByRole("combobox", { name: "Voice source" });
+  expect((source as HTMLSelectElement).value).toBe("model");
+  expect(screen.queryByText("Voice reference")).toBeNull();
+  const submit = screen.getByRole("button", { name: "Generate speech" });
+  await waitFor(() =>
+    expect((submit as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(submit);
+  await waitFor(() => expect(backend.submissions).toHaveLength(1));
+  expect(backend.submissions[0].parameters).toEqual({
+    text: "Dokładny tekst.",
+    engine: "fish_s2_pro",
+    voice_source: "model",
+    reference_artifact_id: null,
+    direction: "whisper",
+    pace: "slow",
+    gpu: "auto",
+  });
 });

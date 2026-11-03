@@ -88,7 +88,7 @@ def render(request, *, runtime, models, work, reference):
         p.device != torch.device("cuda:1") for p in codec.parameters()
     ):
         raise ValueError("Fish model weights must stay on the allocated GPUs")
-    reference_tokens = encode_audio(str(reference), codec, "cuda:1").cpu()
+    reference_tokens = encode_audio(str(reference), codec, "cuda:1").cpu() if reference is not None else None
     end_id = model.tokenizer.get_token_id(IM_END_TOKEN)
     parts = []
     prefix = " ".join(
@@ -126,8 +126,8 @@ def render(request, *, runtime, models, work, reference):
                 top_k=30,
                 temperature=0.7,
                 compile=False,
-                prompt_text=[request.reference_text],
-                prompt_tokens=[reference_tokens],
+                prompt_text=[request.reference_text] if reference_tokens is not None else None,
+                prompt_tokens=[reference_tokens] if reference_tokens is not None else None,
                 chunk_length=1000,
             ):
                 if response.action == "sample":
@@ -225,7 +225,7 @@ def run(receipt):
         sys.addaudithook(offline)
     if installation_observation(runtime, models) != request.observation:
         raise ValueError("Fish implementation or model changed since queuing")
-    data = reference_bytes(root, request.reference.model_dump())
+    data = reference_bytes(root, request.reference.model_dump()) if request.reference is not None else None
     output_relative = f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav"
     output = resolve_child(root, output_relative)
     work = resolve_child(root, f"runs/{run_id}/fish-speech")
@@ -237,8 +237,9 @@ def run(receipt):
     ):
         raise ValueError("Inspect existing speech work instead of overwriting it")
     work.mkdir(mode=0o700, parents=True)
-    reference = work / "reference.wav"
-    reference.write_bytes(data)
+    reference = work / "reference.wav" if data is not None else None
+    if reference is not None:
+        reference.write_bytes(data)
     # Upstream diagnostic prompt dumps cannot impersonate measured wrapper events.
     with (work / "model.log").open("x") as log, redirect_stdout(log), redirect_stderr(log):
         report = render(request, runtime=runtime, models=models, work=work, reference=reference)
@@ -248,7 +249,8 @@ def run(receipt):
         text=request.text,
         direction=request.direction,
         pace=request.pace,
-        reference_sha256=request.reference.sha256,
+        reference_sha256=request.reference.sha256 if request.reference is not None else None,
+        **({"voice_source": "model"} if request.voice_source == "model" else {}),
     )
     (work / "report.json").write_text(json.dumps(report, ensure_ascii=False))
     samples = combine(work, report, output)

@@ -16,7 +16,8 @@ class SpeechDelivery(BaseModel):
 class SpeechRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     text: str = Field(min_length=1, max_length=1000)
-    reference_artifact_id: UUID
+    reference_artifact_id: UUID | None
+    voice_source: Literal["reference", "model"] = "reference"
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
     delivery: SpeechDelivery | None = None
     engine: Literal["fish_s2_pro"] | None = Field(
@@ -33,6 +34,10 @@ class SpeechRequest(BaseModel):
 
     @model_validator(mode="after")
     def supported_delivery(self):
+        if self.voice_source == "model" and (
+            self.engine != "fish_s2_pro" or self.reference_artifact_id is not None
+        ):
+            raise ValueError("Generated voice requires Fish and cannot ignore a voice recording")
         if self.engine is None and (self.direction is not None or self.pace is not None):
             raise ValueError("Choose expressive speech for direction or pacing")
         if self.engine is not None and self.delivery is not None:
@@ -42,6 +47,8 @@ class SpeechRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_legacy_identity(self, handler):
         values = handler(self)
+        if self.voice_source == "reference":
+            values.pop("voice_source", None)
         if self.delivery is None:
             values.pop("delivery", None)
         for field in ("engine", "direction", "pace"):

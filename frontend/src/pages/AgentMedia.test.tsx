@@ -989,3 +989,81 @@ it("reviews a Library film and exact scene sounds for a local effects agent", as
     }),
   ).toMatch(/Choose a film/);
 });
+
+it("reviews a generated Fish voice without a recording and requires a source again when switching back", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/audio/capabilities")
+          ? {
+              engines: {
+                fish_s2_pro: {
+                  available: true,
+                  readiness: "ready",
+                  voice_sources: ["reference", "model"],
+                },
+              },
+            }
+          : url.includes("/hardware")
+            ? { gpus: [] }
+            : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>({
+      kind: "speech",
+      description_source: "fixed",
+      request: { text: "Dokładne słowa.", reference_artifact_id: null },
+    });
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Speak"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Voice review">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  const model = await screen.findByRole("combobox", { name: "Speech model" });
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("option", { name: /Fish S2 Pro/ }) as HTMLOptionElement)
+        .disabled,
+    ).toBe(false),
+  );
+  fireEvent.change(model, { target: { value: "fish_s2_pro" } });
+  let saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(saved.request).toMatchObject({
+    engine: "fish_s2_pro",
+    voice_source: "model",
+    reference_artifact_id: null,
+  });
+  expect(agentMediaIssue(saved)).toBeNull();
+  expect(screen.queryByText("Voice reference")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "Voice source" }), {
+    target: { value: "reference" },
+  });
+  saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(agentMediaIssue(saved)).toContain("voice");
+  expect(screen.getByText("Voice reference")).toBeTruthy();
+  fireEvent.change(model, { target: { value: "" } });
+  saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(saved.request).not.toHaveProperty("voice_source");
+});

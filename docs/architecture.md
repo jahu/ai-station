@@ -308,6 +308,9 @@ each Run. The worker reserves two compatible GPUs and load RAM; a fixed native
 child owns the zero-swap scope, complete EOS-checked chunks and final WAV.
 Audio and reviewed media agents share model/direction controls and private
 creative history. No model service, new execution engine or schema is introduced.
+An explicit Fish generated-voice request omits the recording/ASR prerequisite;
+reference voice remains the legacy default. The choice is frozen in the same Run
+and native receipt, with unchanged permissions, dual-GPU/RAM and Stop contracts.
 
 The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
 existing local translation preparation/apply executors. Fixed generator/operation
