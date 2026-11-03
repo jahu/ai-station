@@ -2,9 +2,9 @@
 
 # ✳ AI Station
 
-### Your own AI. No AI or IT background needed.
+### Your own AI. Made simple.
 
-**A familiar ChatGPT-style experience, on your own computer.**
+**A familiar ChatGPT-style experience, on your own computer. No AI or IT background needed.**
 
 Your conversations, images, videos, voices, music and agents — together, on your machine.
 
