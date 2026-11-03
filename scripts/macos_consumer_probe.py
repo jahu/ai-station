@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 MODEL = "huihui-qwen3-4b-2507-q4km-macos-x86-64-cpu"
 MODEL_SHA = "b1324e2f1bd2e0610d591f54f93e38d90b187f69d1f215f4cace349eade678d7"
 PROFILE = "llamacpp-native-darwin-x86_64-b12032-v2"
+STOP_PROMPT = "Tell a fictional fairy tale about an owl visiting the moon, in at least 1000 words. /no_think"
 # The real startup includes independent 180-second bridge and readiness budgets
 # plus package retention and database preparation. A 300-second whole-operation
 # limit can cancel these legitimate steps before their own bounds are reached.
@@ -402,6 +403,36 @@ class Client:
             time.sleep(1)
         raise TimeoutError("The browser did not create its ordinary record")
 
+    def stopped_in_browser(self, conversation_id, previous_message_ids, *, timeout=60):
+        """Independently verify visible streaming/Stop; never cancel through this client."""
+        conversation_id = str(UUID(conversation_id))
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            detail = self.request("/api/chat/conversations/" + conversation_id)
+            fresh = [row for row in detail["messages"] if row["id"] not in previous_message_ids]
+            if len(fresh) > 2:
+                raise ValueError("The browser Stop action created ambiguous conversation messages")
+            if len(fresh) == 2:
+                user, reply = fresh
+                if user["role"] != "user" or user["content"] != STOP_PROMPT or reply["role"] != "assistant":
+                    raise ValueError("The browser Stop action does not match the reviewed request")
+                run_id = str(UUID(reply["run_id"]))
+                run = self.request("/api/runs/" + run_id)
+                if run["status"] in {"succeeded", "failed", "interrupted"}:
+                    raise ValueError("The browser did not cancel a streaming answer")
+                if run["status"] == "canceled" and not detail.get("active_run"):
+                    if not reply["content"].strip() or reply.get("metadata", {}).get("partial") is not True:
+                        raise ValueError("The canceled answer did not retain its streamed text")
+                    return {
+                        "conversation_id": conversation_id,
+                        "run_id": run_id,
+                        "status": "canceled",
+                        "streamed_characters": len(reply["content"]),
+                        "partial_preserved": True,
+                    }
+            time.sleep(1)
+        raise TimeoutError("The visible browser Stop did not finish")
+
 
 def main():
     require_host()
@@ -752,6 +783,10 @@ def main():
                 raise ValueError("The browser did not receive one real first answer")
             client.wait("/api/runs/" + str(UUID(replies[0]["run_id"])), timeout=300)
             proof["native_browser_engine_model_and_first_reply"] = True
+            progress("real_native_streaming_and_browser_Stop")
+            previous = {row["id"] for row in detail["messages"]}
+            guided_action("testStopStreamingAnswer")
+            proof["native_browser_streaming_Stop"] = client.stopped_in_browser(conversation["id"], previous)
         else:
             conversation = client.request(
                 "/api/chat/conversations",

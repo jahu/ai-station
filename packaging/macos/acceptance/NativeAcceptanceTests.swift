@@ -221,4 +221,30 @@ final class NativeGuidedAcceptanceTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [answer], timeout: 360), .completed,
                        "A real, nonempty model answer must be visible in the conversation")
     }
+
+    func testStopStreamingAnswer() throws {
+        let page = try existingPage()
+        let copies = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Copy AI Station "))
+        let previousAnswers = copies.count
+        XCTAssertGreaterThan(previousAnswers, 0, "The real first answer must precede this follow-up")
+        let message = page.textViews["Message"]
+        XCTAssertTrue(message.waitForExistence(timeout: 30))
+        message.click()
+        message.typeText("Tell a fictional fairy tale about an owl visiting the moon, in at least 1000 words. /no_think")
+        XCTAssertTrue(page.buttons["Send"].isEnabled)
+        page.buttons["Send"].click()
+        let stop = page.buttons["Stop"]
+        let streaming = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            copies.count == previousAnswers + 1 && copies.element(boundBy: previousAnswers).isEnabled
+                && stop.exists && stop.isEnabled
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [streaming], timeout: 180), .completed,
+                       "Nonempty generated text and Stop must coexist; a queued or finished reply is insufficient")
+        stop.click() // Only the ordinary visible Stop; no API cancellation substitute.
+        let idle = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !stop.exists && page.buttons["Send"].exists && message.isEnabled
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [idle], timeout: 60), .completed,
+                       "The composer must become usable again after Stop")
+    }
 }

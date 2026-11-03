@@ -22,6 +22,15 @@ GUI run must verify this candidate; component tests alone are not acceptance.
 
 ## Current code and verified upstream constraints
 
+The next guided acceptance increment must send a long fictional request in the
+ordinary conversation, observe nonempty streamed text while Stop is available,
+and click that visible button. Read-only API checks must independently confirm
+the new Run is canceled, its partial answer survives and the composer is idle.
+The later application restart must preserve that same history. No API cancel,
+injected token, shortened fake generation or successful-but-already-finished
+answer may substitute for this gate. This check is a candidate until its actual
+native/browser/model run passes.
+
 The unmerged consumer-qualification candidate replaces the Linux-only preflight
 with a read-only Mac package/OS/architecture and pinned local Docker Desktop
 check. This is preparation for the actual installed journey, not qualification.

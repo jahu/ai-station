@@ -67,6 +67,75 @@ def test_browser_record_observation_cannot_adopt_ambiguous_or_invalid_rows(monke
         client.created_in_browser("/api/setup/downloads")
 
 
+def stopped_messages():
+    return [
+        {"id": "old", "role": "assistant", "content": "Earlier answer"},
+        {"id": "user", "role": "user", "content": probe.STOP_PROMPT},
+        {
+            "id": "reply",
+            "role": "assistant",
+            "content": "Once upon a time…",
+            "run_id": "91f0cece-c533-4081-a63f-979a1025762b",
+            "metadata": {"partial": True},
+        },
+    ]
+
+
+def test_browser_stop_observer_only_reads_and_reports_no_generated_or_account_text(monkeypatch):
+    client = probe.Client("http://127.0.0.1:8765")
+    messages = stopped_messages()
+    paths = []
+
+    def request(path, body=None):
+        assert body is None, "Never substitute API writes for visible Stop"
+        paths.append(path)
+        return (
+            {"status": "canceled"}
+            if path.startswith("/api/runs/")
+            else {"messages": messages, "active_run": None}
+        )
+
+    monkeypatch.setattr(client, "request", request)
+    result = client.stopped_in_browser("4da328a1-06bf-4d26-9fab-7b590defc86f", {"old"})
+    assert result["status"] == "canceled" and result["partial_preserved"]
+    assert result["streamed_characters"] == len(messages[-1]["content"])
+    assert paths == [
+        "/api/chat/conversations/4da328a1-06bf-4d26-9fab-7b590defc86f",
+        "/api/runs/" + messages[-1]["run_id"],
+    ]
+    assert messages[-1]["content"] not in json.dumps(result) and probe.STOP_PROMPT not in json.dumps(result)
+
+
+@pytest.mark.parametrize(
+    "fault", ["finished", "failed", "empty", "not_partial", "wrong_prompt", "extra_message"]
+)
+def test_browser_stop_cannot_pass_a_finished_empty_or_different_answer(monkeypatch, fault):
+    messages = stopped_messages()
+    status = "canceled"
+    if fault in {"finished", "failed"}:
+        status = "succeeded" if fault == "finished" else "failed"
+    elif fault == "empty":
+        messages[-1]["content"] = " "
+    elif fault == "not_partial":
+        messages[-1]["metadata"]["partial"] = False
+    elif fault == "wrong_prompt":
+        messages[-2]["content"] = "A different request"
+    else:
+        messages.append({"id": "unexpected"})
+    client = probe.Client("http://127.0.0.1:8765")
+    monkeypatch.setattr(
+        client,
+        "request",
+        lambda path: (
+            {"status": status}
+            if path.startswith("/api/runs/")
+            else {"messages": messages, "active_run": None}
+        ),
+    )
+    with pytest.raises(ValueError):
+        client.stopped_in_browser("4da328a1-06bf-4d26-9fab-7b590defc86f", {"old"})
+
+
 @pytest.mark.parametrize(
     "error",
     [RuntimeError("PRIVATE_SETUP_LINK"), subprocess.CalledProcessError(17, ["PRIVATE_COMMAND"])],
