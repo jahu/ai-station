@@ -150,7 +150,10 @@ Normal fake regressions cover ownership changes, uncertain creation/timeout,
 exact-ID cleanup, consent/CPU choices, lock exclusion, changed configuration,
 partial preparation and old Windows recipe guards. The complete affected
 families passed 924 tests; the final image/telemetry/helper subset passed 81.
-The full Python regression is running before integration. Operator catalog v44
+The full Python regression passed 8,020 tests with 19 explicit skips and four
+existing warnings. Late publisher-identity and root-private-file corrections
+were additionally verified by all 77 final helper/probe/consent/bundle cases;
+application/Runner core code stayed unchanged during that full run. Operator catalog v44
 adds SETUP-160–163, with no answers prefilled as successful.
 
 
