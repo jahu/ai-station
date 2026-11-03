@@ -95,6 +95,21 @@ user's existing services. Runtime RAM admission remains unchanged and still
 checks actual available memory. The reported figures must establish whether
 memory pressure is relevant; it is not an assumed explanation for the lost run.
 
+The pending `macos-consumer-gui` mode reuses that same real package and fresh-host
+setup. The ordinary host launches the stock `.app` with no console or approval
+switches. A separate XCTest class verifies the actual application PID/executable,
+clicks its real setup consent, attaches to the system's default browser and fills
+the first-administrator form. It must reach the actual model setup page; the
+ordinary API login then independently confirms the account was created. Logs
+remain private because browser diagnostics can contain a setup URL. The ordinary
+component UI operation explicitly selects its five fixture tests instead.
+
+This mode has not yet been qualified. Engine/model preparation and reply/restart
+assertions still use the existing API path, so `consumer_gui_qualified` remains
+false even if this initial native/browser step passes. Continue with actual model
+selection/download, streaming/Stop and the complete update/backup/removal journey;
+do not substitute that API coverage for the required guided consumer experience.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

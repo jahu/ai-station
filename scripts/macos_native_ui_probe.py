@@ -81,6 +81,7 @@ def main():
                     str(repo / "packaging/macos/acceptance/NativeAcceptance.xcodeproj"),
                     "-scheme",
                     "NativeAcceptance",
+                    "-only-testing:NativeAcceptanceTests/NativeAcceptanceTests",
                     "-configuration",
                     "Debug",
                     "-destination",

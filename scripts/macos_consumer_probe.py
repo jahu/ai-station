@@ -147,9 +147,11 @@ def main():
     for key in list(os.environ):
         if key.startswith(("GH_", "ACTIONS_")) or key == "GITHUB_TOKEN":
             os.environ.pop(key)
-    proof = {"consumer_gui_qualified": False, "macos_installer_qualified": False, "console_entry": True}
+    gui = os.environ.get("AI_STATION_REAL_MAC_CONSUMER_GUI_TESTS") == "1"
+    proof = {"consumer_gui_qualified": False, "macos_installer_qualified": False, "console_entry": not gui}
     stage = "build"
     processes = []
+    ui_processes = []
     log = (root / "commands.private.log").open("w")
 
     def save():
@@ -183,18 +185,48 @@ def main():
             f"swap={facts.get('swap_used_mib')}MiB; disk={shutil.disk_usage(root).free // 1024**2}MiB",
         )
 
-    def start(executable):
+    def start(executable, *, first_gui=False):
         import desktop
 
         process = subprocess.Popen(
-            [str(executable), "--console", "--background"],
+            [str(executable), *([] if gui else ["--console", "--background"])],
             stdout=log,
             stderr=subprocess.STDOUT,
             env=execution_environment(),
         )
         processes.append(process)
-        deadline = time.monotonic() + 300
+        if first_gui:
+            (root / "gui-process.json").write_text(json.dumps({"pid": process.pid}))
+            controller = subprocess.Popen(
+                [
+                    "/usr/bin/xcodebuild",
+                    "test",
+                    "-project",
+                    str(repo / "packaging/macos/acceptance/NativeAcceptance.xcodeproj"),
+                    "-scheme",
+                    "NativeAcceptance",
+                    "-configuration",
+                    "Debug",
+                    "-only-testing:NativeAcceptanceTests/NativeConsumerAcceptanceTests",
+                    "-destination",
+                    "platform=macOS",
+                    "-parallel-testing-enabled",
+                    "NO",
+                    "-derivedDataPath",
+                    str(root / "gui-build"),
+                    "-resultBundlePath",
+                    str(root / "gui-result.xcresult"),
+                    "CODE_SIGN_IDENTITY=-",
+                ],
+                env=execution_environment(),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+            ui_processes.append(controller)
+        deadline = time.monotonic() + (900 if first_gui else 300)
         while time.monotonic() < deadline:
+            if first_gui and controller.poll() not in {None, 0}:
+                raise RuntimeError("The actual native/browser acceptance failed")
             if process.poll() is not None:
                 raise RuntimeError("The actual package exited before readiness")
             url = desktop.ready_url(state)
@@ -296,21 +328,35 @@ def main():
         if desktop_engine.select(dict(os.environ)).identity != engine.identity:
             raise ValueError("The owned Desktop restart changed its pinned local endpoint")
         progress("start_actual_package")
-        process, url = start(executable)
+        process, url = start(executable, first_gui=gui)
         parsed = urllib.parse.urlsplit(url)
         client = Client(urllib.parse.urlunsplit(parsed._replace(path="", query="", fragment="")))
         token = urllib.parse.parse_qs(urllib.parse.urlsplit(parsed.fragment).query).get(
             "setup_token", [None]
         )[0]
         progress("first_administrator")
-        client.request(
-            "/api/auth/setup",
-            {
-                "username": "QaAdmin",
-                "password": "synthetic private desktop acceptance password",
-                "local_setup_token": token,
-            },
-        )
+        if gui:
+            controller = ui_processes[-1]
+            controller.wait(timeout=600)
+            if controller.returncode:
+                raise RuntimeError("The actual browser did not complete administrator setup")
+            client.request(
+                "/api/auth/login",
+                {
+                    "username": "QaAdmin",
+                    "password": "synthetic private desktop acceptance password",
+                },
+            )
+            proof["native_browser_first_administrator"] = True
+        else:
+            client.request(
+                "/api/auth/setup",
+                {
+                    "username": "QaAdmin",
+                    "password": "synthetic private desktop acceptance password",
+                    "local_setup_token": token,
+                },
+            )
         proof["first_administrator"] = True
         progress("prepare_native_engine")
         observed = client.request("/api/setup/runtimes?profile=" + PROFILE)
@@ -407,6 +453,14 @@ def main():
             proof["status_publish_failed"] = True
         raise
     finally:
+        for controller in ui_processes:
+            if controller.poll() is None:
+                controller.terminate()  # This immediate, unreaped Xcode child only.
+                try:
+                    controller.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    controller.kill()
+                    controller.wait(timeout=5)
         for process in processes:
             if process.poll() is None:
                 try:

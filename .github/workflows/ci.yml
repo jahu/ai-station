@@ -15,6 +15,7 @@ on:
           - macos-desktop-transport
           - macos-native-ui-checks
           - macos-consumer-backend
+          - macos-consumer-gui
 permissions:
   contents: read
 jobs:
@@ -207,9 +208,9 @@ jobs:
         run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
   macos-consumer-backend:
     # Explicit real 4B CPU model on a fresh PUBLIC standard-free Intel host.
-    if: inputs.operation == 'macos-consumer-backend' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    if: (inputs.operation == 'macos-consumer-backend' || inputs.operation == 'macos-consumer-gui') && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    timeout-minutes: ${{ inputs.operation == 'macos-consumer-gui' && 60 || 45 }}
     permissions:
       contents: read
       statuses: write
@@ -217,6 +218,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
       AI_STATION_REAL_MAC_CONSUMER_TESTS: '1'
+      AI_STATION_REAL_MAC_CONSUMER_GUI_TESTS: ${{ inputs.operation == 'macos-consumer-gui' && '1' || '0' }}
       PYTHONPATH: backend:host-runner:scripts
     steps:
       - uses: actions/checkout@v4

@@ -94,3 +94,43 @@ final class NativeAcceptanceTests: XCTestCase {
         XCTAssertTrue(proxy.wait(for: .notRunning, timeout: 10))
     }
 }
+
+final class NativeConsumerAcceptanceTests: XCTestCase {
+    func testActualFirstLaunchAndBrowserAdministratorSetup() throws {
+        continueAfterFailure = false
+        executionTimeAllowance = 600
+        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let root = repository.appendingPathComponent(".tools/mac-consumer-experiment")
+        let descriptor = try Data(contentsOf: root.appendingPathComponent("gui-process.json"))
+        let value = try XCTUnwrap(try JSONSerialization.jsonObject(with: descriptor) as? [String: Any])
+        let number = try XCTUnwrap(value["pid"] as? NSNumber)
+        XCTAssertGreaterThan(number.int32Value, 0)
+        XCTAssertEqual(Int64(number.int32Value), number.int64Value)
+        let main = try XCTUnwrap(NSRunningApplication(processIdentifier: number.int32Value))
+        XCTAssertEqual(main.executableURL?.resolvingSymlinksInPath(),
+                       root.appendingPathComponent("AI Station.app/Contents/MacOS/AI Station").resolvingSymlinksInPath())
+        let helper = XCUIApplication(bundleIdentifier: "io.ai-station.presentation")
+        let setup = helper.dialogs.firstMatch.buttons["Set up AI Station"]
+        XCTAssertTrue(setup.waitForExistence(timeout: 90))
+        setup.click() // Ordinary stock consent, never a hidden auto-approval flag.
+
+        let handler = try XCTUnwrap(NSWorkspace.shared.urlForApplication(toOpen: URL(string: "http://127.0.0.1")!))
+        let identity = try XCTUnwrap(Bundle(url: handler)?.bundleIdentifier)
+        let browser = XCUIApplication(bundleIdentifier: identity) // Attach to the browser opened by the product.
+        XCTAssertTrue(browser.wait(for: .runningForeground, timeout: 300))
+        let page = browser.webViews.firstMatch
+        let username = page.textFields["Username"]
+        XCTAssertTrue(username.waitForExistence(timeout: 60))
+        XCTAssertTrue(username.isEnabled)
+        XCTAssertEqual(page.secureTextFields.count, 2)
+        username.click()
+        username.typeText("QaAdmin")
+        page.secureTextFields.element(boundBy: 0).click()
+        page.secureTextFields.element(boundBy: 0).typeText("synthetic private desktop acceptance password")
+        page.secureTextFields.element(boundBy: 1).click()
+        page.secureTextFields.element(boundBy: 1).typeText("synthetic private desktop acceptance password")
+        page.buttons["Create your account"].click()
+        XCTAssertTrue(page.staticTexts["Set up your models"].waitForExistence(timeout: 30))
+    }
+}
