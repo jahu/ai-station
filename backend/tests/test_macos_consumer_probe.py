@@ -615,6 +615,23 @@ def test_stage_publisher_refuses_an_ordinary_environment_without_network(monkeyp
         qa_status.Status("a" * 40)
 
 
+def test_prerequisite_breadcrumbs_publish_only_fixed_phases_on_the_workflow_head(monkeypatch):
+    from unittest.mock import Mock
+
+    publisher = Mock()
+    construct = Mock(return_value=publisher)
+    monkeypatch.setattr(qa_status, "Status", construct)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    for stage in sorted(qa_status.PREREQUISITE_STAGES):
+        qa_status.publish_prerequisite(stage)
+        construct.assert_called_with("a" * 40)
+        publisher.post.assert_called_with("pending", "Prerequisite: " + stage)
+    count = construct.call_count
+    with pytest.raises(ValueError, match="Unknown fixed"):
+        qa_status.publish_prerequisite("PRIVATE_PATH_OR_CREDENTIAL")
+    assert construct.call_count == count
+
+
 def test_existing_desktop_without_this_job_receipt_cannot_be_restarted(monkeypatch):
     monkeypatch.setattr(probe, "require_host", lambda: None)
     monkeypatch.setattr(probe.Path, "is_file", lambda _: False)

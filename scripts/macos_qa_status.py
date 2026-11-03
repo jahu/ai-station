@@ -4,6 +4,24 @@ import json
 import os
 import re
 import subprocess
+import sys
+
+PREREQUISITE_STAGES = {
+    "hypervisor",
+    "download_desktop",
+    "verify_desktop",
+    "mount_desktop",
+    "verify_desktop_signature",
+    "install_desktop",
+    "start_desktop",
+    "desktop_engine_ready",
+}
+
+
+def publish_prerequisite(stage):
+    if stage not in PREREQUISITE_STAGES:
+        raise ValueError("Unknown fixed Mac prerequisite stage")
+    Status(os.environ.get("GITHUB_SHA", "")).post("pending", "Prerequisite: " + stage)
 
 
 class Status:
@@ -43,3 +61,9 @@ class Status:
         )
         if result.returncode:
             raise RuntimeError("Could not publish bounded Mac QA stage evidence")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        raise ValueError("Choose one fixed Mac prerequisite stage")
+    publish_prerequisite(sys.argv[1])

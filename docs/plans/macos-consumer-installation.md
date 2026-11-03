@@ -49,6 +49,16 @@ known public module names/timings, exception classes, basename/line frames and
 fixed ownership/path fault codes; messages, environment values and private URLs
 remain excluded. Normal desktop startup does not enable profiling.
 
+Full diagnostic run 41617862538 at `4cf75db` ended with GitHub's hosted-runner
+lost-communication annotation. The application probe did not publish a stage;
+the job left its prerequisite step unfinished and no final application report
+or downloadable job log was available. This is neither an application failure
+diagnosis nor a passing installer. Add fixed, bounded stage breadcrumbs before
+each fresh Desktop prerequisite (download, checksum, mount, signature, install,
+boot) using the same owner-dispatched status publisher. A new explicit run can
+then distinguish a lost prerequisite host from the known application-startup
+failure. It still cannot qualify unexecuted consumer steps.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm

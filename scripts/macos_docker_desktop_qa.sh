@@ -33,6 +33,14 @@ desktop_cli() {
         PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C "$qa_cli" "$@"
 }
 
+publish_stage() {
+    if [[ "$qa_stage" == consumer ]]; then
+        # Same bounded, owner-dispatched status context as the later probe.
+        # Survives a lost hosted VM before the application probe can start.
+        "$qa_python" -IB scripts/macos_qa_status.py "$1"
+    fi
+}
+
 cleanup() {
     qa_status=$?
     trap - EXIT
@@ -58,6 +66,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+publish_stage hypervisor
 /usr/bin/xcrun clang -Wall -Wextra -Werror -framework Hypervisor \
     packaging/macos/hypervisor-probe.c -o "$qa_root/hypervisor"
 /usr/bin/codesign --force --sign - --entitlements packaging/macos/hypervisor-probe.entitlements \
@@ -68,18 +77,23 @@ trap 'exit 143' TERM
     "$qa_root/hypervisor.json"
 
 # Exact publisher 4.97.0 Intel DMG and its published checksum, never "latest".
+publish_stage download_desktop
 /usr/bin/curl --fail --location --proto '=https' --tlsv1.2 --connect-timeout 15 --max-time 300 \
     https://desktop.docker.com/mac/main/amd64/244584/Docker.dmg -o "$qa_root/Docker.dmg"
+publish_stage verify_desktop
 printf '%s  %s\n' 98da1a82dac734ba6a14c3e0379f5655ce0bd52a04cf8bb47f4e4642c914f695 \
     "$qa_root/Docker.dmg" | /usr/bin/shasum -a 256 -c -
+publish_stage mount_desktop
 mkdir -m 700 "$qa_root/mount"
 /usr/bin/hdiutil attach -readonly -nobrowse -mountpoint "$qa_root/mount" "$qa_root/Docker.dmg"
 touch "$qa_root/mounted"
+publish_stage verify_desktop_signature
 /usr/bin/codesign --verify --deep --strict "$qa_root/mount/Docker.app"
 
 # Docker's documented prerequisite install requires administrator setup. This
 # acts only inside the throwaway developer VM; it does not install on the user's
 # workstation. License acceptance here is confined to this explicit QA operation.
+publish_stage install_desktop
 (
     # The vendor creates root-owned shared application configuration. Inheriting
     # our private QA umask makes it unreadable by its ordinary-user backend.
@@ -110,6 +124,7 @@ rm "$qa_root/mounted"
 rm "$qa_root/Docker.dmg"
 # A fresh headless installation has no Launch Services registration yet. Open
 # this exact installed app first; the vendor CLI locates it by bundle identity.
+publish_stage start_desktop
 /usr/bin/open -a /Applications/Docker.app
 desktop_cli desktop start --timeout 240
 # The vendor CLI returns success immediately when the GUI is already running;
@@ -117,6 +132,7 @@ desktop_cli desktop start --timeout 240
 /usr/bin/env -i HOME="$HOME" USER="$qa_user" LOGNAME="$qa_user" \
     PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
     "$qa_python" -IB scripts/macos_desktop_qa_ready.py | /usr/bin/tee "$qa_root/engine-ready.json"
+publish_stage desktop_engine_ready
 if [[ "$qa_stage" == consumer ]]; then
     # Fixed fresh-host developer experiment. Actual package/engine/model; its
     # explicit console path is NOT a complete consumer GUI qualification.
