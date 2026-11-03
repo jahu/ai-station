@@ -52,7 +52,10 @@ Reject WSL/Darwin and untrusted/non-system Docker coordinates.
 Revalidate package names/versions/hashes and root-owned inputs before dispatch.
 Inspect pinned package maintainer scripts before relying on their service
 behavior. Preserve unrelated daemon settings, runc defaults and a private
-root-only original configuration receipt; never expose possible proxy/registry
+root-only original configuration receipt. Publish daemon settings with mode 0600
+because existing values may contain proxy credentials; Docker clients use its
+API and need no direct file access. Changed prepared-file permissions require
+inspection. Never expose possible proxy/registry
 secrets through UI output. Bound operations and retain durable phase/hash
 receipts across a lost acknowledgement. Inspect before retrying; do not blindly
 undo a package-manager transaction or overwrite later administrator changes.
@@ -149,3 +152,12 @@ partial preparation and old Windows recipe guards. The complete affected
 families passed 924 tests; the final image/telemetry/helper subset passed 81.
 The full Python regression is running before integration. Operator catalog v44
 adds SETUP-160–163, with no answers prefilled as successful.
+
+
+Security review follow-up: daemon publication now explicitly uses mode 0600,
+including when an existing protected file contains proxy credentials. Prepared
+receipts with changed file permissions refuse reactivation instead of weakening
+access. The helper/probe/native-consent fake families were rerun after this
+correction. The recorded `9727afe` OS qualification predates that mode change;
+final frozen Linux package qualification must confirm private publication and
+normal Docker operation with that mode. No current host configuration was edited.

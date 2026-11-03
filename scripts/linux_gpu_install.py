@@ -195,6 +195,7 @@ def install():
         if saved and saved["phase"] == "prepared":
             if installed != complete or current_hash != target_hash:
                 raise ValueError("The prepared graphics configuration changed")
+            trusted(CONFIG, private=True)
             return {"status": "prepared", "restart_required": True, "gpu_ready": False}
         atomic(receipt, canonical(journal))
         if installed != complete:
@@ -212,7 +213,9 @@ def install():
         current = CONFIG.read_bytes() if CONFIG.exists() or CONFIG.is_symlink() else None
         if current != original:
             raise ValueError("Docker settings changed before publication")
-        atomic(CONFIG, target, mode=0o644)
+        # Existing daemon settings may contain proxy credentials. Only dockerd
+        # and this OS-authenticated helper need to read them; never widen access.
+        atomic(CONFIG, target, mode=0o600)
         stage.unlink()
         atomic(receipt, canonical({**journal, "phase": "prepared"}))
         # Never restart/reload the host daemon or signal any container. A normal

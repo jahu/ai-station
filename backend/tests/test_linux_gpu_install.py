@@ -74,6 +74,7 @@ def test_fixed_packages_preserve_settings_without_restarting_anything(setup):
     assert result == {"status": "prepared", "restart_required": True, "gpu_ready": False}
     value = json.loads(setup.config.read_text())
     assert value["log-driver"] == "local" and value["live-restore"] is False
+    assert setup.config.stat().st_mode & 0o777 == 0o600
     assert "default-runtime" not in value and value["runtimes"] == {"nvidia": gpu.RUNTIME}
     assert (setup.store / "original-daemon.json").read_bytes() == original
     assert (setup.store / "original-daemon.json").stat().st_mode & 0o777 == 0o600
@@ -100,7 +101,7 @@ def test_partial_owned_package_transaction_can_resume_after_inspection(setup):
     assert gpu.install()["status"] == "prepared"
 
 
-@pytest.mark.parametrize("change", ["config", "package", "daemon", "backup", "receipt-link"])
+@pytest.mark.parametrize("change", ["config", "package", "daemon", "backup", "receipt-link", "permissions"])
 def test_changed_completed_operation_refuses_before_any_install(setup, monkeypatch, change):
     gpu.install()
     if change == "config":
@@ -111,6 +112,8 @@ def test_changed_completed_operation_refuses_before_any_install(setup, monkeypat
         monkeypatch.setattr(gpu, "daemon", lambda: "different-system-daemon")
     elif change == "backup":
         (setup.store / "original-daemon.json").write_text("changed")
+    elif change == "permissions":
+        setup.config.chmod(0o644)
     else:
         path = setup.store / "receipt.json"
         original = path.with_name("retained-receipt.json")
@@ -194,3 +197,14 @@ def test_entry_requires_privileged_fixed_action_and_real_invoking_uid(monkeypatc
     monkeypatch.setattr(gpu, "run", lambda *a, **k: pytest.fail("No commands before admission"))
     with pytest.raises(ValueError):
         gpu.identity()
+
+
+def test_private_existing_proxy_settings_never_become_public(setup):
+    config = {"proxies": {"http-proxy": "http://fixture:synthetic-password@proxy.example.invalid:3128"}}
+    setup.config.write_text(json.dumps(config))
+    setup.config.chmod(0o600)
+    assert gpu.install()["status"] == "prepared"
+    assert json.loads(setup.config.read_text())["proxies"] == config["proxies"]
+    for path in (setup.config, setup.store / "original-daemon.json"):
+        assert path.stat().st_mode & 0o777 == 0o600
+    assert "synthetic-password" not in (setup.store / "receipt.json").read_text()
