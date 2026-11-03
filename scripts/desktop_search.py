@@ -8,6 +8,7 @@ import time
 IMAGE = "searxng/searxng@sha256:eb2a404db174d33a04cd9f2e519bcae2ca722a58923510652cc1314be94e8e63"
 ARCHITECTURES = {"x86_64": "amd64", "arm64": "arm64"}
 FORMAT = '{"os": {{json .Os}}, "arch": {{json .Architecture}}}'
+WAITING = "Waiting for Docker Desktop's local engine…"
 
 
 def prepare(engine, package, log, *, stage, canceled=lambda: False):
@@ -23,13 +24,36 @@ def prepare(engine, package, log, *, stage, canceled=lambda: False):
         raise ValueError("Search preparation requires a supported desktop package and engine")
 
     def present():
-        result = subprocess.run(
-            engine.command("image", "inspect", IMAGE, "--format", FORMAT),
-            env=engine.environment,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
+        # Desktop can return cached metadata while its Linux engine is asleep
+        # or still starting. Retry only timed-out read-only inspection, never
+        # an execution or a failed identity check, in its own bounded phase.
+        deadline = time.monotonic() + 180 if engine.identity is not None else None
+        attempt_timeout = 15
+        waiting = False
+        while True:
+            if canceled():
+                return None
+            if waiting:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("Docker Desktop's local engine did not become responsive")
+                attempt_timeout = min(5, remaining)
+            try:
+                result = subprocess.run(
+                    engine.command("image", "inspect", IMAGE, "--format", FORMAT),
+                    env=engine.environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=attempt_timeout,
+                )
+                break
+            except subprocess.TimeoutExpired:
+                if deadline is None:
+                    raise
+                if not waiting:
+                    stage(WAITING)
+                    waiting = True
+                time.sleep(0.2)
         if result.returncode:
             return False
         if len(result.stdout) > 4096:
@@ -41,7 +65,10 @@ def prepare(engine, package, log, *, stage, canceled=lambda: False):
     if canceled():
         return False
     stage("Checking the local web-search component…")
-    if present():
+    cached = present()
+    if cached is None:
+        return False
+    if cached:
         return not canceled()
     if canceled():
         return False
@@ -64,7 +91,10 @@ def prepare(engine, package, log, *, stage, canceled=lambda: False):
             time.sleep(0.2)
         if process.returncode:
             raise RuntimeError("The web-search component could not be downloaded; check your connection")
-        if not present():
+        verified = present()
+        if verified is None:
+            return False
+        if not verified:
             raise RuntimeError("The downloaded web-search component could not be verified")
         return not canceled()
     finally:

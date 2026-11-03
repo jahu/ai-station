@@ -158,7 +158,7 @@ def test_cancellation_or_deadline_reaps_only_its_real_owned_download_child(monke
     monkeypatch.setattr(search.subprocess, "Popen", spawn)
     if stop == "timeout":
         clock = iter([0, 601])
-        monkeypatch.setattr(search.time, "monotonic", lambda: next(clock, 601))
+        monkeypatch.setattr(search.time, "monotonic", lambda: next(clock, 601) if children else 0)
     with (tmp_path / "private.log").open("w") as log:
         if stop == "cancel":
             assert not search.prepare(
@@ -203,7 +203,70 @@ def test_native_progress_offers_cancel_only_during_interruptible_download(monkey
     progress.stage("Downloading the web-search component. This only happens once…")
     assert window.update.call_args.kwargs["cancelable"] is True
     assert progress.canceled()
+    progress.stage(search.WAITING)
+    assert window.update.call_args.kwargs["cancelable"] is True
     progress.stage("Starting your local AI Station…")
     assert window.update.call_args.kwargs["cancelable"] is False
     progress.close()
     window.close.assert_called_once()
+
+
+def test_native_cached_image_waits_for_responsive_engine_without_pulling_or_changing_settings(monkeypatch):
+    metadata = SimpleNamespace(returncode=0, stdout='{"os":"linux","arch":"amd64"}')
+    inspect = Mock(side_effect=[subprocess.TimeoutExpired("PRIVATE_COMMAND", 15), metadata])
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    monkeypatch.setattr(search.subprocess, "Popen", lambda *a, **k: pytest.fail("Pulled a cached image"))
+    monkeypatch.setattr(search.time, "sleep", lambda _: None)
+    stages = []
+    assert search.prepare(engine(), {"architecture": "x86_64"}, io.StringIO(), stage=stages.append)
+    assert search.WAITING in stages
+    assert [call.kwargs["timeout"] for call in inspect.call_args_list] == [15, 5]
+    assert all(call.args[0][3:5] == ["image", "inspect"] for call in inspect.call_args_list)
+
+
+def test_native_engine_wait_is_bounded_and_never_reports_unresponsive_engine_ready(monkeypatch):
+    inspect = Mock(side_effect=subprocess.TimeoutExpired("PRIVATE_COMMAND", 5))
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    monkeypatch.setattr(search.subprocess, "Popen", lambda *a, **k: pytest.fail("Executed after timeout"))
+    clock = iter([0, 15, 180])
+    monkeypatch.setattr(search.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(search.time, "sleep", lambda _: None)
+    with pytest.raises(TimeoutError, match="did not become responsive"):
+        search.prepare(engine(), {"architecture": "x86_64"}, io.StringIO(), stage=lambda _: None)
+    assert inspect.call_count == 2
+
+
+def test_engine_wake_never_admits_or_retries_a_wrong_cached_image_identity(monkeypatch):
+    metadata = SimpleNamespace(returncode=0, stdout='{"os":"linux","arch":"arm64"}')
+    inspect = Mock(side_effect=[subprocess.TimeoutExpired("PRIVATE_COMMAND", 15), metadata])
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    monkeypatch.setattr(search.subprocess, "Popen", lambda *a, **k: pytest.fail("Replaced a wrong image"))
+    monkeypatch.setattr(search.time, "sleep", lambda _: None)
+    with pytest.raises(ValueError, match="does not match"):
+        search.prepare(engine(), {"architecture": "x86_64"}, io.StringIO(), stage=lambda _: None)
+    assert inspect.call_count == 2
+
+
+def test_stop_during_native_engine_wait_never_pulls_or_starts_services(monkeypatch):
+    inspect = Mock(side_effect=subprocess.TimeoutExpired("PRIVATE_COMMAND", 15))
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    monkeypatch.setattr(search.subprocess, "Popen", lambda *a, **k: pytest.fail("Executed after Stop"))
+    monkeypatch.setattr(search.time, "sleep", lambda _: None)
+    assert not search.prepare(
+        engine(),
+        {"architecture": "x86_64"},
+        io.StringIO(),
+        stage=lambda _: None,
+        canceled=lambda: inspect.call_count > 0,
+    )
+    assert inspect.call_count == 1
+
+
+def test_linux_engine_timeout_is_not_retried_as_native_Desktop_startup(monkeypatch):
+    selected = engine()
+    selected.identity = None
+    inspect = Mock(side_effect=subprocess.TimeoutExpired("PRIVATE_COMMAND", 15))
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    with pytest.raises(subprocess.TimeoutExpired):
+        search.prepare(selected, {}, io.StringIO(), stage=lambda _: None)
+    assert inspect.call_count == 1

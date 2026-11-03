@@ -745,8 +745,12 @@ def main():
         observed_stage = None
         next_process_sample = 0
         while time.monotonic() < deadline:
-            if first_gui and startup_errors(root, log_name="commands.private.log")["errors"]:
-                raise RuntimeError("The actual package reported a structured native startup fault")
+            if first_gui:
+                launcher_errors = startup_errors(root, log_name="commands.private.log")
+                if launcher_errors["errors"]:
+                    proof["native_launcher_startup_errors"] = launcher_errors
+                    save()
+                    raise RuntimeError("The actual package reported a structured native startup fault")
             current = startup_stage(root / "commands.private.log", after=startup_offset)
             if current and current != observed_stage:
                 observed_stage = current

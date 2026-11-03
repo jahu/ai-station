@@ -34,6 +34,7 @@ STARTUP_STAGES = {
     "Checking and preparing your private application folder…": "retained_application",
     "Preparing the bundled application image…": "application_image",
     "Checking the local web-search component…": "search_image",
+    "Waiting for Docker Desktop's local engine…": "search_engine_wait",
     "Downloading the web-search component. This only happens once…": "search_download",
     "Checking private communication and your data filesystem…": "private_bridge",
     "Checking your persistent application database…": "persistent_database",
@@ -736,7 +737,7 @@ class Preparation:
             if self.cancelable:
                 self.native.update(
                     text,
-                    cancelable=STARTUP_STAGES.get(text) == "search_download",
+                    cancelable=STARTUP_STAGES.get(text) in {"search_download", "search_engine_wait"},
                 )
             else:
                 self.native.stage(text)

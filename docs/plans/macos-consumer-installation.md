@@ -7,6 +7,23 @@ control plane, native user Runner and Task → Run → Events → Artifacts life
 
 ## Explicit search-image preparation (candidate, 2026-11-03)
 
+Actual default run 41644085267 at `5bf5e4b` built and verified its real package,
+then failed in the initial search-image inspection: `desktop_search.present`
+exceeded its 15-second CLI deadline. The daemon's subsequent inspection also
+timed out. Fresh-host Docker logs show its Linux engine becoming ready at
+14:06:17, 1m43 after that engine start, after the app had already failed.
+Resource Saver is a plausible trigger after the seven-minute native package
+attestation/copy interval, not a proven host-state observation. Docker documents
+[automatic VM suspension and wake](https://docs.docker.com/desktop/use-desktop/resource-saver/);
+read-only metadata responses do not establish a fully running engine.
+The candidate therefore gives only timed-out native search-image inspection its
+own visible, cancelable 180-second readiness phase, with short bounded retries.
+It never retries wrong image identities, starts a probe container, changes
+Desktop settings, restarts an existing engine or changes application/Runner/
+Compose/download deadlines. Linux/owned WSL retain their original inspection
+behavior. This candidate still needs actual Mac execution; no account/model or
+backup qualification follows from the failed run.
+
 The actual package GUI qualification now also has candidate native full-backup
 and restore steps after the real conversation/restart checks. XCTest operates
 the retained product helper's ordinary selection and confirmation dialogs, then
