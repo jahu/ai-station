@@ -29,6 +29,19 @@ from desktop_engine import select as select_engine  # noqa: E402
 # Bind-mounted application data must survive shutdown. Never pass --volumes/-v/--rmi.
 COMPOSE_DOWN = ("down", "--timeout", "10")
 VOLUME_WIPE_FLAGS = frozenset({"-v", "--volumes", "--rmi"})
+DESKTOP_SERVICE_STAGES = frozenset(
+    {
+        "checking_engine",
+        "checking_database",
+        "checking_deployment",
+        "starting_runner",
+        "starting_private_connection",
+        "starting_services",
+        "checking_api",
+        "preparing_browser_entry",
+        "ready",
+    }
+)
 
 
 def configuration(config_file: Path | None = None) -> dict[str, str]:
@@ -220,11 +233,17 @@ def main() -> None:
     parser.add_argument("--docker-desktop-cli", help=argparse.SUPPRESS)
     parser.add_argument("--docker-desktop-endpoint", help=argparse.SUPPRESS)
     args = parser.parse_args()
+
+    def report_stage(stage):
+        if args.desktop:
+            print(json.dumps({"desktop_service_stage": stage}), flush=True)
+
     coordinates = (args.docker_desktop_cli, args.docker_desktop_endpoint)
     if any(coordinates) and (not all(coordinates) or not args.desktop):
         raise RuntimeError("Docker Desktop handoff requires both coordinates and the desktop supervisor")
     os.chdir(ROOT)
     env = configuration(args.config) if args.config else configuration()
+    report_stage("checking_engine")
     engine = select_engine(env, expected=coordinates if all(coordinates) else None)
     env = engine.environment
     if args.desktop and not env.get("AI_STATION_DESKTOP_INSTANCE_ID"):
@@ -246,6 +265,7 @@ def main() -> None:
         if not args.desktop or not args.no_build or args.dev:
             raise RuntimeError("Native Mac startup requires the packaged desktop supervisor")
         ensure_recovery_finished(runtime)
+        report_stage("checking_database")
         attest_native_database(args.config, engine, env)
         # Read-only `compose ps` needs valid interpolation before the Runner
         # starts. Zero cannot open the service; start_native_connection replaces
@@ -269,6 +289,7 @@ def main() -> None:
         except BlockingIOError:
             raise RuntimeError("AI Station is already supervised for this data directory")
         ensure_recovery_finished(runtime)
+        report_stage("checking_deployment")
         # Never attach cleanup ownership to a pre-existing Compose deployment.
         if run("ps", "--all", "--quiet", capture_output=True, text=True).stdout.strip():
             raise RuntimeError(
@@ -297,6 +318,7 @@ def main() -> None:
                 )
             # Building can take minutes; the preflight Runner may have exited
             # or been replaced. Recheck before reusing it.
+            report_stage("starting_runner")
             if not runner_health(env):
                 proc = subprocess.Popen(
                     [
@@ -313,18 +335,23 @@ def main() -> None:
                         raise RuntimeError("Host Runner did not become healthy")
                     time.sleep(0.2)
             if engine.identity is not None:
+                report_stage("starting_private_connection")
                 connection = start_native_connection(env)
             started = True
+            report_stage("starting_services")
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
             url = f"http://127.0.0.1:{port}"
             with httpx.Client(timeout=3, trust_env=False, follow_redirects=False) as client:
+                report_stage("checking_api")
                 client.get(url).raise_for_status()
                 api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
+                report_stage("preparing_browser_entry")
                 url = local_entry_url(
                     client, run, url, api_url, instance_id=env.get("AI_STATION_DESKTOP_INSTANCE_ID", "")
                 )
             if args.desktop:
+                report_stage("ready")
                 # Private pipe to the owning desktop process. The parent consumes
                 # this setup authority without persisting it in ordinary logs.
                 print(
@@ -364,4 +391,8 @@ if __name__ == "__main__":
     try:
         main()
     except (RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
+        if "--desktop" in sys.argv:
+            from desktop import startup_failure
+
+            startup_failure(error)
         raise SystemExit(str(error))

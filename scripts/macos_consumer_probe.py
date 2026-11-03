@@ -77,6 +77,72 @@ def sdk_cache_state(state):
     return result
 
 
+def startup_errors(state):
+    """Read bounded structured faults, never raw private supervisor log text."""
+    from launch import DESKTOP_SERVICE_STAGES
+
+    result = {"stage": None, "errors": []}
+    try:
+        descriptor = os.open(state / "desktop.log", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return result
+    with os.fdopen(descriptor, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_nlink != 1:
+            raise ValueError("The owned startup log is not a private regular file")
+        stream.seek(max(0, info.st_size - 65536))
+        tail = stream.read(65536).decode(errors="replace")
+    observed = []
+    for line in tail.splitlines():
+        if line.startswith('{"desktop_service_stage": '):
+            try:
+                stage = json.loads(line).get("desktop_service_stage")
+            except ValueError:
+                continue
+            if isinstance(stage, str) and stage in DESKTOP_SERVICE_STAGES:
+                result["stage"] = stage
+        if not line.startswith('{"desktop_startup_error": '):
+            continue
+        try:
+            value = json.loads(line)["desktop_startup_error"]
+        except (ValueError, KeyError):
+            continue
+        if not isinstance(value, dict) or value.get("error_type") not in {
+            "RuntimeError",
+            "ValueError",
+            "OSError",
+            "PermissionError",
+            "FileNotFoundError",
+            "CalledProcessError",
+            "TimeoutExpired",
+            "HTTPError",
+            "HTTPStatusError",
+            "ConnectError",
+            "ReadTimeout",
+            "ConnectTimeout",
+        }:
+            continue
+        item = {"error_type": value["error_type"], "frames": []}
+        frames = value.get("frames")
+        for frame in frames[-12:] if isinstance(frames, list) else []:
+            if (
+                isinstance(frame, dict)
+                and isinstance(frame.get("file"), str)
+                and re.fullmatch(r"[A-Za-z0-9_.-]+\.py", frame["file"])
+                and type(frame.get("line")) is int
+                and 0 < frame["line"] < 2**31
+                and isinstance(frame.get("function"), str)
+                and re.fullmatch(r"[A-Za-z0-9_<>]{1,128}", frame["function"])
+            ):
+                item["frames"].append({key: frame[key] for key in ("file", "line", "function")})
+        for key in ("errno", "return_code"):
+            if type(value.get(key)) is int and -(2**31) < value[key] < 2**31:
+                item[key] = value[key]
+        observed.append(item)
+    result["errors"] = observed[-8:]
+    return result
+
+
 def service_states(engine, state):
     """Read only fixed service state codes in this fresh QA station's project."""
     from dotenv import dotenv_values
@@ -618,10 +684,14 @@ def main():
         save()  # Preserve the fault before bounded process cleanup can block.
         print(json.dumps({"experiment_failed_at": stage, **failure(error)}), flush=True)
         try:
+            proof["supervisor_startup_errors"] = startup_errors(state)
+        except (OSError, ValueError):
+            proof["startup_log_inspection_unavailable"] = True
+        try:
             if engine is not None:
                 proof["owned_service_states"] = service_states(engine, state)
-        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
-            proof["service_inspection_unavailable"] = True
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as inspection_error:
+            proof["service_inspection_unavailable"] = type(inspection_error).__name__
         if stage == "prepare_native_engine":
             try:
                 proof["native_sdk_cache"] = sdk_cache_state(state)

@@ -1,6 +1,11 @@
 """An expensive fresh-host experiment cannot silently execute as a normal test."""
 
 import json
+import os
+import runpy
+import subprocess
+import sys
+from pathlib import Path
 
 import macos_consumer_probe as probe
 import macos_native_ui_probe as ui_probe
@@ -35,6 +40,97 @@ def test_missing_dependency_reports_only_its_module_identity():
         "error_type": "ModuleNotFoundError",
         "missing_module": "ai_station_runner",
     }
+
+
+@pytest.mark.parametrize(
+    "error",
+    [RuntimeError("PRIVATE_SETUP_LINK"), subprocess.CalledProcessError(17, ["PRIVATE_COMMAND"])],
+)
+def test_actual_desktop_supervisor_entry_reports_coordinates_without_private_arguments(
+    monkeypatch, capsys, error
+):
+    import argparse
+
+    source = Path(probe.__file__).with_name("launch.py")
+    monkeypatch.setattr(sys, "argv", [str(source), "--desktop"])
+
+    def refuse(_parser):
+        raise error
+
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", refuse)
+    with pytest.raises(SystemExit) as caught:
+        runpy.run_path(str(source), run_name="__main__")
+    assert caught.value.code == str(error)  # Existing CLI error behavior is preserved.
+    output = capsys.readouterr()
+    assert not output.out
+    value = json.loads(output.err)["desktop_startup_error"]
+    assert value["error_type"] == type(error).__name__
+    assert any(frame["file"] == "launch.py" and frame["function"] == "main" for frame in value["frames"])
+    assert "PRIVATE" not in output.err
+    if isinstance(error, subprocess.CalledProcessError):
+        assert value["return_code"] == 17
+
+
+def test_owned_supervisor_log_exports_only_bounded_structured_coordinates(tmp_path):
+    assert probe.startup_errors(tmp_path) == {"stage": None, "errors": []}
+    frame = {"file": "launch.py", "line": 315, "function": "main", "locals": "PRIVATE_ACCOUNT"}
+    value = {
+        "error_type": "CalledProcessError",
+        "frames": [frame],
+        "return_code": 17,
+        "command": "PRIVATE_COMMAND",
+        "message": "PRIVATE_SETUP_LINK",
+    }
+    path = tmp_path / "desktop.log"
+    path.write_text(
+        "PRIVATE_OLD_LOG" * 200000
+        + '\n{"desktop_service_stage": "starting_services"}\n'
+        + json.dumps({"desktop_startup_error": value})
+        + "\nPRIVATE_FINAL_LINE\n"
+    )
+    assert probe.startup_errors(tmp_path)["errors"] == [
+        {
+            "error_type": "CalledProcessError",
+            "frames": [{"file": "launch.py", "line": 315, "function": "main"}],
+            "return_code": 17,
+        }
+    ]
+
+    assert probe.startup_errors(tmp_path)["stage"] == "starting_services"
+
+
+def test_owned_supervisor_log_ignores_unknown_records_and_invalid_coordinates(tmp_path):
+    values = [
+        {"error_type": "PRIVATE_CLASS", "frames": []},
+        {
+            "error_type": "RuntimeError",
+            "frames": [None, {"file": "/PRIVATE/path.py", "line": 2, "function": "main"}],
+            "errno": True,
+            "return_code": "PRIVATE_VALUE",
+        },
+        [],
+    ]
+    (tmp_path / "desktop.log").write_text(
+        '{"desktop_startup_error": invalid}\n{"desktop_service_stage": "PRIVATE_STAGE"}\n'
+        + "\n".join(json.dumps({"desktop_startup_error": value}) for value in values)
+    )
+    assert probe.startup_errors(tmp_path)["errors"] == [{"error_type": "RuntimeError", "frames": []}]
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "fifo"])
+def test_owned_supervisor_log_cannot_read_an_external_alias_or_block_on_fifo(tmp_path, kind):
+    path = tmp_path / "desktop.log"
+    if kind == "fifo":
+        os.mkfifo(path)
+    else:
+        other = tmp_path / "PRIVATE_OTHER_FILE"
+        other.write_text("PRIVATE_CONTENT")
+        if kind == "symlink":
+            path.symlink_to(other)
+        else:
+            os.link(other, path)
+    with pytest.raises((OSError, ValueError)):
+        probe.startup_errors(tmp_path)
 
 
 def test_failed_owned_sdk_retains_native_fault_coordinates_without_log_contents(monkeypatch):

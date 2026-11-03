@@ -120,7 +120,19 @@ final class NativeConsumerAcceptanceTests: XCTestCase {
         let browser = XCUIApplication(bundleIdentifier: identity) // Attach to the browser opened by the product.
         // The browser opens after package retention, bridge, database and API
         // startup, each with its own bounded operation. Include that whole path.
-        XCTAssertTrue(browser.wait(for: .runningForeground, timeout: 900))
+        let deadline = Date().addingTimeInterval(900)
+        while browser.state != .runningForeground && Date() < deadline {
+            if helper.state != .notRunning {
+                let close = helper.dialogs.firstMatch.buttons["Close"]
+                if close.exists {
+                    close.click() // Acknowledge the product's actual startup error before cleanup.
+                    XCTFail("The installed app displayed a startup error before browser readiness")
+                    return
+                }
+            }
+            _ = browser.wait(for: .runningForeground, timeout: 1)
+        }
+        XCTAssertEqual(browser.state, .runningForeground)
         let page = browser.webViews.firstMatch
         let username = page.textFields["Username"]
         XCTAssertTrue(username.waitForExistence(timeout: 60))

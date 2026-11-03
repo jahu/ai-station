@@ -122,7 +122,9 @@ def test_native_import_load_reinspection_use_one_selected_engine(installed, tmp_
 
 
 @pytest.mark.parametrize("failure", [None, "up", "down", "connection"])
-def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path, monkeypatch, failure):
+def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(
+    installed, tmp_path, monkeypatch, capsys, failure
+):
     env = {
         "AI_STATION_DATA_HOST_PATH": str(tmp_path),
         "AI_STATION_RUNNER_SOCKET_DIR": str(tmp_path / "native-runner"),
@@ -193,6 +195,13 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
             launch.main()
     else:
         launch.main()
+    stages = [
+        json.loads(line)["desktop_service_stage"]
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith('{"desktop_service_stage": ')
+    ]
+    assert stages[-1] == ("starting_services" if failure == "up" else "ready")
+    assert all(stage in launch.DESKTOP_SERVICE_STAGES for stage in stages)
     rows = observations(installed)
     assert rows[0]["args"][:3] == ["context", "inspect", "desktop-linux"]
     commands = [row["args"][2:] for row in rows[1:]]

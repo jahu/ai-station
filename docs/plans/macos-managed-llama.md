@@ -36,8 +36,23 @@ cache object before the unchanged checksum check. Explicit native GGUF verificat
 uses the same metadata-only finalization when needed, with `manage_models`
 permission; readonly inspection/loading and external models keep their contracts.
 The native SDK probe now starts from `0644` and must show unchanged bytes and a
-readonly result. Actual qualification of this correction is pending; it is not
-yet a first-model/consumer-installation success claim.
+readonly result. [Run 41569771195](https://github.com/jahu/ai-station/actions/runs/41569771195)
+passed this correction on both ARM 15.8.2 and Intel 15.7.9 through the real app's
+interpreter, including owned preparation, permissions, Stop and restart. This
+component check uses a neutral image and does not qualify a first-model reply or
+the consumer installation.
+
+The distinct native GUI attempt
+[41565422530](https://github.com/jahu/ai-station/actions/runs/41565422530)
+clicked the stock setup dialog but hit the supervisor's existing 180-second
+readiness deadline. Its child startup cause is not established by the parent
+traceback. The desktop supervisor now records fixed service-stage codes and
+structured fault coordinates in its private log; QA exports only bounded known
+codes, frame coordinates and numeric exit/OS codes. Raw setup URLs, account
+fields, command arguments and exception messages stay out of that report. Native
+UI acceptance acknowledges an actual startup-error dialog and fails promptly,
+instead of waiting the full browser budget with the error window left open.
+Production readiness deadlines and setup consent are unchanged.
 
 Two fixed profiles use the existing hash-pinned b12032 ARM/Intel manifests.
 After administrator review of the exact manifest/license, `/api/setup/runtimes`
