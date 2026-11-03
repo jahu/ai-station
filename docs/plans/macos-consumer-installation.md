@@ -86,6 +86,17 @@ the final job log. Only this owner-only job gets `statuses: write`; the publishe
 retains its short-lived token privately and drops CI authority before subprocesses.
 Failures are recorded before cleanup. This does not replace functional assertions.
 
+[Actual backend run 41551172141](https://github.com/jahu/ai-station/actions/runs/41551172141)
+built and started the real package and created its first administrator. The
+ordinary native SDK preparation Run then reached `running` and failed. No model
+was downloaded and no inference/restart acceptance follows. Stage observations
+reported about 6.8 GiB available RAM and zero swap at SDK dispatch; they do not
+establish a memory-related cause. The original generic QA exception discarded
+the underlying native fault. Terminal Run diagnostics now retain its validated
+identity/error code and stderr traceback file/line/function coordinates, exception
+class and numeric OS/HTTP codes, without publishing message text, URLs, account
+fields, prompts or source lines. Inspect that evidence before changing SDK code.
+
 The producer also restarts only its newly installed Docker Desktop after package
 assembly and before starting the station. The same-run, private installation
 receipt must match before any such action. This clears the developer build's
