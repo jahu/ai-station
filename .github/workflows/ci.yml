@@ -183,6 +183,9 @@ jobs:
           .native-mac/native-interface/ai-station-native --native-admin-recovery-smoke
           .native-mac/native-interface/ai-station-native --native-update-ownership-smoke
           .native-mac/application-python/bin/python3.12 -IB scripts/macos_desktop_storage_probe.py
+      - name: Check cold installed Runner under its native application parent
+        # Isolate service startup from image production and model downloads.
+        run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_runner_gui_probe.py
       - name: Exercise actual bundle entry and its native SDK with neutral image fixture
         env:
           TARGET_ARCHITECTURE: ${{ matrix.architecture }}

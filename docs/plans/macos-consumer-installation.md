@@ -22,6 +22,16 @@ GUI run must verify this candidate; component tests alone are not acceptance.
 
 ## Current code and verified upstream constraints
 
+GUI run 41606316157 completes separate search-image preparation but fails the
+native Runner's 20-second readiness gate before containers are created. That is
+a distinct remaining failure, not proof that all startup is fixed. The existing
+installed-interpreter component already exercises a real private Runner under
+a console parent. Extend the native-only matrix with the same installed Runner
+under the stock AppKit launcher and nested Python owner. Record bounded import
+timings and exit codes without command arguments, environment or raw messages.
+This needs no Docker/image/model preparation and must retain the 20-second gate;
+it is a diagnostic component check, never full consumer qualification.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm
