@@ -14,6 +14,21 @@ ambient settings cannot attach it to another station. First-admin authority
 travels through a private parent pipe to the local browser and is omitted from
 desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
 
+Packaged Linux/WSL supervision can retain a private Compose ownership receipt
+outside mounted application data. It records exact container IDs and hashes of
+their immutable configuration/mounts, bound to the Docker daemon and canonical
+installation/data identities. Only after taking the existing launcher lock and
+validating the complete surviving inventory may a later Start stop/remove those
+specific containers. Unexpected IDs, unsafe/changed receipts or fingerprints
+refuse before any signal. No volume removal, native/model process cancellation,
+legacy deployment adoption, agent tool or HTTP operation is introduced. Only
+Docker's null/empty default DNS lists are equivalent; a previous literal receipt
+requires a complete matching original hash under those three default fields.
+Nonempty DNS changes and every other configuration change still refuse recovery.
+The retained Windows installation passed actual OS reboot, preserving upgrade,
+native Start recovery and normal Stop; see the
+[qualification record](plans/desktop-installation.md#qualified-packaged-recovery--2026-11-03).
+
 The [Mac connection candidate](plans/macos-runner-transport.md) retains the private
 Runner Unix socket. A supervised loopback-only helper and a non-root process in
 the same application image use mutual TLS with fresh private certificates.

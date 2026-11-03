@@ -477,3 +477,12 @@ Windows Start/Stop, retained-login/history and exact-image verification. See the
 Physical Windows GPU inference, signing, remaining media listening/quality
 acceptance and the final release handoff are not inferred from this CPU fixture.
 Mac qualification remains deferred under the owner scope amendment above.
+
+The subsequent `f5ff9e4` package passed actual retained Windows OS-restart
+recovery, preserving upgrade, native Start/Stop and saved login/history. The
+launcher now verifies its private recorded container inventory before recovery;
+no manual Docker cleanup was needed. The QA catalog is now v43 with 232 active
+cases, including SETUP-159 for Linux/Windows restart. See
+[packaged recovery qualification](desktop-installation.md#qualified-packaged-recovery--2026-11-03).
+This closes that observed restart defect, not the separately listed physical-GPU,
+signing, listening/quality and final operator-handoff gates.

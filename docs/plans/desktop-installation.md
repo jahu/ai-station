@@ -207,3 +207,66 @@ validation and child identity. Real .NET HTTP tests on Linux cover correct/wrong
 instances, redirects, missing identity and oversized responses; these do not
 qualify Windows forwarding or native rendering. Those platform gates remain in
 the [Windows contract](windows-consumer-installation.md).
+
+## Linux/Windows recovery after OS restart
+
+The final retained Windows check exposed old Compose containers restarting after
+Windows/WSL had closed their native owner. The current launcher correctly refuses
+unregistered pre-existing deployments; a consumer must not need manual Docker
+cleanup after an ordinary system restart.
+
+For newly launched packaged Linux/WSL sessions, retain a private Compose ownership
+receipt beside `desktop.env`, outside container-mounted application data. Bind it
+to the actual Docker daemon, installation/data directory identities and project.
+After this supervisor's successful Compose creation, record exact container IDs,
+services and immutable configuration/mount fingerprints before announcing ready.
+Normal successful shutdown removes the receipt. Never infer ownership from a
+project name alone or adopt a legacy installation with no receipt.
+
+A later packaged Start holds the existing exclusive launcher lock. It may stop
+and remove only the previously recorded containers after checking the complete
+current inventory, daemon, namespace and every fingerprint. An unexpected ID,
+changed configuration/mount or unsafe receipt refuses recovery without signals.
+Partial prior cleanup may leave a subset of recorded IDs; verify all survivors
+before acting. Preserve volumes, database files, managed model containers and
+other projects. Existing worker leases/native process inspection retain their
+normal interrupted-work policy; this does not blindly re-execute external work.
+
+This change applies only to Linux/WSL packaged supervision; development launches
+retain their existing refusal and macOS remains deferred. Crashes before a new
+inventory is durably recorded still require inspection. Hostile receipt/container
+regressions, actual disposable Docker recovery and the retained Windows reboot
+qualification below passed; this does not qualify arbitrary hardware or every
+possible power-loss point.
+
+The real retained Windows reboot exposed a Docker representation change:
+`HostConfig.Dns`, `DnsOptions` and `DnsSearch` changed from null to empty lists
+on all four containers. Reconstructing those three original defaults reproduced
+every recorded hash exactly. Schema 2 canonicalizes only these equivalent empty
+DNS defaults. Schema 1 can be reconciled only by matching its entire original
+hash with one of the eight default representations; nonempty DNS, all other
+configuration and every ID/mount/image check remain frozen. Filesystem UUID
+identity and directory inode replace volatile device enumeration in the native
+namespace, and mount-array ordering does not change ownership.
+
+### Qualified packaged recovery — 2026-11-03
+
+Clean source `f5ff9e44d0e4e82be61f4f2c6cb60185b6133c12` produced the Linux
+Debian package, prepared WSL image and actual PowerShell 5.1/Inno Setup Windows
+installer. After a normal Windows 11 reboot with the old session left running,
+the preserving upgrade and native Start recovered its four recorded containers
+without manual Docker cleanup. Their replacement IDs and the schema-2 receipt
+were verified. Eight account/security/history table hashes, the original browser
+login and the saved four-message conversation were retained. Native Stop removed
+only its own Compose containers and receipt; database integrity and foreign keys
+passed, with no active Runs and models/data retained.
+
+The final image also passed isolated account setup, a separate fake-executor
+worker, durable events/SSE replay and database reopen. Ninety focused launcher/
+ownership regressions and 29 offline QA-tool tests passed. A real Linux Docker
+probe verified recovery of exact owned IDs while retaining an unrelated model
+stub and data marker. No model inference or download was repeated. These tests
+do not qualify physical Windows GPU inference, signing or audible media quality.
+Private receipts and packages are in
+`data/acceptance/desktop-owned-recovery-20261103/`; native observations are in
+`data/acceptance/windows-native-qualification-20261031/` (results 281–283).

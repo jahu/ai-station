@@ -269,8 +269,26 @@ def main() -> None:
         except BlockingIOError:
             raise RuntimeError("AI Station is already supervised for this data directory")
         ensure_recovery_finished(runtime)
-        # Never attach cleanup ownership to a pre-existing Compose deployment.
-        if run("ps", "--all", "--quiet", capture_output=True, text=True).stdout.strip():
+        # Only a packaged Linux/WSL session with its private native receipt may
+        # recover its own previous containers. A project name grants no authority.
+        project_owner = None
+        if args.desktop and args.no_build and args.config and not args.dev and engine.identity is None:
+            if sys.platform == "linux":
+                from desktop_project import DesktopProject
+
+                project_owner = DesktopProject(
+                    args.config,
+                    env,
+                    engine,
+                    lambda: run("ps", "--all", "--quiet", capture_output=True, text=True).stdout,
+                    ROOT,
+                )
+        existing = run("ps", "--all", "--quiet", capture_output=True, text=True).stdout
+        if project_owner is not None:
+            from desktop_project import container_ids
+
+            project_owner.recover(container_ids(existing))
+        elif existing.strip():
             raise RuntimeError(
                 "This Compose project already has containers; inspect them before starting another supervisor"
             )
@@ -316,6 +334,8 @@ def main() -> None:
                 connection = start_native_connection(env)
             started = True
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
+            if project_owner is not None:
+                project_owner.capture()
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
             url = f"http://127.0.0.1:{port}"
             with httpx.Client(timeout=3, trust_env=False, follow_redirects=False) as client:
@@ -352,6 +372,8 @@ def main() -> None:
                 if started:
                     subprocess.run(data_preserving_compose_down(compose), env=env, check=True)
                     cleaned = True
+                    if project_owner is not None:
+                        project_owner.clear()
             finally:
                 try:
                     if connection is not None:
@@ -363,5 +385,5 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
+    except (ValueError, RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
         raise SystemExit(str(error))

@@ -1,5 +1,5 @@
 {
-  "version": 42,
+  "version": 43,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5298,6 +5298,31 @@
         "Slower trwa około 25% dłużej, a Faster około 20% krócej od Natural dla tego samego tekstu i kierunku. Brak uciętych słów, zmiany wysokości głosu lub wyraźnych nowych zniekształceń.",
         "Historia zachowuje trzy wyniki i ich ustawienia. Zapisz słyszalne pogorszenie jakości jako wynik testu; samo zakończenie Run nie oznacza akceptacji jakości."
       ]
+    },
+    {
+      "id": "SETUP-159",
+      "area": "Instalacja aplikacji",
+      "priority": "P0",
+      "requirements": [
+        "NR-13"
+      ],
+      "title": "Linux/Windows: ponowne otwarcie stacji po restarcie systemu",
+      "prerequisites": [
+        "Nowy instalator z obsługą zapisanej własności kontenerów; gotowe konto administratora i zapisana jednorazowa rozmowa QA. Użyj oddzielnej instalacji testowej, najlepiej maszyny wirtualnej; zapisz pozostałą pracę przed restartem systemu. Nie wykonuj restartu docelowej stacji, gdy trwa ważne zadanie."
+      ],
+      "steps": [
+        "Zaloguj się z Keep me logged in. Zapisz krótką rozmowę QA i zakończ wszystkie zadania. Pozostaw AI Station uruchomione, bez aktywnego generowania ani pobierania.",
+        "Uruchom ponownie system zwykłą opcją Restart. Nie wymuszaj wyłączenia i nie używaj narzędzi Docker ani poleceń terminala.",
+        "Po zalogowaniu otwórz ikonę AI Station, a w Windows wybierz Start. Zaczekaj na gotowość i otwórz aplikację przyciskiem Open app; użyj adresu otwartego przez instalator.",
+        "Sprawdź zachowaną rozmowę, Library i zainstalowane modele. Użyj zwykłego Stop i otwórz stację ponownie. Zapisz komunikaty i czas oczekiwania."
+      ],
+      "expected": [
+        "Stacja odzyskuje własne poprzednie kontenery i otwiera jedną gotową instalację. Nie wymaga ręcznego czyszczenia Dockera ani ponownej instalacji.",
+        "Zachowane są konto, rozmowa, dane Library i modele; nie rozpoczyna się ponowne pobieranie wag. Przerwane wcześniej operacje nie są uruchamiane ponownie bez kontroli.",
+        "Stop i kolejny Start działają. AI Station nie usuwa wolumenów ani danych i nie przejmuje kontenerów innych aplikacji. Nie zmieniaj ręcznie prywatnych plików instalacji, aby zaliczyć próbę."
+      ],
+      "resources": "Osobna instalacja Linux x86-64 lub Windows 11 x64, bez aktywnych zadań. Sam test nie uruchamia modelu, nie wymaga GPU i nie pobiera wag. Restart dotyczy wyłącznie wybranego systemu testowego.",
+      "minutes": 6
     }
   ],
   "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano.",
