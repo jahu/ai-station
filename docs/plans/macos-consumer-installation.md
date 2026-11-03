@@ -86,6 +86,20 @@ This permits the child to report its actual health outcome; it does not establis
 that the remaining service-health problem is fixed. Actual default installation
 must still pass all gates.
 
+Default run 41633712343 at `35b2489` reaches real browser readiness without
+profiling: all five services are running, and API/search/connection healthchecks
+are healthy. The visible first-admin test creates an account and reaches Models;
+the independent observer then fails login. The fixture appended `QaAdmin` to the
+product's prefilled `admin` username rather than replacing it. A fresh compiled
+browser/real-loopback-API reproduction confirms account creation succeeds in
+both cases, but observer login returns 401 after append and 200 after explicit
+replacement. No model, GPU or production data is used. Keep the helpful product
+default; fix the native test to select all, replace and assert its chosen name.
+HTTP failure evidence now includes only the numeric status, never a URL, body or
+credential. Evidence: `data/acceptance/macos-consumer-qualification-20261102/`
+under `default-services-result.private.json` and `account-browser-reproduction/`.
+Actual Mac engine/model/reply/Stop and later installer gates remain unexecuted.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm

@@ -408,6 +408,8 @@ def failure(error):
         }
     if isinstance(error, ModuleNotFoundError):
         detail["missing_module"] = error.name
+    if isinstance(error, urllib.error.HTTPError) and 400 <= error.code <= 599:
+        detail["http_status"] = error.code
     if isinstance(error, RunFailed):
         detail["owned_run_failure"] = error.evidence
     return detail  # Never include exception messages, locals or source lines.

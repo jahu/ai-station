@@ -39,6 +39,14 @@ def test_ordinary_host_is_rejected_before_directories_or_subprocesses(monkeypatc
         probe.main()
 
 
+def test_http_failure_reports_status_without_response_url_or_private_values():
+    from urllib.error import HTTPError
+
+    error = HTTPError("http://PRIVATE_URL", 401, "PRIVATE_MESSAGE", {}, None)
+    detail = probe.failure(error)
+    assert detail["http_status"] == 401 and "PRIVATE" not in json.dumps(detail)
+
+
 def test_failure_evidence_locates_code_without_exception_or_local_contents():
     private_material = "PRIVATE_SETUP_LINK_AND_ACCOUNT_FIXTURE"
     try:

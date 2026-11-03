@@ -139,7 +139,12 @@ final class NativeConsumerAcceptanceTests: XCTestCase {
         XCTAssertTrue(username.isEnabled)
         XCTAssertEqual(page.secureTextFields.count, 2)
         username.click()
+        // First setup intentionally suggests "admin". Replace it as a user
+        // would; appending creates a different valid account than the observer
+        // subsequently tries to authenticate.
+        username.typeKey("a", modifierFlags: .command)
         username.typeText("QaAdmin")
+        XCTAssertEqual(username.value as? String, "QaAdmin")
         page.secureTextFields.element(boundBy: 0).click()
         page.secureTextFields.element(boundBy: 0).typeText("synthetic private desktop acceptance password")
         page.secureTextFields.element(boundBy: 1).click()
