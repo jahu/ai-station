@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 from uuid import UUID
@@ -14,6 +15,17 @@ from desktop_bridge import private_directory
 
 def exists(path):
     return path.exists() or path.is_symlink()
+
+
+def restored_mode(path, item):
+    mode = 0o700 if item["executable"] else 0o600
+    if re.fullmatch(r"models/store/[a-f0-9]{64}", path):
+        if path.rsplit("/", 1)[1] != item["sha256"]:
+            raise ValueError("The retained model object does not match its content-addressed name")
+        # Export copies are writable private files; managed model/SDK objects
+        # must regain their immutable namespace contract when restored.
+        mode &= ~0o222
+    return mode
 
 
 def inventory(root, *, prefix=None):
@@ -203,7 +215,7 @@ class FileRestore:
                 else:
                     desired[key] = {
                         "kind": "file",
-                        "mode": 0o700 if item["executable"] else 0o600,
+                        "mode": restored_mode(key, item),
                         "size": item["size"],
                         "sha256": item["sha256"],
                     }
@@ -281,8 +293,7 @@ class FileRestore:
                     != item["sha256"]
                 ):
                     raise ValueError("The staged restore file differs from its frozen source")
-                if item["mode"] == 0o600:
-                    os.chmod(target, 0o600, follow_symlinks=False)
+                os.chmod(target, item["mode"], follow_symlinks=False)
             progress(count, len(request["desired"]))
         same_tree(self.data, request["original"])
         same_tree(self.incoming, request["desired"])

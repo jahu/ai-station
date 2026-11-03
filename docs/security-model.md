@@ -137,6 +137,9 @@ distinguished from a transaction with a durable request. Publication requires
 resume/inspection. Full native coordination now retains original files, stages
 on the same filesystem, preserves current credential/MFA files, refuses unknown
 file changes and fences startup until DB/files publication agree. Only the
+verified content-addressed model/SDK namespace regains owner-only immutable file
+modes on restore; hashes must match object names. Model admission checks remain
+unchanged, and ordinary restored documents remain writable. Only the
 pre-database phase allows rollback. Historical execution/package receipts remain
 provenance. Native backup presentation uses the same verified current package and
 same-user Stop handoff, borrowing the desktop lock while the coordinator holds its

@@ -1,6 +1,8 @@
 """Real retained-file publication/rollback, no SQLite, commands or real user files."""
 
+import hashlib
 import os
+import stat
 from uuid import uuid4
 
 import desktop_restore_files as restore
@@ -51,6 +53,72 @@ def test_prepare_publish_and_commit_keep_current_MFA_and_never_execution_authori
     assert owner.commit()["phase"] == "committed"
     with pytest.raises(ValueError, match="automatic file rollback"):
         owner.abort()
+
+
+@pytest.mark.parametrize("executable", [False, True])
+@pytest.mark.parametrize("content", [b"GGUFsynthetic local model", b"synthetic pinned SDK archive"])
+def test_full_file_restore_keeps_verified_objects_immutable_and_usable(tmp_path, executable, content):
+    from ai_station_runner.owned_models import verify_owned_model
+    from ai_station_runner.speech_environment import verified_object
+
+    source, data, backup = (tmp_path / name for name in ("source", "target", "export"))
+    for root in (source, data, backup):
+        root.mkdir(mode=0o700)
+    (source / "models").mkdir(mode=0o700)
+    store = source / "models/store"
+    store.mkdir(mode=0o700)
+    digest = hashlib.sha256(content).hexdigest()
+    relative = "models/store/" + digest
+    model = source / relative
+    model.write_bytes(content)
+    model.chmod(0o500 if executable else 0o400)
+    item = {"sha256": digest, "size_bytes": len(content)}
+    assert verified_object(source, item, lambda: None) == model
+    files.export_files(source, backup, IDENTITY)
+
+    owner = restore.FileRestore(data, str(uuid4()))
+    owner.prepare(backup, IDENTITY)
+    owner.publish()
+    owner.commit()
+
+    restored = verified_object(data, item, lambda: None)
+    if content.startswith(b"GGUF"):
+        assert verify_owned_model(data, relative, digest) == restored
+    assert restored.read_bytes() == content
+    assert stat.S_IMODE(restored.stat().st_mode) == (0o500 if executable else 0o400)
+    assert stat.S_IMODE(model.stat().st_mode) == (0o500 if executable else 0o400)
+
+
+def test_content_addressed_name_mismatch_aborts_before_changing_original_files(tree, tmp_path):
+    source, data, _ = tree
+    before = restore.inventory(data)
+    store = source / "models"
+    store.mkdir(mode=0o700)
+    (store / "store").mkdir(mode=0o700)
+    (store / "store" / ("a" * 64)).write_bytes(b"GGUFcontent does not match the name")
+    (store / "store" / ("a" * 64)).chmod(0o400)
+    backup = tmp_path / "mismatched-export"
+    backup.mkdir(mode=0o700)
+    files.export_files(source, backup, IDENTITY)
+    with pytest.raises(ValueError, match="content-addressed name"):
+        restore.FileRestore(data, str(uuid4())).prepare(backup, IDENTITY)
+    assert restore.inventory(data) == before
+
+
+def test_regular_artifacts_with_hash_filenames_remain_writable_after_restore(tree, tmp_path):
+    source, data, _ = tree
+    content = b"ordinary editable document"
+    name = hashlib.sha256(content).hexdigest()
+    (source / "artifacts" / name).write_bytes(content)
+    (source / "artifacts" / name).chmod(0o600)
+    backup = tmp_path / "artifact-export"
+    backup.mkdir(mode=0o700)
+    files.export_files(source, backup, IDENTITY)
+    owner = restore.FileRestore(data, str(uuid4()))
+    owner.prepare(backup, IDENTITY)
+    owner.publish()
+    assert stat.S_IMODE((data / "artifacts" / name).stat().st_mode) == 0o600
+    (data / "artifacts" / name).write_bytes(b"still editable")
 
 
 @pytest.mark.parametrize("count", [1, 2, 3, 4, 5, 6])
