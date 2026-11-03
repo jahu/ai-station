@@ -82,6 +82,20 @@ def file_manifest(root):
     return result
 
 
+def bundle_identity(files, head, patch, *, windows_gpu=False, linux_gpu=False, release_version=None):
+    fields = {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}
+    # Linux and Windows may carry identical offline files but grant different
+    # installer actions. Freeze those choices too; keep legacy defaults intact.
+    if windows_gpu or linux_gpu:
+        fields["gpu_recipes"] = {
+            "windows": WINDOWS_GPU_RECIPE if windows_gpu else None,
+            "linux": WINDOWS_GPU_RECIPE if linux_gpu else None,
+        }
+    if release_version is not None:
+        fields["release_version"] = release_version
+    return hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
+
+
 def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linux_gpu=False, gpu_cache=None):
     if gpu_cache is not None and not (windows_gpu or linux_gpu):
         raise ValueError("A Windows GPU cache requires the explicit Windows guest package option")
@@ -113,11 +127,7 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linu
         shutil.copy2(ROOT / "packaging/linux/requirements.lock", bundle / "native-requirements.lock")
         files = file_manifest(bundle)
         patch = subprocess.check_output(["git", "diff", "HEAD"], cwd=ROOT)
-        identity = hashlib.sha256(
-            json.dumps(
-                {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}, sort_keys=True
-            ).encode()
-        ).hexdigest()
+        identity = bundle_identity(files, head, patch, windows_gpu=windows_gpu, linux_gpu=linux_gpu)
         image_tag = "ai-station:desktop-" + identity[:16]
         archive = python_tar or stage / "python.tar.gz"
         python_archive(archive)

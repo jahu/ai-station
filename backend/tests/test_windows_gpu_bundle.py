@@ -204,3 +204,20 @@ def test_native_linux_gpu_package_has_only_its_separately_authenticated_fixed_ac
     policy = (destination / "usr/share/polkit-1/actions/org.ai-station.gpu-access.policy").read_text()
     assert "auth_admin_keep" not in policy and policy.count(">auth_admin<") == 3
     assert "/usr/libexec/ai-station/gpu-access" in policy
+
+
+def test_shared_offline_files_cannot_alias_different_OS_activation_policies():
+    import build_linux_package as builder
+
+    files, head, patch = {"same-offline-input": "a" * 64}, "b" * 40, b""
+    choices = {
+        builder.bundle_identity(files, head, patch, windows_gpu=w, linux_gpu=l)
+        for w in (False, True)
+        for l in (False, True)
+    }
+    assert len(choices) == 4
+    legacy = {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}
+    assert (
+        builder.bundle_identity(files, head, patch)
+        == hashlib.sha256(json.dumps(legacy, sort_keys=True).encode()).hexdigest()
+    )
