@@ -441,7 +441,10 @@ def load(body: Load | NativeModelLoad):
                     "NVIDIA_VISIBLE_DEVICES=void",
                 ]
             if record["devices"]:
-                args += ["--gpus", '"device=' + ",".join(record["devices"]) + '"']
+                # CUDA must select the allocated UUIDs too: WSL's shared /dev/dxg
+                # is not Linux's per-device mount boundary. Preserve UUID order.
+                visible = ",".join(record["devices"])
+                args += ["--gpus", '"device=' + visible + '"', "--env", "CUDA_VISIBLE_DEVICES=" + visible]
             if record.get("projector"):
                 args += [
                     "--mount",

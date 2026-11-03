@@ -5,6 +5,14 @@ not its completed private CPU qualification. Windows GPU inference is not yet
 qualified. The existing Linux NVIDIA profiles and CPU-only Windows flow retain
 their contracts.
 
+The 2026-11-03 llama.cpp follow-up adds an explicit ordered UUID selection in
+`CUDA_VISIBLE_DEVICES`, alongside the existing exact Docker device request.
+This matches the image executor and avoids relying solely on Docker filtering
+for CUDA compute selection. Real Linux driver queries pass both single-card
+choices and reversed pair ordering even with both GPUs exposed to the probe;
+no model was loaded. It does not prove Windows inference or replace the physical
+Windows acceptance below. [Device-selection evidence](../managed-llama.md).
+
 ## Observed gaps
 
 The private guest installs Docker but does not install NVIDIA Container Toolkit.
