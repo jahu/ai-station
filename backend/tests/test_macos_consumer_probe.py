@@ -42,6 +42,31 @@ def test_missing_dependency_reports_only_its_module_identity():
     }
 
 
+def test_browser_record_observation_uses_only_reads_and_waits_for_actual_publication(monkeypatch):
+    client = probe.Client("http://127.0.0.1:8765")
+    row = {"id": "91f0cece-c533-4081-a63f-979a1025762b", "run": {"status": "queued"}}
+    results = iter([[], [row]])
+    paths = []
+
+    def request(path, body=None):
+        assert body is None, "A browser acceptance assertion must not replace the UI action"
+        paths.append(path)
+        return next(results)
+
+    monkeypatch.setattr(client, "request", request)
+    monkeypatch.setattr(probe.time, "sleep", lambda _: None)
+    assert client.created_in_browser("/api/setup/downloads") == row
+    assert paths == ["/api/setup/downloads"] * 2
+
+
+@pytest.mark.parametrize("rows", [{"id": "not-a-list"}, [{"id": "bad-identity"}], [{"id": "a"}, {"id": "b"}]])
+def test_browser_record_observation_cannot_adopt_ambiguous_or_invalid_rows(monkeypatch, rows):
+    client = probe.Client("http://127.0.0.1:8765")
+    monkeypatch.setattr(client, "request", lambda _: rows)
+    with pytest.raises(ValueError):
+        client.created_in_browser("/api/setup/downloads")
+
+
 @pytest.mark.parametrize(
     "error",
     [RuntimeError("PRIVATE_SETUP_LINK"), subprocess.CalledProcessError(17, ["PRIVATE_COMMAND"])],

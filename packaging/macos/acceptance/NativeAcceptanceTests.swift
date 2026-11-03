@@ -148,3 +148,66 @@ final class NativeConsumerAcceptanceTests: XCTestCase {
         XCTAssertTrue(page.staticTexts["Set up your models"].waitForExistence(timeout: 30))
     }
 }
+
+final class NativeGuidedAcceptanceTests: XCTestCase {
+    private func existingPage() throws -> XCUIElement {
+        continueAfterFailure = false
+        executionTimeAllowance = 420
+        let handler = try XCTUnwrap(NSWorkspace.shared.urlForApplication(toOpen: URL(string: "http://127.0.0.1")!))
+        let identity = try XCTUnwrap(Bundle(url: handler)?.bundleIdentifier)
+        let browser = XCUIApplication(bundleIdentifier: identity)
+        XCTAssertNotEqual(browser.state, .notRunning, "The product must have opened the browser")
+        browser.activate() // Only the already-running product browser; no replacement URL or app.
+        let page = browser.webViews.firstMatch
+        XCTAssertTrue(page.waitForExistence(timeout: 30))
+        return page
+    }
+
+    func testPrepareNativeEngine() throws {
+        let page = try existingPage()
+        let consent = page.checkBoxes.matching(NSPredicate(
+            format: "label CONTAINS %@", "runtime and bundled component licenses"
+        )).firstMatch
+        XCTAssertTrue(consent.waitForExistence(timeout: 30))
+        consent.click()
+        let prepare = page.buttons["Prepare llama.cpp"]
+        XCTAssertTrue(prepare.isEnabled)
+        prepare.click() // The parent independently verifies the ordinary queued Run.
+    }
+
+    func testDownloadSelectedStarter() throws {
+        let page = try existingPage()
+        XCTAssertTrue(page.staticTexts["Native engine available"].waitForExistence(timeout: 30))
+        let choice = page.radioButtons["Choose Q4_K_M"]
+        XCTAssertTrue(choice.waitForExistence(timeout: 30))
+        choice.click()
+        let consent = page.checkBoxes.matching(NSPredicate(
+            format: "label CONTAINS %@", "and want to download these files."
+        )).firstMatch
+        XCTAssertTrue(consent.waitForExistence(timeout: 30))
+        consent.click()
+        let download = page.buttons["Download 2.33 GiB"] // Fixed reviewed 2,497,281,312-byte model.
+        XCTAssertTrue(download.isEnabled)
+        download.click() // No API POST, injected state, hidden consent or synthetic result.
+    }
+
+    func testFirstModelAnswer() throws {
+        let page = try existingPage()
+        let open = page.buttons.matching(identifier: "Open Chat with this model").firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 30))
+        open.click()
+        let message = page.textViews["Message"]
+        XCTAssertTrue(message.waitForExistence(timeout: 30))
+        message.click()
+        message.typeText("What is 2+2? Reply only with the number. /no_think")
+        let send = page.buttons["Send"]
+        XCTAssertTrue(send.isEnabled)
+        send.click()
+        let copy = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Copy AI Station ")).firstMatch
+        let answer = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            copy.exists && copy.isEnabled
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [answer], timeout: 360), .completed,
+                       "A real, nonempty model answer must be visible in the conversation")
+    }
+}

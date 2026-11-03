@@ -329,6 +329,19 @@ class Client:
             time.sleep(2)
         raise TimeoutError("The owned experiment Run did not finish within its budget")
 
+    def created_in_browser(self, path, *, timeout=30):
+        """Observe one fresh UI-created record; never substitute an API write."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            rows = self.request(path)
+            if not isinstance(rows, list) or len(rows) > 1:
+                raise ValueError("The fresh browser action has ambiguous records")
+            if rows:
+                UUID(rows[0]["id"])
+                return rows[0]
+            time.sleep(1)
+        raise TimeoutError("The browser did not create its ordinary record")
+
 
 def main():
     require_host()
@@ -408,6 +421,41 @@ def main():
             f"swap={facts.get('swap_used_mib')}MiB; disk={shutil.disk_usage(root).free // 1024**2}MiB",
         )
 
+    def launch_ui(selection, receipt):
+        controller = subprocess.Popen(
+            [
+                "/usr/bin/xcodebuild",
+                "test",
+                "-project",
+                str(repo / "packaging/macos/acceptance/NativeAcceptance.xcodeproj"),
+                "-scheme",
+                "NativeAcceptance",
+                "-configuration",
+                "Debug",
+                "-only-testing:NativeAcceptanceTests/" + selection,
+                "-destination",
+                "platform=macOS",
+                "-parallel-testing-enabled",
+                "NO",
+                "-derivedDataPath",
+                str(root / "gui-build"),
+                "-resultBundlePath",
+                str(root / (receipt + ".xcresult")),
+                "CODE_SIGN_IDENTITY=-",
+            ],
+            env=execution_environment(),
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+        ui_processes.append(controller)
+        return controller
+
+    def guided_action(method):
+        controller = launch_ui("NativeGuidedAcceptanceTests/" + method, method)
+        controller.wait(timeout=480)
+        if controller.returncode:
+            raise RuntimeError("The actual guided browser action failed")
+
     def start(executable, *, first_gui=False):
         nonlocal startup_offset
         import desktop
@@ -423,32 +471,7 @@ def main():
         processes.append(process)
         if first_gui:
             (root / "gui-process.json").write_text(json.dumps({"pid": process.pid}))
-            controller = subprocess.Popen(
-                [
-                    "/usr/bin/xcodebuild",
-                    "test",
-                    "-project",
-                    str(repo / "packaging/macos/acceptance/NativeAcceptance.xcodeproj"),
-                    "-scheme",
-                    "NativeAcceptance",
-                    "-configuration",
-                    "Debug",
-                    "-only-testing:NativeAcceptanceTests/NativeConsumerAcceptanceTests",
-                    "-destination",
-                    "platform=macOS",
-                    "-parallel-testing-enabled",
-                    "NO",
-                    "-derivedDataPath",
-                    str(root / "gui-build"),
-                    "-resultBundlePath",
-                    str(root / "gui-result.xcresult"),
-                    "CODE_SIGN_IDENTITY=-",
-                ],
-                env=execution_environment(),
-                stdout=log,
-                stderr=subprocess.STDOUT,
-            )
-            ui_processes.append(controller)
+            controller = launch_ui("NativeConsumerAcceptanceTests", "gui-result")
         deadline = time.monotonic() + (1200 if first_gui else STARTUP_TIMEOUT)
         observed_stage = None
         while time.monotonic() < deadline:
@@ -594,15 +617,24 @@ def main():
         observed = client.request("/api/setup/runtimes?profile=" + PROFILE)
         if not observed["installation_available"]:
             raise ValueError("The actual Mac did not admit its native CPU engine")
-        runtime = client.request(
-            "/api/setup/runtimes",
-            {
-                "client_request_id": str(uuid4()),
-                "profile": PROFILE,
-                "manifest_sha256": observed["manifest_sha256"],
-                "license_accepted": True,
-            },
-        )
+        if gui:
+            guided_action("testPrepareNativeEngine")
+            runtime = client.created_in_browser("/api/setup/runtimes/preparations?profile=" + PROFILE)
+            if (
+                runtime["recipe"]["profile"] != PROFILE
+                or runtime["manifest_sha256"] != observed["manifest_sha256"]
+            ):
+                raise ValueError("The browser prepared another native engine")
+        else:
+            runtime = client.request(
+                "/api/setup/runtimes",
+                {
+                    "client_request_id": str(uuid4()),
+                    "profile": PROFILE,
+                    "manifest_sha256": observed["manifest_sha256"],
+                    "license_accepted": True,
+                },
+            )
         client.wait("/api/setup/runtimes/preparations/" + runtime["id"])
         proof["native_engine_prepared"] = True
         progress("download_pinned_native_4b_model")
@@ -616,34 +648,54 @@ def main():
             or not entry["recommendation"]["fits"]
         ):
             raise ValueError("The pinned public CPU starter changed or does not fit this host")
-        download = client.request(
-            "/api/setup/downloads",
-            {
-                "client_request_id": str(uuid4()),
-                "catalog_id": MODEL,
-                "manifest_sha256": entry["manifest_sha256"],
-                "license_accepted": True,
-            },
-        )
+        if gui:
+            guided_action("testDownloadSelectedStarter")
+            download = client.created_in_browser("/api/setup/downloads")
+            if download["entry"]["id"] != MODEL or download["manifest_sha256"] != entry["manifest_sha256"]:
+                raise ValueError("The browser selected another model")
+        else:
+            download = client.request(
+                "/api/setup/downloads",
+                {
+                    "client_request_id": str(uuid4()),
+                    "catalog_id": MODEL,
+                    "manifest_sha256": entry["manifest_sha256"],
+                    "license_accepted": True,
+                },
+            )
         downloaded = client.wait("/api/setup/downloads/" + download["id"], timeout=1200)
         model = downloaded["model_key"]
         progress("first_real_native_reply")
-        conversation = client.request(
-            "/api/chat/conversations",
-            {
-                "title": "Private Mac acceptance",
-                "execution_mode": "local",
-                "provider": "local-openai-compatible",
-                "model": model,
-                "max_tokens": 128,
-                "temperature": 0,
-            },
-        )
-        turn = client.request(
-            "/api/chat/conversations/" + conversation["id"] + "/messages",
-            {"content": "What is 2+2? Reply only with the number. /no_think"},
-        )
-        client.wait("/api/runs/" + turn["id"], timeout=300)
+        if gui:
+            guided_action("testFirstModelAnswer")
+            conversation = client.created_in_browser("/api/chat/conversations")
+            if conversation["model"] != model or conversation["execution_mode"] != "assistant":
+                raise ValueError("The browser opened a different model or conversation")
+            detail = client.request("/api/chat/conversations/" + conversation["id"])
+            replies = [
+                row for row in detail["messages"] if row["role"] == "assistant" and row["content"].strip()
+            ]
+            if len(replies) != 1:
+                raise ValueError("The browser did not receive one real first answer")
+            client.wait("/api/runs/" + str(UUID(replies[0]["run_id"])), timeout=300)
+            proof["native_browser_engine_model_and_first_reply"] = True
+        else:
+            conversation = client.request(
+                "/api/chat/conversations",
+                {
+                    "title": "Private Mac acceptance",
+                    "execution_mode": "local",
+                    "provider": "local-openai-compatible",
+                    "model": model,
+                    "max_tokens": 128,
+                    "temperature": 0,
+                },
+            )
+            turn = client.request(
+                "/api/chat/conversations/" + conversation["id"] + "/messages",
+                {"content": "What is 2+2? Reply only with the number. /no_think"},
+            )
+            client.wait("/api/runs/" + turn["id"], timeout=300)
         detail = client.request("/api/chat/conversations/" + conversation["id"])
         if not any(row["role"] == "assistant" and row["content"].strip() for row in detail["messages"]):
             raise ValueError("The actual native model returned no assistant answer")

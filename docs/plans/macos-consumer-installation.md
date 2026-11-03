@@ -115,11 +115,20 @@ ordinary API login then independently confirms the account was created. Logs
 remain private because browser diagnostics can contain a setup URL. The ordinary
 component UI operation explicitly selects its five fixture tests instead.
 
-This mode has not yet been qualified. Engine/model preparation and reply/restart
-assertions still use the existing API path, so `consumer_gui_qualified` remains
-false even if this initial native/browser step passes. Continue with actual model
-selection/download, streaming/Stop and the complete update/backup/removal journey;
-do not substitute that API coverage for the required guided consumer experience.
+This mode has not yet been qualified. Its next implemented UI stages separately
+review/accept the runtime license and click Prepare, select the reviewed 4B Q4
+starter and accept its model license/download, then open Chat and send the first
+question. They attach to the already-running browser without changing its URL,
+injecting JavaScript or submitting API writes. Read-only API observations verify
+exact profile/manifest, the pinned model, ordinary successful Runs and a nonempty
+answer. Separate XCTest results preserve the failing stage; the component UI
+operation compiles these classes but deliberately does not execute them.
+
+These newly added actions still require actual Mac execution; local Python checks
+do not prove browser accessibility or Swift compilation. Stop/restart and a later
+answer still use the existing API path. `consumer_gui_qualified` remains false:
+complete streaming/Stop, update, backup, restore and removal acceptance is required
+before consumer admission. Do not substitute partial coverage for that journey.
 
 [First actual GUI run 41555762552](https://github.com/jahu/ai-station/actions/runs/41555762552)
 built the complete package and passed the native setup-button assertion/click.
