@@ -302,9 +302,33 @@ older stable remains a refused downgrade. The Windows publisher passes the
 stable Debian version to Inno's AppVersion; its separate retained source/hash
 identity and existing preview build behavior remain intact.
 
-The 97 affected version/updater tests passed, including actual built synthetic
-Debian payload comparisons without installation. The publisher PowerShell source
-parses locally. Actual stable bundle builds and native Windows 5.1/Inno build and
-preserving-update qualification remain required before this is a final release.
+The complete affected version/updater/guest/bundle families now pass 159 tests,
+including actual synthetic Debian payload ordering and private-data preservation
+across a stable update replay. Publisher identity also freezes the independent
+Linux/Windows activation choices: shared offline files cannot alias different
+OS policies. Legacy default hashing remains unchanged.
+
+The private clean `b145d7d` candidate was built with stable Debian metadata,
+both explicit graphics recipes and the compiled app. Actual qualification:
+
+- Ubuntu 24.04 upgraded its previous preview to `0.1.0`, preserving the same live
+  Docker PID/identity, unrelated fixture container, toolkit configuration,
+  root-only original backup/journal and user sentinel.
+- Native Windows PowerShell 5.1 and Inno built the real installer with ProductVersion
+  `0.1.0`. The installed UI's **Update AI Station** action completed its preserving
+  WSL update and ordinary automatic Start. All eight protected account, conversation,
+  message, artifact, memory, agent, project and model-file table hashes matched.
+  Existing registration/storage and application configuration were retained.
+- The real browser retained its original login cookie, four-message conversation
+  and usable composer. The private desktop owner and exact new app image were
+  verified. Ordinary native **Stop** cleared its own Compose inventory/receipt
+  while retaining valid account/history/model data. No new inference was run.
+
+That Windows installer is verified **NotSigned** and remains private. The VM is
+CPU-only; none of these results qualifies physical Windows GPU inference. The
+subsequent publisher policy-identity correction needs a final frozen artifact
+build after integration; its code/metadata identity must not be confused with
+the earlier qualification artifact. Full regression and the existing distribution,
+physical-GPU and operator handoff gates still apply.
 Only the human owner promotes the reviewed release PR to master; no build option
 publishes, signs, tags or bypasses that policy.
