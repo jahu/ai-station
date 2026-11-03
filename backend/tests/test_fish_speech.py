@@ -147,12 +147,12 @@ print('speech.chunk.completed 1/1',flush=True)
 
 
 def enqueue(client, **extra):
-    source = reference(client)
+    source = reference(client) if extra.get("voice_source") != "model" else None
     response = client.post(
         "/api/audio/runs",
         json={
             "text": "Dokładne słowa autora.",
-            "reference_artifact_id": source["id"],
+            "reference_artifact_id": source["id"] if source else None,
             "engine": "fish_s2_pro",
             "direction": "whisper",
             **extra,
@@ -165,6 +165,113 @@ def enqueue(client, **extra):
 def work():
     with control_session_factory()() as db:
         return tick(db, "fish-test")
+
+
+def test_generated_voice_runs_without_recording_or_asr_and_keeps_empty_lineage(fish_bridge):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Dokładne słowa autora.",
+                "engine": "fish_s2_pro",
+                "voice_source": "model",
+                "reference_artifact_id": None,
+                "direction": "whisper",
+            },
+        )
+        assert response.status_code == 202, response.text
+        run = response.json()
+        assert run["parameters"]["voice_source"] == "model"
+        assert "reference_transcription_run_id" not in run["parameters"]
+        assert work() == run["id"]
+        actual = client.get("/api/runs/" + run["id"]).json()
+        assert actual["status"] == "succeeded", actual
+        assert not fish_bridge["reports"] and len(fish_bridge["starts"]) == 1
+        artifacts = client.get("/api/artifacts", params={"run_id": run["id"]}).json()
+        assert len(artifacts) == 1 and artifacts[0]["parent_artifact_ids"] == []
+        assert artifacts[0]["metadata"]["voice_source"] == "model"
+        with session_factory()() as db:
+            assert not active_locks(db)
+
+
+def test_generated_voice_refuses_an_older_runner_before_queueing_or_enabling_an_agent(
+    fish_bridge, monkeypatch
+):
+    original = RunnerClient.request
+
+    def request(self, method, path, json=None):
+        value = original(self, method, path, json)
+        if path == "/v1/audio/capabilities":
+            value["engines"]["fish_s2_pro"].pop("voice_sources", None)
+        return value
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    body = {
+        "text": "Exact words",
+        "engine": "fish_s2_pro",
+        "voice_source": "model",
+        "reference_artifact_id": None,
+    }
+    with TestClient(app) as client:
+        assert client.post("/api/audio/runs", json=body).status_code == 409
+        response = client.post(
+            "/api/agents",
+            json={
+                "name": "Generated voice",
+                "goal": "Speak",
+                "enabled": True,
+                "tools": ["create_media"],
+                "media": {"kind": "speech", "request": body},
+            },
+        )
+        assert response.status_code == 409, response.text
+        assert not client.get("/api/runs").json() and not fish_bridge["starts"]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"engine": None},
+        {"reference_artifact_id": str(uuid4())},
+        {"voice_source": "unknown"},
+    ],
+)
+def test_generated_voice_rejects_other_engines_or_silently_ignored_reference(fish_bridge, extra):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Exact words",
+                "engine": "fish_s2_pro",
+                "voice_source": "model",
+                "reference_artifact_id": None,
+                **extra,
+            },
+        )
+        assert response.status_code == 422
+        assert not fish_bridge["starts"] and not fish_bridge["reports"]
+
+
+def test_changed_generated_voice_cannot_ignore_an_added_reference_before_native_dispatch(fish_bridge):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Exact words",
+                "engine": "fish_s2_pro",
+                "voice_source": "model",
+                "reference_artifact_id": None,
+            },
+        )
+        assert response.status_code == 202
+        identity = response.json()["id"]
+        with session_factory()() as db:
+            run = db.get(Run, identity)
+            run.parameters = {**run.parameters, "reference_text": "Unreviewed source words"}
+            db.commit()
+        assert work() == identity
+        actual = client.get("/api/runs/" + identity).json()
+        assert actual["status"] == "failed" and not fish_bridge["starts"]
 
 
 def test_uploaded_reference_is_transcribed_then_queued_speech_keeps_text_style_and_lineage(fish_bridge):
@@ -373,10 +480,12 @@ def test_changed_reference_or_transcript_cannot_reach_native_speech(fish_bridge,
         assert not client.get("/api/artifacts", params={"run_id": run["id"]}).json()
 
 
-def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge):
+@pytest.mark.parametrize("generated", [False, True])
+def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge, generated):
     with TestClient(app) as client:
-        run, _ = enqueue(client)
-        work()
+        run, _ = enqueue(client, **({"voice_source": "model"} if generated else {}))
+        if not generated:
+            work()
         fish_bridge["hardware"]["gpus"][0]["memory_used_mib"] = 7000
         work()
         assert client.get("/api/runs/" + run["id"]).json()["status"] == "queued"
@@ -391,8 +500,9 @@ def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge):
         assert client.get("/api/runs/" + run["id"]).json()["status"] == "succeeded"
 
 
+@pytest.mark.parametrize("generated", [False, True])
 def test_cancellation_signals_only_the_owned_process_and_never_publishes_partial_audio(
-    fish_bridge, monkeypatch
+    fish_bridge, generated, monkeypatch
 ):
     original = RunnerClient.request
 
@@ -406,8 +516,9 @@ def test_cancellation_signals_only_the_owned_process_and_never_publishes_partial
 
     monkeypatch.setattr(RunnerClient, "request", request)
     with TestClient(app) as client:
-        run, _ = enqueue(client, text="WAIT")
-        work()
+        run, _ = enqueue(client, text="WAIT", **({"voice_source": "model"} if generated else {}))
+        if not generated:
+            work()
         work()
         assert client.get("/api/runs/" + run["id"]).json()["status"] == "canceled"
         assert not fish_bridge["manager"].inspect(run["id"])["alive"]
@@ -416,10 +527,12 @@ def test_cancellation_signals_only_the_owned_process_and_never_publishes_partial
             assert not active_locks(db)
 
 
-def test_native_receipt_is_idempotent_and_does_not_extend_deadline(fish_bridge):
+@pytest.mark.parametrize("generated", [False, True])
+def test_native_receipt_is_idempotent_and_does_not_extend_deadline(fish_bridge, generated):
     with TestClient(app) as client:
-        run, _ = enqueue(client)
-        work()
+        run, _ = enqueue(client, **({"voice_source": "model"} if generated else {}))
+        if not generated:
+            work()
         work()
         from app.config import get_settings
 
@@ -434,7 +547,10 @@ def test_native_receipt_is_idempotent_and_does_not_extend_deadline(fish_bridge):
         assert changed.status_code == 409 and len(fish_bridge["starts"]) == 1
 
 
-def test_lost_dispatch_reply_keeps_both_gpu_leases_and_recovers_by_inspection(fish_bridge, monkeypatch):
+@pytest.mark.parametrize("generated", [False, True])
+def test_lost_dispatch_reply_keeps_both_gpu_leases_and_recovers_by_inspection(
+    fish_bridge, generated, monkeypatch
+):
     from datetime import timedelta
 
     from app.db import utcnow
@@ -450,8 +566,9 @@ def test_lost_dispatch_reply_keeps_both_gpu_leases_and_recovers_by_inspection(fi
 
     monkeypatch.setattr(RunnerClient, "request", request)
     with TestClient(app) as client:
-        run, _ = enqueue(client, text="WAIT")
-        work()
+        run, _ = enqueue(client, text="WAIT", **({"voice_source": "model"} if generated else {}))
+        if not generated:
+            work()
         work()
         with control_session_factory()() as db:
             actual = db.get(Run, run["id"])
@@ -474,10 +591,12 @@ def test_lost_dispatch_reply_keeps_both_gpu_leases_and_recovers_by_inspection(fi
         assert len(fish_bridge["starts"]) == 1
 
 
-def test_native_permission_deadline_and_device_checks_do_not_start_processes(fish_bridge):
+@pytest.mark.parametrize("generated", [False, True])
+def test_native_permission_deadline_and_device_checks_do_not_start_processes(fish_bridge, generated):
     with TestClient(app) as client:
-        run, _ = enqueue(client)
-        work()
+        run, _ = enqueue(client, **({"voice_source": "model"} if generated else {}))
+        if not generated:
+            work()
         work()
         from app.config import get_settings
 
@@ -519,13 +638,14 @@ def test_unsupported_controls_are_rejected_before_queuing(extra):
         assert client.get("/api/runs").json() == []
 
 
-def test_reviewed_speech_agent_waits_for_fish_artifact_and_reports_its_actual_result(fish_bridge):
+@pytest.mark.parametrize("generated", [False, True])
+def test_reviewed_speech_agent_waits_for_fish_artifact_and_reports_its_actual_result(fish_bridge, generated):
     from app.models import Notice
     from sqlalchemy import select
     from test_agent_media import create, drain, start
 
     with TestClient(app) as client:
-        source = reference(client)
+        source = reference(client) if not generated else None
         agent = create(
             client,
             media={
@@ -533,7 +653,8 @@ def test_reviewed_speech_agent_waits_for_fish_artifact_and_reports_its_actual_re
                 "description_source": "fixed",
                 "request": {
                     "text": "Dokładne słowa.",
-                    "reference_artifact_id": source["id"],
+                    "reference_artifact_id": source["id"] if source else None,
+                    **({"voice_source": "model"} if generated else {}),
                     "engine": "fish_s2_pro",
                     "direction": "whisper",
                     "pace": "slow",

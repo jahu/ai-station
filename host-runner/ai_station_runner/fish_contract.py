@@ -21,7 +21,7 @@ CODEC_VRAM_MIB = 5120
 SOURCE_SHA256 = "00e6ece667bb971044525461412c04296a2a24d55bf6cedf9482b10e72eaa09e"
 DIRECTIONS = {
     "natural": "",
-    "whisper": "[whispering]",
+    "whisper": "[whisper]",
     "happy": "[happy]",
     "sad": "[sad]",
     "afraid": "[scared]",
@@ -97,8 +97,11 @@ class FishRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
     direction: Direction = "natural"
     pace: Pace = "natural"
-    reference: MediaInput
-    reference_text: str = Field(min_length=1, max_length=8000)
+    voice_source: Literal["reference", "model"] = Field(
+        default="reference", exclude_if=lambda value: value == "reference"
+    )
+    reference: MediaInput | None = None
+    reference_text: str | None = Field(default=None, min_length=1, max_length=8000)
     observation: str = Field(pattern=r"^[a-f0-9]{64}$")
     gpus: list[StrictInt] = Field(min_length=2, max_length=2)
     deadline_at: float = Field(gt=0, strict=True, allow_inf_nan=False)
@@ -111,6 +114,14 @@ class FishRequest(BaseModel):
     def distinct_devices(self):
         if len(set(self.gpus)) != 2 or any(gpu < 0 for gpu in self.gpus):
             raise ValueError("Fish requires two distinct allocated GPU indexes")
+        return self
+
+    @model_validator(mode="after")
+    def explicit_voice_source(self):
+        if self.voice_source == "reference" and (self.reference is None or self.reference_text is None):
+            raise ValueError("Reference voice requires its recording and verified transcript")
+        if self.voice_source == "model" and (self.reference is not None or self.reference_text is not None):
+            raise ValueError("Model voice cannot silently ignore a recording or transcript")
         return self
 
 

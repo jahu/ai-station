@@ -109,6 +109,65 @@ def execution_reference(session, source, transcript):
     return result
 
 
+def _parameters(body, ready):
+    return {
+        "text": body.text,
+        "language": "auto",
+        "backend": "fish_s2_pro",
+        "profile": PROFILE,
+        "observation": ready["observation"],
+        "direction": body.direction or "natural",
+        "pace": body.pace or "natural",
+        **(
+            {
+                "environment_id": ready["environment_id"],
+                "eligible_gpu_indices": ready.get("eligible_gpu_indices", []),
+                "primary_gpu_indices": ready.get("primary_gpu_indices", []),
+                "codec_gpu_indices": ready.get("codec_gpu_indices", []),
+            }
+            if ready.get("environment_id")
+            else {}
+        ),
+    }
+
+
+def _queue(session, body, task, parent_run_id, parameters):
+    return create_run(
+        session,
+        task,
+        run_type="audio",
+        capability="audio.speech",
+        executor_type="fish_speech",
+        permissions=["filesystem_read", "workspace_write"],
+        requested_gpu=body.gpu,
+        requested_resources={"ram_mib": RAM_MIB, "gpu_count": 2},
+        retry_class="inspect",
+        parent_run_id=parent_run_id,
+        parameters=parameters,
+    )
+
+
+def _model_voice(run):
+    mode = run.parameters.get("voice_source", "reference")
+    if mode not in {"reference", "model"}:
+        raise ValueError("The frozen speech voice selection changed")
+    if mode == "model" and (
+        any(
+            key in run.parameters
+            for key in (
+                "reference",
+                "reference_artifact_id",
+                "reference_text",
+                "execution_reference",
+                "reference_transcription_run_id",
+                "reference_text_provenance",
+            )
+        )
+    ):
+        raise ValueError("Generated voice cannot ignore a frozen voice reference")
+    return mode == "model"
+
+
 def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
     ready = capabilities().get("engines", {}).get("fish_s2_pro", {})
     if (
@@ -140,6 +199,23 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
             )
         if body.gpu != "auto" and int(body.gpu) not in primary:
             raise HTTPException(422, "Choose Auto or a compatible primary GPU for expressive voice")
+    if body.voice_source == "model":
+        if "model" not in ready.get("voice_sources", []):
+            raise HTTPException(409, "Update the Host Runner before using generated Fish voices")
+        if source is not None:
+            raise HTTPException(422, "Generated voice cannot ignore a selected recording")
+        task = task or create_task(session, title=body.text[:80], prompt=body.text, capability="audio.speech")
+        return _queue(
+            session,
+            body,
+            task,
+            parent_run_id,
+            {
+                **_parameters(body, ready),
+                "voice_source": "model",
+                "parent_artifact_ids": [],
+            },
+        )
     try:
         snapshot = source_snapshot(source)
         from app.recordings import FORMATS, recording_format
@@ -173,26 +249,10 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
         except (ValueError, OSError, UnicodeError):
             pass  # An unavailable old transcript can be safely recreated from the owned recording.
     parameters = {
-        "text": body.text,
-        "language": "auto",
-        "backend": "fish_s2_pro",
-        "profile": PROFILE,
-        "observation": ready["observation"],
-        "direction": body.direction or "natural",
-        "pace": body.pace or "natural",
+        **_parameters(body, ready),
         "reference": snapshot,
         "reference_artifact_id": source.id,
         "parent_artifact_ids": [source.id],
-        **(
-            {
-                "environment_id": ready["environment_id"],
-                "eligible_gpu_indices": ready.get("eligible_gpu_indices", []),
-                "primary_gpu_indices": ready.get("primary_gpu_indices", []),
-                "codec_gpu_indices": ready.get("codec_gpu_indices", []),
-            }
-            if ready.get("environment_id")
-            else {}
-        ),
     }
     if reference_text:
         parameters["reference_transcription_run_id"] = cached_id
@@ -218,19 +278,7 @@ def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
             "run_id": transcript.id,
             "sha256": source.sha256,
         }
-    run = create_run(
-        session,
-        task,
-        run_type="audio",
-        capability="audio.speech",
-        executor_type="fish_speech",
-        permissions=["filesystem_read", "workspace_write"],
-        requested_gpu=body.gpu,
-        requested_resources={"ram_mib": RAM_MIB, "gpu_count": 2},
-        retry_class="inspect",
-        parent_run_id=parent_run_id,
-        parameters=parameters,
-    )
+    run = _queue(session, body, task, parent_run_id, parameters)
     if not reference_text:
         depend_on(session, run, transcript)
     return run
@@ -314,6 +362,13 @@ class FishSpeechExecutor(AudioExecutor):
 
     def validate_inputs(self, session, run):
         super().validate_inputs(session, run)
+        if _model_voice(run):
+            run.parameters = {
+                **run.parameters,
+                "execution_deadline_at": run.parameters.get("execution_deadline_at")
+                or (utcnow() + timedelta(minutes=30)).isoformat(),
+            }
+            return
         text = resolve_reference_text(session, run)
         selected = execution_reference(
             session,
@@ -337,8 +392,14 @@ class FishSpeechExecutor(AudioExecutor):
                 "text": run.parameters["text"],
                 "direction": run.parameters["direction"],
                 "pace": run.parameters["pace"],
-                "reference": run.parameters.get("execution_reference", run.parameters["reference"]),
-                "reference_text": run.parameters["reference_text"],
+                **(
+                    {"voice_source": "model", "reference": None, "reference_text": None}
+                    if _model_voice(run)
+                    else {
+                        "reference": run.parameters.get("execution_reference", run.parameters["reference"]),
+                        "reference_text": run.parameters["reference_text"],
+                    }
+                ),
                 "observation": run.parameters["observation"],
                 "gpus": [int(device) for device in run.allocated_resources["gpus"]],
                 "permissions": run.effective_permissions,
@@ -352,10 +413,12 @@ class FishSpeechExecutor(AudioExecutor):
         )
 
     def on_success(self, session, run, artifact):
-        resolve_reference_text(session, run)
+        if not _model_voice(run):
+            resolve_reference_text(session, run)
         artifact.metadata_json = {
             **artifact.metadata_json,
             "speech_engine": "fish_s2_pro",
+            **({"voice_source": "model"} if _model_voice(run) else {}),
             "direction": run.parameters["direction"],
             "pace": run.parameters["pace"],
             "profile": PROFILE,

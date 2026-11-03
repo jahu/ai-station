@@ -9,6 +9,8 @@ export default function SpeechEngineFields({
   onEngine,
   onDirection,
   onPace,
+  voiceSource,
+  onVoiceSource,
 }: {
   engine: string;
   direction: string;
@@ -17,6 +19,8 @@ export default function SpeechEngineFields({
   onEngine: (value: string) => void;
   onDirection: (value: string) => void;
   onPace: (value: string) => void;
+  voiceSource?: "reference" | "model";
+  onVoiceSource?: (value: "reference" | "model") => void;
 }) {
   const fish = capabilities?.engines?.fish_s2_pro;
   const checking = !capabilities || fish?.readiness === "checking";
@@ -46,10 +50,38 @@ export default function SpeechEngineFields({
             <strong>Direct the performance</strong>
             <span>LOCAL · 2 GPUs</span>
           </div>
+          {onVoiceSource && (
+            <label>
+              Voice source
+              <select
+                aria-label="Voice source"
+                value={voiceSource ?? "reference"}
+                onChange={(event) =>
+                  onVoiceSource(event.target.value as "reference" | "model")
+                }
+              >
+                <option
+                  value="model"
+                  disabled={!fish?.voice_sources?.includes("model")}
+                >
+                  Generate a voice
+                </option>
+                <option value="reference">Use a recording</option>
+              </select>
+            </label>
+          )}
           <p className="muted">
-            Choose how it should sound. Your reference is transcribed locally
-            when needed; your script stays unchanged.
+            {voiceSource === "model"
+              ? "Fish creates the voice. Best for whispers and expressive delivery; it won't imitate a specific person. Your words stay unchanged."
+              : "Your recording provides the voice and is transcribed locally. A neutral reference can soften emotional delivery. Your words stay unchanged."}
           </p>
+          {voiceSource === "model" &&
+            !fish?.voice_sources?.includes("model") && (
+              <p className="notice" role="status">
+                Update AI Station to generate voices without a recording, or
+                choose Use a recording.
+              </p>
+            )}
           <div className="speech-direction-grid">
             <label>
               Voice direction

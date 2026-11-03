@@ -170,3 +170,60 @@ The [guided installation plan](managed-fish-setup.md) includes CPU transcription
 and codec prerequisites. Its dependency candidate is separate from the historical
 configured runtime above; guided readiness and real fresh-install qualification
 remain unfinished.
+
+## Voice-source conditioning study and explicit model voice (2026-11-03)
+
+Private GPU-only comparisons used the pinned configured S2 Pro source/weights,
+existing synthetic voice reference, seed 42 and identical Polish words. Eight
+complete-EOS samples compared the current whisper tag, the publisher's canonical
+`[whisper]`, explicit source-speaker binding, free-form quiet whisper, natural,
+happy, sad and afraid. The current whisper reproduced the retained baseline
+byte-for-byte. Canonical tags/binding alone do not establish an expression fix:
+voiced fractions remained about 0.81–0.88 with similar median pitch.
+
+A separate controlled four-sample comparison checked English with that same
+reference and Polish without a reference. Referenced English natural/whisper
+remained about 0.79/0.82 voiced, with complete approximate ASR transcripts.
+Without the reference, Polish natural/whisper changed from about 0.72 to 0.08
+voiced and spectral flatness from 0.0034 to 0.0889. This supports neutral-reference
+conditioning as a material factor for this voice/seed; it is not general proof
+of every voice, audible quality, identity fidelity or emotion. Unvoiced-frame
+pitch estimates must not be interpreted as the whispered voice's pitch. No
+operator process was stopped, external model changed or production data written.
+Evidence remains private under `data/acceptance/fish-prosody-20261103/` and
+`data/acceptance/fish-prosody-reference-20261103/`; listening remains open.
+
+The candidate adds an explicit **Generate a voice / Use a recording** choice
+for Fish in Audio and reviewed speech agents. It never silently drops a supplied
+voice reference to improve delivery. Existing requests/history retain reference
+mode and their identity; Chatterbox keeps its WAV contract. Model voice is an
+explicit Fish-only request, rejects mixed reference inputs, omits the ASR
+prerequisite and has no voice-recording lineage. Agent text-preparation provenance
+remains in the ordinary artifact lineage. The worker/native receipt freeze
+that choice; privacy, typed permissions, dual-GPU/RAM admission, EOS/chunk checks,
+Stop and recovery retain their existing contracts. Creative drafts/follow-ups and
+agent review must preserve the selection. API/schema, native dispatch/cancellation,
+private lineage and actual UI/worker/GPU checks precede availability. The
+qualification below covers the normal worker/hardware path; deployment and
+listening acceptance remain separate.
+
+### Integrated generated-voice qualification
+
+The exact candidate at `b194d9a` passed a fresh private-account API → separate
+worker → real native Unix Runner → dual-GPU Fish execution. It produced an
+EOS-complete, decoded **5.53-second Polish whisper** without a reference, ASR Run
+or fabricated executor. The result was published through the ordinary private
+artifact endpoint with `voice_source=model`.
+
+A second real owned Fish process survived abrupt loss of only the private
+worker group. Its replacement inspected the same native PID without redispatch;
+ordinary API Stop then canceled that process. No partial audio was published and
+the private GPU/RAM leases were released. The Runner and both private workers
+were stopped afterward. The workstation's idle AI Station-managed LLM was
+temporarily unloaded through an audited, owner-scoped Stop Run and restored
+through an ordinary load Run with the same model, GPU assignment, context,
+cache and image. External runtimes were unchanged.
+
+Evidence remains private under `data/acceptance/fish-model-voice-api-20261103/`.
+This verifies execution, cancellation and recovery; it does not establish human
+listening acceptance of every emotion, script or cloned speaker.

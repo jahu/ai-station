@@ -45,6 +45,10 @@ def require_profile(scope):
             if scope.request.engine == "fish_s2_pro"
             else profile.get("available") and "pl" in profile.get("languages", [])
         )
+        if scope.request.voice_source == "model":
+            ready = ready and "model" in profile.get("engines", {}).get("fish_s2_pro", {}).get(
+                "voice_sources", []
+            )
     elif scope.kind == "avatar":
         try:
             path = (
@@ -252,6 +256,8 @@ def freeze_inputs(session, scope):
     if scope.kind == "music" or scope.kind == "video" and scope.request.image_artifact_id is None:
         return []
     if scope.kind == "speech" and scope.request.reference_artifact_id is None:
+        if scope.request.voice_source == "model":
+            return []
         raise ValueError("Select and review a Library voice reference before running speech")
     identifiers = (
         scope.request.input_artifact_ids

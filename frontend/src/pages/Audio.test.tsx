@@ -358,3 +358,59 @@ it("prepares phone references with Fish and clears an incompatible reference whe
     "audio/wav,.wav",
   );
 });
+
+it("generates an expressive voice without uploading a recording and keeps recording mode explicit", async () => {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/audio/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/audio/capabilities")
+            ? {
+                engines: {
+                  fish_s2_pro: {
+                    available: true,
+                    readiness: "ready",
+                    voice_sources: ["reference", "model"],
+                  },
+                },
+              }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.includes("/runs")
+                ? { id: "speech", status: "queued" }
+                : [],
+      };
+    }),
+  );
+  mount("/audio?engine=fish_s2_pro");
+  const source = await screen.findByRole("combobox", { name: "Voice source" });
+  expect((source as HTMLSelectElement).value).toBe("model");
+  expect(screen.queryByText("Voice reference")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Text to speak"), {
+    target: { value: "Dokładne słowa." },
+  });
+  const submit = screen.getByRole("button", { name: "Generate speech" });
+  await waitFor(() =>
+    expect((submit as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.change(source, { target: { value: "reference" } });
+  expect(screen.getByText("Voice reference")).toBeTruthy();
+  expect((submit as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(source, { target: { value: "model" } });
+  fireEvent.click(submit);
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toEqual({
+    text: "Dokładne słowa.",
+    gpu: "auto",
+    reference_artifact_id: null,
+    engine: "fish_s2_pro",
+    voice_source: "model",
+    direction: "natural",
+    pace: "natural",
+  });
+});

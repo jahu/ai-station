@@ -79,10 +79,19 @@ export default function AgentMediaScopeEditor({
   const selectedReadiness =
     scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
       ? {
-          ready: speech.data?.engines?.fish_s2_pro?.available === true,
+          ready:
+            speech.data?.engines?.fish_s2_pro?.available === true &&
+            (scope.request.voice_source !== "model" ||
+              speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                "model",
+              ) === true),
           reason:
-            speech.data?.engines?.fish_s2_pro?.reason ??
-            "Checking expressive speech setup…",
+            scope.request.voice_source === "model" &&
+            speech.data &&
+            !speech.data.engines?.fish_s2_pro?.voice_sources?.includes("model")
+              ? "Update AI Station or choose a voice recording."
+              : (speech.data?.engines?.fish_s2_pro?.reason ??
+                "Checking expressive speech setup…"),
         }
       : scope.kind === "effects"
         ? {
@@ -426,12 +435,27 @@ export default function AgentMediaScopeEditor({
               direction={scope.request.direction ?? "natural"}
               pace={scope.request.pace ?? "natural"}
               capabilities={speech.data}
+              voiceSource={scope.request.voice_source ?? "reference"}
+              onVoiceSource={(voice_source) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    voice_source,
+                    reference_artifact_id:
+                      voice_source === "model"
+                        ? null
+                        : scope.request.reference_artifact_id,
+                  },
+                })
+              }
               onEngine={(engine) => {
                 const request = { ...scope.request };
                 delete request.engine;
                 delete request.direction;
                 delete request.pace;
                 delete request.delivery;
+                delete request.voice_source;
                 onChange({
                   ...scope,
                   request: {
@@ -441,6 +465,12 @@ export default function AgentMediaScopeEditor({
                           engine: "fish_s2_pro" as const,
                           direction: "natural" as const,
                           pace: "natural" as const,
+                          ...(!request.reference_artifact_id &&
+                          speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                            "model",
+                          )
+                            ? { voice_source: "model" as const }
+                            : {}),
                         }
                       : {}),
                   },
@@ -466,30 +496,32 @@ export default function AgentMediaScopeEditor({
               }
             />
             <p className="muted">
-              Speech in Polish. Your selected recording provides the voice
-              reference. Goal mode writes the spoken text; the voice stays
-              fixed.
+              {scope.request.voice_source === "model"
+                ? "Fish generates the voice. Goal mode writes fresh words for each execution."
+                : "Speech in Polish. Your selected recording provides the voice reference. Goal mode writes the spoken text; the voice stays fixed."}
             </p>
-            <MediaInput
-              kind="audio"
-              label="Voice reference"
-              hint="Choose or upload a clear PCM WAV recording, 0.1–60 seconds."
-              value={scope.request.reference_artifact_id ?? ""}
-              disabled={disabled || uploading}
-              onChange={(id) =>
-                onChange({
-                  ...scope,
-                  request: {
-                    ...scope.request,
-                    reference_artifact_id: id || null,
-                  },
-                })
-              }
-              onBusy={(busy) => {
-                setUploading(busy);
-                onBusy(busy);
-              }}
-            />
+            {scope.request.voice_source !== "model" && (
+              <MediaInput
+                kind="audio"
+                label="Voice reference"
+                hint="Choose or upload a clear PCM WAV recording, 0.1–60 seconds."
+                value={scope.request.reference_artifact_id ?? ""}
+                disabled={disabled || uploading}
+                onChange={(id) =>
+                  onChange({
+                    ...scope,
+                    request: {
+                      ...scope.request,
+                      reference_artifact_id: id || null,
+                    },
+                  })
+                }
+                onBusy={(busy) => {
+                  setUploading(busy);
+                  onBusy(busy);
+                }}
+              />
+            )}
             <details>
               <summary>
                 <Settings2 size={15} />

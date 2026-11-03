@@ -19,6 +19,7 @@ export type SpeechCapabilities = {
       readiness: string;
       reason?: string;
       license_url?: string;
+      voice_sources?: ("reference" | "model")[];
     };
   };
 };

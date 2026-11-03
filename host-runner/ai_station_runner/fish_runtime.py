@@ -79,6 +79,7 @@ def capabilities():
         "codec_vram_mib": CODEC_VRAM_MIB,
         "max_text_characters": 1000,
         "directions": list(DIRECTIONS),
+        "voice_sources": ["reference", "model"],
         "paces": ["natural", "slow", "fast"],
         "offline": True,
         "license_url": "https://huggingface.co/fishaudio/s2-pro/blob/1de9996b6be38b745688de084d87a5633f714e4e/LICENSE.md",
@@ -199,7 +200,8 @@ def start(manager, body):
         compatible = {int(g["index"]) for g in compatible_devices(collect(root).get("gpus", []))}
         if not driver_supported("580.126.20") or not set(body.gpus) <= compatible:
             raise ValueError("The allocated Fish GPU pair or driver does not fit its prepared profile")
-    reference_bytes(root, body.reference.model_dump())
+    if body.reference is not None:
+        reference_bytes(root, body.reference.model_dump())
     output = resolve_child(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav")
     if output.exists() or output.is_symlink():
         raise ValueError("Inspect existing speech output instead of overwriting")
