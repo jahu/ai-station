@@ -5,6 +5,21 @@ from ai_station_runner.diagnostics import command_version
 from ai_station_runner.telemetry import gpus
 
 
+def test_native_container_readiness_does_not_replace_physical_telemetry(tmp_path, monkeypatch):
+    from ai_station_runner import telemetry
+    from ai_station_runner.config import clear_settings_cache
+
+    devices = [{"index": 3, "uuid": "GPU-observed", "memory_total_mib": 12288}]
+    monkeypatch.setattr(telemetry, "gpus", lambda: devices)
+    monkeypatch.setenv("AI_STATION_CONTAINER_GPU_READY", "false")
+    clear_settings_cache()
+    try:
+        result = telemetry.collect(tmp_path)
+        assert result["gpus"] == devices and result["container_gpu_ready"] is False
+    finally:
+        clear_settings_cache()
+
+
 def test_missing_nvidia_fields_remain_unknown(monkeypatch):
     monkeypatch.setattr(
         subprocess,

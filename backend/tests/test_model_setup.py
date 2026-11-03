@@ -139,6 +139,23 @@ def request(item):
     }
 
 
+def test_native_cpu_choice_retains_real_gpu_inventory_without_suggesting_an_unready_cuda_model(setup_bridge):
+    from app.setup_models import CANDIDATES as candidates
+
+    hardware = setup_bridge["hardware"]
+    hardware["container_gpu_ready"] = False
+    cuda = setup_bridge["entry"]
+    decision = model_setup.recommendation(cuda, hardware)
+    assert not decision["fits"] and "Graphics setup" in decision["reason"]
+    cpu = next(e for e in candidates if e.runtime_profile == "llamacpp-cpu-linux-amd64-v1")
+    assert model_setup.recommendation(cpu, hardware)["fits"]
+    with TestClient(app) as api:
+        result = api.get("/api/setup/catalog")
+    assert result.status_code == 200
+    assert result.json()["hardware"]["gpus"] == hardware["gpus"]
+    assert result.json()["engine_profile"] == "llamacpp-cpu-linux-amd64-v1"
+
+
 def work():
     with control_session_factory()() as db:
         return tick(db, "model-setup-test")

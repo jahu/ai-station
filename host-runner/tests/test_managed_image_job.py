@@ -225,6 +225,19 @@ def finish(setup, *, exit_code=0, valid=True):
     output.chmod(0o600)
 
 
+def test_native_cpu_choice_prevents_new_container_images_without_changing_prior_work(setup, monkeypatch):
+    _, _, state, body = setup
+    monkeypatch.setenv("AI_STATION_CONTAINER_GPU_READY", "false")
+    clear_settings_cache()
+    try:
+        with pytest.raises(HTTPException) as error:
+            job.start(body)
+        assert error.value.status_code == 503 and "Graphics setup" in error.value.detail
+        assert state["create_count"] == state["start_count"] == 0
+    finally:
+        clear_settings_cache()
+
+
 def test_actual_container_identity_is_frozen_hardened_and_repeated_start_only_inspects(setup):
     _, _, state, body = setup
     first = job.start(body)

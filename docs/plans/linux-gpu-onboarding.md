@@ -1,6 +1,7 @@
 # Native Linux GPU preparation — NR-13/14
 
-Status: planned, not implemented or qualified. Preserve the working Linux GPU
+Status: implemented candidate, not yet OS-installation qualified or enabled in
+default packages. Preserve the working Linux GPU
 profiles, Windows owned-guest recipe, ordinary CPU setup and current workstation.
 
 ## Observed first-user gap
@@ -21,8 +22,8 @@ changing them. An already working installation proceeds without an authenticatio
 prompt or software replacement. CPU-only startup keeps its present path.
 
 When preparation is needed, offer **Enable GPU features** and an explicit CPU
-choice. Explain the small toolkit installation, Docker configuration and any
-required Docker restart before asking for OS administrator authentication. A
+choice. Explain the small toolkit installation, Docker configuration and the
+operator-chosen OS restart before asking for OS administrator authentication. A
 canceled prompt leaves the machine unchanged. Application passwords never enter
 this flow. Continue into normal model setup only with truthful GPU readiness;
 downloading model weights remains a separate reviewed choice.
@@ -55,11 +56,27 @@ secrets through UI output. Bound operations and retain durable phase/hash
 receipts across a lost acknowledgement. Inspect before retrying; do not blindly
 undo a package-manager transaction or overwrite later administrator changes.
 
-Do not stop external containers. Docker restart requires explicit prior consent
-and a verified idle daemon, rechecked immediately before restart. A newly busy
-daemon retains a pending/inspection state instead of disrupting workloads. The
-normal user app is never executed as root. Current workstation tests must not
+Do not stop external containers or restart/reload the host Docker service.
+Even stopped foreign containers can have restart policies, and an apparently
+idle daemon is not an exclusive maintenance window. Instead prepare the fixed
+configuration and ask the operator to save work and restart the OS normally,
+as with Windows prerequisites. Native CUDA probing after startup, not a package
+receipt, establishes readiness. The normal user app is never executed as root.
+Current workstation tests must not
 install packages, rewrite daemon settings or restart its Docker service.
+
+The opt-in builder flag is `--linux-gpu`; only that Debian package installs
+`org.ai-station.gpu-access` and its fixed helper. Legacy packages and the separate
+Windows recipe retain their activation policy. Toolkit inputs are shared by
+hash, not downloaded again when `--gpu-cache` points at a verified input bundle.
+
+The native desktop stores its private CPU/pending/restart choice outside mounted
+application data. **Graphics setup** in desktop controls reopens that decision.
+The ordinary Runner receives an optional container-readiness hint for that
+startup; physical GPU telemetry is retained. A CPU choice makes guided chat
+suggest CPU profiles and prevents new managed container GPU loads/images from
+pretending their runtime is ready. Native media and already-owned operations
+retain their existing lifecycle and inspection contracts.
 
 Use the bundled application image for a bounded, owned CUDA-driver query with
 fixed argv, no model, no network or data mounts. Inspect actual device UUIDs;
@@ -70,7 +87,8 @@ reference for compute enumeration, not a new Windows or fresh-host acceptance.
 ## Qualification before activation
 
 - Normal fake/temporary tests: cancel/refusal, UID and path boundaries, immutable
-  inputs, configuration preservation, busy daemon, changed state and lost ack.
+  inputs, configuration preservation, absence of any daemon/container signals,
+  changed state and lost ack.
 - Real disposable Ubuntu OS fixture: OS authentication cancel/accept, actual
   package/daemon setup, retained data and safe repeated inspection. CPU hardware
   observations remain CPU evidence; simulated GPU observations are labeled.
@@ -85,3 +103,12 @@ reference for compute enumeration, not a new Windows or fresh-host acceptance.
 Remain unavailable until the installation permissions, interruption/recovery
 and relevant real platform contracts pass. This is a release requirement, not a
 new unrestricted system-management capability.
+
+### Candidate observations — 2026-11-03
+
+The fixed application-image CUDA query passed on both real local NVIDIA devices
+in 4.3 seconds, without contexts, kernels or weights. Its exact owned probe was
+removed and every pre-existing running container remained running. This proves
+the healthy observation path on the configured workstation, not a fresh-driver
+installation or Windows GPU inference. Actual OS-authentication/package checks
+and the final package qualification remain pending.

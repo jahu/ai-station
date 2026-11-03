@@ -30,6 +30,9 @@ SOURCE = (
     "scripts/desktop_versions.py",
     "scripts/desktop_update_owner.py",
     "scripts/desktop_docker_access.py",
+    "scripts/desktop_gpu.py",
+    "scripts/linux_gpu_probe.py",
+    "scripts/windows_gpu_bundle.py",
     "scripts/desktop_engine.py",
     "scripts/desktop_project.py",
     "packaging/linux/docker_access.py",
@@ -79,8 +82,8 @@ def file_manifest(root):
     return result
 
 
-def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, gpu_cache=None):
-    if gpu_cache is not None and not windows_gpu:
+def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linux_gpu=False, gpu_cache=None):
+    if gpu_cache is not None and not (windows_gpu or linux_gpu):
         raise ValueError("A Windows GPU cache requires the explicit Windows guest package option")
     if platform.system() != "Linux" or platform.machine().lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("Build this package on Linux x86-64")
@@ -98,10 +101,15 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, gpu_
         bundle = stage / "bundle"
         bundle.mkdir()
         copy_sources(bundle)
-        if windows_gpu:
-            shutil.copy2(ROOT / "scripts/windows_gpu_bundle.py", bundle / "scripts/windows_gpu_bundle.py")
+        if windows_gpu or linux_gpu:
             shutil.copy2(ROOT / "scripts/windows_gpu_install.py", bundle / "scripts/windows_gpu_install.py")
             prepare_windows_gpu(bundle / "windows-gpu", cache=gpu_cache)
+        if linux_gpu:
+            shutil.copy2(ROOT / "scripts/linux_gpu_install.py", bundle / "scripts/linux_gpu_install.py")
+            for name in ("gpu_access.py", "org.ai-station.gpu-access.policy"):
+                target = bundle / "packaging/linux" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / "packaging/linux" / name, target)
         shutil.copy2(ROOT / "packaging/linux/requirements.lock", bundle / "native-requirements.lock")
         files = file_manifest(bundle)
         patch = subprocess.check_output(["git", "diff", "HEAD"], cwd=ROOT)
@@ -190,6 +198,8 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, gpu_
         }
         if windows_gpu:
             metadata["windows_gpu_recipe"] = WINDOWS_GPU_RECIPE
+        if linux_gpu:
+            metadata["linux_gpu_recipe"] = WINDOWS_GPU_RECIPE
         (bundle / "desktop-manifest.json").write_text(json.dumps(metadata, indent=2) + "\n")
         os.rename(bundle, output)
     return metadata
@@ -226,6 +236,11 @@ def deb(bundle, metadata):
             raise ValueError("Only the reviewed Windows GPU input recipe can be packaged")
         verify_windows_gpu(bundle / "windows-gpu")
         gpu_field = "X-AI-Station-WSL-GPU-Recipe: " + WINDOWS_GPU_RECIPE + "\n"
+    if "linux_gpu_recipe" in metadata:
+        if metadata["linux_gpu_recipe"] != WINDOWS_GPU_RECIPE:
+            raise ValueError("Only the reviewed native Linux GPU input recipe can be packaged")
+        verify_windows_gpu(bundle / "windows-gpu")
+        gpu_field += "X-AI-Station-Linux-GPU-Recipe: " + WINDOWS_GPU_RECIPE + "\n"
     with tempfile.TemporaryDirectory(prefix=".desktop-deb-", dir=bundle.parent) as temporary:
         root = Path(temporary)
         shutil.copytree(bundle, root / "usr/lib/ai-station", symlinks=True)
@@ -261,6 +276,14 @@ def deb(bundle, metadata):
             ROOT / "packaging/linux/org.ai-station.docker-access.policy",
             policy / "org.ai-station.docker-access.policy",
         )
+        if "linux_gpu_recipe" in metadata:
+            gpu_helper = helper.with_name("gpu-access")
+            shutil.copy2(bundle / "packaging/linux/gpu_access.py", gpu_helper)
+            gpu_helper.chmod(0o755)
+            shutil.copy2(
+                bundle / "packaging/linux/org.ai-station.gpu-access.policy",
+                policy / "org.ai-station.gpu-access.policy",
+            )
         package_permissions(root)
         run("dpkg-deb", "--root-owner-group", "--build", str(root), str(result))
     return result
@@ -278,12 +301,18 @@ def main():
         help="Bundle offline toolkit inputs; never install them on the build host",
     )
     parser.add_argument("--gpu-cache", type=Path, help="Reuse a verified Windows GPU input bundle")
+    parser.add_argument(
+        "--linux-gpu",
+        action="store_true",
+        help="Bundle the reviewed native Linux graphics setup; never install it on the build host",
+    )
     args = parser.parse_args()
     metadata = build(
         args.output.resolve(),
         allow_dirty=args.allow_dirty,
         python_tar=args.python_archive,
         windows_gpu=args.windows_gpu,
+        linux_gpu=args.linux_gpu,
         gpu_cache=args.gpu_cache,
     )
     if args.deb:

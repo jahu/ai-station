@@ -74,6 +74,16 @@ def runtime(tmp_path, monkeypatch):
     clear_settings_cache()
 
 
+def test_unprepared_native_gpu_rejects_load_before_dispatch_but_retains_cpu_path(runtime, monkeypatch):
+    _, body, state = runtime
+    monkeypatch.setenv("AI_STATION_CONTAINER_GPU_READY", "false")
+    clear_settings_cache()
+    with pytest.raises(HTTPException) as error:
+        llama.load(body)
+    assert error.value.status_code == 503 and "Graphics setup" in error.value.detail
+    assert not state["calls"]
+
+
 def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     root, body, state = runtime
     assert llama.load(body)["alive"]

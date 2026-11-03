@@ -1,3 +1,16 @@
+The optional native Linux graphics action is a separate argument-free polkit
+helper in an explicitly built Debian package, never an HTTP/Runner/agent tool.
+It admits only an ordinary invoking account, native Ubuntu 24.04 amd64 and the
+fixed root-owned system Docker socket/service. Root-owned inputs, pinned package
+hashes, the original configuration backup and operation journal are rechecked;
+unknown toolkit installations or later administrator changes refuse mutation.
+It installs only its four toolkit packages and adds the fixed NVIDIA runtime,
+retaining runc and unrelated settings. No host driver/CUDA/kernel/model changes,
+daemon restart/reload or foreign-container signal is allowed. OS restart remains
+an explicit operator action. The unprivileged probe has a private identity
+receipt, immutable app image/query, no mounts/network and exact-ID cleanup.
+[Candidate qualification](plans/linux-gpu-onboarding.md) is still required.
+
 The explicit managed CPU conversation profile accepts only its pinned image and
 verified owned GGUF. Native dispatch rechecks actual cache geometry and the exact
 RAM budget; no GPU devices/visibility, bounded threads, zero GPU layers and equal

@@ -91,6 +91,14 @@ def recommendation(entry, hardware):
             "ram_mib": needed,
             "runtime_profile": entry.runtime_profile,
         }
+    if hardware.get("container_gpu_ready") is False:
+        return {
+            "fits": False,
+            "reason": "Finish Graphics setup from the AI Station desktop controls, "
+            "or choose a CPU conversation model",
+            "gpus": [],
+            "context_size": None,
+        }
     devices = [
         g
         for g in (hardware.get("gpus") or [])
@@ -233,7 +241,7 @@ def catalog(session: DB):
                 "starter": (item.id.startswith("huihui-qwen3-4b-") and item.quantization == "Q4_K_M")
                 if is_native
                 else bool(item.runtime_profile) and not mac
-                if not hardware.get("gpus")
+                if not hardware.get("gpus") or hardware.get("container_gpu_ready") is False
                 else item.id in STARTER_CANDIDATE_IDS,
                 "manifest_sha256": fingerprint(item.model_dump(mode="json")),
                 "recommendation": preset,
@@ -260,11 +268,12 @@ def catalog(session: DB):
             "host": hardware.get("host"),
             "memory": hardware.get("memory"),
             "gpus": hardware.get("gpus", []),
+            "container_gpu_ready": hardware.get("container_gpu_ready"),
         },
         "engine_profile": mac_profile
         if mac
         else "llamacpp-cpu-linux-amd64-v1"
-        if not hardware.get("gpus")
+        if not hardware.get("gpus") or hardware.get("container_gpu_ready") is False
         else "llamacpp-cuda-linux-amd64-v1",
         "platform_notice": "This Mac architecture does not yet have a qualified native conversation engine"
         if mac and not mac_profile

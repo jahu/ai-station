@@ -296,6 +296,12 @@ def load(body: Load | NativeModelLoad):
         raise HTTPException(503, "Container llama.cpp profiles require a Linux Host Runner")
     if not {"manage_models", "filesystem_read"}.issubset(body.permissions):
         raise HTTPException(403, "Runtime loading requires model management and filesystem read")
+    if body.gpus and get_settings().container_gpu_ready is False:
+        raise HTTPException(
+            503,
+            "Finish Graphics setup from the AI Station desktop controls and restart "
+            "AI Station, or choose a CPU conversation model",
+        )
     with locked():
         folder = directory(body.instance_id)
         request = body.model_dump(mode="json")

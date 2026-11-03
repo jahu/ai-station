@@ -24,6 +24,11 @@ def collect(data_dir: Path) -> dict:
         "disk": disk(data_dir),
         "load": load(),
     }
+    from ai_station_runner.config import get_settings
+
+    graphics_ready = get_settings().container_gpu_ready
+    if graphics_ready is not None:
+        result["container_gpu_ready"] = graphics_ready
     if sys.platform == "darwin":
         from ai_station_runner.darwin_metal import observe
 
