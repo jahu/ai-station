@@ -25,6 +25,20 @@ passed 818 native/desktop component cases with five expected platform skips.
 No model or Docker ran in this check, so the full package startup and the
 separately observed GUI/SDK worker integration failures remain open.
 
+The full worker experiment
+[41565419357](https://github.com/jahu/ai-station/actions/runs/41565419357)
+reached account setup and reproduced the SDK failure at the immutable download
+check. Its native observation was an owned, singly linked regular 12,258,802-byte
+archive with the exact expected hash, but mode `0644`. The worker's publication
+calls `chmod(0444)`; that did not produce an immutable native view in this Desktop
+experiment. The native preparation now finalizes write bits on that exact owned
+cache object before the unchanged checksum check. Explicit native GGUF verification
+uses the same metadata-only finalization when needed, with `manage_models`
+permission; readonly inspection/loading and external models keep their contracts.
+The native SDK probe now starts from `0644` and must show unchanged bytes and a
+readonly result. Actual qualification of this correction is pending; it is not
+yet a first-model/consumer-installation success claim.
+
 Two fixed profiles use the existing hash-pinned b12032 ARM/Intel manifests.
 After administrator review of the exact manifest/license, `/api/setup/runtimes`
 queues an ordinary `runtime.prepare` Run using `native_llama_setup`, effective

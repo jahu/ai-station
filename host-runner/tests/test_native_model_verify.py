@@ -52,6 +52,31 @@ def test_native_owned_file_context_and_sdk_return_no_private_setup_coordinates(c
     assert not rig["owner"].processes._live
 
 
+def test_explicit_native_verification_seals_only_the_owned_download(coordinates, rig):
+    api, body = coordinates
+    path = rig["root"] / body["host_path"]
+    path.chmod(0o644)
+    content, before = path.read_bytes(), path.stat()
+    response = api.post("/v1/models/verify", json=body)
+    assert response.status_code == 200 and response.json()["matches_observation"], response.text
+    assert not path.stat().st_mode & 0o222
+    assert path.read_bytes() == content and path.stat().st_mtime_ns == before.st_mtime_ns
+
+
+def test_missing_management_permission_cannot_change_download_metadata(coordinates, rig):
+    api, body = coordinates
+    path = rig["root"] / body["host_path"]
+    path.chmod(0o644)
+    assert api.post("/v1/models/verify", json={**body, "permissions": ["filesystem_read"]}).status_code == 403
+    assert path.stat().st_mode & 0o200
+
+
+def test_readonly_file_with_stale_length_keeps_the_existing_observation_response(coordinates):
+    api, body = coordinates
+    response = api.post("/v1/models/verify", json={**body, "size_bytes": body["size_bytes"] + 1})
+    assert response.status_code == 200 and not response.json()["matches_observation"], response.text
+
+
 @pytest.mark.parametrize(
     "change,status",
     [

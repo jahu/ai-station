@@ -9,6 +9,7 @@ from ai_station_runner.darwin_llama import memory_budget
 from ai_station_runner.darwin_llama_environment import Environment
 from ai_station_runner.gguf_context import inspect_context
 from ai_station_runner.owned_models import verify_owned_model
+from ai_station_runner.owned_store import make_download_readonly
 
 
 def verify(body):
@@ -18,6 +19,12 @@ def verify(body):
     root = get_settings().host_data_dir().resolve(strict=True)
     try:
         checked = environment.resolve_id(root, body.environment_id) if body.environment_id else None
+        # Only this explicit manage_models operation finalizes an app-owned
+        # download. Inspection/loading still requires the normal immutable GGUF
+        # and its frozen size/mtime; external model references never enter here.
+        candidate = root / "models/store" / body.model_sha256
+        if candidate.stat(follow_symlinks=False).st_mode & 0o222:
+            make_download_readonly(root, body.model_sha256, body.size_bytes)
         path = verify_owned_model(root, body.host_path, body.model_sha256)
         info = path.stat()
         matches = info.st_size == body.size_bytes and abs(info.st_mtime - body.mtime) <= 0.001

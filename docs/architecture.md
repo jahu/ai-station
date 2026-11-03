@@ -50,6 +50,11 @@ filesystem with a separate disposable mount. Full Docker Desktop transport,
 guided model setup, Metal, preserving updates/removal and signing acceptance remain
 required before the launcher admits Mac consumer operation.
 
+Native setup finalizes write bits on explicit app-owned downloaded objects before
+the existing SDK checksum/model observation checks. This keeps the host filesystem
+authoritative when the container's readonly publication is not reflected there;
+it grants no access to external model files or arbitrary filesystem operations.
+
 The actual Intel Docker Desktop experiment starts its Linux engine but rejects
 the shared native Unix socket with `EOPNOTSUPP`. The
 [Mac connection contract](plans/macos-runner-transport.md) preserves typed HTTP

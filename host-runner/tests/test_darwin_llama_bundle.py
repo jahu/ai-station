@@ -136,19 +136,25 @@ def test_offline_preparation_verifies_macho_and_materializes_only_regular_files(
         prepare(fixture)
 
 
-@pytest.mark.parametrize("problem", ["size", "hash", "writable", "symlink", "hardlink"])
+def test_sdk_preparation_finalizes_native_download_permissions_without_changing_bytes(fixture):
+    path = fixture["source"]
+    before = path.read_bytes()
+    path.chmod(0o644)  # Actual Mac host observation after container publication.
+    prepare(fixture)
+    assert path.read_bytes() == before and not path.stat().st_mode & 0o222
+
+
+@pytest.mark.parametrize("problem", ["size", "hash", "writable_hash", "symlink", "hardlink"])
 def test_input_must_be_an_exact_immutable_owned_store_object(fixture, problem):
     path = fixture["source"]
     if problem == "size":
         fixture["frozen"]["inputs"][0]["size_bytes"] += 1
-    if problem == "hash":
+    if problem in {"hash", "writable_hash"}:
         path.chmod(0o644)
         raw = bytearray(path.read_bytes())
         raw[-1] ^= 1
         path.write_bytes(raw)
-        path.chmod(0o444)
-    if problem == "writable":
-        path.chmod(0o644)
+        path.chmod(0o444 if problem == "hash" else 0o644)
     if problem == "symlink":
         other = path.with_suffix(".moved")
         path.rename(other)
@@ -226,7 +232,7 @@ def test_bad_native_abi_or_external_dependencies_are_not_published(fixture, chan
 
 def test_cancellation_preserves_partial_operation_without_a_ready_receipt(fixture):
     def check():
-        if fixture["progress"]:
+        if any("completed_files" in entry for entry in fixture["progress"]):
             raise InterruptedError("cooperative cancellation")
 
     with pytest.raises(InterruptedError):

@@ -22,6 +22,17 @@ is no unauthenticated TCP, public bind, shell or Docker authority. Credential
 files stay outside artifacts and server keys stay native. Consumer admission
 remains gated until real transport, lifetime/recovery and installation checks pass.
 
+Explicit native SDK preparation and managed native model verification may finalize
+write bits only on `models/store/<sha256>` in application-owned storage. The native
+descriptor must identify the same owned regular, singly linked, non-executable
+file with the expected length and unchanged inode/mtime. Parent/leaf symlinks,
+foreign owners and aliases are rejected; only write permissions can be removed.
+This handles a Docker Desktop host view that remained writable after the worker's
+publication. It is not checksum adoption: the existing SDK hash verification and
+GGUF download/observation/header checks remain mandatory. Direct model inspection
+and loading still reject writable objects; external registered models are never
+changed. There is no additional endpoint, caller-selected path or shell authority.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates

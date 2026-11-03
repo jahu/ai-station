@@ -15,6 +15,7 @@ from collections import Counter
 from pathlib import Path
 from uuid import UUID
 
+from ai_station_runner.owned_store import make_download_readonly
 from ai_station_runner.speech_environment import directory, fingerprint, verified_object
 
 RELEASE = "b12032"
@@ -230,6 +231,9 @@ def prepare(root, operation_id, architecture, *, check=lambda: None, progress=la
     frozen = recipe(architecture)
     identity = fingerprint(frozen)
     # Reuse the existing immutable store and private environment primitives.
+    progress({"phase": "verifying_inputs"})
+    item = frozen["inputs"][0]
+    make_download_readonly(root, item["sha256"], item["size_bytes"], check=check)
     source = verified_object(root, frozen["inputs"][0], check)
     runtime = root / "runtime"
     if runtime.is_symlink():

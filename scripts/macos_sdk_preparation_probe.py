@@ -89,7 +89,9 @@ def main(architecture, *, run_native_inference=False):
                 output.write(chunk)
             output.flush()
             os.fsync(output.fileno())
-            os.fchmod(output.fileno(), 0o444)
+            # Reproduce the actual Docker Desktop host observation: the worker
+            # published readonly bytes, but the Mac view still exposed0644.
+            os.fchmod(output.fileno(), 0o644)
         if size != item["size_bytes"] or digest.hexdigest() != item["sha256"]:
             raise ValueError("The fixed native SDK dependency changed")
         env = {
@@ -184,6 +186,13 @@ def main(architecture, *, run_native_inference=False):
                 response.raise_for_status()
                 initial = response.json()
                 result = prepared(identity)
+                if (
+                    target.stat().st_mode & 0o222
+                    or hashlib.sha256(target.read_bytes()).hexdigest() != item["sha256"]
+                ):
+                    raise ValueError(
+                        "Native SDK preparation did not finalize its unchanged downloaded object"
+                    )
                 repeated = client.post("/v1/setup/native-llama/prepare", json=body)
                 repeated.raise_for_status()
                 if repeated.json().get("process", {}).get("pid") != result["process"]["pid"]:
