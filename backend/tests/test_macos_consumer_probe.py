@@ -327,6 +327,35 @@ def test_missing_owned_project_cannot_query_any_docker_containers(tmp_path, monk
     assert probe.service_states(None, tmp_path) == {"unavailable": "NoOwnedProject"}
 
 
+def test_native_process_observation_keeps_owned_descendants_without_private_commands(monkeypatch):
+    from types import SimpleNamespace
+
+    output = "\n".join(
+        [
+            "100 1 S 0.2 00:20 /PRIVATE_HOME/AI Station",
+            "101 100 S 1.5 00:19 /PRIVATE_HOME/python3.12",
+            "102 101 S 0.0 00:15 /PRIVATE_HOME/docker-credential-desktop",
+            "103 101 S 0.0 00:12 /PRIVATE_HOME/PRIVATE_EXECUTABLE",
+            "200 1 R 5.0 00:10 /PRIVATE_HOME/docker",
+            "300 301 S 0.0 00:11 /PRIVATE_HOME/python3",
+            "301 300 S 0.0 00:11 /PRIVATE_HOME/python3",
+        ]
+    )
+
+    def query(argv, **kwargs):
+        assert argv == ["/bin/ps", "-A", "-o", "pid=,ppid=,stat=,pcpu=,etime=,comm="]
+        assert kwargs["timeout"] == 5 and kwargs["capture_output"]
+        return SimpleNamespace(stdout=output)
+
+    monkeypatch.setattr(probe.subprocess, "run", query)
+    value = probe.native_process_states([100])
+    assert [row["pid"] for row in value] == [100, 101, 102, 103]
+    assert [row["kind"] for row in value] == ["AI Station", "python", "docker-credential-desktop", "other"]
+    assert "PRIVATE" not in json.dumps(value)
+    with pytest.raises(ValueError):
+        probe.native_process_states([True])
+
+
 def test_sdk_cache_snapshot_reports_only_metadata_and_hash_and_never_follows_a_link(tmp_path, monkeypatch):
     import hashlib
 

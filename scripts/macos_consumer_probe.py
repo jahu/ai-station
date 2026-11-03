@@ -206,6 +206,64 @@ def service_states(engine, state):
     return observed
 
 
+def native_process_states(roots):
+    """Only owned ancestry and fixed process names; never arguments/environment."""
+    if not roots or any(type(pid) is not int or pid <= 0 for pid in roots):
+        raise ValueError("Use live owned QA process identities")
+    result = subprocess.run(
+        ["/bin/ps", "-A", "-o", "pid=,ppid=,stat=,pcpu=,etime=,comm="],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=5,
+    )
+    rows = {}
+    known = {
+        "AI Station",
+        "ai-station-native",
+        "docker",
+        "com.docker.cli",
+        "docker-compose",
+        "docker-credential-desktop",
+        "docker-credential-osxkeychain",
+        "xcodebuild",
+        "xctest",
+    }
+    for line in result.stdout.splitlines():
+        parts = line.split(None, 5)
+        if len(parts) != 6:
+            continue
+        pid, parent, status, cpu, elapsed, command = parts
+        try:
+            pid, parent, cpu = int(pid), int(parent), float(cpu)
+        except ValueError:
+            continue
+        if (
+            pid <= 0
+            or not 0 <= cpu <= 100000
+            or not re.fullmatch(r"[A-Za-z+<>0-9-]{1,12}", status)
+            or not re.fullmatch(r"[0-9:-]{1,24}", elapsed)
+        ):
+            continue
+        name = Path(command).name
+        kind = "python" if re.fullmatch(r"python(?:[0-9.]+)?", name) else name if name in known else "other"
+        rows[pid] = {
+            "pid": pid,
+            "parent_pid": parent,
+            "kind": kind,
+            "state": status,
+            "cpu_percent": cpu,
+            "elapsed": elapsed,
+        }
+    owned = set(roots)
+    while True:
+        added = {pid for pid, row in rows.items() if row["parent_pid"] in owned} - owned
+        if not added:
+            break
+        owned.update(added)
+    return [rows[pid] for pid in sorted(owned) if pid in rows][:32]
+
+
 def execution_environment():
     # CI publication authority stays in this trusted QA parent. Neither build
     # subprocesses nor the installed application/model receive those tokens.
@@ -476,6 +534,7 @@ def main():
             controller = launch_ui("NativeConsumerAcceptanceTests", "gui-result")
         deadline = time.monotonic() + (1200 if first_gui else STARTUP_TIMEOUT)
         observed_stage = None
+        next_process_sample = 0
         while time.monotonic() < deadline:
             if first_gui and startup_errors(root, log_name="commands.private.log")["errors"]:
                 raise RuntimeError("The actual package reported a structured native startup fault")
@@ -484,6 +543,16 @@ def main():
                 observed_stage = current
                 proof["native_startup_stage"] = current
                 progress("startup_" + current)
+            if first_gui and current == "application_services" and time.monotonic() >= next_process_sample:
+                roots = [child.pid for child in [process, *ui_processes] if child.poll() is None]
+                try:
+                    observations = proof.setdefault("native_startup_processes", [])
+                    observations.append(native_process_states(roots))
+                    del observations[:-12]
+                    save()
+                except (OSError, ValueError, subprocess.SubprocessError) as sample_error:
+                    proof["process_observation_unavailable"] = type(sample_error).__name__
+                next_process_sample = time.monotonic() + 30
             if first_gui and controller.poll() not in {None, 0}:
                 raise RuntimeError("The actual native/browser acceptance failed")
             if process.poll() is not None:
