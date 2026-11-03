@@ -81,6 +81,8 @@ def catalog():
     notice = (
         "Managed image generation and guided setup are still being qualified"
         if not image_job.QUALIFIED
+        else "Finish Graphics setup from the AI Station desktop controls and restart AI Station"
+        if hardware.get("container_gpu_ready") is False
         else "A compatible Linux NVIDIA workstation is required"
         if not supported or not capacity_hint
         else "Local Docker storage could not be confirmed"
@@ -111,7 +113,14 @@ def catalog():
             "source": "configured" if configured else "managed",
             "available": configured_available
             if configured
-            else bool(image_job.QUALIFIED and supported and capacity_hint and image and model_files_present),
+            else bool(
+                image_job.QUALIFIED
+                and supported
+                and capacity_hint
+                and image
+                and model_files_present
+                and hardware.get("container_gpu_ready") is not False
+            ),
         },
         "licenses": frozen["component_licenses"],
         "image_inference_tested_now": False,

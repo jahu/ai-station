@@ -1,3 +1,12 @@
+The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
+candidate extends the trusted desktop installer with a separate OS-authenticated
+fixed action. It prepares pinned toolkit inputs and preserves Docker settings,
+then asks the operator to restart the OS; it never restarts/reloads Docker or
+stops other workloads. A normal-user CUDA query establishes actual readiness.
+Private CPU/restart choices remain outside application storage; an optional
+Runner readiness hint gates new container GPU activation without hiding physical
+devices. It is not a Runner/agent tool and remains opt-in pending qualification.
+
 The [guided CPU conversation profile](plans/guided-cpu-conversation.md) reuses
 the same runtime preparation, verified model store and llama.cpp lifecycle.
 Explicit CPU metadata freezes its image, 4096-token Q8 context and native GGUF

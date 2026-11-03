@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     site_preview_image: str = ""
     python_image: str = ""
     llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
+    container_gpu_ready: bool | None = None
     model_roots: str = ""
     allowed_roots: str = ""
     llm_base_url: str = "http://127.0.0.1:11434/v1"

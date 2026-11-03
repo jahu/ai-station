@@ -195,7 +195,8 @@ def test_invalid_host_port_cannot_start_a_desktop_child(tmp_path, monkeypatch, p
     spawn.assert_not_called()
 
 
-def test_host_selected_port_overrides_only_the_owned_child_environment(tmp_path, monkeypatch):
+@pytest.mark.parametrize("graphics", ["cpu", "ready", None])
+def test_host_selected_port_overrides_only_the_owned_child_environment(tmp_path, monkeypatch, graphics):
     proc = Mock()
     proc.stdout = io.StringIO()
     proc.poll.return_value = None
@@ -205,8 +206,18 @@ def test_host_selected_port_overrides_only_the_owned_child_environment(tmp_path,
     config = tmp_path / "config"
     config.write_text("AI_STATION_PORT=8765\n")
     with pytest.raises(RuntimeError, match="could not start"):
-        desktop.supervise(tmp_path, config, {"image_tag": "owned"}, io.StringIO(), host_port=8789)
+        desktop.supervise(
+            tmp_path,
+            config,
+            {"image_tag": "owned"},
+            io.StringIO(),
+            host_port=8789,
+            container_gpu_status=graphics,
+        )
     assert spawn.call_args.kwargs["env"]["AI_STATION_PORT"] == "8789"
+    assert spawn.call_args.kwargs["env"].get("AI_STATION_CONTAINER_GPU_READY") == (
+        None if graphics is None else "false" if graphics == "cpu" else "true"
+    )
     assert config.read_text() == "AI_STATION_PORT=8765\n"
     proc.terminate.assert_called_once()
 

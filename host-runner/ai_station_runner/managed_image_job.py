@@ -650,6 +650,12 @@ def start(body: Start):
             if record.get("cancel_requested") and not record.get("create"):
                 return canceled_result(identity)
         else:
+            if get_settings().container_gpu_ready is False:
+                raise HTTPException(
+                    503,
+                    "Finish Graphics setup from the AI Station desktop controls "
+                    "and restart AI Station before starting managed images",
+                )
             frozen = recipe()
             if not QUALIFIED or body.manifest_sha256 != fingerprint(frozen):
                 raise HTTPException(409, "This image profile is not qualified or its manifest changed")

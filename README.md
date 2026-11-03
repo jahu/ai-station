@@ -41,6 +41,9 @@ more control.
 > Linux and Windows. macOS is deferred due to known startup issues. The full download-and-install
 > experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
 
+Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
+result, and updates that keep your accounts, models and saved work.
+
 ## Help make it simple
 
 **We especially need testers and feedback.** Try AI Station on your hardware and

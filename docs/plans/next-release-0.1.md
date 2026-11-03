@@ -16,6 +16,7 @@ Stop/Start and retained data are the release path. macOS is deferred below.
 | --- | --- |
 | Ubuntu 24.04 x86-64 clean installation | Native OS install/consent, first CPU-model download/reply, preserving update/removal/reinstall passed. |
 | Linux NVIDIA workstation | The declared local LLM/media profiles have separate real GPU qualification; this is not every GPU or distribution. |
+| Fresh native Linux NVIDIA prerequisites | Guided Container Toolkit preparation is missing; the existing configured workstation does not qualify this clean-machine journey. See the [native setup plan](linux-gpu-onboarding.md). |
 | Windows 11 x64 private WSL2 installation | Actual installed CPU reply, preserving updates, native Start/Stop, saved login/history and ordinary OS-restart recovery passed. |
 | Physical Windows NVIDIA inference | Not yet tested. The evaluation VM has no physical GPU; Linux GPU and Windows CPU evidence do not substitute for it. |
 
@@ -28,6 +29,11 @@ profiles remain intact; there is no new execution architecture or UI rewrite.
 
 The remaining release gates are explicit:
 
+- Complete and qualify the native Linux GPU prerequisite flow, keeping the
+  current host/working runtimes intact and OS changes behind explicit native
+  administrator consent. [Observed gap and contract](linux-gpu-onboarding.md).
+- Prepare final stable package metadata rather than publishing the private
+  Debian builder's hard-coded `0.1.0~preview` packages as a finished release.
 - Qualify actual Windows NVIDIA model load/reply, scoped Stop and recovery on
   physical hardware before claiming that GPU path works for consumers.
 - Resolve installer signing/distribution acceptance. Current private Windows

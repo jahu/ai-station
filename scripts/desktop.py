@@ -448,6 +448,7 @@ def supervise(
     instance_id=None,
     host_port=None,
     engine=None,
+    container_gpu_status=None,
 ):
     instance_id = instance_id or uuid4().hex
     readiness("http://127.0.0.1:8765", instance_id)
@@ -463,6 +464,10 @@ def supervise(
         if type(host_port) is not int or not 8765 <= host_port < 8865:
             raise ValueError("Choose a local desktop port between 8765 and 8864")
         env["AI_STATION_PORT"] = str(host_port)
+    if container_gpu_status is not None:
+        if container_gpu_status not in {"ready", "cpu"}:
+            raise ValueError("Unexpected native graphics readiness")
+        env["AI_STATION_CONTAINER_GPU_READY"] = "true" if container_gpu_status == "ready" else "false"
     docker_handoff = []
     if engine is not None and engine.identity is not None:
         # The child re-discovers and compares both coordinates before any engine
@@ -540,7 +545,13 @@ def supervise(
             return proc.poll() is None and not stopped.is_set()
 
         if not console and not background:
-            if running_window(url, active=active) == "stop":
+            graphics_options = {}
+            if platform.system() == "Linux" and (root / "desktop-manifest.json").is_file():
+                from desktop_gpu import enabled
+
+                if enabled(value):
+                    graphics_options["graphics"] = lambda: graphics_setup(config.parent)
+            if running_window(url, active=active, **graphics_options) == "stop":
                 return
         if control is not None:
             control.background.set()
@@ -554,7 +565,7 @@ def supervise(
         reader.join(timeout=5)
 
 
-def running_window(url, *, active):
+def running_window(url, *, active, graphics=None):
     """Closing the native window leaves work running; Stop is always explicit."""
     if platform.system() == "Darwin":
         from macos_desktop_ui import running_window as native_running_window
@@ -572,6 +583,7 @@ def running_window(url, *, active):
                 "--ok-label=Open AI Station",
                 "--cancel-label=Run in background",
                 "--extra-button=Stop AI Station",
+                *(["--extra-button=Graphics setup"] if graphics is not None else []),
             ],
             stdout=subprocess.PIPE,
             text=True,
@@ -588,6 +600,9 @@ def running_window(url, *, active):
                 window.wait(timeout=5)
         if answer.strip() == "Stop AI Station":
             return "stop"
+        if answer.strip() == "Graphics setup" and graphics is not None:
+            graphics()
+            continue
         if window.returncode != 0:
             return "background"
         webbrowser.open(url)
@@ -613,7 +628,13 @@ def existing_controls(root):
     url = ready_url(root)
     if url is None:
         return
-    if running_window(url, active=active) == "stop":
+    options = {}
+    if platform.system() == "Linux" and (ROOT / "desktop-manifest.json").is_file():
+        from desktop_gpu import enabled
+
+        if enabled(manifest(ROOT)):
+            options["graphics"] = lambda: graphics_setup(root)
+    if running_window(url, active=active, **options) == "stop":
         control_request(control_directory(root), "stop", instance_id=instance_id)
 
 
@@ -663,6 +684,30 @@ class Preparation:
         if self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
             self.proc.wait(timeout=5)
+
+
+def graphics_setup(root):
+    """Desktop icon controls only; this never runs inside the web application."""
+    from desktop_gpu import prepare
+
+    value = manifest(ROOT)
+    verify(ROOT, value)
+    progress = Preparation(False)
+    try:
+        engine = select_engine(launch_environment())
+        with (root / "desktop.log").open("a", encoding="utf-8") as log:
+            progress.stage("Checking local graphics support…")
+            import_image(ROOT, value, log, engine=engine)
+            result = prepare(root, value, engine, before_dialog=progress.close, force=True)
+        progress.close()
+        if result == "ready":
+            dialog(
+                "--info",
+                "--text=GPU access is ready. If AI Station was started in CPU mode, "
+                "stop it from the desktop controls and open it again to refresh model suggestions.",
+            )
+    finally:
+        progress.close()
 
 
 def unowned_supervisor_active(root):
@@ -905,6 +950,31 @@ def main():
                 import_image(installed, value, log, engine=engine)
                 if control.stop_requested.is_set():
                     return
+                graphics_status = None
+                if platform.system() == "Linux":
+                    from desktop_gpu import prepare
+
+                    progress.stage("Checking local graphics support…")
+                    graphics_dialog_opened = []
+
+                    def before_graphics_dialog():
+                        progress.close()
+                        graphics_dialog_opened.append(True)
+
+                    graphics_status = prepare(
+                        root,
+                        value,
+                        engine,
+                        before_dialog=before_graphics_dialog,
+                        stop_requested=control.stop_requested.is_set,
+                        console=args.console,
+                    )
+                    if graphics_status == "canceled":
+                        return
+                    if graphics_status == "not_applicable":
+                        graphics_status = None
+                    if graphics_dialog_opened:
+                        progress = Preparation(args.console)
                 if platform.system() == "Darwin":
                     from desktop_bridge import check as check_bridge
 
@@ -944,6 +1014,7 @@ def main():
                     instance_id=instance_id,
                     host_port=args.host_port,
                     engine=engine,
+                    container_gpu_status=graphics_status,
                 )
         finally:
             progress.close()

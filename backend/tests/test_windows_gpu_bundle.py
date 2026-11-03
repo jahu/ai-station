@@ -180,3 +180,44 @@ def test_a_cache_cannot_implicitly_enable_windows_gpu_packaging(tmp_path):
 
     with pytest.raises(ValueError, match="explicit"):
         builder.build(tmp_path / "package", gpu_cache=tmp_path / "cache")
+
+
+@pytest.mark.skipif(not shutil.which("dpkg-deb"), reason="Debian package inspection requires dpkg-deb")
+def test_native_linux_gpu_package_has_only_its_separately_authenticated_fixed_action(tmp_path, publisher):
+    import build_linux_package as builder
+
+    root = tmp_path / "desktop"
+    (root / "packaging/linux").mkdir(parents=True)
+    for name in ("gpu_access.py", "org.ai-station.gpu-access.policy"):
+        shutil.copy2(builder.ROOT / "packaging/linux" / name, root / "packaging/linux" / name)
+    bundle.prepare(root / "windows-gpu")
+    metadata = {"source_epoch": 1793520000, "bundle_id": "b" * 64, "linux_gpu_recipe": bundle.RECIPE}
+    package = builder.deb(root, metadata)
+    fields = subprocess.check_output(["dpkg-deb", "--field", str(package)], text=True)
+    assert "X-AI-Station-Linux-GPU-Recipe: " + bundle.RECIPE in fields
+    assert "X-AI-Station-WSL-GPU-Recipe" not in fields
+    destination = tmp_path / "unpacked"
+    subprocess.run(["dpkg-deb", "--extract", str(package), str(destination)], check=True)
+    helper = destination / "usr/libexec/ai-station/gpu-access"
+    assert helper.read_text().startswith("#!/usr/lib/ai-station/python/bin/python3 -IBS")
+    assert helper.stat().st_mode & 0o777 == 0o755
+    policy = (destination / "usr/share/polkit-1/actions/org.ai-station.gpu-access.policy").read_text()
+    assert "auth_admin_keep" not in policy and policy.count(">auth_admin<") == 3
+    assert "/usr/libexec/ai-station/gpu-access" in policy
+
+
+def test_shared_offline_files_cannot_alias_different_OS_activation_policies():
+    import build_linux_package as builder
+
+    files, head, patch = {"same-offline-input": "a" * 64}, "b" * 40, b""
+    choices = {
+        builder.bundle_identity(files, head, patch, windows_gpu=windows_enabled, linux_gpu=linux_enabled)
+        for windows_enabled in (False, True)
+        for linux_enabled in (False, True)
+    }
+    assert len(choices) == 4
+    legacy = {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}
+    assert (
+        builder.bundle_identity(files, head, patch)
+        == hashlib.sha256(json.dumps(legacy, sort_keys=True).encode()).hexdigest()
+    )

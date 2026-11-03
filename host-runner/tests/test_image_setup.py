@@ -97,6 +97,19 @@ def test_two_gpu_candidate_does_not_promise_readiness_on_a_single_gpu(setup, cat
     assert not setup.state["starts"]
 
 
+def test_toolkit_not_ready_is_not_confused_with_missing_physical_vram(setup, catalog, monkeypatch):
+    monkeypatch.setattr(managed_image_job, "QUALIFIED", True)
+    hardware = {
+        "gpus": [{"index": i, "memory_total_mib": 12288} for i in (2, 7)],
+        "container_gpu_ready": False,
+    }
+    monkeypatch.setattr(image_setup, "collect", lambda _: hardware)
+    result = image_setup.catalog()
+    assert result["hardware"]["gpus"] == hardware["gpus"]
+    assert not result["installation_available"] and "Graphics setup" in result["installation_notice"]
+    assert not setup.state["starts"]
+
+
 @pytest.mark.parametrize("qualified", [False, True])
 def test_existing_configured_pipeline_keeps_priority(setup, catalog, monkeypatch, qualified):
     monkeypatch.setattr(managed_image_job, "QUALIFIED", qualified)
