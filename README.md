@@ -41,12 +41,8 @@ more control.
 > Linux and Windows. macOS is deferred due to known startup issues. The full download-and-install
 > experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
 
-For release 0.1 we are checking the first installation, first local reply,
-restarts and updates on Linux and Windows. The opt-in
-[Linux graphics setup candidate](docs/plans/linux-gpu-onboarding.md) now has real
-OS authentication/recovery checks and a packaged CUDA check; fresh NVIDIA
-hardware qualification remains a separate release gate. This does not change
-the published v0.0.2 installation instructions.
+Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
+result, and updates that keep your accounts, models and saved work.
 
 ## Help make it simple
 
