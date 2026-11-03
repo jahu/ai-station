@@ -145,6 +145,17 @@ final class NativeConsumerAcceptanceTests: XCTestCase {
         page.secureTextFields.element(boundBy: 1).click()
         page.secureTextFields.element(boundBy: 1).typeText("synthetic private desktop acceptance password")
         page.buttons["Create your account"].click()
+        XCTAssertTrue(page.buttons["Sign out"].waitForExistence(timeout: 30))
+        // First sign-in may open the ordinary conversation. Follow the same
+        // visible Models navigation as a user instead of assuming a redirect.
+        if !page.staticTexts["Set up your models"].exists {
+            page.links["Models"].click()
+            let setupModels = page.links.matching(NSPredicate(
+                format: "label BEGINSWITH %@", "Set up a local model"
+            )).firstMatch
+            XCTAssertTrue(setupModels.waitForExistence(timeout: 30))
+            setupModels.click()
+        }
         XCTAssertTrue(page.staticTexts["Set up your models"].waitForExistence(timeout: 30))
     }
 }
