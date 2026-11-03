@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-def main(architecture):
+def main(architecture, *, run_native_inference=False):
     if (
         platform.system() != "Darwin"
         or platform.machine() != architecture
@@ -134,6 +134,22 @@ def main(architecture):
         )
         if result.returncode or result.stdout or result.stderr:
             raise ValueError("The isolated update coordinator or native progress presentation failed")
+        # Exercise the native subprocess barrier/SDK using the interpreter at
+        # its actual .app path, including spaces, rather than only the separate
+        # producer layer. The image stays an explicitly neutral fixture.
+        subprocess.run(
+            [
+                str(resources / "python/bin/python3.12"),
+                "-IB",
+                str(root / "scripts/macos_sdk_preparation_probe.py"),
+                architecture,
+                *(["--run-native-inference"] if run_native_inference else []),
+            ],
+            cwd=work,
+            env=env,
+            timeout=600,
+            check=True,
+        )
         (output / "Contents/Resources/control-plane.tar").write_bytes(b"changed fixture")
         result = run("--package-check")
         if result.returncode != 1 or "missing or changed" not in result.stderr:
@@ -149,6 +165,7 @@ def main(architecture):
         "os_version": platform.mac_ver()[0],
         "native_bundle_entry_passed": True,
         "actual_installed_python": True,
+        "native_sdk_from_actual_bundle": True,
         "package_check_passed": True,
         "isolated_packaged_supervisor_import_passed": True,
         "isolated_packaged_bridge_import_passed": True,
@@ -160,7 +177,7 @@ def main(architecture):
         "station_data_created": False,
         "fixture_image_only": True,
         "docker_desktop_tested": False,
-        "model_inference_tested": False,
+        "model_inference_tested": run_native_inference,
         "macos_installer_qualified": False,
     }
     print(json.dumps(value, sort_keys=True))
@@ -168,6 +185,6 @@ def main(architecture):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in {2, 3} or (len(sys.argv) == 3 and sys.argv[2] != "--run-native-inference"):
         raise SystemExit("Choose the native architecture")
-    main(sys.argv[1])
+    main(sys.argv[1], run_native_inference=len(sys.argv) == 3)

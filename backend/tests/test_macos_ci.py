@@ -52,6 +52,15 @@ def test_native_mac_job_is_owner_manual_public_only_on_standard_free_labels():
     )
     assert "--allow-dirty" not in application_build["run"]
     assert "scripts/macos_application_python.py" in application_build["run"]
+    bundle = next(
+        step
+        for step in job["steps"]
+        if step.get("name") == "Exercise actual bundle entry and its native SDK with neutral image fixture"
+    )
+    assert 'if [ "${{ inputs.operation }}" = "macos-native-inference" ]; then' in bundle["run"]
+    assert bundle["run"].count("--run-native-inference") == 1
+    ordinary = bundle["run"].split("\nelse\n", 1)[1].split("\nfi", 1)[0]
+    assert "scripts/macos_bundle_probe.py" in ordinary and "--run-native-inference" not in ordinary
     for name in ("python", "windows-contracts", "frontend", "docker"):
         assert value["jobs"][name]["if"] == "inputs.operation == 'checks'"
 
@@ -65,12 +74,14 @@ def test_import_probe_cannot_run_target_acceptance_on_linux(monkeypatch):
         probe.main()
 
 
-def test_bundle_entry_probe_refuses_another_platform_before_any_package_or_process(monkeypatch):
+@pytest.mark.parametrize("inference", [False, True])
+def test_bundle_entry_probe_refuses_another_platform_before_any_package_or_process(monkeypatch, inference):
     import macos_bundle_probe as probe
 
     monkeypatch.setattr(probe.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(probe.subprocess, "run", lambda *a, **kw: pytest.fail("Unexpected real process"))
     with pytest.raises(RuntimeError, match="native Mac"):
-        probe.main("arm64")
+        probe.main("arm64", run_native_inference=inference)
 
 
 def test_sdk_probe_requires_actual_installed_native_python_before_any_download(monkeypatch):

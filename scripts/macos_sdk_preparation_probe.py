@@ -59,7 +59,9 @@ def main(architecture, *, run_native_inference=False):
     model_proof = {}
     with tempfile.TemporaryDirectory(prefix="ais-sdk-", dir="/private/tmp") as temporary:
         work = Path(temporary).resolve()
-        data, socket = work / "data", work / "uds/runner.sock"
+        # Match normal user storage names instead of qualifying ASCII-only,
+        # no-space fixture paths. Keep the native UDS coordinate short.
+        data, socket = work / "Private data, Żółw", work / "uds/runner.sock"
         data.mkdir(mode=0o700)
         socket.parent.mkdir(mode=0o700)
         store = data / "models/store"

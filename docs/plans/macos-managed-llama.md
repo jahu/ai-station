@@ -7,6 +7,14 @@ inference or Linux image/media recipes.
 
 ## Native SDK preparation
 
+The native qualification job now exercises SDK preparation from the interpreter
+inside the actual assembled `.app`, rather than only its separate producer layer.
+Its disposable data folder contains spaces and Polish characters, while the UDS
+path remains short. The SDK is downloaded once for this test; normal checks still
+run no model, and real CPU inference requires the existing explicit operation.
+The application image in this component fixture stays neutral: passing this check
+would qualify relocation/SDK ownership, not Docker or consumer installation.
+
 Two fixed profiles use the existing hash-pinned b12032 ARM/Intel manifests.
 After administrator review of the exact manifest/license, `/api/setup/runtimes`
 queues an ordinary `runtime.prepare` Run using `native_llama_setup`, effective
