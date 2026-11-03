@@ -30,6 +30,13 @@ READY_FILE = "desktop-ready.json"
 DESKTOP_PROTOCOL = 2
 WSL_UPDATE_PENDING = Path("/usr/lib/ai-station-wsl-update-pending.json")
 DARWIN_RUNTIME_PARENT = Path("/private/tmp")
+STARTUP_STAGES = {
+    "Checking and preparing your private application folder…": "retained_application",
+    "Preparing the bundled application image…": "application_image",
+    "Checking private communication and your data filesystem…": "private_bridge",
+    "Checking your persistent application database…": "persistent_database",
+    "Starting your local AI Station…": "application_services",
+}
 # Isolated packaged Python deliberately ignores ambient Python module paths.
 sys.path.insert(0, str(ROOT / "scripts"))
 from desktop_control import DesktopControl  # noqa: E402
@@ -670,6 +677,10 @@ class Preparation:
             )
 
     def stage(self, text):
+        if text in STARTUP_STAGES:
+            # Fixed phase codes are safe in native/console diagnostics. Never
+            # copy arbitrary presentation text, paths or setup authority here.
+            print(json.dumps({"desktop_startup_stage": STARTUP_STAGES[text]}), flush=True)
         if self.native is not None:
             self.native.stage(text)
             return

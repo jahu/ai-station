@@ -1,5 +1,6 @@
 """Opt-in fresh Intel Mac package/backend experiment; never consumer UI proof."""
 
+import hashlib
 import http.cookiejar
 import json
 import os
@@ -22,6 +23,119 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 MODEL = "huihui-qwen3-4b-2507-q4km-macos-x86-64-cpu"
 MODEL_SHA = "b1324e2f1bd2e0610d591f54f93e38d90b187f69d1f215f4cace349eade678d7"
 PROFILE = "llamacpp-native-darwin-x86_64-b12032-v2"
+# The real startup includes independent 180-second bridge and readiness budgets
+# plus package retention and database preparation. A 300-second whole-operation
+# limit can cancel these legitimate steps before their own bounds are reached.
+STARTUP_TIMEOUT = 900
+
+
+def startup_stage(path, *, after=0):
+    from desktop import STARTUP_STAGES
+
+    latest = None
+    if path.is_file():
+        with path.open(errors="replace") as stream:
+            stream.seek(after)
+            for line in stream:
+                if not line.startswith('{"desktop_startup_stage": '):
+                    continue
+                try:
+                    value = json.loads(line).get("desktop_startup_stage")
+                except ValueError:
+                    continue
+                if value in STARTUP_STAGES.values():
+                    latest = value
+    return latest
+
+
+def sdk_cache_state(state):
+    """Inspect only the pinned public SDK object's metadata/hash, never its bytes."""
+    from ai_station_runner.darwin_llama_environment import Environment
+
+    item = Environment(PROFILE).recipe()["inputs"][0]
+    path = state / "data/models/store" / item["sha256"]
+    try:
+        if path.parent.resolve() != path.parent:
+            raise ValueError("The SDK cache parent changed")
+        info = path.lstat()
+    except FileNotFoundError:
+        return {"exists": False}
+    result = {
+        "exists": True,
+        "diagnostic_only": True,
+        "symlink": stat.S_ISLNK(info.st_mode),
+        "size_bytes": info.st_size,
+        "expected_bytes": item["size_bytes"],
+        "uid": info.st_uid,
+        "native_uid": os.geteuid(),
+        "link_count": info.st_nlink,
+        "mode": oct(stat.S_IMODE(info.st_mode)),
+    }
+    if stat.S_ISREG(info.st_mode) and info.st_uid == os.geteuid() and info.st_size == item["size_bytes"]:
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as stream:
+            result["sha256_matches"] = hashlib.file_digest(stream, "sha256").hexdigest() == item["sha256"]
+    return result
+
+
+def service_states(engine, state):
+    """Read only fixed service state codes in this fresh QA station's project."""
+    from dotenv import dotenv_values
+
+    project = dotenv_values(state / "desktop.env", interpolate=False).get("COMPOSE_PROJECT_NAME")
+    if not isinstance(project, str) or not re.fullmatch(r"ai-station-desktop-[a-f0-9]{12}", project):
+        return {"unavailable": "NoOwnedProject"}
+
+    def query(*args):
+        result = subprocess.run(
+            engine.command(*args), env=engine.environment, capture_output=True, text=True, timeout=5
+        )
+        if result.returncode:
+            raise RuntimeError("Owned service inspection failed")
+        return result.stdout
+
+    observed = []
+    rows = query(
+        "container",
+        "ls",
+        "--all",
+        "--no-trunc",
+        "--filter",
+        "label=com.docker.compose.project=" + project,
+        "--format",
+        '{{.ID}} {{.Label "com.docker.compose.service"}}',
+    )
+    for row in rows.splitlines()[:8]:
+        parts = row.split()
+        if (
+            len(parts) != 2
+            or not re.fullmatch(r"[a-f0-9]{64}", parts[0])
+            or parts[1] not in {"ai-station", "worker", "scheduler", "search", "runner-connection"}
+        ):
+            continue
+        value = json.loads(query("container", "inspect", parts[0], "--format", "{{json .State}}"))
+        if not isinstance(value, dict):
+            raise ValueError("Unexpected owned service state")
+        item = {"service": parts[1]}
+        if value.get("Status") in {
+            "created",
+            "running",
+            "restarting",
+            "removing",
+            "paused",
+            "exited",
+            "dead",
+        }:
+            item["status"] = value["Status"]
+        if type(value.get("ExitCode")) is int:
+            item["exit_code"] = value["ExitCode"]
+        if type(value.get("OOMKilled")) is bool:
+            item["oom_killed"] = value["OOMKilled"]
+        health = value.get("Health")
+        health = health.get("Status") if isinstance(health, dict) else None
+        if health in {"healthy", "unhealthy", "starting"}:
+            item["health"] = health
+        observed.append(item)
+    return observed
 
 
 def execution_environment():
@@ -191,8 +305,10 @@ def main():
     gui = os.environ.get("AI_STATION_REAL_MAC_CONSUMER_GUI_TESTS") == "1"
     proof = {"consumer_gui_qualified": False, "macos_installer_qualified": False, "console_entry": not gui}
     stage = "build"
+    startup_offset = 0
     processes = []
     ui_processes = []
+    engine = None
     log = (root / "commands.private.log").open("w")
 
     def save():
@@ -227,8 +343,11 @@ def main():
         )
 
     def start(executable, *, first_gui=False):
+        nonlocal startup_offset
         import desktop
 
+        log.flush()
+        startup_offset = os.fstat(log.fileno()).st_size
         process = subprocess.Popen(
             [str(executable), *([] if gui else ["--console", "--background"])],
             stdout=log,
@@ -264,8 +383,14 @@ def main():
                 stderr=subprocess.STDOUT,
             )
             ui_processes.append(controller)
-        deadline = time.monotonic() + (900 if first_gui else 300)
+        deadline = time.monotonic() + (1200 if first_gui else STARTUP_TIMEOUT)
+        observed_stage = None
         while time.monotonic() < deadline:
+            current = startup_stage(root / "commands.private.log", after=startup_offset)
+            if current and current != observed_stage:
+                observed_stage = current
+                proof["native_startup_stage"] = current
+                progress("startup_" + current)
             if first_gui and controller.poll() not in {None, 0}:
                 raise RuntimeError("The actual native/browser acceptance failed")
             if process.poll() is not None:
@@ -486,11 +611,23 @@ def main():
         status.post("success", "Backend scenario passed; full GUI/installer still unqualified")
     except BaseException as error:
         proof.update(passed=False, stage=stage, **failure(error))
+        proof["native_startup_stage"] = startup_stage(root / "commands.private.log", after=startup_offset)
         proof["startup_files_present"] = [
             name for name in ("desktop.env", "desktop.log", "desktop-ready.json") if (state / name).is_file()
         ]
         save()  # Preserve the fault before bounded process cleanup can block.
         print(json.dumps({"experiment_failed_at": stage, **failure(error)}), flush=True)
+        try:
+            if engine is not None:
+                proof["owned_service_states"] = service_states(engine, state)
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            proof["service_inspection_unavailable"] = True
+        if stage == "prepare_native_engine":
+            try:
+                proof["native_sdk_cache"] = sdk_cache_state(state)
+            except (OSError, ValueError):
+                proof["sdk_cache_inspection_unavailable"] = True
+        save()
         try:
             status.post("failure", f"{stage}: {type(error).__name__}")
         except (OSError, RuntimeError, subprocess.SubprocessError):

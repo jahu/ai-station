@@ -131,6 +131,24 @@ without logging exception messages, account data or setup URLs. The experiment
 also records only which fixed startup files exist before cleanup. These changes
 make the next fault inspectable; they are not a claimed fix for that startup.
 
+[Console run 41560567049](https://github.com/jahu/ai-station/actions/runs/41560567049)
+also reached the 300-second whole-startup observation limit, with its configuration
+and private desktop log present but no readiness record. It did not reach account
+or SDK preparation. That limit is shorter than the permitted sequential bridge
+and API-readiness operations (180 seconds each), before package retention and
+database preparation are counted. The QA budget now covers that aggregate path;
+the application's own operation deadlines and failure assertions are unchanged.
+The browser assertion includes the preceding native installation time as well.
+
+The launcher emits only fixed startup phase codes alongside its existing visible
+progress. QA publishes phase changes and reads only the fresh owned Compose
+project's fixed service state/health/exit/OOM fields before cleanup. It never
+publishes container environments, health logs or raw errors. An SDK failure can
+also record only the pinned public archive's native metadata and hash result,
+without following a cache symlink or modifying/adopting the object. These are
+diagnostic observations, not a waiver or evidence that the earlier failures are
+fixed. Inspect the next actual runs before making a startup/model claim.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

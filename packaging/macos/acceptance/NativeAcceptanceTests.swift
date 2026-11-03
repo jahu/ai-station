@@ -98,7 +98,7 @@ final class NativeAcceptanceTests: XCTestCase {
 final class NativeConsumerAcceptanceTests: XCTestCase {
     func testActualFirstLaunchAndBrowserAdministratorSetup() throws {
         continueAfterFailure = false
-        executionTimeAllowance = 600
+        executionTimeAllowance = 1200
         let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let root = repository.appendingPathComponent(".tools/mac-consumer-experiment")
@@ -118,7 +118,9 @@ final class NativeConsumerAcceptanceTests: XCTestCase {
         let handler = try XCTUnwrap(NSWorkspace.shared.urlForApplication(toOpen: URL(string: "http://127.0.0.1")!))
         let identity = try XCTUnwrap(Bundle(url: handler)?.bundleIdentifier)
         let browser = XCUIApplication(bundleIdentifier: identity) // Attach to the browser opened by the product.
-        XCTAssertTrue(browser.wait(for: .runningForeground, timeout: 300))
+        // The browser opens after package retention, bridge, database and API
+        // startup, each with its own bounded operation. Include that whole path.
+        XCTAssertTrue(browser.wait(for: .runningForeground, timeout: 900))
         let page = browser.webViews.firstMatch
         let username = page.textFields["Username"]
         XCTAssertTrue(username.waitForExistence(timeout: 60))

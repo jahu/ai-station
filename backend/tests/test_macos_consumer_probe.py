@@ -113,6 +113,107 @@ def test_gui_failure_coordinates_are_available_before_its_modal_dialog(capsys):
     assert "PRIVATE" not in captured.err
 
 
+def test_only_fixed_startup_codes_are_reported_and_restart_does_not_reuse_old_phase(tmp_path):
+    log = tmp_path / "commands.log"
+    old = '{"desktop_startup_stage": "application_services"}\n'
+    log.write_text(old + '{"desktop_startup_stage": "PRIVATE_SETUP_URL"}\nPRIVATE_OTHER_LINE\n')
+    assert probe.startup_stage(log) == "application_services"
+    assert probe.startup_stage(log, after=len(old.encode())) is None
+    with log.open("a") as output:
+        output.write('{"desktop_startup_stage": "private_bridge", "password": "PRIVATE_FIELD"}\n')
+    assert probe.startup_stage(log, after=len(old.encode())) == "private_bridge"
+
+
+def test_gui_progress_emits_only_a_known_startup_code(monkeypatch, capsys):
+    import desktop
+
+    stages = []
+    progress = desktop.Preparation.__new__(desktop.Preparation)
+    progress.native = type("Native", (), {"stage": lambda _, value: stages.append(value)})()
+    progress.proc = None
+    progress.stage("PRIVATE_PRESENTATION_TEXT")
+    assert capsys.readouterr().out == ""
+    progress.stage("Checking private communication and your data filesystem…")
+    assert json.loads(capsys.readouterr().out) == {"desktop_startup_stage": "private_bridge"}
+    assert stages[0] == "PRIVATE_PRESENTATION_TEXT"
+
+
+def test_service_diagnostics_inspect_only_the_owned_project_without_secret_log_fields(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    (tmp_path / "desktop.env").write_text('COMPOSE_PROJECT_NAME="ai-station-desktop-0123456789ab"\n')
+    identity = "a" * 64
+    calls = []
+    engine = SimpleNamespace(command=lambda *args: ["/fixed/docker", *args], environment={"PATH": "/bin"})
+
+    def query(argv, **kwargs):
+        calls.append((argv, kwargs))
+        if "ls" in argv:
+            return SimpleNamespace(returncode=0, stdout=identity + " ai-station\n" + "b" * 64 + " other\n")
+        return SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "Status": "running",
+                    "ExitCode": 0,
+                    "OOMKilled": False,
+                    "Error": "PRIVATE_ERROR",
+                    "Health": {"Status": "starting", "Log": [{"Output": "PRIVATE_SETUP_URL"}]},
+                }
+            ),
+        )
+
+    monkeypatch.setattr(probe.subprocess, "run", query)
+    value = probe.service_states(engine, tmp_path)
+    assert value == [
+        {
+            "service": "ai-station",
+            "status": "running",
+            "exit_code": 0,
+            "oom_killed": False,
+            "health": "starting",
+        }
+    ]
+    assert len(calls) == 2
+    assert "label=com.docker.compose.project=ai-station-desktop-0123456789ab" in calls[0][0]
+    assert calls[1][0][1:4] == ["container", "inspect", identity]
+    assert all(kwargs["timeout"] == 5 and kwargs["capture_output"] for _, kwargs in calls)
+    assert "PRIVATE" not in json.dumps(value)
+
+
+def test_missing_owned_project_cannot_query_any_docker_containers(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe.subprocess, "run", lambda *a, **kw: pytest.fail("Unexpected Docker query"))
+    assert probe.service_states(None, tmp_path) == {"unavailable": "NoOwnedProject"}
+
+
+def test_sdk_cache_snapshot_reports_only_metadata_and_hash_and_never_follows_a_link(tmp_path, monkeypatch):
+    import hashlib
+
+    from ai_station_runner.darwin_llama_environment import Environment
+
+    raw = b"private fixture bytes must not be published"
+    digest = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(
+        Environment, "recipe", lambda _: {"inputs": [{"sha256": digest, "size_bytes": len(raw)}]}
+    )
+    target = tmp_path / "data/models/store" / digest
+    assert probe.sdk_cache_state(tmp_path) == {"exists": False}
+    target.parent.mkdir(parents=True)
+    target.write_bytes(raw)
+    target.chmod(0o444)
+    value = probe.sdk_cache_state(tmp_path)
+    assert value["sha256_matches"] and value["link_count"] == 1
+    assert value["uid"] == value["native_uid"]
+    assert value["mode"] == "0o444" and value["diagnostic_only"]
+    assert raw.decode() not in json.dumps(value)
+    target.unlink()
+    target.symlink_to(tmp_path / "PRIVATE_EXTERNAL_FILE")
+    monkeypatch.setattr(probe.hashlib, "file_digest", lambda *a: pytest.fail("Followed a cache symlink"))
+    value = probe.sdk_cache_state(tmp_path)
+    assert value["symlink"] and "sha256_matches" not in value
+    assert "PRIVATE" not in json.dumps(value)
+
+
 def test_native_ui_fixture_refuses_normal_hosts_before_storage_or_processes(monkeypatch):
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.setattr(ui_probe.Path, "mkdir", lambda *a, **kw: pytest.fail("Unexpected fixture storage"))
