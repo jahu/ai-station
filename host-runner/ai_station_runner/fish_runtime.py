@@ -79,6 +79,7 @@ def capabilities():
         "codec_vram_mib": CODEC_VRAM_MIB,
         "max_text_characters": 1000,
         "directions": list(DIRECTIONS),
+        "voice_sources": ["reference", "model"],
         "paces": ["natural", "slow", "fast"],
         "offline": True,
         "license_url": "https://huggingface.co/fishaudio/s2-pro/blob/1de9996b6be38b745688de084d87a5633f714e4e/LICENSE.md",

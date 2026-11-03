@@ -96,6 +96,7 @@ export type AgentMediaScope =
           temperature: number;
         };
         reference_artifact_id: string | null;
+        voice_source?: "reference" | "model";
         gpu?: string;
       };
     }
@@ -317,7 +318,17 @@ export function agentMediaIssue(
   if (scope.kind === "speech") {
     if (!scope.request.text.trim() || scope.request.text.length > 1000)
       return "Write the spoken text or instructions in 1–1000 characters.";
-    if (!scope.request.reference_artifact_id && !options?.allowMissingVoice)
+    if (
+      scope.request.voice_source === "model" &&
+      (scope.request.engine !== "fish_s2_pro" ||
+        scope.request.reference_artifact_id)
+    )
+      return "Generated voice requires Fish and cannot use a recording.";
+    if (
+      !scope.request.reference_artifact_id &&
+      scope.request.voice_source !== "model" &&
+      !options?.allowMissingVoice
+    )
       return "Choose a voice reference from Library or upload a WAV before enabling.";
     return null;
   }

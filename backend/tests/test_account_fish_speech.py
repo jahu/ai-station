@@ -77,3 +77,34 @@ def test_verified_reference_transcript_is_reused_and_later_tampering_stops_dispa
     work()
     assert alice.get("/api/runs/" + third["id"]).json()["status"] == "failed"
     assert len(fish_bridge["starts"]) == 2
+
+
+def test_generated_voice_creative_history_and_files_remain_private_without_source_artifacts(
+    accounts, fish_bridge
+):
+    _, alice, bob = accounts
+    workspace = create(alice, "speech")
+    path = "/api/creative/sessions/" + workspace["id"]
+    body = {
+        "client_request_id": str(uuid4()),
+        "parameters": {
+            "text": "Moje dokładne słowa.",
+            "engine": "fish_s2_pro",
+            "voice_source": "model",
+            "reference_artifact_id": None,
+            "direction": "whisper",
+        },
+    }
+    first = alice.post(path + "/generate", json=body)
+    assert first.status_code == 202, first.text
+    assert alice.post(path + "/generate", json=body).json()["id"] == first.json()["id"]
+    identity = work()
+    turn = alice.get(path).json()["turns"][0]
+    assert turn["status"] == "succeeded", turn
+    assert (
+        turn["parameters"]["voice_source"] == "model" and turn["parameters"]["reference_artifact_id"] is None
+    )
+    assert len(turn["artifacts"]) == 1 and turn["artifacts"][0]["parent_artifact_ids"] == []
+    assert not fish_bridge["reports"]
+    assert bob.get(path).status_code == 404 and bob.get("/api/runs/" + identity).status_code == 404
+    assert bob.get("/api/artifacts/" + turn["artifacts"][0]["id"] + "/file").status_code == 404

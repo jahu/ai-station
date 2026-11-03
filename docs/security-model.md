@@ -389,7 +389,11 @@ parses configured source without executing it. Controlled dispatch requires its
 frozen source hash; unsupported/changed CLIs fail instead of dropping settings.
 
 Optional expressive Fish speech accepts a fixed engine, bounded script, enum
-direction/pace, frozen owned WAV/transcript and two allocated GPU IDs. Runtime
+direction/pace, an explicit voice source and two allocated GPU IDs. Reference
+voice freezes the owned WAV/transcript; generated voice rejects those inputs and
+does not read or transcribe an implicit recording. Chatterbox keeps its reference
+contract. Legacy serialization and private source checks remain unchanged;
+generated voice retains normal text-preparation lineage and output ownership. Runtime
 paths and weights are native configuration; callers cannot choose commands,
 imports, flags or model downloads. Background read-only readiness verifies the
 pinned source/weights; the owned child rechecks the full observation before

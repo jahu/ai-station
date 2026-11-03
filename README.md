@@ -58,7 +58,9 @@ usability problems matter just as much as bugs. You don't need to write code to 
 
 On `develop`, optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
 adds a model choice, delivery directions and pacing in Audio and reviewed speech
-agents. It requires a configured two-GPU runtime and retains Fish Audio's separate
+agents. Choose **Generate a voice** for expressive delivery, or **Use a recording**
+to keep a particular speaker; a neutral recording can soften emotional delivery.
+It requires a configured two-GPU runtime and retains Fish Audio's separate
 model license. Chatterbox remains the default; this is next-release development,
 not a change to the published v0.0.2 package.
 

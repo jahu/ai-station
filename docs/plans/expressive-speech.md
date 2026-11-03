@@ -193,14 +193,16 @@ operator process was stopped, external model changed or production data written.
 Evidence remains private under `data/acceptance/fish-prosody-20261103/` and
 `data/acceptance/fish-prosody-reference-20261103/`; listening remains open.
 
-The next implementation adds an explicit **Model voice / Reference voice** choice
+The candidate adds an explicit **Generate a voice / Use a recording** choice
 for Fish in Audio and reviewed speech agents. It never silently drops a supplied
 voice reference to improve delivery. Existing requests/history retain reference
 mode and their identity; Chatterbox keeps its WAV contract. Model voice is an
 explicit Fish-only request, rejects mixed reference inputs, omits the ASR
-prerequisite and has no source-artifact lineage. The worker/native receipt freeze
+prerequisite and has no voice-recording lineage. Agent text-preparation provenance
+remains in the ordinary artifact lineage. The worker/native receipt freeze
 that choice; privacy, typed permissions, dual-GPU/RAM admission, EOS/chunk checks,
 Stop and recovery retain their existing contracts. Creative drafts/follow-ups and
 agent review must preserve the selection. API/schema, native dispatch/cancellation,
 private lineage and actual UI/worker/GPU checks precede availability. This section
-records the contract; model voice is not yet exposed by the application.
+records the candidate contract; normal worker/hardware qualification, review and
+deployment remain separate from the passing unit/API/component checks.
