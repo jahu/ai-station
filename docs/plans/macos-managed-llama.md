@@ -15,6 +15,16 @@ run no model, and real CPU inference requires the existing explicit operation.
 The application image in this component fixture stays neutral: passing this check
 would qualify relocation/SDK ownership, not Docker or consumer installation.
 
+[Run 41561605904](https://github.com/jahu/ai-station/actions/runs/41561605904)
+passed that relocated SDK contract at `853d6db` on ARM macOS 15.8.2 and Intel
+macOS 15.7.9. Both used the actual bundle's isolated Python and installed Runner;
+SDK preparation, duplicate identity, permission denial, immutable requests,
+pre-dispatch/live Stop, refused stopped activation and same SDK identity after
+Runner restart passed without changing the interpreter inventory. Each also
+passed 818 native/desktop component cases with five expected platform skips.
+No model or Docker ran in this check, so the full package startup and the
+separately observed GUI/SDK worker integration failures remain open.
+
 Two fixed profiles use the existing hash-pinned b12032 ARM/Intel manifests.
 After administrator review of the exact manifest/license, `/api/setup/runtimes`
 queues an ordinary `runtime.prepare` Run using `native_llama_setup`, effective
