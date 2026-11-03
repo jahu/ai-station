@@ -125,8 +125,13 @@ the storage owner's strict helper journal and inspection, caching completion
 before removal. Stop covers only owned preparation and requires subsequent
 inspection; publication is resumed instead of blindly rolled back. The native
 full-restore coordinator now joins it to staged retained files, preserves originals
-and newer MFA key files, and fences startup until files and DB agree. Explicit
-credential conflicts require review. Package/runtime/volume receipts are not
+and newer MFA key files, and fences startup until files and DB agree.
+Restore normalizes verified `models/store/<sha256>` objects back to owner-only
+read access (and execute when recorded), so model and SDK integrity checks still
+admit them. Their content hash must match the name. Export copies remain private
+writable copies; ordinary restored documents remain writable. Existing snapshot
+formats remain readable, with no new execution authority.
+Credential conflicts require explicit review. Package/runtime/volume receipts are not
 restored as execution authority. The native menu candidate now presents ordinary
 backup/restore, progress, credential conflict review and interruption continuation
 over those same coordinators. Exceptional administrator recovery now has secure
