@@ -37,8 +37,8 @@ coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
 > **Early access:** the published v0.0.2 release uses the Linux setup guide below.
-> Development builds already offer guided model setup; desktop installers for
-> Linux, Windows and macOS are being tested. The full download-and-install
+> Development builds already offer guided model setup; release 0.1 targets
+> Linux and Windows. macOS is deferred due to known startup issues. The full download-and-install
 > experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
 
 ## Help make it simple
@@ -298,12 +298,15 @@ have been verified on [Linux x86-64](docs/plans/linux-consumer-qualification.md)
 and [Windows 11 / WSL2](docs/plans/windows-consumer-installation.md).
 The Linux package explains any required Docker permission through a native dialog
 and keeps the app running as your ordinary user. These are release candidates;
-the complete macOS installer and broader GPU qualification remain in progress.
+broader GPU qualification remains in progress.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
-The Mac candidate now has full backup/restore coordination and a native menu;
-administrator recovery includes a secure form reachable after a failed start.
-Complete installed-device acceptance remains in progress.
-[Backup and restoration status](docs/plans/desktop-snapshots.md).
+
+**Known issue — macOS:** the native installer is **not supported in release 0.1**.
+Full installed startup remains unreliable; the latest attempt timed out waiting
+for Docker Desktop's local engine before account/model setup. Passing native
+component tests does not establish a working Mac installation. Mac work is
+deferred so it does not delay Linux and Windows. Existing experimental source
+and evidence are retained. [Mac status](docs/plans/macos-consumer-installation.md).
 
 Development builds also retain creative sessions across Images, Video, Music,
 Speech and Avatars. Measured generation stages and scoped time estimates use

@@ -7,6 +7,13 @@ media profiles. Product version remains 0.0.2 until release preparation.
 
 ## Scope and acceptance
 
+**Owner scope amendment, 2026-11-03:** finish release 0.1 for **Linux and Windows**.
+Defer macOS rather than spending further release time on its unreliable startup.
+Document it as an unsupported known issue in README and the website. Cancel the
+active Mac experiment and close its unqualified PR without merging; preserve the
+candidate source/evidence for later work. The original three-platform ambition
+remains a future requirement, but macOS is no longer a completion gate for 0.1.
+
 Current NR-06 implementation adds an optional Fish S2 Pro voice alongside the
 existing Chatterbox path: Audio and reviewed speech agents expose model,
 direction and pace, restored in private creative history. Real integrated short,
@@ -35,10 +42,10 @@ choice and the consumer OS installer requirements remain open.
 | NR-10 | README model freedom and user responsibility | Explain compatible user-selected uncensored models/NSFW use, local execution and responsibility under applicable law/licenses. Do not claim universal format support, automatically uncensored behavior or absolute legal immunity. |
 | NR-11 | Real accounts, private data and optional 2FA | First startup creates an admin; admin manages users and can inspect all data. A/B users cannot enumerate or access each other's prompts, chats, Library, files, memory, agents, Runs, projects, settings or credentials through any API/UI/tool. Password/cookie sessions and opt-in TOTP/recovery work. Only infrastructure/model resources are shared. |
 | NR-12 | LLM-prepared Web searches | A tools-free preparation step uses the selected permission-bound model (local by default; external only when explicitly selected) to derive relevant queries from the current question and bounded relevant conversation. Search uses those queries, displays them and returns sources relevant to ambiguous follow-ups. Explicit URLs still use page reading. |
-| NR-13 | Easy installation on Windows, macOS and Linux | A nontechnical user installs the application, creates the admin, selects fitting capabilities and obtains a real first result through a guided flow. Update/uninstall retain user data unless explicitly removed. Test every advertised platform. |
+| NR-13 | Easy installation on Linux and Windows; macOS deferred by owner | A nontechnical user installs the application, creates the admin, selects fitting capabilities and obtains a real first result through a guided flow. Update/uninstall retain user data unless explicitly removed. Test every advertised platform. macOS remains an unsupported known issue for 0.1. |
 | NR-14 | Hardware-aware model catalog and setup | Detect actual RAM/VRAM/devices, recommend compatible model/quantization/context profiles with headroom, show size/license/storage before download, and configure real readiness. Advanced users can search/select alternatives. Verified downloads recover from cancellation/restart and stale URLs without substituting unverified weights. |
 
-These are all in scope. A partial Linux installer, an emotion selector with no
+These requirements follow the scope amendment above. A partial Linux installer, an emotion selector with no
 audible effect, cosmetic progress or workspace-local component state does not
 satisfy the corresponding requirement. Unfinished adapters remain unavailable.
 
@@ -98,7 +105,7 @@ consumer installer or broaden the hardware claims beyond actual qualification.
    workspace feedback, cancellation, resource scheduling and artifact lineage.
 6. **Consumer setup, NR-13/14:** curated catalog/download service, capability
    onboarding and packaged desktop launcher/installers. Qualify clean Linux,
-   Windows and macOS paths with actual platform evidence.
+   Windows paths with actual platform evidence. macOS is deferred for this release.
 7. **Brand/docs/release, NR-09/10:** finalize naming and responsibility copy,
    refresh setup/benchmarks and issue an updated release-specific QA workbook.
    Review the complete candidate before the human-approved master promotion.
@@ -264,8 +271,8 @@ a mirror URL are not authority to replace a model or license. Changed bytes
 need an explicit catalog/review update. Record unavailable/gated sources honestly.
 
 Qualify clean-machine install → admin → recommended download → first real
-completion/media artifact → restart/update → retained data on Linux, Windows
-and macOS. Signing/notarization and platform hardware evidence are release gates
+completion/media artifact → restart/update → retained data on Linux and Windows.
+macOS is explicitly deferred by the owner. Signing and platform hardware evidence are release gates
 for the installers that claim them, not reasons to stop independent application
 work while a platform-specific credential/device is unavailable.
 

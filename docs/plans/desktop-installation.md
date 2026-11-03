@@ -1,6 +1,10 @@
 # Desktop installation
 
-NR-13 remains required on Linux, Windows and macOS. The first packaging
+Owner decision, 2026-11-03: release 0.1 targets **Linux and Windows**. macOS is an
+unsupported known issue and is deferred; its incomplete native experiments must
+not delay this release or be advertised as a working installer.
+
+NR-13 now requires Linux and Windows acceptance for this release. The first packaging
 increment targets Linux x86-64; it does not establish the other platforms.
 Preserve the existing Docker control plane and native Runner. First launch
 must reach the account setup proof and guided runtime/model flow already

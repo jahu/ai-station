@@ -1,8 +1,17 @@
 # macOS consumer installation — NR-13/14
 
-Status: implementation contract, not an available Mac installer. The full release
-still requires a real local Mac installation and first result; a remote web client,
-Linux emulation or an unsigned skeleton does not satisfy it. Preserve the Docker
+**Deferred by the owner, 2026-11-03.** macOS is unsupported for release 0.1 and is
+not a Linux/Windows release gate. PR #614 is closed without merging; its feature
+branch and private qualification evidence are retained. The latest complete
+attempt, run41644085267 at `5bf5e4b`, failed during local Docker image inspection:
+the 15-second client limit expired while the Linux engine was still starting;
+Docker's own logs report readiness later. No account/model or full installer
+success follows. The subsequent run41653440443 was canceled at the owner's
+request. Stop further native Mac implementation/qualification for this release.
+
+The historical contract below describes future work, not an available installer.
+A remote web client, Linux emulation or an unsigned skeleton does not qualify a
+Mac installation. Preserve the Docker
 control plane, native user Runner and Task → Run → Events → Artifacts lifecycle.
 
 ## Current code and verified upstream constraints
