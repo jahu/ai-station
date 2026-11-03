@@ -347,3 +347,61 @@ def test_mount_inventory_order_does_not_falsely_change_ownership(installation):
         item["Mounts"].reverse()
     installation.owner().recover(list(installation.docker.items))
     assert len(installation.docker.actions) == 2
+
+
+@pytest.mark.parametrize("field", ["Dns", "DnsOptions", "DnsSearch"])
+def test_dns_default_null_and_empty_remain_equivalent_after_daemon_restart(installation, field):
+    for item in installation.docker.items.values():
+        item["HostConfig"][field] = None
+    recorded(installation)
+    for item in installation.docker.items.values():
+        item["HostConfig"][field] = []
+    installation.owner().recover(list(installation.docker.items))
+    assert len(installation.docker.actions) == 2
+
+
+def make_literal_schema_one_receipt(station):
+    from desktop_project import digest
+
+    for item in station.docker.items.values():
+        item["HostConfig"].update(Dns=None, DnsOptions=None, DnsSearch=None)
+    recorded(station)
+    path = station.root / RECEIPT
+    value = json.loads(path.read_text())
+    value["schema"] = 1
+    for identity, item in station.docker.items.items():
+        raw = {k: item[k] for k in ["Config", "HostConfig", "Image"]}
+        raw["Mounts"] = sorted(item["Mounts"], key=lambda m: json.dumps(m, sort_keys=True))
+        value["containers"][identity]["fingerprint"] = digest(raw)
+    path.write_text(json.dumps(value))
+    return value
+
+
+def test_literal_prior_receipt_accepts_exact_three_default_changes_and_upgrades_on_capture(installation):
+    original = copy.deepcopy(installation.docker.items)
+    make_literal_schema_one_receipt(installation)
+    for item in installation.docker.items.values():
+        item["HostConfig"].update(Dns=[], DnsOptions=[], DnsSearch=[])
+    owner = installation.owner()
+    owner.recover(list(installation.docker.items))
+    assert len(installation.docker.actions) == 2
+    installation.docker.items.update(original)
+    owner.capture()
+    assert json.loads((installation.root / RECEIPT).read_text())["schema"] == 2
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize(
+    "field,value", [("Dns", ["8.8.8.8"]), ("DnsOptions", ["use-vc"]), ("DnsSearch", ["private.example"])]
+)
+def test_real_dns_policy_change_still_refuses_before_stopping_anything(installation, legacy, field, value):
+    if legacy:
+        make_literal_schema_one_receipt(installation)
+    else:
+        recorded(installation)
+    for item in installation.docker.items.values():
+        item["HostConfig"].update(Dns=[], DnsOptions=[], DnsSearch=[])
+    next(iter(installation.docker.items.values()))["HostConfig"][field] = value
+    with pytest.raises(ValueError, match="changed"):
+        installation.owner().recover(list(installation.docker.items))
+    assert not installation.docker.actions

@@ -1,6 +1,8 @@
 """Private Linux/WSL desktop Compose ownership; never an HTTP or workload API."""
 
+import copy
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -14,10 +16,35 @@ from desktop_versions import canonical, directory, read_private
 RECEIPT = "desktop-compose-owner.json"
 SERVICES = frozenset({"ai-station", "worker", "scheduler", "search"})
 HEX = r"[a-f0-9]{64}"
+DNS_DEFAULTS = ("Dns", "DnsOptions", "DnsSearch")
 
 
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def fingerprint(value, *, legacy_expected=None):
+    """Only Docker's null/empty DNS defaults are equivalent across daemon boots."""
+    canonical_value = copy.deepcopy(value)
+    for key in DNS_DEFAULTS:
+        current = canonical_value["HostConfig"].get(key)
+        if current is not None and not isinstance(current, list):
+            raise ValueError("Desktop DNS configuration is invalid")
+        canonical_value["HostConfig"][key] = current or []
+    if legacy_expected is not None:
+        # Schema 1 recorded these fields literally. Match its complete original
+        # hash using only the eight equivalent default representations. Never
+        # vary a non-empty DNS list or any other security/configuration field.
+        alternatives = [
+            (None, []) if not canonical_value["HostConfig"][key] else (canonical_value["HostConfig"][key],)
+            for key in DNS_DEFAULTS
+        ]
+        for combination in itertools.product(*alternatives):
+            candidate = copy.deepcopy(canonical_value)
+            candidate["HostConfig"].update(zip(DNS_DEFAULTS, combination, strict=True))
+            if digest(candidate) == legacy_expected:
+                return legacy_expected
+    return digest(canonical_value)
 
 
 def container_ids(text):
@@ -99,7 +126,7 @@ class DesktopProject:
             not isinstance(value, dict)
             or set(value) != {"schema", "namespace", "daemon", "containers"}
             or type(value["schema"]) is not int
-            or value["schema"] != 1
+            or value["schema"] not in (1, 2)
             or value["namespace"] != self.namespace
             or not isinstance(value["daemon"], str)
             or not re.fullmatch(r"[A-Za-z0-9:_-]{8,128}", value["daemon"])
@@ -123,7 +150,7 @@ class DesktopProject:
             seen.add(item["service"])
         return value
 
-    def observe(self, ids, *, created=False):
+    def observe(self, ids, *, created=False, legacy=False):
         items = json.loads(self.docker("inspect", *ids))
         if not isinstance(items, list) or len(items) != len(ids):
             raise ValueError("Desktop container inspection is incomplete")
@@ -171,7 +198,12 @@ class DesktopProject:
                 "service": service,
                 # Configuration can contain credentials. Persist only its hash,
                 # never raw environment, logs, setup links, PIDs or process state.
-                "fingerprint": digest(immutable),
+                "fingerprint": fingerprint(
+                    immutable,
+                    legacy_expected=self.record["containers"].get(item["Id"], {}).get("fingerprint")
+                    if legacy and self.record is not None
+                    else None,
+                ),
             }
             services.add(service)
         return result
@@ -190,7 +222,7 @@ class DesktopProject:
             raise ValueError("Unregistered desktop containers need inspection; nothing was stopped")
         if not ids:
             return
-        observed = self.observe(ids)
+        observed = self.observe(ids, legacy=self.record["schema"] == 1)
         if observed != {identity: self.record["containers"][identity] for identity in ids}:
             raise ValueError("A recorded desktop container changed; nothing was stopped")
         # Exact IDs only. Never Compose down against an unverified inventory,
@@ -210,7 +242,7 @@ class DesktopProject:
         if {item["service"] for item in containers.values()} != SERVICES:
             raise ValueError("The newly launched desktop project is incomplete")
         value = {
-            "schema": 1,
+            "schema": 2,
             "namespace": self.namespace,
             "daemon": self.daemon(),
             "containers": containers,

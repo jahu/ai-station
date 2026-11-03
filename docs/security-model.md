@@ -21,7 +21,10 @@ installation/data identities. Only after taking the existing launcher lock and
 validating the complete surviving inventory may a later Start stop/remove those
 specific containers. Unexpected IDs, unsafe/changed receipts or fingerprints
 refuse before any signal. No volume removal, native/model process cancellation,
-legacy deployment adoption, agent tool or HTTP operation is introduced. Actual
+legacy deployment adoption, agent tool or HTTP operation is introduced. Only
+Docker's null/empty default DNS lists are equivalent; a previous literal receipt
+requires a complete matching original hash under those three default fields.
+Nonempty DNS changes and every other configuration change still refuse recovery. Actual
 reboot qualification is required before claiming this recovery path operational.
 
 The [Mac connection candidate](plans/macos-runner-transport.md) retains the private

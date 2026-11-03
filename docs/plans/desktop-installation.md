@@ -237,3 +237,13 @@ retain their existing refusal and macOS remains deferred. Crashes before a new
 inventory is durably recorded still require inspection. Qualify hostile receipt/
 container changes, actual disposable Docker recovery and a real Windows reboot
 of the retained installation before claiming the recovery path complete.
+
+The real retained Windows reboot exposed a Docker representation change:
+`HostConfig.Dns`, `DnsOptions` and `DnsSearch` changed from null to empty lists
+on all four containers. Reconstructing those three original defaults reproduced
+every recorded hash exactly. Schema 2 canonicalizes only these equivalent empty
+DNS defaults. Schema 1 can be reconciled only by matching its entire original
+hash with one of the eight default representations; nonempty DNS, all other
+configuration and every ID/mount/image check remain frozen. Filesystem UUID
+identity and directory inode replace volatile device enumeration in the native
+namespace, and mount-array ordering does not change ownership.
