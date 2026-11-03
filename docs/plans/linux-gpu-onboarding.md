@@ -157,7 +157,22 @@ adds SETUP-160–163, with no answers prefilled as successful.
 Security review follow-up: daemon publication now explicitly uses mode 0600,
 including when an existing protected file contains proxy credentials. Prepared
 receipts with changed file permissions refuse reactivation instead of weakening
-access. The helper/probe/native-consent fake families were rerun after this
-correction. The recorded `9727afe` OS qualification predates that mode change;
-final frozen Linux package qualification must confirm private publication and
-normal Docker operation with that mode. No current host configuration was edited.
+access. The helper/probe/native-consent fake families passed 53 tests after this
+correction. The later frozen `86a394b` package contains byte-identical reviewed
+native helper/controller/policy files and passed actual Ubuntu checks:
+
+- A legacy prepared configuration with shared permissions refused activation.
+- A controlled lost-ack state was reconstructed from that **same owned**
+  operation's original backup/journal in the disposable VM. This was explicit
+  fault injection, not an unobserved real crash or an unknown installation.
+- After real OS authentication, the installed helper published root-owned 0600
+  configuration and a prepared receipt, without package reinstallation or a
+  daemon restart. The original backup and package database hashes were retained.
+- After a normal guest OS restart, the ordinary account's Docker API still
+  worked with runc/defaults and the NVIDIA runtime registered, while direct
+  configuration reads raised PermissionError. Root configuration/journal/backup
+  hashes and user data remained intact. No GPU inference was run in this CPU VM.
+
+The fixture then shut down normally. The development workstation's configuration
+and services were not changed. Final release source/artifact freezing and the
+separately recorded physical-GPU gates remain required.
