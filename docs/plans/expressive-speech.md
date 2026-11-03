@@ -203,6 +203,27 @@ remains in the ordinary artifact lineage. The worker/native receipt freeze
 that choice; privacy, typed permissions, dual-GPU/RAM admission, EOS/chunk checks,
 Stop and recovery retain their existing contracts. Creative drafts/follow-ups and
 agent review must preserve the selection. API/schema, native dispatch/cancellation,
-private lineage and actual UI/worker/GPU checks precede availability. This section
-records the candidate contract; normal worker/hardware qualification, review and
-deployment remain separate from the passing unit/API/component checks.
+private lineage and actual UI/worker/GPU checks precede availability. The
+qualification below covers the normal worker/hardware path; deployment and
+listening acceptance remain separate.
+
+### Integrated generated-voice qualification
+
+The exact candidate at `b194d9a` passed a fresh private-account API → separate
+worker → real native Unix Runner → dual-GPU Fish execution. It produced an
+EOS-complete, decoded **5.53-second Polish whisper** without a reference, ASR Run
+or fabricated executor. The result was published through the ordinary private
+artifact endpoint with `voice_source=model`.
+
+A second real owned Fish process survived abrupt loss of only the private
+worker group. Its replacement inspected the same native PID without redispatch;
+ordinary API Stop then canceled that process. No partial audio was published and
+the private GPU/RAM leases were released. The Runner and both private workers
+were stopped afterward. The workstation's idle AI Station-managed LLM was
+temporarily unloaded through an audited, owner-scoped Stop Run and restored
+through an ordinary load Run with the same model, GPU assignment, context,
+cache and image. External runtimes were unchanged.
+
+Evidence remains private under `data/acceptance/fish-model-voice-api-20261103/`.
+This verifies execution, cancellation and recovery; it does not establish human
+listening acceptance of every emotion, script or cloned speaker.
