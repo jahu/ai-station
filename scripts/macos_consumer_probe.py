@@ -486,6 +486,9 @@ def main():
         status.post("success", "Backend scenario passed; full GUI/installer still unqualified")
     except BaseException as error:
         proof.update(passed=False, stage=stage, **failure(error))
+        proof["startup_files_present"] = [
+            name for name in ("desktop.env", "desktop.log", "desktop-ready.json") if (state / name).is_file()
+        ]
         save()  # Preserve the fault before bounded process cleanup can block.
         print(json.dumps({"experiment_failed_at": stage, **failure(error)}), flush=True)
         try:

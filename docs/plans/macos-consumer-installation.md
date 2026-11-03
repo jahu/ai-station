@@ -121,6 +121,16 @@ false even if this initial native/browser step passes. Continue with actual mode
 selection/download, streaming/Stop and the complete update/backup/removal journey;
 do not substitute that API coverage for the required guided consumer experience.
 
+[First actual GUI run 41555762552](https://github.com/jahu/ai-station/actions/runs/41555762552)
+built the complete package and passed the native setup-button assertion/click.
+It failed while waiting for the default browser to become foreground; application
+readiness was not observed, and no account/SDK/model qualification follows. The
+precise startup cause is still unproven. GUI launcher exceptions now emit bounded
+exception/traceback coordinates before displaying their normal error dialog,
+without logging exception messages, account data or setup URLs. The experiment
+also records only which fixed startup files exist before cleanup. These changes
+make the next fault inspectable; they are not a claimed fix for that startup.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

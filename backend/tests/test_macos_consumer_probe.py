@@ -97,6 +97,22 @@ def test_run_inspection_failure_does_not_hide_original_terminal_run(monkeypatch)
     assert caught.value.evidence["native_frames"] == []
 
 
+def test_gui_failure_coordinates_are_available_before_its_modal_dialog(capsys):
+    import desktop
+
+    try:
+        raise OSError(13, "PRIVATE_ACCOUNT_AND_SETUP_URL", "/PRIVATE_FILE")
+    except OSError as error:
+        desktop.startup_failure(error)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    value = json.loads(captured.err)["desktop_startup_error"]
+    assert value["error_type"] == "PermissionError"
+    assert value["errno"] == 13
+    assert value["frames"][-1]["file"] == "test_macos_consumer_probe.py"
+    assert "PRIVATE" not in captured.err
+
+
 def test_native_ui_fixture_refuses_normal_hosts_before_storage_or_processes(monkeypatch):
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.setattr(ui_probe.Path, "mkdir", lambda *a, **kw: pytest.fail("Unexpected fixture storage"))

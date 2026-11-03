@@ -18,6 +18,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import traceback
 import webbrowser
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit, urlunsplit
@@ -45,6 +46,20 @@ def digest(path):
         while block := handle.read(1024 * 1024):
             result.update(block)
     return result.hexdigest()
+
+
+def startup_failure(error):
+    """Keep a GUI startup fault inspectable without logging exception contents."""
+    value = {
+        "error_type": type(error).__name__,
+        "frames": [
+            {"file": Path(frame.filename).name, "line": frame.lineno, "function": frame.name}
+            for frame in traceback.extract_tb(error.__traceback__)[-12:]
+        ],
+    }
+    if isinstance(error, OSError) and type(error.errno) is int:
+        value["errno"] = error.errno
+    print(json.dumps({"desktop_startup_error": value}), file=sys.stderr, flush=True)
 
 
 def require_completed_guest_update():
@@ -975,6 +990,7 @@ if __name__ == "__main__":
         if not {"--console", "--status", "--stop", "--package-check"}.intersection(sys.argv) and (
             platform.system() == "Darwin" or shutil.which("zenity")
         ):
+            startup_failure(error)
             dialog("--error", "--text=" + str(error))
         else:
             raise SystemExit(str(error))

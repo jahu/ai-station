@@ -258,6 +258,12 @@ jobs:
                   continue
               print('Bounded failure diagnostics:', name)
               lines = path.read_text(errors='replace').splitlines()
+              # This fixed launcher record contains only code coordinates, no
+              # exception text. Keep it even when later XCTest output pushes
+              # the startup fault out of the ordinary bounded tail.
+              for line in lines:
+                  if line.startswith('{"desktop_startup_error": '):
+                      print(line[:4096])
               for line in lines[-100:]:
                   text = line.casefold()
                   if any(word in text for word in ('token','password','authorization','cookie','secret','private key')):
