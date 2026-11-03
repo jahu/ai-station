@@ -1,5 +1,6 @@
 """Launcher obtains first-setup authority only from the owned console."""
 
+import subprocess
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -25,6 +26,7 @@ def test_pending_setup_uses_the_api_port_and_fixed_owned_container_console(port)
     run.assert_called_once_with(
         "exec",
         "-T",
+        "--interactive=false",
         "ai-station",
         "python",
         "-m",
@@ -33,6 +35,8 @@ def test_pending_setup_uses_the_api_port_and_fixed_owned_container_console(port)
         ui,
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=30,
     )
 
 

@@ -1,6 +1,7 @@
 """Prepare one pinned desktop prerequisite before bounded application startup."""
 
 import json
+import platform
 import subprocess
 import time
 
@@ -10,9 +11,16 @@ FORMAT = '{"os": {{json .Os}}, "arch": {{json .Architecture}}}'
 
 
 def prepare(engine, package, log, *, stage, canceled=lambda: False):
-    if engine.identity is None or package.get("architecture") not in ARCHITECTURES:
-        raise ValueError("Search preparation requires the verified native Mac package and engine")
-    architecture = ARCHITECTURES[package["architecture"]]
+    if engine.identity is not None:
+        if package.get("architecture") not in ARCHITECTURES:
+            raise ValueError("Search preparation requires a supported verified native Mac package")
+        architecture = ARCHITECTURES[package["architecture"]]
+    elif platform.system() == "Linux" and platform.machine().lower() in {"x86_64", "amd64"}:
+        # Linux packages and the owned Windows WSL guest share this fixed
+        # platform. They have no Mac architecture field or Desktop handoff.
+        architecture = "amd64"
+    else:
+        raise ValueError("Search preparation requires a supported desktop package and engine")
 
     def present():
         result = subprocess.run(

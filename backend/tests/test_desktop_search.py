@@ -12,6 +12,7 @@ from unittest.mock import Mock
 import desktop
 import desktop_search as search
 import pytest
+from test_desktop_reopen import shell as shell
 
 
 def engine():
@@ -25,6 +26,61 @@ def engine():
 def test_fixed_search_digest_matches_canonical_compose():
     source = Path(__file__).resolve().parents[2] / "compose.yaml"
     assert "image: " + search.IMAGE in source.read_text()
+
+
+@pytest.mark.parametrize("cached", [True, False])
+def test_linux_and_windows_guest_prepare_fixed_component_before_start(monkeypatch, cached):
+    selected = engine()
+    selected.identity = None
+    selected.command = lambda *args: ["docker", *args]
+    monkeypatch.setattr(search.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(search.platform, "machine", lambda: "x86_64")
+    metadata = SimpleNamespace(returncode=0, stdout='{"os":"linux","arch":"amd64"}')
+    inspect = Mock(side_effect=[metadata] if cached else [SimpleNamespace(returncode=1), metadata])
+    monkeypatch.setattr(search.subprocess, "run", inspect)
+    pull = Mock(return_value=SimpleNamespace(poll=lambda: 0, returncode=0))
+    monkeypatch.setattr(search.subprocess, "Popen", pull)
+    assert search.prepare(selected, {}, io.StringIO(), stage=lambda _: None)
+    assert inspect.call_count == (1 if cached else 2)
+    if cached:
+        pull.assert_not_called()
+    else:
+        assert pull.call_args.args[0] == [
+            "docker",
+            "image",
+            "pull",
+            "--platform",
+            "linux/amd64",
+            search.IMAGE,
+        ]
+
+
+@pytest.mark.parametrize("prepared", [True, False])
+def test_linux_launcher_does_not_start_services_until_search_is_prepared(shell, monkeypatch, prepared):
+    import sys
+
+    root, _, _, _ = shell
+    stages = []
+    monkeypatch.setattr(sys, "argv", ["desktop.py", "--console"])
+    monkeypatch.setattr(desktop, "install_copy", lambda *args: desktop.ROOT)
+    monkeypatch.setattr(desktop, "import_image", lambda *a, **kw: stages.append("image"))
+
+    def prepare(*args, canceled, **kwargs):
+        assert stages == ["image"] and not canceled()
+        stages.append("search")
+        return prepared
+
+    monkeypatch.setattr(search, "prepare", prepare)
+    monkeypatch.setattr(desktop, "supervise", lambda *a, **kw: stages.append("services"))
+    desktop.main()
+    assert stages == (["image", "search", "services"] if prepared else ["image", "search"])
+    assert not (root / desktop.READY_FILE).exists()
+
+
+def test_linux_producer_includes_search_preparation_without_a_mac_dependency():
+    from build_linux_package import SOURCE
+
+    assert "scripts/desktop_search.py" in SOURCE
 
 
 @pytest.mark.parametrize("architecture,expected", [("x86_64", "amd64"), ("arm64", "arm64")])

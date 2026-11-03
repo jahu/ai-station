@@ -6,6 +6,15 @@ Preserve the existing Docker control plane and native Runner. First launch
 must reach the account setup proof and guided runtime/model flow already
 qualified in PRs #530–#532.
 
+The launcher candidate prepares the fixed, architecture-verified SearXNG image
+before application readiness on every desktop path, including the owned Windows
+WSL guest. A cached image needs no registry request; first download has a separate
+bounded progress stage. Only after verification may the ordinary packaged
+supervisor start services, with implicit pulls disabled. No existing image is
+deleted or replaced to create a cold-cache test. Mac cancellation and the native
+Stop channel retain their ownership checks. Linux/WSL cold-cache package
+acceptance remains distinct from mocked coordination checks.
+
 ## Packaging decision
 
 Bundle a checksum-pinned, relocatable CPython distribution and pinned native

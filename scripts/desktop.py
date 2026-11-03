@@ -968,18 +968,19 @@ def main():
                 import_image(installed, value, log, engine=engine)
                 if control.stop_requested.is_set():
                     return
+                from desktop_search import prepare as prepare_search
+
+                if not prepare_search(
+                    engine,
+                    value,
+                    log,
+                    stage=progress.stage,
+                    canceled=lambda: control.stop_requested.is_set() or progress.canceled(),
+                ):
+                    return
                 if platform.system() == "Darwin":
                     from desktop_bridge import check as check_bridge
-                    from desktop_search import prepare as prepare_search
 
-                    if not prepare_search(
-                        engine,
-                        value,
-                        log,
-                        stage=progress.stage,
-                        canceled=lambda: control.stop_requested.is_set() or progress.canceled(),
-                    ):
-                        return
                     progress.stage("Checking private communication and your data filesystem…")
                     if not check_bridge(installed, root, config, value, engine, log, control):
                         return

@@ -357,7 +357,7 @@ def main() -> None:
             run(
                 "up",
                 "--no-build",
-                *(["--pull", "never"] if engine.identity is not None else []),
+                *(["--pull", "never"] if args.desktop or engine.identity is not None else []),
                 "--detach",
                 "--wait",
                 "--wait-timeout",

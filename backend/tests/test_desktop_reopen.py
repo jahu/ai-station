@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from unittest.mock import Mock
 
 import desktop
+import desktop_search
 import pytest
 from test_desktop_package import fixture_bundle
 
@@ -26,6 +27,7 @@ def shell(tmp_path, monkeypatch):
     monkeypatch.setattr(desktop.webbrowser, "open", browser)
     monkeypatch.setattr(desktop, "prerequisites", prerequisites)
     monkeypatch.setattr(desktop, "supervise", supervise)
+    monkeypatch.setattr(desktop_search, "prepare", Mock(return_value=True))
     previous = os.umask(0o077)
     try:
         yield root, browser, prerequisites, supervise
