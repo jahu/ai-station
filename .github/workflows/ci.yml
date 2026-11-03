@@ -206,7 +206,9 @@ jobs:
     # Explicit real 4B CPU model on a fresh PUBLIC standard-free Intel host.
     if: (inputs.operation == 'macos-consumer-backend' || inputs.operation == 'macos-consumer-gui') && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
     runs-on: macos-15-intel
-    timeout-minutes: ${{ inputs.operation == 'macos-consumer-gui' && 60 || 45 }}
+    # The actual console scenario completed in minute 44; the former 45-minute
+    # job limit canceled its required owned-Desktop shutdown after that success.
+    timeout-minutes: 60
     permissions:
       contents: read
       statuses: write

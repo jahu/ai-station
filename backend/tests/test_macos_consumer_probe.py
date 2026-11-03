@@ -142,6 +142,26 @@ def test_owned_supervisor_log_ignores_unknown_records_and_invalid_coordinates(tm
     assert probe.startup_errors(tmp_path)["errors"] == [{"error_type": "RuntimeError", "frames": []}]
 
 
+def test_native_parent_fault_is_visible_before_waiting_for_browser_timeout(tmp_path):
+    (tmp_path / "commands.private.log").write_text(
+        json.dumps(
+            {
+                "desktop_startup_error": {
+                    "error_type": "RuntimeError",
+                    "frames": [{"file": "desktop.py", "line": 558, "function": "supervise"}],
+                    "message": "PRIVATE_SETUP_URL",
+                }
+            }
+        )
+        + "\n"
+    )
+    result = probe.startup_errors(tmp_path, log_name="commands.private.log")
+    assert result["errors"][0]["frames"][0]["function"] == "supervise"
+    assert "PRIVATE" not in json.dumps(result)
+    with pytest.raises(ValueError):
+        probe.startup_errors(tmp_path, log_name="../PRIVATE_OTHER_LOG")
+
+
 @pytest.mark.parametrize("kind", ["symlink", "hardlink", "fifo"])
 def test_owned_supervisor_log_cannot_read_an_external_alias_or_block_on_fifo(tmp_path, kind):
     path = tmp_path / "desktop.log"

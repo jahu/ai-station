@@ -77,13 +77,15 @@ def sdk_cache_state(state):
     return result
 
 
-def startup_errors(state):
+def startup_errors(state, *, log_name="desktop.log"):
     """Read bounded structured faults, never raw private supervisor log text."""
     from launch import DESKTOP_SERVICE_STAGES
 
+    if log_name not in {"desktop.log", "commands.private.log"}:
+        raise ValueError("Choose only this experiment's fixed startup log")
     result = {"stage": None, "errors": []}
     try:
-        descriptor = os.open(state / "desktop.log", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        descriptor = os.open(state / log_name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError:
         return result
     with os.fdopen(descriptor, "rb") as stream:
@@ -475,6 +477,8 @@ def main():
         deadline = time.monotonic() + (1200 if first_gui else STARTUP_TIMEOUT)
         observed_stage = None
         while time.monotonic() < deadline:
+            if first_gui and startup_errors(root, log_name="commands.private.log")["errors"]:
+                raise RuntimeError("The actual package reported a structured native startup fault")
             current = startup_stage(root / "commands.private.log", after=startup_offset)
             if current and current != observed_stage:
                 observed_stage = current

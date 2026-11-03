@@ -158,6 +158,18 @@ without following a cache symlink or modifying/adopting the object. These are
 diagnostic observations, not a waiver or evidence that the earlier failures are
 fixed. Inspect the next actual runs before making a startup/model claim.
 
+[Console run 41569774253](https://github.com/jahu/ai-station/actions/runs/41569774253)
+at `88861ef` subsequently completed the real installed CPU backend scenario:
+first administrator, native SDK preparation, the pinned 4B download, first model
+answer, Stop/restart with identical saved conversation, a new model answer and
+clean application Stop all passed. Its retained result has `passed: true`; the
+overall Actions job is nevertheless **canceled**, not green. The former 45-minute
+job ceiling interrupted the separate owned Docker Desktop shutdown after the
+scenario finished in minute 44. The whole-job ceiling is now 60 minutes, including
+that required cleanup; product operation deadlines are unchanged. This is useful
+backend evidence, not a successful complete job or guided consumer admission.
+The separate native/browser attempt and update/export/restore/removal gates remain.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,
