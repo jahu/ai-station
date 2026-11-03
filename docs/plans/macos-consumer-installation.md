@@ -170,6 +170,19 @@ that required cleanup; product operation deadlines are unchanged. This is useful
 backend evidence, not a successful complete job or guided consumer admission.
 The separate native/browser attempt and update/export/restore/removal gates remain.
 
+[Native GUI run 41572578494](https://github.com/jahu/ai-station/actions/runs/41572578494)
+at `f52afdc` failed before browser readiness. Its new child evidence reached
+`preparing_browser_entry`: service startup and the first API check had completed,
+but the private entry handoff did not. The parent reached its 180-second readiness
+deadline; the later owned Docker inspection also timed out, and cleanup remains
+uncertain. This does not establish why that Docker connection stopped responding.
+The fixed bootstrap console call now disables Compose's default interactive mode,
+uses EOF stdin and has its own 30-second deadline; subprocess timeouts retain safe
+structured fault coordinates. A real neutral child test holds inherited input
+open and verifies that the handoff still sees EOF and exits. See
+[Docker's scripted exec guidance](https://docs.docker.com/reference/cli/docker/compose/exec/).
+Actual guided execution must verify this correction before any GUI success claim.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

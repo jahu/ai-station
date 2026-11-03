@@ -210,9 +210,10 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(
     assert commands[1][-6:] == ["up", "--no-build", "--detach", "--wait", "--wait-timeout", "120"]
     assert commands[-1][-3:] == ["down", "--timeout", "10"]
     if failure != "up":
-        assert commands[2][-8:] == [
+        assert commands[2][-9:] == [
             "exec",
             "-T",
+            "--interactive=false",
             "ai-station",
             "python",
             "-m",

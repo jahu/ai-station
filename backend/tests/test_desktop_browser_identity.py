@@ -2,6 +2,9 @@
 
 import io
 import json
+import os
+import subprocess
+import sys
 import threading
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -85,6 +88,40 @@ def test_matched_desktop_obtains_bootstrap_only_after_identity_check():
         )
     assert calls == ["/api/health", "/api/auth"]
     run.assert_called_once()
+    assert run.call_args.args[:3] == ("exec", "-T", "--interactive=false")
+    assert run.call_args.kwargs["stdin"] == subprocess.DEVNULL
+    assert run.call_args.kwargs["timeout"] == 30
+
+
+def test_private_bootstrap_child_sees_eof_even_when_launcher_input_remains_open(tmp_path):
+    binary = tmp_path / "owned-bootstrap.py"
+    binary.write_text(
+        "import sys\nassert sys.stdin.read()==''\nprint('http://127.0.0.1:8766/#/?setup_token='+'z'*43)\n"
+    )
+    read_fd, write_fd = os.pipe()
+    original_input = os.dup(0)
+
+    # A native app may retain an open input pipe. The typed bootstrap must not
+    # attach it: a live writer cannot prevent this fixed child from exiting.
+    def run(*arguments, **kwargs):
+        # Bound a regression to two seconds; the separate contract assertion
+        # checks the actual production deadline. This child really reads stdin.
+        kwargs["timeout"] = 2
+        return subprocess.run([sys.executable, str(binary)], **kwargs)
+
+    def respond(request):
+        return httpx.Response(200, json={"setup_required": True})
+
+    try:
+        os.dup2(read_fd, 0)
+        with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+            result = local_entry_url(client, run, "http://127.0.0.1:8766", "http://127.0.0.1:8766")
+        assert result.endswith("setup_token=" + "z" * 43)
+    finally:
+        os.dup2(original_input, 0)
+        os.close(original_input)
+        os.close(read_fd)
+        os.close(write_fd)
 
 
 def test_readiness_persistence_retains_identity_and_rejects_corruption(tmp_path):

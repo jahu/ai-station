@@ -174,6 +174,7 @@ def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "
     return run(
         "exec",
         "-T",
+        "--interactive=false",
         "ai-station",
         "python",
         "-m",
@@ -182,6 +183,8 @@ def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "
         url,
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=30,
     ).stdout.strip()
 
 
@@ -390,7 +393,7 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
+    except (RuntimeError, subprocess.SubprocessError, httpx.HTTPError) as error:
         if "--desktop" in sys.argv:
             from desktop import startup_failure
 
