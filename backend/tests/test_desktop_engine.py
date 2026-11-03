@@ -207,7 +207,16 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(
     commands = [row["args"][2:] for row in rows[1:]]
     assert all(command[:1] == ["compose"] for command in commands)
     assert commands[0][-3:] == ["ps", "--all", "--quiet"]
-    assert commands[1][-6:] == ["up", "--no-build", "--detach", "--wait", "--wait-timeout", "120"]
+    assert commands[1][-8:] == [
+        "up",
+        "--no-build",
+        "--pull",
+        "never",
+        "--detach",
+        "--wait",
+        "--wait-timeout",
+        "120",
+    ]
     assert commands[-1][-3:] == ["down", "--timeout", "10"]
     if failure != "up":
         assert commands[2][-9:] == [

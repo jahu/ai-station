@@ -270,6 +270,7 @@ def test_gui_progress_emits_only_a_known_startup_code(monkeypatch, capsys):
 
     stages = []
     progress = desktop.Preparation.__new__(desktop.Preparation)
+    progress.cancelable = False
     progress.native = type("Native", (), {"stage": lambda _, value: stages.append(value)})()
     progress.proc = None
     progress.stage("PRIVATE_PRESENTATION_TEXT")

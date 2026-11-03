@@ -177,6 +177,8 @@ def test_application_layout_preserves_inputs_and_records_unsigned_component_scop
     assert build.digest(contents / "MacOS/AI Station") == value["native_interface_sha256"]
     assert desktop.manifest(resources) == value
     desktop.verify(resources, value)
+    assert "scripts/desktop_search.py" in value["files"]
+    assert (resources / "scripts/desktop_search.py").is_file()
     assert application.inventory(inputs.layer) == before
     assert not value["signed"] and not value["notarized"] and not value["macos_installer_qualified"]
     assert (resources / "python/bin/python3").is_symlink()

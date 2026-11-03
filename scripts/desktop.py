@@ -33,6 +33,8 @@ DARWIN_RUNTIME_PARENT = Path("/private/tmp")
 STARTUP_STAGES = {
     "Checking and preparing your private application folder…": "retained_application",
     "Preparing the bundled application image…": "application_image",
+    "Checking the local web-search component…": "search_image",
+    "Downloading the web-search component. This only happens once…": "search_download",
     "Checking private communication and your data filesystem…": "private_bridge",
     "Checking your persistent application database…": "persistent_database",
     "Starting your local AI Station…": "application_services",
@@ -663,13 +665,16 @@ def dialog(*args):
 class Preparation:
     """An indeterminate stage display, never a fabricated transfer percentage."""
 
-    def __init__(self, console, *, heading=None):
+    def __init__(self, console, *, heading=None, cancelable=False):
         self.proc = None
         self.native = None
+        self.cancelable = cancelable
         if not console and platform.system() == "Darwin":
             from macos_desktop_ui import Preparation as NativePreparation
 
-            self.native = NativePreparation(ROOT, heading=heading)
+            self.native = NativePreparation(
+                ROOT, heading=heading, **({"cancelable": True} if cancelable else {})
+            )
             return
         if not console:
             self.proc = subprocess.Popen(
@@ -684,7 +689,13 @@ class Preparation:
             # copy arbitrary presentation text, paths or setup authority here.
             print(json.dumps({"desktop_startup_stage": STARTUP_STAGES[text]}), flush=True)
         if self.native is not None:
-            self.native.stage(text)
+            if self.cancelable:
+                self.native.update(
+                    text,
+                    cancelable=STARTUP_STAGES.get(text) == "search_download",
+                )
+            else:
+                self.native.stage(text)
             return
         if self.proc is None:
             print(text, flush=True)
@@ -694,6 +705,9 @@ class Preparation:
                 self.proc.stdin.flush()
             except BrokenPipeError:
                 pass  # Closing this display does not interrupt image import.
+
+    def canceled(self):
+        return self.native.canceled() if self.native is not None and self.cancelable else False
 
     def close(self):
         if self.native is not None:
@@ -918,7 +932,9 @@ def main():
             )
             if answer != 0:
                 return
-        progress = Preparation(args.console)
+        progress = Preparation(
+            args.console, **({"cancelable": True} if platform.system() == "Darwin" else {})
+        )
         try:
             progress.stage("Checking and preparing your private application folder…")
             installed = install_copy(root, ROOT, value)
@@ -946,7 +962,16 @@ def main():
                     return
                 if platform.system() == "Darwin":
                     from desktop_bridge import check as check_bridge
+                    from desktop_search import prepare as prepare_search
 
+                    if not prepare_search(
+                        engine,
+                        value,
+                        log,
+                        stage=progress.stage,
+                        canceled=lambda: control.stop_requested.is_set() or progress.canceled(),
+                    ):
+                        return
                     progress.stage("Checking private communication and your data filesystem…")
                     if not check_bridge(installed, root, config, value, engine, log, control):
                         return

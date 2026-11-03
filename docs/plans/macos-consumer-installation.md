@@ -5,6 +5,21 @@ still requires a real local Mac installation and first result; a remote web clie
 Linux emulation or an unsigned skeleton does not satisfy it. Preserve the Docker
 control plane, native user Runner and Task → Run → Events → Artifacts lifecycle.
 
+## Explicit search-image preparation (candidate, 2026-11-03)
+
+Real GUI run 41600426425 reaches `starting_services` with a live native Runner
+and Docker Compose still waiting; no project containers are observed. This
+narrows the startup failure but does not establish its complete root cause.
+Compose currently may download the pinned SearXNG image during the application's
+180-second readiness window. Its `--wait-timeout` bounds container health, not
+that download. Prepare this fixed prerequisite separately, with visible native
+progress and cancellation, before starting application services. Verify the
+Linux architecture against the package, use the already pinned local engine,
+and require cached images during Mac `compose up`. Never modify Docker settings,
+remove images, substitute an unpinned image or extend the readiness deadline to
+hide a failed startup. Cached startup must remain offline-capable. The next real
+GUI run must verify this candidate; component tests alone are not acceptance.
+
 ## Current code and verified upstream constraints
 
 The unmerged consumer-qualification candidate replaces the Linux-only preflight

@@ -13,7 +13,8 @@ from dotenv import dotenv_values
 
 
 @pytest.mark.parametrize(
-    "reaches_ready,blocked", [(False, None), (True, None), (False, "bridge"), (False, "storage")]
+    "reaches_ready,blocked",
+    [(False, None), (True, None), (False, "search"), (False, "bridge"), (False, "storage")],
 )
 def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_instance(
     native, monkeypatch, tmp_path, reaches_ready, blocked
@@ -22,6 +23,7 @@ def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_inst
     from types import SimpleNamespace
 
     import desktop_bridge
+    import desktop_search
     import desktop_versions
     import macos_database_storage
     from test_desktop_package import fixture_bundle
@@ -38,6 +40,13 @@ def test_candidate_mac_launcher_records_readiness_only_for_its_verified_api_inst
     monkeypatch.setattr(desktop.signal, "signal", lambda *args: None)
     monkeypatch.setattr(desktop, "select_engine", lambda *args: object())
     stages = []
+
+    def search_prepared(*args, canceled, **kwargs):
+        assert not canceled()
+        assert stages == ["image"] and not (root / desktop_versions.RECEIPT).exists()
+        return blocked != "search"
+
+    monkeypatch.setattr(desktop_search, "prepare", search_prepared)
 
     def bridge_checked(*args):
         assert stages == ["image"] and not (root / desktop_versions.RECEIPT).exists()

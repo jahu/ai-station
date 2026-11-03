@@ -27,6 +27,7 @@ MAC_SOURCES = (
     "scripts/desktop_update.py",
     "scripts/desktop_upgrade_image.py",
     "scripts/macos_desktop_docker.py",
+    "scripts/desktop_search.py",
     "scripts/macos_native_bundle.py",
     "scripts/macos_transport_probe.py",
     "scripts/desktop_bridge.py",
