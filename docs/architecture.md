@@ -17,6 +17,11 @@ passed fresh browser/worker setup and complete inference, Stop/recovery, privacy
 and final package checks; other platforms and audible expression acceptance
 remain separate gates.
 
+Fish directions shape model delivery; its optional speaking pace applies fixed,
+pitch-preserving rates to complete EOS-checked PCM inside the same owned child.
+Natural bypasses that step. The native report retains original/final sample
+counts and rate, while the ordinary worker publishes the same private artifact.
+
 The Linux desktop packaging candidate bundles a relocatable real CPython,
 native Runner and compiled Docker image around the existing supervisor. Its
 private configuration selects a separate data root, Compose project and exact

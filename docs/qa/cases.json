@@ -1,5 +1,5 @@
 {
-  "version": 40,
+  "version": 41,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5374,6 +5374,29 @@
       "expected": [
         "Zatrzymywany jest wyłącznie proces tego Run; nie jest publikowany niedokończony WAV.",
         "Zasoby zostają zwolnione, pozostałe modele i zadania zachowują swój stan, a nowa wypowiedź może zostać uruchomiona."
+      ]
+    },
+    {
+      "id": "VOICE-005",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro; użyj krótkiej własnej lub syntetycznej wypowiedzi."
+      ],
+      "resources": "Trzy lokalne generacje na kwalifikowanym profilu dwóch GPU; bez nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
+      "title": "Tempo mowy bez zmiany wysokości głosu",
+      "steps": [
+        "W Audio → Speech wybierz Fish, Generate a voice i kierunek Natural. Wygeneruj ten sam tekst kolejno z Speaking pace: Natural, Slower i Faster.",
+        "Porównaj długości w odtwarzaczu i odsłuchaj całe nagrania. Opuść zakładkę, wróć i otwórz zapisane warianty."
+      ],
+      "expected": [
+        "Slower trwa około 25% dłużej, a Faster około 20% krócej od Natural dla tego samego tekstu i kierunku. Brak uciętych słów, zmiany wysokości głosu lub wyraźnych nowych zniekształceń.",
+        "Historia zachowuje trzy wyniki i ich ustawienia. Zapisz słyszalne pogorszenie jakości jako wynik testu; samo zakończenie Run nie oznacza akceptacji jakości."
       ]
     }
   ]

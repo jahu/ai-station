@@ -11,6 +11,36 @@ from ai_station_runner.media_inputs import MediaInput
 from pydantic import ValidationError
 
 
+def test_natural_pace_keeps_pcm_identical_without_importing_processing(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "librosa.effects", None)
+    audio = [0.1, 0.2, -0.1]
+    assert fish_job.apply_pace(audio, "natural") is audio
+
+
+@pytest.mark.parametrize("pace,rate,length", [("slow", 0.8, 1250), ("fast", 1.25, 800)])
+def test_fixed_pace_passes_complete_pcm_to_pitch_preserving_processing(monkeypatch, pace, rate, length):
+    import sys
+    from types import ModuleType
+
+    effects = ModuleType("librosa.effects")
+    audio = [0.1] * 1000
+
+    def stretch(value, *, rate):
+        assert value is audio
+        assert rate == fish_job.PACE_RATES[pace]
+        return [0.1] * length
+
+    effects.time_stretch = stretch
+    monkeypatch.setitem(sys.modules, "librosa.effects", effects)
+    assert len(fish_job.apply_pace(audio, pace)) == length
+    assert fish_job.PACE_RATES[pace] == rate
+    effects.time_stretch = lambda *args, **kwargs: [0.1] * (length - 1)
+    with pytest.raises(ValueError, match="incomplete buffer"):
+        fish_job.apply_pace(audio, pace)
+
+
 @pytest.mark.parametrize(
     "free,minimum,available",
     [(10240, 10240, True), (10239, 10240, False), (5120, 5120, True), (5000, 5120, False)],

@@ -412,6 +412,11 @@ imports. An actual 24-GiB, zero-swap user scope bounds load RAM; model weights
 stay on the allocated GPUs. Stop/recovery use the existing process journal.
 Reference transcription is account-bound and revalidated at dispatch/publication;
 partial, capped-without-EOS or canceled outputs never become Library artifacts.
+Speaking pace uses only fixed rates on complete decoded PCM in that same bounded
+child. It does not alter sample rate or allocate another model; Natural bypasses
+processing. Original/final sample counts and the processing rate remain in the
+private native report, and processed PCM must pass the existing finite-value,
+duration, amplitude and complete-output checks before publication.
 
 The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
 guidance recipe and installed-source observation to new continuation plans.
