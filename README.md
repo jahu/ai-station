@@ -60,6 +60,8 @@ On `develop`, optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
 adds a model choice, delivery directions and pacing in Audio and reviewed speech
 agents. Choose **Generate a voice** for expressive delivery, or **Use a recording**
 to keep a particular speaker; a neutral recording can soften emotional delivery.
+Slower/Faster adjusts speaking speed while preserving pitch; Natural keeps the
+model's original pace.
 It requires a configured two-GPU runtime and retains Fish Audio's separate
 model license. Chatterbox remains the default; this is next-release development,
 not a change to the published v0.0.2 package.

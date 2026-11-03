@@ -104,9 +104,22 @@ Sadness/fear and actual audible delivery remain listening qualification work.
 Audio → Speech offers **Speech model**, then **Voice direction** and **Speaking
 pace** when Fish is selected. Reviewed speech agents use the same controls.
 Direction tags are applied inside the fixed wrapper, separately from the saved
-script; every bounded chunk receives the selected direction and pace. Creative
+script. Every complete chunk receives the selected direction; speaking pace uses
+pitch-preserving processing of that complete PCM: Slower is 0.8× speed and Faster
+is 1.25×. Natural leaves the decoded PCM unchanged. This uses librosa already in
+the fixed offline Fish environment, inside the same owned process and resource
+budget, without another download. The report records the method, rate and original
+and final sample counts; complete EOS is still required before processing. Creative
 versions restore them. Chatterbox remains the default and its legacy requests
 retain their original serialized identities.
+
+The real seven-direction/pace API/worker/GPU matrix found that the old `[fast]`
+tag produced 4.92 seconds against 4.78 seconds for Natural on the same Polish
+script/seed; `[slowly]` produced 6.50 seconds. Tags alone therefore did not provide
+a reliable pace control. Emotions remain model-generated; the pace correction
+changes duration rather than asking the model to reinterpret the words. The
+seven outputs passed EOS, decoding and approximate offline ASR observations;
+those observations are not human listening acceptance.
 
 Configure only the native runner with `AI_STATION_FISH_SPEECH_ENABLED=true`,
 `AI_STATION_FISH_SPEECH_PYTHON`, `AI_STATION_FISH_SPEECH_DIR` and

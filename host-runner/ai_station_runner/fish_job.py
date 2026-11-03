@@ -27,6 +27,24 @@ class GpuMemoryUnavailable(ValueError):
     """Another workload took VRAM after initial resource admission."""
 
 
+PACE_RATES = {"natural": 1.0, "slow": 0.8, "fast": 1.25}
+
+
+def apply_pace(audio, pace):
+    """Change duration, preserving pitch, after the model finishes the words."""
+    rate = PACE_RATES[pace]
+    if rate == 1.0:
+        return audio
+    # Already part of the fixed Fish environment. No extra executable/download,
+    # resampling or GPU allocation; this stays in the owned, bounded child.
+    from librosa.effects import time_stretch
+
+    paced = time_stretch(audio, rate=rate)
+    if len(paced) != round(len(audio) / rate):
+        raise ValueError("Speech pacing returned an incomplete buffer")
+    return paced
+
+
 def verify_module_locations(runtime, modules):
     # Fish uses namespace packages, whose __file__ is legitimately None.
     # Check imported implementation files, including editable installations.
@@ -91,15 +109,10 @@ def render(request, *, runtime, models, work, reference):
     reference_tokens = encode_audio(str(reference), codec, "cuda:1").cpu() if reference is not None else None
     end_id = model.tokenizer.get_token_id(IM_END_TOKEN)
     parts = []
-    prefix = " ".join(
-        filter(
-            None,
-            (
-                DIRECTIONS[request.direction],
-                {"natural": "", "slow": "[slowly]", "fast": "[fast]"}[request.pace],
-            ),
-        )
-    )
+    # Model directions shape delivery. Pace tags are stochastic (the real
+    # [fast] trial was slower than neutral), so apply the selected rate to the
+    # complete PCM instead. The same seed/direction keeps the underlying voice.
+    prefix = DIRECTIONS[request.direction]
     chunks = text_chunks(request.text)
     for index, chunk in enumerate(chunks):
         if time.time() >= request.deadline_at:
@@ -138,6 +151,10 @@ def render(request, *, runtime, models, work, reference):
             if not codes:
                 raise ValueError("The speech model returned no complete audio")
             audio = decode_to_audio(torch.cat(codes, dim=1).to("cuda:1"), codec).float().cpu().numpy()
+        rendered_samples = len(audio)
+        if audio.ndim != 1 or not np.isfinite(audio).all() or not 0.1 <= len(audio) / codec.sample_rate <= 90:
+            raise ValueError("Speech returned invalid or unbounded PCM")
+        audio = apply_pace(audio, request.pace)
         if not np.isfinite(audio).all() or not 0.1 <= len(audio) / codec.sample_rate <= 90:
             raise ValueError("Speech returned invalid or unbounded PCM")
         if not 1e-6 < float(np.max(np.abs(audio))) <= 2:
@@ -146,11 +163,23 @@ def render(request, *, runtime, models, work, reference):
         if path.exists() or path.is_symlink():
             raise ValueError("Inspect existing speech parts")
         sf.write(path, audio, codec.sample_rate, subtype="PCM_16")
-        parts.append({"path": path.name, "text": chunk, "samples": len(audio), "eos": True})
+        parts.append(
+            {
+                "path": path.name,
+                "text": chunk,
+                "samples": len(audio),
+                "rendered_samples": rendered_samples,
+                "eos": True,
+            }
+        )
         print(f"speech.chunk.completed {index + 1}/{len(chunks)}", file=sys.__stdout__, flush=True)
     return {
         "parts": parts,
         "sample_rate": codec.sample_rate,
+        "pace_processing": {
+            "method": "none" if request.pace == "natural" else "phase_vocoder",
+            "rate": PACE_RATES[request.pace],
+        },
         "seconds": time.monotonic() - started,
         "peak_allocated_mib": [int(torch.cuda.max_memory_allocated(i) / 1024**2) for i in (0, 1)],
     }
