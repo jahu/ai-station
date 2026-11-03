@@ -234,9 +234,10 @@ normal interrupted-work policy; this does not blindly re-execute external work.
 
 This change applies only to Linux/WSL packaged supervision; development launches
 retain their existing refusal and macOS remains deferred. Crashes before a new
-inventory is durably recorded still require inspection. Qualify hostile receipt/
-container changes, actual disposable Docker recovery and a real Windows reboot
-of the retained installation before claiming the recovery path complete.
+inventory is durably recorded still require inspection. Hostile receipt/container
+regressions, actual disposable Docker recovery and the retained Windows reboot
+qualification below passed; this does not qualify arbitrary hardware or every
+possible power-loss point.
 
 The real retained Windows reboot exposed a Docker representation change:
 `HostConfig.Dns`, `DnsOptions` and `DnsSearch` changed from null to empty lists
@@ -247,3 +248,25 @@ hash with one of the eight default representations; nonempty DNS, all other
 configuration and every ID/mount/image check remain frozen. Filesystem UUID
 identity and directory inode replace volatile device enumeration in the native
 namespace, and mount-array ordering does not change ownership.
+
+### Qualified packaged recovery — 2026-11-03
+
+Clean source `f5ff9e44d0e4e82be61f4f2c6cb60185b6133c12` produced the Linux
+Debian package, prepared WSL image and actual PowerShell 5.1/Inno Setup Windows
+installer. After a normal Windows 11 reboot with the old session left running,
+the preserving upgrade and native Start recovered its four recorded containers
+without manual Docker cleanup. Their replacement IDs and the schema-2 receipt
+were verified. Eight account/security/history table hashes, the original browser
+login and the saved four-message conversation were retained. Native Stop removed
+only its own Compose containers and receipt; database integrity and foreign keys
+passed, with no active Runs and models/data retained.
+
+The final image also passed isolated account setup, a separate fake-executor
+worker, durable events/SSE replay and database reopen. Ninety focused launcher/
+ownership regressions and 29 offline QA-tool tests passed. A real Linux Docker
+probe verified recovery of exact owned IDs while retaining an unrelated model
+stub and data marker. No model inference or download was repeated. These tests
+do not qualify physical Windows GPU inference, signing or audible media quality.
+Private receipts and packages are in
+`data/acceptance/desktop-owned-recovery-20261103/`; native observations are in
+`data/acceptance/windows-native-qualification-20261031/` (results 281–283).

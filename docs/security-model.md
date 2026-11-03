@@ -24,8 +24,10 @@ refuse before any signal. No volume removal, native/model process cancellation,
 legacy deployment adoption, agent tool or HTTP operation is introduced. Only
 Docker's null/empty default DNS lists are equivalent; a previous literal receipt
 requires a complete matching original hash under those three default fields.
-Nonempty DNS changes and every other configuration change still refuse recovery. Actual
-reboot qualification is required before claiming this recovery path operational.
+Nonempty DNS changes and every other configuration change still refuse recovery.
+The retained Windows installation passed actual OS reboot, preserving upgrade,
+native Start recovery and normal Stop; see the
+[qualification record](plans/desktop-installation.md#qualified-packaged-recovery--2026-11-03).
 
 The [Mac connection candidate](plans/macos-runner-transport.md) retains the private
 Runner Unix socket. A supervised loopback-only helper and a non-root process in

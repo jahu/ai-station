@@ -586,3 +586,15 @@ remain in `data/acceptance/windows-native-qualification-20261031/`. This does no
 qualify physical Windows GPU inference, code signing, broader hardware or
 unexpected OS-reboot recovery. macOS is deferred by the owner and is not a
 release-0.1 gate.
+
+### Recorded restart recovery — 2026-11-03
+
+The subsequent clean `f5ff9e4` package fixes the restart gap above. A real
+Windows reboot retained four old containers; the installed native Start then
+verified and replaced only that recorded inventory, preserving the original
+login, history, model storage and security/account table hashes. Native Stop
+passed with SQLite integrity and foreign keys intact. No manual container
+cleanup was used for that recovery. The
+[full evidence and ownership contract](desktop-installation.md#qualified-packaged-recovery--2026-11-03)
+also records the Docker DNS-default compatibility correction. Physical Windows
+GPU inference, signing and broader hardware remain separately unqualified.
