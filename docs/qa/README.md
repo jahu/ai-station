@@ -1,12 +1,16 @@
 # Operator QA catalog and workbook
 
-The developing v43 catalog contains **232 active cases** for Linux, Windows and
+The developing v44 catalog contains **236 active cases** for Linux, Windows and
 shared application workflows. The owner deferred macOS on 2026-11-03:
 SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs
 and definitions, and are excluded from new worksheets, manifests and result
 counts. The scope notice appears on Start and in the plain-text guide. Earlier
 issued workbooks/answers remain unchanged; import those with their original
 archived catalog, as required by their manifest.
+
+SETUP-160–163 define the native Linux graphics healthy path, cancellation and
+CPU choice, explicit OS restart/first GPU reply, and preserved alternative engines.
+They are untested operator cases; a CPU fixture cannot pass the physical-GPU case.
 
 SETUP-159 covers reopening a packaged Linux/Windows station after a normal OS
 restart, retaining its account/data/models without manual Docker cleanup. It is

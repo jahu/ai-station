@@ -1,5 +1,5 @@
 {
-  "version": 43,
+  "version": 44,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -33,7 +33,8 @@
     "docs/plans/windows-consumer-installation.md",
     "docs/web-search.md",
     "docs/plans/macos-managed-llama.md",
-    "docs/plans/expressive-speech.md"
+    "docs/plans/expressive-speech.md",
+    "docs/plans/linux-gpu-onboarding.md"
   ],
   "cases": [
     {
@@ -5323,6 +5324,103 @@
       ],
       "resources": "Osobna instalacja Linux x86-64 lub Windows 11 x64, bez aktywnych zadań. Sam test nie uruchamia modelu, nie wymaga GPU i nie pobiera wag. Restart dotyczy wyłącznie wybranego systemu testowego.",
       "minutes": 6
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-160",
+      "title": "Linux: działający dostęp NVIDIA nie wymaga ponownej konfiguracji",
+      "prerequisites": [
+        "Nowy pakiet z kwalifikowaną obsługą Graphics setup; działający sterownik NVIDIA i NVIDIA Container Toolkit dla używanego silnika Docker."
+      ],
+      "steps": [
+        "Otwórz AI Station z ikony aplikacji i zaczekaj na stronę startową.",
+        "Otwórz wybór modeli i System. Sprawdź widoczne rzeczywiste GPU oraz sugestie pasujących modeli. Niczego nie pobieraj dla samego tego kroku."
+      ],
+      "expected": [
+        "Nie pojawia się prośba o uprawnienia administratora do ponownej instalacji narzędzi GPU. Sprawdzenie nie pobiera modeli ani nie rozpoczyna generowania.",
+        "Fizyczne GPU są nadal widoczne, pasujące profile GPU nie są blokowane fałszywą informacją o braku pamięci. Inne aplikacje i kontenery działają dalej."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-161",
+      "title": "Linux: anulowanie konfiguracji grafiki i świadomy wybór CPU",
+      "prerequisites": [
+        "Nowy kwalifikowany instalator, działający sterownik NVIDIA, systemowy Docker i brak przygotowanego NVIDIA Container Toolkit. Osobny system testowy; nie usuwaj narzędzi z działającej stacji, żeby wykonać próbę."
+      ],
+      "steps": [
+        "Otwórz AI Station. Zamknij propozycję Enable GPU features. Otwórz aplikację ponownie i wybierz Enable GPU features, ale anuluj okno autoryzacji systemowej.",
+        "Otwórz aplikację ponownie i wybierz Use CPU for now. Sprawdź wybór modeli oraz System.",
+        "Zamknij stację jej własnym Stop i otwórz ponownie. Otwórz też Graphics setup w kontrolkach ikony aplikacji."
+      ],
+      "expected": [
+        "Zamknięcie i anulowanie autoryzacji nie instalują narzędzi GPU ani nie uruchamiają po cichu zadań. Hasło systemowe jest wpisywane wyłącznie do okna systemu.",
+        "Dopiero świadomy wybór CPU uruchamia stację z propozycjami CPU. Rzeczywiste karty pozostają widoczne; kontenerowe profile GPU nie udają gotowości.",
+        "Wybór CPU jest pamiętany. Graphics setup pozwala wrócić do decyzji; nie trzeba edytować plików ani używać terminala."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-162",
+      "title": "Linux: przygotowanie grafiki, restart i pierwsza odpowiedź na GPU",
+      "prerequisites": [
+        "Osobny Ubuntu 24.04 z kompatybilną kartą NVIDIA, działającym sterownikiem, systemowym Dockerem i kwalifikowanym nowym instalatorem. Brak Toolkit; zapisz pracę przed świadomie wybranym restartem."
+      ],
+      "steps": [
+        "Wybierz Enable GPU features, przeczytaj zakres zmian i zatwierdź autoryzację w oknie systemowym.",
+        "Po przygotowaniu sprawdź komunikat o potrzebie restartu. Możesz wybrać CPU na teraz; nie powinno pojawić się zapewnienie o gotowym GPU przed sprawdzeniem.",
+        "Zapisz pozostałą pracę, zrestartuj system zwykłą opcją Restart i otwórz AI Station. Pobierz świadomie sugerowany mały pasujący model GPU i zadaj krótkie pytanie.",
+        "Zatrzymaj ten model w Models. Sprawdź zachowaną rozmowę i możliwość ponownego otwarcia aplikacji."
+      ],
+      "expected": [
+        "Instalowane są tylko opisane narzędzia kontenerowe. AI Station nie instaluje sterowników/CUDA, nie zatrzymuje cudzych kontenerów i nie restartuje automatycznie Dockera ani komputera.",
+        "Przygotowanie nie jest przedstawione jako gotowość GPU. Po restarcie prawdziwe sprawdzenie CUDA odblokowuje pasujące profile GPU.",
+        "Model daje rzeczywistą odpowiedź na wybranej karcie. Stop zwalnia wyłącznie własne zasoby; konto, rozmowa i pobrane modele pozostają zapisane."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-163",
+      "title": "Linux: istniejący inny silnik Docker lub brak sterownika",
+      "prerequisites": [
+        "Osobna testowa instalacja z Docker Desktop/rootless/remote albo wykrytą kartą NVIDIA bez działającego sterownika. Nie zmieniaj celowo działającej stacji, żeby utworzyć taki stan."
+      ],
+      "steps": [
+        "Otwórz AI Station i przeczytaj komunikat konfiguracji grafiki. Wybierz CPU na teraz albo zamknij okno.",
+        "Sprawdź zachowanie dotychczasowego silnika i aplikacji. Jeśli administrator później przygotuje poprawny dostęp GPU, otwórz Graphics setup z ikony i sprawdź wynik."
+      ],
+      "expected": [
+        "Wyświetlony jest zrozumiały powód i dalszy krok; nie ma automatycznej zmiany kontekstu Docker, podmiany silnika, instalacji sterowników ani udawanej gotowości.",
+        "CPU pozostaje świadomą opcją. Ponowne sprawdzenie rzeczywiście działającej konfiguracji potrafi potwierdzić GPU bez ponownej instalacji narzędzi."
+      ]
     }
   ],
   "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano.",

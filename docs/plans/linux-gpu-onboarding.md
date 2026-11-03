@@ -1,7 +1,8 @@
 # Native Linux GPU preparation — NR-13/14
 
-Status: implemented candidate, not yet OS-installation qualified or enabled in
-default packages. Preserve the working Linux GPU
+Status: opt-in candidate; native OS authentication/preparation and the packaged
+healthy GPU check passed. Full regression and fresh physical-GPU first-result
+qualification remain required. It is not enabled in default packages. Preserve the working Linux GPU
 profiles, Windows owned-guest recipe, ordinary CPU setup and current workstation.
 
 ## Observed first-user gap
@@ -111,4 +112,40 @@ in 4.3 seconds, without contexts, kernels or weights. Its exact owned probe was
 removed and every pre-existing running container remained running. This proves
 the healthy observation path on the configured workstation, not a fresh-driver
 installation or Windows GPU inference. Actual OS-authentication/package checks
-and the final package qualification remain pending.
+are now separately recorded below; final release qualification remains pending.
+
+The clean `9727afe` source produced a real Debian candidate with bundled Python,
+the compiled application image and the four verified toolkit inputs. Its
+installed root-owned helper/policy were exercised inside a disposable Ubuntu
+24.04 VM with no host mounts or GPU passthrough:
+
+- The actual OS authentication **Cancel** returned 126, without tools or an
+  operation receipt. The test uses an ordinary account and the real polkit
+  agent; a detached-session fixture error was corrected before this result.
+- A real, separately held package-manager lock made the authorized operation
+  fail. Original Docker settings were preserved and its `installing` journal
+  remained. After releasing only the fixture's lock, a fresh explicit OS
+  authorization resumed that owned operation and installed all four exact
+  `1.20.1-1` packages.
+- runc remained default and unrelated log/live-restore settings were retained.
+  The same Docker daemon PID/identity and separate running fixture container
+  survived preparation. User data and the root-only original backup remained.
+- Reinspection of the prepared operation changed neither the dpkg database nor
+  the configuration, original backup or journal hashes; it did not reinstall.
+- A normal, explicitly requested **guest OS** restart registered the NVIDIA
+  runtime, preserving the same daemon identity, runc, user data and receipt
+  hashes. The unrelated fixture container returned through its existing restart
+  policy. No development-workstation service/driver configuration was changed.
+
+The fresh VM has no NVIDIA device: none of those OS results claim GPU inference.
+The packaged isolated Python/controller separately returned `ready` on the real
+two-GPU workstation using the owned read-only CUDA probe, without OS
+authentication, model loading or host mutations. The two observations qualify
+different contracts; a fresh physical NVIDIA setup/first reply remains required.
+
+Normal fake regressions cover ownership changes, uncertain creation/timeout,
+exact-ID cleanup, consent/CPU choices, lock exclusion, changed configuration,
+partial preparation and old Windows recipe guards. The complete affected
+families passed 924 tests; the final image/telemetry/helper subset passed 81.
+The full Python regression is running before integration. Operator catalog v44
+adds SETUP-160–163, with no answers prefilled as successful.
