@@ -83,6 +83,7 @@ def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     argv = creates[0]
     assert argv[argv.index("--gpus") + 1] == '"device=GPU-2,GPU-7"'
     assert argv[argv.index("--tensor-split") + 1] == "1,1"
+    assert "CUDA_VISIBLE_DEVICES=GPU-2,GPU-7" in argv
     assert argv[argv.index("--network") + 1] == "none"
     assert argv[argv.index("--reasoning") + 1] == "off"
     assert argv[argv.index("--reasoning-budget") + 1] == "0"
@@ -92,6 +93,19 @@ def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     assert llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))["status"] == "stopped"
     with pytest.raises(HTTPException):
         llama.load(body)
+
+
+@pytest.mark.parametrize("selected,visible", [([7], "GPU-7"), ([7, 2], "GPU-7,GPU-2")])
+def test_single_and_reordered_gpu_requests_set_matching_cuda_selection(runtime, selected, visible):
+    _, body, state = runtime
+    assert llama.load(body.model_copy(update={"gpus": selected}))["alive"]
+    argv = next(args for args in state["calls"] if args[0] == "create")
+    requested = argv[argv.index("--gpus") + 1]
+    assert requested.removeprefix('"device=').removesuffix('"') == visible
+    assert [argv[i + 1] for i, value in enumerate(argv) if value == "--env"] == [
+        "CUDA_VISIBLE_DEVICES=" + visible
+    ]
+    assert ("--tensor-split" in argv) == (len(selected) > 1)
 
 
 def test_stop_before_late_load_tombstones_identity(runtime):
