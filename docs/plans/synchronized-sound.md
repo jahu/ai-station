@@ -373,3 +373,30 @@ editor reopening pass. This is not a new GPU-inference or perceptual-quality
 claim. Review/merge/deployment are recorded separately. NR-06/07 audible and
 scene-correspondence acceptance, naming and guided installation/catalog remain
 part of the complete release objective.
+
+### New film with generated sound (2026-11-03)
+
+The existing conversation flow was additionally exercised at `99cb8f8` with a
+new private account, the normal application API through a loopback TestClient,
+a separate ordinary worker and a real private-UDS Host Runner. No executor or
+model result was substituted. A newly requested two-second forest-stream film
+completed Wan generation, film composition, dependent sound preparation, real
+MMAudio generation and the saved timeline render. This is a fresh generated film,
+unlike the earlier adopted-fixture sound experiments.
+
+Wan used 1280×704, 49 source frames, 20 steps and the qualified 11-GiB zero-swap
+profile on one allocated RTX 3060. The composed film has 48 frames at 24 fps.
+MMAudio used 25 steps and seed 42, producing exactly 88,200 samples at 44.1 kHz;
+its measured Torch allocation peak was 5,073 MiB. The conversation exposes one
+final sound-bearing video, with its separate WAV and saved edit. The decoded
+final has 48 video frames and stereo AAC at 48 kHz with 96,000 samples per channel;
+the signal is finite and nonsilent. About 8 min 27 s elapsed from root execution to
+final render, including model loading. Existing operator models/services were
+not stopped and production data was not modified; owned QA services and resource
+leases were cleared normally.
+
+Private evidence and an offline review page are under
+`data/acceptance/fresh-film-sound-20261103/`. The four-frame visual inspection shows
+the requested forest stream; it does not assess audible sound/scene alignment.
+Listening, multiple-scene perceptual acceptance and the full release/platform
+gates remain open. No QA image or video is added to public promotional assets.
