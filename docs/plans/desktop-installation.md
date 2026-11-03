@@ -326,9 +326,31 @@ both explicit graphics recipes and the compiled app. Actual qualification:
 
 That Windows installer is verified **NotSigned** and remains private. The VM is
 CPU-only; none of these results qualifies physical Windows GPU inference. The
-subsequent publisher policy-identity correction needs a final frozen artifact
-build after integration; its code/metadata identity must not be confused with
-the earlier qualification artifact. Full regression and the existing distribution,
+subsequent publisher policy-identity correction is included in the frozen
+merged-source installers described below. Its code/metadata identity must not
+be confused with the earlier qualification artifact. The existing distribution,
 physical-GPU and operator handoff gates still apply.
 Only the human owner promotes the reviewed release PR to master; no build option
 publishes, signs, tags or bypasses that policy.
+
+### Frozen private installers — 2026-11-04
+
+PRs #629–630 are reviewed and squash-merged to `develop`. Clean source
+`4a1d8281f8ba5bdbc93b6b40a0956773e23e37b1` produced the Linux Debian package,
+compiled application, WSL payload and actual native Windows installer with
+version `0.1.0`. Windows PowerShell 5.1/Inno built and exported the final EXE;
+its actual signature status remains **NotSigned**.
+
+All 17 native Windows runtime/legal files and the bootstrap source match the
+actual previously qualified preserving update. The final application image's
+Python version, all 4,778 runtime/dependency/frontend/legal files and selected
+launch configuration match the previously qualified image. This is an identity
+comparison, not another installation or inference test. The final helper/policy
+files match the separately qualified root-private Linux publication/restart path.
+
+Both disposable OS fixtures shut down normally; their sidecars are closed.
+Superseded project-owned build inputs were removed only after verifying the
+retained final artifact hashes. Models, production data and current services
+were preserved. The [release audit](release-0.1-readiness.md) records remaining
+hardware, distribution, human quality and handoff gates. No public tag, release
+or master promotion was performed.

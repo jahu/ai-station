@@ -6,7 +6,7 @@ that the features below ship. Preserve the existing application and qualified
 media profiles. Candidate application packages identify themselves as 0.1.0;
 the published stable release remains 0.0.2 until an approved release is published.
 
-## Current release checkpoint — 2026-11-03
+## Current release checkpoint — 2026-11-04
 
 The priority is a reliable first experience on Linux and Windows, not a deadline
 or another feature expansion. Installation, first account/model/reply, normal
@@ -16,26 +16,26 @@ Stop/Start and retained data are the release path. macOS is deferred below.
 | --- | --- |
 | Ubuntu 24.04 x86-64 clean installation | Native OS install/consent, first CPU-model download/reply, preserving update/removal/reinstall passed. |
 | Linux NVIDIA workstation | The declared local LLM/media profiles have separate real GPU qualification; this is not every GPU or distribution. |
-| Fresh native Linux NVIDIA prerequisites | Guided Container Toolkit preparation is missing; the existing configured workstation does not qualify this clean-machine journey. See the [native setup plan](linux-gpu-onboarding.md). |
+| Fresh native Linux NVIDIA prerequisites | Guided OS-authenticated preparation, cancellation, protected configuration, preserving recovery and normal restart passed in clean Ubuntu. The packaged readiness query passed on the existing two-GPU workstation. A complete fresh physical-GPU first-result journey remains separate. See the [native setup plan](linux-gpu-onboarding.md). |
 | Windows 11 x64 private WSL2 installation | Actual installed CPU reply, preserving updates, native Start/Stop, saved login/history and ordinary OS-restart recovery passed. |
 | Physical Windows NVIDIA inference | Not yet tested. The evaluation VM has no physical GPU; Linux GPU and Windows CPU evidence do not substitute for it. |
 
-PR #626 closes the observed packaged restart defect, with the full Python
-baseline (7,945 passed, 19 explicit skips), final changed families (90 passed),
-offline QA tools (29 passed), built Linux/Windows packages and actual retained
-Windows recovery. [Exact scope and evidence](desktop-installation.md#qualified-packaged-recovery--2026-11-03).
+PR #626 closes the observed packaged restart defect. PRs #629–630 add native
+Linux GPU preparation and stable-version preserving updates. Clean private
+Linux/Windows `0.1.0` installers are frozen from reviewed `develop` commit
+`4a1d8281f8ba5bdbc93b6b40a0956773e23e37b1`; they are not published releases.
+The Python regression passed 8,020 tests with 19 explicit skips; late changes
+passed 77 helper/probe/consent/bundle and 159 version/update/package cases.
+[Qualification and artifact scope](release-0.1-readiness.md).
 The existing account/creative/search/catalog/editor implementation and qualified
 profiles remain intact; there is no new execution architecture or UI rewrite.
 
 The remaining release gates are explicit:
 
-- Complete and qualify the native Linux GPU prerequisite flow, keeping the
-  current host/working runtimes intact and OS changes behind explicit native
-  administrator consent. [Observed gap and contract](linux-gpu-onboarding.md).
-- Finish stable candidate packaging and preserving-update qualification. The
-  explicit clean-source `--release-version` path and bounded Windows stable
-  update admission are implemented candidates; do not publish the private
-  `0.1.0~preview` packages as a finished release. [Packaging contract](desktop-installation.md#stable-version-candidate-packaging--2026-11-03).
+- Complete a fresh physical Linux NVIDIA first-result journey through the
+  prepared graphics path. Existing-machine readiness plus clean CPU-VM
+  preparation/reboot do not establish that combined hardware result. Preserve
+  host runtimes and require native administrator consent for OS changes.
 - Qualify actual Windows NVIDIA model load/reply, scoped Stop and recovery on
   physical hardware before claiming that GPU path works for consumers.
 - Resolve installer signing/distribution acceptance. Current private Windows
@@ -44,10 +44,11 @@ The remaining release gates are explicit:
   quality acceptance for NR-07. Real generation, complete-file and lifecycle
   checks have passed; they do not establish perceptual quality. Eight existing
   GPU voice samples are available in the private Library as **Release QA · Fish**.
-- Freeze the release identity, issue the final v43/232-case operator workbook,
-  and prepare the owner-reviewed promotion to `master`. The new workbook has
-  been exported and inspected as a draft with all answers untested; it does not
-  replace the final handoff. Only the human owner may approve/merge `master`.
+- Issue the final v45/260-case operator workbook against the accepted release
+  identity, and prepare the owner-reviewed promotion to `master`. The catalog
+  now explicitly covers every NR-01–14 requirement, including accounts, creative
+  histories, progress and prompt improvement. Drafts retain untested answers;
+  they do not replace final handoff. Only the human owner may approve/merge `master`.
 
 Do not mark this release or the full goal complete while these gates remain open.
 
@@ -116,8 +117,10 @@ private access preserved. [Guided expressive voice](managed-fish-setup.md) is
 is reviewed, merged and deployed (PR #546), with independent Fish/ASR
 environments, canonical phone references, complete Library output, native
 recovery/Stop, account privacy and final packaged/default-policy checks.
-Production data, configured engines, memory and private access were preserved. Consumer installation on all three operating systems, broader
-model selection and NR-06/07 quality acceptance remain in scope.
+Production data, configured engines, memory and private access were preserved.
+Consumer installation on Linux/Windows and NR-06/07 quality acceptance remain
+release gates; macOS is deferred. Broader hardware/model coverage must remain
+explicit rather than inferred from the qualified local profiles.
 
 ## Delivery order
 

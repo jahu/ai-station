@@ -5,8 +5,9 @@ before testing. Deliver a complete Polish QA workbook at the release handoff,
 then use the returned results as structured bug/improvement input. This is a
 required product deliverable, not a request for operator testing now.
 
-The initial [versioned catalog and offline exporter](../qa/README.md) now cover
-161 Polish cases in 21 areas and produce a six-sheet XLSX, three CSV templates,
+The initial handoff contained 161 Polish cases in 21 areas. The current
+[versioned catalog and offline exporter](../qa/README.md) cover 260 active
+cases (v45) and produce a six-sheet XLSX, three CSV templates,
 a readable guide and a release/catalog manifest. Drafts have no prefilled passes.
 Catalog v10 additionally ships synthetic CSV/two-sheet Excel/document/PNG inputs,
 a deliberate invalid-input case and checked expected values, with input hashes in
@@ -26,6 +27,13 @@ idea only. Catalog v15 retains both SMTP test IDs with an explicit scope exclusi
 all exported operator answer cells still start **Nie testowano**. The final package
 records exact qualified profiles, known media quality issues and the actual app
 commit, independently of the newer documentation/catalog commit.
+
+The 2026-11-04 candidate is frozen from reviewed application source `4a1d828`.
+Its updated workbook remains a draft until the remaining platform/distribution
+and human-quality gates are resolved. The [requirement audit](release-0.1-readiness.md)
+distinguishes implementation, internal qualification and operator acceptance.
+Do not label a QA/catalog-only documentation commit as a newly tested runtime,
+and do not rebuild or repeat unchanged expensive inference just for that commit.
 
 ## Delivery and timing
 

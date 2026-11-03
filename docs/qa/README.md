@@ -1,12 +1,25 @@
 # Operator QA catalog and workbook
 
-The developing v44 catalog contains **236 active cases** for Linux, Windows and
+The developing v45 catalog contains **260 active cases** for Linux, Windows and
 shared application workflows. The owner deferred macOS on 2026-11-03:
 SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs
 and definitions, and are excluded from new worksheets, manifests and result
 counts. The scope notice appears on Start and in the plain-text guide. Earlier
 issued workbooks/answers remain unchanged; import those with their original
 archived catalog, as required by their manifest.
+
+The release audit found missing explicit coverage for several 0.1 requirements.
+v45 adds 24 cases without changing the previous 236 definitions: CREATIVE-101–105
+cover each workspace's saved history/variants/restart; PROGRESS-101–102 cover
+honest whole-task progress; PROMPT-101–104 cover actual prepared input and safe
+recovery; IMAGE-101–102 cover structural Auto edits and explicit model choice;
+LIB-101 covers persistent card dismissal; ACCOUNT-101–107 cover accounts,
+isolation, remembered sessions, TOTP and administrative operations; WEB-009
+covers prepared follow-up queries; DOC-101–102 cover approved branding and model
+responsibility. Every NR-01–14 now has direct case references. These are operator
+definitions, not executed tests or a security certification. Reuse short existing
+creative journeys where specified instead of generating extra long films.
+See the [frozen-candidate readiness audit](../plans/release-0.1-readiness.md).
 
 SETUP-160–163 define the native Linux graphics healthy path, cancellation and
 CPU choice, explicit OS restart/first GPU reply, and preserved alternative engines.

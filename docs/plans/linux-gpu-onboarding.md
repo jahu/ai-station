@@ -1,8 +1,9 @@
 # Native Linux GPU preparation — NR-13/14
 
 Status: opt-in candidate; native OS authentication/preparation and the packaged
-healthy GPU check passed. Full regression and fresh physical-GPU first-result
-qualification remain required. It is not enabled in default packages. Preserve the working Linux GPU
+healthy GPU check and full regression passed. Fresh physical-GPU first-result
+qualification remains required. It is not enabled in default package builds;
+the private frozen 0.1.0 candidate explicitly includes it. Preserve the working Linux GPU
 profiles, Windows owned-guest recipe, ordinary CPU setup and current workstation.
 
 ## Observed first-user gap
@@ -177,5 +178,6 @@ native helper/controller/policy files and passed actual Ubuntu checks:
   hashes and user data remained intact. No GPU inference was run in this CPU VM.
 
 The fixture then shut down normally. The development workstation's configuration
-and services were not changed. Final release source/artifact freezing and the
-separately recorded physical-GPU gates remain required.
+and services were not changed. The reviewed merged source and both stable
+installers are now frozen; the separately recorded physical-GPU gates remain
+required. See the [release audit](release-0.1-readiness.md).
