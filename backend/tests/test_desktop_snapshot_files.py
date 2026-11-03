@@ -11,7 +11,9 @@ IDENTITY = "c" * 64
 
 @pytest.fixture
 def tree(tmp_path):
-    source, output = tmp_path.resolve() / "data", tmp_path.resolve() / "snapshot"
+    # Backend checks also prepare tmp_path/data. Keep this native-only fixture
+    # independently fresh rather than adopting that database tree.
+    source, output = tmp_path.resolve() / "retained-data", tmp_path.resolve() / "snapshot"
     source.mkdir(mode=0o700)
     output.mkdir(mode=0o700)
     old = os.umask(0o077)
