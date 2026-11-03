@@ -4,6 +4,7 @@ import http.cookiejar
 import json
 import os
 import platform
+import re
 import shutil
 import stat
 import subprocess
@@ -14,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -53,7 +54,43 @@ def failure(error):
         }
     if isinstance(error, ModuleNotFoundError):
         detail["missing_module"] = error.name
+    if isinstance(error, RunFailed):
+        detail["owned_run_failure"] = error.evidence
     return detail  # Never include exception messages, locals or source lines.
+
+
+class RunFailed(RuntimeError):
+    """Publish only coordinates/codes from an owned Run, never arbitrary log text."""
+
+    def __init__(self, run, events):
+        super().__init__("The owned experiment Run did not succeed")
+        self.evidence = {"id": str(UUID(run["id"])), "status": run["status"]}
+        code = run.get("error_type")
+        if isinstance(code, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.]{0,127}", code):
+            self.evidence["error_type"] = code
+        stderr = "".join(
+            event.get("payload", {}).get("text", "")
+            for event in events
+            if event.get("event_type") == "stderr"
+        )[-65536:]
+        frames = []
+        for filename, line, function in re.findall(
+            r'File "([^"\n]+)", line ([0-9]+), in ([A-Za-z0-9_<>]+)', stderr
+        )[-12:]:
+            name = Path(filename).name
+            if re.fullmatch(r"[A-Za-z0-9_.-]+\.py", name):
+                frames.append({"file": name, "line": int(line), "function": function})
+        self.evidence["native_frames"] = frames
+        classes = re.findall(r"^([A-Za-z][A-Za-z0-9_.]*(?:Error|Exception)):", stderr, re.MULTILINE)
+        if classes:
+            self.evidence["native_error_type"] = classes[-1]
+        # Numeric transport/OS failures help diagnose downloads without copying
+        # a URL, request header, setup link, account field or exception message.
+        text = stderr + "\n" + str(run.get("error_message") or "")
+        self.evidence["errno"] = sorted({int(v) for v in re.findall(r"\[Errno ([0-9]+)\]", text)})
+        self.evidence["http_status"] = sorted(
+            {int(v) for v in re.findall(r"(?:HTTP Error |status code |error ')([45][0-9]{2})\b", text)}
+        )
 
 
 def require_host():
@@ -102,9 +139,13 @@ class Client:
             if run["status"] == "succeeded":
                 return value
             if run["status"] in {"failed", "interrupted", "canceled"}:
-                raise RuntimeError(
-                    "Owned experiment Run ended: " + str(run.get("error_type") or run["status"])
-                )
+                # Preserve the actual native fault before the disposable host
+                # is cleaned up. Evidence deliberately excludes message text.
+                try:
+                    events = self.request("/api/runs/" + str(UUID(run["id"])) + "/events")
+                except (OSError, ValueError):
+                    events = []
+                raise RunFailed(run, events)
             time.sleep(2)
         raise TimeoutError("The owned experiment Run did not finish within its budget")
 

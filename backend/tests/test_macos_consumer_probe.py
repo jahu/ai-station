@@ -37,6 +37,66 @@ def test_missing_dependency_reports_only_its_module_identity():
     }
 
 
+def test_failed_owned_sdk_retains_native_fault_coordinates_without_log_contents(monkeypatch):
+    identity = "9299cb43-2908-4886-82f9-2db14d828be7"
+    run = {
+        "id": identity,
+        "status": "failed",
+        "error_type": "RuntimePreparationFailed",
+        "error_message": "PRIVATE_SETUP_LINK HTTP Error 403: Forbidden",
+    }
+    events = [
+        {
+            "event_type": "stderr",
+            "payload": {
+                "text": 'Traceback (most recent call last):\n  File "/PRIVATE_HOME/native_llama_environment_job.py", '
+                'line 41, in main\n    PRIVATE_SOURCE_LINE\n  File "/PRIVATE_HOME/speech_environment.py", '
+                "line 62, in verified_object\nValueError: PRIVATE_ACCOUNT_AND_EXCEPTION\n"
+            },
+        },
+        {"event_type": "stdout", "payload": {"text": "PRIVATE_PROMPT"}},
+    ]
+    client = probe.Client("http://127.0.0.1:8765")
+    calls = []
+
+    def request(path):
+        calls.append(path)
+        return events if path.endswith("/events") else {"run": run}
+
+    monkeypatch.setattr(client, "request", request)
+    with pytest.raises(probe.RunFailed) as caught:
+        client.wait("/api/setup/runtimes/preparations/owned-task")
+    detail = probe.failure(caught.value)
+    evidence = detail["owned_run_failure"]
+    assert evidence["id"] == identity
+    assert evidence["error_type"] == "RuntimePreparationFailed"
+    assert evidence["native_error_type"] == "ValueError"
+    assert evidence["native_frames"][-1] == {
+        "file": "speech_environment.py",
+        "line": 62,
+        "function": "verified_object",
+    }
+    assert evidence["http_status"] == [403]
+    assert calls[-1] == "/api/runs/" + identity + "/events"
+    assert "PRIVATE" not in json.dumps(detail)
+
+
+def test_run_inspection_failure_does_not_hide_original_terminal_run(monkeypatch):
+    run = {"id": "9299cb43-2908-4886-82f9-2db14d828be7", "status": "failed", "error_type": "DownloadFailed"}
+    client = probe.Client("http://127.0.0.1:8765")
+
+    def request(path):
+        if path.endswith("/events"):
+            raise OSError("PRIVATE_RESPONSE")
+        return run
+
+    monkeypatch.setattr(client, "request", request)
+    with pytest.raises(probe.RunFailed) as caught:
+        client.wait("/api/runs/" + run["id"])
+    assert caught.value.evidence["error_type"] == "DownloadFailed"
+    assert caught.value.evidence["native_frames"] == []
+
+
 def test_native_ui_fixture_refuses_normal_hosts_before_storage_or_processes(monkeypatch):
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.setattr(ui_probe.Path, "mkdir", lambda *a, **kw: pytest.fail("Unexpected fixture storage"))
