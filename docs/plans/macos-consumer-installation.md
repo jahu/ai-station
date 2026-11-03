@@ -19,6 +19,16 @@ a synthetic conversation created after export. The backup must remain valid.
 These steps are unqualified until their real Mac run passes; preserving update,
 removal, signing and applicable hardware acceptance remain independent gates.
 
+The following candidate removal/reinstall stage stops the station normally,
+hashes the real VM database and retained files, verifies a separate reinstall
+copy, then removes only this fresh experiment's generated `.app`. It must prove
+the private configuration, database and files are unchanged while the app is
+absent. Reinstalling the identical verified bundle must retain the session and
+complete conversation and produce another real native-model answer. An existing
+reinstall copy, redirected app or data inside that app refuses removal. This is
+actual filesystem lifecycle acceptance on an owned disposable app, not Finder,
+Gatekeeper, signing, a preserving version update or a completed installer claim.
+
 Run 41641007361 at `fa1c29b` ended before the control-plane build: the optional
 GitHub stage publisher raised on a nonzero CLI result, aborting the actual
 experiment. Its evidence points to `macos_qa_status.py:post`, not a product

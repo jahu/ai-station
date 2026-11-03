@@ -1,5 +1,6 @@
 """An expensive fresh-host experiment cannot silently execute as a normal test."""
 
+import hashlib
 import json
 import os
 import runpy
@@ -96,6 +97,83 @@ def test_native_maintenance_never_waits_forever_on_the_predecessor(monkeypatch):
     monkeypatch.setattr(desktop, "ready_info", lambda _: previous)
     with pytest.raises(TimeoutError, match="new desktop owner"):
         probe.maintenance_ready(SimpleNamespace(poll=lambda: None), None, previous, timeout=1)
+
+
+@pytest.fixture
+def removable_qa_bundle(tmp_path, monkeypatch):
+    import desktop
+
+    monkeypatch.setattr(probe, "require_host", lambda: None)
+    parent = tmp_path / ".tools"
+    parent.mkdir(mode=0o700)
+    root = parent / "mac-consumer-experiment"
+    root.mkdir(mode=0o700)
+    resources = root / "AI Station.app/Contents/Resources"
+    resources.mkdir(parents=True)
+    content = b"synthetic verified app payload"
+    (resources / "payload").write_bytes(content)
+    (resources / "alias").symlink_to("payload")
+    digest = hashlib.sha256(content).hexdigest()
+    monkeypatch.setattr(desktop, "manifest", lambda _: {"files": {"payload": digest, "alias": digest}})
+    state = tmp_path / "saved-data"
+    state.mkdir(mode=0o700)
+    (state / "private.txt").write_bytes(b"saved accounts and models are separate")
+    return root, state, content
+
+
+def test_QA_app_removal_retains_verified_reinstall_source_and_private_data(removable_qa_bundle):
+    root, state, content = removable_qa_bundle
+    original = (state / "private.txt").read_bytes()
+    retained = probe.remove_qa_application(root, state)
+    assert not (root / "AI Station.app").exists()
+    assert retained == root / "reinstall-source/AI Station.app"
+    assert (retained / "Contents/Resources/payload").read_bytes() == content
+    assert (retained / "Contents/Resources/alias").is_symlink()
+    assert (state / "private.txt").read_bytes() == original
+
+
+def test_QA_removal_refuses_an_existing_reinstall_copy_before_deleting_app(removable_qa_bundle):
+    root, state, _ = removable_qa_bundle
+    (root / "reinstall-source").mkdir()
+    with pytest.raises(FileExistsError):
+        probe.remove_qa_application(root, state)
+    assert (root / "AI Station.app/Contents/Resources/payload").exists()
+
+
+def test_QA_removal_never_deletes_app_when_reinstall_copy_fails_verification(
+    removable_qa_bundle, monkeypatch
+):
+    root, state, content = removable_qa_bundle
+    copy = probe.shutil.copytree
+
+    def damaged(*args, **kwargs):
+        result = copy(*args, **kwargs)
+        if Path(args[0]).name == "AI Station.app":
+            (Path(result) / "Contents/Resources/payload").write_bytes(b"incomplete copy")
+        return result
+
+    monkeypatch.setattr(probe.shutil, "copytree", damaged)
+    with pytest.raises(ValueError, match="missing or changed"):
+        probe.remove_qa_application(root, state)
+    assert (root / "AI Station.app/Contents/Resources/payload").read_bytes() == content
+
+
+def test_QA_removal_rejects_redirected_app_without_touching_its_target(removable_qa_bundle, tmp_path):
+    root, state, content = removable_qa_bundle
+    external = tmp_path / "unrelated.app"
+    (root / "AI Station.app").rename(external)
+    (root / "AI Station.app").symlink_to(external, target_is_directory=True)
+    with pytest.raises(ValueError, match="restricted to this fresh QA bundle"):
+        probe.remove_qa_application(root, state)
+    assert (external / "Contents/Resources/payload").read_bytes() == content
+    assert not (root / "reinstall-source").exists()
+
+
+def test_QA_removal_refuses_saved_data_inside_the_selected_app(removable_qa_bundle):
+    root, _, content = removable_qa_bundle
+    with pytest.raises(ValueError, match="outside saved data"):
+        probe.remove_qa_application(root, root / "AI Station.app/Contents/Resources")
+    assert (root / "AI Station.app/Contents/Resources/payload").read_bytes() == content
 
 
 def test_failure_evidence_locates_code_without_exception_or_local_contents():

@@ -572,6 +572,37 @@ def maintenance_ready(process, state, previous, *, timeout=STARTUP_TIMEOUT):
     raise TimeoutError("The native maintenance did not reopen with a new desktop owner")
 
 
+def remove_qa_application(root, state):
+    """Remove only this fresh experiment's verified app, retaining a checked reinstall source."""
+    require_host()
+    import desktop
+
+    app = root / "AI Station.app"
+    if (
+        root.name != "mac-consumer-experiment"
+        or root.parent.name != ".tools"
+        or root.resolve(strict=True) != root
+        or app.is_symlink()
+        or not app.is_dir()
+        or state.resolve(strict=True) != state
+        or state.is_relative_to(app)
+        or app.is_relative_to(state)
+    ):
+        raise ValueError("App removal is restricted to this fresh QA bundle outside saved data")
+    resources = app / "Contents/Resources"
+    if resources.resolve(strict=True) != resources:
+        raise ValueError("The generated QA application resources cannot be redirected")
+    value = desktop.manifest(resources)
+    desktop.verify(resources, value)
+    source = root / "reinstall-source"
+    source.mkdir(mode=0o700)  # Never adopt a partial or pre-existing reinstall copy.
+    retained = source / "AI Station.app"
+    shutil.copytree(app, retained, symlinks=True)
+    desktop.verify(retained / "Contents/Resources", value)
+    shutil.rmtree(app)  # Exact generated app only, after its reinstall copy passed verification.
+    return retained
+
+
 def main():
     require_host()
     os.umask(0o077)
@@ -982,6 +1013,7 @@ def main():
         proof["native_reply_after_restart"] = True
         if gui:
             import desktop
+            import desktop_restore_files
             import desktop_snapshot_files
             import desktop_snapshots
             import desktop_versions
@@ -1086,6 +1118,58 @@ def main():
             proof["native_browser_full_restore"]["real_model_followup"] = True
         stop(executable, process)
         proof["clean_stop"] = True
+        if gui:
+            from macos_database_storage import DatabaseStorage
+
+            progress("remove_QA_application_preserving_private_data")
+            config = state / "desktop.env"
+            data, _ = desktop_versions.namespace(config)
+            storage = DatabaseStorage(state, config, engine, metadata)
+            before_database = storage.fingerprint()
+            storage.cleanup()
+            before_files = desktop_restore_files.inventory(data)
+            before_config = config.read_bytes()
+            source = remove_qa_application(root, state)
+            if app.exists() or config.read_bytes() != before_config:
+                raise ValueError("App removal did not retain its private installation configuration")
+            if desktop_restore_files.inventory(data) != before_files:
+                raise ValueError("App removal changed retained model, artifact or credential files")
+            if storage.fingerprint() != before_database:
+                raise ValueError("App removal changed its private account/history database")
+            storage.cleanup()
+            proof["application_removal_preserved_data"] = {
+                "actual_QA_bundle_removed": True,
+                "database_unchanged": True,
+                "retained_files_unchanged": True,
+                "configuration_unchanged": True,
+                "scope": "Owned test app filesystem removal; not Finder or Gatekeeper qualification",
+            }
+            progress("reinstall_identical_verified_QA_application")
+            shutil.copytree(source, app, symlinks=True)
+            command(executable, "--package-check")
+            process, next_url = start(executable)
+            if urllib.parse.urlsplit(next_url).netloc != parsed.netloc:
+                raise ValueError("Reinstallation changed the private station address")
+            retained = client.request("/api/chat/conversations/" + conversation["id"])
+            if retained["messages"] != restored["messages"]:
+                raise ValueError("Reinstallation did not retain the saved conversation")
+            turn = client.request(
+                "/api/chat/conversations/" + conversation["id"] + "/messages",
+                {"content": "What is 5+5? Reply only with the number. /no_think"},
+            )
+            client.wait("/api/runs/" + turn["id"], timeout=300)
+            retained = client.request("/api/chat/conversations/" + conversation["id"])
+            if not any(
+                row["role"] == "assistant" and row["run_id"] == turn["id"] and row["content"].strip()
+                for row in retained["messages"]
+            ):
+                raise ValueError("The reinstalled station could not use its retained native model")
+            proof["application_reinstallation"] = {
+                "same_verified_package": True,
+                "session_and_history_retained": True,
+                "real_model_reply": True,
+            }
+            stop(executable, process)
         proof["passed"] = True
         progress("backend_experiment_passed_full_installer_still_required")
         if not status.post("success", "Backend scenario passed; full GUI/installer still unqualified"):
