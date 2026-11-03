@@ -121,6 +121,26 @@ changes duration rather than asking the model to reinterpret the words. The
 seven outputs passed EOS, decoding and approximate offline ASR observations;
 those observations are not human listening acceptance.
 
+The correction at `43201f3` passed an actual private-account API → separate
+worker → Unix Runner → dual-GPU comparison, with no fake executor. The same
+Polish text, direction and seed yielded 210,944 model samples in all three Runs:
+
+| Speaking pace | Complete output | Speed |
+| --- | --- | --- |
+| Natural | 4.7833 seconds | 1.0×, unchanged PCM |
+| Slower | 5.9791 seconds | 0.8× |
+| Faster | 3.8266 seconds | 1.25× |
+
+All three ordinary private artifacts passed EOS, canonical WAV and recorded
+sample-count checks. GPU/RAM reservations were released and the temporary test
+services stopped. The idle AI Station-owned LLM was restored through ordinary
+audited Stop/load Runs to its saved model/image, GPU and 131,072-token Q8 cache
+preset; unrelated services were untouched. A separate bounded CPU check retained
+the exact 220-Hz tone peak at both rates and processed real generated speech.
+Evidence is private under `data/acceptance/fish-reliable-pace-20261103/`.
+Perceptual fidelity remains an explicit operator gate, covered by `VOICE-005`;
+these measurements do not establish audible quality for every voice or language.
+
 Configure only the native runner with `AI_STATION_FISH_SPEECH_ENABLED=true`,
 `AI_STATION_FISH_SPEECH_PYTHON`, `AI_STATION_FISH_SPEECH_DIR` and
 `AI_STATION_FISH_SPEECH_MODELS`. Use the pinned revisions above, an isolated
