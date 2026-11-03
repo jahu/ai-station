@@ -271,12 +271,15 @@ work while a platform-specific credential/device is unavailable.
 
 ## Naming and README
 
-Working name stays AI Station during implementation. Candidate directions:
+**Owner decision, 2026-11-03:** retain **AI Station** for release 0.1, with the
+tagline **Your own AI. Made simple.** Use this identity consistently in the app,
+README, website and installers. Existing storage paths, package identifiers,
+accounts, URLs and project identities stay unchanged. No rename migration is
+needed. The earlier candidate directions were:
 **Ownspace** (personal workspace), **Ognivo** (connected tools, Polish character),
 and **Localia** (local creation). These are proposals, not availability/trademark
-claims. Check product/domain/package collisions before an actual rename; the
-owner can choose without blocking account/media work. Keep storage/application
-identifiers stable if display branding changes.
+claims. Their preliminary collision screen follows; they are not selected for
+this release.
 
 Preliminary naming screen, 2026-11-03, using the products' own published pages:
 
@@ -287,11 +290,8 @@ Preliminary naming screen, 2026-11-03, using the products' own published pages:
 | Ognivo | [KIR's Ognivo](https://www.kir.pl/nasza-oferta/banki/centrum-wymiany-informacji/ognivo) is an established banking communication system. | Drop this candidate because the exact name already identifies another software product. |
 
 This establishes observed name collisions, not trademark, domain or package-name
-clearance. Proposed direction for 0.1: retain **AI Station**, using the consistent
-**Your own AI. Made simple.** positioning in README and the website. The owner
-has been asked to choose retention versus a new name; the decision is pending.
-Keep all existing storage paths, package identifiers, accounts, URLs and links
-unchanged while that choice is open. A future rename needs its own collision
+clearance. The owner explicitly accepted retaining **AI Station** after reviewing
+this direction. A future rename needs its own collision
 screen and coordinated display-branding change, rather than adopting a rejected
 candidate or claiming that a web search establishes availability.
 
