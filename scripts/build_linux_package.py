@@ -5,11 +5,13 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import stat
 import subprocess
 import tarfile
 import tempfile
+import tomllib
 import urllib.request
 from pathlib import Path
 
@@ -82,6 +84,34 @@ def file_manifest(root):
     return result
 
 
+def release_number(value):
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"(?:0|[1-9][0-9]{0,4})(?:\.(?:0|[1-9][0-9]{0,4})){2}", value) is None
+        or any(int(part) > 65535 for part in value.split("."))
+    ):
+        raise ValueError("Use a numeric major.minor.patch release version")
+    return value
+
+
+def release_source(version, head):
+    """A private stable candidate must still describe the reviewed, clean source."""
+    release_number(version)
+    versions = [
+        tomllib.loads((ROOT / part / "pyproject.toml").read_text())["project"]["version"]
+        for part in ("backend", "host-runner")
+    ]
+    versions.append(json.loads((ROOT / "frontend/package.json").read_text())["version"])
+    if versions != [version] * 3:
+        raise ValueError("Align backend, Host Runner and frontend versions before stable packaging")
+    observed = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    dirty = subprocess.check_output(
+        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=ROOT, text=True
+    ).strip()
+    if observed != head or re.fullmatch(r"[a-f0-9]{40}", head) is None or dirty:
+        raise ValueError("Stable packaging requires the same clean reviewed source throughout the build")
+
+
 def bundle_identity(files, head, patch, *, windows_gpu=False, linux_gpu=False, release_version=None):
     fields = {"files": files, "head": head, "patch": hashlib.sha256(patch).hexdigest()}
     # Linux and Windows may carry identical offline files but grant different
@@ -96,12 +126,25 @@ def bundle_identity(files, head, patch, *, windows_gpu=False, linux_gpu=False, r
     return hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
 
 
-def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linux_gpu=False, gpu_cache=None):
+def build(
+    output,
+    *,
+    allow_dirty=False,
+    python_tar=None,
+    windows_gpu=False,
+    linux_gpu=False,
+    gpu_cache=None,
+    release_version=None,
+):
+    if release_version is not None and allow_dirty:
+        raise ValueError("Stable packaging cannot use --allow-dirty")
     if gpu_cache is not None and not (windows_gpu or linux_gpu):
         raise ValueError("A Windows GPU cache requires the explicit Windows guest package option")
     if platform.system() != "Linux" or platform.machine().lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("Build this package on Linux x86-64")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    if release_version is not None:
+        release_source(release_version, head)
     dirty = subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()
     if dirty and not allow_dirty:
         raise RuntimeError(
@@ -127,7 +170,9 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linu
         shutil.copy2(ROOT / "packaging/linux/requirements.lock", bundle / "native-requirements.lock")
         files = file_manifest(bundle)
         patch = subprocess.check_output(["git", "diff", "HEAD"], cwd=ROOT)
-        identity = bundle_identity(files, head, patch, windows_gpu=windows_gpu, linux_gpu=linux_gpu)
+        identity = bundle_identity(
+            files, head, patch, windows_gpu=windows_gpu, linux_gpu=linux_gpu, release_version=release_version
+        )
         image_tag = "ai-station:desktop-" + identity[:16]
         archive = python_tar or stage / "python.tar.gz"
         python_archive(archive)
@@ -210,6 +255,9 @@ def build(output, *, allow_dirty=False, python_tar=None, windows_gpu=False, linu
             metadata["windows_gpu_recipe"] = WINDOWS_GPU_RECIPE
         if linux_gpu:
             metadata["linux_gpu_recipe"] = WINDOWS_GPU_RECIPE
+        if release_version is not None:
+            release_source(release_version, head)
+            metadata["release_version"] = release_version
         (bundle / "desktop-manifest.json").write_text(json.dumps(metadata, indent=2) + "\n")
         os.rename(bundle, output)
     return metadata
@@ -231,6 +279,14 @@ def package_permissions(root):
 
 
 def debian_version(metadata):
+    if "release_version" in metadata:
+        if (
+            metadata.get("source_dirty") is not False
+            or not isinstance(metadata.get("source_head"), str)
+            or re.fullmatch(r"[a-f0-9]{40}", metadata["source_head"]) is None
+        ):
+            raise ValueError("A stable package requires an identified clean source")
+        return release_number(metadata["release_version"])
     # Hashes identify bytes but cannot order updates. Preview also sorts after
     # the old experimental ~dev.<hash> scheme, without a forced downgrade.
     return f"0.1.0~preview.{metadata['source_epoch']}+{metadata['bundle_id'][:16]}"
@@ -304,6 +360,9 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--python-archive", type=Path, help="Reuse the same pinned, hash-verified archive")
     parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument(
+        "--release-version", help="Build a clean stable-version candidate; does not tag or publish"
+    )
     parser.add_argument("--deb", action="store_true")
     parser.add_argument(
         "--windows-gpu",
@@ -324,6 +383,7 @@ def main():
         windows_gpu=args.windows_gpu,
         linux_gpu=args.linux_gpu,
         gpu_cache=args.gpu_cache,
+        release_version=args.release_version,
     )
     if args.deb:
         print(deb(args.output.resolve(), metadata))

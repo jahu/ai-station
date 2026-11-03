@@ -270,3 +270,65 @@ do not qualify physical Windows GPU inference, signing or audible media quality.
 Private receipts and packages are in
 `data/acceptance/desktop-owned-recovery-20261103/`; native observations are in
 `data/acceptance/windows-native-qualification-20261031/` (results 281–283).
+
+
+## Stable-version candidate packaging — 2026-11-03
+
+The release builder candidate adds an explicit `--release-version 0.1.0` option.
+Its default remains the existing ordered private preview version. Stable builds
+refuse `--allow-dirty`, require backend/Runner/frontend version agreement and
+recheck the same clean source before publication. The release version contributes
+to the immutable bundle identity; it cannot alias a preview of the same source.
+This produces private qualification artifacts, not a Git tag or public release.
+
+A publisher builds a new destination on native Linux x86-64, for example:
+
+```bash
+.venv/bin/python scripts/build_linux_package.py \
+  --output /path/to/new-qualified-bundle --deb \
+  --release-version 0.1.0 --linux-gpu --windows-gpu
+```
+
+The two GPU flags remain explicit independent opt-ins. A verified `--gpu-cache`
+can reuse the same four input packages without downloading them again. The
+Linux action rejects WSL, and the Windows activation still rejects native Linux.
+The compiler does not install the toolkit or change the build host's daemon.
+
+The Windows guest update identity previously accepted only the private preview
+format, which would reject a real stable update before installation. The candidate
+also admits bounded numeric stable versions while retaining all source/recipe,
+package metadata and actual Debian ordering checks; stable → older preview or
+older stable remains a refused downgrade. The Windows publisher passes the
+stable Debian version to Inno's AppVersion; its separate retained source/hash
+identity and existing preview build behavior remain intact.
+
+The complete affected version/updater/guest/bundle families now pass 159 tests,
+including actual synthetic Debian payload ordering and private-data preservation
+across a stable update replay. Publisher identity also freezes the independent
+Linux/Windows activation choices: shared offline files cannot alias different
+OS policies. Legacy default hashing remains unchanged.
+
+The private clean `b145d7d` candidate was built with stable Debian metadata,
+both explicit graphics recipes and the compiled app. Actual qualification:
+
+- Ubuntu 24.04 upgraded its previous preview to `0.1.0`, preserving the same live
+  Docker PID/identity, unrelated fixture container, toolkit configuration,
+  root-only original backup/journal and user sentinel.
+- Native Windows PowerShell 5.1 and Inno built the real installer with ProductVersion
+  `0.1.0`. The installed UI's **Update AI Station** action completed its preserving
+  WSL update and ordinary automatic Start. All eight protected account, conversation,
+  message, artifact, memory, agent, project and model-file table hashes matched.
+  Existing registration/storage and application configuration were retained.
+- The real browser retained its original login cookie, four-message conversation
+  and usable composer. The private desktop owner and exact new app image were
+  verified. Ordinary native **Stop** cleared its own Compose inventory/receipt
+  while retaining valid account/history/model data. No new inference was run.
+
+That Windows installer is verified **NotSigned** and remains private. The VM is
+CPU-only; none of these results qualifies physical Windows GPU inference. The
+subsequent publisher policy-identity correction needs a final frozen artifact
+build after integration; its code/metadata identity must not be confused with
+the earlier qualification artifact. Full regression and the existing distribution,
+physical-GPU and operator handoff gates still apply.
+Only the human owner promotes the reviewed release PR to master; no build option
+publishes, signs, tags or bypasses that policy.

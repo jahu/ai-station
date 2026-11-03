@@ -68,7 +68,12 @@ try {
  [IO.Directory]::Move($stage,$Output)
  if ($InnoCompiler) {
   $version=(Get-FileHash -LiteralPath (Join-Path $Output 'windows-host-manifest.json') -Algorithm SHA256).Hash.ToLowerInvariant().Substring(0,16)
-  & $InnoCompiler ('/DPayload='+[IO.Path]::GetFullPath($Output)) ('/DVersionId='+$version) (Join-Path $PSScriptRoot 'ai-station.iss')
+  $versionArgs=@()
+  if ($manifest.package.Version -cmatch '\A(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})\z') {
+   foreach ($part in $manifest.package.Version.Split('.')) { if ([int]$part -gt 65535) { throw 'The stable installer version exceeds its numeric bound.' } }
+   $versionArgs=@('/DInstallerVersion='+$manifest.package.Version)
+  }
+  & $InnoCompiler ('/DPayload='+[IO.Path]::GetFullPath($Output)) ('/DVersionId='+$version) @versionArgs (Join-Path $PSScriptRoot 'ai-station.iss')
   if ($LASTEXITCODE -ne 0) { throw 'The native installer compiler failed; the private payload was retained for inspection.' }
  }
 } finally {
