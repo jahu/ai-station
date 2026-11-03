@@ -170,3 +170,37 @@ The [guided installation plan](managed-fish-setup.md) includes CPU transcription
 and codec prerequisites. Its dependency candidate is separate from the historical
 configured runtime above; guided readiness and real fresh-install qualification
 remain unfinished.
+
+## Voice-source conditioning study and explicit model voice (2026-11-03)
+
+Private GPU-only comparisons used the pinned configured S2 Pro source/weights,
+existing synthetic voice reference, seed 42 and identical Polish words. Eight
+complete-EOS samples compared the current whisper tag, the publisher's canonical
+`[whisper]`, explicit source-speaker binding, free-form quiet whisper, natural,
+happy, sad and afraid. The current whisper reproduced the retained baseline
+byte-for-byte. Canonical tags/binding alone do not establish an expression fix:
+voiced fractions remained about 0.81–0.88 with similar median pitch.
+
+A separate controlled four-sample comparison checked English with that same
+reference and Polish without a reference. Referenced English natural/whisper
+remained about 0.79/0.82 voiced, with complete approximate ASR transcripts.
+Without the reference, Polish natural/whisper changed from about 0.72 to 0.08
+voiced and spectral flatness from 0.0034 to 0.0889. This supports neutral-reference
+conditioning as a material factor for this voice/seed; it is not general proof
+of every voice, audible quality, identity fidelity or emotion. Unvoiced-frame
+pitch estimates must not be interpreted as the whispered voice's pitch. No
+operator process was stopped, external model changed or production data written.
+Evidence remains private under `data/acceptance/fish-prosody-20261103/` and
+`data/acceptance/fish-prosody-reference-20261103/`; listening remains open.
+
+The next implementation adds an explicit **Model voice / Reference voice** choice
+for Fish in Audio and reviewed speech agents. It never silently drops a supplied
+voice reference to improve delivery. Existing requests/history retain reference
+mode and their identity; Chatterbox keeps its WAV contract. Model voice is an
+explicit Fish-only request, rejects mixed reference inputs, omits the ASR
+prerequisite and has no source-artifact lineage. The worker/native receipt freeze
+that choice; privacy, typed permissions, dual-GPU/RAM admission, EOS/chunk checks,
+Stop and recovery retain their existing contracts. Creative drafts/follow-ups and
+agent review must preserve the selection. API/schema, native dispatch/cancellation,
+private lineage and actual UI/worker/GPU checks precede availability. This section
+records the contract; model voice is not yet exposed by the application.

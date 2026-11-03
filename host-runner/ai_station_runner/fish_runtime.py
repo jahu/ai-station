@@ -199,7 +199,8 @@ def start(manager, body):
         compatible = {int(g["index"]) for g in compatible_devices(collect(root).get("gpus", []))}
         if not driver_supported("580.126.20") or not set(body.gpus) <= compatible:
             raise ValueError("The allocated Fish GPU pair or driver does not fit its prepared profile")
-    reference_bytes(root, body.reference.model_dump())
+    if body.reference is not None:
+        reference_bytes(root, body.reference.model_dump())
     output = resolve_child(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav")
     if output.exists() or output.is_symlink():
         raise ValueError("Inspect existing speech output instead of overwriting")
