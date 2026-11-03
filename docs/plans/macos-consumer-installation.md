@@ -59,6 +59,12 @@ boot) using the same owner-dispatched status publisher. A new explicit run can
 then distinguish a lost prerequisite host from the known application-startup
 failure. It still cannot qualify unexecuted consumer steps.
 
+The manual workflow now defaults `macos_startup_profile` to **false**. Only an
+explicit true selection enables the fixed native import profiler; inherited
+profiling flags are cleared. The experiment records this boolean separately from
+its consumer result. A default run and a diagnostic run can therefore use the
+same source without treating a timing-altered startup as proof of normal startup.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm

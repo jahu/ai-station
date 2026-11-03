@@ -30,6 +30,17 @@ STOP_PROMPT = "Tell a fictional fairy tale about an owl visiting the moon, in at
 STARTUP_TIMEOUT = 900
 
 
+def select_startup_profile():
+    """Explicit experiment choice; ordinary consumer evidence stays unprofiled."""
+    selected = os.environ.get("AI_STATION_REAL_MAC_STARTUP_PROFILE", "0")
+    if selected not in {"0", "1"}:
+        raise ValueError("Choose the explicit boolean Mac startup profiling option")
+    os.environ.pop("AI_STATION_RUNNER_STARTUP_PROFILE", None)
+    if selected == "1":
+        os.environ["AI_STATION_RUNNER_STARTUP_PROFILE"] = "1"
+    return selected == "1"
+
+
 def startup_stage(path, *, after=0):
     from desktop import STARTUP_STAGES
 
@@ -536,7 +547,7 @@ def main():
         != "98da1a82dac734ba6a14c3e0379f5655ce0bd52a04cf8bb47f4e4642c914f695"
     ):
         raise ValueError("The Desktop installation belongs to another QA operation")
-    os.environ["AI_STATION_RUNNER_STARTUP_PROFILE"] = "1"
+    startup_profile_enabled = select_startup_profile()
     package_builder = producer()
     state = Path.home() / "Library/Application Support/AI Station"
     if state.exists() or state.is_symlink():
@@ -555,7 +566,12 @@ def main():
         if key.startswith(("GH_", "ACTIONS_")) or key == "GITHUB_TOKEN":
             os.environ.pop(key)
     gui = os.environ.get("AI_STATION_REAL_MAC_CONSUMER_GUI_TESTS") == "1"
-    proof = {"consumer_gui_qualified": False, "macos_installer_qualified": False, "console_entry": not gui}
+    proof = {
+        "consumer_gui_qualified": False,
+        "macos_installer_qualified": False,
+        "console_entry": not gui,
+        "startup_profile_enabled": startup_profile_enabled,
+    }
     stage = "build"
     startup_offset = 0
     processes = []

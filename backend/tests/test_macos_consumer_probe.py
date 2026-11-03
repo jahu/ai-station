@@ -13,6 +13,24 @@ import macos_qa_status as qa_status
 import pytest
 
 
+@pytest.mark.parametrize("selected", [None, "0", "1"])
+def test_complete_probe_profiles_only_after_explicit_workflow_selection(monkeypatch, selected):
+    monkeypatch.setenv("AI_STATION_RUNNER_STARTUP_PROFILE", "1")
+    if selected is None:
+        monkeypatch.delenv("AI_STATION_REAL_MAC_STARTUP_PROFILE", raising=False)
+    else:
+        monkeypatch.setenv("AI_STATION_REAL_MAC_STARTUP_PROFILE", selected)
+    assert probe.select_startup_profile() == (selected == "1")
+    assert os.environ.get("AI_STATION_RUNNER_STARTUP_PROFILE") == ("1" if selected == "1" else None)
+
+
+@pytest.mark.parametrize("selected", ["true", "1 --arbitrary", "PRIVATE_VALUE"])
+def test_complete_probe_rejects_non_boolean_profiling_settings(monkeypatch, selected):
+    monkeypatch.setenv("AI_STATION_REAL_MAC_STARTUP_PROFILE", selected)
+    with pytest.raises(ValueError, match="explicit boolean"):
+        probe.select_startup_profile()
+
+
 def test_ordinary_host_is_rejected_before_directories_or_subprocesses(monkeypatch):
     monkeypatch.delenv("AI_STATION_REAL_MAC_CONSUMER_TESTS", raising=False)
     monkeypatch.setattr(probe.Path, "home", lambda: pytest.fail("Accessed a real home before opt-in"))

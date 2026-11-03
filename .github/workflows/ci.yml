@@ -16,6 +16,10 @@ on:
           - macos-native-ui-checks
           - macos-consumer-backend
           - macos-consumer-gui
+      macos_startup_profile:
+        description: Opt into bounded Runner import profiling for the Mac consumer experiment
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -220,6 +224,7 @@ jobs:
       AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
       AI_STATION_REAL_MAC_CONSUMER_TESTS: '1'
       AI_STATION_REAL_MAC_CONSUMER_GUI_TESTS: ${{ inputs.operation == 'macos-consumer-gui' && '1' || '0' }}
+      AI_STATION_REAL_MAC_STARTUP_PROFILE: ${{ inputs.macos_startup_profile && '1' || '0' }}
       PYTHONPATH: backend:host-runner:scripts
     steps:
       - uses: actions/checkout@v4
