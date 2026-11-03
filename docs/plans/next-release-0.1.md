@@ -3,7 +3,45 @@
 Owner direction, 2026-10-29, after v0.0.2. Target milestone: **0.1.0**. This is
 the implementation contract for the complete supplied change list, not a claim
 that the features below ship. Preserve the existing application and qualified
-media profiles. Product version remains 0.0.2 until release preparation.
+media profiles. Candidate application packages identify themselves as 0.1.0;
+the published stable release remains 0.0.2 until an approved release is published.
+
+## Current release checkpoint — 2026-11-03
+
+The priority is a reliable first experience on Linux and Windows, not a deadline
+or another feature expansion. Installation, first account/model/reply, normal
+Stop/Start and retained data are the release path. macOS is deferred below.
+
+| Platform/path | Actual qualification |
+| --- | --- |
+| Ubuntu 24.04 x86-64 clean installation | Native OS install/consent, first CPU-model download/reply, preserving update/removal/reinstall passed. |
+| Linux NVIDIA workstation | The declared local LLM/media profiles have separate real GPU qualification; this is not every GPU or distribution. |
+| Windows 11 x64 private WSL2 installation | Actual installed CPU reply, preserving updates, native Start/Stop, saved login/history and ordinary OS-restart recovery passed. |
+| Physical Windows NVIDIA inference | Not yet tested. The evaluation VM has no physical GPU; Linux GPU and Windows CPU evidence do not substitute for it. |
+
+PR #626 closes the observed packaged restart defect, with the full Python
+baseline (7,945 passed, 19 explicit skips), final changed families (90 passed),
+offline QA tools (29 passed), built Linux/Windows packages and actual retained
+Windows recovery. [Exact scope and evidence](desktop-installation.md#qualified-packaged-recovery--2026-11-03).
+The existing account/creative/search/catalog/editor implementation and qualified
+profiles remain intact; there is no new execution architecture or UI rewrite.
+
+The remaining release gates are explicit:
+
+- Qualify actual Windows NVIDIA model load/reply, scoped Stop and recovery on
+  physical hardware before claiming that GPU path works for consumers.
+- Resolve installer signing/distribution acceptance. Current private Windows
+  candidates are unsigned; a successful build is not a signed public installer.
+- Complete human listening/style acceptance for NR-06 and sound/synchronization
+  quality acceptance for NR-07. Real generation, complete-file and lifecycle
+  checks have passed; they do not establish perceptual quality. Eight existing
+  GPU voice samples are available in the private Library as **Release QA · Fish**.
+- Freeze the release identity, issue the final v43/232-case operator workbook,
+  and prepare the owner-reviewed promotion to `master`. The new workbook has
+  been exported and inspected as a draft with all answers untested; it does not
+  replace the final handoff. Only the human owner may approve/merge `master`.
+
+Do not mark this release or the full goal complete while these gates remain open.
 
 ## Scope and acceptance
 
