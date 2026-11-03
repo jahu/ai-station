@@ -462,3 +462,18 @@ streaming replies across observer replacement and confirms owned Stop/private
 socket cleanup. NR-13/14 are still open: this is not the consumer installer,
 Docker Desktop transport, Metal inference, signing or a full station restart.
 See [the measured Mac gates](macos-consumer-installation.md#acceptance-evidence).
+
+### Linux/Windows package and QA scope follow-up — 2026-11-03
+
+PR #624 updates the release QA catalog to version 42: 231 active Linux/Windows
+cases, with four Mac cases archived without changing their IDs or legacy
+feedback compatibility. The optional exporter/importer suite passes 29 tests;
+no operator result is prefilled as successful. The final release-specific
+operator workbook is still a separate handoff step.
+
+The clean `629a438` candidate now has Linux/Windows packages and actual installed
+Windows Start/Stop, retained-login/history and exact-image verification. See the
+[current Windows package qualification](windows-consumer-installation.md#current-linuxwindows-candidate--2026-11-03).
+Physical Windows GPU inference, signing, remaining media listening/quality
+acceptance and the final release handoff are not inferred from this CPU fixture.
+Mac qualification remains deferred under the owner scope amendment above.

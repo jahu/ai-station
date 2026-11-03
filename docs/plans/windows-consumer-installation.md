@@ -546,3 +546,43 @@ without changing the application. Actual Tab/Shift+Tab skips disabled actions.
 The reusable owner-fenced probe and operator case SETUP-154 retain this evidence
 without another installer build or model download. Larger scales, Narrator,
 running-state focus and other platform gates remain open.
+
+### Current Linux/Windows candidate — 2026-11-03
+
+The clean `629a438d6cfee092e5a7d5bcbb04baf34b7df4d4` candidate now has a
+new Linux Debian package, prepared WSL image and actual Windows installer built
+with Windows PowerShell 5.1 and Inno Setup. The packaged control-plane image
+passed account setup, a separate fake-executor worker, durable events/SSE replay
+and database reopen. Normal and development Compose configurations validate.
+The changed native Windows process/startup families and genuine NTFS boundary
+checks passed 65 assertions; unchanged application suites reuse their recorded
+full validation rather than repeating expensive model runs.
+
+The installer updated the retained Windows 11 evaluation installation without
+reimporting its guest. All 45 logical tables remain present: 42 retain their
+exact pre-update hashes; the other differences are worker registration,
+telemetry retention and `scheduler_heartbeat.value`. The actual pre-update
+backup confirms unchanged account/security settings. The initial assertion that
+all operational state must stay frozen was retained and investigated, rather
+than reported as a pass.
+
+The previous QA session had left four old-image Compose containers behind.
+Startup correctly refused to adopt them. Only their inspected full IDs were
+stopped/removed, with both owner locks held and no active Runs; data, model
+containers and volumes were preserved. This is fixture cleanup, not a newly
+implemented crash/reboot-recovery flow.
+
+The installed native window's actual Start reached readiness on the new exact
+image `sha256:380b9aeaed195649e7f13b0d759ebca1613d59c71e22614f54b67c39afa3c8c1`.
+The original browser login and four-message conversation remained usable,
+without horizontal overflow. Actual native Stop then removed its own Compose
+containers normally; SQLite integrity and foreign keys passed, with no active
+Runs and saved accounts/history intact. No model download or inference rerun
+was needed for this package check.
+
+Private reproducibility receipts and the unsigned installer are under
+`data/acceptance/linux-windows-candidate-20261103/`; detailed native observations
+remain in `data/acceptance/windows-native-qualification-20261031/`. This does not
+qualify physical Windows GPU inference, code signing, broader hardware or
+unexpected OS-reboot recovery. macOS is deferred by the owner and is not a
+release-0.1 gate.
