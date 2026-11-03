@@ -307,3 +307,43 @@ def test_live_supervisor_lock_prevents_recovery_before_any_docker_operation(inst
         with pytest.raises(RuntimeError, match="already supervised"):
             launch.main()
     assert not station.docker.actions
+
+
+def test_device_renumbering_after_reboot_retains_filesystem_and_directory_identity(installation, monkeypatch):
+    import desktop_project
+
+    recorded(installation)
+    original = desktop_project.directory
+
+    def remounted(path):
+        info = original(path)
+        return SimpleNamespace(st_mode=info.st_mode, st_ino=info.st_ino, st_dev=info.st_dev + 1000)
+
+    monkeypatch.setattr(desktop_project, "directory", remounted)
+    installation.owner().recover(list(installation.docker.items))
+    assert len(installation.docker.actions) == 2
+
+
+def test_replacement_filesystem_refuses_even_if_paths_and_inodes_match(installation, monkeypatch):
+    import desktop_project
+
+    recorded(installation)
+    original = desktop_project.os.statvfs
+    monkeypatch.setattr(
+        desktop_project.os, "statvfs", lambda path: SimpleNamespace(f_fsid=original(path).f_fsid + 1)
+    )
+    with pytest.raises(ValueError, match="different storage"):
+        installation.owner()
+    assert not installation.docker.actions
+
+
+def test_mount_inventory_order_does_not_falsely_change_ownership(installation):
+    for item in installation.docker.items.values():
+        item["Mounts"].append(
+            {"Type": "bind", "Source": str(installation.data / "runtime/runner"), "Destination": "/runner"}
+        )
+    recorded(installation)
+    for item in installation.docker.items.values():
+        item["Mounts"].reverse()
+    installation.owner().recover(list(installation.docker.items))
+    assert len(installation.docker.actions) == 2

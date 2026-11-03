@@ -64,8 +64,10 @@ class DesktopProject:
             "uid": os.geteuid(),
             "root": str(self.root),
             "data": str(self.data),
+            # Device numbers can change when WSL remounts its disk. On ext4,
+            # f_fsid derives from the filesystem UUID, not device enumeration.
             "directories": [
-                [info.st_dev, info.st_ino] for info in (directory(self.root), directory(self.data))
+                [os.statvfs(path).f_fsid, directory(path).st_ino] for path in (self.root, self.data)
             ],
         }
 
@@ -161,13 +163,15 @@ class DesktopProject:
                 )
             ):
                 raise ValueError("New desktop containers do not match the launched package/data")
+            immutable = {key: item[key] for key in ("Config", "HostConfig", "Image")}
+            # Docker's mount inventory is unordered; comparison must not depend
+            # on the daemon's map enumeration before/after a restart.
+            immutable["Mounts"] = sorted(item["Mounts"], key=lambda value: json.dumps(value, sort_keys=True))
             result[item["Id"]] = {
                 "service": service,
                 # Configuration can contain credentials. Persist only its hash,
                 # never raw environment, logs, setup links, PIDs or process state.
-                "fingerprint": digest(
-                    {key: item[key] for key in ("Config", "HostConfig", "Mounts", "Image")}
-                ),
+                "fingerprint": digest(immutable),
             }
             services.add(service)
         return result
