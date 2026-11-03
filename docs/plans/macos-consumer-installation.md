@@ -183,6 +183,16 @@ open and verifies that the handoff still sees EOF and exits. See
 [Docker's scripted exec guidance](https://docs.docker.com/reference/cli/docker/compose/exec/).
 Actual guided execution must verify this correction before any GUI success claim.
 
+Run [41575839010](https://github.com/jahu/ai-station/actions/runs/41575839010)
+at `d000d9c` instead failed at native Runner health startup (`launch.py:338`),
+before Compose services. The cause is not established by that deadline alone.
+The native application now declares its ongoing supervision as user-initiated
+activity and gives its owned NSTasks corresponding QoS, following
+[Apple's app-level work guidance](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheAppLevel.html).
+Normal idle system sleep remains allowed; this changes no OS policy, entitlement
+or Docker setting. This corrects the app's work declaration; App Nap is still an
+unproven explanation for the earlier failures. Actual GUI qualification is required.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

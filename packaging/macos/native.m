@@ -446,6 +446,7 @@ static int administratorRecovery(BOOL smoke) {
     task.executableURL = [root URLByAppendingPathComponent:@"python/bin/python3.12"];
     task.arguments = [@[@"-IB", [root URLByAppendingPathComponent:@"scripts/desktop.py"].path] arrayByAddingObjectsFromArray:arguments];
     task.currentDirectoryURL = root;
+    task.qualityOfService = NSQualityOfServiceUserInitiated;
     return task;
 }
 - (void)openStation:(id)sender {
@@ -630,7 +631,12 @@ int main(int argc, const char *argv[]) {
         item.submenu = application;
         NSApp.mainMenu = menu;
         NSApp.delegate = stationDelegate;
+        // Supervising local work is an ongoing user action, not an idle window.
+        // Permit normal system sleep; do not let App Nap defer owned children.
+        id activity = [NSProcessInfo.processInfo beginActivityWithOptions:NSActivityUserInitiatedAllowingIdleSystemSleep
+            reason:@"Running your local AI Station"];
         [NSApp run];
+        [NSProcessInfo.processInfo endActivity:activity];
         return 0;
     }
 }
