@@ -2,13 +2,13 @@
 
 # ✳ AI Station
 
-### Your own AI. Without becoming an AI expert.
+### Your own AI. No AI or IT background needed.
 
 **A familiar ChatGPT-style experience, on your own computer.**
 
 Your conversations, images, videos, voices, music and agents — together, on your machine.
 
-[Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
+[Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
 `v0.0.2` · `Linux first` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
@@ -16,7 +16,9 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 </div>
 
-You bring the hardware. Our goal is to make the rest as simple as installing an app.
+**Local AI should be for anyone with a capable computer.** You shouldn't need to
+know what a model server is, use a terminal or understand GPUs to get started.
+You bring the hardware. We're building an app that takes care of the setup.
 
 Ask a question. Make an image or video. Create a voiceover or a soundtrack.
 Put an agent to work. Keep your conversations, files and results in one familiar
@@ -30,15 +32,23 @@ workspace — powered by your own computer.
 
 You should not have to learn how to run model servers, choose Python environments
 or assemble separate AI tools. **Making local AI approachable is the product.**
+The conversation is your starting point: describe what you want, and AI Station
+coordinates the tools behind it. Dedicated workspaces are there when you want
+more control.
 
 > **Early access:** the published v0.0.2 release uses the Linux setup guide below.
 > Development builds already offer guided model setup; desktop installers for
 > Linux, Windows and macOS are being tested. The full download-and-install
 > experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
 
+## Help make it simple
+
 **We especially need testers and feedback.** Try AI Station on your hardware and
 tell us what worked, what broke or what felt confusing. Setup friction and small
 usability problems matter just as much as bugs. You don't need to write code to help.
+Tell us what you tried, what you expected and what happened; include your operating
+system and hardware if you know them. Please leave passwords and private files out
+of public reports.
 [Report a bug](https://github.com/jahu/ai-station/issues/new) ·
 [Suggest an improvement](https://github.com/jahu/ai-station/issues/new?title=Suggestion%3A%20) ·
 [Contribution guide](CONTRIBUTING.md).

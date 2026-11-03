@@ -58,6 +58,10 @@ to `master` are created by the existing bot and remain for human-owner approval.
   prerequisites remain visible and working Linux commands stay in native details.
 - Testing and feedback have a dedicated section with direct issue/suggestion
   links. No technical background or code contribution is required to help.
+  README and the page lead with the same promise: no AI or IT background, one
+  conversation and guided setup. Keep published-release requirements visible
+  until that download-and-install experience is qualified and released. Feedback
+  asks for attempted action, expected result and actual result, without secrets.
 - Benchmarks quote the existing recorded runs, with hardware, scope and a link to
   the full methodology. It does not invent user counts, testimonials or partners.
 - Only the previously owner-approved neutral screenshots and tour are included,
