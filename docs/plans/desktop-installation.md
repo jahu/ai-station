@@ -270,3 +270,41 @@ do not qualify physical Windows GPU inference, signing or audible media quality.
 Private receipts and packages are in
 `data/acceptance/desktop-owned-recovery-20261103/`; native observations are in
 `data/acceptance/windows-native-qualification-20261031/` (results 281–283).
+
+
+## Stable-version candidate packaging — 2026-11-03
+
+The release builder candidate adds an explicit `--release-version 0.1.0` option.
+Its default remains the existing ordered private preview version. Stable builds
+refuse `--allow-dirty`, require backend/Runner/frontend version agreement and
+recheck the same clean source before publication. The release version contributes
+to the immutable bundle identity; it cannot alias a preview of the same source.
+This produces private qualification artifacts, not a Git tag or public release.
+
+A publisher builds a new destination on native Linux x86-64, for example:
+
+```bash
+.venv/bin/python scripts/build_linux_package.py \
+  --output /path/to/new-qualified-bundle --deb \
+  --release-version 0.1.0 --linux-gpu --windows-gpu
+```
+
+The two GPU flags remain explicit independent opt-ins. A verified `--gpu-cache`
+can reuse the same four input packages without downloading them again. The
+Linux action rejects WSL, and the Windows activation still rejects native Linux.
+The compiler does not install the toolkit or change the build host's daemon.
+
+The Windows guest update identity previously accepted only the private preview
+format, which would reject a real stable update before installation. The candidate
+also admits bounded numeric stable versions while retaining all source/recipe,
+package metadata and actual Debian ordering checks; stable → older preview or
+older stable remains a refused downgrade. The Windows publisher passes the
+stable Debian version to Inno's AppVersion; its separate retained source/hash
+identity and existing preview build behavior remain intact.
+
+The 97 affected version/updater tests passed, including actual built synthetic
+Debian payload comparisons without installation. The publisher PowerShell source
+parses locally. Actual stable bundle builds and native Windows 5.1/Inno build and
+preserving-update qualification remain required before this is a final release.
+Only the human owner promotes the reviewed release PR to master; no build option
+publishes, signs, tags or bypasses that policy.

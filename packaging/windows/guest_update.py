@@ -214,6 +214,16 @@ def use_update_python(distribution):
     )
 
 
+def package_version(value):
+    if not isinstance(value, str):
+        return False
+    if re.fullmatch(r"0\.1\.0~preview\.[0-9]+\+[a-f0-9]{16}", value):
+        return True
+    return re.fullmatch(r"(?:0|[1-9][0-9]{0,4})(?:\.(?:0|[1-9][0-9]{0,4})){2}", value) is not None and all(
+        int(part) <= 65535 for part in value.split(".")
+    )
+
+
 def identity(value):
     """Only the immutable guest-build fields, excluding Windows archive receipts."""
     keys = {"schema", "desktop_protocol", "source_head", "base", "package_sha256", "package", "sources"}
@@ -239,8 +249,7 @@ def identity(value):
         or package.get("Package") != "ai-station"
         or package.get("Architecture") != "amd64"
         or package.get("X-AI-Station-Desktop-Protocol") != "2"
-        or not isinstance(package.get("Version"), str)
-        or re.fullmatch(r"0\.1\.0~preview\.[0-9]+\+[a-f0-9]{16}", package["Version"]) is None
+        or not package_version(package.get("Version"))
     ):
         raise ValueError("Only the reviewed AI Station desktop package can be updated")
     sources = result["sources"]

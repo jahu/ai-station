@@ -32,8 +32,10 @@ The remaining release gates are explicit:
 - Complete and qualify the native Linux GPU prerequisite flow, keeping the
   current host/working runtimes intact and OS changes behind explicit native
   administrator consent. [Observed gap and contract](linux-gpu-onboarding.md).
-- Prepare final stable package metadata rather than publishing the private
-  Debian builder's hard-coded `0.1.0~preview` packages as a finished release.
+- Finish stable candidate packaging and preserving-update qualification. The
+  explicit clean-source `--release-version` path and bounded Windows stable
+  update admission are implemented candidates; do not publish the private
+  `0.1.0~preview` packages as a finished release. [Packaging contract](desktop-installation.md#stable-version-candidate-packaging--2026-11-03).
 - Qualify actual Windows NVIDIA model load/reply, scoped Stop and recovery on
   physical hardware before claiming that GPU path works for consumers.
 - Resolve installer signing/distribution acceptance. Current private Windows

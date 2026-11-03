@@ -492,6 +492,51 @@ def test_actual_debian_metadata_and_version_order_before_install(tmp_path, versi
             guest.check_package(output, candidate, receipt(1))
 
 
+@pytest.mark.parametrize(
+    "previous,target,allowed",
+    [
+        ("0.1.0~preview.2+" + "b" * 16, "0.1.0", True),
+        ("0.1.0", "0.1.1", True),
+        ("0.1.0", "0.1.0~preview.9+" + "b" * 16, False),
+        ("0.1.0", "0.0.2", False),
+    ],
+)
+def test_actual_stable_debian_payload_order_is_enforced_before_install(tmp_path, previous, target, allowed):
+    import subprocess
+
+    old, new = receipt(1), receipt(2)
+    old["package"]["Version"], new["package"]["Version"] = previous, target
+    guest.plan(old, new)
+    folder = tmp_path / "payload"
+    control = folder / "DEBIAN"
+    control.mkdir(parents=True)
+    control.chmod(0o755)
+    (control / "control").write_text(
+        "Package: ai-station\nVersion: " + target + "\nArchitecture: amd64\n"
+        "X-AI-Station-Desktop-Protocol: 2\nMaintainer: QA <qa@example.invalid>\nDescription: Never installed\n"
+    )
+    (control / "control").chmod(0o644)
+    output = tmp_path / "candidate.deb"
+    subprocess.run(
+        ["dpkg-deb", "--root-owner-group", "--build", str(folder), str(output)],
+        capture_output=True,
+        check=True,
+    )
+    if allowed:
+        guest.check_package(output, new, old)
+    else:
+        with pytest.raises(ValueError, match="downgrades"):
+            guest.check_package(output, new, old)
+
+
+@pytest.mark.parametrize("version", ["0.1", "01.1.0", "0.1.0-rc1", "65536.0.0", "0.1.0;id", "0.1.0\n", None])
+def test_unsupported_stable_update_version_is_rejected_before_any_work(version):
+    old, new = receipt(1), receipt(2)
+    new["package"]["Version"] = version
+    with pytest.raises(ValueError, match="reviewed AI Station"):
+        guest.plan(old, new)
+
+
 def test_lost_ack_after_target_receipt_reconciles_without_second_install(fixture, monkeypatch):
     root, store, database, manifest, calls = fixture
     original = guest.atomic_json
