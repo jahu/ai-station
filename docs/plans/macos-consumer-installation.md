@@ -75,6 +75,26 @@ prerequisites nor installs into an existing station. Its result explicitly leave
 consumer GUI, update/backup/restore/removal and complete installer qualification
 false; those remain required acceptance, not replaced by this backend evidence.
 
+[Backend run 41541859567](https://github.com/jahu/ai-station/actions/runs/41541859567)
+was canceled for exceeding 45 minutes; both official run and job log endpoints
+returned no usable log afterward. The last reached application stage and cause
+are therefore unproven. Do not infer success, an application memory failure or
+even completed package assembly from that result. The subsequent QA candidate
+publishes fixed stages and advisory RAM/swap/disk figures directly as a per-run
+[commit status](https://docs.github.com/en/rest/commits/statuses), independent of
+the final job log. Only this owner-only job gets `statuses: write`; the publisher
+retains its short-lived token privately and drops CI authority before subprocesses.
+Failures are recorded before cleanup. This does not replace functional assertions.
+
+The producer also restarts only its newly installed Docker Desktop after package
+assembly and before starting the station. The same-run, private installation
+receipt must match before any such action. This clears the developer build's
+transient guest cache, matching a consumer who imports a prebuilt package; it
+does not alter Desktop settings, image storage, the pinned model/context or a
+user's existing services. Runtime RAM admission remains unchanged and still
+checks actual available memory. The reported figures must establish whether
+memory pressure is relevant; it is not an assumed explanation for the lost run.
+
 The previously qualified baseline retained a Linux-only consumer prerequisite gate. Independent
 Darwin kernel ownership, peer credentials, telemetry, native Python and installed
 Runner components have passed the platform checks below. Consumer .app packaging,

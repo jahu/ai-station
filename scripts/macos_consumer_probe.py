@@ -4,6 +4,8 @@ import http.cookiejar
 import json
 import os
 import platform
+import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -19,6 +21,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 MODEL = "huihui-qwen3-4b-2507-q4km-macos-x86-64-cpu"
 MODEL_SHA = "b1324e2f1bd2e0610d591f54f93e38d90b187f69d1f215f4cace349eade678d7"
 PROFILE = "llamacpp-native-darwin-x86_64-b12032-v2"
+
+
+def execution_environment():
+    # CI publication authority stays in this trusted QA parent. Neither build
+    # subprocesses nor the installed application/model receive those tokens.
+    return {
+        key: value for key, value in os.environ.items() if not key.startswith(("GH_", "GITHUB_", "ACTIONS_"))
+    }
 
 
 def producer():
@@ -103,6 +113,23 @@ def main():
     require_host()
     os.umask(0o077)
     repo = Path(__file__).resolve().parent.parent
+    ownership = repo / ".native-mac/desktop-installed"
+    if (
+        ownership.is_symlink()
+        or not ownership.is_file()
+        or ownership.stat().st_size > 1024
+        or ownership.stat().st_uid != os.geteuid()
+        or stat.S_IMODE(ownership.stat().st_mode) & 0o077
+    ):
+        raise ValueError("This experiment requires its fresh private Desktop installation receipt")
+    installed = json.loads(ownership.read_text())
+    if (
+        installed.get("run_id") != os.environ.get("GITHUB_RUN_ID")
+        or installed.get("uid") != os.geteuid()
+        or installed.get("installer_sha256")
+        != "98da1a82dac734ba6a14c3e0379f5655ce0bd52a04cf8bb47f4e4642c914f695"
+    ):
+        raise ValueError("The Desktop installation belongs to another QA operation")
     package_builder = producer()
     state = Path.home() / "Library/Application Support/AI Station"
     if state.exists() or state.is_symlink():
@@ -112,6 +139,14 @@ def main():
     if root.parent.is_symlink():
         raise ValueError("The owned experiment directory cannot cross a symlink")
     root.mkdir(mode=0o700)  # Never adopt partial/unknown experiments.
+    from macos_qa_status import Status
+
+    status = Status(package_builder.git("rev-parse", "HEAD"))
+    # Only the status publisher retains this job's short-lived authority. Drop
+    # inherited CI tokens before any producer, Docker or application subprocess.
+    for key in list(os.environ):
+        if key.startswith(("GH_", "ACTIONS_")) or key == "GITHUB_TOKEN":
+            os.environ.pop(key)
     proof = {"consumer_gui_qualified": False, "macos_installer_qualified": False, "console_entry": True}
     stage = "build"
     processes = []
@@ -122,7 +157,12 @@ def main():
 
     def command(*argv, timeout=1200):
         return subprocess.run(
-            list(map(str, argv)), stdout=log, stderr=subprocess.STDOUT, timeout=timeout, check=True
+            list(map(str, argv)),
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+            check=True,
+            env=execution_environment(),
         )
 
     def progress(value):
@@ -134,12 +174,23 @@ def main():
         # Fixed stage names only: expose live progress through check annotations
         # without publishing private commands, setup URLs or account material.
         print(f"::notice title=Mac package QA::{stage}", flush=True)
+        from ai_station_runner.darwin_telemetry import memory
+
+        facts = memory()
+        status.post(
+            "pending",
+            f"{stage}; RAM available={facts.get('available_mib')}MiB; "
+            f"swap={facts.get('swap_used_mib')}MiB; disk={shutil.disk_usage(root).free // 1024**2}MiB",
+        )
 
     def start(executable):
         import desktop
 
         process = subprocess.Popen(
-            [str(executable), "--console", "--background"], stdout=log, stderr=subprocess.STDOUT
+            [str(executable), "--console", "--background"],
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            env=execution_environment(),
         )
         processes.append(process)
         deadline = time.monotonic() + 300
@@ -233,6 +284,17 @@ def main():
         }
         executable = app / "Contents/MacOS/AI Station"
         command(executable, "--package-check")
+        # A consumer imports a prebuilt image; the developer's preceding image
+        # build can leave guest cache occupying host RAM. Restart only this QA
+        # job's newly installed Desktop, retaining its image store and settings.
+        progress("cold_start_owned_desktop_after_build")
+        command(engine.identity[0], "desktop", "stop", "--timeout", "60", timeout=90)
+        command(engine.identity[0], "desktop", "start", "--timeout", "240", timeout=270)
+        from macos_desktop_qa_ready import wait_for_engine
+
+        wait_for_engine()
+        if desktop_engine.select(dict(os.environ)).identity != engine.identity:
+            raise ValueError("The owned Desktop restart changed its pinned local endpoint")
         progress("start_actual_package")
         process, url = start(executable)
         parsed = urllib.parse.urlsplit(url)
@@ -334,8 +396,15 @@ def main():
         proof["clean_stop"] = True
         proof["passed"] = True
         progress("backend_experiment_passed_GUI_update_backup_removal_still_required")
+        status.post("success", "Backend scenario passed; full GUI/installer still unqualified")
     except BaseException as error:
         proof.update(passed=False, stage=stage, **failure(error))
+        save()  # Preserve the fault before bounded process cleanup can block.
+        print(json.dumps({"experiment_failed_at": stage, **failure(error)}), flush=True)
+        try:
+            status.post("failure", f"{stage}: {type(error).__name__}")
+        except (OSError, RuntimeError, subprocess.SubprocessError):
+            proof["status_publish_failed"] = True
         raise
     finally:
         for process in processes:

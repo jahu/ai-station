@@ -210,7 +210,11 @@ jobs:
     if: inputs.operation == 'macos-consumer-backend' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
     runs-on: macos-15-intel
     timeout-minutes: 45
+    permissions:
+      contents: read
+      statuses: write
     env:
+      GH_TOKEN: ${{ github.token }}
       AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
       AI_STATION_REAL_MAC_CONSUMER_TESTS: '1'
       PYTHONPATH: backend:host-runner:scripts

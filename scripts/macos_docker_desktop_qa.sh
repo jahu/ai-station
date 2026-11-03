@@ -90,7 +90,12 @@ touch "$qa_root/mounted"
         PATH=/usr/bin:/bin:/usr/sbin:/sbin LANG=C \
         "$qa_root/mount/Docker.app/Contents/MacOS/install" --accept-license --user="$qa_user"
 )
-touch "$qa_root/desktop-installed"
+"$qa_python" -I - "$qa_root/desktop-installed" <<'PY'
+import json,os,sys
+with open(sys.argv[1], 'x') as target:
+    json.dump({'run_id':os.environ['GITHUB_RUN_ID'], 'uid':os.geteuid(),
+               'installer_sha256':'98da1a82dac734ba6a14c3e0379f5655ce0bd52a04cf8bb47f4e4642c914f695'}, target)
+PY
 [[ -x '/Library/Application Support/com.docker.docker' ]]
 /usr/bin/stat -f '%Sp %Su:%Sg %N' '/Library/Application Support/com.docker.docker'
 if [[ -e '/Library/Application Support/com.docker.docker/install-settings.json' ]]; then
