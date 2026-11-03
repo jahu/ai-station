@@ -31,6 +31,7 @@ SOURCE = (
     "scripts/desktop_update_owner.py",
     "scripts/desktop_docker_access.py",
     "scripts/desktop_engine.py",
+    "scripts/desktop_project.py",
     "packaging/linux/docker_access.py",
     "packaging/linux/org.ai-station.docker-access.policy",
     "compose.yaml",

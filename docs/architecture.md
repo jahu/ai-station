@@ -29,6 +29,15 @@ application image; no second application API is introduced. Installed code is
 copied into a retained version directory before supervision so OS package
 replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
 
+Linux/WSL desktop recovery reuses that supervisor and its exclusive launcher
+lock. A private native receipt, outside the mounted data directory, binds its
+previous Compose containers to exact IDs/configuration/mount fingerprints and
+the persistent Docker/storage namespace. A later Start can reconcile only that
+verified inventory after the old supervisor has gone. Managed model containers
+and native processes keep their existing ownership/recovery contracts; ordinary
+worker leases decide interrupted Run handling. Legacy or modified deployments
+still require inspection. This does not extend the deferred Mac launcher.
+
 The native Mac candidate keeps a private version receipt outside container-mounted
 data, binding its verified package to the data directory identity, Compose
 project, accounts profile and Runner socket coordinates. A separate same-user

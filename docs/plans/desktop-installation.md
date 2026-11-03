@@ -207,3 +207,33 @@ validation and child identity. Real .NET HTTP tests on Linux cover correct/wrong
 instances, redirects, missing identity and oversized responses; these do not
 qualify Windows forwarding or native rendering. Those platform gates remain in
 the [Windows contract](windows-consumer-installation.md).
+
+## Linux/Windows recovery after OS restart
+
+The final retained Windows check exposed old Compose containers restarting after
+Windows/WSL had closed their native owner. The current launcher correctly refuses
+unregistered pre-existing deployments; a consumer must not need manual Docker
+cleanup after an ordinary system restart.
+
+For newly launched packaged Linux/WSL sessions, retain a private Compose ownership
+receipt beside `desktop.env`, outside container-mounted application data. Bind it
+to the actual Docker daemon, installation/data directory identities and project.
+After this supervisor's successful Compose creation, record exact container IDs,
+services and immutable configuration/mount fingerprints before announcing ready.
+Normal successful shutdown removes the receipt. Never infer ownership from a
+project name alone or adopt a legacy installation with no receipt.
+
+A later packaged Start holds the existing exclusive launcher lock. It may stop
+and remove only the previously recorded containers after checking the complete
+current inventory, daemon, namespace and every fingerprint. An unexpected ID,
+changed configuration/mount or unsafe receipt refuses recovery without signals.
+Partial prior cleanup may leave a subset of recorded IDs; verify all survivors
+before acting. Preserve volumes, database files, managed model containers and
+other projects. Existing worker leases/native process inspection retain their
+normal interrupted-work policy; this does not blindly re-execute external work.
+
+This change applies only to Linux/WSL packaged supervision; development launches
+retain their existing refusal and macOS remains deferred. Crashes before a new
+inventory is durably recorded still require inspection. Qualify hostile receipt/
+container changes, actual disposable Docker recovery and a real Windows reboot
+of the retained installation before claiming the recovery path complete.
