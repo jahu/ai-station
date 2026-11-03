@@ -95,6 +95,65 @@ final class NativeAcceptanceTests: XCTestCase {
     }
 }
 
+final class NativeMaintenanceAcceptanceTests: XCTestCase {
+    private func click(_ label: String, timeout: TimeInterval = 60) throws {
+        let identity = "io.ai-station.presentation"
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !NSRunningApplication.runningApplications(withBundleIdentifier: identity).isEmpty
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: timeout), .completed)
+        let owners = NSRunningApplication.runningApplications(withBundleIdentifier: identity)
+        XCTAssertEqual(owners.count, 1)
+        let owner = try XCTUnwrap(owners.first)
+        let executable = try XCTUnwrap(owner.executableURL?.resolvingSymlinksInPath().path)
+        let retained = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/AI Station/releases").path
+        XCTAssertTrue(executable.hasPrefix(retained + "/"))
+        XCTAssertTrue(executable.hasSuffix("/bin/AI Station Helper.app/Contents/MacOS/ai-station-native"))
+        let app = XCUIApplication(bundleIdentifier: identity) // Attach to the retained product helper.
+        let button = app.dialogs.firstMatch.buttons[label]
+        XCTAssertTrue(button.waitForExistence(timeout: timeout))
+        XCTAssertTrue(button.isEnabled)
+        button.click()
+        let closed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in owner.isTerminated }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+    }
+
+    func testCreateCompleteBackup() throws {
+        continueAfterFailure = false
+        executionTimeAllowance = 480
+        try click("Create backup") // Selection, followed by the ordinary explicit confirmation.
+        try click("Create backup")
+        try click("Open AI Station", timeout: 300) // Do not export a path or open Finder.
+    }
+
+    func testRestoreCompleteBackup() throws {
+        continueAfterFailure = false
+        executionTimeAllowance = 480
+        let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let descriptor = repository.appendingPathComponent(".tools/mac-consumer-experiment/backup-path.private.json")
+        let value = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: descriptor)) as? [String: String])
+        let path = try XCTUnwrap(value["path"])
+        let exports = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/AI Station/database-exports").path
+        XCTAssertEqual(URL(fileURLWithPath: path).deletingLastPathComponent().path, exports)
+        XCTAssertNotNil(UUID(uuidString: URL(fileURLWithPath: path).lastPathComponent))
+        try click("Restore backup…")
+        let picker = XCUIApplication(bundleIdentifier: "io.ai-station.presentation")
+        let panel = picker.dialogs["open-panel"]
+        XCTAssertTrue(panel.buttons["Check backup"].waitForExistence(timeout: 30))
+        picker.typeKey("g", modifierFlags: [.command, .shift])
+        let location = picker.sheets.textFields.firstMatch
+        XCTAssertTrue(location.waitForExistence(timeout: 15))
+        location.typeText(path + "\n")
+        XCTAssertTrue(panel.buttons["Check backup"].isEnabled)
+        panel.buttons["Check backup"].click()
+        try click("Restore backup", timeout: 90) // Keep current password; no exceptional MFA reset.
+        try click("Open AI Station", timeout: 300)
+    }
+}
+
 final class NativeConsumerAcceptanceTests: XCTestCase {
     func testActualFirstLaunchAndBrowserAdministratorSetup() throws {
         continueAfterFailure = false

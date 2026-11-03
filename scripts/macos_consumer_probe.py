@@ -549,6 +549,29 @@ class Client:
         raise TimeoutError("The visible browser Stop did not finish")
 
 
+def maintenance_ready(process, state, previous, *, timeout=STARTUP_TIMEOUT):
+    """Observe a new ordinary desktop owner, never accept its predecessor's link."""
+    import desktop
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError("The native maintenance owner exited before reopening the station")
+        current = desktop.ready_info(state)
+        if current and current.get("instance_id") != previous.get("instance_id"):
+            if not current.get("instance_id") or (
+                urllib.parse.urlsplit(current["url"]).scheme,
+                urllib.parse.urlsplit(current["url"]).netloc,
+            ) != (
+                urllib.parse.urlsplit(previous["url"]).scheme,
+                urllib.parse.urlsplit(previous["url"]).netloc,
+            ):
+                raise ValueError("The preserving maintenance changed its private origin or owner")
+            return current
+        time.sleep(1)
+    raise TimeoutError("The native maintenance did not reopen with a new desktop owner")
+
+
 def main():
     require_host()
     os.umask(0o077)
@@ -662,8 +685,8 @@ def main():
         ui_processes.append(controller)
         return controller
 
-    def guided_action(method):
-        controller = launch_ui("NativeGuidedAcceptanceTests/" + method, method)
+    def guided_action(method, *, suite="NativeGuidedAcceptanceTests"):
+        controller = launch_ui(suite + "/" + method, method)
         controller.wait(timeout=480)
         if controller.returncode:
             raise RuntimeError("The actual guided browser action failed")
@@ -954,10 +977,86 @@ def main():
         ):
             raise ValueError("The restarted installation could not continue its conversation")
         proof["native_reply_after_restart"] = True
+        if gui:
+            import desktop
+            import desktop_snapshots
+
+            def maintenance(method):
+                previous = desktop.ready_info(state)
+                if not previous or not previous.get("instance_id"):
+                    raise ValueError("Native maintenance requires the actual ready desktop owner")
+                child = subprocess.Popen(
+                    [str(executable), "--manage-backups", "--background"],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    env=execution_environment(),
+                )
+                processes.append(child)
+                guided_action(method, suite="NativeMaintenanceAcceptanceTests")
+                maintenance_ready(child, state, previous)
+                return child
+
+            progress("native_complete_backup_and_preserving_reopen")
+            export_root = state / "database-exports"
+            before = set(export_root.iterdir()) if export_root.exists() else set()
+            saved_messages = continued["messages"]
+            process = maintenance("testCreateCompleteBackup")
+            exports = set(export_root.iterdir()) - before
+            if len(exports) != 1:
+                raise ValueError("Native backup did not create exactly one complete export")
+            backup = exports.pop()
+            UUID(backup.name)
+            snapshot = desktop_snapshots.verify(backup)
+            if snapshot["file_count"] < 1:
+                raise ValueError("Native backup did not retain its installed files")
+            if client.request("/api/chat/conversations/" + conversation["id"])["messages"] != saved_messages:
+                raise ValueError("Native backup changed its conversation history")
+            proof["native_browser_full_backup"] = {
+                "verified_all_exported_files": True,
+                "file_count": snapshot["file_count"],
+                "history_preserved": True,
+                "new_desktop_owner": True,
+            }
+            marker = client.request(
+                "/api/chat/conversations",
+                {
+                    "title": "Synthetic conversation created after the backup",
+                    "execution_mode": "local",
+                    "provider": "local-openai-compatible",
+                    "model": model,
+                },
+            )
+            (root / "backup-path.private.json").write_text(json.dumps({"path": str(backup)}))
+            progress("native_complete_restore_and_reauthentication")
+            process = maintenance("testRestoreCompleteBackup")
+            try:
+                client.request("/api/chat/conversations")
+            except urllib.error.HTTPError as error:
+                if error.code != 401:
+                    raise
+            else:
+                raise ValueError("Native restoration retained a pre-restore account session")
+            client.request(
+                "/api/auth/login",
+                {"username": "QaAdmin", "password": "synthetic private desktop acceptance password"},
+            )
+            if client.request("/api/chat/conversations/" + conversation["id"])["messages"] != saved_messages:
+                raise ValueError("Native restoration did not recover the complete saved conversation")
+            if any(row["id"] == marker["id"] for row in client.request("/api/chat/conversations")):
+                raise ValueError("Native restoration retained a conversation created after the backup")
+            desktop_snapshots.verify(backup)  # Restoration must preserve its source too.
+            proof["native_browser_full_restore"] = {
+                "history_restored": True,
+                "post_backup_conversation_absent": True,
+                "old_session_rejected": True,
+                "original_password_works": True,
+                "backup_still_verified": True,
+                "new_desktop_owner": True,
+            }
         stop(executable, process)
         proof["clean_stop"] = True
         proof["passed"] = True
-        progress("backend_experiment_passed_GUI_update_backup_removal_still_required")
+        progress("backend_experiment_passed_full_installer_still_required")
         status.post("success", "Backend scenario passed; full GUI/installer still unqualified")
     except BaseException as error:
         proof.update(passed=False, stage=stage, **failure(error))

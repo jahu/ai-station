@@ -7,6 +7,18 @@ control plane, native user Runner and Task → Run → Events → Artifacts life
 
 ## Explicit search-image preparation (candidate, 2026-11-03)
 
+The actual package GUI qualification now also has candidate native full-backup
+and restore steps after the real conversation/restart checks. XCTest operates
+the retained product helper's ordinary selection and confirmation dialogs, then
+selects the exact newly created backup through the native folder picker. It
+neither calls backup APIs nor bypasses consent. Read-only observations require
+a new desktop owner on the same private origin, hash verification of every
+exported file and unchanged conversation history. Restore must invalidate the
+old session, accept the original password, recover that exact history and remove
+a synthetic conversation created after export. The backup must remain valid.
+These steps are unqualified until their real Mac run passes; preserving update,
+removal, signing and applicable hardware acceptance remain independent gates.
+
 Real GUI run 41600426425 reaches `starting_services` with a live native Runner
 and Docker Compose still waiting; no project containers are observed. This
 narrows the startup failure but does not establish its complete root cause.

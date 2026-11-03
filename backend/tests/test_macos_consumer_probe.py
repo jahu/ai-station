@@ -6,6 +6,7 @@ import runpy
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import macos_consumer_probe as probe
 import macos_native_ui_probe as ui_probe
@@ -45,6 +46,56 @@ def test_http_failure_reports_status_without_response_url_or_private_values():
     error = HTTPError("http://PRIVATE_URL", 401, "PRIVATE_MESSAGE", {}, None)
     detail = probe.failure(error)
     assert detail["http_status"] == 401 and "PRIVATE" not in json.dumps(detail)
+
+
+def test_native_maintenance_waits_for_a_new_owner_instead_of_accepting_stale_readiness(monkeypatch):
+    import desktop
+
+    previous = {"url": "http://127.0.0.1:8765/?private=old", "instance_id": "a" * 32}
+    current = {"url": "http://127.0.0.1:8765/?private=new", "instance_id": "b" * 32}
+    observations = iter([previous, None, current])
+    monkeypatch.setattr(desktop, "ready_info", lambda _: next(observations))
+    waits = []
+    monkeypatch.setattr(probe.time, "sleep", waits.append)
+    assert probe.maintenance_ready(SimpleNamespace(poll=lambda: None), None, previous) == current
+    assert waits == [1, 1]
+
+
+@pytest.mark.parametrize(
+    "current",
+    [
+        {"url": "http://127.0.0.1:8766/", "instance_id": "b" * 32},
+        {"url": "https://127.0.0.1:8765/", "instance_id": "b" * 32},
+        {"url": "http://127.0.0.1:8765/"},
+    ],
+)
+def test_native_maintenance_rejects_a_changed_origin_or_missing_owner(monkeypatch, current):
+    import desktop
+
+    previous = {"url": "http://127.0.0.1:8765/", "instance_id": "a" * 32}
+    monkeypatch.setattr(desktop, "ready_info", lambda _: current)
+    with pytest.raises(ValueError, match="private origin or owner"):
+        probe.maintenance_ready(SimpleNamespace(poll=lambda: None), None, previous)
+
+
+def test_native_maintenance_child_exit_is_failure_even_if_old_readiness_remains(monkeypatch):
+    import desktop
+
+    monkeypatch.setattr(desktop, "ready_info", lambda _: pytest.fail("Accepted a stale owner"))
+    with pytest.raises(RuntimeError, match="exited before"):
+        probe.maintenance_ready(SimpleNamespace(poll=lambda: 0), None, {})
+
+
+def test_native_maintenance_never_waits_forever_on_the_predecessor(monkeypatch):
+    import desktop
+
+    previous = {"url": "http://127.0.0.1:8765/", "instance_id": "a" * 32}
+    clock = iter([0, 0, 2])
+    monkeypatch.setattr(probe.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(probe.time, "sleep", lambda _: None)
+    monkeypatch.setattr(desktop, "ready_info", lambda _: previous)
+    with pytest.raises(TimeoutError, match="new desktop owner"):
+        probe.maintenance_ready(SimpleNamespace(poll=lambda: None), None, previous, timeout=1)
 
 
 def test_failure_evidence_locates_code_without_exception_or_local_contents():
