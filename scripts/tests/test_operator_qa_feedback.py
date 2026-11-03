@@ -82,6 +82,11 @@ class FeedbackTests(unittest.TestCase):
             feedback.ingest(manifest_path=self.manifest, workbook=self.returned, output=self.root / "triage")
         self.assertEqual(self.returned.read_bytes(), before)
 
+    def test_a_deferred_case_cannot_be_inserted_into_current_release_results(self):
+        self.book["Testy"]["A2"] = "SETUP-155"
+        with self.assertRaises(ValueError):
+            self.ingest()
+
     def test_reports_group_only_same_symptoms_keep_evidence_and_retests_never_erase_failure(self):
         self.book["Testy"]["B2"] = "Błąd"
         self.book["Testy"]["G2"] = "Zażółć gęślą jaźń — brak odpowiedzi"
