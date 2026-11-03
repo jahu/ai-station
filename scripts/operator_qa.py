@@ -72,10 +72,17 @@ def load_catalog(path: Path = CATALOG) -> dict:
 
 def validate_catalog(value: dict) -> dict:
     cases = value["cases"]
-    ids = [item["id"] for item in cases]
+    deferred = value.get("deferred_cases", [])
+    if not isinstance(deferred, list):
+        raise ValueError("Deferred cases must be a list")
+    notice = value.get("scope_notice")
+    if (deferred or notice is not None) and (not isinstance(notice, str) or not notice.strip()):
+        raise ValueError("A scoped catalog requires a nonempty scope notice")
+    all_cases = [*cases, *deferred]
+    ids = [item["id"] for item in all_cases]
     if not cases or len(ids) != len(set(ids)):
         raise ValueError("Case IDs must be nonempty and unique")
-    for case in cases:
+    for case in all_cases:
         if not re.fullmatch(r"[A-Z]+-\d{3}", case["id"]):
             raise ValueError("Invalid stable case ID")
         for field in ("area", "title", "priority", "resources", "requirements"):
@@ -207,6 +214,10 @@ def export(
             ["Wygenerowano", datetime.now(UTC).isoformat(timespec="seconds")],
             ["Wersja katalogu", str(catalog["version"])],
             ["Identyfikator katalogu", catalog_hash],
+            [
+                "Zakres wydania",
+                catalog.get("scope_notice", "Zakres opisano w przypadkach i sprawdzonych profilach poniżej."),
+            ],
             [
                 "Kolejność",
                 "Zacznij od uruchomienia i logowania, następnie jedna rozmowa, pliki i media, agenci, Memory oraz pozostałe obszary. Nie wybierasz trybu Chat / Work: orkiestrator dobiera wykonanie. P0 oznacza główną ścieżkę.",

@@ -29,6 +29,12 @@ commit, independently of the newer documentation/catalog commit.
 
 ## Delivery and timing
 
+For release 0.1, the owner's 2026-11-03 scope change requires Linux and Windows,
+with macOS recorded as unsupported/deferred. Catalog v42 archives its four Mac
+cases separately instead of asking the operator to execute them or marking
+them successful. New packages contain only active cases, with the scope notice
+on Start and in the guide; original catalogs remain usable for older feedback.
+
 - Keep a version-controlled test-case catalog with stable case IDs and trace each
   case to product requirements and implemented workflows. Update it as features
   change; do not generate the final workbook against an obsolete release.

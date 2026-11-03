@@ -1,6 +1,14 @@
 # Operator QA catalog and workbook
 
-The developing v33 catalog contains 219 cases. SETUP-146–148 cover native
+The developing v42 catalog contains **231 active cases** for Linux, Windows and
+shared application workflows. The owner deferred macOS on 2026-11-03:
+SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs
+and definitions, and are excluded from new worksheets, manifests and result
+counts. The scope notice appears on Start and in the plain-text guide. Earlier
+issued workbooks/answers remain unchanged; import those with their original
+archived catalog, as required by their manifest.
+
+SETUP-146–148 cover native
 Docker consent and preserving OS package update/removal/reinstallation.
  SETUP-143–145 cover the explicit
 CPU conversation starter, first reply, RAM/Stop/recovery and private setup
