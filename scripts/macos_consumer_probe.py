@@ -146,6 +146,84 @@ def startup_errors(state, *, log_name="desktop.log"):
                 item[key] = value[key]
         observed.append(item)
     result["errors"] = observed[-8:]
+    result.update(startup_profile(tail))
+    return result
+
+
+def startup_profile(tail):
+    """Only fixed code identities/timings and known faults, never raw log lines."""
+    roots = {
+        "ai_station_runner",
+        "fastapi",
+        "starlette",
+        "pydantic",
+        "pydantic_core",
+        "pydantic_settings",
+        "uvicorn",
+        "httpx",
+        "httpcore",
+        "ssl",
+        "asyncio",
+        "certifi",
+        "cryptography",
+        "PIL",
+        "psutil",
+        "torch",
+        "numpy",
+        "safetensors",
+        "huggingface_hub",
+        "pynvml",
+        "gguf",
+        "importlib",
+    }
+    imports = [
+        {"module": name, "self_us": int(own), "cumulative_us": int(total)}
+        for own, total, name in re.findall(
+            r"^import time:\s*(\d{1,12})\s*\|\s*(\d{1,12})\s*\|\s*([A-Za-z][A-Za-z0-9_.]{0,127})\s*$",
+            tail,
+            re.M,
+        )
+        if name.split(".")[0] in roots
+    ]
+    result = {}
+    if imports:
+        result["slowest_imports"] = sorted(imports, key=lambda row: row["cumulative_us"], reverse=True)[:12]
+    allowed_errors = {
+        "ModuleNotFoundError",
+        "ImportError",
+        "AttributeError",
+        "KeyError",
+        "TypeError",
+        "ValidationError",
+        "RuntimeError",
+        "ValueError",
+        "OSError",
+        "PermissionError",
+        "FileNotFoundError",
+        "BlockingIOError",
+    }
+    errors = [
+        name
+        for name in re.findall(r"^(?:[A-Za-z0-9_.]+\.)?([A-Za-z][A-Za-z0-9_]{0,63}):", tail, re.M)
+        if name in allowed_errors
+    ]
+    if errors:
+        frames = []
+        for filename, line, function in re.findall(
+            r'^\s*File "([^"\n]{1,4096})", line (\d{1,9}), in ([A-Za-z0-9_<>]{1,128})\s*$', tail, re.M
+        )[-12:]:
+            name = Path(filename).name
+            if re.fullmatch(r"[A-Za-z0-9_.-]+\.py", name):
+                frames.append({"file": name, "line": int(line), "function": function})
+        result["unstructured_child_errors"] = {"types": errors[-4:], "frames": frames}
+    messages = {
+        "A Host Runner already owns this data directory": "data_owner_busy",
+        "The configured socket already has a listener": "socket_owner_busy",
+        "This platform needs a shorter private Unix socket path": "socket_path_too_long",
+    }
+    codes = [code for message, code in messages.items() if message in tail]
+    if codes:
+        result["runner_message_codes"] = codes
     return result
 
 
@@ -458,6 +536,7 @@ def main():
         != "98da1a82dac734ba6a14c3e0379f5655ce0bd52a04cf8bb47f4e4642c914f695"
     ):
         raise ValueError("The Desktop installation belongs to another QA operation")
+    os.environ["AI_STATION_RUNNER_STARTUP_PROFILE"] = "1"
     package_builder = producer()
     state = Path.home() / "Library/Application Support/AI Station"
     if state.exists() or state.is_symlink():

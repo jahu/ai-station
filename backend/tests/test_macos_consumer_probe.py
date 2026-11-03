@@ -79,6 +79,74 @@ def test_missing_dependency_reports_only_its_module_identity():
     }
 
 
+def test_startup_profile_keeps_only_code_timings_and_sanitized_child_faults():
+    text = """import time: 13 | 472 | ai_station_runner.app
+import time: 19 | 900 | PRIVATE_MODULE.SECRET
+Traceback (most recent call last):
+  File "/Users/PRIVATE_OWNER/PRIVATE_FOLDER/main.py", line 42, in <module>
+    PRIVATE_VARIABLE = "PRIVATE_TOKEN"
+pydantic_core._pydantic_core.ValidationError: PRIVATE_INPUT https://secret.invalid/?token=PRIVATE_TOKEN
+The configured socket already has a listener
+"""
+    result = probe.startup_profile(text)
+    assert result == {
+        "slowest_imports": [{"module": "ai_station_runner.app", "self_us": 13, "cumulative_us": 472}],
+        "unstructured_child_errors": {
+            "types": ["ValidationError"],
+            "frames": [{"file": "main.py", "line": 42, "function": "<module>"}],
+        },
+        "runner_message_codes": ["socket_owner_busy"],
+    }
+    assert "PRIVATE" not in json.dumps(result) and "secret.invalid" not in json.dumps(result)
+
+
+def test_startup_profile_drops_malformed_or_unbounded_rows():
+    assert (
+        probe.startup_profile(
+            "import time: " + ("9" * 5000) + " | 12 | ai_station_runner.app\nPRIVATE_ERROR: PRIVATE_TOKEN"
+        )
+        == {}
+    )
+
+
+@pytest.mark.parametrize(
+    "system,desktop,isolation", [("darwin", True, ["-IB"]), ("linux", True, ["-I"]), ("linux", False, [])]
+)
+def test_runner_profile_is_an_explicit_fixed_diagnostic_without_arbitrary_arguments(
+    monkeypatch, system, desktop, isolation
+):
+    import launch
+
+    monkeypatch.setattr(launch.sys, "platform", system)
+    ordinary = [sys.executable, *isolation, "-m", "ai_station_runner.main"]
+    assert launch.runner_command(desktop=desktop, environment={}) == ordinary
+    assert (
+        launch.runner_command(
+            desktop=desktop, environment={"AI_STATION_RUNNER_STARTUP_PROFILE": "1 --arbitrary PRIVATE_VALUE"}
+        )
+        == ordinary
+    )
+    assert launch.runner_command(desktop=desktop, environment={"AI_STATION_RUNNER_STARTUP_PROFILE": "1"}) == [
+        sys.executable,
+        *isolation,
+        "-X",
+        "importtime",
+        "-m",
+        "ai_station_runner.main",
+    ]
+
+
+def test_desktop_preserves_only_the_explicit_runner_diagnostic_setting(monkeypatch):
+    import desktop
+
+    monkeypatch.setenv("AI_STATION_RUNNER_STARTUP_PROFILE", "1")
+    monkeypatch.setenv("AI_STATION_DATA_HOST_PATH", "PRIVATE_OTHER_STATION")
+    monkeypatch.setenv("PYTHONPATH", "PRIVATE_OTHER_MODULES")
+    result = desktop.launch_environment()
+    assert result["AI_STATION_RUNNER_STARTUP_PROFILE"] == "1"
+    assert "AI_STATION_DATA_HOST_PATH" not in result and "PYTHONPATH" not in result
+
+
 def test_browser_record_observation_uses_only_reads_and_waits_for_actual_publication(monkeypatch):
     client = probe.Client("http://127.0.0.1:8765")
     row = {"id": "91f0cece-c533-4081-a63f-979a1025762b", "run": {"status": "queued"}}

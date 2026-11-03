@@ -370,11 +370,15 @@ def import_image(root, value, log, *, engine=None):
 def launch_environment():
     # The desktop bundle has its own configuration. Shell variables from a
     # developer's other station must not redirect its data, credentials or port.
-    return {
+    environment = {
         key: value
         for key, value in os.environ.items()
         if not key.startswith(("AI_STATION_", "COMPOSE_", "PYTHON"))
     }
+    # Explicit local diagnostics only; never propagate another station's settings.
+    if os.environ.get("AI_STATION_RUNNER_STARTUP_PROFILE") == "1":
+        environment["AI_STATION_RUNNER_STARTUP_PROFILE"] = "1"
+    return environment
 
 
 def browser_url(value):

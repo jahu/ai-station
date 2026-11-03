@@ -51,6 +51,16 @@ class RunnerReadinessError(RuntimeError):
         self.runner_readiness = "timed_out" if returncode is None else "exited"
 
 
+def runner_command(*, desktop, environment):
+    return [
+        sys.executable,
+        *(["-IB" if sys.platform == "darwin" else "-I"] if desktop else []),
+        *(["-X", "importtime"] if environment.get("AI_STATION_RUNNER_STARTUP_PROFILE") == "1" else []),
+        "-m",
+        "ai_station_runner.main",
+    ]
+
+
 def configuration(config_file: Path | None = None) -> dict[str, str]:
     load_dotenv(config_file or ROOT / ".env", override=False)
     env = dict(os.environ)
@@ -331,12 +341,7 @@ def main() -> None:
             report_stage("starting_runner")
             if not runner_health(env):
                 proc = subprocess.Popen(
-                    [
-                        sys.executable,
-                        *(["-IB" if sys.platform == "darwin" else "-I"] if args.desktop else []),
-                        "-m",
-                        "ai_station_runner.main",
-                    ],
+                    runner_command(desktop=args.desktop, environment=env),
                     env=env,
                 )
                 deadline = time.monotonic() + 20

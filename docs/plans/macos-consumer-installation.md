@@ -40,6 +40,15 @@ the producer's actual permissions. Full startup faults also distinguish an exite
 Runner (numeric exit code) from a live readiness timeout; neither outcome logs
 private messages or changes the existing deadline.
 
+The relocated-copy diagnostic at `6fae25f` also passes on ARM/Intel (2.73/3.86
+seconds) with the actual producer permissions and stock filtered desktop
+environment. The full installer context is still unqualified. The next complete
+probe explicitly sets the local `AI_STATION_RUNNER_STARTUP_PROFILE=1` diagnostic:
+only the fixed native entry gains Python import timing. Startup evidence keeps
+known public module names/timings, exception classes, basename/line frames and
+fixed ownership/path fault codes; messages, environment values and private URLs
+remain excluded. Normal desktop startup does not enable profiling.
+
 The next guided acceptance increment must send a long fictional request in the
 ordinary conversation, observe nonempty streamed text while Stop is available,
 and click that visible button. Read-only API checks must independently confirm
