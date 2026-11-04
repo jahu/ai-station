@@ -184,3 +184,43 @@ def test_shared_media_lineage_resolves_sources_and_derived_across_types():
         assert client.get(f"/api/artifacts/{uuid4()}/lineage").status_code == 404
         with session_factory()() as session:
             assert session.scalar(select(func.count()).select_from(Run)) == run_count
+
+
+def test_media_filter_is_applied_before_paging_and_keeps_files_explicit():
+    with TestClient(app) as client:
+        image = upload(client)
+        with session_factory()() as session:
+            session.add_all(
+                [
+                    Artifact(
+                        artifact_type="json",
+                        mime_type="application/json",
+                        relative_path=f"artifacts/{uuid4().hex}.json",
+                        original_filename=f"report-{i}.json",
+                        metadata_json={},
+                    )
+                    for i in range(110)
+                ]
+            )
+            audio = Artifact(
+                artifact_type="audio",
+                mime_type="audio/wav",
+                relative_path="artifacts/audio.wav",
+                original_filename="song.wav",
+            )
+            video = Artifact(
+                artifact_type="video",
+                mime_type="video/mp4",
+                relative_path="artifacts/avatar.mp4",
+                original_filename="avatar.mp4",
+            )
+            session.add_all([audio, video])
+            session.commit()
+        media = client.get("/api/artifacts", params={"kind": "media", "limit": 2}).json()
+        older = client.get("/api/artifacts", params={"kind": "media", "limit": 2, "offset": 2}).json()
+        assert {a["type"] for a in media + older} == {"image", "audio", "video"}
+        assert len(media + older) == 3
+        assert any(a["id"] == image["id"] for a in older)
+        assert len(client.get("/api/artifacts", params={"kind": "files"}).json()) == 100
+        found = client.get("/api/artifacts", params={"kind": "image", "search": "source"}).json()
+        assert [a["id"] for a in found] == [image["id"]]

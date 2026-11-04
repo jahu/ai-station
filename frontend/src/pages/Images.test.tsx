@@ -283,7 +283,7 @@ it("moves through Images sources with arrow keys without queueing a Run", async 
     },
   ];
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
-    ok: options === undefined,
+    ok: !options?.method,
     json: async () => {
       const url = String(path);
       if (url.includes("/hardware")) return { gpus: [] };
@@ -320,7 +320,7 @@ it("moves through Images sources with arrow keys without queueing a Run", async 
   fireEvent.keyDown(second.closest(".source-strip") as HTMLElement, {
     key: "Enter",
   });
-  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+  expect(fetch.mock.calls.every((call) => !call[1]?.method)).toBe(true);
   fireEvent.keyDown(second.closest(".source-strip") as HTMLElement, {
     key: "Home",
   });
@@ -443,7 +443,7 @@ it("retries a failed image run in the workspace without opening the inspector", 
 
 it("reuses the finished image as an Edit source without queueing a Run", async () => {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
-    ok: options === undefined,
+    ok: !options?.method,
     json: async () =>
       String(path).endsWith("/lineage")
         ? { id: "photo", sources: [], derived: [] }
@@ -461,7 +461,7 @@ it("reuses the finished image as an Edit source without queueing a Run", async (
   await screen.findByRole("heading", { name: "Edit" });
   await screen.findByLabelText("Source 1 photo");
   expect(screen.getByAltText("Generated image")).toBeTruthy();
-  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+  expect(fetch.mock.calls.every((call) => !call[1]?.method)).toBe(true);
 });
 
 it("queues the optional upscale without replacing the selected image operation", async () => {

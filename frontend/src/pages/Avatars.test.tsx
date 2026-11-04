@@ -193,7 +193,7 @@ it("selects existing inputs, queues video and keeps the live result beside the f
           ? { gpus: [] }
           : path.includes("/runs")
             ? { id: "avatar", status: "queued" }
-            : path.endsWith("/artifacts")
+            : path.includes("/artifacts?")
               ? artifacts
               : artifacts.find((a) => path.endsWith(a.id)),
   }));
@@ -331,7 +331,7 @@ it("queues typed speech with a voice reference while keeping recording mode unch
       if (path.endsWith("/capabilities")) return { available: true };
       if (path.endsWith("/hardware")) return { gpus: [] };
       if (path.includes("/runs")) return { id: "speech", status: "queued" };
-      if (path.endsWith("/artifacts")) return artifacts;
+      if (path.includes("/artifacts?")) return artifacts;
       return artifacts.find((a) => path.endsWith(a.id));
     },
   }));

@@ -6,6 +6,9 @@ import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudioLines, Film, ImagePlus, Library, Upload, X } from "lucide-react";
 import { api, type Artifact } from "../../api";
+import { useLibraryAssets } from "./useLibraryAssets";
+import LibraryMore from "./LibraryMore";
+import ArtifactThumbnail from "./ArtifactThumbnail";
 import { ErrorNotice } from "../common";
 import { Button } from "../ui/button";
 import { useListKeyboard } from "../../pages/useListKeyboard";
@@ -45,11 +48,7 @@ export default function MediaInput({
     queryFn: () => api<Artifact>(`/artifacts/${value}`),
     enabled: !!value,
   });
-  const library = useQuery({
-    queryKey: ["media-inputs"],
-    queryFn: () => api<Artifact[]>("/artifacts"),
-    enabled: libraryOpen,
-  });
+  const library = useLibraryAssets(kind, search, libraryOpen);
   const upload = useMutation({
     mutationFn: async (file: File) => {
       const body = new FormData();
@@ -64,7 +63,7 @@ export default function MediaInput({
     onSuccess: (artifact) => {
       cache.setQueryData(["artifact", artifact.id], artifact);
       onChange(artifact.id);
-      void cache.invalidateQueries({ queryKey: ["media-inputs"] });
+      void cache.invalidateQueries({ queryKey: ["library"] });
     },
     onSettled: () => onBusy(false),
   });
@@ -75,25 +74,24 @@ export default function MediaInput({
   const audioTypes =
     audioMode !== "voice" ? TRANSCRIPTION_AUDIO_TYPES : ["audio/wav"];
   const available =
-    library.data?.filter(
-      (a) =>
-        a.type === kind &&
-        (kind !== "image" ||
-          ["image/png", "image/jpeg"].includes(a.mime_type)) &&
-        (kind !== "video" ||
-          (a.mime_type === "video/mp4" &&
-            !!a.metadata?.frames &&
-            [24, 25].includes(Number(a.metadata?.fps)))) &&
-        (kind !== "audio" ||
-          ((audioMode === "transcription" ||
-            a.metadata?.capability !== "audio.effects") &&
-            audioTypes.includes(a.mime_type) &&
-            (a.metadata?.duration_seconds === undefined ||
-              a.metadata.duration_seconds <= maxAudioSeconds))) &&
-        `${a.title ?? ""} ${a.original_filename}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
-    ) ?? [];
+    library.data?.pages
+      .flat()
+      .filter(
+        (a) =>
+          a.type === kind &&
+          (kind !== "image" ||
+            ["image/png", "image/jpeg"].includes(a.mime_type)) &&
+          (kind !== "video" ||
+            (a.mime_type === "video/mp4" &&
+              !!a.metadata?.frames &&
+              [24, 25].includes(Number(a.metadata?.fps)))) &&
+          (kind !== "audio" ||
+            ((audioMode === "transcription" ||
+              a.metadata?.capability !== "audio.effects") &&
+              audioTypes.includes(a.mime_type) &&
+              (a.metadata?.duration_seconds === undefined ||
+                a.metadata.duration_seconds <= maxAudioSeconds))),
+      ) ?? [];
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
     available,
     (artifact) => artifact.id,
@@ -296,9 +294,9 @@ export default function MediaInput({
                       }}
                     >
                       {kind === "image" ? (
-                        <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
+                        <ArtifactThumbnail id={a.id} kind="image" />
                       ) : kind === "video" ? (
-                        <Film size={18} />
+                        <ArtifactThumbnail id={a.id} kind="video" />
                       ) : (
                         <AudioLines size={18} />
                       )}
@@ -306,9 +304,11 @@ export default function MediaInput({
                     </button>
                   );
                 })}
+                <LibraryMore {...library} />
               </div>
             </section>
           )}
+          {!available.length && <LibraryMore {...library} />}
         </div>
       )}
       <ErrorNotice error={upload.error ?? source.error ?? library.error} />

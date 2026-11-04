@@ -1,5 +1,21 @@
 # Library management
 
+The collection opens on **Media** (images, video and audio). **Files** exposes
+JSON/documents and **All** includes both; Run history still lists every artifact.
+Filtering happens before database pagination, so technical outputs cannot hide
+older media. Input pickers in agents, media workspaces, chat and the timeline
+search the full private collection on the server and progressively load older
+pages as you scroll, with a Load more / retry button as a fallback. Compatibility
+checks still restrict which inputs each operation can use. Image cards are large
+enough to inspect, with whole-image previews rather than cropped 36px icons.
+
+Video and avatar cards show a still from the actual stored film, decoded locally
+by the browser only when the card approaches the viewport. They do not autoplay
+or play audio. Existing films need no migration, GPU job or re-generation. The
+file endpoint supports byte-range delivery. Metadata preloading and a seek of
+at most one second request the preview; buffering is controlled by the browser. A failed/unsupported video keeps its film icon.
+
+
 Completed permanent-deletion cards can be closed with X. Dismissal is stored on
 that terminal deletion Run and survives navigation/reload; it does not remove
 the Run, its events, approval or per-file outcomes. The recent three-card window

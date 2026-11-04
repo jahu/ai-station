@@ -70,7 +70,7 @@ of public reports.
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
 | **Put agents to work** | Natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
 | **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
-| **Keep your creative work** | Your private Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
+| **Keep your creative work** | Your private media-first Library, searchable reusable inputs, film previews, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
 
 Optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
