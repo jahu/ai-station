@@ -1,3 +1,6 @@
+import { useLibraryAssets } from "../components/media/useLibraryAssets";
+import LibraryMore from "../components/media/LibraryMore";
+import ArtifactThumbnail from "../components/media/ArtifactThumbnail";
 import { useEffect, useRef, useState } from "react";
 import {
   useMutation,
@@ -133,15 +136,7 @@ function Editor() {
       api<Revision[]>(`/timelines/${creative!.id}/revisions`, { signal }),
     enabled: !!creative,
   });
-  const assets = useQuery({
-    queryKey: ["timeline-library", picker, filter],
-    queryFn: ({ signal }) =>
-      api<Artifact[]>(
-        `/artifacts?kind=${picker}&search=${encodeURIComponent(filter)}&limit=100`,
-        { signal },
-      ),
-    enabled: !!picker,
-  });
+  const assets = useLibraryAssets(picker || "video", filter, !!picker);
   const activeId = previewId || creative?.sourceRun?.id || "";
   const run = useMediaRun(activeId);
   const artifacts = useQuery({
@@ -558,8 +553,9 @@ function Editor() {
             <p>Loading your Library…</p>
           ) : (
             <div className="tl-asset-list">
-              {assets.data
-                ?.filter(
+              {assets.data?.pages
+                .flat()
+                .filter(
                   (a) =>
                     a.mime_type ===
                       (picker === "video" ? "video/mp4" : "audio/wav") &&
@@ -575,11 +571,15 @@ function Editor() {
                     disabled={add.isPending}
                     onClick={() => add.mutate(a.id)}
                   >
-                    <FolderOpen size={15} />
+                    {picker === "video" ? (
+                      <ArtifactThumbnail id={a.id} kind="video" />
+                    ) : (
+                      <FolderOpen size={15} />
+                    )}
                     <span>{a.title || a.original_filename}</span>
                   </Button>
                 ))}
-              {!assets.data?.length && (
+              {!assets.data?.pages.flat().length && (
                 <p className="muted">
                   Create media in the workspaces or upload a WAV in Audio, then
                   add it here.
@@ -587,6 +587,7 @@ function Editor() {
               )}
             </div>
           )}
+          <LibraryMore {...assets} />
         </section>
       )}
       <div className="tl-workspace">

@@ -44,7 +44,7 @@ it("chooses an owned film and keeps sound description, prompt preparation and ef
               ? { gpus: [] }
               : path.includes("generation/preferences")
                 ? { enabled: false }
-                : path === "/api/artifacts"
+                : path.startsWith("/api/artifacts?")
                   ? [
                       {
                         id: "film",

@@ -49,3 +49,8 @@ def test_lineage_filters_private_derived_artifacts_before_limit(accounts):  # no
     with ScopedSession(bind=get_engine(), scope=DataScope(owner)) as session:
         first = derived_artifact_ids(session, source, limit=1)
         assert len(first) == 1 and first[0] in expected
+
+    media = alice.get("/api/artifacts", params={"kind": "media", "limit": 2}).json()
+    media += alice.get("/api/artifacts", params={"kind": "media", "limit": 2, "offset": 2}).json()
+    assert {a["id"] for a in media} == expected | {source}
+    assert bob.get(f"/api/artifacts/{source}/thumbnail").status_code == 404

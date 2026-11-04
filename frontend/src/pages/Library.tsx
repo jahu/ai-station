@@ -1,3 +1,4 @@
+import ArtifactThumbnail from "../components/media/ArtifactThumbnail";
 import { copyText } from "../lib/clipboard";
 import EditTimelineLink from "../components/media/EditTimelineLink";
 import AddSoundLink from "../components/media/AddSoundLink";
@@ -111,27 +112,15 @@ export function ArtifactCards({
                     <span>{a.purged_at ? "Deleted" : "Deleting"}</span>
                   </div>
                 ) : a.type === "image" ? (
-                  <img
-                    loading="lazy"
-                    src={`/api/artifacts/${a.id}/thumbnail`}
-                    alt=""
-                  />
+                  <ArtifactThumbnail id={a.id} kind="image" />
                 ) : (
                   <div
                     className={`artifact-placeholder artifact-kind-${a.type}`}
                   >
-                    {a.type === "video" &&
-                    a.metadata.capability === "avatar.animate" &&
-                    a.parent_artifact_ids[0] ? (
-                      <img
-                        src={`/api/artifacts/${a.parent_artifact_ids[0]}/thumbnail`}
-                        alt=""
-                        loading="lazy"
-                      />
+                    {a.type === "video" ? (
+                      <ArtifactThumbnail id={a.id} kind="video" />
                     ) : a.type === "audio" ? (
                       <AudioLines size={34} aria-hidden="true" />
-                    ) : a.type === "video" ? (
-                      <Film size={34} aria-hidden="true" />
                     ) : (
                       <FileText size={30} aria-hidden="true" />
                     )}
@@ -166,7 +155,7 @@ export function ArtifactCards({
 }
 
 export function Library() {
-  const [kind, setKind] = useState("");
+  const [kind, setKind] = useState("media");
   const [view, setView] = useState("active");
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
@@ -270,6 +259,7 @@ export function Library() {
           aria-label="Artifact type"
         >
           {[
+            ["media", "Media"],
             ["", "All"],
             ["image", "Images"],
             ["audio", "Audio"],

@@ -2442,36 +2442,42 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .media-picker-list {
   display: grid;
-  gap: 4px;
-  margin-top: 8px;
-  max-height: 200px;
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  max-height: 480px;
   overflow: auto;
+  padding: 2px;
 }
 .media-picker-list button {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   min-width: 0;
   padding: 8px;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
+  background: #171c19;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   text-align: left;
 }
-.media-picker-list button:hover {
-  background: #222a23;
+.media-picker-list button:hover,
+.media-picker-list button:focus-visible {
+  border-color: var(--accent);
   color: var(--accent);
 }
 .media-picker-list img {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
-  border-radius: 4px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: #0c100e;
+  border-radius: 5px;
 }
-.media-picker-list span {
+.media-picker-list button > span:not(.artifact-video-thumbnail) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
 }
 .media-help-link {
   display: flex;
@@ -3623,7 +3629,7 @@ section:has(> .memory-grid) > .dashboard-note {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(730px, calc(100vw - 32px));
+  width: min(1000px, calc(100vw - 32px));
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
   background: #191c1f;
@@ -3643,7 +3649,7 @@ section:has(> .memory-grid) > .dashboard-note {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin: 20px 0;
-  max-height: 430px;
+  max-height: min(60dvh, 650px);
   overflow-y: auto;
   padding: 2px;
 }
@@ -3668,13 +3674,13 @@ section:has(> .memory-grid) > .dashboard-note {
 .library-picker-card > img {
   display: block;
   width: 100%;
-  aspect-ratio: 1.4;
-  object-fit: cover;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
 }
 .library-picker-card > strong {
   display: block;
   padding: 10px 10px 5px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -8387,4 +8393,41 @@ section:has(> .memory-grid) > .dashboard-note {
   display: grid;
   gap: 8px;
   font-size: 13px;
+}
+
+/* Native still-frame previews: existing videos need no re-generation. */
+.artifact-video-thumbnail {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #101513;
+}
+.artifact-video-thumbnail video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.artifact-video-fallback {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.artifact-placeholder > .artifact-video-thumbnail {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.library-more {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 12px;
+}
+.tl-asset-list .artifact-video-thumbnail {
+  width: 160px;
+  flex-shrink: 0;
 }

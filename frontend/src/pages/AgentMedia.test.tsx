@@ -928,7 +928,7 @@ it("reviews a Library film and exact scene sounds for a local effects agent", as
           ? { available: true }
           : path.includes("/hardware")
             ? { gpus: [] }
-            : path === "/api/artifacts"
+            : path.startsWith("/api/artifacts?")
               ? [film]
               : path === "/api/artifacts/" + film.id
                 ? film
