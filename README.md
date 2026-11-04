@@ -68,7 +68,7 @@ of public reports.
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
 | **Put agents to work** | Natural-language drafts, reviewed tools and permissions, schedules, history and in-app notices. |
 | **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
-| **Keep your creative work** | A shared Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
+| **Keep your creative work** | Your private Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
 
 Optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
@@ -235,7 +235,7 @@ conversations, Library, memory and agents, with shared models/hardware, optional
 two-factor authentication and administrator management. They are an explicit
 access-profile cutover; see [accounts and migration](docs/accounts.md).
 
-Development builds offer **Models → Set up a local model** for reviewed local
+**Models → Set up a local model** offers reviewed local
 conversation-model downloads. See actual RAM/VRAM and free application storage,
 accept the model license, stop/resume preparation and open Chat after verification.
 This Linux route can prepare a reviewed llama.cpp runtime image, then download
