@@ -1,5 +1,7 @@
 # Operator QA catalog and workbook
 
+Release 0.1.2 adds catalog v48 cases LIB-012–014 and RUN-006 for complete input search, larger cards, media-first browsing, real film stills and generation during history browsing. RUN-005 distinguishes inspection-only recovery from replay. New exports remain untested.
+
 Release 0.1.1 adds catalog v47 cases AGENT-017–020 for explicit cadence, inline activation/model changes, registry deletion and image/workflow layout. Existing answers remain unchanged; new exports start untested.
 
 The developing v46 catalog contains **261 active cases** for Linux, Windows and

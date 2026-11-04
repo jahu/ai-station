@@ -1,5 +1,5 @@
 {
-  "version": 47,
+  "version": 48,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -40,7 +40,10 @@
     "docs/releases/0.1.1.md",
     "docs/plans/registry-deletion.md",
     "docs/plans/agent-chat-activation.md",
-    "docs/plans/agent-image-models.md"
+    "docs/plans/agent-image-models.md",
+    "docs/releases/0.1.2.md",
+    "docs/library.md",
+    "docs/plans/media-lease-recovery.md"
   ],
   "cases": [
     {
@@ -2602,7 +2605,7 @@
         "Sprawdź odzyskiwanie"
       ],
       "expected": [
-        "Nie ma ślepego powtórzenia zewnętrznych skutków; stan procesu i potrzeba inspekcji są jawne."
+        "Dla pasującego, nadal dostępnego dziennika procesu mediów inspekcja/odbiór wyniku może być wznowiony bez ponownego startu generacji. Zasoby i Stop pozostają związane z oryginalnym Run. Nieznany proces lub brak wiarygodnego zakończenia pozostawia jawną potrzebę inspekcji; inne efekty zewnętrzne nie są ślepo ponawiane."
       ],
       "resources": "CPU/GPU zależnie od wybranego zadania QA",
       "minutes": 5,
@@ -6112,6 +6115,99 @@
       "requirements": [
         "NR-07",
         "MVP-120"
+      ]
+    },
+    {
+      "id": "LIB-012",
+      "area": "Biblioteka",
+      "title": "Domyślna kolekcja mediów i dostęp do JSON/dokumentów",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i neutralne pliki testowe. Korzystaj z już posiadanych wyników; nie generuj dużej kolekcji wyłącznie dla testu. Nie publikuj prywatnych materiałów."
+      ],
+      "steps": [
+        "Otwórz Library bez wybierania filtra, a potem odśwież stronę.",
+        "Przełącz Media, Files i All; sprawdź dostępność własnego raportu JSON lub dokumentu."
+      ],
+      "expected": [
+        "Domyślnie wybrano Media: obrazy, filmy i audio. JSON-y nie zaśmiecają kolekcji.",
+        "Files i All nadal udostępniają pliki techniczne. Historia i pliki nie zostały usunięte."
+      ],
+      "resources": "Komputer i telefon; istniejące neutralne pliki. Generacja tylko przy własnym zaplanowanym zadaniu; bez płatnego API.",
+      "minutes": 5,
+      "requirements": [
+        "NR-05"
+      ]
+    },
+    {
+      "id": "LIB-013",
+      "area": "Biblioteka",
+      "title": "Starsze obrazy, pełne wyszukiwanie i duże podglądy",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i neutralne pliki testowe. Korzystaj z już posiadanych wyników; nie generuj dużej kolekcji wyłącznie dla testu. Nie publikuj prywatnych materiałów."
+      ],
+      "steps": [
+        "W kolekcji zawierającej ponad 40 obrazów otwórz wybór referencji w agencie oraz Images. Jeśli brakuje danych, zapisz ten fakt zamiast generować kilkadziesiąt plików.",
+        "Przewiń kolejne strony i wyszukaj najstarszy obraz po nazwie lub notatce.",
+        "W Images zaznacz referencję, wyszukaj inną i dołącz obie. Powtórz wybór na telefonie."
+      ],
+      "expected": [
+        "Starsze pasujące obrazy są dostępne po przewinięciu lub wyszukaniu; raporty JSON nie zajmują ich stron.",
+        "Podglądy są duże i pokazują cały obraz; wybrane referencje i kolejność nie giną przy zmianie strony/wyszukiwania.",
+        "Nie ma poziomego przewijania całej strony. Format nieobsługiwany przez operację nie jest oferowany jako prawidłowy input."
+      ],
+      "resources": "Komputer i telefon; istniejące neutralne pliki. Generacja tylko przy własnym zaplanowanym zadaniu; bez płatnego API.",
+      "minutes": 8,
+      "requirements": [
+        "NR-05",
+        "NR-07"
+      ]
+    },
+    {
+      "id": "LIB-014",
+      "area": "Biblioteka",
+      "title": "Klatki podglądu istniejących filmów i awatarów",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i neutralne pliki testowe. Korzystaj z już posiadanych wyników; nie generuj dużej kolekcji wyłącznie dla testu. Nie publikuj prywatnych materiałów."
+      ],
+      "steps": [
+        "Otwórz Library z zakończonym neutralnym filmem i awatarem.",
+        "Przewiń karty w widoku komputera i telefonu. Otwórz wybrany plik."
+      ],
+      "expected": [
+        "Karty pokazują klatkę rzeczywistego nagrania, a nie tylko ikonę lub wejściowy portret.",
+        "Podglądy nie odtwarzają dźwięku/filmu automatycznie i nie tworzą generacji GPU; otwarcie pliku pozwala normalnie go odtworzyć."
+      ],
+      "resources": "Komputer i telefon; istniejące neutralne pliki. Generacja tylko przy własnym zaplanowanym zadaniu; bez płatnego API.",
+      "minutes": 5,
+      "requirements": [
+        "NR-05",
+        "NR-07"
+      ]
+    },
+    {
+      "id": "RUN-006",
+      "area": "Wykonania",
+      "title": "Generacja podczas przeglądania historii i biblioteki",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i neutralne pliki testowe. Korzystaj z już posiadanych wyników; nie generuj dużej kolekcji wyłącznie dla testu. Nie publikuj prywatnych materiałów."
+      ],
+      "steps": [
+        "Podczas własnego planowanego neutralnego zadania obrazu lub wideo przeglądaj Runs, historię i Library w drugim oknie.",
+        "Po zakończeniu otwórz wynik i sprawdź historię tego samego Run. Nie zatrzymuj ręcznie procesów ani bazy stacji."
+      ],
+      "expected": [
+        "Przeglądanie kolekcji nie porzuca monitorowania generacji z błędem Lease expired.",
+        "Wynik i zakończenie są widoczne; nie uruchomiono drugiej generacji tego samego zadania. Faktyczny błąd modelu pozostaje jawny."
+      ],
+      "resources": "Komputer i telefon; istniejące neutralne pliki. Generacja tylko przy własnym zaplanowanym zadaniu; bez płatnego API.",
+      "minutes": 10,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
       ]
     }
   ],

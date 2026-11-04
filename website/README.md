@@ -1,5 +1,12 @@
 # Project landing page
 
+Release 0.1.2 refreshes the downloads, release notes and daily-use highlights:
+complete Library search, larger references, media-first browsing, actual film
+stills and inspection-only recovery of owned media jobs. Download filenames and
+release-note URLs come from `site.config.json`; do not hard-code a prior version
+in the HTML. The running local/LAN preview must use the newly compiled output.
+Approved media assets remain unchanged.
+
 A standalone, static product website. It lives alongside the application so its
 claims and screenshots can be reviewed together. It has **no application runtime,
 API, database, npm dependencies or hosting account dependency**. Moving this
