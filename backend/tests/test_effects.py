@@ -255,6 +255,8 @@ def test_lost_acknowledgement_retains_sound_gpu_and_recovers_without_replay(soun
         with control_session_factory()() as db:
             recover_stale(db)
             db.commit()
+            # Reclaim inspection only; the queued Stop must not relaunch effects.
+            tick(db, "replacement-effects-observer")
             assert db.get(Run, run["id"]).status == "canceled" and not active_locks(db)
         assert len(sound_bridge["launches"]) == 1
 

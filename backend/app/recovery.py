@@ -156,6 +156,45 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             append_event(session, run.id, "recovery.runner_unavailable", {})
             touched.append(run.id)
             continue
+        from app.host_media_executor import RESUMABLE_MEDIA
+
+        if (
+            run.executor_type in RESUMABLE_MEDIA
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("run_id") == run.id
+            and info.get("executor") == run.executor_type
+            and info.get("reachable") is True
+            and info.get("cleanup_confirmed") is not False
+            and (
+                info.get("alive") is True
+                or info.get("completion_pending") is True
+                or info.get("status") in {"exited", "canceled"}
+                and type(info.get("exit_code")) is int
+            )
+        ):
+            # Resume only inspection/collection of this immutable native journal.
+            # Preserve GPU/RAM locks, original output and cancellation. No start.
+            canceled = run.status == RunStatus.CANCEL_REQUESTED.value
+            transition(
+                session,
+                run,
+                RunStatus.INTERRUPTED,
+                event_type="executor.inspection_yielded",
+                payload={"reason": "Resume owned media inspection; no generation replay"},
+            )
+            run.metadata_json = {
+                **run.metadata_json,
+                "media_inspection_resume": True,
+                "cancel_on_resume": bool(run.metadata_json.get("cancel_on_resume") or canceled),
+            }
+            run.finished_at = None
+            run.worker_id = None
+            run.lease_expires_at = None
+            transition(
+                session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"inspection_only": True}
+            )
+            touched.append(run.id)
+            continue
         if info.get("alive") or info.get("completion_pending"):
             from app.runs import touch_lease
 

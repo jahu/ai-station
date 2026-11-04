@@ -305,21 +305,24 @@ def request_cancel(session: Session, run: Run) -> Run:
     run.cancellation_requested_at = utcnow()
     if (
         run.status == RunStatus.QUEUED
-        and run.executor_type
-        in {
-            "llama_load",
-            "llama_stop",
-            "private_access",
-            "runtime_setup",
-            "speech_setup",
-            "image_setup",
-            "music_setup",
-            "video_setup",
-            "avatar_setup",
-            "effects_setup",
-            "fish_setup",
-            "native_llama_setup",
-        }
+        and (
+            run.metadata_json.get("media_inspection_resume")
+            or run.executor_type
+            in {
+                "llama_load",
+                "llama_stop",
+                "private_access",
+                "runtime_setup",
+                "speech_setup",
+                "image_setup",
+                "music_setup",
+                "video_setup",
+                "avatar_setup",
+                "effects_setup",
+                "fish_setup",
+                "native_llama_setup",
+            }
+        )
         and run.metadata_json.get("dispatch_attempted")
     ):
         # A resumed lifecycle operation may still own a container. Let the next

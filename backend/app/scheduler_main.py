@@ -28,7 +28,11 @@ def main() -> None:
             session.commit()
             try:
                 reconcile(session, runner)
-                record_sample(session, {"sampled_at": utcnow().isoformat(), **runner.hardware()})
+                # Reconcile may finish with a read transaction (even no models).
+                # SQLite reserves its writer on BEGIN; never hold it over telemetry I/O.
+                session.commit()
+                sample = {"sampled_at": utcnow().isoformat(), **runner.hardware()}
+                record_sample(session, sample)
             except (RunnerUnavailable, RunnerError):
                 record_sample(session, {"available": False})
             session.merge(Setting(key="scheduler_heartbeat", value={"at": utcnow().isoformat()}))
