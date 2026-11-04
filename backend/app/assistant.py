@@ -827,6 +827,15 @@ def explicit_plan(params):
                 action="page.describe", reason="Read the selected page and inspect its visual design locally."
             )
         return Plan(action=action, reason="Using your selected action.")
+    # Current agent authority takes precedence over media inside its recurring goal.
+    from app.chat_policy import agent_draft_requested
+
+    if (
+        agent_draft_requested(params)
+        if params.get("policy_mode") == "assistant"
+        else re.match(r"^(create|make|stw[oó]rz|utw[oó]rz|zbuduj)\b.{0,30}\bagent", params["content"], re.I)
+    ):
+        return Plan(action="agent.create", reason="Create an agent definition for review and activation.")
     from app.conversation_effects import new_film_requested
 
     if new_film_requested(params):
@@ -916,15 +925,6 @@ def explicit_plan(params):
         return Plan(action="avatar.animate", reason="Animate the portrait using your speech recording.")
     if params.get("audio_artifact_id") and re.match(r"^(powiedz|przeczytaj|speak|read aloud)\b", prompt):
         return Plan(action="audio.speech", reason="Read your message using the attached voice reference.")
-    # Agent intent precedes media words inside the requested agent's goal.
-    from app.chat_policy import agent_draft_requested
-
-    if (
-        agent_draft_requested(params)
-        if params.get("policy_mode") == "assistant"
-        else re.match(r"^(create|make|stw[oó]rz|utw[oó]rz|zbuduj)\b.{0,30}\bagent", prompt)
-    ):
-        return Plan(action="agent.create", reason="Create an agent definition for review and activation.")
     image_prompt, motion = image_video_followup(params["content"])
     if (
         motion

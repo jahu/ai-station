@@ -39,6 +39,51 @@ AGENT_REQUEST = re.compile(
     r"agent(?:a|s|[oó]w)?\b",
     re.I,
 )
+_RECURRING_CADENCE = re.compile(
+    r"\b(?:(?:every|co)\s+(?:\d{1,8}\s+(?:seconds?|minutes?|hours?|"
+    r"sekund[ęey]?|minut[ęey]?|godzin[ęey]?)|minute|hour|day|week|morning|evening|"
+    r"minut[ęe]|godzin[ęe]|rano|wiecz[oó]r|tydzie[ńn])|daily|weekly|codziennie)\b",
+    re.I,
+)
+_RECURRING_ACTION = re.compile(
+    r"^(?:(?:please|prosz[eę]|now|teraz)\s*[,;:]?\s+){0,3}"
+    r"(?:(?:can|could|would)\s+you(?:\s+please)?\s+|"
+    r"(?:czy\s+)?(?:mo[zż]esz|m[oó]g[łl](?:by[śs]|aby[śs]))\s+|"
+    r"(?:chc[eę]|chcia[łl](?:bym|abym))\s*[,;:]?\s+(?:(?:aby[śs]|[żz]eby[śs])\s+)?|"
+    r"i(?:\s+would|'d)?\s+(?:want|need|like)\s+(?:you\s+)?to\s+)?"
+    r"(?:generate|generuj|generowa[ćcłl]|wygeneruj|create|make|produce|render|"
+    r"stw[oó]rz|utw[oó]rz|zr[oó]b|tw[oó]rz|check|sprawdzaj|sprawd[zź]|monitor|monitoruj|"
+    r"report|raportuj|summari[sz]e|podsumowuj|podsumuj|send|wysy[łl]aj|write|napisz|pisz|"
+    r"read|czytaj|analy[sz]e|analizuj|przeanalizuj|run|execute|uruchamiaj|wykonuj)\b",
+    re.I,
+)
+
+
+def _recurring_request(text):
+    # Quoted examples/labels and pasted code are data, never schedule authority.
+    instruction = re.sub(
+        r'```[\s\S]*?```|`[^`\n]*`|"[^"\n]*"|[„“][^”\n]*”|'
+        r"(?<!\w)'[^'\n]*'(?!\w)|‘[^’\n]*’|^\s*>[^\n]*$",
+        " ",
+        text,
+        flags=re.M,
+    )
+    cadence = _RECURRING_CADENCE.search(instruction)
+    if cadence is None:
+        return False
+    before = instruction[: cadence.start()]
+    if re.search(r"\b(?:not|never|don't|nie)(?:\W+\w+){0,2}\W*$", before, re.I):
+        return False
+    if re.search(
+        r"\b(?:prompts?|promptu|instructions?|tutorials?|examples?|descriptions?|"
+        r"instrukcj\w*|poradnik\w*|przyk[łl]ad\w*|opis(?:u|em|y)?|napis(?:em|u|y)?|saying)\b|"
+        r"\b(?:scripts?|skrypt\w*|program\w*|code|kod)\b.{0,80}\b(?:that|which|kt[oó]r\w*)\b",
+        before,
+        re.I,
+    ):
+        return False
+    command = (before + " " + instruction[cadence.end() :]).lstrip(" \t\n,;:")
+    return bool(_RECURRING_ACTION.match(command))
 
 
 def policy_mode(mode):
@@ -53,6 +98,8 @@ def agent_draft_requested(params):
     mention = re.search(r"\bagent", text, re.I)
     if mention and re.search(r"\b(?:not|never|don't|nie)\b", text[: mention.start()], re.I):
         return False
+    if _recurring_request(text):
+        return True
     match = AGENT_REQUEST.match(text)
     return bool(
         match
