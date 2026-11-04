@@ -12,7 +12,17 @@ Stop, account revocation, worker-claim replacement and deadlines fence publicati
 No weight download, runtime preparation or inference is performed by inspection.
 
 Choose a variant to inspect its file budget, supported profile and estimated
-context/GPU group. Matching platform profiles come first; Mac-only profiles are
+context/GPU group. A supported repository's publisher configuration is resolved
+once and frozen for all its file variants. Hardware advice compares their fitted
+32K context, required GPU count and an explicit balanced-quantization preference.
+A useful known-precision GPU profile ranks before a low-bit alternative; unknown
+requirements, missing telemetry or insufficient disk never earn a recommendation.
+This comparison is within one model, not a speed or quality ranking across models.
+**Context options** can request 128K for the installation plan; the model's trained
+limit and actual fitted context remain visible. An old accepted plan retains its
+original context target. GPU pairs are considered only through the existing
+llama.cpp sharding admission, and short-cache fit is not called a full-context fit.
+Matching platform profiles come first; Mac-only profiles are
 not offered on Linux. Current GPU occupation is separate from capacity. Unknown
 architectures and companion sets retain **unknown** memory requirements; a GGUF
 extension or a file fitting on disk does not qualify it for Chat or Images.
@@ -38,7 +48,12 @@ Verification uses bounded fake public metadata, real private-account API/worker
 tests and temporary storage. Live HF metadata/search and read-only workstation
 telemetry were checked without weights or inference. Compiled desktop/mobile UI
 checks use those public metadata results with fixture HTTP/hardware; they are not
-a production model installation or inference qualification.
+a production model installation or inference qualification. The variant-advice
+increment additionally checked all nine public Qwen2.5 0.5B GGUF files against
+read-only actual GPU/RAM/disk observations. It selected Q6_K for a 32K target;
+compiled desktop/mobile checks covered the recommendation, explicit 128K plan,
+license consent and saved preparation restoration with fixture HTTP. No additional
+weights or inference were needed to verify this assessment change.
 
 A separate explicit real qualification built the Docker control plane and used
 an independent native Runner/data root. It downloaded a fresh 491,400,032-byte

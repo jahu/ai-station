@@ -168,3 +168,83 @@ async def test_candidate_cannot_redirect_to_another_object_or_config(publisher):
 async def test_saved_repository_observation_can_be_reinspected_for_base_provenance(publisher):
     inspected = await inspect_source(parse_source("publisher/new-model"), lambda: None)
     assert inspected["base_models"] == ["publisher/base"] and inspected["architecture_hint"] == "qwen3"
+
+
+@pytest.mark.asyncio
+async def test_one_pinned_configuration_serves_all_variants_and_later_plans(publisher, monkeypatch):
+    from app.model_variant_advice import enrich_source
+
+    inspected = await inspect_source(parse_source("publisher/new-model"), lambda: None)
+    inspected["files"].append(
+        {
+            **inspected["files"][0],
+            "filename": "new-model.Q6_K.gguf",
+            "sha256": "e" * 64,
+            "source_url": "https://huggingface.co/publisher/new-model/resolve/"
+            + "a" * 40
+            + "/new-model.Q6_K.gguf",
+        }
+    )
+    await enrich_source(inspected, lambda: None)
+    assert len(publisher["calls"]) == 3
+    assert inspected["language_profile"]["configuration_revision"] == "c" * 40
+
+    async def forbidden(*args):
+        raise AssertionError("A saved immutable profile must not consult a moving base again")
+
+    monkeypatch.setattr(plans, "metadata_json", forbidden)
+    monkeypatch.setattr(plans, "inspect_source", forbidden)
+    for file in inspected["files"]:
+        entry = await plans.resolve_candidate(inspected, file["filename"], lambda: None, 32768)
+        assert entry.context_ceiling == 32768 and entry.configuration_revision == "c" * 40
+        assert entry.file.sha256 == file["sha256"]
+    with pytest.raises(ValueError, match="another immutable source"):
+        plans.candidate_from_profile(
+            {**inspected, "revision": "f" * 40},
+            inspected["files"][0]["filename"],
+            inspected["language_profile"],
+        )
+
+
+@pytest.mark.asyncio
+async def test_missing_hub_architecture_hint_can_use_known_publisher_config(publisher):
+    publisher["architecture"] = None
+    original = observation()
+    entry = await plans.resolve_candidate(original, original["files"][0]["filename"], lambda: None, 32768)
+    assert entry.architecture == "qwen3" and entry.context_ceiling == 32768
+    publisher["config"]["model_type"] = "unknown_remote_code"
+    with pytest.raises(ValueError, match="supported llama.cpp"):
+        await plans.resolve_candidate(original, original["files"][0]["filename"], lambda: None)
+
+
+@pytest.mark.asyncio
+async def test_context_targets_respect_trained_limit_and_reject_arbitrary_values(publisher):
+    original = observation()
+    publisher["config"]["max_position_embeddings"] = 40960
+    balanced = await plans.resolve_candidate(original, original["files"][0]["filename"], lambda: None, 32768)
+    longer = await plans.resolve_candidate(original, original["files"][0]["filename"], lambda: None, 131072)
+    assert balanced.context_ceiling == 32768 and longer.context_ceiling == 40960
+    with pytest.raises(ValueError, match="context target"):
+        await plans.resolve_candidate(original, original["files"][0]["filename"], lambda: None, 999999)
+
+
+@pytest.mark.asyncio
+async def test_unavailable_config_is_actionable_and_stop_is_never_swallowed(publisher, monkeypatch):
+    import httpx
+    from app.model_variant_advice import enrich_source
+
+    inspected = await inspect_source(parse_source("publisher/new-model"), lambda: None)
+
+    async def unavailable(*args):
+        raise httpx.ConnectError("Publisher unavailable")
+
+    monkeypatch.setattr(plans, "metadata_json", unavailable)
+    await enrich_source(inspected, lambda: None)
+    assert "Publisher unavailable" in inspected["requirements_error"]
+    assert "language_profile" not in inspected and inspected["files"]
+
+    def stopped():
+        raise RuntimeError("Claim lost")
+
+    with pytest.raises(RuntimeError, match="Claim lost"):
+        await enrich_source(inspected, stopped)

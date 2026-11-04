@@ -1,6 +1,6 @@
 """Reviewed new-model plans feed the existing owned downloader and registry."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +24,7 @@ class PlanRequest(BaseModel):
     inspection_run_id: UUID
     observation_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     filename: str = Field(min_length=1, max_length=400)
+    context_target: Literal[32768, 131072] = 32768
 
 
 def source_observation(session, identity, expected):
@@ -53,6 +54,7 @@ def plan(body: PlanRequest, session: DB):
                 "inspection_run_id": str(body.inspection_run_id),
                 "observation_sha256": body.observation_sha256,
                 "filename": body.filename,
+                "context_target": body.context_target,
             }
         },
     )
