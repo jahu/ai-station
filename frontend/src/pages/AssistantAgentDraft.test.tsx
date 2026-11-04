@@ -1,3 +1,4 @@
+import type { AgentMediaScope } from "./agent-media";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -108,7 +109,7 @@ function withCatalog(
 }
 
 function mount(
-  agent = draft,
+  agent: typeof draft & { media?: AgentMediaScope } = draft,
   compact = false,
   conversationContext?: Parameters<
     typeof AssistantAgentDraft
@@ -2640,4 +2641,44 @@ it("makes a fifteen-minute cron schedule understandable before inline activation
     screen.getByRole("button", { name: "Accept and Enable" }),
   ).toBeTruthy();
   expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
+});
+
+it("saves the image model directly in a compact draft without enabling or generating", async () => {
+  const fetch = mount(
+    {
+      ...draft,
+      tools: ["create_media"],
+      media: {
+        kind: "image",
+        description_source: "goal",
+        request: {
+          mode: "t2i",
+          backend: "juggernaut",
+          prompt: "Calm mountain illustration",
+          seed: 123,
+          negative: "blur",
+        },
+      },
+    },
+    true,
+  );
+  const model = await screen.findByLabelText("Agent image model");
+  fireEvent.change(model, { target: { value: "qwen" } });
+  await waitFor(() =>
+    expect(fetch.mock.calls.some((call) => call[1]?.method === "PUT")).toBe(
+      true,
+    ),
+  );
+  const writes = fetch.mock.calls.filter((call) => call[1]);
+  expect(writes).toHaveLength(1);
+  expect(writes[0][0]).toBe("/api/agents/agent-one");
+  const body = JSON.parse(String(writes[0][1]?.body));
+  expect(body.media.request).toMatchObject({
+    backend: "qwen",
+    seed: null,
+    negative: null,
+    prompt: "Calm mountain illustration",
+  });
+  expect(body.enabled).toBe(false);
+  expect(screen.getByRole("link", { name: "Review and Edit" })).toBeTruthy();
 });

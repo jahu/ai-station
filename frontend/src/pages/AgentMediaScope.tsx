@@ -1,3 +1,4 @@
+import AgentImageModel from "./AgentImageModel";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -585,22 +586,13 @@ export default function AgentMediaScopeEditor({
               </p>
             )}
             {image.mode === "t2i" && (
-              <label>
-                Image model
-                <select
-                  aria-label="Agent image model"
-                  value={image.backend ?? "qwen"}
-                  onChange={(event) =>
-                    updateImage({
-                      backend: event.target.value as "qwen" | "juggernaut",
-                      seed: null,
-                    })
-                  }
-                >
-                  <option value="qwen">Qwen</option>
-                  <option value="juggernaut">Juggernaut</option>
-                </select>
-              </label>
+              <AgentImageModel
+                request={image}
+                disabled={disabled || uploading}
+                onChange={(request) =>
+                  onChange({ ...scope, kind: "image", request })
+                }
+              />
             )}
             {image.mode !== "t2i" && (
               <div className="agent-media-references">
@@ -740,6 +732,19 @@ export default function AgentMediaScopeEditor({
                       value={image.cfg ?? (image.mode === "t2i" ? 5 : 6)}
                       onChange={(event) =>
                         updateImage({ cfg: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                )}
+                {image.mode === "t2i" && image.backend === "juggernaut" && (
+                  <label>
+                    Negative prompt
+                    <textarea
+                      aria-label="Agent negative prompt"
+                      value={image.negative ?? ""}
+                      placeholder="Optional: what to avoid"
+                      onChange={(event) =>
+                        updateImage({ negative: event.target.value || null })
                       }
                     />
                   </label>

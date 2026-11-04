@@ -1067,3 +1067,57 @@ it("reviews a generated Fish voice without a recording and requires a source aga
   ) as AgentMediaScope;
   expect(saved.request).not.toHaveProperty("voice_source");
 });
+
+it("shows the stored Juggernaut negative prompt and clears incompatible options when changing to Qwen", () => {
+  responses();
+  let saved: AgentMediaScope;
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>({
+      kind: "image",
+      description_source: "goal",
+      request: {
+        mode: "t2i",
+        backend: "juggernaut",
+        prompt: "Calm mountain illustration",
+        seed: 123,
+        negative: "blur, noise",
+      },
+    });
+    return (
+      <AgentMediaScopeEditor
+        value={value}
+        goal="Calm mountains"
+        disabled={false}
+        onBusy={() => {}}
+        onChange={(next) => {
+          saved = next;
+          setValue(next);
+        }}
+      />
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  fireEvent.click(screen.getByText("Advanced image settings"));
+  expect(
+    (screen.getByLabelText("Agent negative prompt") as HTMLTextAreaElement)
+      .value,
+  ).toBe("blur, noise");
+  fireEvent.change(screen.getByLabelText("Agent negative prompt"), {
+    target: { value: "" },
+  });
+  expect(saved!.kind === "image" && saved!.request.negative).toBeNull();
+  fireEvent.change(screen.getByLabelText("Agent image model"), {
+    target: { value: "qwen" },
+  });
+  expect(saved!.kind === "image" && saved!.request).toMatchObject({
+    backend: "qwen",
+    seed: null,
+    negative: null,
+    prompt: "Calm mountain illustration",
+  });
+  expect(screen.queryByLabelText("Agent negative prompt")).toBeNull();
+});

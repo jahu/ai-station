@@ -1,3 +1,4 @@
+import AgentImageModel from "./AgentImageModel";
 import {
   ResultEmailEditor,
   ResultEmailApproval,
@@ -980,6 +981,32 @@ export function AssistantAgentDraft({
                 </div>
               ) : null}
             </dl>
+            {agent.media?.kind === "image" &&
+              agent.media.request.mode === "t2i" && (
+                <div className="assistant-agent-image-model">
+                  <AgentImageModel
+                    request={agent.media.request}
+                    disabled={editLocked}
+                    onChange={(request) =>
+                      saveSettings.mutate({
+                        media: { ...agent.media!, kind: "image", request },
+                      })
+                    }
+                  />
+                  {saveSettings.isPending && (
+                    <small role="status" className="muted">
+                      Saving image model…
+                    </small>
+                  )}
+                  <small className="muted">
+                    {active
+                      ? "Finish active work to change image settings."
+                      : agent.enabled
+                        ? "Changes apply to future runs; previous images are kept."
+                        : "Qwen is the default. Your choice is saved before you enable this agent."}
+                  </small>
+                </div>
+              )}
             {videoSetup}
             {agent.enabled && (
               <p className="muted assistant-agent-brief-note">
