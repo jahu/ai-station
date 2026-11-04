@@ -1,5 +1,5 @@
 {
-  "version": 46,
+  "version": 47,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -36,7 +36,11 @@
     "docs/plans/expressive-speech.md",
     "docs/plans/linux-gpu-onboarding.md",
     "docs/plans/generation-progress.md",
-    "docs/plans/local-prompt-enhancement.md"
+    "docs/plans/local-prompt-enhancement.md",
+    "docs/releases/0.1.1.md",
+    "docs/plans/registry-deletion.md",
+    "docs/plans/agent-chat-activation.md",
+    "docs/plans/agent-image-models.md"
   ],
   "cases": [
     {
@@ -6017,6 +6021,97 @@
       "requirements": [
         "NR-13",
         "NR-14"
+      ]
+    },
+    {
+      "id": "AGENT-017",
+      "area": "Agenci",
+      "title": "Harmonogram co 15 minut i akceptacja w rozmowie",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i testowe definicje; działający lokalny model do tworzenia szkiców. Nie używaj prywatnych materiałów w publicznych zgłoszeniach."
+      ],
+      "steps": [
+        "W czacie wpisz: „Co 15 minut generuj mi zdjęcie gór”. Sprawdź wyłączony szkic, model obrazu, narzędzia i harmonogram.",
+        "Otwórz Review and Edit i wróć bez aktywacji. Następnie wybierz Accept and Enable w tej samej rozmowie.",
+        "Sprawdź termin następnego wykonania, a potem wstrzymaj testowego agenta przed tym terminem."
+      ],
+      "expected": [
+        "Szkic ma cron */15 * * * * i czytelny opis co 15 minut, nie Manual. Akceptacja działa bez opuszczania rozmowy i pokazuje następne wykonanie. Samo włączenie nie uruchamia dodatkowego generowania natychmiast."
+      ],
+      "resources": "Własna stacja, komputer/telefon; bez płatnego API i bez wymaganej generacji obrazu",
+      "minutes": 7,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-018",
+      "area": "Agenci",
+      "title": "Qwen domyślny i zmiana modelu obrazu bez ukrytych opcji",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i testowe definicje; działający lokalny model do tworzenia szkiców. Nie używaj prywatnych materiałów w publicznych zgłoszeniach."
+      ],
+      "steps": [
+        "Utwórz szkic agenta obrazowego bez wskazania modelu. Przed akceptacją sprawdź Qwen w selektorze modelu.",
+        "Wybierz Juggernaut w czacie i sprawdź zapis bez aktywacji. W Review and Edit ustaw seed oraz negative prompt w Advanced. Zapisz.",
+        "Przełącz ponownie na Qwen i zapisz. Powtórz zmianę Qwen → Juggernaut → Qwen na karcie w czacie."
+      ],
+      "expected": [
+        "Qwen jest domyślny; wybór modelu dostępny przed akceptacją. Zapis do Qwena czyści nieobsługiwany seed/negative prompt i nie wyświetla wcześniejszego błędu walidacji. Negative prompt Juggernauta można zobaczyć i edytować. Żadna zmiana formularza nie generuje obrazu."
+      ],
+      "resources": "Własna stacja, komputer/telefon; bez płatnego API i bez wymaganej generacji obrazu",
+      "minutes": 7,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-019",
+      "area": "Agenci",
+      "title": "Usuwanie pojedyncze i grupowe agentów/projektów",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i testowe definicje; działający lokalny model do tworzenia szkiców. Nie używaj prywatnych materiałów w publicznych zgłoszeniach."
+      ],
+      "steps": [
+        "Utwórz dwa wyłączone testowe agenty i osobny testowy projekt. Używaj wyłącznie tych wpisów.",
+        "Wybierz Delete przy jednym agencie, sprawdź nazwę w oknie potwierdzenia i anuluj. Następnie potwierdź usunięcie.",
+        "Zaznacz pozostały testowy agent i usuń przez Delete selected. Usuń testowy projekt, zachowując kontrolę nad jego folderem na dysku."
+      ],
+      "expected": [
+        "Anulowanie zachowuje wpis. Potwierdzone usuwanie pojedyncze i grupowe usuwa wpisy z list. Repozytorium/folder i wcześniejsze wyniki pozostają zachowane; aktywna praca blokuje usunięcie zamiast ubijania procesu. Nie usuwaj rzeczywistych projektów do tego testu."
+      ],
+      "resources": "Własna stacja, komputer/telefon; bez płatnego API i bez wymaganej generacji obrazu",
+      "minutes": 7,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-020",
+      "area": "Agenci",
+      "title": "Podgląd obrazu nie zasłania workflow",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto i testowe definicje; działający lokalny model do tworzenia szkiców. Nie używaj prywatnych materiałów w publicznych zgłoszeniach."
+      ],
+      "steps": [
+        "Otwórz Workspace agenta z już ukończonym neutralnym obrazem. Nie trzeba generować nowego pliku wyłącznie do tej próby.",
+        "Na komputerze przewijaj stronę do Workflow steps i historii. Powtórz na telefonie lub wąskim ekranie."
+      ],
+      "expected": [
+        "Obraz, workflow i historia układają się kolejno w pionie. Podgląd nie zasłania kroków ani ich przycisków przy przewijaniu. Nie ma poziomego przewijania całej strony."
+      ],
+      "resources": "Własna stacja, komputer/telefon; bez płatnego API i bez wymaganej generacji obrazu",
+      "minutes": 7,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
       ]
     }
   ],
