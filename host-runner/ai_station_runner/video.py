@@ -166,6 +166,10 @@ def capabilities(checkpoint=None, runtime=None):
         )
         managed = chosen.get("managed") is True
         if checkpoint:
+            from ai_station_runner.video_prepare import QUALIFIED
+
+            if not QUALIFIED:
+                raise HTTPException(409, "This managed video engine is not qualified")
             hardware = collect(get_settings().host_data_dir())
             total_ram = (hardware.get("memory") or {}).get("total_mib")
             if (
@@ -268,6 +272,11 @@ def start_video(manager, body):
         raise HTTPException(403, "Video read/write permissions are required")
     from ai_station_runner.video_selection import selection
 
+    if body.checkpoint:
+        from ai_station_runner.video_prepare import QUALIFIED
+
+        if not QUALIFIED:
+            raise HTTPException(409, "This managed video engine is not qualified")
     observation = body.managed_runtime.model_dump(mode="json") if body.managed_runtime else None
     chosen = (
         selected_environment(get_settings().host_data_dir(), body.checkpoint, observation)

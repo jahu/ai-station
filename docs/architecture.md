@@ -30,6 +30,11 @@ video recipe; legacy language-model admission stays GGUF-only. This primitive
 provides structural evidence, not new video installation or runtime selection.
 
 
+Owned-model filesystem checks are shared through a standard-library module.
+The Runner maps its errors to HTTP; the offline inference child imports the pure
+checks directly and never needs FastAPI/Uvicorn or the Runner's setup router.
+Engine qualification gates stay in native preparation and parent dispatch.
+
 The video discovery candidate matches one immutable SafeTensors header against
 that slot before weights transfer, then composes the existing downloader and
 optional owned video-engine prerequisite. License/workload consent includes the

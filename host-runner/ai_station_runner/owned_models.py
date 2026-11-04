@@ -1,10 +1,6 @@
 """Read-only inspection of a fixed app-owned verified-model namespace."""
 
-import os
 import re
-import stat
-import struct
-from pathlib import Path
 
 from fastapi import HTTPException
 
@@ -25,39 +21,12 @@ def owned_safetensors(relative, digest):
 
 def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
     """The same immutable-model boundary for an explicitly owned native data root."""
-    if not isinstance(digest, str) or not SHA.fullmatch(digest) or relative != "models/store/" + digest:
-        raise HTTPException(422, "Choose a verified app-owned model reference")
-    if checkpoint_format not in {"gguf", "safetensors"}:
-        raise HTTPException(422, "Unsupported owned model format")
-    root = Path(root).resolve()
-    path = root
-    for part in Path(relative).parts:
-        path = path / part
-        if path.is_symlink():
-            raise HTTPException(422, "App-owned models cannot cross symlinks")
+    from ai_station_runner.owned_model_files import verify_owned_model as inspect_file
+
     try:
-        info = path.stat(follow_symlinks=False)
-        if (
-            not stat.S_ISREG(info.st_mode)
-            or info.st_nlink != 1
-            or info.st_uid != os.geteuid()
-            or info.st_mode & 0o222
-        ):
-            raise ValueError("The model is not an immutable owned regular file")
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, "rb") as source:
-            if checkpoint_format == "safetensors":
-                prefix = source.read(8)
-                if len(prefix) != 8 or not 2 <= struct.unpack("<Q", prefix)[0] <= 32 * 1024**2:
-                    raise ValueError("The model does not have a bounded SafeTensors header")
-                if source.read(1) != b"{":
-                    raise ValueError("The model does not have a SafeTensors header")
-            elif source.read(4) != b"GGUF":
-                raise ValueError("The model does not have a GGUF header")
+        return inspect_file(root, relative, digest, checkpoint_format=checkpoint_format)
     except (OSError, ValueError) as exc:
-        label = "GGUF" if checkpoint_format == "gguf" else "SafeTensors checkpoint"
-        raise HTTPException(422, f"The verified app-owned {label} is unavailable or changed") from exc
-    return path
+        raise HTTPException(422, str(exc)) from exc
 
 
 def validate_reference(path, digest, app_owned):

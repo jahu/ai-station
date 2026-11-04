@@ -30,10 +30,7 @@ class CheckpointSource(BaseModel):
 
 def managed_environment(root, runtime=None):
     from ai_station_runner import video_environment
-    from ai_station_runner.video_prepare import QUALIFIED
 
-    if not QUALIFIED:
-        raise ValueError("This managed video engine is not qualified")
     root = Path(root).resolve()
     if runtime is None:
         private = video_environment.read_json(root / "runtime/video-environments/active.json")
@@ -43,7 +40,7 @@ def managed_environment(root, runtime=None):
 
 
 def selected_environment(root, source, runtime=None, *, verify_weights=False):
-    from ai_station_runner.owned_models import verify_owned_model
+    from ai_station_runner.owned_model_files import verify_owned_model
 
     root = Path(root).resolve()
     selected = managed_environment(root, runtime)

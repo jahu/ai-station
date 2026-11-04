@@ -120,7 +120,7 @@ def catalog():
 
         selected = managed_environment(root)
         managed = {
-            "available": bool(supported and fitting and ram >= 24576 and driver_ok),
+            "available": bool(QUALIFIED and supported and fitting and ram >= 24576 and driver_ok),
             "managed_runtime": video_environment.public_observation(selected["observation"]),
         }
     except (OSError, ValueError, KeyError):

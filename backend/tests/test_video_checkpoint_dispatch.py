@@ -153,7 +153,28 @@ def test_changed_checkpoint_or_physical_ram_refuses_before_an_owned_process(brid
     response = bridge.post("/v1/runs/video", json=body)
     assert response.status_code == 409 and "physical RAM" in response.text
     assert not (selected["root"] / "runs" / body["run_id"] / "video").exists()
+
     selected["hardware"]["memory"]["total_mib"] = 32768
     selected["path"].chmod(0o600)
     assert bridge.post("/v1/runs/video", json=body).status_code == 422
     assert not (selected["root"] / "runs" / body["run_id"] / "video").exists()
+
+
+def test_native_checkpoint_validation_does_not_import_the_runner_web_stack(selected):
+    import subprocess
+    import sys
+
+    code = """
+import importlib.abc,sys
+class NoWeb(importlib.abc.MetaPathFinder):
+ def find_spec(self,fullname,path=None,target=None):
+  if fullname.split('.')[0] in {'fastapi','uvicorn'}:
+   raise ModuleNotFoundError('The inference environment has no web stack')
+sys.meta_path.insert(0,NoWeb())
+from ai_station_runner.owned_model_files import verify_owned_model
+from ai_station_runner.video_checkpoints import CheckpointSource,recipe,PROFILE
+from ai_station_runner.video_environment import resolve_public
+assert recipe(PROFILE)['tensor_count']==825
+assert 'fastapi' not in sys.modules
+"""
+    subprocess.run([sys.executable, "-c", code], check=True, capture_output=True)
