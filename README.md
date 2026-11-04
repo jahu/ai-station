@@ -129,6 +129,10 @@ Model choice is broad; machine access stays explicit. Agents use reviewed tools,
 owned workspaces and scoped permissions. You can inspect what ran, where it ran,
 what changed and which files it produced.
 
+Media jobs retain supervision across temporary database contention and can resume
+inspection of an already-owned process after a worker disappears, without starting
+generation again. [Recovery contract](docs/plans/media-lease-recovery.md).
+
 ## 🧭 How does it fit alongside other projects?
 
 These projects cover overlapping ground. Here is where each places its emphasis

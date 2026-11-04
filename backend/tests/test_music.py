@@ -191,17 +191,18 @@ def test_recovery_inspects_live_music_without_reexecution_and_confirms_stop(musi
             recover_stale(session)
             session.commit()
             session.refresh(run)
-            assert run.status == "running" and active_locks(session)
+            assert (
+                run.status == "queued"
+                and run.metadata_json["media_inspection_resume"]
+                and active_locks(session)
+            )
             assert host_app.manager().inspect(run_id)["pid"] == process["pid"]
             request_cancel(session, run)
             run.lease_expires_at = utcnow() - timedelta(seconds=1)
             session.commit()
-            recover_stale(session)
-            session.commit()
-            run.lease_expires_at = utcnow() - timedelta(seconds=1)
-            session.commit()
-            recover_stale(session)
-            session.commit()
+            # The inspection-only handoff remains queued until a worker owns it.
+            assert run.status == "queued" and active_locks(session)
+            tick(session, "replacement-music-observer")
             session.refresh(run)
             assert run.status == "canceled" and not active_locks(session)
             assert not host_app.manager().inspect(run_id)["alive"]

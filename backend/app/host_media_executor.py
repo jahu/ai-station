@@ -1,12 +1,13 @@
 """Shared owned-process media lifecycle, GPU scheduling, cancellation and artifacts."""
 
+import logging
 import time
 from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.artifacts import adopt_existing
-from app.db import utcnow
+from app.db import sqlite_busy, utcnow
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.models import Run
@@ -19,8 +20,24 @@ from app.resources import (
     reserve_memory,
 )
 from app.runner_client import RunnerClient, RunnerError
-from app.runs import mark_failed, transition
-from app.state import RunStatus
+from app.runs import mark_failed, touch_lease, transition
+from app.state import TERMINAL, RunStatus
+
+# These adapters share the exact owned-process polling/collection contract.
+# Inspection may resume, but the native start operation is never repeated.
+RESUMABLE_MEDIA = {
+    "photo_pipe",
+    "wan_video",
+    "echomimic",
+    "sonic_whole",
+    "chatterbox",
+    "fish_speech",
+    "mmaudio_effects",
+    "effects_preview",
+    "ace_step_music",
+    "timeline_render",
+    "media_compose",
+}
 
 
 class HostMediaExecutor:
@@ -44,6 +61,8 @@ class HostMediaExecutor:
         require(run.effective_permissions, "filesystem_read")
         require(run.effective_permissions, "workspace_write")
         session.refresh(run)
+        if run.metadata_json.get("media_inspection_resume"):
+            return self._resume(session, run)
         if self._cancel_before_dispatch(session, run):
             return "done"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
@@ -203,27 +222,93 @@ class HostMediaExecutor:
             return True
         return False
 
+    def _database_step(self, session, run, claim, action):
+        """Retry only a rolled-back database observation, never native dispatch."""
+        while True:
+            try:
+                session.refresh(run)
+                if (run.worker_id, run.claimed_at) != claim or run.status in TERMINAL:
+                    session.rollback()
+                    return False
+                touch_lease(session, run)
+                action()
+                session.commit()
+                return True
+            except Exception as exc:
+                session.rollback()
+                if not sqlite_busy(exc):
+                    raise
+                logging.warning("SQLite busy; retaining owned media inspection without redispatch")
+                time.sleep(0.2)
+
+    def _resume(self, session, run):
+        claim = (run.worker_id, run.claimed_at)
+        runner = self.runner(run)
+        run_id = run.id
+        session.commit()
+        info = runner.inspect_process(run_id)
+        if info.get("run_id") != run_id or info.get("executor") != self.name:
+            raise ValueError("Owned media inspection identity changed")
+
+        def resumed():
+            if run.status != "cancel_requested":
+                transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
+            run.pid = info.get("pid")
+            run.process_group_id = info.get("process_group_id")
+            run.runner_id = info.get("runner_id")
+            run.stdout_log = info.get("stdout_log", run.stdout_log)
+            run.stderr_log = info.get("stderr_log", run.stderr_log)
+            if run.metadata_json.get("cancel_on_resume") or run.cancellation_requested_at:
+                if run.status != "cancel_requested":
+                    transition(session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested")
+            elif run.status != "cancel_requested":
+                transition(session, run, RunStatus.RUNNING, event_type="executor.inspection_resumed")
+
+        if self._database_step(session, run, claim, resumed):
+            output = f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}{self.suffix}"
+            self._poll(session, run, runner, output)
+        return "done"
+
     def _poll(self, session, run, runner, output):
+        claim = (run.worker_id, run.claimed_at)
+        run_id = run.id
         offsets = {"stdout_offset": 0, "stderr_offset": 0}
         progress_buffers = {}
         while True:
-            session.refresh(run)
-            cancel_expired_run(session, run.id)
-            cancel = run.status == "cancel_requested"
-            session.commit()
-            if cancel:
-                runner.cancel_process(run.id)
-            info = runner.inspect_process(run.id, **offsets)
-            self.on_inspection(session, run, info)
-            from app.generation_progress import observe
+            cancel = False
 
-            observe(session, run, info, buffers=progress_buffers)
-            for stream in ("stdout", "stderr"):
-                text = info.get(stream, "")
-                if text:
-                    append_event(session, run.id, stream, {"text": text})
-                offsets[f"{stream}_offset"] = info[f"{stream}_offset"]
-            session.commit()
+            def check_cancel():
+                nonlocal cancel
+                cancel_expired_run(session, run_id)
+                cancel = run.status == "cancel_requested"
+
+            if not self._database_step(session, run, claim, check_cancel):
+                return
+            if cancel:
+                runner.cancel_process(run_id)
+            info = runner.inspect_process(run_id, **offsets)
+            # Neither cursor nor parser state advances until its DB transaction
+            # commits. Retrying a busy flush must not lose or duplicate a log page.
+            next_buffers = dict(progress_buffers)
+
+            def record():
+                self.on_inspection(session, run, info)
+                from app.generation_progress import observe
+
+                observe(session, run, info, buffers=next_buffers)
+                for stream in ("stdout", "stderr"):
+                    if text := info.get(stream, ""):
+                        append_event(session, run_id, stream, {"text": text})
+
+            def record_page():
+                next_buffers.clear()
+                next_buffers.update(progress_buffers)
+                record()
+
+            if not self._database_step(session, run, claim, record_page):
+                return
+            progress_buffers = next_buffers
+            offsets = {f"{stream}_offset": info[f"{stream}_offset"] for stream in ("stdout", "stderr")}
             if (
                 not info["alive"]
                 and not info.get("completion_pending")
@@ -233,38 +318,45 @@ class HostMediaExecutor:
                 break
             if not info["stdout_more"] and not info["stderr_more"]:
                 time.sleep(0.4)
-        session.refresh(run)
-        # Inspection proved there is no live owned group; release is now safe.
-        release_run_locks(session, run.id)
-        run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
-        session.commit()
-        session.refresh(run)
-        if run.status == "cancel_requested" or info["status"] == "canceled":
-            transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
-        elif info["status"] == "interrupted" or info.get("exit_code") is None:
-            transition(
-                session,
-                run,
-                RunStatus.INTERRUPTED,
-                event_type="run.interrupted",
-                payload={"reason": "Exit status unavailable; inspect output before retrying"},
-            )
-        elif info["exit_code"] != 0:
-            mark_failed(session, run, "ExitCode", info.get("stderr_tail") or f"Exit {info['exit_code']}")
-        else:
-            artifact = adopt_existing(
-                session,
-                relative_path=output,
-                artifact_type=self.artifact_type,
-                mime_type=self.mime_type,
-                original_filename=f"{run.id}{self.suffix}",
-                run_id=run.id,
-                metadata={"capability": run.capability, **run.parameters, **self.output_metadata(output)},
-                parent_artifact_ids=run.parameters.get("parent_artifact_ids", []),
-            )
-            self.on_success(session, run, artifact)
-            if run.metadata_json.get("prompt_translation"):
-                from app.media_translation import decorate_output
 
-                decorate_output(run, artifact)
-            transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+        def confirmed_exit():
+            release_run_locks(session, run_id)
+            run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+
+        if not self._database_step(session, run, claim, confirmed_exit):
+            return
+
+        def finish():
+            # Result/children publish atomically. Retain the independently committed
+            # exit proof even if output validation fails; don't loop on bad files.
+            if run.status == "cancel_requested" or info["status"] == "canceled":
+                transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+            elif info["status"] == "interrupted" or info.get("exit_code") is None:
+                transition(
+                    session,
+                    run,
+                    RunStatus.INTERRUPTED,
+                    event_type="run.interrupted",
+                    payload={"reason": "Exit status unavailable; inspect output before retrying"},
+                )
+            elif info["exit_code"] != 0:
+                mark_failed(session, run, "ExitCode", info.get("stderr_tail") or f"Exit {info['exit_code']}")
+            else:
+                artifact = adopt_existing(
+                    session,
+                    relative_path=output,
+                    artifact_type=self.artifact_type,
+                    mime_type=self.mime_type,
+                    original_filename=f"{run_id}{self.suffix}",
+                    run_id=run_id,
+                    metadata={"capability": run.capability, **run.parameters, **self.output_metadata(output)},
+                    parent_artifact_ids=run.parameters.get("parent_artifact_ids", []),
+                )
+                self.on_success(session, run, artifact)
+                if run.metadata_json.get("prompt_translation"):
+                    from app.media_translation import decorate_output
+
+                    decorate_output(run, artifact)
+                transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+
+        self._database_step(session, run, claim, finish)

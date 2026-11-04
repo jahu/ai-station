@@ -21,6 +21,8 @@ class PhotoPipeExecutor(HostMediaExecutor):
         from app.task_control import lock_task
 
         session.refresh(run)
+        if run.metadata_json.get("media_inspection_resume"):
+            return super().execute(session, run)
         if self._cancel_before_dispatch(session, run):
             return "done"
         require(run.effective_permissions, "filesystem_read")
