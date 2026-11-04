@@ -137,6 +137,18 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   payload layout, and binds its reference to the exact runtime recipe. Tiny fake
   headers and read-only actual reference/different-graph checks cover it. This is
   structural inspection only; new media installation and runtime use remain open.
+- New Qwen Image 2.1 image checkpoint path: publisher geometry and native slot
+  snapshots feed the existing resumable downloader, an optional fixed engine
+  prerequisite and shared image registration. Workspace/assistant choices freeze
+  the owned diffusion source with fixed companions. Native dispatch checks graph
+  and component budgets; unit/fake integration tests cover Generate/Edit/Recompose,
+  Stop/Resume, cleanup uncertainty and account privacy. An isolated real Q4_0
+  installation completed Generate, Edit and two-reference Recompose on Linux;
+  owned jobs and Runner are stopped. Local validation passed 439 selected Python
+  regressions, global lint/format, 43 frontend tests, frontend lint/typecheck/build
+  and desktop/mobile browser checks; the Docker image also built successfully.
+  Other image architectures and all remaining media families still
+  require their own compatible slots.
 - Still required: cross-model hardware-ranked discovery,
   complete split/companion plans, validated multimodal model slots and selectors,
   install/update/removal UX and release QA/packages. These remain part of the

@@ -12,6 +12,7 @@ import "./ModelDiscover.css";
 
 type Profile = {
   catalog_id: string;
+  capability?: string;
   name: string;
   fit: string;
   occupancy: string;
@@ -32,11 +33,15 @@ type ModelFile = {
     hardware_status: string;
     reason: string;
     profiles: Profile[];
-    disk: { status: string; free_bytes: number | null };
+    disk: {
+      status: string;
+      free_bytes: number | null;
+      install_bytes_upper_bound?: number;
+    };
     variant_advice?: {
       recommended: boolean;
-      context_target: number;
-      meets_context_target: boolean;
+      context_target: number | null;
+      meets_context_target: boolean | null;
       precision_tradeoff: boolean;
       reason: string;
     };
@@ -62,6 +67,14 @@ type Report = {
     pipeline_hint: string;
     downloads: number | null;
   }[];
+  candidate?: {
+    capability: "chat" | "image";
+    setup_recipe?: {
+      component_licenses: { name: string; url: string }[];
+      inputs: { role: string; filename: string; size_bytes: number }[];
+    };
+    prepare_engine?: boolean;
+  };
   files: ModelFile[];
 };
 const terminal = ["succeeded", "failed", "canceled", "interrupted"];
@@ -356,15 +369,16 @@ export default function ModelDiscover() {
                 !!file.assessment.profiles.length && (
                   <div className="hub-fit-summary">
                     <strong>{file.assessment.variant_advice.reason}</strong>
-                    {!file.assessment.variant_advice.meets_context_target && (
-                      <p>
-                        This variant does not meet the{" "}
-                        {file.assessment.variant_advice.context_target.toLocaleString()}
-                        -token target on this station. Choose another model,
-                        variant or a shorter target. The model’s trained limit
-                        also applies.
-                      </p>
-                    )}
+                    {file.assessment.variant_advice.context_target != null &&
+                      !file.assessment.variant_advice.meets_context_target && (
+                        <p>
+                          This variant does not meet the{" "}
+                          {file.assessment.variant_advice.context_target.toLocaleString()}
+                          -token target on this station. Choose another model,
+                          variant or a shorter target. The model’s trained limit
+                          also applies.
+                        </p>
+                      )}
                     {file.assessment.variant_advice.precision_tradeoff && (
                       <p>
                         Low-bit quantization reduces memory use with a larger
@@ -374,11 +388,20 @@ export default function ModelDiscover() {
                   </div>
                 )}
               <p className="muted">
+                {file.assessment.disk.install_bytes_upper_bound != null && (
+                  <>
+                    Additional installation reserve: up to{" "}
+                    {bytes(file.assessment.disk.install_bytes_upper_bound)}{" "}
+                    after verified cache reuse.{" "}
+                  </>
+                )}
                 {file.assessment.disk.status === "insufficient"
                   ? "Not enough disk space, including safety headroom."
                   : file.assessment.disk.status === "unknown"
                     ? "Free application storage could not be confirmed."
-                    : "The file fits on disk; runtime and companions may require more space."}
+                    : file.assessment.disk.install_bytes_upper_bound != null
+                      ? "The reviewed installation reserve fits on disk, including the required engine and companions."
+                      : "The file fits on disk; runtime and companions may require more space."}
               </p>
               {file.unsafe_serialization && (
                 <p className="muted">
@@ -414,30 +437,34 @@ export default function ModelDiscover() {
                 file.format === "gguf" &&
                 file.sha256 && (
                   <>
-                    <details className="hub-context-options">
-                      <summary>Context options</summary>
-                      <label htmlFor="model-hub-context">
-                        Context for installation
-                      </label>
-                      <select
-                        id="model-hub-context"
-                        value={contextTarget}
-                        onChange={(event) =>
-                          setContextTarget(Number(event.target.value))
-                        }
-                      >
-                        <option value={32768}>
-                          32K · Balanced conversation
-                        </option>
-                        <option value={131072}>128K · Longer tasks</option>
-                      </select>
-                      <p className="muted">
-                        Variant recommendations use a 32K target. The
-                        installation review checks your chosen target against
-                        GPU memory and the model’s trained limit, and shows the
-                        context that fits.
-                      </p>
-                    </details>
+                    {!file.assessment.profiles.some(
+                      (p) => p.capability === "image",
+                    ) && (
+                      <details className="hub-context-options">
+                        <summary>Context options</summary>
+                        <label htmlFor="model-hub-context">
+                          Context for installation
+                        </label>
+                        <select
+                          id="model-hub-context"
+                          value={contextTarget}
+                          onChange={(event) =>
+                            setContextTarget(Number(event.target.value))
+                          }
+                        >
+                          <option value={32768}>
+                            32K · Balanced conversation
+                          </option>
+                          <option value={131072}>128K · Longer tasks</option>
+                        </select>
+                        <p className="muted">
+                          Variant recommendations use a 32K target. The
+                          installation review checks your chosen target against
+                          GPU memory and the model’s trained limit, and shows
+                          the context that fits.
+                        </p>
+                      </details>
+                    )}
                     <Button
                       variant="secondary"
                       disabled={
@@ -478,6 +505,12 @@ export default function ModelDiscover() {
               runId={runId}
               plan={{
                 manifest_sha256: report.manifest_sha256,
+                capability: report.candidate?.capability,
+                components: report.candidate?.prepare_engine
+                  ? report.candidate.setup_recipe?.inputs
+                  : undefined,
+                component_licenses:
+                  report.candidate?.setup_recipe?.component_licenses,
                 license: report.license ?? "Not declared",
                 license_url: report.license_url ?? report.source_url ?? "",
                 files: report.files,

@@ -55,6 +55,10 @@ class HubCandidate(Candidate):
 
 
 def download_candidate(payload):
+    if payload.get("origin") == "hub_image":
+        from app.hub_image_candidates import HubImageCandidate
+
+        return HubImageCandidate.model_validate(payload)
     return (
         HubCandidate.model_validate(payload)
         if payload.get("origin") == "hub"
@@ -221,6 +225,11 @@ def candidate_from_profile(observation, filename, profile, *, context_ceiling=32
 
 
 async def resolve_candidate(observation, filename, check, context_ceiling=131072):
+    if observation.get("image_profile"):
+        from app.hub_image_candidates import candidate_from_profile as image_candidate
+        from app.hub_image_candidates import refresh_plan
+
+        return refresh_plan(image_candidate(observation, filename), check)
     # Old accepted requests retain their original context target. New requests
     # explicitly record their balanced or longer-context target.
     if observation.get("language_profile"):

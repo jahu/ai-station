@@ -38,6 +38,20 @@ BALANCED = {
 
 async def enrich_source(report, check):
     if (
+        "architecture_hint" in report
+        and "base_models" in report
+        and report.get("pipeline_hint") in {"text-to-image", "image-to-image"}
+        and any(f.get("format") == "gguf" and f.get("identity_available") for f in report["files"])
+    ):
+        from app.hub_image_candidates import resolve_profile as image_profile
+        from app.runner_client import RunnerError, RunnerUnavailable
+
+        try:
+            report["image_profile"] = await image_profile(report, check)
+        except (ValueError, httpx.HTTPError, RunnerError, RunnerUnavailable) as exc:
+            report["requirements_error"] = str(exc)[:300]
+        return
+    if (
         "architecture_hint" not in report
         or "base_models" not in report
         or report.get("architecture_hint") not in {None, "", "llama", "qwen2", "qwen3", "qwen35"}
@@ -57,6 +71,16 @@ async def enrich_source(report, check):
 
 def assess_variant(file, report, hardware, storage, *, context_target=32768):
     existing = assess_file(file, hardware, storage)
+    if report.get("image_profile"):
+        from app.hub_image_candidates import candidate_from_profile as image_candidate
+
+        try:
+            return assess_file(
+                file, hardware, storage, candidates=(image_candidate(report, file["filename"]),)
+            )
+        except ValueError as exc:
+            existing["reason"] = str(exc)[:300]
+            return existing
     if existing["profiles"] or not report.get("language_profile"):
         return existing
     try:
@@ -96,7 +120,8 @@ def rank_variants(report, *, context_target=32768):
         gpus = best["recommendation"]["gpus"] if best else []
         disk_fits = assessment["disk"]["status"] == "file_fits"
         usable = bool(best and disk_fits)
-        meets_context = bool(best and context >= context_target)
+        image = any(p.get("capability") == "image" for p in assessment["profiles"])
+        meets_context = bool(best and (image or context >= context_target))
         quant = best.get("quantization", "") if best else ""
         precision_known = quant in BALANCED and not quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))
         # All scores are local to this immutable repository observation.
@@ -111,11 +136,13 @@ def rank_variants(report, *, context_target=32768):
         assessment["variant_advice"] = {
             "policy": POLICY,
             "recommended": False,
-            "context_target": context_target,
-            "meets_context_target": bool(meets_context),
+            "context_target": None if image else context_target,
+            "meets_context_target": None if image else bool(meets_context),
             "precision_tradeoff": bool(best and quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))),
             "rank": 0,
-            "reason": f"Estimated {context:,}-token context on {len(gpus)} GPU(s)"
+            "reason": f"Estimated images up to {best['recommendation']['maximum_side']} px per side on {len(gpus)} GPUs"
+            if image and best
+            else f"Estimated {context:,}-token context on {len(gpus)} GPU(s)"
             if best
             else assessment["reason"],
         }

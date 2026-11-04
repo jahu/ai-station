@@ -4,6 +4,9 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from ai_station_runner.gguf_headers import inspect_header
 
@@ -95,4 +98,48 @@ def inspect_checkpoint(path, size_bytes, mtime, profile):
         "header_bytes": report["header_bytes"],
         "runtime_qualified": False,
         "notice": "Graph/layout compatibility only; companion readiness, resource admission and first-result qualification remain separate.",
+    }
+
+
+# Typed selection of an already downloaded object; it cannot select a host path,
+# companion, image or command. Generation retains its ordinary workspace rights.
+class CheckpointSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    profile: Literal["qwen-image21-diffusion-v1"]
+    relative_path: str
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    size_bytes: StrictInt = Field(gt=0, le=64 * 1024**3)
+    mtime: float = Field(ge=0, allow_inf_nan=False)
+    schema_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+    @model_validator(mode="after")
+    def namespace(self):
+        if self.relative_path != "models/store/" + self.sha256:
+            raise ValueError("Select a verified image checkpoint from application storage")
+        return self
+
+
+def resolve_source(source):
+    from ai_station_runner.owned_models import owned_model
+
+    path = owned_model(source.relative_path, source.sha256)
+    proof = inspect_checkpoint(path, source.size_bytes, source.mtime, source.profile)
+    if proof["schema_sha256"] != source.schema_sha256:
+        raise ValueError("The selected image checkpoint graph changed")
+    return path
+
+
+def device_budget(source):
+    expected = recipe(source.profile)
+    baseline = expected.get(
+        "workload", {"primary_vram_mib": 12288, "companion_vram_mib": 12288, "maximum_side": 1024}
+    )
+    delta = (source.size_bytes - expected["reference"]["size_bytes"]) / 1024**2
+    return {
+        "primary_vram_mib": max(
+            baseline["primary_vram_mib"], math.ceil(baseline["primary_vram_mib"] + delta)
+        ),
+        "companion_vram_mib": baseline["companion_vram_mib"],
+        "ram_mib": max(12288, math.ceil(source.size_bytes / 1024**2 + 2048)),
+        "maximum_side": baseline["maximum_side"],
     }

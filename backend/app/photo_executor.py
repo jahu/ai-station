@@ -1,6 +1,7 @@
 """Adapter around the existing photo pipeline's typed Runner operation."""
 
 import json
+import math
 from pathlib import Path
 
 from app.config import get_settings
@@ -31,7 +32,23 @@ class PhotoPipeExecutor(HostMediaExecutor):
             return super().execute(session, run)
         worker, claim = run.worker_id, run.claimed_at
         session.commit()
-        capabilities = RunnerClient().request("GET", "/v1/photo/capabilities")
+        imported = (run.parameters.get("image_model") or {}).get("binding")
+        if imported:
+            from app.image_setup_client import ImageSetupClient
+
+            catalog = ImageSetupClient().runtime_setup_catalog()
+            capabilities = {
+                "configuration_source": "managed",
+                "available": (catalog.get("managed_images") or {}).get("available"),
+                "managed_image": {
+                    "profile": catalog["recipe"]["profile"],
+                    "manifest_sha256": catalog["recipe"]["model_manifest_sha256"],
+                    "gpu_count": imported["gpu_count"],
+                    "eligible_gpu_indices": [int(v["index"]) for v in catalog["hardware"].get("gpus", [])],
+                },
+            }
+        else:
+            capabilities = RunnerClient().request("GET", "/v1/photo/capabilities")
         managed = capabilities.get("configuration_source") == "managed"
         if managed or run.parameters.get("managed_image_runtime"):
             lock_task(session, run.task)
@@ -51,7 +68,9 @@ class PhotoPipeExecutor(HostMediaExecutor):
             run.requested_resources = {
                 **run.requested_resources,
                 "gpu_count": runtime["gpu_count"],
-                "ram_mib": max(12288, run.requested_resources.get("ram_mib", 0)),
+                "ram_mib": max(
+                    12288, (imported or {}).get("ram_mib", 0), run.requested_resources.get("ram_mib", 0)
+                ),
             }
             run.execution_target = "container"
             session.commit()
@@ -72,6 +91,41 @@ class PhotoPipeExecutor(HostMediaExecutor):
 
     def reserve_devices_from_hardware(self, session, run, hardware):
         runtime = run.parameters.get("managed_image_runtime")
+        if runtime and runtime.get("diffusion"):
+            from app.resources import ResourceUnknown, active_locks, reserve_gpu_bundle
+
+            binding = runtime["checkpoint_binding"]
+            devices = [
+                v
+                for v in hardware.get("gpus", [])
+                if type(v.get("index")) is int
+                and v["index"] >= 0
+                and type(v.get("memory_total_mib")) in {int, float}
+                and math.isfinite(v["memory_total_mib"])
+            ]
+            devices.sort(key=lambda v: (-v["memory_total_mib"], v["index"]))
+            busy = active_locks(session)
+            possible = False
+            for primary in devices:
+                if primary["memory_total_mib"] < binding[
+                    "minimum_primary_vram_mib"
+                ] or run.requested_gpu not in {"auto", str(primary["index"])}:
+                    continue
+                for companion in devices:
+                    if (
+                        companion["index"] == primary["index"]
+                        or companion["memory_total_mib"] < binding["minimum_companion_vram_mib"]
+                    ):
+                        continue
+                    possible = True
+                    indices = [primary["index"], companion["index"]]
+                    if all(f"gpu:{index}" not in busy for index in indices):
+                        return reserve_gpu_bundle(session, run, indices, 2)
+            if not possible:
+                raise ResourceUnknown(
+                    "The selected image checkpoint has no fitting component placement on these GPUs"
+                )
+            return None
         if runtime:
             eligible = runtime["eligible_gpu_indices"]
             hardware = {
@@ -204,6 +258,7 @@ class PhotoPipeExecutor(HostMediaExecutor):
                     "manifest_sha256": runtime["manifest_sha256"],
                     "command": runtime["command"],
                     "references": runtime["references"],
+                    **({"diffusion": runtime["diffusion"]} if runtime.get("diffusion") else {}),
                     "gpus": [int(gpu) for gpu in run.allocated_resources["gpus"]],
                     "deadline_at": run.parameters["managed_image_native_deadline_at"],
                     "permissions": ["filesystem_read", "workspace_write"],

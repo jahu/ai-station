@@ -35,7 +35,23 @@ FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP":
 
 
 @router.get("/images/capabilities")
-def image_capabilities(session: DB):
+def image_capabilities(session: DB, model_id: UUID | None = None):
+    if model_id:
+        from app.image_models import frozen_model
+
+        _, model = frozen_model(session, str(model_id), "t2i")
+        if model and model.get("binding"):
+            from app.image_setup_client import ImageSetupClient
+
+            try:
+                report = ImageSetupClient().runtime_setup_catalog()
+                return {
+                    "available": bool((report.get("managed_images") or {}).get("available")),
+                    "backends": ["qwen"],
+                    "configuration_source": "managed",
+                }
+            except (RunnerError, RunnerUnavailable):
+                return {"available": False, "notice": "Connect the Host Runner to inspect this image engine"}
     try:
         return RunnerClient().request("GET", "/v1/photo/capabilities")
     except (RunnerError, RunnerUnavailable):
@@ -125,7 +141,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         run_type="image",
         capability=original.capability,
         executor_type="photo_pipe",
-        execution_target="host",
+        execution_target=original.execution_target,
         parameters={
             **{
                 key: value
@@ -241,6 +257,10 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
     resources = {"gpu": body.gpu}
     if model_snapshot:
         parameters["image_model"] = model_snapshot
+        if model_snapshot.get("binding"):
+            resources.update(
+                gpu_count=model_snapshot["binding"]["gpu_count"], ram_mib=model_snapshot["binding"]["ram_mib"]
+            )
     if body.backend == "krea2":
         parameters["krea_inputs"] = [
             {"relative_path": parent.relative_path, "size_bytes": parent.size_bytes, "sha256": parent.sha256}
@@ -273,7 +293,7 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         run_type="image",
         capability=capability,
         executor_type="photo_pipe",
-        execution_target="host",
+        execution_target="container" if model_snapshot and model_snapshot.get("binding") else "host",
         parameters=parameters,
         requested_gpu=body.gpu,
         requested_resources=resources,

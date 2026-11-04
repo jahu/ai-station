@@ -80,8 +80,11 @@ def choice(session, identifier):
         "backend": backend,
         "modes": modes,
         "available": available,
+        "managed_checkpoint": bool(metadata.get("binding")),
         "maximum_references": 2 if backend == "krea2" else 8,
-        "gpu_count": metadata.get("gpu_count", 2) if backend == "krea2" else 1,
+        "gpu_count": metadata.get("gpu_count", 2)
+        if backend == "krea2"
+        else (metadata.get("binding") or {}).get("gpu_count", 1),
         "presets": metadata.get("presets", {}),
         "license_url": metadata.get("license_url"),
         "file": {"filename": file.filename, "format": file.format, "size_bytes": file.size_bytes}
@@ -107,6 +110,22 @@ def frozen_model(session, identifier, mode):
         "backend": selected["backend"],
         "model_file": {"path": file.host_path, "size": file.size_bytes, "sha256": image["sha256"]},
     }
+    if image.get("binding"):
+        binding = image["binding"]
+        if (
+            selected["backend"] != "qwen"
+            or file.sha256 != image["sha256"]
+            or file.relative_path != "models/store/" + file.sha256
+            or binding.get("checkpoint_profile") != "qwen-image21-diffusion-v1"
+        ):
+            raise HTTPException(409, "The imported image checkpoint binding is unavailable")
+        snapshot["binding"] = dict(binding)
+        snapshot["model_file"] = {
+            "relative_path": file.relative_path,
+            "size": file.size_bytes,
+            "sha256": file.sha256,
+            "mtime": file.mtime,
+        }
     if selected["backend"] == "krea2":
         profile = image.get("profile_sha256", "")
         count = image.get("gpu_count", 2)

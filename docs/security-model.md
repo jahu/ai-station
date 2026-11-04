@@ -73,7 +73,24 @@ names/dimensions, unsupported storage types, bad alignment, truncated extents an
 overlapping payloads. It reads no tensor payload and launches no process. A
 publisher architecture tag cannot override the fixed graph signature. Its reference
 SHA256/size and engine image are bound to the existing native recipe. Inspection
-does not grant download, registration, GPU execution or companion substitution.
+does not by itself grant download, registration, GPU execution or companion substitution.
+
+An accepted image model plan may enqueue the fixed image-engine setup as an
+owned prerequisite, with the same Task-wide Stop fence. Native preparation
+validation requires the licensed model snapshot/fingerprint, matching parent
+Run/owner, exact fixed recipe and persisted dependency; other Task intents and
+executors retain their original restrictions. Unknown or unavailable runtime
+prerequisites block installation before transfer. A new plan rechecks readiness
+without changing its immutable publisher configuration or engine identities.
+
+An imported image definition binds the verified store object and graph signature
+to the fixed engine manifest. The ordinary managed generation request can select
+only that typed diffusion object; all other mounts, image, command and CUDA
+placement remain controlled. Dispatch checks graph/layout, source observation,
+resolution, two distinct physical GPUs and per-component VRAM/RAM budgets.
+Native ownership, deadlines, cancellation, inspection and recovery use the existing
+image journal. Legacy request serialization excludes the new optional coordinate.
+Shared model readiness never exposes another account's source/preparation Runs.
 
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper

@@ -34,6 +34,25 @@ def assess_file(file, hardware, storage, *, candidates=None):
         and entry.file.sha256 == file.get("sha256")
         and entry.file.size_bytes == size
     ]
+    images = [v for v in matches if getattr(v, "origin", None) == "hub_image"]
+    if images:
+        entry = images[0]
+        prerequisites = entry.prerequisite_budget_bytes
+        if prerequisites is None:
+            prerequisites = (
+                sum(v["size_bytes"] for v in entry.setup_recipe["inputs"])
+                + max(entry.setup_recipe.get("minimum_free_bytes", 0), entry.setup_recipe["download_bytes"])
+                if entry.prepare_engine
+                else 0
+            )
+        budget = size + prerequisites
+        disk = (
+            "unknown"
+            if free is None or headroom is None
+            else "file_fits"
+            if free >= budget + headroom
+            else "insufficient"
+        )
     plans = []
     from app.native_models import host_profile, native
 
@@ -88,7 +107,9 @@ def assess_file(file, hardware, storage, *, candidates=None):
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
-                "provenance": "pinned_publisher_configuration"
+                "provenance": "pinned_image_recipe_and_configuration"
+                if getattr(entry, "origin", None) == "hub_image"
+                else "pinned_publisher_configuration"
                 if getattr(entry, "origin", None) == "hub"
                 else "reviewed_recipe_exact_object",
             }
@@ -99,11 +120,14 @@ def assess_file(file, hardware, storage, *, candidates=None):
             "file_bytes": size,
             "free_bytes": free,
             "headroom_bytes": headroom,
-            "complete_install_budget_known": False,
+            "complete_install_budget_known": bool(images),
+            **({"install_bytes_upper_bound": budget} if images else {}),
             "note": "File size is a minimum; runtime, companions and staging may need more space.",
         },
-        "runtime_status": "supported_architecture_plan"
-        if plans and any(getattr(entry, "origin", None) == "hub" for entry in matches)
+        "runtime_status": "runtime_unavailable"
+        if images and not images[0].preparation_available
+        else "supported_architecture_plan"
+        if plans and any(getattr(entry, "origin", None) in {"hub", "hub_image"} for entry in matches)
         else "reviewed_profile"
         if plans
         else "needs_compatible_recipe",
@@ -115,7 +139,11 @@ def assess_file(file, hardware, storage, *, candidates=None):
         if plans
         else "unknown",
         "profiles": plans,
-        "reason": "Supported architecture; memory is estimated from pinned publisher configuration and verified natively after download."
+        "reason": images[0].preparation_notice or "Prepare the supported image runtime prerequisites first."
+        if images and not images[0].preparation_available
+        else "Supported image graph; the fixed engine and all encoder/VAE companions are included in this estimate. The downloaded graph is verified natively."
+        if images
+        else "Supported architecture; memory is estimated from pinned publisher configuration and verified natively after download."
         if plans and any(getattr(entry, "origin", None) == "hub" for entry in matches)
         else "Review the matching recipe and hardware profile before installing."
         if plans
