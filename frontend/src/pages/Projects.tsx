@@ -1,3 +1,8 @@
+import {
+  RegistryDeleteButton,
+  useRegistryDeletion,
+  type RegistryItem,
+} from "./RegistryDeletion";
 import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -418,7 +423,13 @@ function ProjectForm({
   );
 }
 
-function ProjectCards({ projects }: { projects: Project[] }) {
+function ProjectCards({
+  projects,
+  rowActions,
+}: {
+  projects: Project[];
+  rowActions: (item: RegistryItem) => React.ReactNode;
+}) {
   const headingId = useId();
   const labelId = useId();
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
@@ -441,27 +452,29 @@ function ProjectCards({ projects }: { projects: Project[] }) {
         onKeyDown={onKeyDown}
       >
         {projects.map((project, i) => (
-          <Link
-            className="panel project-card"
-            key={project.id}
-            to={`/projects/${project.id}`}
-            aria-label={`Inspect ${project.name} ${project.id.slice(0, 8)}`}
-            {...itemProps(i, project.id)}
-          >
-            <div className="row spread">
-              <FolderGit2 size={23} aria-hidden="true" />
-              <span className="chip">HOST REPOSITORY</span>
-            </div>
-            <h2>{project.name}</h2>
-            <p className="mono muted">{project.repo_path}</p>
-            <div className="project-card-footer">
-              <span>
-                <GitBranch size={13} aria-hidden="true" />
-                {project.integration_branch}
-              </span>
-              <span>{project.preferred_executor} preferred</span>
-            </div>
-          </Link>
+          <article className="panel project-card" key={project.id}>
+            <Link
+              className="project-card-main"
+              to={`/projects/${project.id}`}
+              aria-label={`Inspect ${project.name} ${project.id.slice(0, 8)}`}
+              {...itemProps(i, project.id)}
+            >
+              <div className="row spread">
+                <FolderGit2 size={23} aria-hidden="true" />
+                <span className="chip">HOST REPOSITORY</span>
+              </div>
+              <h2>{project.name}</h2>
+              <p className="mono muted">{project.repo_path}</p>
+              <div className="project-card-footer">
+                <span>
+                  <GitBranch size={13} aria-hidden="true" />
+                  {project.integration_branch}
+                </span>
+                <span>{project.preferred_executor} preferred</span>
+              </div>
+            </Link>
+            {rowActions(project)}
+          </article>
         ))}
       </div>
     </section>
@@ -474,6 +487,11 @@ export function Projects() {
     queryKey: ["projects", offset],
     queryFn: () => api<Project[]>(`/projects?limit=50&offset=${offset}`),
   });
+  const deletion = useRegistryDeletion(
+    "projects",
+    projects.data ?? [],
+    String(offset),
+  );
   return (
     <>
       <PageTitle
@@ -490,13 +508,18 @@ export function Projects() {
       >
         Your repositories, branch policies, and coding preferences in one place.
       </PageTitle>
+      {deletion.toolbar}
+      {deletion.dialog}
       <ErrorNotice error={projects.error} />
       {projects.isPending ? (
         <Loading />
       ) : (
         projects.data &&
         (projects.data.length ? (
-          <ProjectCards projects={projects.data} />
+          <ProjectCards
+            projects={projects.data}
+            rowActions={deletion.rowActions}
+          />
         ) : (
           <section className="panel">
             <Empty title="No projects on this page">
@@ -681,6 +704,7 @@ export function NewProject() {
 }
 
 export function ProjectDetail() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const cache = useQueryClient();
   const [saved, setSaved] = useState(false);
@@ -706,6 +730,15 @@ export function ProjectDetail() {
       <PageTitle
         eyebrow="PROJECTS / CONFIGURATION"
         title={project.data?.name ?? "Project"}
+        action={
+          project.data && (
+            <RegistryDeleteButton
+              kind="projects"
+              item={project.data}
+              onDeleted={() => navigate("/projects")}
+            />
+          )
+        }
       >
         {project.data?.repo_path}
       </PageTitle>

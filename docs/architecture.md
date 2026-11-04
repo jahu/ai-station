@@ -1418,3 +1418,5 @@ source fingerprints; interrupted publication can resume without re-execution.
 Accounts, live login cookies, schedules and queued work are preserved rather than
 normalized as in an explicit disaster restore. Native update consent, ownership
 handoff and complete Mac qualification remain later installer steps.
+
+Registry deletion uses account-scoped, versioned tombstones for Agents and Projects. Active work blocks removal; historical execution records keep their references. New work cannot reference deleted definitions. Repository files remain native and untouched. See [registry deletion](plans/registry-deletion.md).

@@ -1,4 +1,9 @@
 import {
+  RegistryDeleteButton,
+  useRegistryDeletion,
+  type RegistryItem,
+} from "./RegistryDeletion";
+import {
   ResultEmailSettings,
   ResultEmailApproval,
   type ResultEmailScope,
@@ -388,7 +393,9 @@ function ToolChoiceList({
 function AgentCards({
   agents,
   projects,
+  rowActions,
 }: {
+  rowActions: (item: RegistryItem) => React.ReactNode;
   agents: Agent[];
   projects: { id: string; name: string }[];
 }) {
@@ -470,6 +477,7 @@ function AgentCards({
               </p>
               <p>Last: {agent.last_status || "Never run"}</p>
               <small className="muted">Next: {time(agent.next_run_at)}</small>
+              {rowActions(agent)}
               <AgentLinkedProjectLinks
                 agentId={agent.id}
                 projectId={agent.project_id}
@@ -504,6 +512,11 @@ export function Agents() {
     queryKey: ["projects"],
     queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
   });
+  const deletion = useRegistryDeletion(
+    "agents",
+    agents.data ?? [],
+    `${offset}:${projectId}`,
+  );
   return (
     <>
       <PageTitle eyebrow="AUTOMATION / AGENTS" title="Agents">
@@ -538,6 +551,8 @@ export function Agents() {
           </select>
         </label>
       </div>
+      {deletion.toolbar}
+      {deletion.dialog}
       <ErrorNotice error={agents.error ?? projects.error} />
       {agents.isPending ? (
         <Loading />
@@ -550,7 +565,11 @@ export function Agents() {
           </Empty>
         </section>
       ) : (
-        <AgentCards agents={agents.data} projects={projects.data ?? []} />
+        <AgentCards
+          agents={agents.data}
+          projects={projects.data ?? []}
+          rowActions={deletion.rowActions}
+        />
       )}
       <div className="row">
         <Button
@@ -706,9 +725,16 @@ export function AgentDetail() {
         }
         title={agent.name}
         action={
-          <Link className="button secondary" to="/agents">
-            All agents
-          </Link>
+          <div className="row">
+            <RegistryDeleteButton
+              kind="agents"
+              item={agent}
+              onDeleted={() => navigate("/agents")}
+            />
+            <Link className="button secondary" to="/agents">
+              All agents
+            </Link>
+          </div>
         }
       >
         {agent.enabled ? "Enabled" : "Paused / draft"} · {schedule(agent)} ·{" "}

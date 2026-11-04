@@ -22,7 +22,7 @@ def test_0042_preserves_external_file_and_definition_references_in_both_directio
         )
     with engine.begin() as db:
         cfg.attributes["connection"] = db
-        command.upgrade(cfg, "head")
+        command.upgrade(cfg, "0042")
         assert db.execute(
             text("SELECT host_path,relative_path,sha256 FROM model_files WHERE id='file'")
         ).one() == ("/external/existing.gguf", None, None)
@@ -43,7 +43,7 @@ def test_downgrade_preserves_owned_models_by_refusing_to_drop_their_coordinates(
     cfg = alembic_config()
     with engine.begin() as db:
         cfg.attributes["connection"] = db
-        command.upgrade(cfg, "head")
+        command.upgrade(cfg, "0042")
         db.execute(
             text(
                 "INSERT INTO model_files(id,relative_path,sha256,filename,size_bytes,mtime,format,family,quantization,category,capabilities,root_label,discovered_at,availability) VALUES ('owned',:path,:sha,'owned.gguf',1024,1,'gguf','qwen3','Q4','llm','[]','AI Station storage',CURRENT_TIMESTAMP,'present')"

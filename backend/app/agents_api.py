@@ -19,6 +19,7 @@ from app.factory import draft_agent
 from app.local_provider import model_endpoint
 from app.models import Agent, Project, Run
 from app.providers import ProviderError
+from app.registry_lifecycle import RegistryDeleteBatch, RegistryDeleteItem, RegistryDeleteOne, delete_registry
 from app.schedule import active_run, compute_next, launch_agent
 from app.schedule_time import ScheduleTimezone
 from app.serialize import agent_dict
@@ -101,6 +102,8 @@ def get_agent(session, agent_id):
     row = session.get(Agent, str(agent_id))
     if row is None:
         raise HTTPException(404, "Agent not found")
+    if row.deleted_at is not None:
+        raise HTTPException(410, "Agent was deleted. Previous results remain in Runs and Library.")
     return row
 
 
@@ -148,7 +151,9 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 authorization(session, agent, body.market)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
-    if body.project_id and session.get(Project, str(body.project_id)) is None:
+    if body.project_id and (
+        (project := session.get(Project, str(body.project_id))) is None or project.deleted_at is not None
+    ):
         raise HTTPException(422, "Project does not exist")
     if "python_data" in body.tools and body.enabled:
         if body.model != "auto" and not body.model.startswith("llamacpp:"):
@@ -275,6 +280,21 @@ def tools():
     ]
 
 
+@router.post("/delete")
+def delete_selected(body: RegistryDeleteBatch, session: DB):
+    result = delete_registry(session, Agent, body.items)
+    session.commit()
+    return {"deleted": result}
+
+
+@router.delete("/{agent_id}", status_code=204)
+def delete_one(agent_id: UUID, body: RegistryDeleteOne, session: DB):
+    delete_registry(
+        session, Agent, [RegistryDeleteItem(id=agent_id, expected_updated_at=body.expected_updated_at)]
+    )
+    session.commit()
+
+
 @router.get("")
 def agents(
     session: DB,
@@ -282,7 +302,13 @@ def agents(
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    statement = select(Agent).order_by(Agent.name, Agent.id).limit(limit).offset(offset)
+    statement = (
+        select(Agent)
+        .where(Agent.deleted_at.is_(None))
+        .order_by(Agent.name, Agent.id)
+        .limit(limit)
+        .offset(offset)
+    )
     if project_id is not None:
         statement = statement.where(Agent.project_id == str(project_id))
     return [definition_dict(agent, session) for agent in session.scalars(statement)]
