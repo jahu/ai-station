@@ -60,6 +60,10 @@ def _apply_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
 def get_engine() -> Engine:
     global _engine, _session_factory
     if _engine is None:
+        from app.registry_lifecycle import guard_registry_references
+
+        if not event.contains(Session, "before_flush", guard_registry_references):
+            event.listen(Session, "before_flush", guard_registry_references)
         settings = get_settings()
         url = settings.sqlite_url()
         if url.startswith("sqlite:///"):

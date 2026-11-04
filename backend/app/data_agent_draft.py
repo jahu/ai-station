@@ -255,12 +255,12 @@ def verified(session, draft):
     return source
 
 
-def repeat_definition(source, proposal, timezone):
+def repeat_definition(source, proposal, timezone, *, instruction=""):
     base = source["definition"]
     return AgentSettings.model_validate(
         {
             **base,
-            **schedule_values(proposal.model_dump(mode="json")),
+            **schedule_values(proposal.model_dump(mode="json"), instruction=instruction),
             "schedule_timezone": timezone,
             "enabled": False,
             "project_id": None,

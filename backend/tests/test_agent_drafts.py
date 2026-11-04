@@ -764,7 +764,7 @@ def test_new_draft_canonicalizes_only_inactive_schedule_fields(model, trigger):
         )
     ]
     with TestClient(app) as api:
-        run = submit(api, instruction="Prepare a disabled agent that reports daily from https://example.com/")
+        run = submit(api, instruction="Prepare a disabled agent that reports from https://example.com/")
         step()
         done = state(api, run)
         assert done["status"] == "succeeded", done["error_message"]

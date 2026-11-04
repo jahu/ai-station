@@ -1,5 +1,7 @@
 # Operator QA catalog and workbook
 
+Release 0.1.1 adds catalog v47 cases AGENT-017–020 for explicit cadence, inline activation/model changes, registry deletion and image/workflow layout. Existing answers remain unchanged; new exports start untested.
+
 The developing v46 catalog contains **261 active cases** for Linux, Windows and
 shared application workflows. The owner deferred macOS on 2026-11-03:
 SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs

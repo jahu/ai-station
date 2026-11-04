@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db import session_scope, utcnow
 from app.models import Project, Run, Worktree
 from app.project_activity import project_write_condition
+from app.registry_lifecycle import RegistryDeleteBatch, RegistryDeleteItem, RegistryDeleteOne, delete_registry
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import project_dict, worktree_dict
@@ -109,6 +110,8 @@ def get_project(session: Session, project_id: UUID) -> Project:
     project = session.get(Project, str(project_id))
     if project is None:
         raise HTTPException(404, "Project not found")
+    if project.deleted_at is not None:
+        raise HTTPException(410, "Project was deleted. Previous results remain in Runs and Library.")
     return project
 
 
@@ -121,9 +124,30 @@ def inspect_repository(path: str) -> dict:
         raise
 
 
+@router.post("/delete")
+def delete_selected(body: RegistryDeleteBatch, session: DB):
+    result = delete_registry(session, Project, body.items)
+    session.commit()
+    return {"deleted": result}
+
+
+@router.delete("/{project_id}", status_code=204)
+def delete_one(project_id: UUID, body: RegistryDeleteOne, session: DB):
+    delete_registry(
+        session, Project, [RegistryDeleteItem(id=project_id, expected_updated_at=body.expected_updated_at)]
+    )
+    session.commit()
+
+
 @router.get("")
 def projects(session: DB, limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
-    rows = session.scalars(select(Project).order_by(Project.name, Project.id).limit(limit).offset(offset))
+    rows = session.scalars(
+        select(Project)
+        .where(Project.deleted_at.is_(None))
+        .order_by(Project.name, Project.id)
+        .limit(limit)
+        .offset(offset)
+    )
     return [project_dict(row) for row in rows]
 
 
@@ -134,7 +158,7 @@ def register_project(body: ProjectCreate, session: DB):
     path = info["repo_path"]
     if len(path) > 1000:
         raise HTTPException(422, "Canonical repository path exceeds the 1,000 character storage limit")
-    if session.scalar(select(Project.id).where(Project.repo_path == path)):
+    if session.scalar(select(Project.id).where(Project.repo_path == path, Project.deleted_at.is_(None))):
         raise HTTPException(409, "This repository is already registered")
     values = body.model_dump(exclude={"repo_path"})
     project = Project(repo_path=path, **values)

@@ -52,3 +52,31 @@ translation review, inline recovery/reload, draft preservation and Stop passed.
 Source mappings, review, merge and deployment receipts in the evidence directory
 determine the live release. This does not claim a new real model/GPU smoke or
 complete the full-platform acceptance/QA handoff.
+
+## Recurring instructions without the word agent — 2026-11-04
+
+An actual unified conversation sent “co 15 minut generuj mi zdjęcie…” to a plain
+`chat.completion` Run. The creation predicate required the word agent, while
+media patterns assumed a leading generation verb. The LLM therefore received an
+ordinary reply request; its capability disclaimer was a consequence of the wrong
+route, not evidence that local generation or scheduling was unavailable.
+
+Recognize an explicit recurring action in the current Polish/English instruction
+as authority to prepare a **disabled** agent, without requiring implementation
+vocabulary. Preserve both cadence-first and action-first wording. Freeze that
+choice before implicit music/video/data preparation can turn it into a one-off
+operation. Reuse the existing local agent factory and normal Task/Run graph;
+keep the original instruction and produce a visible definition with the actual
+schedule for review. Do not automatically enable it or launch a sample image.
+
+Cadence inside quotations/code/examples, informational questions, negated
+instructions and an output's duration do not authorize agent creation. Explicit
+action overrides remain authoritative. Content from attachments/history/tools
+does not become a new recurring instruction. Default Web availability must not
+search the goal or add another classification inference to deterministic drafting.
+
+Qualification includes neutral image/music/video API-to-worker regressions,
+900-second schedule, definition/history persistence and no scheduled/media Run
+before activation, plus ordinary-reply/quote/negation/duration controls. Normal
+tests use fake inference and no GPU/external tokens. Deployment and real-model
+results must be recorded separately; the released 0.1.0 tag stays immutable.

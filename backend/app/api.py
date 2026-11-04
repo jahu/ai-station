@@ -69,6 +69,7 @@ from app.providers import ProviderError
 from app.publication import router as publication_router
 from app.recovery import lease_health
 from app.redact import redact_obj
+from app.registry_lifecycle import RegistryDeletedError
 from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
@@ -103,7 +104,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="AI Station", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AI Station", version="0.1.1", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -187,6 +188,11 @@ async def invalid_request(_request, error):
     )
 
 
+@app.exception_handler(RegistryDeletedError)
+async def removed_definition(_request, error):
+    return JSONResponse({"detail": str(error)}, status_code=409)
+
+
 @app.exception_handler(InvalidTransition)
 async def invalid_transition(_request, error):
     return JSONResponse({"detail": str(error)}, status_code=409)
@@ -220,7 +226,7 @@ def health(response: Response):
     with get_engine().connect() as connection:
         connection.execute(text("SELECT 1"))
     response.headers["Cache-Control"] = "no-store"
-    result = {"status": "ok", "version": "0.1.0"}
+    result = {"status": "ok", "version": "0.1.1"}
     if instance_id := get_settings().desktop_instance_id:
         result["desktop_instance_id"] = instance_id
     return result

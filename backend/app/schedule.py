@@ -45,6 +45,8 @@ def launch_agent(
     avatar_appearance_recipe=...,
     avatar_whole_recipe=...,
 ) -> str:
+    if agent.deleted_at is not None:
+        raise ValueError("Agent was deleted")
     if not agent.enabled:
         raise ValueError("Enable the reviewed definition before running this agent")
     if active_run(session, agent.id):
@@ -344,6 +346,7 @@ def due_agents(session: Session):
             select(Agent)
             .where(
                 Agent.enabled.is_(True),
+                Agent.deleted_at.is_(None),
                 Agent.provider == "local-openai-compatible",
                 Agent.trigger != "manual",
                 Agent.next_run_at.is_not(None),

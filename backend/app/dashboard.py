@@ -41,7 +41,7 @@ def overview(session: DB):
         .order_by(case((Run.status == "queued", 1), else_=0), Run.created_at, Run.id)
         .limit(8)
     ).all()
-    enabled = select(Agent).where(Agent.enabled.is_(True))
+    enabled = select(Agent).where(Agent.enabled.is_(True), Agent.deleted_at.is_(None))
     upcoming = session.scalars(
         enabled.where(Agent.trigger != "manual", Agent.next_run_at.is_not(None))
         .order_by(Agent.next_run_at, Agent.id)

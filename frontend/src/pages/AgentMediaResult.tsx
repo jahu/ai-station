@@ -23,10 +23,10 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
         .map((item) => ({ result: item.result }))
     : [];
   return (
-    <>
+    <div className="agent-media-result">
       <AgentDocumentSources captures={documents} />
       <AgentMediaOutput runs={runs} />
-    </>
+    </div>
   );
 }
 

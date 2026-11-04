@@ -199,3 +199,149 @@ def test_effects_draft_cannot_invent_a_film_or_scene_timing(reference):
     )
     with pytest.raises(ValueError, match="Do not invent"):
         definition(proposal, "Create an agent that adds sound to a film", "fake-local")
+
+
+@pytest.mark.parametrize(
+    "model_schedule", [{"trigger": "manual"}, {"trigger": "cron", "cron_expr": "0 9 * * *"}]
+)
+def test_polish_quarter_hour_media_draft_keeps_cadence_and_enables_without_generating(
+    model, implemented_media, model_schedule, monkeypatch
+):
+    from app.runner_client import RunnerClient
+
+    def profile(_self, method, path, **_kwargs):
+        assert (method, path) == ("GET", "/v1/photo/capabilities")
+        return {"available": True, "modes": ["t2i"]}
+
+    monkeypatch.setattr(RunnerClient, "request", profile)
+    _, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                "name": "Mountain illustration",
+                "goal": "Generate a peaceful mountain illustration",
+                "tools": ["create_media"],
+                "media": {
+                    "kind": "image",
+                    "request": {"mode": "t2i", "prompt": "Peaceful mountain illustration"},
+                },
+                **model_schedule,
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(
+            api, instruction="Co 15 minut generuj mi zdjęcie gór.", schedule_timezone="Europe/Warsaw"
+        )
+        assert step() == run["id"]
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["trigger"] == "cron" and agent["cron_expr"] == "*/15 * * * *"
+        assert agent["schedule_timezone"] == "Europe/Warsaw" and not agent["enabled"]
+        enabled = api.post(
+            "/api/agents/" + agent["id"] + "/enabled",
+            json={"expected_updated_at": agent["updated_at"], "enabled": True},
+        )
+        assert enabled.status_code == 200, enabled.text
+        assert enabled.json()["next_run_at"] and enabled.json()["enabled"]
+        with session_factory()() as session:
+            # Activation must not silently enqueue or execute image generation.
+            assert len(list(session.scalars(select(Run)))) == 1
+
+
+@pytest.mark.parametrize(
+    "instruction,expected",
+    [
+        ("Co 15 minut generuj mi zdjęcie gór.", "qwen"),
+        ("Generate a mountain illustration using Qwen.", "qwen"),
+        ("Generate a mountain illustration using Juggernaut XL.", "juggernaut"),
+    ],
+)
+def test_image_draft_uses_qwen_by_default_and_retains_explicit_model(
+    instruction, expected, implemented_media
+):
+    proposed = Proposal.model_validate(
+        {
+            "name": "Mountains",
+            "goal": "Create a mountain illustration",
+            "tools": ["create_media"],
+            "media": {
+                "kind": "image",
+                "request": {
+                    "mode": "t2i",
+                    "backend": "juggernaut",
+                    "prompt": "Calm mountains",
+                    "seed": 123,
+                    "negative": "blur, noise",
+                },
+            },
+        }
+    )
+    saved = definition(proposed, instruction, "fake-local")
+    assert saved.media.request.backend == expected
+    assert not saved.enabled
+    if expected == "qwen":
+        assert saved.media.request.seed is None and saved.media.request.negative is None
+    else:
+        assert saved.media.request.seed == 123 and saved.media.request.negative == "blur, noise"
+    assert saved.media.request.prompt == "Calm mountains"
+
+
+def test_explicit_juggernaut_choice_can_replace_model_proposed_qwen(implemented_media):
+    proposed = Proposal.model_validate(
+        {
+            "name": "Mountains",
+            "goal": "Create an illustration",
+            "tools": ["create_media"],
+            "media": {
+                "kind": "image",
+                "request": {"mode": "t2i", "backend": "qwen", "prompt": "Calm mountains"},
+            },
+        }
+    )
+    saved = definition(proposed, "Create an image with JuggernautXL.", "fake-local")
+    assert saved.media.request.backend == "juggernaut" and saved.media.request.seed == 42
+
+
+def test_existing_image_agent_can_save_a_clean_qwen_switch_without_weakening_validation():
+    with TestClient(app) as api:
+        body = {
+            "name": "Existing image policy",
+            "goal": "Illustrate a neutral landscape",
+            "model": "fake-local",
+            "tools": ["create_media"],
+            "media": {
+                "kind": "image",
+                "request": {
+                    "mode": "t2i",
+                    "backend": "juggernaut",
+                    "prompt": "A mountain landscape",
+                    "seed": 123,
+                    "negative": "blur",
+                },
+            },
+        }
+        created = api.post("/api/agents", json=body)
+        assert created.status_code == 201, created.text
+        row = created.json()
+        invalid = {
+            **body,
+            "expected_updated_at": row["updated_at"],
+            "media": {"kind": "image", "request": {**body["media"]["request"], "backend": "qwen"}},
+        }
+        assert api.put("/api/agents/" + row["id"], json=invalid).status_code == 422
+        clean = {
+            **invalid,
+            "media": {
+                "kind": "image",
+                "request": {**invalid["media"]["request"], "seed": None, "negative": None},
+            },
+        }
+        saved = api.put("/api/agents/" + row["id"], json=clean)
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["media"]["request"]["backend"] == "qwen"
+        assert (
+            saved.json()["media"]["request"]["seed"] is None
+            and saved.json()["media"]["request"]["negative"] is None
+        )

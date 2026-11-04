@@ -194,7 +194,7 @@ def prepared_family(settings):
     )
 
 
-def definition(source, proposal, timezone, *, report_model=None):
+def definition(source, proposal, timezone, *, report_model=None, instruction=""):
     if proposal.family not in allowed_families(source):
         raise ValueError(
             "Choose a family supported by the selected inputs; data files and file creation require data"
@@ -202,7 +202,7 @@ def definition(source, proposal, timezone, *, report_model=None):
     base = source["definition"]
     values = {
         **base,
-        **schedule_values(proposal.model_dump(mode="json", exclude={"family"})),
+        **schedule_values(proposal.model_dump(mode="json", exclude={"family"}), instruction=instruction),
         "schedule_timezone": timezone,
         "enabled": False,
         "project_id": None,

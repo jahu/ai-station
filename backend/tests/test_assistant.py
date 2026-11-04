@@ -80,7 +80,8 @@ def test_two_references_dispatch_real_image_contract_and_project_results(monkeyp
         assert client.post(route + "/regenerate").status_code == 409
 
 
-def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled(monkeypatch):
+@pytest.mark.parametrize("prefix", ["", "  "])
+def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled(monkeypatch, prefix):
     async def stream(self, **params):
         yield json.dumps(
             {
@@ -96,7 +97,7 @@ def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled(monkeypa
         cid = create(client)
         client.post(
             f"/api/chat/conversations/{cid}/messages",
-            json={"content": "Stwórz mi agenta który generuje obrazy co rano"},
+            json={"content": prefix + "Stwórz mi agenta który generuje obrazy co rano"},
         )
         step()
         preparing = client.get(f"/api/chat/conversations/{cid}").json()

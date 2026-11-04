@@ -1,3 +1,4 @@
+import type { AgentMediaScope } from "./agent-media";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -29,6 +30,7 @@ const draft = {
   skills: ["station-briefing"],
   trigger: "cron",
   cron_expr: "0 7 * * 1-5",
+  schedule_timezone: "UTC",
   require_approval: true,
   workflow_mode: "gated",
   search_query: "workstation GPU news",
@@ -107,155 +109,179 @@ function withCatalog(
 }
 
 function mount(
-  agent = draft,
+  agent: typeof draft & { media?: AgentMediaScope } = draft,
   compact = false,
   conversationContext?: Parameters<
     typeof AssistantAgentDraft
   >[0]["conversationContext"],
 ) {
   let current = { ...agent };
-  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
-    const url = String(path);
-    const catalog = stationCatalog(url);
-    if (catalog) return { ok: true, json: async () => catalog };
-    if (options?.method === "PUT" && url.endsWith(`/agents/${current.id}`)) {
-      current = {
-        ...current,
-        ...JSON.parse(String(options.body)),
-        updated_at: "2026-10-11T10:02:00Z",
-      };
-      return { ok: true, json: async () => current };
-    }
-    if (
-      url.includes("/chat/conversations/") &&
-      url.endsWith("/run") &&
-      options?.method === "POST"
-    ) {
+  const fetch = vi.fn(
+    async (
+      path: string,
+      options?: RequestInit,
+    ): Promise<{
+      ok: boolean;
+      status?: number;
+      json: () => Promise<unknown>;
+    }> => {
+      const url = String(path);
+      const catalog = stationCatalog(url);
+      if (catalog) return { ok: true, json: async () => catalog };
+      if (
+        options?.method === "POST" &&
+        url.endsWith(`/agents/${current.id}/enabled`)
+      ) {
+        current = {
+          ...current,
+          enabled: JSON.parse(String(options.body)).enabled,
+          updated_at: "2026-10-11T10:01:00Z",
+        };
+        return { ok: true, json: async () => current };
+      }
+      if (options?.method === "PUT" && url.endsWith(`/agents/${current.id}`)) {
+        current = {
+          ...current,
+          ...JSON.parse(String(options.body)),
+          updated_at: "2026-10-11T10:02:00Z",
+        };
+        return { ok: true, json: async () => current };
+      }
+      if (
+        url.includes("/chat/conversations/") &&
+        url.endsWith("/run") &&
+        options?.method === "POST"
+      ) {
+        return {
+          ok: true,
+          json: async () => ({
+            run: {
+              id: "queued-control",
+              capability: "agent.control",
+              status: "queued",
+            },
+          }),
+        };
+      }
       return {
         ok: true,
-        json: async () => ({
-          run: {
-            id: "queued-control",
-            capability: "agent.control",
-            status: "queued",
-          },
-        }),
-      };
-    }
-    return {
-      ok: true,
-      json: async () =>
-        url.endsWith("/enabled")
-          ? { ...current, enabled: true, updated_at: "2026-10-11T10:01:00Z" }
-          : url.endsWith("/duplicate")
-            ? {
-                ...current,
-                id: "agent-copy",
-                name: `${current.name} (copy)`,
-                enabled: false,
-                last_run_at: null,
-                next_run_at: null,
-                last_status: "",
-                runs: [],
-              }
-            : url.endsWith("/run") && options?.method === "POST"
+        json: async () =>
+          url.endsWith("/enabled")
+            ? { ...current, enabled: true, updated_at: "2026-10-11T10:01:00Z" }
+            : url.endsWith("/duplicate")
               ? {
-                  id: "queued-run-ffff",
-                  capability: "agent.workflow",
-                  status: "queued",
+                  ...current,
+                  id: "agent-copy",
+                  name: `${current.name} (copy)`,
+                  enabled: false,
+                  last_run_at: null,
+                  next_run_at: null,
+                  last_status: "",
+                  runs: [],
                 }
-              : url.includes("/agents?") && url.includes("project_id=")
-                ? []
-                : url.includes("/artifacts")
+              : url.endsWith("/run") && options?.method === "POST"
+                ? {
+                    id: "queued-run-ffff",
+                    capability: "agent.workflow",
+                    status: "queued",
+                  }
+                : url.includes("/agents?") && url.includes("project_id=")
                   ? []
-                  : url.includes("/skills")
-                    ? [
-                        {
-                          id: "station-briefing",
-                          name: "Station briefing",
-                          version: "1.0.0",
-                          description: "Local status report format",
-                          required_permissions: [],
-                          instructions:
-                            "Always mention GPU memory when it appears.",
-                        },
-                        {
-                          id: "daily-brief",
-                          name: "Daily brief",
-                          version: "1.2.0",
-                          description: "Morning format",
-                          required_permissions: [],
-                          instructions: "Cite only supplied tool results.",
-                        },
-                      ]
-                    : url.endsWith("/tools")
+                  : url.includes("/artifacts")
+                    ? []
+                    : url.includes("/skills")
                       ? [
                           {
-                            name: "system_snapshot",
-                            description:
-                              "Read current host hardware telemetry through the Host Runner.",
-                            operational: true,
-                            required_permissions: ["filesystem_read"],
-                          },
-                          {
-                            name: "web_search",
-                            description:
-                              "Search public pages through the configured search service.",
-                            operational: true,
-                            required_permissions: ["network_read"],
-                          },
-                          {
-                            name: "http_fetch",
-                            description: "GET reviewed public pages.",
-                            operational: true,
-                            required_permissions: ["network_read"],
-                          },
-                          {
-                            name: "remember_report",
-                            description:
-                              "Save successful reports as observations.",
-                            operational: true,
-                            required_permissions: ["memory_write"],
-                          },
-                          {
-                            name: "remember_workflow",
-                            description: "Save workflow observations.",
-                            operational: true,
-                            required_permissions: ["memory_write"],
-                          },
-                          {
-                            name: "browser",
-                            description:
-                              "Browser automation is not implemented for agents.",
-                            operational: false,
+                            id: "station-briefing",
+                            name: "Station briefing",
+                            version: "1.0.0",
+                            description: "Local status report format",
                             required_permissions: [],
+                            instructions:
+                              "Always mention GPU memory when it appears.",
+                          },
+                          {
+                            id: "daily-brief",
+                            name: "Daily brief",
+                            version: "1.2.0",
+                            description: "Morning format",
+                            required_permissions: [],
+                            instructions: "Cite only supplied tool results.",
                           },
                         ]
-                      : url.includes("/retry-workflow")
-                        ? {
-                            id: "retry-run",
-                            capability: "agent.workflow",
-                            status: "queued",
-                            retry: {
-                              allowed: false,
-                              retry_of: "fail-run-dddd",
+                      : url.endsWith("/tools")
+                        ? [
+                            {
+                              name: "system_snapshot",
+                              description:
+                                "Read current host hardware telemetry through the Host Runner.",
+                              operational: true,
+                              required_permissions: ["filesystem_read"],
                             },
-                          }
-                        : url.endsWith("/cancel") && options?.method === "POST"
-                          ? { id: "run-live-eeee", status: "cancel_requested" }
-                          : url.includes("/approval") &&
+                            {
+                              name: "web_search",
+                              description:
+                                "Search public pages through the configured search service.",
+                              operational: true,
+                              required_permissions: ["network_read"],
+                            },
+                            {
+                              name: "http_fetch",
+                              description: "GET reviewed public pages.",
+                              operational: true,
+                              required_permissions: ["network_read"],
+                            },
+                            {
+                              name: "remember_report",
+                              description:
+                                "Save successful reports as observations.",
+                              operational: true,
+                              required_permissions: ["memory_write"],
+                            },
+                            {
+                              name: "remember_workflow",
+                              description: "Save workflow observations.",
+                              operational: true,
+                              required_permissions: ["memory_write"],
+                            },
+                            {
+                              name: "browser",
+                              description:
+                                "Browser automation is not implemented for agents.",
+                              operational: false,
+                              required_permissions: [],
+                            },
+                          ]
+                        : url.includes("/retry-workflow")
+                          ? {
+                              id: "retry-run",
+                              capability: "agent.workflow",
+                              status: "queued",
+                              retry: {
+                                allowed: false,
+                                retry_of: "fail-run-dddd",
+                              },
+                            }
+                          : url.endsWith("/cancel") &&
                               options?.method === "POST"
                             ? {
-                                id: "wait-run-cccc",
-                                status:
-                                  JSON.parse(String(options.body))
-                                    .resolution === "denied"
-                                    ? "canceled"
-                                    : "queued",
+                                id: "run-live-eeee",
+                                status: "cancel_requested",
                               }
-                            : current,
-    };
-  });
+                            : url.includes("/approval") &&
+                                options?.method === "POST"
+                              ? {
+                                  id: "wait-run-cccc",
+                                  status:
+                                    JSON.parse(String(options.body))
+                                      .resolution === "denied"
+                                      ? "canceled"
+                                      : "queued",
+                                }
+                              : current,
+      };
+    },
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -2390,7 +2416,7 @@ it("shows a compact review card instead of the full editor without enabling or r
   expect(screen.getByText(draft.search_query)).toBeTruthy();
   expect(screen.queryByText("Identity")).toBeNull();
   expect(
-    screen.getByRole("link", { name: "Review & enable" }).getAttribute("href"),
+    screen.getByRole("link", { name: "Review and Edit" }).getAttribute("href"),
   ).toBe("/agents/agent-one?view=settings");
   expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
 });
@@ -2544,4 +2570,115 @@ it("does not queue a conversation action while the composer is busy or archived"
   expect(
     fetch.mock.calls.some(([, options]) => options?.method === "POST"),
   ).toBe(false);
+});
+
+it("accepts and enables a reviewed draft directly from its compact conversation card without Run now", async () => {
+  const fetch = mount(draft, true);
+  const accept = await screen.findByRole("button", {
+    name: "Accept and Enable",
+  });
+  await waitFor(() =>
+    expect((accept as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(accept);
+  await screen.findByText("Enabled");
+  expect(
+    screen.getByRole("link", { name: "Open agent workspace" }),
+  ).toBeTruthy();
+  const writes = fetch.mock.calls.filter((call) => call[1]);
+  expect(writes).toHaveLength(1);
+  expect(writes[0][0]).toBe("/api/agents/agent-one/enabled");
+  expect(JSON.parse(String(writes[0][1]?.body))).toEqual({
+    expected_updated_at: draft.updated_at,
+    enabled: true,
+  });
+});
+
+it("shows activation errors inline and keeps the draft available to review and edit", async () => {
+  const fetch = mount(draft, true);
+  const original = fetch.getMockImplementation()!;
+  fetch.mockImplementation(async (path, options) =>
+    String(path).endsWith("/enabled") && options
+      ? {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            detail: "Agent definition changed. Reload before continuing.",
+          }),
+        }
+      : original(path, options),
+  );
+  const accept = await screen.findByRole("button", {
+    name: "Accept and Enable",
+  });
+  await waitFor(() =>
+    expect((accept as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(accept);
+  await screen.findByText(
+    "Agent definition changed. Reload before continuing.",
+  );
+  expect(screen.getByRole("link", { name: "Review and Edit" })).toBeTruthy();
+  expect(screen.queryByText("Enabled")).toBeNull();
+});
+
+it("blocks compact approval when reviewed tool inputs are missing", async () => {
+  mount({ ...draft, search_query: "" }, true);
+  const button = await screen.findByRole("button", {
+    name: "Accept and Enable",
+  });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole("link", { name: "Review and Edit" })).toBeTruthy();
+});
+
+it("makes a fifteen-minute cron schedule understandable before inline activation", async () => {
+  const fetch = mount(
+    { ...draft, cron_expr: "*/15 * * * *", schedule_timezone: "Europe/Warsaw" },
+    true,
+  );
+  await screen.findByText("Every 15 minutes · Europe/Warsaw");
+  expect(
+    screen.getByRole("button", { name: "Accept and Enable" }),
+  ).toBeTruthy();
+  expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
+});
+
+it("saves the image model directly in a compact draft without enabling or generating", async () => {
+  const fetch = mount(
+    {
+      ...draft,
+      tools: ["create_media"],
+      media: {
+        kind: "image",
+        description_source: "goal",
+        request: {
+          mode: "t2i",
+          backend: "juggernaut",
+          prompt: "Calm mountain illustration",
+          seed: 123,
+          negative: "blur",
+        },
+      },
+    },
+    true,
+  );
+  const model = await screen.findByLabelText("Agent image model");
+  fireEvent.change(model, { target: { value: "qwen" } });
+  await waitFor(() =>
+    expect(fetch.mock.calls.some((call) => call[1]?.method === "PUT")).toBe(
+      true,
+    ),
+  );
+  const writes = fetch.mock.calls.filter((call) => call[1]);
+  expect(writes).toHaveLength(1);
+  expect(writes[0][0]).toBe("/api/agents/agent-one");
+  const body = JSON.parse(String(writes[0][1]?.body));
+  expect(body.media.request).toMatchObject({
+    backend: "qwen",
+    seed: null,
+    negative: null,
+    prompt: "Calm mountain illustration",
+  });
+  expect(body.enabled).toBe(false);
+  expect(screen.getByRole("link", { name: "Review and Edit" })).toBeTruthy();
 });

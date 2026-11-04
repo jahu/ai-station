@@ -2,15 +2,17 @@
 
 # ✳ AI Station
 
-### Your own AI. Made simple.
+### Your own AI. Made simple. No platform censorship.
 
 **A familiar ChatGPT-style experience, on your own computer. No AI or IT background needed.**
 
 Your conversations, images, videos, voices, music and agents — together, on your machine.
 
+**Your models. Your rules. No cloud quotas or per-token fees for local generation.**
+
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.1.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.1.1` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -40,11 +42,11 @@ more control.
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.1.0.md).
+> [Exact qualification and known issues](docs/releases/0.1.1.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.1 release notes and qualification status](docs/releases/0.1.0.md).
+[0.1 release notes and qualification status](docs/releases/0.1.1.md).
 
 ## Help make it simple
 
@@ -66,7 +68,7 @@ of public reports.
 | **Make and transform images** | Generate, Edit, Recompose and Upscale; ordered references, prompts, parameters and reusable results. |
 | **Create video and avatars** | Local video generation, multi-shot films, resumable segments and portraits animated against a recording or generated speech. |
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
-| **Put agents to work** | Natural-language drafts, reviewed tools and permissions, schedules, history and in-app notices. |
+| **Put agents to work** | Natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
 | **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
 | **Keep your creative work** | Your private Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
@@ -103,7 +105,7 @@ and landscape film come from recorded local generation. [Media provenance](docs/
 
 ## 🔓 Local by choice. Yours to control.
 
-**No cloud inference account is required for configured local workflows.** Run
+**No platform censorship. No cloud inference account required for local workflows.** Run
 compatible models on your workstation, keep your files and history there, and
 choose the models you want — including compatible uncensored weights. You choose the model, its capabilities
 and its behavior.
@@ -176,8 +178,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.1.0-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.1.0-linux-amd64.deb`.
+- **Windows 11 x64:** `AI-Station-0.1.1-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.1.1-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -191,7 +193,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.1.0.md).
+[Installation, updates and known issues](docs/releases/0.1.1.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -225,10 +227,10 @@ feature branches and PRs into `develop`.
 <details>
 <summary><strong>Explore 0.1 features and guided model setup</strong></summary>
 
-**0.1.0** follows the [release plan](docs/plans/next-release-0.1.md):
+**0.1.1** follows the [release plan](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.1.0.md).
+post-release QA are listed in the [release notes](docs/releases/0.1.1.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -472,7 +474,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.1.0.md#qualification-and-known-issues) ·
+[Release verification](docs/releases/0.1.1.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)

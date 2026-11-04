@@ -1418,3 +1418,9 @@ source fingerprints; interrupted publication can resume without re-execution.
 Accounts, live login cookies, schedules and queued work are preserved rather than
 normalized as in an explicit disaster restore. Native update consent, ownership
 handoff and complete Mac qualification remain later installer steps.
+
+Registry deletion uses account-scoped, versioned tombstones for Agents and Projects. Active work blocks removal; historical execution records keep their references. New work cannot reference deleted definitions. Repository files remain native and untouched. See [registry deletion](plans/registry-deletion.md).
+
+New agent drafts preserve controller-parsed explicit user schedules over model defaults across ordinary, selected-source and repeat-analysis paths. Compact conversation cards activate the saved revision through the existing permission/readiness-checked API; draft creation remains disabled. See [conversation activation](plans/agent-chat-activation.md).
+
+Image-agent proposals default to Qwen unless the user names another supported engine. Agent model selectors share backend-specific option cleanup; the typed image API keeps rejecting incompatible settings. Vertical agent media results use static positioning while Images keeps its sticky preview. See [agent image models](plans/agent-image-models.md).
