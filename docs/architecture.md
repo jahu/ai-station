@@ -1,3 +1,10 @@
+The next-release [open model discovery contract](plans/open-model-discovery.md)
+extends existing model setup rather than adding an execution system. Public source
+inspections/searches are private administrator-owned Tasks/Runs, with bounded HF
+metadata, immutable source observations and hardware assessments. They download
+no weights and cannot activate a runtime. Dynamic install plans, compatible recipe
+slots and workspace/orchestrator binding remain separate required delivery steps.
+
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated
 fixed action. It prepares pinned toolkit inputs and preserves Docker settings,

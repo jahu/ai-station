@@ -270,6 +270,14 @@ export function Models() {
         into AI Station storage.
       </PageTitle>
       <p className="muted">
+        {canManage && (
+          <>
+            <Link className="text-link" to="/models/discover">
+              Find new models →
+            </Link>
+            {" · "}
+          </>
+        )}
         <Link className="text-link" to="/setup/models">
           Set up a local model →
         </Link>{" "}

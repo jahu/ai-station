@@ -53,6 +53,7 @@ from app.media_jobs import router as media_jobs_router
 from app.media_translation import router as generation_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
+from app.model_hub import router as model_hub_router
 from app.model_registry import router as model_router
 from app.model_setup import router as model_setup_router
 from app.models import Run, Setting, WorkerRow
@@ -487,6 +488,7 @@ app.include_router(private_ui_router)
 app.include_router(operator_auth_router)
 app.include_router(nodes_router)
 app.include_router(model_definition_router)
+app.include_router(model_hub_router)
 app.include_router(model_router)
 app.include_router(model_setup_router)
 app.include_router(bundle_setup_router)

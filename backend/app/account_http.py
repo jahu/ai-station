@@ -51,6 +51,8 @@ def administrator_operation(request: Request) -> bool:
         "/api/coding/cursor",
         "/api/coding/codex",
         "/api/models/discover",
+        "/api/model-hub/inspections",
+        "/api/model-hub/searches",
         "/api/memory/embeddings/prepare",
         "/api/memory/embeddings/setup",
     }:
