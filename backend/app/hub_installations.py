@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import session_scope
-from app.hub_candidates import HubCandidate
+from app.hub_candidates import download_candidate
 from app.model_hub import enqueue_inspection
 from app.model_setup import INTENT, administrator, attempt, fingerprint, view
 from app.models import Run, Task
@@ -79,8 +79,14 @@ def install(body: InstallRequest, session: DB):
     report = source.metadata_json.get("source_inspection", {})
     if report.get("kind") != "install_plan":
         raise HTTPException(409, "Review a complete model installation plan first")
-    candidate = HubCandidate.model_validate(report["candidate"])
+    candidate = download_candidate(report["candidate"])
     snapshot = candidate.model_dump(mode="json")
+    if candidate.capability == "image" and not candidate.preparation_available:
+        raise HTTPException(
+            409,
+            candidate.preparation_notice
+            or "Prepare the supported image runtime prerequisites before installing this checkpoint",
+        )
     if fingerprint(snapshot) != body.manifest_sha256 or report.get("manifest_sha256") != body.manifest_sha256:
         raise HTTPException(409, "The model manifest changed; review its source, hardware and license again")
     prior = session.get(Task, str(body.client_request_id))

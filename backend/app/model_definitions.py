@@ -49,7 +49,7 @@ COMPATIBILITY = (
         "runtime": "stable-diffusion.cpp",
         "adapter": "none",
         "operational": False,
-        "summary": "Image GGUFs are observed only. No managed image-GGUF runtime is enabled.",
+        "summary": "Observed image GGUFs need a complete supported recipe. Discover can import compatible Qwen Image 2.1 checkpoints with a verified managed runtime binding.",
     },
     {
         "format": "gguf",
@@ -170,6 +170,8 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "operational": row.status == "registered",
             "summary": "Select this installed image checkpoint and operation settings in Images. Models load only when its Run executes.",
         }
+        if image.get("binding"):
+            spec.update(runtime="stable-diffusion.cpp", adapter="managed-container")
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
         "id": row.id,
@@ -350,6 +352,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **(
+                {"checkpoint_binding": dict(row.metadata_json["image"]["binding"])}
+                if (row.metadata_json.get("image") or {}).get("binding")
+                else {}
+            ),
             **({"context_size": preset_of(row)["context_size"]} if native(row.metadata_json) else {}),
             **{
                 k: row.metadata_json[k]
@@ -447,10 +454,31 @@ class ModelInstallExecutor:
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
+                    **(
+                        {"checkpoint_profile": run.parameters["checkpoint_binding"]["checkpoint_profile"]}
+                        if run.parameters.get("checkpoint_binding")
+                        else {}
+                    ),
                     **(verification(run.parameters) if run.parameters.get("runtime_profile") else {}),
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("checkpoint_binding"):
+                from app.image_setup_client import ImageSetupClient
+
+                binding = run.parameters["checkpoint_binding"]
+                engine = ImageSetupClient(timeout=20).runtime_setup_catalog()
+                proof = report.get("checkpoint_profile") or {}
+                if not (
+                    proof.get("schema_sha256") == binding["schema_sha256"]
+                    and proof.get("runtime_profile") == binding["runtime_profile"]
+                    and proof.get("source") == "gguf_tensor_descriptors"
+                    and (engine.get("managed_images") or {}).get("available")
+                    and engine["recipe"]["model_manifest_sha256"] == binding["manifest_sha256"]
+                ):
+                    report["error"] = (
+                        "The selected image graph, engine or required companions could not be verified"
+                    )
         except RunnerError as exc:
             if exc.status_code < 500:
                 row.status = "failed"

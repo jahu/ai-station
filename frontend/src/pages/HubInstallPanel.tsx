@@ -10,10 +10,17 @@ import { PreparationCard, type Preparation } from "./ModelSetup";
 
 export type InstallPlan = {
   manifest_sha256: string;
+  capability?: "chat" | "image";
+  components?: { role: string; filename: string; size_bytes: number }[];
+  component_licenses?: { name: string; url: string }[];
   license: string;
   license_url: string;
   files: {
-    assessment: { hardware_status: string; disk: { status: string } };
+    assessment: {
+      hardware_status: string;
+      runtime_status?: string;
+      disk: { status: string };
+    };
   }[];
 };
 type DownloadState = Preparation & { manifest_sha256: string };
@@ -81,16 +88,45 @@ export default function HubInstallPanel({
   });
   const fit = plan.files[0]?.assessment;
   const allowed =
-    fit?.hardware_status === "estimated_fit" && fit.disk.status === "file_fits";
+    fit?.hardware_status === "estimated_fit" &&
+    fit.disk.status === "file_fits" &&
+    fit.runtime_status !== "runtime_unavailable";
   return (
     <section className="panel hub-install" aria-label="Install reviewed model">
       <h2>
         {downloadId ? "Model preparation" : "Ready to review and install"}
       </h2>
       <p className="muted">
-        AI Station checks the download and fits the model to your GPUs before
-        adding it to Chat. Open a conversation when preparation is complete.
+        {plan.capability === "image"
+          ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
+          : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
+      {!!plan.component_licenses?.length && (
+        <details className="hub-context-options">
+          <summary>Required engine, components and licenses</summary>
+          <ul>
+            {plan.components?.map((file) => (
+              <li key={file.role}>
+                {file.filename} · {(file.size_bytes / 1024 ** 3).toFixed(2)} GiB
+              </li>
+            ))}
+          </ul>
+          <ul>
+            {plan.component_licenses.map((license) => (
+              <li key={license.url}>
+                <a href={license.url} target="_blank" rel="noreferrer">
+                  {license.name} ↗
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="muted">
+            Existing verified objects are reused. Engine setup and your new
+            checkpoint appear as related Runs; Stop covers the complete
+            preparation.
+          </p>
+        </details>
+      )}
       {!downloadId && (
         <>
           <label className="hub-license">
@@ -105,7 +141,11 @@ export default function HubInstallPanel({
               <a href={plan.license_url} target="_blank" rel="noreferrer">
                 model license ({plan.license})
               </a>{" "}
-              and agree to download this model.
+              and agree to download this model
+              {plan.capability === "image"
+                ? " and its required licensed components"
+                : ""}
+              .
             </span>
           </label>
           <Button

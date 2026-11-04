@@ -147,6 +147,10 @@ class DownloadExecutor:
                 },
             }
             session.commit()
+            if entry.capability == "image":
+                from app.hub_image_install import adopt
+
+                return adopt(session, run, entry, path, runner, hardware, check)
             relative = "models/store/" + entry.file.sha256
             observed = path.stat()
             report = runner.verify_model(

@@ -27,11 +27,32 @@ def freeze(session, run, capabilities):
     if parameters.get("backend") != "qwen":
         raise ValueError("This managed profile supports Qwen images and RealESRGAN Upscale")
     selected = (parameters.get("image_model") or {}).get("model_file")
-    if selected and (selected.get("sha256"), selected.get("size")) != (
-        report.get("diffusion_sha256"),
-        report.get("diffusion_size_bytes"),
+    binding = (parameters.get("image_model") or {}).get("binding")
+    if (
+        selected
+        and not binding
+        and (selected.get("sha256"), selected.get("size"))
+        != (
+            report.get("diffusion_sha256"),
+            report.get("diffusion_size_bytes"),
+        )
     ):
         raise ValueError("The selected checkpoint is different from the prepared image profile")
+    diffusion = None
+    if binding:
+        if (
+            binding["runtime_profile"] != report["profile"]
+            or binding["manifest_sha256"] != report["manifest_sha256"]
+        ):
+            raise ValueError("The imported image model needs its original reviewed engine and companions")
+        diffusion = {
+            "profile": binding["checkpoint_profile"],
+            "schema_sha256": binding["schema_sha256"],
+            "relative_path": selected["relative_path"],
+            "sha256": selected["sha256"],
+            "size_bytes": selected["size"],
+            "mtime": selected["mtime"],
+        }
     references = []
     dimensions = None
     for identity in parameters.get("parent_artifact_ids", []):
@@ -81,6 +102,8 @@ def freeze(session, run, capabilities):
         width, height = (max(32, round(value * scale / 32) * 32) for value in dimensions)
     if not upscale and (not width or not height or not (256 <= width <= 2048 and 256 <= height <= 2048)):
         raise ValueError("Managed image output dimensions must be between 256 and 2048 pixels per side")
+    if binding and max(width, height) > binding["maximum_side"]:
+        raise ValueError("This imported image model exceeds its reviewed output-size profile")
     if len(prompt) > 10000:
         raise ValueError("The effective image prompt exceeds the runtime's 10,000 character limit")
     command = {
@@ -104,6 +127,7 @@ def freeze(session, run, capabilities):
         "gpu_count": 1 if upscale else report["gpu_count"],
         "command": command,
         "references": references,
+        **({"diffusion": diffusion, "checkpoint_binding": binding} if diffusion else {}),
     }
     if saved is not None and saved != runtime:
         raise ValueError("The saved managed image runtime or its effective inputs changed")

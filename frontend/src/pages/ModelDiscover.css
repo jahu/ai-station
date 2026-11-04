@@ -184,6 +184,20 @@
   display: inline-block;
   margin-top: 20px;
 }
+.hub-install details {
+  margin: 20px 0;
+  line-height: 1.7;
+}
+.hub-install ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.hub-install li {
+  overflow-wrap: anywhere;
+}
 @media (max-width: 600px) {
   .hub-search,
   .hub-variant,

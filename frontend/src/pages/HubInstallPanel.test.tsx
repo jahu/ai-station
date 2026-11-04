@@ -129,3 +129,69 @@ it("restores owned download progress and reuses existing Stop action without ano
     false,
   );
 });
+
+it("reviews image component licenses and opens Images instead of creating a chat", async () => {
+  const imagePlan: InstallPlan = {
+    ...plan,
+    capability: "image",
+    components: [
+      { role: "text_encoder", filename: "encoder.gguf", size_bytes: 1024 ** 3 },
+    ],
+    component_licenses: [
+      {
+        name: "Encoder Apache 2.0",
+        url: "https://www.apache.org/licenses/LICENSE-2.0",
+      },
+    ],
+  };
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      id: "image-preparation",
+      manifest_sha256: plan.manifest_sha256,
+      entry: {
+        name: "New image model",
+        quantization: "Q4_0",
+        capability: "image",
+        file: { size_bytes: 1000, sha256: "b".repeat(64) },
+      },
+      definition_id: "new-image-definition",
+      attempt: 1,
+      run: { id: "download", status: "succeeded" },
+      model_key: null,
+      resume_allowed: false,
+      progress: { ready_to_try: true },
+    }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(imagePlan, "image-preparation");
+  fireEvent.click(screen.getByText("Required engine, components and licenses"));
+  expect(screen.getByRole("link", { name: /Encoder Apache 2.0/ })).toBeTruthy();
+  const open = await screen.findByRole("link", {
+    name: /Open Images with this model/,
+  });
+  expect(open.getAttribute("href")).toBe("/images?model=new-image-definition");
+  expect(screen.queryByRole("button", { name: /Open Chat/ })).toBeNull();
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it("does not install when physical memory fits but runtime prerequisites are unavailable", () => {
+  mount({
+    ...plan,
+    capability: "image",
+    files: [
+      {
+        assessment: {
+          hardware_status: "estimated_fit",
+          runtime_status: "runtime_unavailable",
+          disk: { status: "file_fits" },
+        },
+      },
+    ],
+  });
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(
+    (screen.getByRole("button", { name: "Install model" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+});

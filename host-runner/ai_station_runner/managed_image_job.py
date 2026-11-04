@@ -28,6 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from ai_station_runner import runtime_install
 from ai_station_runner.config import get_settings
 from ai_station_runner.managed_image_command import ImageCommand, argv
+from ai_station_runner.media_checkpoints import CheckpointSource, device_budget, resolve_source
 from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_environment import fingerprint
 from ai_station_runner.telemetry import collect
@@ -56,6 +57,7 @@ class Start(BaseModel):
     profile: Literal["qwen-image21-cuda-linux-amd64-v1"]
     manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     command: ImageCommand
+    diffusion: CheckpointSource | None = Field(default=None, exclude_if=lambda v: v is None)
     references: list[Reference] = Field(default_factory=list, max_length=8)
     gpus: list[StrictInt] = Field(min_length=1, max_length=2)
     deadline_at: datetime
@@ -63,6 +65,14 @@ class Start(BaseModel):
 
     @model_validator(mode="after")
     def valid(self):
+        if self.diffusion is not None:
+            budget = device_budget(self.diffusion)
+            if (
+                self.command.mode == "upscale"
+                or len(self.gpus) != 2
+                or max(self.command.width, self.command.height) > budget["maximum_side"]
+            ):
+                raise ValueError("This image checkpoint needs its bounded two-GPU generation profile")
         if self.deadline_at.tzinfo is None:
             raise ValueError("Use an absolute timezone-aware image deadline")
         if len(self.references) != self.command.reference_count:
@@ -261,10 +271,13 @@ def check_mounts(record):
         raise HTTPException(409, "Image job sources changed before container start")
 
 
-def files(frozen):
+def files(frozen, diffusion=None):
     root = get_settings().host_data_dir().resolve()
     result = {}
     for item in frozen["files"]:
+        if item["role"] == "diffusion" and diffusion is not None:
+            result["diffusion"] = resolve_source(diffusion)
+            continue
         digest = item["sha256"]
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
             raise ValueError("Invalid fixed image object")
@@ -392,8 +405,8 @@ def create_config(body, work, models, image_id, devices, *, prepare_assets=True)
             CapDrop=["ALL"],
             SecurityOpt=["no-new-privileges"],
             PidsLimit=512,
-            Memory=RAM,
-            MemorySwap=RAM,
+            Memory=RAM if body.diffusion is None else device_budget(body.diffusion)["ram_mib"] * 1024**2,
+            MemorySwap=RAM if body.diffusion is None else device_budget(body.diffusion)["ram_mib"] * 1024**2,
             Init=True,
             DeviceRequests=[
                 dict(Driver="nvidia", Count=0, DeviceIDs=devices, Capabilities=[["gpu"]], Options={})
@@ -404,6 +417,21 @@ def create_config(body, work, models, image_id, devices, *, prepare_assets=True)
     )
 
 
+def check_checkpoint_devices(body, hardware):
+    if body.diffusion is None:
+        return
+    budget = device_budget(body.diffusion)
+    total_ram = (hardware.get("memory") or {}).get("total_mib")
+    if type(total_ram) not in {int, float} or not math.isfinite(total_ram) or total_ram < budget["ram_mib"]:
+        raise HTTPException(409, "The host RAM budget does not fit the selected image checkpoint")
+    devices = {v["index"]: v for v in hardware.get("gpus", [])}
+    limits = [budget["primary_vram_mib"], budget["companion_vram_mib"]]
+    for index, required in zip(body.gpus, limits, strict=True):
+        total = devices.get(index, {}).get("memory_total_mib")
+        if type(total) not in {int, float} or not math.isfinite(total) or total < required:
+            raise HTTPException(409, "An allocated GPU does not fit the selected checkpoint component budget")
+
+
 def validate_dispatch(api, identity, record):
     body = validate_record(identity, record)
     frozen = recipe()
@@ -411,13 +439,14 @@ def validate_dispatch(api, identity, record):
         raise HTTPException(409, "This image recipe cannot dispatch new work")
     image = runtime_install.inspect_image(api, frozen["runtime"])
     hardware = collect(get_settings().host_data_dir())
+    check_checkpoint_devices(body, hardware)
     devices = {int(v["index"]): v["uuid"] for v in hardware.get("gpus", [])}
     if image is None or any(v not in devices for v in body.gpus):
         raise HTTPException(409, "Image runtime or allocated GPUs changed")
     expected = create_config(
         body,
         folder(identity),
-        files(frozen),
+        files(frozen, body.diffusion),
         image["id"],
         [devices[v] for v in body.gpus],
         prepare_assets=False,
@@ -661,8 +690,9 @@ def start(body: Start):
                 raise HTTPException(409, "This image profile is not qualified or its manifest changed")
             if not 1 < body.deadline_at.timestamp() - time.time() <= 3600:
                 raise HTTPException(422, "Use an image deadline within one hour")
-            models = files(frozen)
+            models = files(frozen, body.diffusion)
             hardware = collect(get_settings().host_data_dir())
+            check_checkpoint_devices(body, hardware)
             gpus = {int(v["index"]): v["uuid"] for v in hardware.get("gpus", [])}
             if any(v not in gpus for v in body.gpus):
                 raise HTTPException(422, "Choose discovered allocated GPUs")

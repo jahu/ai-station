@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException
 from ai_station_runner import managed_image_job as image_job
 from ai_station_runner import runtime_install, runtime_setup
 from ai_station_runner.config import get_settings
+from ai_station_runner.media_checkpoints import PROFILE as CHECKPOINT_PROFILE
+from ai_station_runner.media_checkpoints import recipe as checkpoint_recipe
 from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_environment import fingerprint
 from ai_station_runner.telemetry import collect
@@ -94,6 +96,17 @@ def catalog():
         else None
     )
     return {
+        "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
+        "managed_images": {
+            "available": bool(
+                image_job.QUALIFIED
+                and supported
+                and capacity_hint
+                and image
+                and model_files_present
+                and hardware.get("container_gpu_ready") is not False
+            )
+        },
         "recipe": frozen,
         "manifest_sha256": fingerprint(frozen),
         "platform_supported": supported,

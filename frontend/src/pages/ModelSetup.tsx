@@ -71,13 +71,17 @@ type Catalog = {
 };
 export type Preparation = {
   id: string;
-  entry: Pick<Entry, "name" | "file" | "quantization">;
+  entry: Pick<Entry, "name" | "file" | "quantization"> & {
+    capability?: string;
+  };
+  definition_id?: string | null;
   attempt: number;
   run: Run;
   model_key: string | null;
   resume_allowed: boolean;
   progress: {
     phase?: string;
+    engine_run_id?: string;
     received_bytes?: number;
     expected_bytes?: number;
     ready_to_try?: boolean;
@@ -158,15 +162,17 @@ export function PreparationCard({
         ? "Stopped · downloaded bytes are retained"
         : value.run.status === "failed" || value.run.status === "interrupted"
           ? "Preparation needs attention"
-          : phase === "verifying"
-            ? "Checking the complete file"
-            : phase === "inspecting"
-              ? "Checking the model and runtime"
-              : phase === "waiting_for_existing_transfer"
-                ? "Waiting for another transfer"
-                : value.run.status === "queued"
-                  ? "Queued"
-                  : "Downloading model";
+          : phase === "preparing_image_engine"
+            ? "Preparing image engine and companions"
+            : phase === "verifying"
+              ? "Checking the complete file"
+              : phase === "inspecting"
+                ? "Checking the model and runtime"
+                : phase === "waiting_for_existing_transfer"
+                  ? "Waiting for another transfer"
+                  : value.run.status === "queued"
+                    ? "Queued"
+                    : "Downloading model";
   return (
     <article
       className="panel setup-download"
@@ -232,12 +238,30 @@ export function PreparationCard({
             Resume preparation
           </Button>
         )}
+        {value.entry.capability === "image" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/images?model=${value.definition_id}`}
+            >
+              Open Images with this model →
+            </Link>
+          )}
         {value.model_key && value.progress.ready_to_try && (
           <PreparedModel
             model={value.model_key}
             onOpen={onOpen}
             opening={opening}
           />
+        )}
+        {value.progress.engine_run_id && (
+          <Link
+            className="text-link"
+            to={`/runs/${value.progress.engine_run_id}`}
+          >
+            Engine setup & logs
+          </Link>
         )}
         <Link className="text-link" to={`/runs/${value.run.id}`}>
           Details & logs

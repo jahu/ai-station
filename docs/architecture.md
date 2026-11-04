@@ -13,8 +13,14 @@ for already verified app-owned GGUFs. The shared bounded GGUF reader checks the
 complete tensor-name/dimension signature and storage layout against the exact
 qualified runtime/reference recipe, without reading tensor payloads or loading a
 GPU. This structural evidence is not runtime readiness or inference qualification.
-Download/adoption, companion binding, model selectors and workspace/orchestrator
-execution for new media checkpoints remain separate required delivery steps.
+Qwen Image 2.1 source plans now compose the existing model downloader with an
+optional fixed image-engine prerequisite in the same Task. The native preparation
+contract accepts that Task only through its exact licensed model manifest and
+RunDependency. Shared image definitions freeze a verified owned checkpoint and
+engine/companion binding; the managed image executor replaces only its diffusion
+mount. Ordinary workspace and assistant/agent selection reuses those definitions.
+Other media checkpoint families and complete cross-capability discovery remain
+required delivery steps.
 
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated

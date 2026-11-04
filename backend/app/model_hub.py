@@ -218,9 +218,9 @@ class ModelHubExecutor:
                     check()
                 candidates = None
                 if report.get("kind") == "install_plan":
-                    from app.hub_candidates import HubCandidate
+                    from app.hub_candidates import download_candidate
 
-                    candidates = (HubCandidate.model_validate(report["candidate"]),)
+                    candidates = (download_candidate(report["candidate"]),)
                 if candidates:
                     file["assessment"] = assess_file(file, hardware, storage, candidates=candidates)
                 else:

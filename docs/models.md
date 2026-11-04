@@ -82,9 +82,54 @@ reference has no architecture metadata, while the existing Lustify GGUF declares
 the Qwen reference's recipe SHA256/size and 297-tensor signature, and refused the
 430-tensor Lustify graph for that slot. No weights were downloaded, altered or
 loaded; normal tests use tiny synthetic GGUFs. The inspection result explicitly
-does **not** qualify inference. New image download/registration, complete
-companions and runtime/workspace bindings are not yet operational through this
-coordinate and remain required by the release plan.
+does **not** qualify inference. New image installation uses this coordinate before
+registry publication. Compatible
+Qwen Image 2.1 GGUF sources resolve their publisher transformer configuration,
+reviewed engine image and complete companion recipe. The existing resumable
+model downloader installs the checkpoint; a required image-engine preparation
+Run is a prerequisite in the same private Task. Stop covers both stages; Resume
+refuses uncertain earlier engine cleanup. Existing verified objects are reused.
+The initial engine recipe includes its starter checkpoint, fixed encoders, VAE
+and upscaler; the review shows those files/licenses and the additional disk
+reserve after verified cache reuse, including unpacked engine space. No personal
+default is changed.
+
+After native verification, the image definition is shared while source, planning,
+installation and preparation history remain private. **Open Images with this
+model** preselects it; ordinary assistant/agent image choices use the same registry.
+Generate, Edit and Recompose freeze the owned checkpoint and fixed engine binding.
+Their existing managed executor substitutes only the diffusion mount, with no
+publisher code, alternate container or custom command. The native dispatcher
+rechecks the graph, immutable source and each GPU component budget before start.
+The reviewed profile uses two GPUs, a maximum 1024 pixels per side and the fixed
+CUDA component placement. Larger checkpoint residency increases the primary-GPU
+budget; it is never spread across cards by adding their VRAM. RAM is reserved and
+the owned container's equal RAM/swap limits remain explicit. Existing configured
+image pipelines and their definitions keep their previous behavior.
+
+The normal API/worker tests use synthetic weights, the real native descriptor
+parser and fake inference. They cover installation, engine dependencies, Stop,
+Resume, uncertain cleanup, re-check, shared model/private history, Generate, Edit
+and multi-reference Recompose. A separate explicit real qualification used an
+isolated Docker control plane, native Runner and data root on this workstation.
+It installed a new `qwen-image-2.1-Q4_0.gguf` object, exercised the normal engine
+prerequisite and obtained actual 512×512 Generate, Edit and two-reference
+Recompose results on the two NVIDIA GPUs. The native journals confirmed the
+selected checkpoint, fixed CUDA component placement and equal RAM/swap limits,
+without a CPU-offload flag. All test jobs finished and the test Runner stopped.
+The engine image and three temporary verified companion copies were available
+before preparation; the exact VAE, upscaler and new checkpoint used ordinary
+verified downloads. This is not a fresh all-files download benchmark or Windows
+GPU qualification. A final source/plan-only check reused that same installation
+and confirmed zero additional engine/companion bytes, without another download
+or inference. Browser desktop/mobile checks replay saved source/plan/state
+projections, with no additional inference. Private evidence remains under
+`data/acceptance/model-discovery-20261104/`.
+
+The first qualification attempt completed installation but its harness supplied
+a seed field rejected by the existing Qwen API. No generation had been queued.
+After confirmed native cleanup, the request was corrected to match the workspace
+and reused the same verified objects; all three GPU operations then succeeded.
 
 ## Installed files
 

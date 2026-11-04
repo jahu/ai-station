@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_image":
+        from app.hub_image_candidates import recommendation as image_recommendation
+
+        return image_recommendation(entry, hardware)
     from app.llama import fit_coding_context, kv_budget_mib
     from app.native_models import host_profile, native
 
@@ -180,6 +184,22 @@ def recommendation(entry, hardware):
 def view(session, task):
     saved = task.metadata_json["model_download"]
     run = session.get(Run, saved["run_id"])
+    progress = dict(run.metadata_json.get("model_download", {}))
+    if saved["entry"].get("origin") == "hub_image" and run.status not in TERMINAL:
+        engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
+        engine = session.get(Run, engine_id) if engine_id else None
+        if engine is not None and engine.task_id == task.id and engine.status != "succeeded":
+            native_progress = engine.metadata_json.get("runtime_preparation", {})
+            recipe = saved["entry"]["setup_recipe"]
+            progress.update(
+                phase="preparing_image_engine",
+                engine_run_id=engine.id,
+                received_bytes=native_progress.get("received_bytes", 0),
+                expected_bytes=native_progress.get(
+                    "expected_bytes",
+                    sum(v["size_bytes"] for v in recipe["inputs"]) + recipe["download_bytes"],
+                ),
+            )
     return {
         "id": task.id,
         "catalog_id": saved["catalog_id"],
@@ -187,11 +207,12 @@ def view(session, task):
         "entry": saved["entry"],
         "attempt": saved["attempt"],
         "run": run_dict(run),
-        "progress": run.metadata_json.get("model_download", {}),
+        "progress": progress,
         "model_file_id": run.metadata_json.get("model_file_id"),
         "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
-        if run.metadata_json.get("model_file_id")
+        if run.metadata_json.get("model_file_id") and saved["entry"].get("capability") != "image"
         else None,
+        "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
     }
 
@@ -301,6 +322,21 @@ class Resume(BaseModel):
 
 
 def attempt(session, task, saved, *, previous=None):
+    prerequisite = None
+    if saved["entry"].get("origin") == "hub_image" and saved["entry"].get("prepare_engine"):
+        from app.runtime_setup_api import attempt as prepare_runtime
+
+        prepare_runtime(
+            session,
+            task,
+            {
+                "recipe": saved["entry"]["setup_recipe"],
+                "manifest_sha256": saved["entry"]["setup_manifest_sha256"],
+                "license_accepted": True,
+                "attempt": saved["attempt"],
+            },
+        )
+        prerequisite = session.get(Run, task.metadata_json["runtime_preparation"]["run_id"])
     run = create_run(
         session,
         task,
@@ -321,6 +357,10 @@ def attempt(session, task, saved, *, previous=None):
         parent_run_id=previous.id if previous else None,
     )
     task.metadata_json = {**task.metadata_json, "model_download": {**saved, "run_id": run.id}}
+    if prerequisite is not None:
+        from app.dependencies import depend_on
+
+        depend_on(session, run, prerequisite)
     return run
 
 
@@ -420,6 +460,17 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
+    if saved["entry"].get("origin") == "hub_image":
+        prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
+        prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
+        if prerequisite is not None and (
+            prerequisite.task_id != task.id
+            or prerequisite.status not in TERMINAL
+            or prerequisite.metadata_json.get("cleanup_requires_inspection")
+        ):
+            raise HTTPException(
+                409, "Inspect or finish stopping the earlier image engine preparation before resuming"
+            )
     task.metadata_json = {
         key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"
     }
