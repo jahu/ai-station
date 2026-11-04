@@ -3,7 +3,17 @@
 The owner's priority is a reliable first experience on **Linux and Windows**.
 This audit follows [the accepted scope](next-release-0.1.md). macOS and SMTP
 are deferred; future nodes and large standalone IDE work are not release gates.
-The release is **not complete or publicly published**.
+**Published on 2026-11-04:** [AI Station 0.1.0](https://github.com/jahu/ai-station/releases/tag/v0.1.0),
+from human-approved master commit `c5237f7cbd2fc9b7bd446f1427a5579e8f9cb844`.
+The sections below retain the pre-publication audit and scope decisions.
+The release gates and final QA handoff are complete; owner-scheduled post-release
+GPU/listening checks remain untested.
+
+Four assets are public: Linux package, unsigned Windows installer, final Polish
+QA ZIP and SHA256SUMS. All server SHA-256 digests match the verified local files;
+anonymous QA/checksum downloads passed. The actual final workbook opened and
+recalculated in LibreOffice; all 261 untested answers survived manifest-bound
+feedback import. No public media, source or binary was substituted after review.
 
 ## Frozen candidate
 

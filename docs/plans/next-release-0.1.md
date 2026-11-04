@@ -3,8 +3,14 @@
 Owner direction, 2026-10-29, after v0.0.2. Target milestone: **0.1.0**. This is
 the implementation contract for the complete supplied change list, not a claim
 that the features below ship. Preserve the existing application and qualified
-media profiles. Candidate application packages identify themselves as 0.1.0;
-the published stable release remains 0.0.2 until an approved release is published.
+media profiles. **0.1.0 was published on 2026-11-04** from owner-approved master
+commit `c5237f7cbd2fc9b7bd446f1427a5579e8f9cb844`, tagged `v0.1.0`.
+[Installers, QA package and checksums](https://github.com/jahu/ai-station/releases/tag/v0.1.0).
+
+The checkpoint below records the pre-publication work and accepted scope.
+Publication and final QA handoff are complete; physical Windows GPU and human
+voice/film evaluation remain explicitly scheduled after release. They have not
+been marked passed. Signing/macOS remain deferred as documented.
 
 ## Current release checkpoint — 2026-11-04
 
