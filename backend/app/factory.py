@@ -112,7 +112,7 @@ def _clock(lowered: str) -> tuple[int, int] | None:
     return None
 
 
-def _schedule(lowered: str, original: str) -> tuple[str, str, int | None, datetime | None]:
+def instruction_schedule(lowered: str, original: str) -> tuple[str, str, int | None, datetime | None]:
     once = re.search(
         r"once at (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2}))",
         original,
@@ -183,7 +183,7 @@ def website_build_goal(lowered):
 
 def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -> Agent:
     lowered = text.lower()
-    trigger, cron_expr, interval, run_at = _schedule(lowered, text)
+    trigger, cron_expr, interval, run_at = instruction_schedule(lowered, text)
     name = text.strip().split(".")[0][:80] or "New agent"
     tools = []
     if "github" in lowered:

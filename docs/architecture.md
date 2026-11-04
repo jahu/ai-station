@@ -1420,3 +1420,5 @@ normalized as in an explicit disaster restore. Native update consent, ownership
 handoff and complete Mac qualification remain later installer steps.
 
 Registry deletion uses account-scoped, versioned tombstones for Agents and Projects. Active work blocks removal; historical execution records keep their references. New work cannot reference deleted definitions. Repository files remain native and untouched. See [registry deletion](plans/registry-deletion.md).
+
+New agent drafts preserve controller-parsed explicit user schedules over model defaults across ordinary, selected-source and repeat-analysis paths. Compact conversation cards activate the saved revision through the existing permission/readiness-checked API; draft creation remains disabled. See [conversation activation](plans/agent-chat-activation.md).
