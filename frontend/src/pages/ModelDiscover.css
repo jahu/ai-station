@@ -129,6 +129,33 @@
   color: var(--muted);
   line-height: 1.7;
 }
+.hub-install {
+  padding: 24px;
+}
+.hub-install h2 {
+  margin-top: 0;
+}
+.hub-install > p {
+  line-height: 1.7;
+}
+.hub-license {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 20px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.hub-license input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+.hub-install > .text-link {
+  display: inline-block;
+  margin-top: 20px;
+}
 @media (max-width: 600px) {
   .hub-search,
   .hub-variant,

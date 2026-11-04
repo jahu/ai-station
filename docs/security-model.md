@@ -58,6 +58,11 @@ credentials or replacement hashes. Search popularity and filename extensions are
 not runtime admission. Inspections are private; no local paths, prompts, serials
 or private media are sent to publishers. This metadata operation does not grant
 installation permission to agents or automatically download/activate models.
+New GGUF installation requires an owner-scoped completed plan and explicit license
+consent. Only the server resolves its fixed-HF sources/hashes; a client selects
+the plan and its fingerprint. Existing owned streaming, native architecture/cache
+inspection, resource admission and registry fences remain authoritative. Runtime
+preparation and arbitrary publisher code are outside this permission.
 
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper

@@ -42,6 +42,7 @@ from app.effects import router as effects_router
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
+from app.hub_installations import router as hub_installations_router
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
 from app.library import router as library_router
@@ -489,6 +490,7 @@ app.include_router(operator_auth_router)
 app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_hub_router)
+app.include_router(hub_installations_router)
 app.include_router(model_router)
 app.include_router(model_setup_router)
 app.include_router(bundle_setup_router)

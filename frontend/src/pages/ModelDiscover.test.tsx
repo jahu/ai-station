@@ -52,7 +52,7 @@ const report = {
   ],
 };
 it("pastes a link, enqueues only metadata inspection and keeps unsupported GPU fit honest", async () => {
-  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
       options?.method === "POST"

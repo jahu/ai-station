@@ -2,8 +2,11 @@ The next-release [open model discovery contract](plans/open-model-discovery.md)
 extends existing model setup rather than adding an execution system. Public source
 inspections/searches are private administrator-owned Tasks/Runs, with bounded HF
 metadata, immutable source observations and hardware assessments. They download
-no weights and cannot activate a runtime. Dynamic install plans, compatible recipe
-slots and workspace/orchestrator binding remain separate required delivery steps.
+no weights and cannot activate a runtime. New single-file GGUF plans freeze a
+supported architecture's publisher configuration and file identities; the existing
+download/adoption lifecycle rechecks native geometry before registering them for
+Chat. Media recipe slots and multimodal workspace/orchestrator binding remain
+separate required delivery steps.
 
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated

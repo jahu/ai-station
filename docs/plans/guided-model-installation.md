@@ -50,6 +50,14 @@ complete pinned Chatterbox multilingual file set through ordinary owned Runs.
 Its separate bundle history does not alter the working conversation-model
 wizard or claim a managed speech runtime before that runtime is qualified.
 
+The next-release [open discovery extension](open-model-discovery.md) admits
+server-resolved new single-file GGUF plans as well as curated IDs. It freezes the
+publisher's configuration/commit and LFS identity, accepts an owner-bound plan
+fingerprint rather than caller URLs/hashes, and uses the same native geometry
+agreement before adoption. It neither changes existing curated manifests nor
+permits remote code. Multimodal checkpoint slots require their own compatibility
+and runtime contracts; a new GGUF is not automatically a media installation.
+
 Keep installed-model discovery (`model_catalog.py` and the existing registries)
 separate from the reviewed downloadable catalog (`setup_models.py`). HTTP clients
 select a catalog ID and accepted manifest/license revision; callers and models

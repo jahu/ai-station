@@ -10,7 +10,7 @@ def number(value):
     return value if type(value) in {int, float} and math.isfinite(value) and value >= 0 else None
 
 
-def assess_file(file, hardware, storage):
+def assess_file(file, hardware, storage, *, candidates=None):
     """Only exact reviewed identities inherit a workload's memory estimate.
 
     Unknown checkpoint formats/architectures have unknown residency, KV geometry
@@ -29,7 +29,7 @@ def assess_file(file, hardware, storage):
     )
     matches = [
         entry
-        for entry in CANDIDATES
+        for entry in (CANDIDATES if candidates is None else candidates)
         if file.get("identity_available")
         and entry.file.sha256 == file.get("sha256")
         and entry.file.size_bytes == size
@@ -70,7 +70,9 @@ def assess_file(file, hardware, storage):
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
-                "provenance": "reviewed_recipe_exact_object",
+                "provenance": "pinned_publisher_configuration"
+                if getattr(entry, "origin", None) == "hub"
+                else "reviewed_recipe_exact_object",
             }
         )
     return {
@@ -82,14 +84,20 @@ def assess_file(file, hardware, storage):
             "complete_install_budget_known": False,
             "note": "File size is a minimum; runtime, companions and staging may need more space.",
         },
-        "runtime_status": "reviewed_profile" if plans else "needs_compatible_recipe",
+        "runtime_status": "supported_architecture_plan"
+        if plans and any(getattr(entry, "origin", None) == "hub" for entry in matches)
+        else "reviewed_profile"
+        if plans
+        else "needs_compatible_recipe",
         "hardware_status": "estimated_fit"
         if any(p["fit"] == "estimated_fit" for p in plans)
         else "not_recommended"
         if plans
         else "unknown",
         "profiles": plans,
-        "reason": "Review the matching recipe and hardware profile before installing."
+        "reason": "Supported architecture; memory is estimated from pinned publisher configuration and verified natively after download."
+        if plans and any(getattr(entry, "origin", None) == "hub" for entry in matches)
+        else "Review the matching recipe and hardware profile before installing."
         if plans
         else "No validated workload profile for this object yet. File size alone cannot establish VRAM fit.",
         "automatic_ram_offload": False,

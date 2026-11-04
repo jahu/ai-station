@@ -78,7 +78,11 @@ def enqueue_inspection(session, client_request_id, request):
         return run_dict(run)
     task = Task(
         id=str(client_request_id),
-        title="Inspect model source" if "source" in request else "Find new models",
+        title="Inspect model source"
+        if "source" in request
+        else "Plan model installation"
+        if "planning" in request
+        else "Find new models",
         prompt="Inspect public publisher metadata and estimate compatibility; do not download weights",
         intent=INTENT,
         capability="models.inspect_source",
@@ -160,6 +164,32 @@ class ModelHubExecutor:
                 async with asyncio.timeout(90):
                     from app.hub_sources import HubSource
 
+                    if "planning" in run.parameters:
+                        from app.hub_candidates import resolve_candidate
+                        from app.hub_installations import source_observation
+
+                        plan = run.parameters["planning"]
+                        observation = source_observation(
+                            session, plan["inspection_run_id"], plan["observation_sha256"]
+                        )
+                        check()
+                        candidate = await resolve_candidate(observation, plan["filename"], check)
+                        file = next(
+                            dict(f) for f in observation["files"] if f["filename"] == plan["filename"]
+                        )
+                        return {
+                            "kind": "install_plan",
+                            "repository": candidate.repository,
+                            "revision": candidate.revision,
+                            "source_url": candidate.source_url,
+                            "license_url": candidate.license_url,
+                            "license": candidate.license,
+                            "candidate": candidate.model_dump(mode="json"),
+                            "manifest_sha256": fingerprint(candidate.model_dump(mode="json")),
+                            "source_inspection_run_id": plan["inspection_run_id"],
+                            "files": [file],
+                            "metadata_only": True,
+                        }
                     if "source" in run.parameters:
                         return await inspect_source(HubSource.model_validate(run.parameters["source"]), check)
                     return await search_models(run.parameters["query"], check)
@@ -175,7 +205,12 @@ class ModelHubExecutor:
             check()
             storage = storage_info(hardware) if report.get("kind") != "search" else None
             for file in report["files"]:
-                file["assessment"] = assess_file(file, hardware, storage)
+                candidates = None
+                if report.get("kind") == "install_plan":
+                    from app.hub_candidates import HubCandidate
+
+                    candidates = (HubCandidate.model_validate(report["candidate"]),)
+                file["assessment"] = assess_file(file, hardware, storage, candidates=candidates)
             report.update(
                 observed_at=utcnow().isoformat(),
                 hardware_observed=not hardware.get("storage_unavailable", False),

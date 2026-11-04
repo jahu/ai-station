@@ -161,6 +161,18 @@ async def inspect_source(source: HubSource, check):
         raise ValueError("The selected file is absent from this immutable revision")
     card = raw.get("cardData") if isinstance(raw.get("cardData"), dict) else {}
     license_name = card.get("license")
+    bases = card.get("base_model", [])
+    bases = [bases] if isinstance(bases, str) else bases
+    base_models = []
+    if isinstance(bases, list) and len(bases) <= 4:
+        for base in bases:
+            try:
+                parsed_base = parse_source(base)
+                if parsed_base.filename is None and base == parsed_base.repository:
+                    base_models.append(parsed_base.repository)
+            except ValueError:
+                continue
+    gguf = raw.get("gguf") if isinstance(raw.get("gguf"), dict) else {}
     return {
         "provider": "huggingface",
         "repository": source.repository,
@@ -170,6 +182,8 @@ async def inspect_source(source: HubSource, check):
         "license_url": f"https://huggingface.co/{source.repository}/blob/{raw['sha']}/README.md",
         "gated": raw.get("gated") is not None and raw.get("gated") is not False,
         "pipeline_hint": str(raw.get("pipeline_tag") or "")[:80],
+        "architecture_hint": str(gguf.get("architecture") or "")[:80],
+        "base_models": list(dict.fromkeys(base_models)),
         "files": files,
         "metadata_only": True,
     }
