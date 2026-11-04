@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Image,
   Music2,
@@ -8,13 +9,17 @@ import {
   Settings2,
   Plus,
   X,
+  Waves,
 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
-import { useHardware } from "../api";
+import { api, useHardware } from "../api";
+import SpeechEngineFields from "../components/media/SpeechEngineFields";
+import type { SpeechCapabilities } from "../components/media/speech-delivery";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
 import AgentVideoScope from "./AgentVideoScope";
+import AgentEffectsScope from "./AgentEffectsScope";
 import AgentAvatarScope from "./AgentAvatarScope";
 import { useWholeAvatarCapabilities } from "../components/media/AvatarWholeProfile";
 import {
@@ -41,10 +46,59 @@ export default function AgentMediaScopeEditor({
     Record<AgentMediaScope["kind"], { ready: boolean; reason?: string | null }>
   >;
 }) {
+  const cache = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
   const wholeAvatar = useWholeAvatarCapabilities();
   const scope = value ?? newAgentMedia("image", goal);
+  const speech = useQuery({
+    queryKey: ["speech-capabilities"],
+    queryFn: () => api<SpeechCapabilities>("/audio/capabilities"),
+    enabled: scope.kind === "speech",
+    staleTime: 30000,
+    refetchInterval: (query) =>
+      query.state.data?.engines?.fish_s2_pro?.readiness === "checking"
+        ? 2000
+        : false,
+  });
+  const effects = useQuery({
+    queryKey: ["effects-capabilities"],
+    queryFn: () =>
+      api<{ available: boolean; readiness?: string; reason?: string }>(
+        "/audio/effects/capabilities",
+      ),
+    enabled: scope.kind === "effects",
+    staleTime: 30000,
+    refetchInterval: (q) =>
+      q.state.data?.readiness === "checking" ? 1000 : false,
+  });
+  useEffect(() => {
+    if (effects.data?.available)
+      void cache.invalidateQueries({ queryKey: ["agent-tools"] });
+  }, [effects.data?.available, cache]);
+  const selectedReadiness =
+    scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+      ? {
+          ready:
+            speech.data?.engines?.fish_s2_pro?.available === true &&
+            (scope.request.voice_source !== "model" ||
+              speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                "model",
+              ) === true),
+          reason:
+            scope.request.voice_source === "model" &&
+            speech.data &&
+            !speech.data.engines?.fish_s2_pro?.voice_sources?.includes("model")
+              ? "Update AI Station or choose a voice recording."
+              : (speech.data?.engines?.fish_s2_pro?.reason ??
+                "Checking expressive speech setup…"),
+        }
+      : scope.kind === "effects"
+        ? {
+            ready: effects.data?.available === true,
+            reason: effects.data?.reason ?? "Checking sound effects setup…",
+          }
+        : readiness?.[scope.kind];
   const recordedWhole =
     scope.kind === "avatar" &&
     !!scope.request.generation_profile &&
@@ -53,7 +107,7 @@ export default function AgentMediaScopeEditor({
   const caption =
     scope.kind === "avatar"
       ? (scope.request.speech_text ?? scope.request.prompt)
-      : scope.kind === "video"
+      : scope.kind === "video" || scope.kind === "effects"
         ? scope.request.prompt
         : scope.kind === "music"
           ? scope.request.caption
@@ -64,15 +118,17 @@ export default function AgentMediaScopeEditor({
               : (image?.prompt ?? "");
   const issue = agentMediaIssue(scope);
   const OutputIcon =
-    scope.kind === "avatar"
-      ? UserRound
-      : scope.kind === "video"
-        ? Film
-        : scope.kind === "speech"
-          ? AudioLines
-          : scope.kind === "music"
-            ? Music2
-            : Image;
+    scope.kind === "effects"
+      ? Waves
+      : scope.kind === "avatar"
+        ? UserRound
+        : scope.kind === "video"
+          ? Film
+          : scope.kind === "speech"
+            ? AudioLines
+            : scope.kind === "music"
+              ? Music2
+              : Image;
   function updateImage(patch: Partial<ImageMediaRequest>) {
     if (scope.kind === "image")
       onChange({ ...scope, request: { ...scope.request, ...patch } });
@@ -88,45 +144,50 @@ export default function AgentMediaScopeEditor({
         The result appears in this workspace and Library. Review the creative
         direction and output settings before enabling.
       </p>
-      {readiness?.[scope.kind]?.ready === false && (
+      {selectedReadiness?.ready === false && (
         <p className="error" role="status">
-          {readiness[scope.kind]?.reason ||
+          {selectedReadiness.reason ||
             "The selected local media engine is unavailable."}{" "}
           You can save this draft and enable it after setup.
         </p>
       )}
       <fieldset disabled={disabled || uploading}>
         <div className="mode-tabs" aria-label="Media output type">
-          {(["image", "music", "speech", "video", "avatar"] as const).map(
-            (kind) => (
-              <button
-                type="button"
-                key={kind}
-                aria-pressed={scope.kind === kind}
-                className={scope.kind === kind ? "active" : ""}
-                onClick={() =>
-                  onChange({
-                    ...newAgentMedia(
-                      kind,
-                      goal,
-                      wholeAvatar.data?.available === true,
-                    ),
-                    description_source: scope.description_source,
-                  })
-                }
-              >
-                {kind === "avatar" ? (
-                  <UserRound size={16} />
-                ) : kind === "video" ? (
-                  <Film size={16} />
-                ) : kind === "image" ? (
-                  <Image size={16} />
-                ) : kind === "speech" ? (
-                  <AudioLines size={16} />
-                ) : (
-                  <Music2 size={16} />
-                )}
-                {kind === "avatar"
+          {(
+            ["image", "music", "speech", "video", "avatar", "effects"] as const
+          ).map((kind) => (
+            <button
+              type="button"
+              key={kind}
+              aria-pressed={scope.kind === kind}
+              className={scope.kind === kind ? "active" : ""}
+              onClick={() =>
+                onChange({
+                  ...newAgentMedia(
+                    kind,
+                    goal,
+                    wholeAvatar.data?.available === true,
+                  ),
+                  description_source: scope.description_source,
+                })
+              }
+            >
+              {kind === "effects" ? (
+                <Waves size={16} />
+              ) : kind === "avatar" ? (
+                <UserRound size={16} />
+              ) : kind === "video" ? (
+                <Film size={16} />
+              ) : kind === "image" ? (
+                <Image size={16} />
+              ) : kind === "speech" ? (
+                <AudioLines size={16} />
+              ) : (
+                <Music2 size={16} />
+              )}
+              {kind === "effects"
+                ? "Sound effects"
+                : kind === "avatar"
                   ? "Avatar"
                   : kind === "video"
                     ? "Video"
@@ -135,9 +196,8 @@ export default function AgentMediaScopeEditor({
                       : kind === "speech"
                         ? "Speech"
                         : "Music"}
-              </button>
-            ),
-          )}
+            </button>
+          ))}
         </div>
         {scope.kind === "avatar" && (
           <label>
@@ -263,7 +323,7 @@ export default function AgentMediaScopeEditor({
                       ? 512
                       : scope.kind === "speech"
                         ? 1000
-                        : scope.kind === "video"
+                        : scope.kind === "video" || scope.kind === "effects"
                           ? 2000
                           : 10000
                 }
@@ -279,7 +339,7 @@ export default function AgentMediaScopeEditor({
                             : { prompt: event.target.value }),
                         },
                       })
-                    : scope.kind === "video"
+                    : scope.kind === "effects"
                       ? onChange({
                           ...scope,
                           request: {
@@ -287,27 +347,35 @@ export default function AgentMediaScopeEditor({
                             prompt: event.target.value,
                           },
                         })
-                      : scope.kind === "speech"
+                      : scope.kind === "video"
                         ? onChange({
                             ...scope,
                             request: {
                               ...scope.request,
-                              text: event.target.value,
+                              prompt: event.target.value,
                             },
                           })
-                        : scope.kind === "music"
+                        : scope.kind === "speech"
                           ? onChange({
                               ...scope,
                               request: {
                                 ...scope.request,
-                                caption: event.target.value,
+                                text: event.target.value,
                               },
                             })
-                          : updateImage(
-                              image?.mode === "img2img"
-                                ? { edit_prompt: event.target.value }
-                                : { prompt: event.target.value },
-                            )
+                          : scope.kind === "music"
+                            ? onChange({
+                                ...scope,
+                                request: {
+                                  ...scope.request,
+                                  caption: event.target.value,
+                                },
+                              })
+                            : updateImage(
+                                image?.mode === "img2img"
+                                  ? { edit_prompt: event.target.value }
+                                  : { prompt: event.target.value },
+                              )
                 }
                 placeholder={
                   scope.kind === "speech"
@@ -338,6 +406,17 @@ export default function AgentMediaScopeEditor({
             }}
           />
         )}
+        {scope.kind === "effects" && (
+          <AgentEffectsScope
+            value={scope.request}
+            disabled={disabled || uploading}
+            onChange={(request) => onChange({ ...scope, request })}
+            onBusy={(busy) => {
+              setUploading(busy);
+              onBusy(busy);
+            }}
+          />
+        )}
         {scope.kind === "video" && (
           <AgentVideoScope
             value={scope.request}
@@ -351,38 +430,107 @@ export default function AgentMediaScopeEditor({
         )}
         {scope.kind === "speech" && (
           <>
-            <p className="muted">
-              Speech in Polish. Your selected recording provides the voice
-              reference. Goal mode writes the spoken text; the voice stays
-              fixed.
-            </p>
-            <MediaInput
-              kind="audio"
-              label="Voice reference"
-              hint="Choose or upload a clear PCM WAV recording, 0.1–60 seconds."
-              value={scope.request.reference_artifact_id ?? ""}
-              disabled={disabled || uploading}
-              onChange={(id) =>
+            <SpeechEngineFields
+              engine={scope.request.engine ?? ""}
+              direction={scope.request.direction ?? "natural"}
+              pace={scope.request.pace ?? "natural"}
+              capabilities={speech.data}
+              voiceSource={scope.request.voice_source ?? "reference"}
+              onVoiceSource={(voice_source) =>
                 onChange({
                   ...scope,
                   request: {
                     ...scope.request,
-                    reference_artifact_id: id || null,
+                    voice_source,
+                    reference_artifact_id:
+                      voice_source === "model"
+                        ? null
+                        : scope.request.reference_artifact_id,
                   },
                 })
               }
-              onBusy={(busy) => {
-                setUploading(busy);
-                onBusy(busy);
+              onEngine={(engine) => {
+                const request = { ...scope.request };
+                delete request.engine;
+                delete request.direction;
+                delete request.pace;
+                delete request.delivery;
+                delete request.voice_source;
+                onChange({
+                  ...scope,
+                  request: {
+                    ...request,
+                    ...(engine === "fish_s2_pro"
+                      ? {
+                          engine: "fish_s2_pro" as const,
+                          direction: "natural" as const,
+                          pace: "natural" as const,
+                          ...(!request.reference_artifact_id &&
+                          speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                            "model",
+                          )
+                            ? { voice_source: "model" as const }
+                            : {}),
+                        }
+                      : {}),
+                  },
+                });
               }}
+              onDirection={(direction) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    direction: direction as typeof scope.request.direction,
+                  },
+                })
+              }
+              onPace={(pace) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    pace: pace as typeof scope.request.pace,
+                  },
+                })
+              }
             />
+            <p className="muted">
+              {scope.request.voice_source === "model"
+                ? "Fish generates the voice. Goal mode writes fresh words for each execution."
+                : "Speech in Polish. Your selected recording provides the voice reference. Goal mode writes the spoken text; the voice stays fixed."}
+            </p>
+            {scope.request.voice_source !== "model" && (
+              <MediaInput
+                kind="audio"
+                label="Voice reference"
+                hint="Choose or upload a clear PCM WAV recording, 0.1–60 seconds."
+                value={scope.request.reference_artifact_id ?? ""}
+                disabled={disabled || uploading}
+                onChange={(id) =>
+                  onChange({
+                    ...scope,
+                    request: {
+                      ...scope.request,
+                      reference_artifact_id: id || null,
+                    },
+                  })
+                }
+                onBusy={(busy) => {
+                  setUploading(busy);
+                  onBusy(busy);
+                }}
+              />
+            )}
             <details>
               <summary>
                 <Settings2 size={15} />
                 Advanced speech settings
               </summary>
               <p className="muted">
-                Chatterbox · local · at most 1000 characters per execution.
+                {scope.request.engine === "fish_s2_pro"
+                  ? "Fish S2 Pro · local · Auto reserves two compatible GPUs."
+                  : "Chatterbox · local · at most 1000 characters per execution."}
               </p>
               <GpuTargetChoiceList
                 value={scope.request.gpu ?? "auto"}

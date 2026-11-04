@@ -1,6 +1,6 @@
 name: CI
 on:
-  # Hosted Actions credits are exhausted; local verification is authoritative.
+  # Manual only. Ordinary checks retain owner-approved local verification.
   workflow_dispatch:
     inputs:
       operation:
@@ -10,11 +10,15 @@ on:
         options:
           - checks
           - release-pr
+          - macos-native-checks
+          - macos-native-inference
+          - macos-desktop-transport
+          - macos-native-ui-checks
 permissions:
   contents: read
 jobs:
   python:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +29,21 @@ jobs:
       - run: .venv/bin/pip install -r requirements-dev.lock
       - run: .venv/bin/pip install --no-deps -e backend -e host-runner
       - run: ./scripts/check.sh
+  windows-contracts:
+    if: inputs.operation == 'checks'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Windows PowerShell lifecycle contracts
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Use native Windows PowerShell 5.1 for these contracts.' }
+          & ./packaging/windows/tests/StartupFailure.Tests.ps1
+          & ./packaging/windows/tests/DesktopProcess.Tests.ps1
+          & ./packaging/windows/tests/UpdateCoordinator.Tests.ps1
+          & ./packaging/windows/tests/GuestUpdate.Tests.ps1
   frontend:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +57,7 @@ jobs:
       - run: npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
         working-directory: frontend
   docker:
-    if: inputs.operation != 'release-pr'
+    if: inputs.operation == 'checks'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +65,195 @@ jobs:
       - run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
       - run: docker build -t ai-station:ci .
       - run: docker build -f python-executor/Dockerfile -t ai-station-python:ci .
+  macos-native:
+    # Only standard free PUBLIC runners. Never allocate paid/private/larger hosts.
+    if: (inputs.operation == 'macos-native-checks' || inputs.operation == 'macos-native-inference') && github.event.repository.private == false && github.actor == github.repository_owner
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            architecture: arm64
+          - os: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: backend:host-runner:scripts
+      AI_STATION_REAL_MAC_PROCESS_TESTS: '1'
+      AI_STATION_REAL_MAC_TELEMETRY_TESTS: '1'
+      AI_STATION_REAL_MAC_METAL_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Observe actual ordinary-user hypervisor availability
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          mkdir -m 700 .native-mac
+          mkdir -m 700 .native-mac/hypervisor-probe
+          /usr/bin/xcrun clang -Wall -Wextra -Werror -framework Hypervisor \
+            packaging/macos/hypervisor-probe.c -o .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --force --sign - \
+            --entitlements packaging/macos/hypervisor-probe.entitlements .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --verify --strict .native-mac/hypervisor-probe/check
+          /usr/bin/codesign --display --entitlements - .native-mac/hypervisor-probe/check
+          /usr/bin/sw_vers -productVersion
+          .native-mac/hypervisor-probe/check | tee .native-mac/hypervisor-probe/result.json
+      - name: Install checked developer dependencies and native package tool
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/checks.lock
+          .venv/bin/python -m pip install --require-hashes -r packaging/macos/build-tools.lock
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Exercise actual native kernel ownership and observations
+        run: |
+          .venv/bin/python -m pytest -q -W error::pytest.PytestUnhandledThreadExceptionWarning \
+            host-runner/tests/test_darwin_process_identity.py \
+            host-runner/tests/test_darwin_processes.py \
+            host-runner/tests/test_runner_platform.py \
+            host-runner/tests/test_darwin_telemetry.py \
+            host-runner/tests/test_darwin_metal.py
+      - name: Exercise desktop routing with neutral local CLI processes
+        run: |
+          # These component tests use no database. Keep backend migration
+          # conftest out of the deliberately native-only dependency environment.
+          .venv/bin/python -m pytest -q --noconftest \
+            backend/tests/test_desktop_engine.py \
+            backend/tests/test_desktop_control.py \
+            backend/tests/test_desktop_versions.py \
+            backend/tests/test_desktop_update_owner.py \
+            backend/tests/test_desktop_upgrade_image.py \
+            backend/tests/test_desktop_update.py \
+            backend/tests/test_desktop_native_storage.py \
+            backend/tests/test_desktop_database_storage.py \
+            backend/tests/test_desktop_restore_owner.py \
+            backend/tests/test_desktop_restore_files.py \
+            backend/tests/test_desktop_restoration.py \
+            backend/tests/test_desktop_backup_ui.py \
+            backend/tests/test_desktop_restore_authority.py \
+            backend/tests/test_macos_desktop_ui.py \
+            backend/tests/test_desktop_database_fingerprint.py \
+            backend/tests/test_desktop_snapshot.py \
+            backend/tests/test_desktop_snapshot_files.py \
+            backend/tests/test_desktop_snapshots.py \
+            backend/tests/test_macos_desktop_docker.py \
+            backend/tests/test_desktop_bridge.py \
+            backend/tests/test_desktop_link.py \
+            backend/tests/test_desktop_connection.py \
+            backend/tests/test_macos_runner_link.py \
+            backend/tests/test_macos_transport_probe.py
+      - name: Assemble fixed native Python layer
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          mkdir -m 700 .native-mac/inputs
+          .venv/bin/python scripts/macos_desktop_python.py \
+            --architecture "$TARGET_ARCHITECTURE" --cache "$PWD/.native-mac/inputs" \
+            --output "$PWD/.native-mac/python" --download-inputs
+      - name: Assemble regular installed Host Runner layer
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          .venv/bin/python scripts/macos_application_python.py \
+            --architecture "$TARGET_ARCHITECTURE" --python-layer "$PWD/.native-mac/python" \
+            --output "$PWD/.native-mac/application-python"
+      - name: Execute installed Runner with exact bundled interpreter
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_application_probe.py "$TARGET_ARCHITECTURE"
+      - name: Exercise native SDK preparation through installed Runner
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          if [ "${{ inputs.operation }}" = "macos-native-inference" ]; then
+            .native-mac/application-python/bin/python3.12 -IB scripts/macos_sdk_preparation_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
+          else
+            .native-mac/application-python/bin/python3.12 -IB scripts/macos_sdk_preparation_probe.py "$TARGET_ARCHITECTURE"
+          fi
+      - name: Compile and exercise native presentation and desktop storage
+        timeout-minutes: 3
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          .venv/bin/python scripts/build_macos_native.py \
+            --architecture "$TARGET_ARCHITECTURE" --output "$PWD/.native-mac/native-interface"
+          .native-mac/native-interface/ai-station-native --native-ui-smoke
+          .native-mac/native-interface/ai-station-native --native-update-smoke
+          .native-mac/native-interface/ai-station-native --native-backup-smoke
+          .native-mac/native-interface/ai-station-native --native-backup-progress-smoke
+          .native-mac/native-interface/ai-station-native --native-admin-recovery-smoke
+          .native-mac/native-interface/ai-station-native --native-update-ownership-smoke
+          .native-mac/application-python/bin/python3.12 -IB scripts/macos_desktop_storage_probe.py
+      - name: Exercise actual application bundle entry with neutral image fixture
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/application-python/bin/python3.12 -IB scripts/macos_bundle_probe.py "$TARGET_ARCHITECTURE"
+      - name: Execute the actual bundled interpreter and native dependencies
+        if: inputs.operation == 'macos-native-checks'
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE"
+      - name: Explicit fixed-model CPU inference and owned Stop
+        if: inputs.operation == 'macos-native-inference'
+        env:
+          TARGET_ARCHITECTURE: ${{ matrix.architecture }}
+        run: .native-mac/python/bin/python3.12 -IB scripts/macos_package_import_probe.py "$TARGET_ARCHITECTURE" --run-native-inference
+  macos-native-ui:
+    # Stock native source, system UI automation; no model/Docker/OS mutation.
+    if: inputs.operation == 'macos-native-ui-checks' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    runs-on: macos-15-intel
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Drive actual native windows through Apple UI automation
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          mkdir -m 700 .native-mac
+          mkdir -m 700 .native-mac/ui-acceptance
+          /usr/bin/xcodebuild test \
+            -project packaging/macos/acceptance/NativeAcceptance.xcodeproj \
+            -scheme NativeAcceptance -configuration Debug \
+            -destination 'platform=macOS' -parallel-testing-enabled NO \
+            -derivedDataPath "$PWD/.native-mac/ui-acceptance/build" \
+            -resultBundlePath "$PWD/.native-mac/ui-acceptance/result.xcresult" \
+            CODE_SIGN_IDENTITY=-
+  macos-desktop-transport:
+    # Explicit developer prerequisite install on a fresh standard free public VM.
+    # Never run this job on an existing station, a private or a paid runner.
+    if: inputs.operation == 'macos-desktop-transport' && github.event.repository.private == false && github.actor == github.repository_owner && github.repository == 'jahu/ai-station'
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install fixed Docker Desktop and test actual native socket and chosen filesystem
+        env:
+          AI_STATION_REAL_MAC_DOCKER_TESTS: '1'
+        run: bash scripts/macos_docker_desktop_qa.sh
+      - name: Report the owned bridge receipt if available
+        if: always()
+        run: |
+          if [ -f .native-mac/bridge-proof/result.json ]; then
+            cat .native-mac/bridge-proof/result.json
+          fi
+          if [ -f .native-mac/bridge-tls-proof/result.json ]; then
+            cat .native-mac/bridge-tls-proof/result.json
+          fi
+          if [ -f .native-mac/bridge-native-db-proof/result.json ]; then
+            cat .native-mac/bridge-native-db-proof/result.json
+          fi
   release-pr:
     if: inputs.operation == 'release-pr'
     runs-on: ubuntu-latest

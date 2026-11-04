@@ -18,6 +18,8 @@ LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 COPY LICENSE NOTICE COMMERCIAL.md /app/legal/
 COPY --from=dependencies /opt/venv /opt/venv
 COPY backend/ /app/backend/
+COPY scripts/desktop_connection.py scripts/desktop_link.py scripts/desktop_control.py scripts/desktop_versions.py /app/desktop/
+COPY scripts/station_recovery/__init__.py scripts/station_recovery/storage.py scripts/station_recovery/accounts.py /app/desktop/station_recovery/
 COPY --from=frontend /build/dist /app/frontend/
 USER 1000:1000
 EXPOSE 8765

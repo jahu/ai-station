@@ -48,7 +48,7 @@ def test_generic_agent_factory_keeps_automation_off():
     assert draft_agent("Write code to calculate totals").workspace_policy == {}
 
 
-def test_migration_preserves_legacy_agent_and_defaults_build_automation_off(session):
+def test_migration_preserves_legacy_agent_and_defaults_build_automation_off(session, legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
@@ -56,7 +56,7 @@ def test_migration_preserves_legacy_agent_and_defaults_build_automation_off(sess
     session.add(agent)
     session.commit()
     aid = agent.id
-    command.downgrade(alembic_config(), "0027")
+    legacy_schema("0027")
     command.upgrade(alembic_config(), "head")
     session.expire_all()
     row = session.get(Agent, aid)

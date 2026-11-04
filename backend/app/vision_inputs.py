@@ -8,6 +8,7 @@ from app.python_execution import read_owned_file
 
 MIMES = {"image/png", "image/jpeg", "image/webp"}
 LIMIT = 20 * 1024 * 1024
+IMAGE_RESULT_LIMIT = 256 * 1024 * 1024
 
 
 def snapshot(artifact):
@@ -27,7 +28,7 @@ def freeze(session, ids):
     return [snapshot(row) for row in rows]
 
 
-def verify(session, inputs, *, read_bytes=False):
+def verify(session, inputs, *, read_bytes=False, limit=LIMIT):
     if not isinstance(inputs, list) or not 1 <= len(inputs) <= 4:
         raise ValueError("Missing inspected image input snapshot")
     for item in inputs:
@@ -50,7 +51,7 @@ def verify(session, inputs, *, read_bytes=False):
                 raise ValueError("An inspected image has an unexpected storage path")
             if not row.sha256:
                 raise ValueError("Reattach this image to establish its source hash")
-            read_owned_file(row.relative_path, row.size_bytes, row.sha256, limit=LIMIT)
+            read_owned_file(row.relative_path, row.size_bytes, row.sha256, limit=limit)
 
 
 def inspected_selection(session, parent, *, read_bytes=True):
@@ -90,7 +91,12 @@ def verify_media_inputs(session, run):
     if "inspected_image_inputs" not in run.parameters:
         return
     inputs = run.parameters["inspected_image_inputs"]
-    verify(session, inputs, read_bytes=True)
+    limit = (
+        IMAGE_RESULT_LIMIT
+        if run.executor_type == "photo_pipe" and run.parameters.get("managed_image_runtime")
+        else LIMIT
+    )
+    verify(session, inputs, read_bytes=True, limit=limit)
     if [item["artifact_id"] for item in inputs] != run.parameters.get("parent_artifact_ids"):
         raise ValueError("Media sources differ from the inspected input selection")
 

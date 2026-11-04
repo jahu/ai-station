@@ -98,10 +98,41 @@ def sqlite_busy(error) -> bool:
     return isinstance(code, int) and (code & 255) in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}
 
 
-def session_factory() -> sessionmaker[Session]:
+def control_session_factory() -> sessionmaker[Session]:
+    """Trusted authentication/configuration/queue coordination, never user data lookup."""
     get_engine()
     assert _session_factory is not None
     return _session_factory
+
+
+def _context_session() -> Session:
+    from app.data_context import UNBOUND, current_data_scope
+
+    scope = current_data_scope()
+    if scope is UNBOUND:
+        from app.account_profile import accounts_enabled
+
+        if accounts_enabled():
+            from app.data_access import DataAccessError
+
+            raise DataAccessError("An explicit owner scope or trusted control session is required")
+        # Existing worker/startup code remains in place during the staged
+        # cutover. Bound requests, including missing principals, never use it.
+        return control_session_factory()()
+    from app.data_access import ScopedSession
+
+    return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
+
+
+def session_factory():
+    # Resolve at invocation, so factories captured before a task starts still
+    # inherit its owner. asyncio.to_thread propagates the owning context too.
+    return _context_session
+
+
+def control_session_scope() -> Iterator[Session]:
+    with control_session_factory()() as session:
+        yield session
 
 
 def session_scope() -> Iterator[Session]:
@@ -129,8 +160,27 @@ def alembic_config() -> Config:
     return cfg
 
 
+def require_upgrade_finished(data_dir: Path) -> None:
+    native_restore = data_dir / "runtime/desktop-restore-pending.json"
+    if native_restore.exists() or native_restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
+    restore = data_dir / "db/.ai-station-restore-pending.json"
+    if restore.exists() or restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
+    snapshot = data_dir / "runtime/desktop-snapshot-pending.json"
+    if snapshot.exists() or snapshot.is_symlink():
+        raise RuntimeError("Finish or cancel the pending private backup before starting AI Station")
+    for name in ("desktop-upgrade-pending.json", "desktop-upgrade-dispatch-pending.json"):
+        pending = data_dir / "runtime" / name
+        if pending.exists() or pending.is_symlink():
+            raise RuntimeError(
+                "Finish or abort the pending offline desktop upgrade before starting AI Station"
+            )
+
+
 def migrate() -> None:
     settings = get_settings()
+    require_upgrade_finished(settings.data_dir)
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     (settings.data_dir / "db").mkdir(parents=True, exist_ok=True)
     for name in (
@@ -149,4 +199,5 @@ def migrate() -> None:
     # Multiple containers can start together. Only one may migrate at a time.
     with (settings.data_dir / "runtime" / "migrations.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        require_upgrade_finished(settings.data_dir)
         command.upgrade(alembic_config(), "head")

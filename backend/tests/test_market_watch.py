@@ -296,7 +296,7 @@ def test_stop_before_network_prevents_fetch(session, monkeypatch):
     assert session.scalar(select(func.count()).select_from(Notice)) == 0
 
 
-def test_migration_preserves_agents_and_has_no_implicit_market_scope(session):
+def test_migration_preserves_agents_and_has_no_implicit_market_scope(session, legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
@@ -304,7 +304,7 @@ def test_migration_preserves_agents_and_has_no_implicit_market_scope(session):
     session.add(row)
     session.commit()
     aid = row.id
-    command.downgrade(alembic_config(), "0028")
+    legacy_schema("0028")
     command.upgrade(alembic_config(), "head")
     session.expire_all()
     assert session.get(Agent, aid).market is None

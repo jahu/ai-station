@@ -206,3 +206,28 @@ def test_recovery_inspects_live_music_without_reexecution_and_confirms_stop(musi
             assert run.status == "canceled" and not active_locks(session)
             assert not host_app.manager().inspect(run_id)["alive"]
         assert client.get("/api/artifacts", params={"run_id": run_id}).json() == []
+
+
+def test_managed_music_freezes_runtime_and_rejects_an_ineligible_gpu(music_bridge, monkeypatch):
+    from app import music
+
+    monkeypatch.setattr(
+        music,
+        "capabilities",
+        lambda: {
+            "available": True,
+            "profile_sha256": music.PROFILE_SHA256,
+            "max_seconds": 600,
+            "configuration_source": "managed",
+            "runtime_manifest_sha256": "a" * 64,
+            "eligible_gpu_indices": [7],
+        },
+    )
+    api = TestClient(app)
+    assert api.post("/api/audio/music/runs", json=body(gpu="9")).status_code == 422
+    accepted = api.post("/api/audio/music/runs", json=body(duration_seconds=120))
+    assert accepted.status_code == 202
+    value = accepted.json()
+    assert value["parameters"]["runtime_manifest_sha256"] == "a" * 64
+    assert value["parameters"]["managed_music_gpu_indices"] == [7]
+    assert value["requested_resources"]["ram_mib"] == 18432

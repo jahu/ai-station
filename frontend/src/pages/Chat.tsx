@@ -11,6 +11,8 @@ import CreationContextNotice, {
 } from "./CreationContextNotice";
 import { browserTimezone } from "./AgentCronFields";
 import { copyText } from "../lib/clipboard";
+import { streamNeedsAuthentication } from "../api";
+import { accountStorageKey, accountEpoch } from "../lib/account-storage";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
@@ -37,7 +39,11 @@ import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
 import { musicScopeReady } from "./music-scope";
 import type { ChatProviderInfo } from "./ChatProviders";
-import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
+import {
+  acceptsLocalAttachments,
+  effectsScopeReady,
+  emptyOptions,
+} from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
   type ActionResult,
@@ -416,13 +422,25 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   useEffect(() => {
     if (!active?.id) return;
     const source = new EventSource(`/api/runs/${active.id}/stream`);
+    const epoch = accountEpoch();
     const refresh = () => {
+      if (epoch !== accountEpoch()) {
+        source.close();
+        return;
+      }
       void cache.invalidateQueries({ queryKey: ["conversation", id] });
     };
     source.onmessage = refresh;
-    source.addEventListener("end", () => {
+    source.addEventListener("end", (event) => {
+      if (streamNeedsAuthentication(event)) {
+        source.close();
+        if (epoch === accountEpoch())
+          window.dispatchEvent(new Event("ai-station:session-expired"));
+        return;
+      }
       refresh();
       source.close();
+      if (epoch !== accountEpoch()) return;
       void cache.invalidateQueries({ queryKey: ["conversations"] });
     });
     return () => source.close();
@@ -1137,15 +1155,15 @@ function Transcript({
 }
 function readWorkChoice(key: string) {
   try {
-    return sessionStorage.getItem(key);
+    return sessionStorage.getItem(accountStorageKey(key));
   } catch {
     return null;
   }
 }
 function saveWorkChoice(key: string, value: string | null) {
   try {
-    if (value) sessionStorage.setItem(key, value);
-    else sessionStorage.removeItem(key);
+    if (value) sessionStorage.setItem(accountStorageKey(key), value);
+    else sessionStorage.removeItem(accountStorageKey(key));
   } catch {
     /* keep the in-memory choice */
   }
@@ -1269,7 +1287,9 @@ function ConversationView({
                 (options.action === "coding.commit" ||
                   options.action === "coding.publish")
               ? gitReady
-              : !!draft.trim() && musicScopeReady(options, draft);
+              : !!draft.trim() &&
+                musicScopeReady(options, draft) &&
+                effectsScopeReady(options);
   const thinking = useThinking(
     conversation.model,
     ["auto", "chat"].includes(options.action) &&
@@ -1825,6 +1845,7 @@ function ConversationView({
                     options.action === "audio.transcribe" ||
                     options.action === "audio.analyze" ||
                     options.action === "audio.music" ||
+                    options.action === "audio.effects" ||
                     options.action === "data.analyze" ||
                     options.action === "image.generate_video" ||
                     options.action === "project.create" ||

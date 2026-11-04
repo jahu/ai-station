@@ -52,6 +52,35 @@ def test_readonly_status_does_not_create_private_keys_or_directories(manager):
     assert not manager.root.exists()
 
 
+def test_registry_validation_serializes_with_managed_process_updates(manager, monkeypatch):
+    import threading
+
+    manager.start(str(uuid4()))
+    processes = manager._processes()
+    original = mod.read_private
+    checked = []
+
+    def read(path, *, limit):
+        if path == manager.root / "runtime/processes.json":
+            acquired = []
+
+            def writer():
+                success = processes._lock.acquire(blocking=False)
+                acquired.append(success)
+                if success:
+                    processes._lock.release()
+
+            thread = threading.Thread(target=writer)
+            thread.start()
+            thread.join(timeout=2)
+            assert not thread.is_alive() and acquired == [False]
+            checked.append(True)
+        return original(path, limit=limit)
+
+    monkeypatch.setattr(mod, "read_private", read)
+    assert manager._processes() is processes and checked
+
+
 def test_start_inspect_restart_recovery_and_owned_stop(manager):
     run_id = str(uuid4())
     state = manager.start(run_id)

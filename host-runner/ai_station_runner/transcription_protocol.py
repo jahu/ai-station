@@ -30,7 +30,10 @@ def profile(directory):
     if resolve_child(root, "preprocessor_config.json").exists():
         files.append("preprocessor_config.json")
     for name in files:
-        path = resolve_child(root, name)
+        from ai_station_runner.fish_model_views import model_reference
+
+        managed = model_reference(root, name)
+        path = managed if managed is not None else resolve_child(root, name)
         entry = value["files"].get(name)
         if (
             not isinstance(entry, dict)

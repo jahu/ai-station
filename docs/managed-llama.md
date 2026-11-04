@@ -6,6 +6,23 @@ A load Task creates a Run and a managed RuntimeInstance. Its immutable request b
 
 Multiple GPUs use llama.cpp layer splitting with equal proportions across the explicitly selected devices. GPU reservations remain held while the runtime is loaded, independently of the completed load Run. Stop is a separate typed Run and releases reservations only after confirmed termination. Health is a separate inspect-only Run: it probes the owned container and records `n_ctx`/liveness without signalling external processes. Restart stops an idle owned instance, then loads the saved preset as a dependent Run; unknown ownership still requires inspection. The immutable native manifest and container ID/labels identify ownership across restarts. Repeating a load request for the same instance inspects/resumes its create/start journal; it never creates a second container or restarts an exited instance. Recovery can safely resume that operation. External containers are never adopted.
 
+New GPU containers also set `CUDA_VISIBLE_DEVICES` to those same frozen GPU
+UUIDs, in the requested order. This mirrors the managed image executor and keeps
+CUDA's compute selection explicit as well as Docker's device request. CPU
+profiles retain their existing disabled-GPU environment. Existing runtime
+journals/containers are not rewritten or restarted by this change.
+
+This is not a new device-isolation guarantee for Windows. NVIDIA's
+[WSL guide](https://docs.nvidia.com/cuda/wsl-user-guide/index.html) describes
+device-filtering limitations, and its pinned
+[container library](https://github.com/NVIDIA/libnvidia-container/blob/v1.20.1/src/nvc_mount.c#L523-L535)
+uses shared `/dev/dxg` rather than per-GPU device mounts. A real Linux CUDA-driver
+query passed single-card selection on each GPU and reversed two-card ordering
+while Docker exposed both exact GPU UUIDs. It loaded no weights, created no
+application inference context and ran no model. Actual Windows GPU inference
+and selection remain a separate qualification gate. Private evidence:
+`data/acceptance/llama-cuda-selection-20261103/`.
+
 Inference uses the private Runner bridge and a runtime ID, not a caller URL. A stored conversation retains its model identity. After the first explicit load records GPU and context choices, Chat, summaries, the assistant and agents automatically reload a stopped model using those choices. Concurrent consumers share one pending load. Changing runtimes never silently substitutes another model.
 
 When an image or another managed model needs reserved GPUs, the worker queues stop Runs for idle AI Station-owned llama.cpp instances. Queued or active consumers protect their model from eviction. External providers such as Ollama remain untouched. Stops and loads are ordinary inspectable Runs; failed prerequisites fail the dependent Run before execution. Canceling a waiting consumer does not cancel a shared load.

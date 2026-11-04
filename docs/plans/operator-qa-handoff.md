@@ -5,8 +5,9 @@ before testing. Deliver a complete Polish QA workbook at the release handoff,
 then use the returned results as structured bug/improvement input. This is a
 required product deliverable, not a request for operator testing now.
 
-The initial [versioned catalog and offline exporter](../qa/README.md) now cover
-161 Polish cases in 21 areas and produce a six-sheet XLSX, three CSV templates,
+The initial handoff contained 161 Polish cases in 21 areas. The current
+[versioned catalog and offline exporter](../qa/README.md) cover 261 active
+cases (v46) and produce a six-sheet XLSX, three CSV templates,
 a readable guide and a release/catalog manifest. Drafts have no prefilled passes.
 Catalog v10 additionally ships synthetic CSV/two-sheet Excel/document/PNG inputs,
 a deliberate invalid-input case and checked expected values, with input hashes in
@@ -27,7 +28,24 @@ all exported operator answer cells still start **Nie testowano**. The final pack
 records exact qualified profiles, known media quality issues and the actual app
 commit, independently of the newer documentation/catalog commit.
 
+The 2026-11-04 candidate is frozen from reviewed application source `4a1d828`.
+The owner moved physical Windows GPU and human voice/film acceptance to
+post-release QA on 2026-11-04. Keep those cases active and untested; do not wait
+for their answers before preparing the handoff. The owner also approved unsigned
+Windows distribution, with an explicit warning and signing deferred. Final
+publication still requires human-owned master promotion.
+The [requirement audit](release-0.1-readiness.md)
+distinguishes implementation, internal qualification and operator acceptance.
+Do not label a QA/catalog-only documentation commit as a newly tested runtime,
+and do not rebuild or repeat unchanged expensive inference just for that commit.
+
 ## Delivery and timing
+
+For release 0.1, the owner's 2026-11-03 scope change requires Linux and Windows,
+with macOS recorded as unsupported/deferred. Catalog v42 archives its four Mac
+cases separately instead of asking the operator to execute them or marking
+them successful. New packages contain only active cases, with the scope notice
+on Start and in the guide; original catalogs remain usable for older feedback.
 
 - Keep a version-controlled test-case catalog with stable case IDs and trace each
   case to product requirements and implemented workflows. Update it as features

@@ -1,10 +1,64 @@
 import { useQuery } from "@tanstack/react-query";
+import { accountEpoch, activeStorageAccount } from "./lib/account-storage";
 
-export async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, options);
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+function requireCurrentAccount(epoch: number) {
+  if (epoch !== accountEpoch())
+    throw new Error("Account changed; previous request discarded.");
+}
+
+export function streamNeedsAuthentication(event?: Event) {
+  try {
+    return (
+      JSON.parse((event as MessageEvent<string>)?.data ?? "{}")
+        .authentication_required === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function privateResponse(path: string, options?: RequestInit) {
+  const epoch = accountEpoch();
+  const owner = activeStorageAccount();
+  let headers = options?.headers;
+  if (owner && !path.startsWith("/auth")) {
+    headers = new Headers(headers);
+    headers.set("X-AI-Station-Account", owner);
+  }
+  // Account-private reads never reuse a browser cache. Before account login,
+  // auth responses already carry no-store; keep the existing operator client
+  // contract (an ordinary GET has no request options) during staged rollout.
+  const response = await fetch(
+    `/api${path}`,
+    owner
+      ? {
+          ...options,
+          ...(headers ? { headers } : {}),
+          cache: "no-store",
+        }
+      : options,
+  );
+  requireCurrentAccount(epoch);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
+    requireCurrentAccount(epoch);
+    if (
+      (response.status === 401 &&
+        !path.startsWith("/auth") &&
+        !path.startsWith("/operator-auth")) ||
+      response.headers?.get?.("X-AI-Station-Account-Changed") === "true"
+    )
+      window.dispatchEvent(new Event("ai-station:session-expired"));
+    throw new ApiError(
       typeof body.detail === "string"
         ? body.detail
         : Array.isArray(body.detail)
@@ -12,10 +66,25 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
               .map((issue: { msg?: string }) => issue.msg ?? "Invalid input")
               .join("; ")
           : `Request failed (${response.status})`,
+      response.status,
     );
   }
+  return { response, epoch };
+}
+
+export async function api<T>(path: string, options?: RequestInit): Promise<T> {
+  const { response, epoch } = await privateResponse(path, options);
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  const body = await response.json();
+  requireCurrentAccount(epoch);
+  return body as T;
+}
+
+export async function apiText(path: string) {
+  const { response, epoch } = await privateResponse(path);
+  const body = await response.text();
+  requireCurrentAccount(epoch);
+  return body;
 }
 
 export interface GPU {
@@ -51,6 +120,18 @@ export interface ResourceWait {
   reserved_mib: number;
   headroom_mib: number;
 }
+export interface GenerationProgress {
+  phase: string;
+  fraction: { completed: number; total: number; unit: string } | null;
+  elapsed_seconds: number;
+  estimate: {
+    lower_seconds: number;
+    upper_seconds: number;
+    basis: string;
+    scope: string;
+    samples?: number;
+  } | null;
+}
 export interface Run {
   id: string;
   project_id: string | null;
@@ -67,6 +148,7 @@ export interface Run {
   actual_gpu: string | null;
   requested_gpu: string;
   resource_wait?: ResourceWait | null;
+  generation_progress?: GenerationProgress | null;
   parameters: Record<string, unknown>;
   effective_permissions: string[];
   summary: string;

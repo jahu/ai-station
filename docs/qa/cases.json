@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 46,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -15,7 +15,28 @@
     "docs/plans/agent-draft-runtime-defaults.md",
     "docs/plans/wan-continuation-quality.md",
     "docs/plans/assisted-agent-drafts.md",
-    "docs/plans/notification-delivery.md"
+    "docs/plans/notification-delivery.md",
+    "docs/plans/media-timeline.md",
+    "docs/plans/synchronized-sound.md",
+    "docs/plans/next-release-0.1.md",
+    "docs/plans/guided-model-installation.md",
+    "docs/plans/desktop-installation.md",
+    "docs/plans/managed-speech-setup.md",
+    "docs/plans/managed-image-setup.md",
+    "docs/plans/managed-music-setup.md",
+    "docs/plans/managed-video-setup.md",
+    "docs/plans/managed-avatar-setup.md",
+    "docs/plans/managed-effects-setup.md",
+    "docs/plans/managed-fish-setup.md",
+    "docs/plans/guided-cpu-conversation.md",
+    "docs/plans/linux-consumer-qualification.md",
+    "docs/plans/windows-consumer-installation.md",
+    "docs/web-search.md",
+    "docs/plans/macos-managed-llama.md",
+    "docs/plans/expressive-speech.md",
+    "docs/plans/linux-gpu-onboarding.md",
+    "docs/plans/generation-progress.md",
+    "docs/plans/local-prompt-enhancement.md"
   ],
   "cases": [
     {
@@ -2883,6 +2904,33 @@
       ]
     },
     {
+      "id": "WEB-008",
+      "area": "Internet",
+      "title": "Web dostępny, ale wyszukiwanie tylko gdy potrzebne",
+      "priority": "P1",
+      "prerequisites": [
+        "Własne konto QA i wybrany działający model lokalny. Web włączony, pole Search query puste."
+      ],
+      "steps": [
+        "Wyślij: Reply with exactly WINDOWS_MODEL_OK. Następnie wyślij zwykłe powitanie.",
+        "Sprawdź odpowiedzi, źródła i szczegóły Run; odśwież rozmowę.",
+        "Poproś o wyszukanie oficjalnej dokumentacji Pythona o venv. Następnie zapytaj, jak aktywować to środowisko na Windows, bez ponownego podawania nazwy Pythona.",
+        "Wpisz własne jawne Search query i wyślij wiadomość.",
+        "Wyłącz Web i wyślij zwykłe pytanie."
+      ],
+      "expected": [
+        "Odpowiedź literalna i powitanie nie wywołują wyszukiwarki, nie pokazują przypadkowych źródeł i nie tworzą artefaktu web-search.json. Pominięcie jest widoczne w historii Run; odpowiedzi zostają po odświeżeniu.",
+        "Pytanie wymagające wyszukania używa krótkiego zapytania przygotowanego przez wybrany model. Follow-up zachowuje temat Pythona i Windows; pokazane źródła dotyczą tego tematu.",
+        "Własne Search query rzeczywiście uruchamia wyszukiwanie. Web wyłączony nie uruchamia planowania wyszukiwania ani połączenia z wyszukiwarką."
+      ],
+      "resources": "Wybrany lokalny LLM; publiczne wyszukiwanie bez kluczy API tylko w próbach wymagających źródeł",
+      "minutes": 8,
+      "requirements": [
+        "NR-12",
+        "spec-87"
+      ]
+    },
+    {
       "id": "DATA-008",
       "area": "Pliki i analiza",
       "title": "Dokument tekstowy lub PDF",
@@ -3691,6 +3739,2388 @@
         "UNIFIED-CHAT",
         "MARKET-DRAFT-CONDITION"
       ]
+    },
+    {
+      "id": "VIDEO-101",
+      "area": "Wideo",
+      "title": "Zapisany montaż: klipy, niezależny dźwięk i eksport",
+      "priority": "P0",
+      "prerequisites": [
+        "Dwa własne, neutralne filmy z Library oraz własny WAV z mową, muzyką lub efektami. Dostępny renderer CPU."
+      ],
+      "steps": [
+        "Otwórz Video → Edit a film i utwórz nowy montaż. Dodaj dwa filmy i WAV z Library.",
+        "Przytnij klip, przesuń ścieżkę audio, zmień jej głośność i ustaw fade in/out. Wycisz oryginalny dźwięk jednego klipu. Zapisz edycję.",
+        "Uruchom Preview this edit, obejrzyj i odsłuchaj wynik. Pobierz Export film i odtwórz go na komputerze.",
+        "Odśwież stronę i wróć do tego montażu. Sprawdź ustawienia, wynik i pliki źródłowe w Library."
+      ],
+      "expected": [
+        "Montaż, osobne ścieżki i zmierzone fale dźwięku pozostają zapisane. Podgląd i eksport zawierają te same przycięcia, pozycje, wyciszenia i przejścia głośności. Oryginalne pliki pozostają niezmienione; odświeżenie nie dodaje klipu ponownie."
+      ],
+      "resources": "CPU; własne filmy/WAV; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-08"
+      ]
+    },
+    {
+      "id": "VIDEO-102",
+      "area": "Wideo",
+      "title": "Wcześniejszy montaż i zatrzymanie renderowania",
+      "priority": "P0",
+      "prerequisites": [
+        "Zapisany montaż i jego gotowy podgląd z VIDEO-101."
+      ],
+      "steps": [
+        "Zmień pozycję lub głośność ścieżki po wykonaniu podglądu.",
+        "Sprawdź oznaczenie wcześniejszego podglądu. Zapisz zmienioną wersję, następnie wybierz wcześniejszą w Saved edits.",
+        "Sprawdź odtworzenie ustawień i wcześniej wyrenderowanego filmu.",
+        "Dla dłuższego montażu uruchom nowy podgląd i kliknij Stop render, kiedy renderowanie trwa."
+      ],
+      "expected": [
+        "Zmiana montażu nie pozwala eksportować starego filmu jako nowej edycji. Wcześniejsze ustawienia i gotowy wynik dają się przywrócić. Stop zatrzymuje wyłącznie własne renderowanie; historia pozostaje, a częściowy film nie jest przedstawiony jako gotowy wynik."
+      ],
+      "resources": "CPU; bez nowego pobierania modeli",
+      "minutes": 7,
+      "requirements": [
+        "NR-08"
+      ]
+    },
+    {
+      "id": "AGENT-016",
+      "area": "Agenci",
+      "title": "Agent tworzący efekty dźwiękowe dla wybranego filmu",
+      "priority": "P0",
+      "prerequisites": [
+        "Własny neutralny film w Library; dostępny lokalny silnik Sound effects."
+      ],
+      "steps": [
+        "Utwórz wyłączonego agenta z narzędziem Create media i wyjściem Sound effects. Sprawdź, że nie można go aktywować bez filmu.",
+        "Wybierz film z Library, wpisz ogólny opis dźwięku i dodaj kierunek dla jednej sceny. Zapisz definicję.",
+        "Wybierz Use this exact description every time, aktywuj agenta i uruchom Run now.",
+        "Sprawdź oddzielny WAV, podgląd filmu z dźwiękiem oraz powrót do wyników po odświeżeniu. Przetestuj także Gated z ręcznym zatwierdzeniem."
+      ],
+      "expected": [
+        "Przed zgodą nie zaczyna się generowanie. Po wykonaniu dostępne są ścieżka efektów i zsynchronizowany podgląd, z zachowanym filmem źródłowym i kierunkami scen. Przy kolejnej pracy film i czasy scen pozostają wybrane przez użytkownika. Inne konto nie widzi definicji ani wyników."
+      ],
+      "resources": "Lokalny GPU; jeden krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AUDIO-101",
+      "area": "Audio",
+      "title": "Jakość ekspresyjnej mowy: szept, emocje i tempo",
+      "priority": "P1",
+      "prerequisites": [
+        "Lokalny Fish S2 Pro i własna próbka głosu, do której masz prawa; spokojny odsłuch na słuchawkach."
+      ],
+      "steps": [
+        "W Audio → Speech wybierz Fish S2 Pro i tę samą własną próbkę głosu dla wszystkich prób.",
+        "Wygeneruj ten sam krótki tekst kolejno w stylach Natural, Whisper, Happy, Sad i Afraid; porównaj także tempo Slow i Fast.",
+        "Odsłuchaj całe próbki. Zapisz w wynikach konkretne słowa, momenty i kierunki, które brzmią robotycznie, nienaturalnie lub zmieniają tożsamość głosu."
+      ],
+      "expected": [
+        "Ustawienia wpływają na słyszalny sposób wypowiedzi, nie są czytane jako część tekstu. Tekst jest kompletny i zrozumiały, a dłuższa wypowiedź nie traci słów na połączeniach. Ocenę naturalności i podobieństwa głosu zapisuje użytkownik; samo ukończenie Run nie oznacza zaliczenia jakości."
+      ],
+      "resources": "Lokalny GPU; własna próbka głosu; bez płatnych API",
+      "minutes": 12,
+      "requirements": [
+        "NR-06"
+      ]
+    },
+    {
+      "id": "AUDIO-102",
+      "area": "Audio",
+      "title": "Zgodność odgłosów ze sceną i czasem filmu",
+      "priority": "P1",
+      "prerequisites": [
+        "Własny krótki neutralny film z widocznym ruchem lub wyraźną zmianą sceny; lokalny Sound effects."
+      ],
+      "steps": [
+        "W Audio → Sound effects wybierz film. Opisz pasujące odgłosy i dodaj co najmniej dwa różne kierunki scen z czasami odpowiadającymi filmowi.",
+        "Wygeneruj ścieżkę i odtwórz cały podgląd. Sprawdź pierwszą scenę, przejście i ostatnie sekundy.",
+        "Porównaj sam WAV i podgląd. Zapisz konkretne opóźnienia, niepasujące odgłosy, przerwy lub słyszalne łączenia, jeśli występują."
+      ],
+      "expected": [
+        "Ścieżka ma pełną długość filmu i nie ucina jego końca. Odgłosy pasują do scen i wskazanych przedziałów; nie pojawia się niezamówiona mowa lub muzyka. Ocenę zgodności dźwięku ze sceną zapisuje użytkownik, oddzielnie od technicznego ukończenia i poprawnego czasu pliku."
+      ],
+      "resources": "Lokalny GPU; jeden krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07"
+      ]
+    },
+    {
+      "id": "CHAT-101",
+      "area": "Chat",
+      "title": "Dźwięk filmu z rozmowy i ponowne otwarcie miksu",
+      "priority": "P1",
+      "prerequisites": [
+        "Własny krótki film w Library, najlepiej z oryginalną mową lub muzyką; gotowy lokalny Sound effects."
+      ],
+      "steps": [
+        "W rozmowie otwórz Attach files & choose tools → Add film sound. Wybierz film i opisz odgłosy. Zostaw Keep and mix with the new effects.",
+        "Wyślij; po zakończeniu odtwórz film i osobny WAV. Odśwież stronę, kliknij Edit sound mix i sprawdź źródłowy klip oraz niezależny poziom efektów.",
+        "W tej samej rozmowie wyślij w Auto: Dodaj do tego filmu dźwięk ptaków. Sprawdź, że źródłem jest właśnie poprzedni gotowy film."
+      ],
+      "expected": [
+        "Film zachowuje oryginalny dźwięk, a WAV zawiera osobne efekty. Miks można dalej edytować; oryginał i wcześniejsze wyniki pozostają w Library. Inne konto nie widzi tych plików ani montażu. Ocena zgodności odgłosów z obrazem jest zapisywana osobno."
+      ],
+      "resources": "Lokalny GPU i CPU; własny krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07",
+        "NR-08"
+      ]
+    },
+    {
+      "id": "CHAT-102",
+      "area": "Chat",
+      "title": "Nowy film z opisanym dźwiękiem jako jedno zadanie",
+      "priority": "P1",
+      "prerequisites": [
+        "Gotowy lokalny Wan oraz Sound effects; zasoby na krótki film."
+      ],
+      "steps": [
+        "W rozmowie wybierz Generate video, długość 15 seconds i Add sound to this film. Opisz obraz w wiadomości, a odgłosy w Sound description.",
+        "Wyślij i obserwuj etapy filmu, generacji dźwięku i miksu. Odśwież stronę w trakcie.",
+        "Po zakończeniu odtwórz cały film; sprawdź osobny WAV i Edit sound mix. Przy osobnej próbie zatrzymaj zadanie przed generacją dźwięku i sprawdź brak późniejszej pracy."
+      ],
+      "expected": [
+        "Jedno zadanie kończy się dopiero po zweryfikowaniu filmu z dźwiękiem; niemy pośredni film nie jest prezentowany jako wynik końcowy. Etapy i źródła można przejrzeć, Stop obejmuje całość, a powrót do rozmowy zachowuje wynik."
+      ],
+      "resources": "Lokalny GPU; krótki film oraz efekty; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-07",
+        "NR-08"
+      ]
+    },
+    {
+      "id": "SETUP-101",
+      "area": "Konfiguracja modeli",
+      "title": "Wybór modelu i pierwsza lokalna odpowiedź",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Jako administrator otwórz Models → Set up a local model. Porównaj RAM, GPU, wolne miejsce i wariant Q4_K_M z rzeczywistym sprzętem.",
+        "Przeczytaj źródło/licencję, zaakceptuj ją i pobierz wariant mieszczący się w pamięci. Obejrzyj postęp, szczegóły Run i Files verified.",
+        "Kliknij Open Chat with this model, wyślij krótką wiadomość i sprawdź rzeczywistą lokalną odpowiedź oraz użyty model."
+      ],
+      "expected": [
+        "Pobieranie wymaga zgody. Pliki i ich SHA-256 są zweryfikowane; same pobrane wagi nie oznaczają działającego runtime. Nowa rozmowa używa wybranego modelu; istniejące modele i dane pozostają. Brak runtime/sprzętu ma jawny komunikat zamiast pozornej gotowości."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-102",
+      "area": "Konfiguracja modeli",
+      "title": "Stop, powrót i wznowienie przygotowania modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Rozpocznij pobieranie nowego wariantu modelu i po pojawieniu się pobranych bajtów kliknij Stop.",
+        "Przejdź do Chat i wróć do konfiguracji, odśwież. Otwórz istniejące przygotowanie i wybierz Resume preparation.",
+        "Poczekaj na weryfikację; sprawdź nowy numer próby i to samo zadanie/model."
+      ],
+      "expected": [
+        "Historia i pobrane bajty pozostają po Stop/odświeżeniu; wznowienie zachowuje zweryfikowaną tożsamość pliku i nie podmienia źródła/modelu. Sam powrót do strony nie tworzy drugiego zadania."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-103",
+      "area": "Konfiguracja modeli",
+      "title": "Wspólne modele i prywatna historia przygotowań",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po przygotowaniu modelu przez administratora zaloguj się drugim zwykłym kontem.",
+        "Otwórz Set up a local model oraz Chat; sprawdź dostępny współdzielony model i własną pustą historię przygotowań.",
+        "Spróbuj wejść pod zapamiętany URL Run przygotowania administratora."
+      ],
+      "expected": [
+        "Zwykłe konto może rozmawiać ze współdzielonym modelem, ale nie pobiera nowych modeli ani nie widzi historii, Run lub JSON administratora. Brak obcego dostępu nie przeszkadza w normalnym korzystaniu z Chat."
+      ],
+      "resources": "Publiczne wagi około 2,33 GiB dla Q4_K_M; lokalny GPU; bez płatnego API",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-104",
+      "area": "Konfiguracja modeli",
+      "title": "Przygotowanie runtime przed wyborem modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z przygotowaniem runtime; konto administratora; Linux x86-64, działający lokalny Docker i NVIDIA dla pierwszej generacji. Nie usuwaj istniejących obrazów Dockera ani modeli tylko na potrzeby testu."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model. Jeśli istniejący obraz jest dostępny, sprawdź komunikat Image available i przejdź do modelu bez ponownego pobierania runtime.",
+        "Jeżeli runtime wymaga przygotowania, sprawdź rozmiar, wolne miejsce i licencje. Zaakceptuj warunki i kliknij Prepare llama.cpp. W czasie transferu przejdź na inną stronę, wróć i odśwież.",
+        "Przy potrzebnym transferze kliknij Stop runtime preparation, następnie Resume runtime preparation. Po weryfikacji wybierz/pobierz model i wyślij krótką wiadomość w Chat. Jeśli pliki pobrano wcześniej bez runtime, użyj Verify model readiness."
+      ],
+      "expected": [
+        "Stan/progres i historia pozostają po odświeżeniu; wznowienie zachowuje zadanie i zweryfikowaną tożsamość obrazu. Sam obraz runtime nie jest przedstawiany jako udana odpowiedź modelu. Działające konfiguracje i modele pozostają, a pliki modelu nie są pobierane drugi raz podczas weryfikacji. Drugie zwykłe konto widzi wspólny zasób, ale nie prywatną historię ani Run administratora."
+      ],
+      "resources": "Lokalny Docker i publiczny runtime około 2,41 GiB, tylko jeśli brak; model według wyboru; bez płatnego API",
+      "minutes": 15,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-105",
+      "area": "Konfiguracja modeli",
+      "title": "Większe modele, wyszukiwanie i dopasowanie sprzętu",
+      "priority": "P1",
+      "prerequisites": [
+        "Kandydat 0.1 z rozszerzonym katalogiem; konto administratora. Sam przegląd nie pobiera wag."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model; sprawdź dwa startowe warianty 4B. Kliknij Explore larger models.",
+        "Wyszukaj 14B, następnie Q8_0. Włącz Only models that fit this workstation i porównaj dostępne warianty, rozmiary oraz estymację GPU/kontekstu.",
+        "Wybierz inny wariant i sprawdź jego nazwę w Your download, źródło, licencję i SHA-256. Potwierdzenie licencji powinno zostać wyzerowane po zmianie wyboru. Nie musisz rozpoczynać wielogigabajtowego pobrania w tym przypadku."
+      ],
+      "expected": [
+        "Katalog pokazuje 4B/8B/14B i osobne Q4_K_M/Q8_0. Wyszukiwanie jest lokalne; wybór nie uruchamia modelu ani pobierania. Model, który się nie mieści, nie jest przedstawiany jako gotowy; można świadomie pobrać same pliki. Nazwa i licencja odpowiadają faktycznie wybranemu modelowi, bez pomylenia wydawców Huihui i mlabonne."
+      ],
+      "resources": "Bez pobierania wag; obserwacja aktualnego RAM/VRAM",
+      "minutes": 5,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "INSTALL-101",
+      "area": "Instalacja desktop",
+      "title": "Linux: pierwsze konto, model, restart i zachowanie danych",
+      "priority": "P1",
+      "prerequisites": [
+        "Przejrzana paczka rozwojowa Linux x86-64; Docker i Compose dostępne dla zalogowanego użytkownika. Używaj osobnego profilu QA. Nie usuwaj istniejących obrazów, modeli ani danych roboczych."
+      ],
+      "steps": [
+        "Otwórz zainstalowaną aplikację AI Station i potwierdź utworzenie prywatnej instalacji. Sprawdź etapy przygotowania oraz brak terminala do wpisywania poleceń.",
+        "Utwórz konto administratora; sprawdź przejście do konfiguracji modeli i widoczne RAM/VRAM. Przygotuj pasujący model, akceptując jego licencję, i wyślij krótką wiadomość.",
+        "Zapisz rozmowę i wpis Memory. Zatrzymaj przez Stop AI Station, uruchom ponownie i sprawdź dane oraz istniejącą sesję logowania.",
+        "Podczas zaplanowanego testu aktualizacji zamknij stację, zainstaluj nową przejrzaną paczkę i sprawdź dane ponownie. Odinstalowanie samej aplikacji nie powinno usuwać prywatnych danych; po ponownej instalacji muszą pozostać."
+      ],
+      "expected": [
+        "Pierwsze uruchomienie prowadzi do konta i modeli bez instalowania Pythona/Node przez użytkownika. Stacja pozostaje lokalna, nie zatrzymuje innych instalacji ani usług. Stop zamyka tylko jej procesy/kontenery. Aktualizacja i usunięcie pakietu zachowują konto, historię, Memory, Library i pobrane modele, dopóki użytkownik osobno nie zdecyduje o usunięciu danych."
+      ],
+      "resources": "Linux x86-64, Docker/Compose, lokalny GPU i świadomie wybrany model; bez płatnego API",
+      "minutes": 20,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-106",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: sprzęt, zgoda i pierwsze nagranie",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny profil QA Linux x86-64 z NVIDIA ≥6 GiB VRAM i dostępnym zarządzaniem zasobami; administrator; referencyjny WAV. Wymagane do 6,49 GB pobrania oraz dodatkowe 8 GiB miejsca."
+      ],
+      "steps": [
+        "Otwórz Models → Set up a local model → Set up local speech. Sprawdź wykryty sprzęt, rozmiar, źródła oraz licencje.",
+        "Potwierdź licencje i rozpocznij przygotowanie. Przejdź do Chat i wróć; poczekaj na zakończenie etapów pobierania i instalacji.",
+        "Otwórz Audio, dodaj własny referencyjny WAV i krótki polski tekst. Wygeneruj, odsłuchaj i znajdź wynik w Library."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie instaluje. Wyświetlane są rzeczywiste etapy i zapisana historia. Gotowość instalacji nie udaje wykonanego testu mowy. Zwykły Run tworzy prywatne, odtwarzalne nagranie; ocena naturalności wymaga odsłuchu."
+      ],
+      "resources": "Świadome pobranie do 6,49 GB i jedna lokalna GPU; brak płatnego API",
+      "minutes": 20,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-107",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: Stop, wznowienie i zachowany postęp",
+      "priority": "P1",
+      "prerequisites": [
+        "Profil QA jak SETUP-106; przygotowanie w toku."
+      ],
+      "steps": [
+        "Zatrzymaj przygotowanie podczas pobierania lub instalacji. Odśwież stronę, następnie sprawdź zapisaną próbę.",
+        "Kliknij Resume, przejdź do innej zakładki i wróć. Sprawdź zakończenie lub widoczny błąd wymagający naprawy."
+      ],
+      "expected": [
+        "Stop nie zatrzymuje innych usług. Zweryfikowane pliki pozostają i są ponownie sprawdzane. Resume zachowuje zaakceptowaną receptę; nie tworzy fikcyjnej gotowości ani podwójnej instalacji. Zmiana zakładki nie gubi postępu."
+      ],
+      "resources": "Lokalne pliki, opcjonalne dalsze pobieranie; bez generowania mowy",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-108",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: prywatna historia i wspólne modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Dwa osobne konta administratorów A/B w profilu QA; przygotowanie i nagranie A; zwykłe konto członka C."
+      ],
+      "steps": [
+        "Na A skopiuj URL próby przygotowania oraz wynikowego Run i artefaktu.",
+        "Zaloguj B w osobnej przeglądarce: sprawdź własną historię i spróbuj otworzyć linki A. Obejrzyj stan gotowości mowy.",
+        "Na C spróbuj uruchomić przygotowanie środowiska."
+      ],
+      "expected": [
+        "B widzi gotowy współdzielony runtime, ale nie historię, prompty, logi, nagrania ani JSON A. C nie może przygotowywać runtime bez praw administratora. Nie należy zmieniać praw istniejących kont produkcyjnych na potrzeby testu."
+      ],
+      "resources": "Bez pobierania i GPU; osobne konta QA",
+      "minutes": 7,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-109",
+      "area": "Konfiguracja modeli",
+      "title": "Mowa lokalna: zachowanie istniejącego runtime i brak dopasowania GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobne profile QA z jawnie skonfigurowanym Chatterbox oraz ze sprzętem bez obsługi tego profilu; nie zmieniaj środowiska roboczego."
+      ],
+      "steps": [
+        "W profilu z istniejącą konfiguracją otwórz kartę konfiguracji mowy i sprawdź informację o używanym runtime.",
+        "W profilu bez odpowiedniego GPU sprawdź zalecenie i możliwość rozpoczęcia instalacji."
+      ],
+      "expected": [
+        "Istniejące ustawienia pozostają wybrane; dodatkowa instalacja wymaga świadomego rozwinięcia opcji. Sprzęt bez zgodnego GPU nie otrzymuje zielonej gotowości ani aktywnego przycisku instalacji."
+      ],
+      "resources": "Tylko przegląd konfiguracji i sprzętu, bez pobierania",
+      "minutes": 5,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-110",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: instalacja modeli i pierwszy wynik",
+      "priority": "P1",
+      "prerequisites": [
+        "Świeży profil QA Linux x86-64 z Docker/NVIDIA i dwiema kartami co najmniej 12 GiB; administrator, wolne miejsce, zgoda na pobranie około 13 GiB."
+      ],
+      "steps": [
+        "Otwórz Models → Set up images. Sprawdź sprzęt, miejsce, pięć źródeł i osobne licencje; zaakceptuj je świadomie.",
+        "Rozpocznij instalację, przejdź do innej zakładki, wróć i otwórz Images po zakończeniu.",
+        "Wygeneruj przy 30 krokach niebieski kubek z czerwonym jabłkiem na drewnianym stole. Otwórz wynik w Library i odśwież workspace."
+      ],
+      "expected": [
+        "Instalacja zachowuje historię i mierzone pobranie. Dopiero komplet zweryfikowanych modeli i silnik pozwalają tworzyć. Prawdziwy wynik, prompt i Run pozostają w prywatnej historii i Library."
+      ],
+      "resources": "Pobranie około 13 GiB, dwa GPU, kilka minut generowania",
+      "minutes": 20,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-111",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: Stop i Resume instalacji",
+      "priority": "P1",
+      "prerequisites": [
+        "Profil QA z SETUP-110, pobieranie lub weryfikacja w toku."
+      ],
+      "steps": [
+        "Zatrzymaj instalację, odśwież stronę i sprawdź zapisaną próbę.",
+        "Wznów przygotowanie; sprawdź numer próby i gotowość po zakończeniu."
+      ],
+      "expected": [
+        "Stop nie zatrzymuje innych usług. Zweryfikowane pliki pozostają. Resume zachowuje zaakceptowaną receptę i tę samą historię, nie uruchamia podwójnej instalacji."
+      ],
+      "resources": "Bez generowania; możliwe dalsze pobieranie modeli",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-112",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: Edit, Recompose i ponowna edycja Upscale",
+      "priority": "P1",
+      "prerequisites": [
+        "SETUP-110 zakończony; własny neutralny obraz kubka i jabłka."
+      ],
+      "steps": [
+        "Edit: usuń jabłko, zachowując kubek i tło; oceń obraz, nie tylko status.",
+        "Recompose: przenieś kubek na marmurowy blat, z jednym, a następnie dwoma własnymi odniesieniami.",
+        "Upscale: sprawdź dokładne 4× wymiary. Użyj wyniku z Library ponownie w Edit z max side 512; uwzględnij także wynik większy niż 20 MB."
+      ],
+      "expected": [
+        "Strukturalna edycja wykonuje instrukcję. Recompose wykorzystuje odniesienia. Upscale i ponowna edycja publikują osobne wyniki z poprawną genealogią; oryginały pozostają bez zmian."
+      ],
+      "resources": "Jeden/dwa GPU; kilka generacji, dwa odniesienia mogą trwać ponad 10 minut",
+      "minutes": 25,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-113",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: odzyskanie po restarcie Runnera i Stop",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobna instalacja QA, aktywne własne generowanie; tylko jej Runner może być restartowany."
+      ],
+      "steps": [
+        "Podczas generowania zrestartuj wyłącznie Runner QA, zachowując kontener obliczeniowy.",
+        "Wróć do zapisanego Run, następnie kliknij Stop i sprawdź rezerwacje oraz Library."
+      ],
+      "expected": [
+        "Run dołącza do tego samego kontenera bez ponownej inferencji. Stop kończy wyłącznie własną pracę, zwalnia rezerwacje po potwierdzeniu i nie publikuje częściowego obrazu."
+      ],
+      "resources": "Dwa GPU i restart wyłącznie wydzielonego Runnera QA",
+      "minutes": 8,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-114",
+      "area": "Konfiguracja modeli",
+      "title": "Obrazy: prywatność i zachowanie istniejącej konfiguracji",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobne konta QA administratora A i członka B; profil z gotowym zarządzanym obrazowaniem oraz osobny z jawną konfiguracją photo pipeline."
+      ],
+      "steps": [
+        "Na B otwórz stan gotowości; spróbuj otworzyć linki A do próby instalacji, Run, obrazu i pliku.",
+        "Na B spróbuj zainstalować modele. W osobnym profilu sprawdź, czy istniejący photo pipeline zachowuje pierwszeństwo.",
+        "Sprawdź kartę na telefonie oraz profil bez zgodnej pary GPU."
+      ],
+      "expected": [
+        "Modele są współdzielone, lecz B nie widzi historii ani plików A i nie instaluje bez uprawnień. Jawna konfiguracja, również niepełna, nie jest nadpisana. Telefon nie ma poziomego przewijania; niezgodny sprzęt nie otrzymuje aktywnej instalacji."
+      ],
+      "resources": "Bez generacji i pobierania; osobne konta/profile QA",
+      "minutes": 7,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-115",
+      "area": "Konfiguracja modeli",
+      "title": "Pamięć: model CPU i pierwszy wynik semantyczny",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny świeży profil QA z kontem administratora i wolnym miejscem; GPU nie jest wymagany."
+      ],
+      "steps": [
+        "W Models otwórz Set up memory. Sprawdź dwa przypięte źródła, MIT, pobranie około 130 MiB i dostępne miejsce.",
+        "Dodaj własną notatkę w Memory, wróć do konfiguracji i świadomie zaakceptuj pobranie. Przygotuj model i poczekaj na indeks.",
+        "W Memory zapytaj innymi słowami o treść swojej notatki. Wróć do konfiguracji na telefonie i odśwież."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Model zostaje faktycznie uruchomiony na CPU, ma 384 wymiary, indeksuje prywatną notatkę i zwraca ją w wyszukiwaniu. Gotowość i aktywność pozostają po odświeżeniu, a telefon nie ma poziomego przewijania."
+      ],
+      "resources": "Około 130 MiB pobrania, CPU / do 2 GiB RAM; bez GPU",
+      "minutes": 8,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-116",
+      "area": "Konfiguracja modeli",
+      "title": "Pamięć: Stop, ponowienie, uprawnienia i istniejący endpoint",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobny profil QA, konta administratora A i członka B; opcjonalny osobny profil z istniejącym endpointem embeddingów."
+      ],
+      "steps": [
+        "Zatrzymaj aktywne przygotowanie z karty modeli, odśwież i uruchom je ponownie.",
+        "Na B sprawdź gotowość oraz próbę dostępu do linku Run A i do instalacji.",
+        "W profilu z endpointem otwórz kartę pamięci; nie wybieraj świadomej opcji zmiany na model lokalny."
+      ],
+      "expected": [
+        "Zatrzymuje się tylko własny Run. Ponowienie weryfikuje kompletne pliki, a niepełny pobiera od początku; postęp nie udaje byte-range Resume. B nie widzi aktywności A i nie konfiguruje modeli. Istniejący endpoint pozostaje wybrany i jest opisany jako skonfigurowany, nie jako świeżo przetestowany runtime."
+      ],
+      "resources": "CPU i ewentualne dalsze pobieranie; osobne konta QA",
+      "minutes": 8,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-117",
+      "title": "Muzyka: instalacja i pierwszy utwór z nowego konta",
+      "prerequisites": [
+        "Osobny świeży profil QA Linux x86-64, NVIDIA co najmniej 12 GiB VRAM, co najmniej 24 GiB RAM; administrator i około 18 GiB wolnego miejsca."
+      ],
+      "steps": [
+        "W Models otwórz Set up music. Sprawdź sprzęt, wolne miejsce, źródła i osobne licencje modeli, SDK oraz komponentów.",
+        "Zaakceptuj pobranie około 10 GiB. Rozpocznij instalację, przejdź do innej zakładki i wróć.",
+        "Po zakończeniu otwórz Music, opisz spokojny fortepian bez wokalu i wygeneruj 30 sekund. Otwórz wynik w Library, odtwórz i przewiń; odśwież historię."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Postęp i historia nie znikają po nawigacji. Dopiero pełna instalacja odblokowuje Music. Kompletny WAV, prompt i Run pozostają prywatne. Profil jawnie korzysta także z RAM/CPU."
+      ],
+      "resources": "Około 10 GiB pobrania; jedno GPU 12 GiB, generacja do 12 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-118",
+      "title": "Muzyka: Stop i Resume przygotowania silnika",
+      "prerequisites": [
+        "Oddzielny profil QA z SETUP-117; pobieranie lub instalowanie silnika trwa."
+      ],
+      "steps": [
+        "W karcie muzyki kliknij Stop music setup, odśwież stronę i sprawdź zatrzymaną próbę.",
+        "Kliknij Resume music setup. Sprawdź tę samą historię, nowy numer próby, zachowane źródła i końcową gotowość."
+      ],
+      "expected": [
+        "Stop kończy wyłącznie własną operację. Zweryfikowane pliki zostają i są ponownie sprawdzane; niepełne środowisko nie uzyskuje gotowości. Resume zachowuje receptę, nie duplikuje aktywnej próby i nie udaje byte-range wznowienia instalacji pakietów."
+      ],
+      "resources": "CPU / do 4 GiB RAM, ewentualne dalsze pobieranie; bez generacji GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-119",
+      "title": "Muzyka: restart Runnera i anulowanie generacji",
+      "prerequisites": [
+        "Oddzielny profil QA z gotowym silnikiem; aktywna własna generacja. Restart dotyczy wyłącznie wydzielonego Runnera QA."
+      ],
+      "steps": [
+        "Podczas generowania zrestartuj Runner QA i wróć do tego samego Run.",
+        "Sprawdź zachowany proces i postęp, następnie kliknij Stop.",
+        "Sprawdź zakończenie procesu, rezerwacje GPU/RAM oraz brak częściowego utworu w Library."
+      ],
+      "expected": [
+        "Restart dołącza do tego samego procesu bez drugiej inferencji. Stop zatrzymuje tylko własną generację; zasoby są zwalniane po potwierdzeniu, a niepełny WAV nie jest publikowany."
+      ],
+      "resources": "Jedno GPU, do 18 GiB RAM dla utworu ponad minutę; restart tylko Runnera QA",
+      "minutes": 7
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-120",
+      "title": "Muzyka: prywatność, telefon i dotychczasowy runtime",
+      "prerequisites": [
+        "Konta QA administratora A i członka B; dodatkowy osobny profil z jawną konfiguracją ACE-Step."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość modeli, a potem linki A do próby instalacji, Run i pliku utworu. Spróbuj rozpocząć instalację.",
+        "Otwórz kartę i wynik na telefonie. Sprawdź komunikat dla niezgodnego sprzętu.",
+        "W osobnym profilu potwierdź, że istniejące ustawienia ACE-Step, także niepełne, nadal mają pierwszeństwo."
+      ],
+      "expected": [
+        "B może używać wspólnego silnika, lecz nie ma dostępu do historii, promptów ani plików A i nie instaluje bez uprawnień. Telefon nie przewija poziomo. Niezgodny sprzęt nie otrzymuje aktywnego przycisku instalacji. Dotychczasowa konfiguracja nie jest nadpisywana."
+      ],
+      "resources": "Bez pobierania/generacji; osobne konta i profile QA",
+      "minutes": 7
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-121",
+      "title": "Wideo: instalacja i pierwszy film",
+      "prerequisites": [
+        "Osobny świeży profil QA Linux x86-64, NVIDIA co najmniej 12 GiB VRAM, 24 GiB RAM i zgodny sterownik; administrator, około 32 GiB wolnego miejsca."
+      ],
+      "steps": [
+        "W Models wybierz Set up video. Sprawdź sprzęt, miejsce, źródła oraz osobne licencje Wan, ComfyUI i zależności.",
+        "Zaakceptuj około 20 GiB pobrania; rozpocznij przygotowanie, przejdź do innej zakładki i wróć.",
+        "Po zakończeniu otwórz Video i wygeneruj neutralną scenę jeziora. Sprawdź film w Library, odtwórz, przewiń i odśwież workspace."
+      ],
+      "expected": [
+        "Przed zgodą nic się nie pobiera. Postęp i próba pozostają po nawigacji. Gotowość wynika z kompletnej instalacji. Film jest rzeczywisty, ma zgodne wymiary/czas i zachowaną prywatną historię. Profil ujawnia 1280×704, co najmniej 20 kroków i limit RAM 11 GiB bez swapu."
+      ],
+      "resources": "Około 20 GiB pobrania, jedno GPU 12 GiB; kilka minut krótkiej generacji",
+      "minutes": 20
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-122",
+      "title": "Wideo: Stop i Resume instalacji",
+      "prerequisites": [
+        "Oddzielny profil QA z SETUP-121, aktywne pobieranie lub przygotowanie silnika."
+      ],
+      "steps": [
+        "Kliknij Stop video setup w trakcie przygotowania silnika. Odśwież i sprawdź zatrzymaną próbę.",
+        "Wznów to samo zadanie, sprawdź numer próby i zakończone przygotowanie."
+      ],
+      "expected": [
+        "Zatrzymuje się tylko własna operacja. Zweryfikowane pliki pozostają, niepełne środowisko nie uzyskuje gotowości. Resume zachowuje źródła/receptę i historię, nie duplikuje działania ani nie udaje wznowienia pakietów od częściowego bajtu."
+      ],
+      "resources": "CPU / 4 GiB RAM, możliwe dalsze pobieranie; bez generacji GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-123",
+      "title": "Wideo: animacja obrazu i dłuższy ciągły film",
+      "prerequisites": [
+        "SETUP-121 zakończony; własny neutralny obraz krajobrazu PNG/JPEG."
+      ],
+      "steps": [
+        "W Video wybierz Animate an image, prześlij obraz i wygeneruj krótki ruch. Sprawdź wynik oraz powiązanie ze źródłem.",
+        "Utwórz film 10-sekundowy w trybie Continuous, przejdź do innej zakładki, wróć i odśwież.",
+        "Po zakończeniu odtwórz kompletny eksport i przewiń przez granice segmentów. Sprawdź, że ustawienia i wcześniejsze wersje zostały zachowane."
+      ],
+      "expected": [
+        "Animacja wykorzystuje własny obraz. Ciągły film kontynuuje kolejne segmenty z tym samym zamrożonym silnikiem/modelami, a końcowy eksport ma dokładnie zadany czas. Zakończenie jednego segmentu nie udaje zakończenia filmu. Dłuższe opcje pozostają dostępne; nie obiecujemy idealnej ciągłości obrazu ani stałego czasu generowania."
+      ],
+      "resources": "Jedno GPU / 11 GiB RAM; długi realny test może trwać znacznie dłużej niż czas filmu",
+      "minutes": 45
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-124",
+      "title": "Wideo: odzyskanie po restarcie i anulowanie",
+      "prerequisites": [
+        "Oddzielny Runner QA i aktywna własna generacja. Restart dotyczy wyłącznie tego Runnera."
+      ],
+      "steps": [
+        "Podczas generacji zrestartuj prywatny Runner QA i wróć do tego samego Run.",
+        "Kliknij Stop; sprawdź zakończenie własnego procesu, rezerwacje GPU/RAM i Library."
+      ],
+      "expected": [
+        "Runner dołącza do tego samego procesu bez ponownej inferencji. Stop nie zabija innych usług, zwalnia zasoby po potwierdzeniu i nie publikuje częściowego filmu. Nieznanego stanu nie przedstawia jako sukces."
+      ],
+      "resources": "Jedno GPU; restart tylko Runnera QA, bez restartu całego komputera",
+      "minutes": 8
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-125",
+      "title": "Wideo: prywatność, zachowanie konfiguracji i niezgodny sprzęt",
+      "prerequisites": [
+        "Konta QA administratora A i członka B; dodatkowy profil z jawną konfiguracją Wan/ComfyUI."
+      ],
+      "steps": [
+        "Na B sprawdź gotowość wspólnego silnika i brak historii instalacji A; spróbuj otworzyć linki do Run, filmu i pliku A oraz rozpocząć instalację.",
+        "Sprawdź kartę konfiguracji i wynik na telefonie. W osobnym profilu sprawdź reakcję na za małą VRAM/RAM lub niezgodny sterownik.",
+        "W profilu ze skonfigurowanym ComfyUI potwierdź pierwszeństwo dotychczasowych ustawień, także niepełnych."
+      ],
+      "expected": [
+        "Modele są wspólne, lecz B nie widzi cudzych promptów, historii, plików ani identyfikatora Run instalacji w gotowości silnika. Nie instaluje bez uprawnień. Telefon nie przewija poziomo. Niezgodny sprzęt nie otrzymuje aktywnej instalacji; aplikacja nie zmienia sterowników. Jawna konfiguracja nie jest nadpisywana."
+      ],
+      "resources": "Bez pobierania i generacji; osobne konta/profile QA",
+      "minutes": 8
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-126",
+      "title": "Awatary: instalacja Sonic i pierwszy wynik",
+      "prerequisites": [
+        "Oddzielny świeży profil QA Linux x86-64, co najmniej jedno NVIDIA 12 GiB, 24 GiB RAM, zgodny sterownik i 24 GiB wolnego miejsca; konto administratora."
+      ],
+      "steps": [
+        "W Models wybierz Set up avatar. Sprawdź sprzęt, miejsce, źródła i osobne licencje SDK Sonic, modeli, SVD i zależności.",
+        "Zaakceptuj składniki i rozpocznij instalację. Przejdź do innej zakładki i wróć; po zakończeniu wybierz Open Avatars.",
+        "Prześlij własny neutralny portret i krótkie nagranie WAV. Wygeneruj awatara i sprawdź wynik w Library."
+      ],
+      "expected": [
+        "Gotowość oznacza pełne środowisko bez ręcznego wskazywania Pythona lub modeli. Wynik obejmuje całe nagranie, ma prawidłowy czas i zachowaną historię; profil nie udaje natywnego HD."
+      ],
+      "resources": "Około 11 GiB danych; CPU 4 GiB podczas instalacji, generacja GPU i 18 GiB RAM",
+      "minutes": 25
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-127",
+      "title": "Awatary: Stop i Resume instalacji",
+      "prerequisites": [
+        "Aktywna własna instalacja z SETUP-126."
+      ],
+      "steps": [
+        "Kliknij Stop avatar setup podczas przygotowania zależności; odśwież widok.",
+        "Wznów to samo zadanie i sprawdź zakończenie oraz historię obu prób."
+      ],
+      "expected": [
+        "Anulowanie zatrzymuje tylko własny proces; niekompletne środowisko nie staje się gotowe. Resume korzysta ze zweryfikowanych plików, zachowuje receptę i nie ukrywa poprzedniej próby."
+      ],
+      "resources": "CPU 4 GiB bez swapu; bez generowania GPU",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-128",
+      "title": "Awatary: całe nagranie, historia i podgląd",
+      "prerequisites": [
+        "Gotowy Sonic, własny neutralny portret i nagranie."
+      ],
+      "steps": [
+        "Wygeneruj awatara dla krótkiego nagrania, przejdź do innej zakładki i wróć.",
+        "Odtwórz i przewiń cały wynik w Library; sprawdź źródłowy portret i nagranie.",
+        "Dla oceny długiej animacji wybierz własne dłuższe nagranie i sprawdź również końcówkę głosu, twarz oraz oczy."
+      ],
+      "expected": [
+        "Jedno zadanie animuje całe nagranie. Liczba klatek i dźwięk obejmują końcówkę; historia i źródła pozostają po odświeżeniu. Jakość twarzy i synchronizację ocenia operator; sam sukces Run nie oznacza akceptacji jakości."
+      ],
+      "resources": "Jedno lub dwa GPU i 18 GiB RAM; długie nagranie może renderować się godzinami",
+      "minutes": 120
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-129",
+      "title": "Awatary: odzyskanie procesu i anulowanie",
+      "prerequisites": [
+        "Wydzielony Runner QA; własny awatar w trakcie generowania."
+      ],
+      "steps": [
+        "Zrestartuj tylko Runner QA i otwórz ten sam Run.",
+        "Kliknij Stop; sprawdź proces, rezerwacje GPU/RAM i brak niepełnego filmu w Library."
+      ],
+      "expected": [
+        "Wznowienie obserwacji dołącza do tego samego procesu. Stop kończy wyłącznie własne wykonanie i zwalnia zasoby po potwierdzeniu; brak częściowego wyniku."
+      ],
+      "resources": "GPU i 18 GiB RAM; restart wyłącznie wydzielonego Runnera",
+      "minutes": 10
+    },
+    {
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "id": "SETUP-130",
+      "title": "Awatary: prywatność, telefon i zachowanie konfiguracji",
+      "prerequisites": [
+        "Administrator A, członek B; dodatkowy profil z istniejącym Sonic/Echo."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość, brak historii instalacji A i brak dostępu do linków A do Run, zadania oraz pliku. Spróbuj rozpocząć instalację.",
+        "Otwórz kartę i wynik na telefonie. Sprawdź komunikaty dla niezgodnego sprzętu.",
+        "W osobnym profilu potwierdź pierwszeństwo jawnych ustawień Sonic, również niepełnych. Sprawdź, że instalacja Sonic nie udaje gotowości Echo."
+      ],
+      "expected": [
+        "Modele i gotowość są wspólne; cudze prompty, źródła, wyniki i identyfikator próby instalacji pozostają prywatne. B nie instaluje bez uprawnień. Widok mieści się na telefonie, a istniejące integracje pozostają zachowane."
+      ],
+      "resources": "Bez nowej generacji/pobierania; konta i oddzielne profile QA",
+      "minutes": 8
+    },
+    {
+      "id": "SETUP-131",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: instalacja i pierwszy wynik",
+      "prerequisites": [
+        "Oddzielny profil QA Linux x86-64; zgodna karta NVIDIA BF16 z co najmniej 8 GiB VRAM, 24 GiB RAM, odpowiedni sterownik i miejsce wskazane przez UI; administrator; własny krótki film z Library."
+      ],
+      "steps": [
+        "W Models wybierz Set up sound effects. Sprawdź rzeczywisty sprzęt, miejsce, źródła oraz osobne warunki MMAudio i Apple CLIP research profile.",
+        "Jeżeli warunki odpowiadają testowi, zaakceptuj je i przygotuj silnik. Po zakończeniu wybierz Open Sound effects.",
+        "Wybierz film z Library, opisz dźwięk i dwie sceny. Wygeneruj i odtwórz WAV oraz wynikowy film na komputerze i telefonie."
+      ],
+      "expected": [
+        "Instalacja nie wymaga ręcznego Pythona ani plików modeli. Wynik obejmuje cały film, zachowuje źródło i historię. Odsłuchaj zgodność opisów/scen; samo poprawne odtwarzanie nie oznacza akceptacji jakości."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-132",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: zatrzymanie i wznowienie instalacji",
+      "prerequisites": [
+        "Dostępny profil MMAudio, konto administratora; instalacja jeszcze nieukończona."
+      ],
+      "steps": [
+        "Uruchom przygotowanie i wybierz Stop sound effects setup. Opuść zakładkę i wróć.",
+        "Wybierz Resume sound effects setup. Sprawdź wcześniejszą próbę i zakończenie nowej."
+      ],
+      "expected": [
+        "Zatrzymanie jest potwierdzone; historia pozostaje w tym samym zadaniu. Zweryfikowane pobrane pliki są używane ponownie. Przerwana próba nie udaje gotowego silnika."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-133",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: anulowanie i odzyskiwanie procesu",
+      "prerequisites": [
+        "Przygotowany profil MMAudio; własny film i trwające generowanie; osobne środowisko QA do restartu Runnera."
+      ],
+      "steps": [
+        "Uruchom dźwięk, sprawdź postęp i odśwież widok. W środowisku QA zrestartuj Runnera i sprawdź to samo zadanie.",
+        "Anuluj zadanie i sprawdź Runs, Library oraz dostępne zasoby."
+      ],
+      "expected": [
+        "Po restarcie odzyskany jest ten sam zarządzany proces; nie pojawia się druga generacja. Stop zwalnia zasoby dopiero po potwierdzeniu zakończenia procesu. Nie ma opublikowanego częściowego dźwięku ani filmu."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-134",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: gotowość współdzielona, wyniki prywatne",
+      "prerequisites": [
+        "Dwa konta A i B; administrator A przygotował silnik i wygenerował dźwięk."
+      ],
+      "steps": [
+        "Na B sprawdź gotowość Sound effects. Sprawdź historię instalacji i bezpośrednie odnośniki do zadań, plików wejściowych i wyników A.",
+        "Jako zwykły użytkownik spróbuj rozpocząć instalację wspólnego silnika."
+      ],
+      "expected": [
+        "B widzi wyłącznie współdzieloną gotowość i własne dane; nie może odczytać historii, promptów, źródeł ani wyników A. Instalacja wymaga administratora. Publiczna gotowość nie ujawnia identyfikatora prywatnej instalacji A."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-135",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Dźwięk filmu: istniejący silnik i eksport bez instalacji wideo",
+      "prerequisites": [
+        "Osobne profile QA: istniejąca jawna konfiguracja MMAudio oraz świeża instalacja tylko Sound effects; własny film."
+      ],
+      "steps": [
+        "Sprawdź zachowanie istniejącego MMAudio po aktualizacji. Niekompletna konfiguracja powinna wskazać problem bez cichego zastąpienia jej.",
+        "W świeżym profilu przygotuj wyłącznie Sound effects i utwórz dźwięk oraz podgląd filmu. Otwórz edytor, zapisz miks i wyeksportuj.",
+        "Na niezgodnym sprzęcie sprawdź komunikat i listę dostępnych GPU."
+      ],
+      "expected": [
+        "Jawna konfiguracja zachowuje pierwszeństwo. Podgląd i eksport używają przygotowanych kodeków bez ręcznego środowiska wideo. Niezgodna karta lub sterownik nie dają fałszywej gotowości."
+      ],
+      "resources": "Około 13.4 GiB pobierania; CPU 4 GiB podczas instalacji i miksowania, generacja GPU oraz 18 GiB RAM",
+      "minutes": 20
+    },
+    {
+      "id": "AUDIO-103",
+      "area": "Audio",
+      "priority": "P1",
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
+      "title": "Fish: próbka głosu z telefonu bez ręcznej konwersji",
+      "prerequisites": [
+        "Gotowy Fish i lokalna transkrypcja; własna próbka M4A, MP3 albo WebM, 5–15 sekund."
+      ],
+      "steps": [
+        "W Audio wybierz Fish. Dodaj próbkę z telefonu i wpisz krótkie zdanie, wybierając kierunek głosu i tempo.",
+        "Uruchom generowanie. Przejdź do innej zakładki, wróć i odtwórz wynik.",
+        "Zleć kolejną wypowiedź z tą samą próbką. Sprawdź pochodzenie próbki i transkrypcji w historii zadania."
+      ],
+      "expected": [
+        "Próbka jest automatycznie transkrybowana i przygotowana lokalnie. W historii twórczej wynikiem jest nowa wypowiedź, a nie przekonwertowana próbka. Oryginał pozostaje dostępny; kolejna wypowiedź może użyć tego samego sprawdzonego WAV i transkrypcji."
+      ],
+      "resources": "Dwa zgodne GPU, 24 GiB dostępnego RAM; bez dodatkowego pobierania przy gotowych silnikach",
+      "minutes": 10
+    },
+    {
+      "id": "AUDIO-104",
+      "area": "Audio",
+      "priority": "P1",
+      "requirements": [
+        "NR-06",
+        "NR-11"
+      ],
+      "title": "Fish: prywatność i odrzucanie niepoprawnej próbki telefonu",
+      "prerequisites": [
+        "Dwa konta A i B; gotowy Fish i lokalna transkrypcja; własna próbka ponad 60 sekund."
+      ],
+      "steps": [
+        "Na A spróbuj użyć ponad 60-sekundowej skompresowanej próbki głosu.",
+        "Na poprawnej krótkiej próbce wykonaj wypowiedź. Na B sprawdź bezpośrednie odnośniki do oryginału, transkrypcji, pochodnego WAV i wyniku A.",
+        "Wybierz Chatterbox i sprawdź, że formularz nadal wymaga próbki WAV."
+      ],
+      "expected": [
+        "Zbyt długa próbka zostaje odrzucona po dekodowaniu przed generowaniem Fish. Nie powstaje częściowa wypowiedź. B nie odczytuje żadnego z prywatnych plików A. Obsługa WAV i dotychczasowe ustawienia Chatterbox pozostają zachowane."
+      ],
+      "resources": "Dwa zgodne GPU i 24 GiB dostępnego RAM dla poprawnej wypowiedzi; transkrypcja CPU",
+      "minutes": 10
+    },
+    {
+      "id": "SETUP-136",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Fish: kompletna instalacja głosu i transkrypcji",
+      "prerequisites": [
+        "Świeży profil QA bez jawnej konfiguracji Fish ani Whisper; konto administratora i zgodna para GPU."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models → Expressive voice. Sprawdź wymagania sprzętowe, rozmiar i odnośniki do licencji.",
+        "Zaakceptuj licencje i rozpocznij instalację. Zatrzymaj ją podczas pobierania lub przygotowania silnika, następnie wybierz Resume.",
+        "Poczekaj na rzeczywistą gotowość i wybierz Open expressive speech."
+      ],
+      "expected": [
+        "Przygotowane są oba niezależne silniki: Fish oraz transkrypcja CPU. Nie trzeba wpisywać ścieżek, instalować pakietów ani ręcznie przepisywać nagrania. Resume zachowuje zadanie i sprawdzone pliki. Link otwiera Audio z wybranym Fish."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-137",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-01",
+        "NR-06",
+        "NR-14"
+      ],
+      "title": "Fish: pierwsza wypowiedź z próbką telefonu",
+      "prerequisites": [
+        "Gotowy profil Expressive voice; własne krótkie nagranie M4A, MP3 albo WebM."
+      ],
+      "steps": [
+        "Wgraj nagranie telefonu, wpisz krótki tekst i wybierz kierunek głosu oraz tempo.",
+        "Uruchom generowanie, przejdź do innej zakładki i wróć do tej samej historii.",
+        "Odtwórz wynik; sprawdź ostatnie zdanie oraz pochodzenie oryginału, transkrypcji i przygotowanego WAV."
+      ],
+      "expected": [
+        "Lokalna transkrypcja i konwersja odbywają się automatycznie. Historia pokazuje wygenerowaną wypowiedź, a nie próbkę przygotowawczą. Cały wynik jest odtwarzalny i pozostaje po odświeżeniu. Ocenę emocji i wierności głosu zapisz osobno w AUDIO-101."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-138",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-01",
+        "NR-14"
+      ],
+      "title": "Fish: Stop, ponowne otwarcie historii i zachowanie poprzedniego wyniku",
+      "prerequisites": [
+        "Ukończona wypowiedź we własnym zapisanym workspace Speech."
+      ],
+      "steps": [
+        "Zleć kolejną wypowiedź w tym samym workspace. Odśwież stronę w trakcie przygotowania modelu.",
+        "Zatrzymaj zadanie z historii, poczekaj na potwierdzenie i ponownie otwórz workspace.",
+        "Sprawdź poprzedni wynik, status zatrzymanej wersji i brak częściowej nowej wypowiedzi."
+      ],
+      "expected": [
+        "Odświeżenie nie tworzy drugiej generacji. Stop kończy wyłącznie własne zadanie; wcześniejszy wynik nadal działa, a zatrzymane zadanie nie udaje ukończonego. Rezerwacje zasobów zostają zwolnione po potwierdzeniu zakończenia."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-139",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-11",
+        "NR-14"
+      ],
+      "title": "Fish: wspólny silnik i prywatne próbki, transkrypcje oraz wyniki",
+      "prerequisites": [
+        "Administrator A przygotował profil i wypowiedź; zwykłe konto B."
+      ],
+      "steps": [
+        "Na B otwórz Models i Audio. Sprawdź dostępność Fish bez ponownej instalacji.",
+        "Na B spróbuj otworzyć odnośniki A do historii instalacji, workspace, Run, oryginału, transkrypcji, pochodnego WAV i wyniku.",
+        "Sprawdź możliwość rozpoczęcia instalacji silnika na B."
+      ],
+      "expected": [
+        "Gotowość modelu jest wspólna. Żadne prywatne zadanie, nagranie, tekst, log ani wynik A nie jest dostępne dla B. Instalacja wymaga administratora."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-140",
+      "area": "Konfiguracja modeli",
+      "priority": "P1",
+      "requirements": [
+        "NR-06",
+        "NR-14"
+      ],
+      "title": "Fish: dotychczasowy głos i zajęta pamięć GPU",
+      "prerequisites": [
+        "Istniejąca konfiguracja Chatterbox; gotowy Fish. Opcjonalnie inne aktywne obciążenie GPU."
+      ],
+      "steps": [
+        "Po aktualizacji sprawdź dotychczasowy model i próbkę głosu w Audio.",
+        "Otwórz Fish z prowadzonej instalacji, następnie świadomie zmień model na Chatterbox i odśwież stronę.",
+        "Przy zajętych GPU zleć Fish; sprawdź oczekiwanie na zasoby i możliwość Stop. Jeśli pamięć zmieni się już podczas ładowania, zapisz widoczny komunikat."
+      ],
+      "expected": [
+        "Istniejąca konfiguracja nie jest zastępowana. Wybór użytkownika ma pierwszeństwo przed wcześniejszym linkiem instalatora. Zadanie nie zatrzymuje obcych programów; oczekuje na zasoby albo informuje o zmianie dostępnej pamięci. Nie publikuje częściowej wypowiedzi."
+      ],
+      "resources": "Około 13.8 GiB plików; dwie zgodne karty GPU (10 + 5 GiB VRAM), 24 GiB dostępnego RAM dla generowania; instalacja 4 GiB bez swap",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-141",
+      "area": "Instalacja modeli",
+      "title": "Model 27B: precyzja i długi kontekst",
+      "priority": "P1",
+      "prerequisites": [
+        "Wspierana stacja NVIDIA; administrator; zgodne GPU i wolna pamięć; przygotowany silnik llama.cpp."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models → Explore larger models i wyszukaj 27B.",
+        "Porównaj Q4_K_M i IQ2_XS: rozmiary, źródła, licencję, wymagane GPU i proponowany kontekst.",
+        "Przygotuj wybrany wariant, otwórz Chat i wyślij neutralne pytanie.",
+        "Sprawdź rzeczywiście załadowany kontekst i zatrzymaj wyłącznie ten silnik."
+      ],
+      "expected": [
+        "Oba warianty mają oddzielne źródła/hash i widoczną informację o kompromisie precyzji IQ2.",
+        "Dobór pamięci uwzględnia KV i stan hybrydowy; kontekst nie jest obietnicą pełnej długości modelu na każdej karcie.",
+        "Na kwalifikowanej parze 12-GiB profil IQ2 dobiera 131072, a Q4 92160 tokenów; na innym sprzęcie wartości wynikają z zasobów.",
+        "Chat odpowiada z wybranym modelem, historia pozostaje prywatna, Stop zwalnia jego zasoby."
+      ],
+      "resources": "GPU · lokalna inferencja; duże wagi, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-142",
+      "area": "Instalacja modeli",
+      "title": "Wznowienie starszego pobrania po poszerzeniu katalogu",
+      "priority": "P1",
+      "prerequisites": [
+        "Zachowane zatrzymane pobranie jednego ze wcześniejszych profili 4B/8B/14B; aktualizacja zachowująca dane."
+      ],
+      "steps": [
+        "Otwórz zapisane przygotowanie wcześniejszego modelu po aktualizacji.",
+        "Porównaj wybrany model, kwantyzację i zapisane źródło.",
+        "Wznów to samo zadanie; sprawdź wynik i poprzednią historię."
+      ],
+      "expected": [
+        "Nowe pola profili 27B nie zmieniają tożsamości wcześniejszych sześciu manifestów.",
+        "Resume zachowuje to samo zadanie i wybrane wagi; nie przełącza modelu ani źródła na nową propozycję.",
+        "Poprzednie dane, modele i historia pozostają dostępne."
+      ],
+      "resources": "CPU/sieć · pobranie wag tylko po świadomym wznowieniu",
+      "minutes": 5,
+      "requirements": [
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-143",
+      "area": "Instalacja modeli",
+      "title": "Mały model CPU: pierwsza rozmowa bez GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Osobna stacja Linux x86-64 bez NVIDIA albo izolowany profil QA z rzeczywiście wyłączonym dostępem do GPU; administrator, co najmniej 7 GiB RAM."
+      ],
+      "steps": [
+        "Otwórz Models → Set up models i sprawdź propozycję CPU, źródło, licencję oraz wymagane miejsce i pamięć.",
+        "Przygotuj silnik i model Q4, następnie wybierz Open Chat with this model i wyślij neutralne pytanie.",
+        "Odśwież Chat i sprawdź zachowaną odpowiedź na komputerze i telefonie."
+      ],
+      "expected": [
+        "Model CPU jest opisany jako wolniejszy i korzystający z RAM. Kontekst wynosi 4096; GPU ani chmura nie są używane.",
+        "Zwykły Chat odpowiada z wybranym modelem; rozmowa i wynik zostają zachowane."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-144",
+      "area": "Instalacja modeli",
+      "title": "CPU: Stop, Resume i zachowanie RAM",
+      "priority": "P1",
+      "prerequisites": [
+        "Gotowy model CPU; oddzielny profil QA."
+      ],
+      "steps": [
+        "Zatrzymaj własne przygotowanie silnika/modelu i wznów to samo zadanie z historii.",
+        "Uruchom rozmowę i podczas gotowości zrestartuj wyłącznie testowy Host Runner.",
+        "Zatrzymaj wybrany model i sprawdź zwolnienie jego rezerwacji pamięci."
+      ],
+      "expected": [
+        "Resume zachowuje wybrane źródło i historię; nie tworzy nowej instalacji bez polecenia.",
+        "Powrót Runnera rozpoznaje ten sam kontener; nie uruchamia modelu drugi raz. RAM pozostaje zarezerwowany do potwierdzenia Stop; kontener nie korzysta ze swapu."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-145",
+      "area": "Instalacja modeli",
+      "title": "CPU: prywatne historie i zachowane wcześniejsze modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Konta administratora A i użytkownika B; przygotowany CPU; istniejące modele GPU lub zewnętrzne, jeśli były skonfigurowane."
+      ],
+      "steps": [
+        "Na B sprawdź wspólną gotowość modelu i spróbuj otworzyć odnośniki A do instalacji, rozmowy, Run i pliku potwierdzenia.",
+        "Spróbuj zainstalować silnik/model na B.",
+        "Sprawdź stare modele i zapisane wcześniej pobrania. Przy konflikcie z istniejącym presetem sprawdź komunikat."
+      ],
+      "expected": [
+        "Gotowość modelu jest wspólna, prywatne dane A pozostają niedostępne. Instalacja wymaga administratora.",
+        "Dotychczasowe modele, presety i tożsamości ośmiu wcześniejszych manifestów są zachowane. Konflikt nie nadpisuje konfiguracji ani nie przełącza GPU na CPU automatycznie."
+      ],
+      "resources": "CPU/RAM · około 2.33 GiB wag i 295 MiB silnika, jeżeli nie są przygotowane",
+      "minutes": 10,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    },
+    {
+      "id": "SETUP-146",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Pierwszy start Linux: zgoda na Docker i anulowanie",
+      "prerequisites": [
+        "Osobna nowa instalacja pakietu Debian na wspieranym Ubuntu; zwykłe konto bez dostępu do lokalnego Dockera. Nie zmieniaj uprawnień swojej działającej stacji do tego testu."
+      ],
+      "steps": [
+        "Zainstaluj paczkę przez menedżer systemowy i otwórz AI Station z menu aplikacji.",
+        "Przeczytaj zakres dostępu i kliknij Cancel; sprawdź, że nic nie zostało uruchomione.",
+        "Otwórz ponownie, wybierz autoryzację i anuluj okno systemowe.",
+        "Powtórz i potwierdź autoryzację w oknie systemowym."
+      ],
+      "expected": [
+        "Odmowa w obu oknach nie zmienia dostępu konta. Hasło przyjmuje system operacyjny, nie AI Station.",
+        "Zgoda nadaje dostęp tylko bieżącemu kontu i prowadzi dalej do zwykłej konfiguracji; aplikacja i Host Runner działają bez roota.",
+        "Na już działającym Dockerze lub po wcześniejszej zgodzie dodatkowe uwierzytelnienie nie pojawia się."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 12
+    },
+    {
+      "id": "SETUP-147",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Linux: aktualizacja działającej instalacji i zachowane dane",
+      "prerequisites": [
+        "Działająca instalacja pakietowa; własna rozmowa, pamięć i pliki; odrębna nowsza paczka."
+      ],
+      "steps": [
+        "Zapisz rozmowę i wpis pamięci. W trakcie pracy aplikacji zainstaluj nowszą paczkę normalnym menedżerem systemowym.",
+        "Otwórz ikonę ponownie i sprawdź, że uruchomiona sesja nadal działa bez duplikatu usług.",
+        "Zatrzymaj AI Station przyciskiem, otwórz nową wersję i sprawdź konto, historię, pamięć, Library oraz modele."
+      ],
+      "expected": [
+        "Nowsza paczka ma prawidłową kolejność wersji i nie wymaga wymuszonego downgrade.",
+        "Instalacja plików nie usuwa kodu aktywnej sesji; restart następuje dopiero po świadomym Stop/otwarciu.",
+        "Dane oraz sesja przeglądarki pozostają dostępne, bez ponownego pytania o wcześniej nadane uprawnienia Dockera."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-148",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Linux: usunięcie i ponowna instalacja z zachowaniem danych",
+      "prerequisites": [
+        "Osobna kwalifikowana instalacja pakietowa z zakończoną rozmową i plikami."
+      ],
+      "steps": [
+        "Zatrzymaj aplikację i usuń sam pakiet przez menedżer systemowy, bez zaznaczania osobnego kasowania danych.",
+        "Zainstaluj ponownie tę samą lub nowszą wersję i otwórz AI Station.",
+        "Sprawdź zachowane konto, rozmowę, pamięć, pliki Library, modele i historię zadań."
+      ],
+      "expected": [
+        "Odinstalowanie usuwa pliki programu i wpis menu; nie usuwa prywatnego katalogu, modeli, historii ani obcych zasobów Dockera.",
+        "Ponowna instalacja korzysta z istniejących danych. Nie żąda tworzenia nowego administratora ani pobierania tych samych zweryfikowanych wag."
+      ],
+      "resources": "Osobne Ubuntu Linux x86-64; zwykłe konto; 8 GiB RAM dla pierwszego modelu CPU; sieć do świadomych pobrań",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-149",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: osobne WSL i przerwana konfiguracja",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Na osobnym Windows 11 x64 otwórz instalator. Przeczytaj wymagania i anuluj zgodę na brakujące WSL.",
+        "Po osobnej zgodzie systemowej przygotuj WSL, ponów instalację i przerwij tworzenie środowiska AI Station. Otwórz ponownie.",
+        "Jeśli Windows wymaga restartu, sprawdź widoczny komunikat, zapisz pozostałą pracę i uruchom Windows ponownie przed dalszą konfiguracją."
+      ],
+      "expected": [
+        "Odmowa nie zmienia funkcji Windows, sterowników ani istniejących dystrybucji.",
+        "Wznowienie rozpoznaje wyłącznie własną instalację; kolizja z obcą dystrybucją nie powoduje jej przejęcia ani usunięcia.",
+        "Wymagany restart nie jest ukrywany przez automatyczne odświeżenie statusu. Aplikacja nie restartuje komputera samodzielnie i nie odblokowuje Start bez ponownego potwierdzenia gotowości."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-150",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: pierwszy model i odpowiedź w przeglądarce",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Utwórz pierwsze konto, wybierz pasujący profil CPU i zatwierdź widoczne pobieranie silnika oraz modelu.",
+        "Wyślij wiadomość w przeglądarce Windows i odśwież rozmowę."
+      ],
+      "expected": [
+        "Pobranie jest jawne, weryfikowane i zachowane; odpowiedź pochodzi z wybranego lokalnego modelu.",
+        "Adres jest dostępny z Windows przez loopback, a nie z obcego hosta. Klucz konfiguracji nie trafia do zwykłych logów."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-151",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: tło, ponowne otwarcie i bezpieczny Stop",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "W czasie pracy zamknij okno sterowania, otwórz ikonę ponownie i wróć do tej samej rozmowy.",
+        "Wybierz Stop i sprawdź, że inne dystrybucje WSL i programy pracują dalej."
+      ],
+      "expected": [
+        "Jedna instalacja ma jednego właściciela; zamknięcie okna nie zatrzymuje generacji.",
+        "Stop dotyczy tylko własnej stacji, bez globalnego zamykania WSL i utraty danych."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 10
+    },
+    {
+      "id": "SETUP-152",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: aktualizacja i reinstalacja z zachowaniem danych",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Zapisz rozmowę, plik i pamięć. W czasie pracy spróbuj otworzyć instalator nowszej wersji; zapisz, czy wymaga najpierw bezpiecznego zakończenia pracy.",
+        "Dokończ zadania, użyj Stop i zamknij stare okno sterowania. Zainstaluj nową wersję, otwórz jej okno i wybierz Update AI Station.",
+        "Po zakończeniu sprawdź poprzednie konto, rozmowę, Library, pamięć i pobrany model. Usuń sam program bez kasowania danych i zainstaluj go ponownie."
+      ],
+      "expected": [
+        "Aktualizacja nie przerywa pracy. Jeśli instalator wymaga zamknięcia starego okna, pokazuje ten warunek i zachowuje zadania oraz kod. Nie tworzy drugiej dystrybucji WSL.",
+        "Nowa wersja jawnie proponuje Update. Po nieudanej lub przerwanej próbie Start pozostaje niedostępny do czasu poprawnego sprawdzenia; Status i Stop zachowują swój zakres.",
+        "Konto, sesja, modele, historia, Library i pamięć pozostają zachowane; naturalne wygaśnięcie sesji może wymagać ponownego logowania. Usunięcie danych wymaga osobnej jawnej decyzji."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 20
+    },
+    {
+      "id": "SETUP-153",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "Windows: rzeczywiste miejsce na modele i odświeżanie w tle",
+      "prerequisites": [
+        "Osobny Windows 11 x64 i zbudowany instalator po kwalifikacji platformowej. Te przypadki są planowane; prototyp obrazu WSL nie oznacza ukończonego instalatora."
+      ],
+      "steps": [
+        "Uruchom stację i otwórz wybór modeli do pobrania. Porównaj pokazywane wolne miejsce z właściwościami dysku Windows, na którym znajduje się instalacja. Nie zmieniaj plików WSL ani nie zapełniaj dysku celowo.",
+        "Schowaj okno sterowania AI Station, odczekaj minutę, wróć do wyboru modeli i odśwież widok.",
+        "Jeżeli katalog zawiera model większy niż wolne miejsce, sprawdź odmowę pobrania. Pomiń ten krok z opisem, jeśli każdy dostępny model się mieści.",
+        "Sprawdź otwieranie aplikacji i Stop z okna sterowania; zapisz każde ostrzeżenie o miejscu lub odświeżeniu."
+      ],
+      "expected": [
+        "Wolne miejsce odpowiada rzeczywistemu dyskowi Windows, z zapasem bezpieczeństwa i naturalnymi różnicami pomiaru; nie pokazuje zawyżonej pojemności wirtualnego dysku WSL.",
+        "Schowanie okna zachowuje działanie stacji i aktualny pomiar. Nie pojawia się bez powodu komunikat o utraconym pomiarze.",
+        "Za mało miejsca blokuje nowe pobranie bez usuwania modeli, danych ani plików częściowych. Nie trzeba celowo pobierać dużego modelu, aby zaliczyć pozostałe kroki.",
+        "Ostrzeżenie o pomiarze miejsca nie odbiera dostępu do otwierania stacji ani Stop."
+      ],
+      "resources": "Osobny Windows 11 x64; 16 GiB RAM dla przetestowanego profilu CPU 4B przy domyślnym limicie pamięci WSL; sieć do świadomych pobrań; zwykłe konto Windows. Mniejsze konfiguracje wymagają osobnego pasującego profilu, nie zakładaj jego dostępności.",
+      "minutes": 5
+    },
+    {
+      "id": "SETUP-154",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13"
+      ],
+      "title": "Windows: powiększenie okna i obsługa klawiaturą",
+      "prerequisites": [
+        "Osobny Windows 11 x64 z kwalifikowanym instalatorem. Zapisz początkowe ustawienie powiększenia ekranu. Nie zmieniaj sterowników ani ustawień innych aplikacji."
+      ],
+      "steps": [
+        "Otwórz okno sterowania AI Station. Klawiszami Tab i Shift+Tab przejdź po dostępnych działaniach; sprawdź widoczny fokus i pomijanie wyłączonych przycisków. Samo przechodzenie nie powinno niczego uruchamiać.",
+        "W ustawieniach ekranu Windows wybierz dostępne standardowe powiększenia, np. 100%, 125%, 150% lub 200%. Zapisz rzeczywiście dostępne i sprawdzone wartości; niedostępnych nie oznaczaj jako zaliczone.",
+        "Sprawdź czytelność nagłówka, opisów, przycisków i linków. Jeśli korzystasz z czytnika ekranu, zapisz oddzielnie jego nazwę i wynik.",
+        "Przywróć początkowe powiększenie. Zakończ okno normalnie przez menu zasobnika; nie wymuszaj zamknięcia procesu."
+      ],
+      "expected": [
+        "Każde dostępne działanie jest osiągalne z klawiatury, z widocznym fokusem; niedostępne działania są pomijane. Tab nie uruchamia przygotowania ani stacji.",
+        "Przy faktycznie sprawdzonym powiększeniu wszystkie działania pozostają dostępne, a opisy są czytelne. Niedostępne wartości oraz brak próby czytnika ekranu pozostają jawnie nieprzetestowane.",
+        "Początkowe ustawienie ekranu zostaje przywrócone. Rozmowy, modele i dane pozostają zachowane."
+      ],
+      "resources": "Osobny Windows 11 x64; klawiatura; opcjonalny czytnik ekranu. Bez nowych pobrań modeli lub generowania.",
+      "minutes": 5
+    },
+    {
+      "id": "VOICE-001",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06"
+      ],
+      "title": "Fish: wyraźny szept bez nagrania",
+      "steps": [
+        "Otwórz Audio → Speech, wybierz Fish i Generate a voice. Wpisz krótki polski tekst i wybierz Whisper.",
+        "Wygeneruj nagranie, odsłuchaj całość i porównaj ze stylem Natural. Zapisz jakość szeptu, kompletność słów oraz szumy."
+      ],
+      "expected": [
+        "Nagranie referencyjne nie jest wymagane; nie powstaje jego transkrypcja.",
+        "Wynik trafia do Library z informacją o wygenerowanym głosie. Nie obiecuje podobieństwa do konkretnej osoby. Ocena słyszalnej ekspresji pozostaje wynikiem tego testu."
+      ]
+    },
+    {
+      "id": "VOICE-002",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
+      "title": "Wybór głosu i historia wariantów",
+      "steps": [
+        "Utwórz wypowiedź Fish z Use a recording i własnym nagraniem. Opuść zakładkę, wróć i odśwież.",
+        "W tym samym workspace jawnie wybierz Generate a voice i utwórz kolejny wariant. Ponownie otwórz obie wersje."
+      ],
+      "expected": [
+        "Źródło głosu i ustawienia pozostają zapisane; tryb nagrania nie jest samoczynnie zmieniany.",
+        "Nowy wariant nie wykorzystuje nagrania jako źródła; starszy wariant zachowuje nagranie i historię. Pochodzenie tekstu agenta może pozostać odrębną relacją."
+      ]
+    },
+    {
+      "id": "VOICE-003",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06",
+        "NR-11"
+      ],
+      "title": "Agent z wygenerowanym głosem i prywatnym wynikiem",
+      "steps": [
+        "W definicji agenta wybierz mowę Fish, Generate a voice i tekst wypowiedzi. Sprawdź ustawienia i aktywuj agenta.",
+        "Uruchom agenta, obejrzyj powiadomienie, historię i nagranie. Z drugiego zwykłego konta spróbuj otworzyć zapisany link do wyniku."
+      ],
+      "expected": [
+        "Agent nie wymaga fikcyjnego nagrania i kończy się rzeczywistym wynikiem audio.",
+        "Powiadomienie prowadzi do właściwego wyniku. Drugie konto nie ma dostępu do nagrania, historii ani tekstu pierwszego użytkownika."
+      ]
+    },
+    {
+      "id": "VOICE-004",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro i jego kwalifikowany profil dwóch GPU. Korzystaj z własnego albo syntetycznego nagrania; nie podszywaj się pod inną osobę."
+      ],
+      "resources": "Lokalna generacja na dwóch GPU. Bez chmury i nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-06"
+      ],
+      "title": "Stop mowy Fish bez nagrania",
+      "steps": [
+        "Uruchom dłuższą wypowiedź z Generate a voice. Zatrzymaj ją w trakcie ładowania lub generacji.",
+        "Sprawdź końcowy status Run, Library i stan GPU. Uruchom następnie krótką nową wypowiedź."
+      ],
+      "expected": [
+        "Zatrzymywany jest wyłącznie proces tego Run; nie jest publikowany niedokończony WAV.",
+        "Zasoby zostają zwolnione, pozostałe modele i zadania zachowują swój stan, a nowa wypowiedź może zostać uruchomiona."
+      ]
+    },
+    {
+      "id": "VOICE-005",
+      "area": "Mowa i głos",
+      "priority": "P1",
+      "prerequisites": [
+        "Przygotowany Fish S2 Pro; użyj krótkiej własnej lub syntetycznej wypowiedzi."
+      ],
+      "resources": "Trzy lokalne generacje na kwalifikowanym profilu dwóch GPU; bez nowych pobrań.",
+      "minutes": 8,
+      "requirements": [
+        "NR-01",
+        "NR-06"
+      ],
+      "title": "Tempo mowy bez zmiany wysokości głosu",
+      "steps": [
+        "W Audio → Speech wybierz Fish, Generate a voice i kierunek Natural. Wygeneruj ten sam tekst kolejno z Speaking pace: Natural, Slower i Faster.",
+        "Porównaj długości w odtwarzaczu i odsłuchaj całe nagrania. Opuść zakładkę, wróć i otwórz zapisane warianty."
+      ],
+      "expected": [
+        "Slower trwa około 25% dłużej, a Faster około 20% krócej od Natural dla tego samego tekstu i kierunku. Brak uciętych słów, zmiany wysokości głosu lub wyraźnych nowych zniekształceń.",
+        "Historia zachowuje trzy wyniki i ich ustawienia. Zapisz słyszalne pogorszenie jakości jako wynik testu; samo zakończenie Run nie oznacza akceptacji jakości."
+      ]
+    },
+    {
+      "id": "SETUP-159",
+      "area": "Instalacja aplikacji",
+      "priority": "P0",
+      "requirements": [
+        "NR-13"
+      ],
+      "title": "Linux/Windows: ponowne otwarcie stacji po restarcie systemu",
+      "prerequisites": [
+        "Nowy instalator z obsługą zapisanej własności kontenerów; gotowe konto administratora i zapisana jednorazowa rozmowa QA. Użyj oddzielnej instalacji testowej, najlepiej maszyny wirtualnej; zapisz pozostałą pracę przed restartem systemu. Nie wykonuj restartu docelowej stacji, gdy trwa ważne zadanie."
+      ],
+      "steps": [
+        "Zaloguj się z Keep me logged in. Zapisz krótką rozmowę QA i zakończ wszystkie zadania. Pozostaw AI Station uruchomione, bez aktywnego generowania ani pobierania.",
+        "Uruchom ponownie system zwykłą opcją Restart. Nie wymuszaj wyłączenia i nie używaj narzędzi Docker ani poleceń terminala.",
+        "Po zalogowaniu otwórz ikonę AI Station, a w Windows wybierz Start. Zaczekaj na gotowość i otwórz aplikację przyciskiem Open app; użyj adresu otwartego przez instalator.",
+        "Sprawdź zachowaną rozmowę, Library i zainstalowane modele. Użyj zwykłego Stop i otwórz stację ponownie. Zapisz komunikaty i czas oczekiwania."
+      ],
+      "expected": [
+        "Stacja odzyskuje własne poprzednie kontenery i otwiera jedną gotową instalację. Nie wymaga ręcznego czyszczenia Dockera ani ponownej instalacji.",
+        "Zachowane są konto, rozmowa, dane Library i modele; nie rozpoczyna się ponowne pobieranie wag. Przerwane wcześniej operacje nie są uruchamiane ponownie bez kontroli.",
+        "Stop i kolejny Start działają. AI Station nie usuwa wolumenów ani danych i nie przejmuje kontenerów innych aplikacji. Nie zmieniaj ręcznie prywatnych plików instalacji, aby zaliczyć próbę."
+      ],
+      "resources": "Osobna instalacja Linux x86-64 lub Windows 11 x64, bez aktywnych zadań. Sam test nie uruchamia modelu, nie wymaga GPU i nie pobiera wag. Restart dotyczy wyłącznie wybranego systemu testowego.",
+      "minutes": 6
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-160",
+      "title": "Linux: działający dostęp NVIDIA nie wymaga ponownej konfiguracji",
+      "prerequisites": [
+        "Nowy pakiet z kwalifikowaną obsługą Graphics setup; działający sterownik NVIDIA i NVIDIA Container Toolkit dla używanego silnika Docker."
+      ],
+      "steps": [
+        "Otwórz AI Station z ikony aplikacji i zaczekaj na stronę startową.",
+        "Otwórz wybór modeli i System. Sprawdź widoczne rzeczywiste GPU oraz sugestie pasujących modeli. Niczego nie pobieraj dla samego tego kroku."
+      ],
+      "expected": [
+        "Nie pojawia się prośba o uprawnienia administratora do ponownej instalacji narzędzi GPU. Sprawdzenie nie pobiera modeli ani nie rozpoczyna generowania.",
+        "Fizyczne GPU są nadal widoczne, pasujące profile GPU nie są blokowane fałszywą informacją o braku pamięci. Inne aplikacje i kontenery działają dalej."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-161",
+      "title": "Linux: anulowanie konfiguracji grafiki i świadomy wybór CPU",
+      "prerequisites": [
+        "Nowy kwalifikowany instalator, działający sterownik NVIDIA, systemowy Docker i brak przygotowanego NVIDIA Container Toolkit. Osobny system testowy; nie usuwaj narzędzi z działającej stacji, żeby wykonać próbę."
+      ],
+      "steps": [
+        "Otwórz AI Station. Zamknij propozycję Enable GPU features. Otwórz aplikację ponownie i wybierz Enable GPU features, ale anuluj okno autoryzacji systemowej.",
+        "Otwórz aplikację ponownie i wybierz Use CPU for now. Sprawdź wybór modeli oraz System.",
+        "Zamknij stację jej własnym Stop i otwórz ponownie. Otwórz też Graphics setup w kontrolkach ikony aplikacji."
+      ],
+      "expected": [
+        "Zamknięcie i anulowanie autoryzacji nie instalują narzędzi GPU ani nie uruchamiają po cichu zadań. Hasło systemowe jest wpisywane wyłącznie do okna systemu.",
+        "Dopiero świadomy wybór CPU uruchamia stację z propozycjami CPU. Rzeczywiste karty pozostają widoczne; kontenerowe profile GPU nie udają gotowości.",
+        "Wybór CPU jest pamiętany. Graphics setup pozwala wrócić do decyzji; nie trzeba edytować plików ani używać terminala."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-162",
+      "title": "Linux: przygotowanie grafiki, restart i pierwsza odpowiedź na GPU",
+      "prerequisites": [
+        "Osobny Ubuntu 24.04 z kompatybilną kartą NVIDIA, działającym sterownikiem, systemowym Dockerem i kwalifikowanym nowym instalatorem. Brak Toolkit; zapisz pracę przed świadomie wybranym restartem."
+      ],
+      "steps": [
+        "Wybierz Enable GPU features, przeczytaj zakres zmian i zatwierdź autoryzację w oknie systemowym.",
+        "Po przygotowaniu sprawdź komunikat o potrzebie restartu. Możesz wybrać CPU na teraz; nie powinno pojawić się zapewnienie o gotowym GPU przed sprawdzeniem.",
+        "Zapisz pozostałą pracę, zrestartuj system zwykłą opcją Restart i otwórz AI Station. Pobierz świadomie sugerowany mały pasujący model GPU i zadaj krótkie pytanie.",
+        "Zatrzymaj ten model w Models. Sprawdź zachowaną rozmowę i możliwość ponownego otwarcia aplikacji."
+      ],
+      "expected": [
+        "Instalowane są tylko opisane narzędzia kontenerowe. AI Station nie instaluje sterowników/CUDA, nie zatrzymuje cudzych kontenerów i nie restartuje automatycznie Dockera ani komputera.",
+        "Przygotowanie nie jest przedstawione jako gotowość GPU. Po restarcie prawdziwe sprawdzenie CUDA odblokowuje pasujące profile GPU.",
+        "Model daje rzeczywistą odpowiedź na wybranej karcie. Stop zwalnia wyłącznie własne zasoby; konto, rozmowa i pobrane modele pozostają zapisane."
+      ]
+    },
+    {
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "resources": "Osobna instalacja testowa Ubuntu 24.04 x86-64. Nie zmieniaj sterowników ani ustawień innych aplikacji. Zapisz model GPU, RAM i wersję instalatora.",
+      "minutes": 5,
+      "id": "SETUP-163",
+      "title": "Linux: istniejący inny silnik Docker lub brak sterownika",
+      "prerequisites": [
+        "Osobna testowa instalacja z Docker Desktop/rootless/remote albo wykrytą kartą NVIDIA bez działającego sterownika. Nie zmieniaj celowo działającej stacji, żeby utworzyć taki stan."
+      ],
+      "steps": [
+        "Otwórz AI Station i przeczytaj komunikat konfiguracji grafiki. Wybierz CPU na teraz albo zamknij okno.",
+        "Sprawdź zachowanie dotychczasowego silnika i aplikacji. Jeśli administrator później przygotuje poprawny dostęp GPU, otwórz Graphics setup z ikony i sprawdź wynik."
+      ],
+      "expected": [
+        "Wyświetlony jest zrozumiały powód i dalszy krok; nie ma automatycznej zmiany kontekstu Docker, podmiany silnika, instalacji sterowników ani udawanej gotowości.",
+        "CPU pozostaje świadomą opcją. Ponowne sprawdzenie rzeczywiście działającej konfiguracji potrafi potwierdzić GPU bez ponownej instalacji narzędzi."
+      ]
+    },
+    {
+      "id": "CREATIVE-101",
+      "area": "Historia prac kreatywnych",
+      "title": "Images: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil obrazów; neutralny prompt i jednorazowy obraz QA."
+      ],
+      "steps": [
+        "Otwórz Images, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 20,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-102",
+      "area": "Historia prac kreatywnych",
+      "title": "Video: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil wideo; krótka neutralna scena QA; wybierz najkrótszy obsługiwany film."
+      ],
+      "steps": [
+        "Otwórz Video, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 25,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-103",
+      "area": "Historia prac kreatywnych",
+      "title": "Audio → Music: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil muzyki; krótki opis instrumentalny QA."
+      ],
+      "steps": [
+        "Otwórz Audio → Music, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 20,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-104",
+      "area": "Historia prac kreatywnych",
+      "title": "Audio → Speech: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil mowy; tekst: To jest pierwsza próba. To jest ostatnie zdanie."
+      ],
+      "steps": [
+        "Otwórz Audio → Speech, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "CREATIVE-105",
+      "area": "Historia prac kreatywnych",
+      "title": "Avatars: powrót do pracy i kolejny wariant",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany profil awatara; własny dozwolony portret i krótkie nagranie QA."
+      ],
+      "steps": [
+        "Otwórz Avatars, rozpocznij nową pracę i zleć krótki wynik; zapisz adres tej historii.",
+        "W trakcie generowania przejdź do innej zakładki i wróć przez historię; odśwież stronę.",
+        "Po zakończeniu wybierz poprzedni wynik i zleć kolejny wariant z jedną zmianą; zachowaj oba wyniki.",
+        "Zatrzymaj i uruchom ponownie AI Station zwykłymi kontrolkami; otwórz zapisany adres."
+      ],
+      "expected": [
+        "Historia odtwarza tę samą pracę, dane, stan i wynik bez dodatkowego zlecenia po samym powrocie.",
+        "Kolejny wariant zachowuje wybrane źródło i feedback; oba wyniki i ich parametry pozostają dostępne.",
+        "New rozpoczyna odrębną historię; restart nie nadpisuje poprzednich wariantów."
+      ],
+      "resources": "Rzeczywisty skonfigurowany model; GPU/RAM i czas zależne od profilu; dwie krótkie generacje, bez płatnych API",
+      "minutes": 25,
+      "requirements": [
+        "NR-01"
+      ]
+    },
+    {
+      "id": "PROGRESS-101",
+      "area": "Postęp generowania",
+      "title": "Etapy, szacunek czasu i powrót do aktywnej pracy",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj w ramach istniejącej krótkiej generacji CREATIVE; nie zlecaj dodatkowego kosztownego filmu tylko dla paska."
+      ],
+      "steps": [
+        "Podczas jednego z testów CREATIVE obserwuj kolejkę, przygotowanie, generowanie i kończenie; zapisz ID Task/Run.",
+        "Przejdź do innej zakładki, wróć i odśwież; porównaj stan z Runs.",
+        "Jeśli profil wymaga przygotowania promptu lub łączenia segmentów, obserwuj przejścia tych etapów."
+      ],
+      "expected": [
+        "Postęp dotyczy całego zadania; zakończenie przygotowania lub pierwszego segmentu nie oznacza sukcesu całości.",
+        "Procent wynika z pomiaru; przy braku danych widoczny jest etap/nieokreślony postęp, a nie wymyślone 100%.",
+        "Szacunek czasu ma czytelny zakres albo informację o braku danych; powrót nie uruchamia zadania ponownie."
+      ],
+      "resources": "Bez dodatkowej generacji; obserwacja rzeczywistego zadania",
+      "minutes": 5,
+      "requirements": [
+        "NR-02"
+      ]
+    },
+    {
+      "id": "PROGRESS-102",
+      "area": "Postęp generowania",
+      "title": "Stop, błąd i zapisany stan zamiast pozornego sukcesu",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany model; jednorazowa krótka praca QA, nie cudze ani ważne aktywne zadanie."
+      ],
+      "steps": [
+        "Zleć jedno krótkie zadanie QA i użyj Stop podczas przygotowania lub generowania.",
+        "Odśwież historię i otwórz powiązane Runs; następnie użyj jawnego Retry/Resume, jeśli jest dostępne."
+      ],
+      "expected": [
+        "Zatrzymanie/błąd pozostaje czytelne po odświeżeniu; brak końcowego pliku nie jest sukcesem.",
+        "Retry/Resume jest jawną akcją; zachowuje poprzednią próbę i nie dubluje już zakończonej pracy."
+      ],
+      "resources": "Rzeczywisty profil; jedna krótka generacja i ewentualne wznowienie",
+      "minutes": 10,
+      "requirements": [
+        "NR-02"
+      ]
+    },
+    {
+      "id": "IMAGE-101",
+      "area": "Obrazy",
+      "title": "Auto: usunięcie przedmiotu i zmiana pozy",
+      "priority": "P1",
+      "prerequisites": [
+        "Dostępny kwalifikowany Qwen Edit; własny dozwolony portret QA, bez danych wrażliwych."
+      ],
+      "steps": [
+        "Użyj neutralnego własnego obrazu z osobą trzymającą wyraźny przedmiot; zachowaj oryginał.",
+        "W Auto zleć usunięcie przedmiotu; sprawdź wskazany model i rzeczywisty wynik.",
+        "Z tego samego oryginału zleć osobno wyraźną zmianę pozy; porównaj oba wyniki z oryginałem."
+      ],
+      "expected": [
+        "Auto pokazuje wybrany profil odpowiedni do zmiany strukturalnej; źródło i instrukcja są zachowane.",
+        "Przedmiot jest faktycznie usunięty, a poza w drugim wyniku faktycznie zmieniona; samo succeeded nie wystarcza.",
+        "Niepożądane zmiany twarzy/tła i niespełnione instrukcje opisz jako błąd/jakość z konkretnym modelem."
+      ],
+      "resources": "Dwie rzeczywiste krótkie edycje GPU; czas zależy od profilu",
+      "minutes": 25,
+      "requirements": [
+        "NR-03"
+      ]
+    },
+    {
+      "id": "IMAGE-102",
+      "area": "Obrazy",
+      "title": "Jawny wybór LUSTIFY i zapisane domyślne modele",
+      "priority": "P1",
+      "prerequisites": [
+        "Dostępny LUSTIFY; jednorazowy obraz QA. Nie pobieraj alternatywnych wag tylko dla tego przypadku."
+      ],
+      "steps": [
+        "W ustawieniach obrazów wybierz jawnie dostępny LUSTIFY, zamiast Auto; zachowaj wcześniejsze ustawienie.",
+        "Zleć neutralną edycję QA, obejrzyj model/parametry wyniku i otwórz historię ponownie.",
+        "Przywróć wcześniejsze ustawienie."
+      ],
+      "expected": [
+        "Jawny wybór jest honorowany i widoczny w parametrach; aplikacja nie podmienia go po cichu na Qwen.",
+        "Historia pokazuje rzeczywisty użyty profil. Jakość zmiany oceniana jest oddzielnie od respektowania wyboru."
+      ],
+      "resources": "Jedna rzeczywista edycja GPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-03"
+      ]
+    },
+    {
+      "id": "PROMPT-101",
+      "area": "Ulepszanie promptów",
+      "title": "Sam checkbox: ulepszony prompt jest rzeczywiście używany",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny LLM i profil Images; neutralna krótka generacja QA."
+      ],
+      "steps": [
+        "W Images wpisz krótki neutralny prompt, włącz tylko Improve prompt; tłumaczenie pozostaw wyłączone.",
+        "Włącz przegląd przygotowania, uruchom i porównaj oryginał, wynik przygotowania oraz model.",
+        "Zatwierdź prompt i po generacji otwórz szczegóły oraz historię."
+      ],
+      "expected": [
+        "Powstaje lokalne przygotowanie z widocznym oryginałem i tekstem efektywnym, modelem i szablonem.",
+        "Generator używa zatwierdzonego tekstu efektywnego, a nie ponownie oryginału; wyłączenie tłumaczenia nie wyłącza ulepszania.",
+        "Powrót do historii zachowuje oba teksty i wynik; nie ma ukrytego zewnętrznego żądania."
+      ],
+      "resources": "Lokalny LLM oraz jedna generacja GPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-102",
+      "area": "Ulepszanie promptów",
+      "title": "Video, Music i Avatar: opis kontra dokładny tekst",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj przy okazji CREATIVE-102–105; nie dodawaj płatnego API ani długiego filmu."
+      ],
+      "steps": [
+        "Dla używanych w CREATIVE profili włącz Improve prompt, jeśli dany model obsługuje opis.",
+        "Dodaj jedno jawne ograniczenie, np. brak napisów; w muzyce zachowaj własny krótki tekst słów, a w mowie/awatarze dokładny skrypt.",
+        "Porównaj przygotowany opis, słowa/skrypt i parametry faktycznego generatora."
+      ],
+      "expected": [
+        "Opis pasuje do wybranego modelu i zachowuje instrukcję/ograniczenia, a dokładne słowa i skrypt nie są przepisywane.",
+        "Profil bez swobodnego promptu, np. stały Sonic, nie obiecuje ulepszania nieistniejącego wejścia.",
+        "Oceń każdy użyty profil osobno w uwagach; niedostępny profil to Nie dotyczy z wyjaśnieniem, nie OK."
+      ],
+      "resources": "W ramach istniejących generacji CREATIVE; lokalny LLM",
+      "minutes": 10,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-103",
+      "area": "Ulepszanie promptów",
+      "title": "Stop i błąd przygotowania; świadomy wybór oryginału",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny LLM; jednorazowy prompt QA. Nie wyłączaj cudzych runtimów ani sieci całej stacji."
+      ],
+      "steps": [
+        "W nowej krótkiej pracy włącz Improve prompt i użyj Stop podczas lokalnego przygotowania.",
+        "Odśwież historię; sprawdź, czy generator nie wystartował sam.",
+        "Użyj dostępnego ponowienia lub jawnego użycia oryginału; zapisz wybrany wariant."
+      ],
+      "expected": [
+        "Stop obejmuje przygotowanie i dalszą generację; aplikacja nie zleca duplikatu po odświeżeniu.",
+        "Błąd/Stop jest widoczny; użycie oryginału wymaga jawnej akcji i zachowuje pochodzenie próby."
+      ],
+      "resources": "Lokalny LLM; ewentualna jedna krótka generacja po świadomym ponowieniu",
+      "minutes": 10,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "PROMPT-104",
+      "area": "Ulepszanie promptów",
+      "title": "Poprawa wyłączona i zachowanie starej historii",
+      "priority": "P1",
+      "prerequisites": [
+        "Zachowana wcześniejsza praca QA; dostępny model. Można połączyć z CREATIVE."
+      ],
+      "steps": [
+        "Otwórz wcześniejszą pracę bez ulepszania; sprawdź prompt i zapisane ustawienia.",
+        "W nowej krótkiej pracy pozostaw Improve prompt wyłączone i zleć generowanie.",
+        "Otwórz Runs oraz historię obu prac."
+      ],
+      "expected": [
+        "Nie powstaje niezamówione przygotowanie/ulepszenie; generator dostaje oryginał zgodnie z jawnym wyborem tłumaczenia.",
+        "Starsza historia zachowuje swój prompt/wybory i nie otrzymuje po cichu nowej polityki."
+      ],
+      "resources": "Bez dodatkowej generacji, jeśli połączono z CREATIVE",
+      "minutes": 5,
+      "requirements": [
+        "NR-04"
+      ]
+    },
+    {
+      "id": "LIB-101",
+      "area": "Biblioteka",
+      "title": "Zamknięcie zakończonej karty trwałego usuwania",
+      "priority": "P1",
+      "prerequisites": [
+        "Wykonaj przy okazji LIB-005–008 na WYŁĄCZNIE jednorazowych plikach QA; nie opróżniaj prywatnej kolekcji."
+      ],
+      "steps": [
+        "Na jednorazowych plikach QA zakończ jedno trwałe usuwanie; zapisz ID Run.",
+        "Kliknij X na zakończonej karcie; zmień zakładkę, wróć i odśwież.",
+        "Sprawdź historię Run i, jeśli istnieją starsze karty, zachowanie widoku."
+      ],
+      "expected": [
+        "Dokładnie ta karta pozostaje zamknięta; jej miejsca nie zajmuje natychmiast kolejna stara identyczna karta.",
+        "Run i jego wynik nadal istnieją; zamknięcie karty nie anuluje aktywnych zadań.",
+        "Błąd zapisu zamknięcia, jeśli wystąpi, jest widoczny zamiast fałszywego sukcesu."
+      ],
+      "resources": "CPU; nieodwracalne usunięcie wyłącznie przygotowanych plików QA",
+      "minutes": 5,
+      "requirements": [
+        "NR-05"
+      ]
+    },
+    {
+      "id": "ACCOUNT-101",
+      "area": "Konta i prywatność",
+      "title": "Pierwszy administrator, zwykli użytkownicy i ostatni admin",
+      "priority": "P0",
+      "prerequisites": [
+        "Świeża odrębna instalacja QA; nie resetuj produkcyjnej bazy ani kont."
+      ],
+      "steps": [
+        "Na świeżej instalacji utwórz pierwszego administratora; w Settings → Users dodaj dwa zwykłe konta A/B.",
+        "Zaloguj A w prywatnym oknie; sprawdź brak zarządzania użytkownikami.",
+        "Jako administrator sprawdź ochronę wyłączenia/odebrania roli ostatniemu aktywnemu adminowi, bez zatwierdzania ryzykownych zmian."
+      ],
+      "expected": [
+        "Pierwsze konto jest administratorem; A/B mogą się zalogować, ale nie mają kontroli administracyjnych.",
+        "Aplikacja chroni ostatniego aktywnego administratora; hasła nie pojawiają się w zwykłych odpowiedziach/logach."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-102",
+      "area": "Konta i prywatność",
+      "title": "A/B: prywatne dane i odmowa bezpośrednich adresów",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako A utwórz oznaczone QA rozmowę, plik, pracę kreatywną, pamięć i wyłączony szkic agenta; zapisz ich adresy i ID Runs.",
+        "Jako B sprawdź listy, wyszukiwanie, historię, powiadomienia i liczniki; następnie otwórz zapisane adresy A, w tym plik/miniaturę.",
+        "Wróć do A i potwierdź, że jego dane pozostały dostępne."
+      ],
+      "expected": [
+        "B nie widzi ani nie pobiera danych A, promptów, zdarzeń i plików; same ID/adresy nie dają dostępu.",
+        "Wspólne modele i sprzęt pozostają widoczne bez cudzych promptów lub historii.",
+        "To kontrola operatora; pełne testy autoryzacji API są odrębnym dowodem wewnętrznym."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-103",
+      "area": "Konta i prywatność",
+      "title": "Zmiana konta: szkice, cache i ustawienia osobiste",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako A wpisz rozpoznawalny niewysłany szkic w rozmowie i formularzu kreatywnym; ustaw osobisty wybór modelu.",
+        "Wyloguj A i zaloguj B w tym samym oknie; użyj nawigacji i Wstecz, odśwież oraz otwórz Settings/Library/Memory.",
+        "Wyloguj B i wróć do A."
+      ],
+      "expected": [
+        "B nie otrzymuje szkiców, podglądów, wyników ani osobistych ustawień A; stare żądania nie dopisują ich po zmianie konta.",
+        "Prywatne połączenia i dane dostawców nie są ujawniane B; wspólne zasoby nie oznaczają wspólnych danych.",
+        "Powrót do A nie niszczy jego zapisanej historii."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-104",
+      "area": "Konta i prywatność",
+      "title": "Keep me logged in i niezależne sesje urządzeń",
+      "priority": "P1",
+      "prerequisites": [
+        "Jednorazowe konto QA; dwa urządzenia lub oddzielne profile przeglądarki; nie odwołuj sesji właściciela."
+      ],
+      "steps": [
+        "Zaloguj jednorazowe konto QA na dwóch urządzeniach/odrębnych profilach; na pierwszym zaznacz Keep me logged in.",
+        "Zamknij i otwórz przeglądarkę pierwszego urządzenia; sprawdź dostęp i listę sesji w ustawieniach bezpieczeństwa.",
+        "Wyloguj albo odwołaj tylko pierwszą sesję; sprawdź oba urządzenia."
+      ],
+      "expected": [
+        "Jawne zapamiętanie utrzymuje tę sesję po ponownym otwarciu; nie włącza automatycznie zapamiętania innych urządzeń.",
+        "Odwołana sesja traci dostęp, druga pozostaje aktywna; na telefonie kontrolki i komunikaty są czytelne."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-105",
+      "area": "Konta i prywatność",
+      "title": "Opcjonalne 2FA i jednorazowy kod odzyskiwania",
+      "priority": "P0",
+      "prerequisites": [
+        "Jednorazowe konto QA i własny authenticator; nie zmieniaj 2FA właściciela."
+      ],
+      "steps": [
+        "Na jednorazowym koncie QA otwórz Security, potwierdź hasło i skonfiguruj aplikację TOTP; bezpiecznie zachowaj kody odzyskiwania poza raportem.",
+        "Po wylogowaniu sprawdź odmowę błędnego kodu, następnie logowanie poprawnym kodem.",
+        "W odrębnej próbie użyj kodu odzyskiwania; po wylogowaniu sprawdź, że ten sam kod drugi raz nie działa.",
+        "Wyłącz 2FA na tym koncie zgodnie z ekranem, potwierdzając wymagane dane."
+      ],
+      "expected": [
+        "2FA jest opcjonalne i aktywuje się dopiero po potwierdzeniu; błędny/brakujący kod nie daje dostępu.",
+        "Kod odzyskiwania jest jednorazowy; tajny klucz, QR i kody nie trafiają do raportu ani zwykłych logów."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 12,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-106",
+      "area": "Konta i prywatność",
+      "title": "Wyłączenie konta i kontrolowany reset danych logowania",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Zaloguj jednorazowe A; jako admin wyłącz A i sprawdź jego dotychczasową sesję.",
+        "Użyj administracyjnego resetu hasła A z wymaganym potwierdzeniem własnego hasła/2FA; nie umieszczaj haseł w raporcie.",
+        "Włącz konto po poprawnym resecie; sprawdź stare i nowe dane logowania oraz zachowaną prywatną historię."
+      ],
+      "expected": [
+        "Wyłączone konto i odwołane sesje nie mają dostępu; reset jest jawną potwierdzoną operacją administracyjną.",
+        "Stare hasło nie działa, nowe działa po włączeniu; historia nie jest przekazana innemu użytkownikowi ani skasowana."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "ACCOUNT-107",
+      "area": "Konta i prywatność",
+      "title": "Jawny podgląd administratora bez przejęcia uprawnień agenta",
+      "priority": "P0",
+      "prerequisites": [
+        "Osobna instalacja lub zgoda administratora; dwa jednorazowe zwykłe konta QA A/B i prywatne okna przeglądarki. Nie zmieniaj jedynego konta właściciela."
+      ],
+      "steps": [
+        "Jako admin użyj Users → Inspect workspace konta A; obejrzyj rozmowę, plik, Run i pamięć QA.",
+        "Zamknij podgląd i sprawdź własny workspace admina.",
+        "Jako A otwórz wyłączony szkic agenta bez uprawnień sieciowych i sprawdź, że ich nie otrzymał przez sam podgląd admina."
+      ],
+      "expected": [
+        "Podgląd wyraźnie wskazuje konto i jest tylko do odczytu; zwykły użytkownik nie ma tego widoku.",
+        "Własny kontekst admina i definicja/uprawnienia agenta A pozostają odrębne; podgląd nie uruchamia zadania."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "NR-11"
+      ]
+    },
+    {
+      "id": "WEB-009",
+      "area": "Internet",
+      "title": "Zapytanie LLM na podstawie pytania i kontekstu follow-up",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany LLM, dozwolony Web i zwykły dostęp do publicznych bezpłatnych źródeł."
+      ],
+      "steps": [
+        "Z włączonym Web zapytaj: Kto zagrał Waltera White’a w Breaking Bad? Otwórz widoczne zapytanie i źródła.",
+        "Następnie zapytaj: W jakich innych serialach występował? Ponownie sprawdź zapytanie i źródła.",
+        "Wyłącz Web i zadaj inne pytanie; sprawdź brak nowego wyszukiwania."
+      ],
+      "expected": [
+        "Przygotowane zapytanie odnosi się do konkretnej osoby i pytania, a nie słownika słowa aktor lub przypadkowej awarii usługi.",
+        "Follow-up wykorzystuje właściwy kontekst; widoczne źródła odpowiadają pytaniu, a brak danych jest uczciwie opisany.",
+        "Wyłączony Web nie wykonuje wyszukiwania; domyślny lokalny model nie jest po cichu zastępowany chmurą."
+      ],
+      "resources": "Lokalny LLM i darmowe publiczne wyszukiwanie; bez kluczy i płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-12"
+      ]
+    },
+    {
+      "id": "DOC-101",
+      "area": "Dokumentacja wydania",
+      "title": "Spójna nazwa i rzeczywista wersja produktu",
+      "priority": "P1",
+      "prerequisites": [
+        "Dokumentacja właściwej wersji i jej manifest; nie porównuj starego publicznego release z innym prywatnym buildem."
+      ],
+      "steps": [
+        "Porównaj nazwę/wersję na ekranie startowym, w instalatorze, README i stronie projektu.",
+        "Porównaj wersję pakietu z manifestem przekazanego kandydata/release."
+      ],
+      "expected": [
+        "Nazwa AI Station i hasło Your own AI. Made simple. są spójne; 0.1.0 nie jest mylone ze starszym opublikowanym wydaniem.",
+        "Dokumentacja wskazuje Linux/Windows i odłożony macOS; nie wymaga zmiany prywatnych ścieżek ani kont."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "NR-09"
+      ]
+    },
+    {
+      "id": "DOC-102",
+      "area": "Dokumentacja wydania",
+      "title": "Wolność modeli i odpowiedzialność bez obietnicy wszystkiego",
+      "priority": "P1",
+      "prerequisites": [
+        "README z przekazanego wydania; test nie wymaga tworzenia materiałów NSFW."
+      ],
+      "steps": [
+        "Przeczytaj w README opis lokalnego działania, własnych modeli, licencji i odpowiedzialności.",
+        "Sprawdź, czy opis rozróżnia obsługiwane profile, opcjonalną chmurę i przyszłe możliwości."
+      ],
+      "expected": [
+        "README wyjaśnia możliwość wyboru zgodnych modeli, także uncensored, oraz odpowiedzialność użytkownika zgodnie z prawem i licencją modelu.",
+        "Nie obiecuje obsługi każdego formatu/GPU, automatycznego braku cenzury ani całkowitego zwolnienia z odpowiedzialności."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "NR-10"
+      ]
+    },
+    {
+      "id": "SETUP-164",
+      "area": "Instalacja i modele",
+      "title": "Po release: Windows NVIDIA, rzeczywista odpowiedź GPU i odzyskiwanie",
+      "priority": "P0",
+      "prerequisites": [
+        "Fizyczny Windows 11 x64 z kompatybilną kartą NVIDIA i działającym sterownikiem; oficjalny instalator 0.1. Próba zaplanowana przez właściciela po release, nie jest dotychczas zaliczona.",
+        "Nie instaluj/zmieniaj sterowników, nie wyłączaj ochrony Windows i nie zmieniaj cudzych dystrybucji WSL. Używaj wyłącznie jednorazowego konta/rozmowy QA."
+      ],
+      "steps": [
+        "Zapisz wersję instalatora, Windows, sterownika, model karty i VRAM. Otwórz AI Station i sprawdź rzeczywiste wykrycie karty oraz dostępność profilu GPU.",
+        "Wybierz rekomendowany pasujący lokalny model; zatwierdź widoczne pobieranie i przygotowanie. Wyślij krótkie pytanie oraz zapisz Run, wybrany model, faktyczne przydzielenie GPU i odpowiedź.",
+        "Użyj Stop podczas kolejnej odpowiedzi, zwolnij/załaduj własny model normalnymi kontrolkami i sprawdź dalszą rozmowę. Nie zatrzymuj cudzych procesów ani całego WSL.",
+        "Zakończ zadania, wykonaj zwykły restart Windows i otwórz AI Station ponownie. Sprawdź konto, model, historię, kolejną krótką odpowiedź i zwykły Stop."
+      ],
+      "expected": [
+        "Model rzeczywiście pracuje na wykrytym GPU z przydziałem pasującym do VRAM; sama nazwa karty lub udana odpowiedź CPU nie zalicza tej próby.",
+        "Pierwsza odpowiedź jest kompletna; Stop/ponowne ładowanie obejmują wyłącznie własne zadanie/runtime.",
+        "Po restarcie dane pozostają zachowane i działa kolejna odpowiedź. Brak gotowości/niezgodny sprzęt jest jawny; zapisz błąd lub blokadę zamiast pozornego OK."
+      ],
+      "resources": "Rzeczywisty Windows/NVIDIA/WSL2; pobranie pasującego modelu, VRAM/RAM i dodatkowe miejsce według profilu; dwie krótkie odpowiedzi oraz restart wyłącznie komputera testowego; bez płatnych API.",
+      "minutes": 30,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
+    }
+  ],
+  "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows 0.1 jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
+  "deferred_cases": [
+    {
+      "id": "SETUP-155",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: silnik natywny i pierwszy model",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "Na Macu Apple Silicon albo Intel otwórz kwalifikowaną aplikację i wybierz konfigurację modeli. Zapisz architekturę, RAM i wersję systemu.",
+        "Sprawdź, czy proponowany jest właściwy natywny silnik llama.cpp i mały model 4B CPU. Przejrzyj licencje i przygotuj silnik, a potem pobierz pasujący model.",
+        "Otwórz rozmowę i zadaj krótkie pytanie. Sprawdź odpowiedź, historię Runs i jawny wybór CPU."
+      ],
+      "expected": [
+        "Architektura pochodzi ze stacji Mac, a nie kontenera Linux. Wagi, RAM i rozmiar pobrania są widoczne; silnik nie udaje obrazu CUDA ani obsługi Metal.",
+        "Przygotowanie silnika i pobranie modelu mają zapisany postęp oraz własną historię. Gotowość samego silnika nie oznacza gotowej odpowiedzi modelu.",
+        "Wybrany model odpowiada lokalnie. Nie następuje niewidoczny wybór chmury ani innego urządzenia."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-156",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: najpierw wagi, potem silnik bez ponownego pobierania",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "W świeżej instalacji bez przygotowanego silnika wybierz pasujący model i jawnie zaznacz pobranie samych plików. Jeśli silnik jest już gotowy, nie usuwaj go dla testu; zapisz Nie dotyczy z powodem.",
+        "Po pobraniu sprawdź status plików. Przygotuj silnik, wróć do modelu i sprawdź jego gotowość istniejącym przyciskiem weryfikacji.",
+        "Otwórz rozmowę na tym modelu i zanotuj, czy wagi pobierano ponownie."
+      ],
+      "expected": [
+        "Bez silnika pliki mogą być pobrane i sprawdzone, ale model nie jest przedstawiany jako gotowy do uruchomienia.",
+        "Po przygotowaniu silnika weryfikacja aktywuje istniejące wagi bez ich powtórnego transferu. Poprzednie konfiguracje i pliki pozostają zachowane.",
+        "Gotowy model można wybrać w rozmowie. Historia przygotowania nie ujawnia prywatnych danych innego konta."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 15
+    },
+    {
+      "id": "SETUP-157",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: większe modele, przerwane przygotowanie i Stop",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "Rozwiń wybór większych modeli, wyszukaj 14B i włącz Only models that fit this workstation. Porównaj wybory z widocznym RAM; nie pobieraj dużych wag tylko dla tego kroku.",
+        "Podczas rzeczywistego przygotowania małego silnika albo modelu użyj Stop. Przejdź do innej zakładki, wróć i sprawdź zachowaną historię. Wznów tylko przerwane przygotowanie.",
+        "Po odpowiedzi lokalnego modelu zatrzymaj ten model jego własnym działaniem w Models i sprawdź zwolnienie zasobów. Nie zatrzymuj innych usług Maca."
+      ],
+      "expected": [
+        "Lista jasno rozróżnia CPU i inne profile. Niepasujące profile nie są przedstawiane jako pasujące; ich wyświetlenie nie uruchamia pobrania.",
+        "Stop i Resume zachowują historię oraz sprawdzone pobrane pliki. Ponowne kliknięcia nie uruchamiają równoległych kopii tego samego przygotowania.",
+        "Zatrzymany jest wyłącznie model zarządzany przez AI Station. Zwolnienie RAM po zakończeniu modelu jest widoczne; nie jest obiecywany twardy limit pamięci ani brak swapu na Macu."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 10
+    },
+    {
+      "id": "SETUP-158",
+      "area": "Instalacja aplikacji",
+      "priority": "P1",
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ],
+      "title": "macOS: aktualizacja i reinstalacja z zachowaniem danych",
+      "prerequisites": [
+        "Rzeczywisty Mac z kwalifikowanym instalatorem i transportem Docker Desktop. To planowane testy odbiorowe; zaliczone testy komponentów ARM/Intel nie oznaczają ukończonego instalatora. Nie wykonuj ich na prototypie i nie obchodź zabezpieczeń systemu."
+      ],
+      "steps": [
+        "W kwalifikowanej aplikacji zapisz rozmowę, plik i wpis pamięci. Zakończ zadania oraz jawnie zatrzymaj używane modele przed aktualizacją.",
+        "Zainstaluj nowszą wersję zwykłą ścieżką aplikacji, bez ręcznego zmieniania usług, sterowników ani zabezpieczeń systemu. Sprawdź wcześniejsze konto i dane.",
+        "Usuń samą aplikację z zachowaniem danych i zainstaluj ponownie. Sprawdź rozmowę, Library, pamięć i wcześniej pobrany model; zapisz ewentualne ponowne pobrania."
+      ],
+      "expected": [
+        "Aktualizacja respektuje trwające zadania i nie zmienia niepowiązanych usług ani plików.",
+        "Konto, rozmowy, Library, pamięć i modele pozostają zachowane. Ewentualny problem z podpisem lub Gatekeeper jest jawny i nie jest obchodzony automatycznie.",
+        "Ponowna instalacja odnajduje zachowane dane i nie pobiera poprawnych wag ponownie. Usunięcie danych wymaga osobnej jawnej decyzji."
+      ],
+      "resources": "Własny Mac Apple Silicon lub Intel; zapisz rzeczywisty RAM i wersję macOS. Sieć wyłącznie do świadomie zaakceptowanych pobrań. Test większych modeli nie wymaga pobierania ich wag.",
+      "minutes": 20
     }
   ]
 }

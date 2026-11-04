@@ -12,8 +12,10 @@ import math
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
@@ -40,6 +42,8 @@ def _identity(pid: int) -> dict | None:
 
 
 def _boot_id() -> str:
+    if sys.platform != "linux":
+        raise RuntimeError("Managed host process execution is not qualified on this platform")
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
@@ -75,6 +79,25 @@ def _group_alive(record: dict) -> bool:
 
 
 class ProcessManager:
+    @staticmethod
+    def _boot_identity():
+        return _boot_id()
+
+    @staticmethod
+    def _capture_identity(pid, boot_id):
+        identity = _identity(pid)
+        return {"start_ticks": identity["start_ticks"] if identity else None}
+
+    @staticmethod
+    def _process_alive(record):
+        return _group_alive(record)
+
+    @contextmanager
+    def _launch(self, argv, *, cwd, env, stdout, stderr):
+        # Platform adapters may gate exec before durable publication. The
+        # qualified Linux path keeps its existing argv/session semantics.
+        yield subprocess.Popen(argv, cwd=cwd, env=env, stdout=stdout, stderr=stderr, start_new_session=True)
+
     def __init__(self, data_dir: Path, grace_seconds: float = 3.0):
         self.data_dir = data_dir.resolve()
         self.grace_seconds = grace_seconds
@@ -92,7 +115,7 @@ class ProcessManager:
                 if (
                     record.get("deadline_at") is not None
                     and record["status"] in {"running", "cancel_requested"}
-                    and _group_alive(record)
+                    and self._process_alive(record)
                 ):
                     self._arm_deadline(run_id, record["deadline_at"])
 
@@ -105,16 +128,21 @@ class ProcessManager:
         executor: str,
         env: dict | None = None,
         deadline_at: float | None = None,
+        capture_output: bool = True,
     ) -> dict:
         if str(UUID(run_id)) != run_id:
             raise ValueError("Canonical UUID required")
         if not argv or any(not isinstance(part, str) or not part for part in argv):
             raise ValueError("argv must be a non-empty list of non-empty strings")
+        if type(capture_output) is not bool:
+            raise ValueError("Choose an explicit process output policy")
         with self._lock:
             records = self._load()
             if run_id in records:
-                if records[run_id]["executor"] != executor:
-                    raise ValueError("Run already belongs to a different executor")
+                if records[run_id]["executor"] != executor or (
+                    records[run_id].get("logs_suppressed", False) is not (not capture_output)
+                ):
+                    raise ValueError("Run already belongs to a different executor or output policy")
                 return self.inspect(run_id)
             if deadline_at is not None and (
                 type(deadline_at) not in {int, float}
@@ -122,37 +150,47 @@ class ProcessManager:
                 or not 0 < deadline_at - time.time() <= MAX_PROCESS_DEADLINE_SECONDS
             ):
                 raise ValueError("Owned process deadline must be within the next four hours")
+            # An unreadable boot identity must fail before any native side
+            # effect. Darwin inspection is separate from qualified execution.
+            boot_id = self._boot_identity()
+            if not boot_id:
+                raise RuntimeError("Managed host process boot identity is unavailable")
             log_dir = resolve_child(self.data_dir, f"runs/{run_id}")
             log_dir.mkdir(parents=True, exist_ok=True)
             out = resolve_child(log_dir, "stdout.log")
             err = resolve_child(log_dir, "stderr.log")
             with out.open("ab") as stdout, err.open("ab") as stderr:
-                proc = subprocess.Popen(
-                    argv, cwd=cwd, env=env, stdout=stdout, stderr=stderr, start_new_session=True
-                )
-            identity = _identity(proc.pid)
-            record = {
-                "run_id": run_id,
-                "pid": proc.pid,
-                "process_group_id": proc.pid,
-                "started_at": time.time(),
-                "boot_id": _boot_id(),
-                "start_ticks": identity["start_ticks"] if identity else None,
-                "executor": executor,
-                "cwd": str(cwd),
-                "stdout_log": f"runs/{run_id}/stdout.log",
-                "stderr_log": f"runs/{run_id}/stderr.log",
-                "status": "running",
-                "exit_code": None,
-                **({"deadline_at": deadline_at} if deadline_at is not None else {}),
-            }
-            records[run_id] = record
-            try:
-                self._dump(records)
-            except BaseException:
-                os.killpg(proc.pid, signal.SIGKILL)
-                proc.wait()
-                raise
+                with self._launch(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    stdout=stdout if capture_output else subprocess.DEVNULL,
+                    stderr=stderr if capture_output else subprocess.DEVNULL,
+                ) as proc:
+                    identity = self._capture_identity(proc.pid, boot_id)
+                    record = {
+                        "run_id": run_id,
+                        "pid": proc.pid,
+                        "process_group_id": proc.pid,
+                        "started_at": time.time(),
+                        "boot_id": boot_id,
+                        **identity,
+                        "executor": executor,
+                        "cwd": str(cwd),
+                        "stdout_log": f"runs/{run_id}/stdout.log",
+                        "stderr_log": f"runs/{run_id}/stderr.log",
+                        "status": "running",
+                        "exit_code": None,
+                        **({"deadline_at": deadline_at} if deadline_at is not None else {}),
+                        **({"logs_suppressed": True} if not capture_output else {}),
+                    }
+                    records[run_id] = record
+                    try:
+                        self._dump(records)
+                    except BaseException:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                        proc.wait()
+                        raise
             self._live[run_id] = proc
             threading.Thread(target=self._wait, args=(run_id, proc), daemon=True).start()
             if deadline_at is not None:
@@ -170,7 +208,11 @@ class ProcessManager:
             with self._lock:
                 records = self._load()
                 record = records.get(run_id)
-                if record is None or record.get("deadline_at") != deadline_at or not _group_alive(record):
+                if (
+                    record is None
+                    or record.get("deadline_at") != deadline_at
+                    or not self._process_alive(record)
+                ):
                     return
                 record["deadline_exceeded_at"] = time.time()
                 self._dump(records)
@@ -189,7 +231,7 @@ class ProcessManager:
             record = records.get(run_id)
             if record is None:
                 raise ProcessNotOwned(run_id)
-            alive = _group_alive(record)
+            alive = self._process_alive(record)
             proc = self._live.get(run_id)
             completion_pending = False
             if not alive and proc is not None:
@@ -263,9 +305,13 @@ class ProcessManager:
                     result[f"{stream}_more"] = path.stat().st_size > offset + len(chunk)
             return result
 
-    def shutdown(self) -> None:
+    def shutdown(self, *, preserve_executors: frozenset[str] = frozenset()) -> None:
         with self._lock:
-            run_ids = list(self._load())
+            run_ids = [
+                identity
+                for identity, record in self._load().items()
+                if record["executor"] not in preserve_executors
+            ]
         for run_id in run_ids:
             self.cancel(run_id)
 
@@ -291,17 +337,16 @@ class ProcessManager:
             self._dump(records)
             self._signal(record, signal.SIGTERM)
         deadline = time.monotonic() + self.grace_seconds
-        while time.monotonic() < deadline and _group_alive(record):
+        while time.monotonic() < deadline and self._process_alive(record):
             time.sleep(0.02)
         self._signal(record, signal.SIGKILL)
         deadline = time.monotonic() + 2
-        while time.monotonic() < deadline and _group_alive(record):
+        while time.monotonic() < deadline and self._process_alive(record):
             time.sleep(0.02)
         return self.inspect(run_id)
 
-    @staticmethod
-    def _signal(record: dict, sig: int) -> None:
-        if _group_alive(record):
+    def _signal(self, record: dict, sig: int) -> None:
+        if self._process_alive(record):
             try:
                 os.killpg(record["process_group_id"], sig)
             except ProcessLookupError:
@@ -322,7 +367,7 @@ class ProcessManager:
                     self._live.pop(run_id, None)
                     # A forked descendant may outlive its group leader. Keep
                     # its budget until the entire owned group is gone.
-                    if not _group_alive(records[run_id]):
+                    if not self._process_alive(records[run_id]):
                         timer = self._deadline_timers.pop(run_id, None)
                         if timer is not None:
                             timer.cancel()

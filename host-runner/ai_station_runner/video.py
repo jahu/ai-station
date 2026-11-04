@@ -14,6 +14,7 @@ from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_compose import MediaInput, verified_path
 from ai_station_runner.telemetry import collect
+from ai_station_runner.video_runtime_schema import ManagedRuntime
 from ai_station_runner.wan_guidance import apg_observation
 from ai_station_runner.wan_profiles import BOUNDED, MEMORY_MIB, validate_profile
 
@@ -54,10 +55,13 @@ class VideoRequest(BaseModel):
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
     memory_profile: Literal["default", "bounded_11g"] = "default"
+    managed_runtime: ManagedRuntime | None = None
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
+        if self.managed_runtime is None:
+            values.pop("managed_runtime", None)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
         if self.continuation_frames == 17:
@@ -70,6 +74,8 @@ class VideoRequest(BaseModel):
 
     @model_validator(mode="after")
     def area(self):
+        if self.managed_runtime is not None and self.deadline_at is None:
+            raise ValueError("Managed video requires its absolute execution deadline")
         validate_profile(
             {
                 "memory_profile": self.memory_profile,
@@ -95,12 +101,16 @@ class VideoRequest(BaseModel):
         return self
 
 
-def profile():
+def profile(observation=None):
+    from ai_station_runner.video_selection import FIELDS, selection
+
     settings = get_settings()
-    names = ("video_python", "comfy_dir", "wan_model", "wan_text_encoder", "wan_vae")
-    if not all(getattr(settings, key) for key in names):
+    chosen = selection(settings, observation) or {}
+    if observation is not None and not chosen.get("managed"):
+        raise HTTPException(409, "The exact managed video environment is no longer selected")
+    if not all(chosen.get(key) for key in FIELDS):
         raise HTTPException(409, "Configure the existing Wan/ComfyUI installation and model files")
-    paths = {key: Path(getattr(settings, key)).expanduser().absolute() for key in names}
+    paths = {key: chosen[key].absolute() for key in FIELDS}
     # Preserve a venv executable symlink, but fix trusted model/install targets.
     original = paths.copy()
     paths = {key: value if key == "video_python" else value.resolve() for key, value in paths.items()}
@@ -121,6 +131,25 @@ def profile():
 def capabilities():
     try:
         paths = profile()
+        from ai_station_runner.video_environment import public_observation
+        from ai_station_runner.video_prepare import driver_supported
+        from ai_station_runner.video_selection import selection
+
+        chosen = selection(get_settings()) or {}
+        managed = chosen.get("managed") is True
+        eligible = (
+            [
+                int(g["index"])
+                for g in collect(get_settings().host_data_dir()).get("gpus", [])
+                if (g.get("memory_total_mib") or 0) >= 12288
+            ]
+            if managed
+            else []
+        )
+        if managed and (not eligible or not driver_supported("580.126.20")):
+            raise HTTPException(
+                409, "The managed video profile requires its compatible NVIDIA GPU and driver"
+            )
         guidance = apg_observation(paths)
         observation = {
             key: {"size_bytes": paths[key].stat().st_size, "mtime": paths[key].stat().st_mtime}
@@ -137,6 +166,15 @@ def capabilities():
         )
         return {
             "available": True,
+            "configuration_source": "managed" if managed else "configured",
+            **(
+                {
+                    "managed_runtime": public_observation(chosen["observation"]),
+                    "eligible_gpu_indices": eligible,
+                }
+                if managed
+                else {}
+            ),
             "backend": "wan2.2-5b",
             "continuation_frames": [1, 17],
             "continuation_guidance": ["standard", "apg_v1"] if guidance else ["standard"],
@@ -153,8 +191,11 @@ def capabilities():
 
 def memory_profiles():
     from ai_station_runner.memory_scope import available
+    from ai_station_runner.video_selection import selection
 
-    enabled = get_settings().wan_bounded_profile and available()
+    enabled = (
+        get_settings().wan_bounded_profile or bool((selection(get_settings()) or {}).get("managed"))
+    ) and available()
     return [
         {
             "id": BOUNDED,
@@ -177,7 +218,14 @@ def memory_profiles():
 def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
-    paths = profile()
+    from ai_station_runner.video_selection import selection
+
+    observation = body.managed_runtime.model_dump(mode="json") if body.managed_runtime else None
+    chosen = selection(get_settings(), observation) or {}
+    managed = chosen.get("managed") is True
+    if managed and (observation is None or body.memory_profile != BOUNDED):
+        raise HTTPException(409, "Managed video requires its frozen environment and bounded memory profile")
+    paths = profile(observation) if observation is not None else profile()
     if body.continuation_guidance != "standard":
         guidance = apg_observation(paths)
         if guidance is None:
@@ -232,6 +280,14 @@ def start_video(manager, body):
             raise HTTPException(422, "Invalid video image input") from exc
     if body.gpu not in {int(g["index"]) for g in collect(root).get("gpus", [])}:
         raise HTTPException(422, "GPU is not present")
+    if managed:
+        from ai_station_runner.video_prepare import driver_supported
+
+        if not driver_supported("580.126.20") or not any(
+            int(g["index"]) == body.gpu and (g.get("memory_total_mib") or 0) >= 12288
+            for g in collect(root).get("gpus", [])
+        ):
+            raise HTTPException(409, "The selected GPU or driver does not fit the managed video profile")
     run_id = str(body.run_id)
     output = owned(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4")
     work = root / "runs" / run_id / "video"
@@ -274,6 +330,19 @@ def start_video(manager, body):
         TORCH_HOME=str(work / "cache" / "torch"),
         TRITON_CACHE_DIR=str(work / "cache" / "triton"),
     )
+    if managed:
+        home = work / "home"
+        home.mkdir(mode=0o700)
+        environment = {
+            key: value for key, value in environment.items() if key not in {"HOME", "LD_LIBRARY_PATH"}
+        }
+        environment.update(
+            PATH="/usr/bin:/bin",
+            HOME=str(home),
+            PYTHONPATH=str(Path(__file__).resolve().parent.parent),
+            OMP_NUM_THREADS="2",
+            TOKENIZERS_PARALLELISM="false",
+        )
     if prefix:
         from ai_station_runner.memory_scope import scope_environment
 

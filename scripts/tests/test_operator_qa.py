@@ -31,6 +31,44 @@ class WorkbookTests(unittest.TestCase):
             {"LIB-005", "LIB-006", "LIB-007", "LIB-008", "MEM-007", "PROJECT-001", "AVATAR-005"} <= ids
         )
 
+    def test_release_scope_preserves_deferred_definitions_without_exporting_their_rows(self):
+        catalog = qa.load_catalog()
+        deferred = {case["id"] for case in catalog["deferred_cases"]}
+        active = {case["id"] for case in catalog["cases"]}
+        self.assertEqual(deferred, {"SETUP-155", "SETUP-156", "SETUP-157", "SETUP-158"})
+        self.assertTrue(deferred.isdisjoint(active))
+        with tempfile.TemporaryDirectory() as folder:
+            paths = qa.export(
+                Path(folder), release=self.release, base_url="http://127.0.0.1:8765", draft=True
+            )
+            book = load_workbook(paths[0], keep_links=False)
+            instructions = dict(book["Start"].iter_rows(min_row=2, values_only=True))
+            self.assertEqual(instructions["Zakres wydania"], catalog["scope_notice"])
+            guide = next(path for path in paths if path.name.endswith("-Instrukcja.txt"))
+            self.assertIn(catalog["scope_notice"], guide.read_text(encoding="utf-8"))
+            manifest = json.loads(paths[-1].read_text())
+            self.assertEqual(set(manifest["case_ids"]), active)
+            self.assertEqual(
+                {row[1] for row in book["Testy"].iter_rows(min_row=2, values_only=True)}, {"Nie testowano"}
+            )
+
+    def test_deferred_cases_retain_unique_ids_valid_steps_and_explicit_scope(self):
+        catalog = qa.load_catalog()
+        for damage in ("duplicate", "missing_steps", "missing_notice"):
+            changed = json.loads(json.dumps(catalog))
+            if damage == "duplicate":
+                changed["deferred_cases"][0]["id"] = changed["cases"][0]["id"]
+            elif damage == "missing_steps":
+                changed["deferred_cases"][0]["steps"] = []
+            else:
+                changed.pop("scope_notice")
+            with self.subTest(damage=damage), self.assertRaises(ValueError):
+                qa.validate_catalog(changed)
+        legacy = {
+            key: value for key, value in catalog.items() if key not in {"deferred_cases", "scope_notice"}
+        }
+        self.assertIs(qa.validate_catalog(legacy), legacy)
+
     def test_workbook_exports_are_usable_feedback_without_prefilled_success(self):
         with tempfile.TemporaryDirectory() as folder:
             files = qa.export(

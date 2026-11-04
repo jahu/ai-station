@@ -1,0 +1,934 @@
+{
+  "profile": "ace-step15-turbo-linux-x86-64-python312-v1",
+  "name": "ACE-Step 1.5 Turbo \u00b7 Music",
+  "capability": "music",
+  "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
+  "model_repository": "ACE-Step/Ace-Step1.5",
+  "model_license_url": "https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22",
+  "source_license_url": "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE",
+  "source_sha256": "f5ad978f98ccdc04dc2bd6bb0271e51494f11a0ffd8932113163b6a2d3c810ef",
+  "model_manifest": {
+    "schema_version": 1,
+    "preset": "ace-step-1.5-turbo-no-lm",
+    "repository": "ACE-Step/Ace-Step1.5",
+    "revision": "19671f406d603126926c1b7e2adc169acbcade22",
+    "code_repository": "https://github.com/ace-step/ACE-Step-1.5",
+    "code_revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+    "license": "MIT",
+    "total_bytes": 6336680772,
+    "files": [
+      {
+        "path": "Qwen3-Embedding-0.6B/added_tokens.json",
+        "size": 707,
+        "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/chat_template.jinja",
+        "size": 4116,
+        "sha256": "87a2728cb8dc9fe424d624542f6060ec05a1d285ebbec578bb078900e33396b5"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/config.json",
+        "size": 1359,
+        "sha256": "bb23c1607cfe059a58d8f0196cf1cebb52082b1056b8e358a579da80a5759420"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/merges.txt",
+        "size": 1671853,
+        "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/model.safetensors",
+        "size": 1191586416,
+        "sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/special_tokens_map.json",
+        "size": 613,
+        "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/tokenizer.json",
+        "size": 11423705,
+        "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/tokenizer_config.json",
+        "size": 5404,
+        "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0"
+      },
+      {
+        "path": "Qwen3-Embedding-0.6B/vocab.json",
+        "size": 2776833,
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      },
+      {
+        "path": "acestep-v15-turbo/config.json",
+        "size": 1968,
+        "sha256": "74745ff704ea49164c3d2d1c99fc0670f3fc635a869f0aec2d1311e6a52d400a"
+      },
+      {
+        "path": "acestep-v15-turbo/configuration_acestep_v15.py",
+        "size": 13130,
+        "sha256": "b89870c5c7a7ce060eb0bcdbb5ffc86b0b1a324ca325a26be552ea1b42496dc5"
+      },
+      {
+        "path": "acestep-v15-turbo/model.safetensors",
+        "size": 4787825604,
+        "sha256": "3f6e0797fad420a39bd33979eb6e840e30989e34a3794e843d23b60ec6e422d7"
+      },
+      {
+        "path": "acestep-v15-turbo/modeling_acestep_v15_turbo.py",
+        "size": 96036,
+        "sha256": "c1ab0dd547124fee7ada449b2b86eae8201dc7d15889932643bbb67e3c982444"
+      },
+      {
+        "path": "acestep-v15-turbo/silence_latent.pt",
+        "size": 3841215,
+        "sha256": "a778e9dd942f5e8b2c09c55370782d318834432b03dabbcdf70e6ed49ad6358b"
+      },
+      {
+        "path": "vae/config.json",
+        "size": 425,
+        "sha256": "14e019904df567f26df750317a70e2bd08f9f8f3c40ff4a24c97d1cd3f20ccd2"
+      },
+      {
+        "path": "vae/diffusion_pytorch_model.safetensors",
+        "size": 337431388,
+        "sha256": "da17edb604c40deaf09e9b24974e590d1ca83a374070e5d0884cfa4bed9a99b0"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "kind": "python",
+      "name": "CPython",
+      "version": "3.12.14",
+      "filename": "cpython-3.12.14-linux-x86_64.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "sha256": "72748da13197c1fb161e3afeef20a6a385ff24f2165e6e2758e47008e7faba4c",
+      "size_bytes": 34143368
+    },
+    {
+      "filename": "ACE-Step-1.5-ca1e85fe9430179831e6bc6be790c332190a3866.tar.gz",
+      "name": "ace-step",
+      "revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+      "kind": "sdk",
+      "url": "https://codeload.github.com/ace-step/ACE-Step-1.5/tar.gz/ca1e85fe9430179831e6bc6be790c332190a3866",
+      "sha256": "b464c11f00af00e1e089a09f58a03962f803c080f116fd0517dbe5ec839706b3",
+      "size_bytes": 8439408
+    },
+    {
+      "filename": "accelerate-1.12.0-py3-none-any.whl",
+      "name": "accelerate",
+      "version": "1.12.0",
+      "url": "https://files.pythonhosted.org/packages/9f/d2/c581486aa6c4fbd7394c23c47b83fa1a919d34194e16944241daf9e762dd/accelerate-1.12.0-py3-none-any.whl",
+      "sha256": "3e2091cd341423207e2f084a6654b1efcd250dc326f2a37d6dde446e07cabb11",
+      "size_bytes": 380935,
+      "kind": "wheel"
+    },
+    {
+      "filename": "annotated_types-0.8.0-py3-none-any.whl",
+      "name": "annotated-types",
+      "version": "0.8.0",
+      "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "size_bytes": 13427,
+      "kind": "wheel"
+    },
+    {
+      "filename": "anyio-4.15.1-py3-none-any.whl",
+      "name": "anyio",
+      "version": "4.15.1",
+      "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "size_bytes": 132079,
+      "kind": "wheel"
+    },
+    {
+      "filename": "certifi-2026.10.19-py3-none-any.whl",
+      "name": "certifi",
+      "version": "2026.10.19",
+      "url": "https://files.pythonhosted.org/packages/c4/51/29046e48f693c54e5b7412216d447a1d8362c9653148d98c02cdf65fa733/certifi-2026.10.19-py3-none-any.whl",
+      "sha256": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b",
+      "size_bytes": 136464,
+      "kind": "wheel"
+    },
+    {
+      "filename": "cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "cffi",
+      "version": "2.1.1",
+      "url": "https://files.pythonhosted.org/packages/b1/db/dceb9dd5b231e1da801793f8acc9f3c52a7e1afe40bb1aae37e02b0faad5/cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf",
+      "size_bytes": 221822,
+      "kind": "wheel"
+    },
+    {
+      "filename": "charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "url": "https://files.pythonhosted.org/packages/7f/c5/38806a25ab5e65fc178f39affeda20858efafede2fce1ffc2556cfc9fe73/charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649",
+      "size_bytes": 257601,
+      "kind": "wheel"
+    },
+    {
+      "filename": "cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "cuda-bindings",
+      "version": "12.9.4",
+      "url": "https://files.pythonhosted.org/packages/a9/c1/dabe88f52c3e3760d861401bb994df08f672ec893b8f7592dc91626adcf3/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8",
+      "size_bytes": 12151019,
+      "kind": "wheel"
+    },
+    {
+      "filename": "cuda_pathfinder-1.8.4-py3-none-any.whl",
+      "name": "cuda-pathfinder",
+      "version": "1.8.4",
+      "url": "https://files.pythonhosted.org/packages/8e/93/f0904fa7d954ecc4c0db17c8d63d185d442dd59fc6757f1d1f448c59c256/cuda_pathfinder-1.8.4-py3-none-any.whl",
+      "sha256": "85a4e708c725d603f576042ef32781a3d1737c51e84c35fe361d2680191af65a",
+      "size_bytes": 62594,
+      "kind": "wheel"
+    },
+    {
+      "filename": "diffusers-0.37.1-py3-none-any.whl",
+      "name": "diffusers",
+      "version": "0.37.1",
+      "url": "https://files.pythonhosted.org/packages/9c/dd/51c38785ce5e1c287b5ad17ba550edaaaffce0deb0da4857019c6700fbaf/diffusers-0.37.1-py3-none-any.whl",
+      "sha256": "0537c0b28cb53cf39d6195489bcf8f833986df556c10f5e28ab7427b86fc8b90",
+      "size_bytes": 5001536,
+      "kind": "wheel"
+    },
+    {
+      "filename": "einops-0.8.2-py3-none-any.whl",
+      "name": "einops",
+      "version": "0.8.2",
+      "url": "https://files.pythonhosted.org/packages/2a/09/f8d8f8f31e4483c10a906437b4ce31bdf3d6d417b73fe33f1a8b59e34228/einops-0.8.2-py3-none-any.whl",
+      "sha256": "54058201ac7087911181bfec4af6091bb59380360f069276601256a76af08193",
+      "size_bytes": 65638,
+      "kind": "wheel"
+    },
+    {
+      "filename": "einx-0.4.3-py3-none-any.whl",
+      "name": "einx",
+      "version": "0.4.3",
+      "url": "https://files.pythonhosted.org/packages/d0/28/6768d342b2b888f9facdddbd430daf015cab936e2598281ab436b1be1b4a/einx-0.4.3-py3-none-any.whl",
+      "sha256": "47ce54a0144f6dffcfacdd8fe2cc9e2e5e6485dda2471330ab75ee747dd22f39",
+      "size_bytes": 163766,
+      "kind": "wheel"
+    },
+    {
+      "filename": "filelock-4.2.4-py3-none-any.whl",
+      "name": "filelock",
+      "version": "4.2.4",
+      "url": "https://files.pythonhosted.org/packages/e0/1b/5e74289a1878e666bb4b65fe5805a04cafcac2aa5f519ef1ead67ef91c56/filelock-4.2.4-py3-none-any.whl",
+      "sha256": "301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e",
+      "size_bytes": 162475,
+      "kind": "wheel"
+    },
+    {
+      "filename": "frozendict-2.4.7-py3-none-any.whl",
+      "name": "frozendict",
+      "version": "2.4.7",
+      "url": "https://files.pythonhosted.org/packages/38/74/f94141b38a51a553efef7f510fc213894161ae49b88bffd037f8d2a7cb2f/frozendict-2.4.7-py3-none-any.whl",
+      "sha256": "972af65924ea25cf5b4d9326d549e69a9a4918d8a76a9d3a7cd174d98b237550",
+      "size_bytes": 16264,
+      "kind": "wheel"
+    },
+    {
+      "filename": "fsspec-2026.9.0-py3-none-any.whl",
+      "name": "fsspec",
+      "version": "2026.9.0",
+      "url": "https://files.pythonhosted.org/packages/6c/c0/a98505f18594f1bce828bb159cec0fcf9860562f1a2c85913409fc8f3d9e/fsspec-2026.9.0-py3-none-any.whl",
+      "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+      "size_bytes": 221738,
+      "kind": "wheel"
+    },
+    {
+      "filename": "h11-0.16.0-py3-none-any.whl",
+      "name": "h11",
+      "version": "0.16.0",
+      "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "size_bytes": 37515,
+      "kind": "wheel"
+    },
+    {
+      "filename": "hf_xet-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "hf-xet",
+      "version": "1.7.0",
+      "url": "https://files.pythonhosted.org/packages/a3/4c/2bf3b66c215d409655f28de1622393dde04c9461280d48c7924bb3b2decd/hf_xet-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8",
+      "size_bytes": 4212180,
+      "kind": "wheel"
+    },
+    {
+      "filename": "httpcore-1.0.9-py3-none-any.whl",
+      "name": "httpcore",
+      "version": "1.0.9",
+      "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "size_bytes": 78784,
+      "kind": "wheel"
+    },
+    {
+      "filename": "httpx-0.28.1-py3-none-any.whl",
+      "name": "httpx",
+      "version": "0.28.1",
+      "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "size_bytes": 73517,
+      "kind": "wheel"
+    },
+    {
+      "filename": "huggingface_hub-0.36.0-py3-none-any.whl",
+      "name": "huggingface-hub",
+      "version": "0.36.0",
+      "url": "https://files.pythonhosted.org/packages/cb/bd/1a875e0d592d447cbc02805fd3fe0f497714d6a2583f59d14fa9ebad96eb/huggingface_hub-0.36.0-py3-none-any.whl",
+      "sha256": "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+      "size_bytes": 566094,
+      "kind": "wheel"
+    },
+    {
+      "filename": "idna-3.20-py3-none-any.whl",
+      "name": "idna",
+      "version": "3.20",
+      "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "size_bytes": 69583,
+      "kind": "wheel"
+    },
+    {
+      "filename": "importlib_metadata-9.1.0-py3-none-any.whl",
+      "name": "importlib_metadata",
+      "version": "9.1.0",
+      "url": "https://files.pythonhosted.org/packages/a4/9f/2e33795e8765420ac43de1f29fe3d827ab4eaa45cbcf4a5de83555a3f9dd/importlib_metadata-9.1.0-py3-none-any.whl",
+      "sha256": "626c65eddcd23c0ee0ffb17567aa882f8cfce0e552c424f2fa37c8b679374078",
+      "size_bytes": 28434,
+      "kind": "wheel"
+    },
+    {
+      "filename": "jinja2-3.1.6-py3-none-any.whl",
+      "name": "Jinja2",
+      "version": "3.1.6",
+      "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+      "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+      "size_bytes": 134899,
+      "kind": "wheel"
+    },
+    {
+      "filename": "llvmlite-0.46.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "llvmlite",
+      "version": "0.46.0",
+      "url": "https://files.pythonhosted.org/packages/aa/85/4890a7c14b4fa54400945cb52ac3cd88545bbdb973c440f98ca41591cdc5/llvmlite-0.46.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "3535bd2bb6a2d7ae4012681ac228e5132cdb75fefb1bcb24e33f2f3e0c865ed4",
+      "size_bytes": 56275176,
+      "kind": "wheel"
+    },
+    {
+      "filename": "loguru-0.7.3-py3-none-any.whl",
+      "name": "loguru",
+      "version": "0.7.3",
+      "url": "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl",
+      "sha256": "31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c",
+      "size_bytes": 61595,
+      "kind": "wheel"
+    },
+    {
+      "filename": "markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "MarkupSafe",
+      "version": "3.0.4",
+      "url": "https://files.pythonhosted.org/packages/4f/a7/aeedb5140afa41fc74c225e9184ab96723a6e873b6ee1c9fede7283456d8/markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581",
+      "size_bytes": 22985,
+      "kind": "wheel"
+    },
+    {
+      "filename": "mpmath-1.3.0-py3-none-any.whl",
+      "name": "mpmath",
+      "version": "1.3.0",
+      "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
+      "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+      "size_bytes": 536198,
+      "kind": "wheel"
+    },
+    {
+      "filename": "networkx-3.7-py3-none-any.whl",
+      "name": "networkx",
+      "version": "3.7",
+      "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl",
+      "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+      "size_bytes": 2142205,
+      "kind": "wheel"
+    },
+    {
+      "filename": "numba-0.63.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "numba",
+      "version": "0.63.1",
+      "url": "https://files.pythonhosted.org/packages/cb/70/ea2bc45205f206b7a24ee68a159f5097c9ca7e6466806e7c213587e0c2b1/numba-0.63.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "5cfd45dbd3d409e713b1ccfdc2ee72ca82006860254429f4ef01867fdba5845f",
+      "size_bytes": 3801656,
+      "kind": "wheel"
+    },
+    {
+      "filename": "numpy-2.3.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "numpy",
+      "version": "2.3.5",
+      "url": "https://files.pythonhosted.org/packages/b6/23/2a1b231b8ff672b4c450dac27164a8b2ca7d9b7144f9c02d2396518352eb/numpy-2.3.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "0d8163f43acde9a73c2a33605353a4f1bc4798745a8b1d73183b28e5b435ae28",
+      "size_bytes": 16606086,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl",
+      "name": "nvidia-cublas-cu12",
+      "version": "12.8.4.1",
+      "url": "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl",
+      "sha256": "8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142",
+      "size_bytes": 594346921,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-cuda-cupti-cu12",
+      "version": "12.8.90",
+      "url": "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182",
+      "size_bytes": 10248621,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "name": "nvidia-cuda-nvrtc-cu12",
+      "version": "12.8.93",
+      "url": "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "sha256": "a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994",
+      "size_bytes": 88040029,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-cuda-runtime-cu12",
+      "version": "12.8.90",
+      "url": "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90",
+      "size_bytes": 954765,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl",
+      "name": "nvidia-cudnn-cu12",
+      "version": "9.10.2.21",
+      "url": "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl",
+      "sha256": "949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8",
+      "size_bytes": 706758467,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-cufft-cu12",
+      "version": "11.3.3.83",
+      "url": "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74",
+      "size_bytes": 193118695,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-cufile-cu12",
+      "version": "1.13.1.3",
+      "url": "https://files.pythonhosted.org/packages/bb/fe/1bcba1dfbfb8d01be8d93f07bfc502c93fa23afa6fd5ab3fc7c1df71038a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc",
+      "size_bytes": 1197834,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl",
+      "name": "nvidia-curand-cu12",
+      "version": "10.3.9.90",
+      "url": "https://files.pythonhosted.org/packages/fb/aa/6584b56dc84ebe9cf93226a5cde4d99080c8e90ab40f0c27bda7a0f29aa1/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl",
+      "sha256": "b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9",
+      "size_bytes": 63619976,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl",
+      "name": "nvidia-cusolver-cu12",
+      "version": "11.7.3.90",
+      "url": "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl",
+      "sha256": "4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450",
+      "size_bytes": 267506905,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-cusparse-cu12",
+      "version": "12.5.8.93",
+      "url": "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b",
+      "size_bytes": 288216466,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl",
+      "name": "nvidia-cusparselt-cu12",
+      "version": "0.7.1",
+      "url": "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl",
+      "sha256": "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623",
+      "size_bytes": 287193691,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-nccl-cu12",
+      "version": "2.27.5",
+      "url": "https://files.pythonhosted.org/packages/6e/89/f7a07dc961b60645dbbf42e80f2bc85ade7feb9a491b11a1e973aa00071f/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457",
+      "size_bytes": 322348229,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "name": "nvidia-nvjitlink-cu12",
+      "version": "12.8.93",
+      "url": "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "sha256": "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88",
+      "size_bytes": 39254836,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-nvshmem-cu12",
+      "version": "3.4.5",
+      "url": "https://files.pythonhosted.org/packages/b5/09/6ea3ea725f82e1e76684f0708bbedd871fc96da89945adeba65c3835a64c/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd",
+      "size_bytes": 139103095,
+      "kind": "wheel"
+    },
+    {
+      "filename": "nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "name": "nvidia-nvtx-cu12",
+      "version": "12.8.90",
+      "url": "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "sha256": "5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f",
+      "size_bytes": 89954,
+      "kind": "wheel"
+    },
+    {
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "name": "packaging",
+      "version": "26.3",
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "size_bytes": 129956,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "pillow",
+      "version": "13.0.0",
+      "url": "https://files.pythonhosted.org/packages/e6/99/fdf65cc539e266ab93546c261bdf98411fe165c6e4e13f9dbf597097192b/pillow-13.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca",
+      "size_bytes": 7144542,
+      "kind": "wheel"
+    },
+    {
+      "filename": "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "psutil",
+      "version": "7.2.2",
+      "url": "https://files.pythonhosted.org/packages/b5/70/5d8df3b09e25bce090399cf48e452d25c935ab72dad19406c77f4e828045/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+      "size_bytes": 155560,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pycparser-3.12-py3-none-any.whl",
+      "name": "pycparser",
+      "version": "3.12",
+      "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl",
+      "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
+      "size_bytes": 62600,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pydantic-2.13.5-py3-none-any.whl",
+      "name": "pydantic",
+      "version": "2.13.5",
+      "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl",
+      "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+      "size_bytes": 472589,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+      "name": "pydantic-settings",
+      "version": "2.15.0",
+      "url": "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl",
+      "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+      "size_bytes": 69413,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "pydantic_core",
+      "version": "2.46.5",
+      "url": "https://files.pythonhosted.org/packages/c0/a4/eb9409ec0736e50aa70a412f16c204ed149516846912f7e6724d4c73ee53/pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "0fc5be0abd4a407e200d844b404e33639a554e7bd0d448e7b9ae181be4789ac2",
+      "size_bytes": 2066284,
+      "kind": "wheel"
+    },
+    {
+      "filename": "python_dotenv-1.2.4-py3-none-any.whl",
+      "name": "python-dotenv",
+      "version": "1.2.4",
+      "url": "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl",
+      "sha256": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
+      "size_bytes": 23266,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pytorch_wavelets-1.3.0-py3-none-any.whl",
+      "name": "pytorch-wavelets",
+      "version": "1.3.0",
+      "url": "https://files.pythonhosted.org/packages/8d/65/b7da80705dc679999ef77c06ded71e060d4ea14ed80111c104223e130cc1/pytorch_wavelets-1.3.0-py3-none-any.whl",
+      "sha256": "e4f8635872370d8de640ef7548edef4ef60d5c565553c463210e939c7901ee69",
+      "size_bytes": 54879,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pywavelets-1.9.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "PyWavelets",
+      "version": "1.9.0",
+      "url": "https://files.pythonhosted.org/packages/0f/34/0f54dd9c288941294898877008bcb5c07012340cc9c5db9cff1bd185d449/pywavelets-1.9.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "573b650805d2f3c981a0e5ae95191c781a722022c37a0f6eba3fa7eae8e0ee17",
+      "size_bytes": 4483843,
+      "kind": "wheel"
+    },
+    {
+      "filename": "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "url": "https://files.pythonhosted.org/packages/8b/9d/b3589d3877982d4f2329302ef98a8026e7f4443c765c46cfecc8858c6b4b/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+      "size_bytes": 807870,
+      "kind": "wheel"
+    },
+    {
+      "filename": "regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "regex",
+      "version": "2026.9.29",
+      "url": "https://files.pythonhosted.org/packages/26/83/d2fbd2e4e3afb1167daa825187d196f313cbaa1a4768f311fb041bb0e3d2/regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0",
+      "size_bytes": 807783,
+      "kind": "wheel"
+    },
+    {
+      "filename": "requests-2.34.2-py3-none-any.whl",
+      "name": "requests",
+      "version": "2.34.2",
+      "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+      "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+      "size_bytes": 73075,
+      "kind": "wheel"
+    },
+    {
+      "filename": "safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "safetensors",
+      "version": "0.7.0",
+      "url": "https://files.pythonhosted.org/packages/a0/60/429e9b1cb3fc651937727befe258ea24122d9663e4d5709a48c9cbfceecb/safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "dac7252938f0696ddea46f5e855dd3138444e82236e3be475f54929f0c510d48",
+      "size_bytes": 507152,
+      "kind": "wheel"
+    },
+    {
+      "filename": "scipy-1.17.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "scipy",
+      "version": "1.17.0",
+      "url": "https://files.pythonhosted.org/packages/d1/fe/66d73b76d378ba8cc2fe605920c0c75092e3a65ae746e1e767d9d020a75a/scipy-1.17.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "9eeb9b5f5997f75507814ed9d298ab23f62cf79f5a3ef90031b1ee2506abdb5b",
+      "size_bytes": 35009148,
+      "kind": "wheel"
+    },
+    {
+      "filename": "setuptools-84.2.1-py3-none-any.whl",
+      "name": "setuptools",
+      "version": "84.2.1",
+      "url": "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl",
+      "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+      "size_bytes": 876263,
+      "kind": "wheel"
+    },
+    {
+      "filename": "six-1.17.0-py2.py3-none-any.whl",
+      "name": "six",
+      "version": "1.17.0",
+      "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+      "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+      "size_bytes": 11050,
+      "kind": "wheel"
+    },
+    {
+      "filename": "soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl",
+      "name": "soundfile",
+      "version": "0.13.1",
+      "url": "https://files.pythonhosted.org/packages/57/5e/70bdd9579b35003a489fc850b5047beeda26328053ebadc1fb60f320f7db/soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl",
+      "sha256": "03267c4e493315294834a0870f31dbb3b28a95561b80b134f0bd3cf2d5f0e618",
+      "size_bytes": 1313646,
+      "kind": "wheel"
+    },
+    {
+      "filename": "sympy-1.14.0-py3-none-any.whl",
+      "name": "sympy",
+      "version": "1.14.0",
+      "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl",
+      "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+      "size_bytes": 6299353,
+      "kind": "wheel"
+    },
+    {
+      "filename": "tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "name": "tokenizers",
+      "version": "0.22.2",
+      "url": "https://files.pythonhosted.org/packages/2e/76/932be4b50ef6ccedf9d3c6639b056a967a86258c6d9200643f01269211ca/tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "369cc9fc8cc10cb24143873a0d95438bb8ee257bb80c71989e3ee290e8d72c67",
+      "size_bytes": 3274982,
+      "kind": "wheel"
+    },
+    {
+      "filename": "torch-2.10.0+cu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "name": "torch",
+      "version": "2.10.0+cu128",
+      "url": "https://download-r2.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "sha256": "628e89bd5110ced7debee2a57c69959725b7fbc64eab81a39dd70e46c7e28ba5",
+      "size_bytes": 916856347,
+      "kind": "wheel"
+    },
+    {
+      "filename": "torchaudio-2.10.0+cu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "name": "torchaudio",
+      "version": "2.10.0+cu128",
+      "url": "https://download-r2.pytorch.org/whl/cu128/torchaudio-2.10.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "sha256": "d26b91a173cee6db9abff68b48d64236950ffc5628d06448ecdd7ac56841e10a",
+      "size_bytes": 1844797,
+      "kind": "wheel"
+    },
+    {
+      "filename": "tqdm-4.67.1-py3-none-any.whl",
+      "name": "tqdm",
+      "version": "4.67.1",
+      "url": "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl",
+      "sha256": "26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2",
+      "size_bytes": 78540,
+      "kind": "wheel"
+    },
+    {
+      "filename": "transformers-4.57.6-py3-none-any.whl",
+      "name": "transformers",
+      "version": "4.57.6",
+      "url": "https://files.pythonhosted.org/packages/03/b8/e484ef633af3887baeeb4b6ad12743363af7cce68ae51e938e00aaa0529d/transformers-4.57.6-py3-none-any.whl",
+      "sha256": "4c9e9de11333ddfe5114bc872c9f370509198acf0b87a832a0ab9458e2bd0550",
+      "size_bytes": 11993498,
+      "kind": "wheel"
+    },
+    {
+      "filename": "triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "name": "triton",
+      "version": "3.6.0",
+      "url": "https://files.pythonhosted.org/packages/ab/a8/cdf8b3e4c98132f965f88c2313a4b493266832ad47fb52f23d14d4f86bb5/triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "74caf5e34b66d9f3a429af689c1c7128daba1d8208df60e81106b115c00d6fca",
+      "size_bytes": 188266850,
+      "kind": "wheel"
+    },
+    {
+      "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+      "name": "typing-inspection",
+      "version": "0.4.4",
+      "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "size_bytes": 14750,
+      "kind": "wheel"
+    },
+    {
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "size_bytes": 45571,
+      "kind": "wheel"
+    },
+    {
+      "filename": "urllib3-2.8.0-py3-none-any.whl",
+      "name": "urllib3",
+      "version": "2.8.0",
+      "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+      "size_bytes": 135717,
+      "kind": "wheel"
+    },
+    {
+      "filename": "vector_quantize_pytorch-1.27.20-py3-none-any.whl",
+      "name": "vector-quantize-pytorch",
+      "version": "1.27.20",
+      "url": "https://files.pythonhosted.org/packages/0a/c6/d48ae634c757eaed2f91b11e961646f2721a8dc0696c08c1e60228ec94d9/vector_quantize_pytorch-1.27.20-py3-none-any.whl",
+      "sha256": "ab85fb622e900edf1317c7c77b3a23dd95995e0ce17a123b4ba6178c1c678335",
+      "size_bytes": 52823,
+      "kind": "wheel"
+    },
+    {
+      "filename": "zipp-4.1.2-py3-none-any.whl",
+      "name": "zipp",
+      "version": "4.1.2",
+      "url": "https://files.pythonhosted.org/packages/b8/44/7bd2007260da11cccca29ba2d4c345f1287aa663db38ee7cefeabf6386a5/zipp-4.1.2-py3-none-any.whl",
+      "sha256": "b30cb6cd253122169c47de245ca24a86bac2a5d3802ba15bf7ba6414eb9e144d",
+      "size_bytes": 10581,
+      "kind": "wheel"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/added_tokens.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/added_tokens.json",
+      "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680",
+      "size_bytes": 707,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/chat_template.jinja",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/chat_template.jinja",
+      "sha256": "87a2728cb8dc9fe424d624542f6060ec05a1d285ebbec578bb078900e33396b5",
+      "size_bytes": 4116,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/config.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/config.json",
+      "sha256": "bb23c1607cfe059a58d8f0196cf1cebb52082b1056b8e358a579da80a5759420",
+      "size_bytes": 1359,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/merges.txt",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/merges.txt",
+      "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+      "size_bytes": 1671853,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/model.safetensors",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/model.safetensors",
+      "sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
+      "size_bytes": 1191586416,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/special_tokens_map.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/special_tokens_map.json",
+      "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd",
+      "size_bytes": 613,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/tokenizer.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/tokenizer.json",
+      "sha256": "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a",
+      "size_bytes": 11423705,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/tokenizer_config.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/tokenizer_config.json",
+      "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0",
+      "size_bytes": 5404,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "Qwen3-Embedding-0.6B/vocab.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/Qwen3-Embedding-0.6B/vocab.json",
+      "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "size_bytes": 2776833,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "acestep-v15-turbo/config.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/acestep-v15-turbo/config.json",
+      "sha256": "74745ff704ea49164c3d2d1c99fc0670f3fc635a869f0aec2d1311e6a52d400a",
+      "size_bytes": 1968,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "acestep-v15-turbo/configuration_acestep_v15.py",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/acestep-v15-turbo/configuration_acestep_v15.py",
+      "sha256": "b89870c5c7a7ce060eb0bcdbb5ffc86b0b1a324ca325a26be552ea1b42496dc5",
+      "size_bytes": 13130,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "acestep-v15-turbo/model.safetensors",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/acestep-v15-turbo/model.safetensors",
+      "sha256": "3f6e0797fad420a39bd33979eb6e840e30989e34a3794e843d23b60ec6e422d7",
+      "size_bytes": 4787825604,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "acestep-v15-turbo/modeling_acestep_v15_turbo.py",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/acestep-v15-turbo/modeling_acestep_v15_turbo.py",
+      "sha256": "c1ab0dd547124fee7ada449b2b86eae8201dc7d15889932643bbb67e3c982444",
+      "size_bytes": 96036,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "acestep-v15-turbo/silence_latent.pt",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/acestep-v15-turbo/silence_latent.pt",
+      "sha256": "a778e9dd942f5e8b2c09c55370782d318834432b03dabbcdf70e6ed49ad6358b",
+      "size_bytes": 3841215,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "vae/config.json",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/vae/config.json",
+      "sha256": "14e019904df567f26df750317a70e2bd08f9f8f3c40ff4a24c97d1cd3f20ccd2",
+      "size_bytes": 425,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    },
+    {
+      "filename": "vae/diffusion_pytorch_model.safetensors",
+      "kind": "model",
+      "url": "https://huggingface.co/ACE-Step/Ace-Step1.5/resolve/19671f406d603126926c1b7e2adc169acbcade22/vae/diffusion_pytorch_model.safetensors",
+      "sha256": "da17edb604c40deaf09e9b24974e590d1ca83a374070e5d0884cfa4bed9a99b0",
+      "size_bytes": 337431388,
+      "repository": "ACE-Step/Ace-Step1.5",
+      "revision": "19671f406d603126926c1b7e2adc169acbcade22"
+    }
+  ],
+  "python": "3.12",
+  "glibc_minimum": "2.28"
+}

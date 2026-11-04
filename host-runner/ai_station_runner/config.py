@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     chatterbox_python: str = ""
     chatterbox_script: str = ""
     chatterbox_cache: str = ""
+    fish_speech_enabled: bool = False
+    fish_speech_python: str = ""
+    fish_speech_dir: str = ""
+    fish_speech_models: str = ""
+    mmaudio_enabled: bool = False
+    mmaudio_python: str = ""
+    mmaudio_dir: str = ""
+    mmaudio_models: str = ""
     music_python: str = ""
     music_source_dir: str = ""
     music_model_dir: str = ""
@@ -53,6 +61,7 @@ class Settings(BaseSettings):
     site_preview_image: str = ""
     python_image: str = ""
     llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
+    container_gpu_ready: bool | None = None
     model_roots: str = ""
     allowed_roots: str = ""
     llm_base_url: str = "http://127.0.0.1:11434/v1"

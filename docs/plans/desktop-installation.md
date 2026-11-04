@@ -1,0 +1,356 @@
+# Desktop installation
+
+Owner decision, 2026-11-03: release 0.1 targets **Linux and Windows**. macOS is an
+unsupported known issue and is deferred; its incomplete native experiments must
+not delay this release or be advertised as a working installer.
+
+NR-13 now requires Linux and Windows acceptance for this release. The first packaging
+increment targets Linux x86-64; it does not establish the other platforms.
+Preserve the existing Docker control plane and native Runner. First launch
+must reach the account setup proof and guided runtime/model flow already
+qualified in PRs #530–#532.
+
+## Packaging decision
+
+Bundle a checksum-pinned, relocatable CPython distribution and pinned native
+Runner dependencies. Native operations use `sys.executable` both for journaled
+children and ordinary `venv` creation. Replacing that interpreter with a frozen
+application executable would change their contract; keep a real Python instead.
+Consumers do not install Python, pip, Node or developer dependencies themselves.
+
+The initial Linux desktop shell uses the installed Zenity dialog service and
+the existing browser UI. It is a local installation/supervision process, not
+a new HTTP backend, Run engine or unrestricted host service. Future desktop
+shells can reuse the same packaged interpreter and supervisor on other OSes.
+
+The build creates a versioned application directory and Debian package with
+a desktop entry. It carries the compiled control-plane image, exact image ID
+and archive checksum; it never builds the frontend on the user's computer.
+Only this fixed image archive may be imported. The private search image remains
+the existing pinned Compose dependency. Package contents include dependency
+license notices. No weights, credentials or personal data enter a package.
+
+## Install and startup
+
+1. The user opens the installed desktop entry. Show prerequisites and local
+   storage/network use. The Debian package declares Docker/Compose and native
+   dialog/authentication dependencies. Missing current-user Docker access offers
+   the explicit OS-authenticated step in the [clean Linux contract](linux-consumer-qualification.md).
+   Already granted membership activates the fixed user launcher without another
+   confirmation. Explain other missing prerequisites through the desktop, not a traceback;
+   never install drivers or change daemon/group/OS settings silently.
+2. After local confirmation, create private XDG application storage. Copy the
+   shipped bundle into an immutable versioned application directory there,
+   so an OS package update cannot remove code from a running generation.
+   Preserve existing version directories and user data across upgrades.
+3. Create configuration only for a new owned desktop installation: accounts,
+   loopback HTTP, a dedicated Compose project/image and data root. Existing
+   operator installations are not silently migrated or adopted. Occupied ports
+   must not trigger another application's shutdown.
+4. Import the verified bundled image if its exact identity is absent; launch
+   the existing foreground supervisor with the explicit configuration. Its
+   account proof is passed to the browser without appearing in ordinary logs.
+5. Open the existing app at account setup or Chat. Offer model setup afterward.
+   Closing a browser does not cancel Runs; stopping the desktop station signals
+   only its own supervisor and uses its existing data-preserving shutdown.
+6. Opening the desktop entry again reuses the live desktop owner's browser link.
+   It neither prepares another image nor starts/restarts services. While the
+   first instance is preparing, explain that its existing progress window owns
+   startup. A newly acquired desktop lock discards stale readiness before work;
+   ordinary shutdown and failed startup remove the current link.
+
+The readiness handoff is an atomic mode-0600 file in the owned desktop state
+directory, read only after observing the existing desktop lock held. It can
+contain the one-use first-admin setup link, so it is not a log or HTTP resource.
+Reads reject symlinks, hard links, nonregular or shared-readable files and
+unexpected URLs. Only the existing loopback browser/setup destinations are
+accepted. Opening an updated package while the previous desktop owner is active
+opens that running version; it does not apply an update during its jobs.
+
+## Qualification and remaining work
+
+The [actual clean Linux qualification](linux-consumer-qualification.md) boots a
+separate no-GPU Ubuntu VM and installs the real Debian package. It reproduced
+and corrected missing account access, inherited package write permissions and
+unordered preview versions. Native consent/authentication cancellation and
+grant, ordinary-user continuation, first admin, real engine/model downloads,
+Chat Send/reply and scoped Stop passed. Actual preserving OS update, explicit
+restart, continued Chat and removal/reinstallation also passed, including
+same-cookie/history/memory/Library/model retention. Final package review remains
+separate. Host permissions, Docker and drivers were left untouched.
+
+The next desktop increment keeps the existing supervisor alive when the native
+status window is closed or **Run in background** is chosen. **Stop AI Station**
+is a separate explicit action. Reopening the entry opens the browser and can
+show controls for that background owner. A private, same-OS-user Unix socket
+supports only status and instance-bound stop; it is outside the mounted data
+root, carries no setup token, and accepts no process IDs, commands or URLs.
+Only the owning supervisor signals the child it launched. Long socket paths
+reuse the qualified directory-descriptor transport. Terminal status/stop flags
+support diagnostics and qualification without adding application HTTP routes.
+This is session background supervision, not login autostart or reboot recovery.
+
+Qualification must exercise background/close/open/stop with an actual packaged
+supervisor and independent clients, reject stale-instance stop and unsafe socket
+files/peers, prove no duplicate services or unrelated process signals, and retain
+account/history across a later restart. Native dialog rendering and button
+semantics require a real private GUI experiment in addition to fake tests.
+
+Unit tests must cover configuration isolation, import identity, no overwrite,
+owned shutdown, occupied ports and setup-link handling. Build the actual bundle,
+relocate it, test Python/SSL/venv/native readiness without host Python/Node,
+and run an isolated app with the packaged image and real account onboarding.
+Then verify retained state through restart/update/uninstall. Synthetic runs
+prove packaging/lifecycle; real model first-result evidence stays separate.
+
+A GUI shown on this workstation is not clean-machine acceptance. Actual
+prerequisite acquisition, supported Linux distributions, Windows WSL2/Docker
+transport and macOS native CPU/Metal execution still require their advertised
+platform journeys. Package signing/public release follows the owner-controlled
+release policy; development artifacts stay private until reviewed.
+
+The [Mac delivery contract](macos-consumer-installation.md) records the native
+ownership, private Docker Desktop socket experiment, CPU/Metal runtime, package
+and preserving-update gates. Initial lifecycle portability work does not enable
+the Linux launcher on macOS or qualify a Mac installer.
+
+## Build and current qualification
+
+Build from a clean reviewed checkout with Docker, `uv` and `dpkg-deb`:
+
+```bash
+python3 scripts/build_linux_package.py --output /path/to/new/ai-station-linux --deb
+```
+
+The builder refuses existing output and dirty sources. `--allow-dirty` is only
+for private experiments. It includes only an explicit source allowlist, a normal
+native wheel, checked Python and hash-pinned runtime dependencies; developer
+credentials, `.env`, application data, model weights and test artifacts are not
+included. The pinned CPython 3.12.14 source/hash is taken from
+[Astral's versioned download metadata](https://github.com/astral-sh/uv/blob/0.12.16/crates/uv-python/download-metadata.json).
+The installed package has a desktop entry; its private version copies and data
+are independent of OS package replacement/removal. No package hook deletes data
+or changes Docker, driver or account permissions.
+
+A real first-start experiment found that the normal desktop data directory
+could exceed the Unix-domain socket address limit for llama.cpp. Linux now uses
+an open parent-directory descriptor as the short bind/connect address when
+needed; socket files stay inside their original validated owned directories.
+No global symlink, TCP listener, filesystem relocation or changed native request
+identity is introduced. Descriptors close after bind/connect, including errors
+and cancellation; streaming uses the already-connected socket. The same helper
+covers the native Runner listener and supervisor health probe.
+
+The initial actual bundle is relocatable and creates a real nested Python venv
+without system Python packages. A clean-source Debian payload was extracted into an isolated staging directory,
+then its actual Zenity dialogs ran on a private authenticated X server. It
+created the first administrator in the compiled browser UI, opened guided model
+setup, verified/adopted the existing public Q4 weights and returned a real GPU
+reply. Desktop/mobile rendering, scoped model Stop, full desktop Stop, restart
+with the same cookie/account/memory/history/model registry, and a separate
+packaged fake worker all passed. Both Runner and model socket paths exceeded the
+usual address limit. No new weight download, production mutation or real OS
+package installation is claimed. Private evidence is under
+`data/acceptance/linux-desktop-package-20261031/`.
+
+The complete native suite passes 1248 tests (two opt-in skips); the eight complete
+backend/launcher/recovery families pass 129 cases, with 69 final socket/transport
+cases. Full Python lint/format covers 825 files. Two old recovery assertions were
+updated from schema 0041 to the existing 0042 migration; no migration was added
+or bypassed. The desktop package and Docker image were built from clean sources.
+QA v21 adds INSTALL-101 without changing issued workbook answers. These checks
+are the documented focused local equivalent; final source/package/Compose review
+and preserving deployment remain separate. Building and testing this `.deb`
+does not complete clean-machine NR-13 or qualify Windows/macOS.
+
+A second actual two-version exercise removed the staged OS package payload
+while the old private interpreter/supervisor kept running, stopped that owned
+station, then extracted and started the newer package. The same account cookie,
+memory and successful Run history survived; workers executed before and after,
+and both immutable code versions plus configuration were retained. This is
+payload-removal/reinstallation qualification without OS mutation, not a claim
+that apt installation/uninstallation or a clean machine has been exercised.
+
+Desktop preparation uses a small native progress window. After readiness,
+closing the status window or choosing **Run in background** leaves supervision
+active in the current user session. Reopen the desktop icon to access the same
+browser and background controls; **Stop AI Station** explicitly closes only
+that installation. Terminal diagnostics use `station --status` and
+`station --stop`; `--background` skips the status window while retaining the
+owning launcher process. Login autostart/reboot recovery, a tray, prerequisite
+acquisition, signing/distribution and actual cross-platform installations remain
+consumer-setup work.
+
+The next Windows increment follows the [dedicated WSL2 consumer contract](windows-consumer-installation.md). It keeps the Linux native boundary in a private guest rather than adopting existing Windows/WSL environments. Windows remains unqualified until its real platform acceptance passes.
+
+## Bind browser readiness to the running station
+
+Desktop startup creates a fresh nonsecret instance UUID, distinct from the private
+stop-channel identity. The explicit child environment passes it through Compose
+to the API; public `/api/health` echoes it with `Cache-Control: no-store`. The
+launcher checks that value before requesting any first-admin authority. A missing
+or different value stops startup rather than opening another local service.
+
+The private parent pipe and mode-0600 readiness handoff retain URL and instance
+identity together. Console reopen returns that same pair. Linux graphical reopen
+can read an older URL-only handoff, but the Windows bridge requires the new
+identity protocol. Its native browser helper validates the address and matches
+the Windows-side loopback health response before handing the URI to the OS
+browser. It uses no proxy/redirect/cache and sends neither URL fragments nor
+bootstrap proof in the HTTP probe. Normal installer, WSL and diagnostic arguments
+do not carry setup authority; the chosen browser necessarily receives its own
+private setup URI through the trusted OS URI handler. The public instance UUID
+is a routing check, not authentication, a user identifier or a stop capability.
+
+Normal tests cover mismatched/missing identity, proof ordering, private handoff
+validation and child identity. Real .NET HTTP tests on Linux cover correct/wrong
+instances, redirects, missing identity and oversized responses; these do not
+qualify Windows forwarding or native rendering. Those platform gates remain in
+the [Windows contract](windows-consumer-installation.md).
+
+## Linux/Windows recovery after OS restart
+
+The final retained Windows check exposed old Compose containers restarting after
+Windows/WSL had closed their native owner. The current launcher correctly refuses
+unregistered pre-existing deployments; a consumer must not need manual Docker
+cleanup after an ordinary system restart.
+
+For newly launched packaged Linux/WSL sessions, retain a private Compose ownership
+receipt beside `desktop.env`, outside container-mounted application data. Bind it
+to the actual Docker daemon, installation/data directory identities and project.
+After this supervisor's successful Compose creation, record exact container IDs,
+services and immutable configuration/mount fingerprints before announcing ready.
+Normal successful shutdown removes the receipt. Never infer ownership from a
+project name alone or adopt a legacy installation with no receipt.
+
+A later packaged Start holds the existing exclusive launcher lock. It may stop
+and remove only the previously recorded containers after checking the complete
+current inventory, daemon, namespace and every fingerprint. An unexpected ID,
+changed configuration/mount or unsafe receipt refuses recovery without signals.
+Partial prior cleanup may leave a subset of recorded IDs; verify all survivors
+before acting. Preserve volumes, database files, managed model containers and
+other projects. Existing worker leases/native process inspection retain their
+normal interrupted-work policy; this does not blindly re-execute external work.
+
+This change applies only to Linux/WSL packaged supervision; development launches
+retain their existing refusal and macOS remains deferred. Crashes before a new
+inventory is durably recorded still require inspection. Hostile receipt/container
+regressions, actual disposable Docker recovery and the retained Windows reboot
+qualification below passed; this does not qualify arbitrary hardware or every
+possible power-loss point.
+
+The real retained Windows reboot exposed a Docker representation change:
+`HostConfig.Dns`, `DnsOptions` and `DnsSearch` changed from null to empty lists
+on all four containers. Reconstructing those three original defaults reproduced
+every recorded hash exactly. Schema 2 canonicalizes only these equivalent empty
+DNS defaults. Schema 1 can be reconciled only by matching its entire original
+hash with one of the eight default representations; nonempty DNS, all other
+configuration and every ID/mount/image check remain frozen. Filesystem UUID
+identity and directory inode replace volatile device enumeration in the native
+namespace, and mount-array ordering does not change ownership.
+
+### Qualified packaged recovery — 2026-11-03
+
+Clean source `f5ff9e44d0e4e82be61f4f2c6cb60185b6133c12` produced the Linux
+Debian package, prepared WSL image and actual PowerShell 5.1/Inno Setup Windows
+installer. After a normal Windows 11 reboot with the old session left running,
+the preserving upgrade and native Start recovered its four recorded containers
+without manual Docker cleanup. Their replacement IDs and the schema-2 receipt
+were verified. Eight account/security/history table hashes, the original browser
+login and the saved four-message conversation were retained. Native Stop removed
+only its own Compose containers and receipt; database integrity and foreign keys
+passed, with no active Runs and models/data retained.
+
+The final image also passed isolated account setup, a separate fake-executor
+worker, durable events/SSE replay and database reopen. Ninety focused launcher/
+ownership regressions and 29 offline QA-tool tests passed. A real Linux Docker
+probe verified recovery of exact owned IDs while retaining an unrelated model
+stub and data marker. No model inference or download was repeated. These tests
+do not qualify physical Windows GPU inference, signing or audible media quality.
+Private receipts and packages are in
+`data/acceptance/desktop-owned-recovery-20261103/`; native observations are in
+`data/acceptance/windows-native-qualification-20261031/` (results 281–283).
+
+
+## Stable-version candidate packaging — 2026-11-03
+
+The release builder candidate adds an explicit `--release-version 0.1.0` option.
+Its default remains the existing ordered private preview version. Stable builds
+refuse `--allow-dirty`, require backend/Runner/frontend version agreement and
+recheck the same clean source before publication. The release version contributes
+to the immutable bundle identity; it cannot alias a preview of the same source.
+This produces private qualification artifacts, not a Git tag or public release.
+
+A publisher builds a new destination on native Linux x86-64, for example:
+
+```bash
+.venv/bin/python scripts/build_linux_package.py \
+  --output /path/to/new-qualified-bundle --deb \
+  --release-version 0.1.0 --linux-gpu --windows-gpu
+```
+
+The two GPU flags remain explicit independent opt-ins. A verified `--gpu-cache`
+can reuse the same four input packages without downloading them again. The
+Linux action rejects WSL, and the Windows activation still rejects native Linux.
+The compiler does not install the toolkit or change the build host's daemon.
+
+The Windows guest update identity previously accepted only the private preview
+format, which would reject a real stable update before installation. The candidate
+also admits bounded numeric stable versions while retaining all source/recipe,
+package metadata and actual Debian ordering checks; stable → older preview or
+older stable remains a refused downgrade. The Windows publisher passes the
+stable Debian version to Inno's AppVersion; its separate retained source/hash
+identity and existing preview build behavior remain intact.
+
+The complete affected version/updater/guest/bundle families now pass 159 tests,
+including actual synthetic Debian payload ordering and private-data preservation
+across a stable update replay. Publisher identity also freezes the independent
+Linux/Windows activation choices: shared offline files cannot alias different
+OS policies. Legacy default hashing remains unchanged.
+
+The private clean `b145d7d` candidate was built with stable Debian metadata,
+both explicit graphics recipes and the compiled app. Actual qualification:
+
+- Ubuntu 24.04 upgraded its previous preview to `0.1.0`, preserving the same live
+  Docker PID/identity, unrelated fixture container, toolkit configuration,
+  root-only original backup/journal and user sentinel.
+- Native Windows PowerShell 5.1 and Inno built the real installer with ProductVersion
+  `0.1.0`. The installed UI's **Update AI Station** action completed its preserving
+  WSL update and ordinary automatic Start. All eight protected account, conversation,
+  message, artifact, memory, agent, project and model-file table hashes matched.
+  Existing registration/storage and application configuration were retained.
+- The real browser retained its original login cookie, four-message conversation
+  and usable composer. The private desktop owner and exact new app image were
+  verified. Ordinary native **Stop** cleared its own Compose inventory/receipt
+  while retaining valid account/history/model data. No new inference was run.
+
+That Windows installer is verified **NotSigned** and remains private. The VM is
+CPU-only; none of these results qualifies physical Windows GPU inference. The
+subsequent publisher policy-identity correction is included in the frozen
+merged-source installers described below. Its code/metadata identity must not
+be confused with the earlier qualification artifact. The existing distribution,
+physical-GPU and operator handoff gates still apply.
+Only the human owner promotes the reviewed release PR to master; no build option
+publishes, signs, tags or bypasses that policy.
+
+### Frozen private installers — 2026-11-04
+
+PRs #629–630 are reviewed and squash-merged to `develop`. Clean source
+`4a1d8281f8ba5bdbc93b6b40a0956773e23e37b1` produced the Linux Debian package,
+compiled application, WSL payload and actual native Windows installer with
+version `0.1.0`. Windows PowerShell 5.1/Inno built and exported the final EXE;
+its actual signature status remains **NotSigned**.
+
+All 17 native Windows runtime/legal files and the bootstrap source match the
+actual previously qualified preserving update. The final application image's
+Python version, all 4,778 runtime/dependency/frontend/legal files and selected
+launch configuration match the previously qualified image. This is an identity
+comparison, not another installation or inference test. The final helper/policy
+files match the separately qualified root-private Linux publication/restart path.
+
+Both disposable OS fixtures shut down normally; their sidecars are closed.
+Superseded project-owned build inputs were removed only after verifying the
+retained final artifact hashes. Models, production data and current services
+were preserved. The [release audit](release-0.1-readiness.md) records remaining
+hardware, distribution, human quality and handoff gates. No public tag, release
+or master promotion was performed.

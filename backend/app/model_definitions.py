@@ -18,6 +18,7 @@ from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
 from app.llama import LoadModel, enqueue_load, loadable_model
+from app.model_sources import source_of, verify_source
 from app.models import ModelDefinition, ModelFile, Run, RuntimeInstance
 from app.permissions import require
 from app.runner_client import RunnerClient, RunnerError
@@ -151,10 +152,13 @@ def preset_of(row: ModelDefinition) -> dict:
         ],
         "context_size": context_size,
         "cache_type": cache_type,
+        **{k: meta[k] for k in ("runtime_profile", "ram_mib", "environment_id") if meta.get(k) is not None},
     }
 
 
 def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict:
+    from app.data_access import accessible_run_id
+
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
     image = (row.metadata_json or {}).get("image")
     image_backend = image.get("backend") if isinstance(image, dict) and row.category == "image" else None
@@ -175,7 +179,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "file_id": row.file_id,
         "capabilities": list(row.capabilities or []),
         "status": row.status,
-        "last_verify_run_id": row.last_verify_run_id,
+        "last_verify_run_id": accessible_run_id(row, row.last_verify_run_id),
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
         "preset": preset_of(row),
@@ -187,6 +191,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
                 "id": file.id,
                 "filename": file.filename,
                 "host_path": file.host_path,
+                **({"relative_path": file.relative_path} if file.relative_path else {}),
                 "format": file.format,
                 "category": file.category,
                 "availability": file.availability,
@@ -214,6 +219,10 @@ def active_install(session: Session, definition_id: str) -> Run | None:
 
 
 def store_preset(row: ModelDefinition, *, gpus, context_size, cache_type):
+    if (row.metadata_json or {}).get("runtime_profile") and (
+        gpus or context_size != 4096 or cache_type != "q8_0"
+    ):
+        raise HTTPException(422, "This managed CPU profile keeps its reviewed 4096-token Q8 preset")
     if len(set(gpus)) != len(gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     row.metadata_json = {
@@ -316,11 +325,15 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         )
     if active_install(session, row.id):
         raise HTTPException(409, "This definition already has an active installation Run")
-    check_image = needs_llama_image(file)
+    from app.native_models import native
+
+    check_image = needs_llama_image(file) and not native(row.metadata_json)
     task = create_task(
         session,
         title="Install " + row.name,
-        prompt="Verify a local model file and any already-installed llama.cpp image",
+        prompt="Verify a local model file and its prepared native llama.cpp engine"
+        if native(row.metadata_json)
+        else "Verify a local model file and any already-installed llama.cpp image",
         capability="models.install",
     )
     run = create_run(
@@ -335,10 +348,14 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         parameters={
             "definition_id": row.id,
             "file_id": file.id,
-            "host_path": file.host_path,
-            "size_bytes": file.size_bytes,
-            "mtime": file.mtime,
+            **verify_source(source_of(file)),
             "check_image": check_image,
+            **({"context_size": preset_of(row)["context_size"]} if native(row.metadata_json) else {}),
+            **{
+                k: row.metadata_json[k]
+                for k in ("runtime_profile", "ram_mib", "environment_id")
+                if row.metadata_json.get(k) is not None
+            },
         },
     )
     row.last_verify_run_id = run.id
@@ -361,6 +378,11 @@ def load_definition(definition_id: UUID, body: EmptyBody, session: DB):
     run = enqueue_load(
         LoadModel(
             model_file_id=file.id,
+            **{
+                k: preset[k]
+                for k in ("runtime_profile", "ram_mib", "environment_id")
+                if preset.get(k) is not None
+            },
             gpus=preset["gpus"],
             context_size=preset["context_size"],
             cache_type=preset["cache_type"],
@@ -398,14 +420,34 @@ class ModelInstallExecutor:
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
+        from app.native_models import active_environment, native, ready, verification
+
+        if native(run.parameters) and not run.parameters.get("environment_id"):
+            environment_id = active_environment(run.parameters["runtime_profile"])
+            if not environment_id:
+                mark_failed(
+                    session,
+                    run,
+                    "NativeEngineMissing",
+                    "Prepare the native llama.cpp engine before checking this model",
+                )
+                return "done"
+            run.parameters = {**run.parameters, "environment_id": environment_id}
+            session.commit()
         try:
             report = RunnerClient(timeout=20).verify_model(
                 {
                     "run_id": run.id,
                     "host_path": run.parameters["host_path"],
+                    **(
+                        {"app_owned": True, "model_sha256": run.parameters["model_sha256"]}
+                        if run.parameters.get("app_owned")
+                        else {}
+                    ),
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
+                    **(verification(run.parameters) if run.parameters.get("runtime_profile") else {}),
                     "permissions": run.effective_permissions,
                 }
             )
@@ -439,6 +481,18 @@ class ModelInstallExecutor:
             and report.get("matches_observation")
             and not report.get("error")
         )
+        if run.parameters.get("runtime_profile"):
+            ok = bool(
+                ok
+                and report.get("cpu")
+                == {
+                    "runtime_profile": run.parameters["runtime_profile"],
+                    "ram_mib": run.parameters["ram_mib"],
+                    "context_size": run.parameters.get("context_size", 4096),
+                }
+            )
+            if native(run.parameters):
+                ok = bool(ok and ready(report, run.parameters))
         image = report.get("image")
         if run.parameters.get("check_image"):
             ok = bool(ok and isinstance(image, dict) and image.get("present"))
@@ -460,6 +514,8 @@ class ModelInstallExecutor:
                 session, run, "ModelInstallFailed", report.get("error") or "Local model installation failed"
             )
             return "done"
+        if native(run.parameters):
+            row.metadata_json = {**row.metadata_json, "environment_id": run.parameters["environment_id"]}
         row.status = "registered"
         row.updated_at = utcnow()
         run.summary = (

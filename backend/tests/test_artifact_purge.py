@@ -258,3 +258,77 @@ def test_stop_between_items_leaves_remaining_files(monkeypatch):
         assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
         assert client.get(f"/api/artifacts/{rows[0]['id']}/file").status_code == 410
         assert client.get(f"/api/artifacts/{rows[1]['id']}/file").status_code == 200
+
+
+def test_completed_progress_dismissal_persists_without_changing_history():
+    with TestClient(app) as client:
+        source = upload(client)
+        run = prepare(client, [source]).json()
+        grant(client, run)
+        work()
+        before = client.get(f"/api/runs/{run['id']}").json()
+        response = client.post(f"/api/library/purges/{run['id']}/dismiss")
+        assert response.status_code == 200, response.text
+        dismissed = response.json()
+        assert dismissed["metadata"]["purge_progress_dismissed_at"]
+        assert dismissed["status"] == before["status"] == "succeeded"
+        assert dismissed["parameters"] == before["parameters"]
+        assert dismissed["metadata"]["purge_outcomes"] == before["metadata"]["purge_outcomes"]
+        repeated = client.post(f"/api/library/purges/{run['id']}/dismiss").json()
+        assert repeated["metadata"] == dismissed["metadata"]
+        listed = client.get("/api/library/purges").json()
+        assert listed[0]["metadata"] == dismissed["metadata"]
+        events = client.get(f"/api/runs/{run['id']}/events").json()
+        assert sum(e["event_type"] == "library.purge_progress.dismissed" for e in events) == 1
+        assert client.get(f"/api/artifacts/{source['id']}/file").status_code == 410
+    with TestClient(app) as reopened:
+        assert reopened.get(f"/api/runs/{run['id']}").json()["metadata"] == dismissed["metadata"]
+
+
+@pytest.mark.parametrize(
+    "status", ["waiting_for_approval", "queued", "claimed", "preparing", "running", "cancel_requested"]
+)
+def test_active_deletion_cannot_be_hidden(status):
+    with TestClient(app) as client:
+        source = upload(client)
+        run = prepare(client, [source]).json()
+        with session_factory()() as session:
+            session.get(Run, run["id"]).status = status
+            session.commit()
+        response = client.post(f"/api/library/purges/{run['id']}/dismiss")
+        assert response.status_code == 409
+        record = client.get(f"/api/runs/{run['id']}").json()
+        assert record["status"] == status
+        assert "purge_progress_dismissed_at" not in record["metadata"]
+        assert client.get(f"/api/artifacts/{source['id']}/file").status_code == 200
+
+
+@pytest.mark.parametrize("status", ["failed", "canceled", "interrupted"])
+def test_stopped_deletion_progress_can_be_dismissed_with_outcomes_retained(status):
+    with TestClient(app) as client:
+        source = upload(client)
+        run = prepare(client, [source]).json()
+        with session_factory()() as session:
+            row = session.get(Run, run["id"])
+            row.status = status
+            row.metadata_json = {**row.metadata_json, "purge_outcomes": {source["id"]: {"state": "failed"}}}
+            session.commit()
+        response = client.post(f"/api/library/purges/{run['id']}/dismiss")
+        assert response.status_code == 200
+        assert response.json()["status"] == status
+        assert response.json()["metadata"]["purge_outcomes"][source["id"]] == {"state": "failed"}
+        assert client.get(f"/api/artifacts/{source['id']}/file").status_code == 200
+
+
+def test_progress_dismissal_rejects_missing_or_other_executor_runs():
+    with TestClient(app) as client:
+        assert client.post(f"/api/library/purges/{uuid4()}/dismiss").status_code == 404
+        assert client.post("/api/library/purges/not-a-uuid/dismiss").status_code == 422
+        run = prepare(client, [upload(client)]).json()
+        with session_factory()() as session:
+            row = session.get(Run, run["id"])
+            row.executor_type = "fake"
+            row.status = "succeeded"
+            session.commit()
+        assert client.post(f"/api/library/purges/{run['id']}/dismiss").status_code == 404
+        assert "purge_progress_dismissed_at" not in client.get(f"/api/runs/{run['id']}").json()["metadata"]

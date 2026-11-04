@@ -60,15 +60,41 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--expected-sha256", help="The exact backup digest you reviewed before --apply")
     parser.add_argument(
+        "--legacy-owner",
+        help="Explicitly assign a pre-account backup's private data to this existing current username",
+    )
+    parser.add_argument(
         "--operator-password-file",
         type=Path,
         help="Private new-password file, required when current credentials cannot be read",
+    )
+    parser.add_argument(
+        "--recover-admin",
+        help="Recover this backup administrator when current account authority is unreadable",
+    )
+    parser.add_argument(
+        "--admin-password-file",
+        type=Path,
+        help="Private 0600 file containing the recovered administrator's new password",
+    )
+    parser.add_argument(
+        "--reset-admin-mfa",
+        action="store_true",
+        help="Explicitly acknowledge resetting the recovered administrator's unavailable second factor",
     )
     args = parser.parse_args(argv)
     if args.apply and (not args.backup_run or not args.expected_sha256):
         parser.error("--apply requires --backup-run and its reviewed --expected-sha256")
     if (args.expected_sha256 or args.operator_password_file) and not args.apply:
         parser.error("--expected-sha256 and --operator-password-file require --apply")
+    if args.legacy_owner and not args.apply:
+        parser.error("--legacy-owner requires --apply and the reviewed backup digest")
+    if args.recover_admin and (not args.apply or not args.reset_admin_mfa):
+        parser.error("--recover-admin requires --apply, the reviewed backup digest and --reset-admin-mfa")
+    if (args.admin_password_file or args.reset_admin_mfa) and not args.recover_admin:
+        parser.error("Administrator password/MFA recovery options require --recover-admin")
+    if args.recover_admin and (args.legacy_owner or args.operator_password_file):
+        parser.error("Administrator recovery cannot combine with operator password or legacy owner mapping")
     sys.path[:0] = [str(ROOT / "backend"), str(ROOT / "host-runner")]
     configuration = {**dotenv_values(ROOT / ".env"), **os.environ}
     root = args.data_root or Path(configuration.get("AI_STATION_DATA_HOST_PATH") or ROOT / "data")
@@ -87,15 +113,42 @@ def main(argv=None) -> int:
         elif not args.apply:
             result = inspect_backup(root, args.backup_run)
         else:
+            admin_recovery = None
+            if args.recover_admin:
+                from station_recovery.accounts import AdminRecovery
+
+                if args.admin_password_file:
+                    admin_password = password_from_file(args.admin_password_file)
+                elif sys.stdin.isatty():
+                    admin_password = getpass.getpass("New administrator password: ")
+                    if admin_password != getpass.getpass("Confirm new administrator password: "):
+                        raise RecoveryError("New administrator passwords did not match")
+                else:
+                    raise RecoveryError(
+                        "Noninteractive administrator recovery requires a private --admin-password-file"
+                    )
+                admin_recovery = AdminRecovery(
+                    args.recover_admin, admin_password, reset_mfa=args.reset_admin_mfa
+                )
             password = (
                 password_from_file(args.operator_password_file) if args.operator_password_file else None
             )
             current = data_path(root, "db/ai-station.sqlite", required=False)
-            if current_security(current) is None and password is None and sys.stdin.isatty():
+            if (
+                admin_recovery is None
+                and current_security(current) is None
+                and password is None
+                and sys.stdin.isatty()
+            ):
                 password = getpass.getpass("New operator password (current credentials are unreadable): ")
                 if password != getpass.getpass("Confirm new operator password: "):
                     raise RecoveryError("New operator passwords did not match")
-            result = restore_database(root, args.backup_run, args.expected_sha256, password=password)
+            options = {"password": password}
+            if args.legacy_owner is not None:
+                options["legacy_owner"] = args.legacy_owner
+            if admin_recovery is not None:
+                options["admin_recovery"] = admin_recovery
+            result = restore_database(root, args.backup_run, args.expected_sha256, **options)
         print(json.dumps({"data_root": str(root), **result}, indent=2, ensure_ascii=False))
         return 0
     except RecoveryError as exc:

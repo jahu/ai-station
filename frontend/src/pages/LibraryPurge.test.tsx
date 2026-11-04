@@ -40,7 +40,7 @@ const run = {
   metadata: {},
 };
 function mount(element: React.ReactNode) {
-  render(
+  return render(
     <QueryClientProvider
       client={
         new QueryClient({
@@ -242,4 +242,132 @@ it("partial results show exact failures and retry only remaining artifact identi
   await screen.findByRole("button", { name: "Delete permanently" });
   expect(fetch).toHaveBeenCalledWith("/api/artifacts/b", undefined);
   expect(fetch).not.toHaveBeenCalledWith("/api/artifacts/a", undefined);
+});
+
+it("dismissal removes a card without replacing it with older identical completions", async () => {
+  let rows = ["first", "second", "third", "older"].map((id) => ({
+    ...run,
+    id,
+    status: "succeeded",
+    metadata: { purge_outcomes: { a: { state: "deleted" } } },
+  }));
+  const fetch = vi.fn(async (path: string) => {
+    if (path.endsWith("/dismiss")) {
+      const id = path.split("/").at(-2);
+      rows = rows.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              metadata: {
+                ...row.metadata,
+                purge_progress_dismissed_at: "2026-10-29T17:00:00Z",
+              },
+            }
+          : row,
+      );
+      return response(rows.find((row) => row.id === id));
+    }
+    return response(rows);
+  });
+  vi.stubGlobal("fetch", fetch);
+  const view = mount(<PurgeActivity />);
+  expect(
+    await screen.findAllByText("Permanent deletion complete"),
+  ).toHaveLength(3);
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Dismiss deletion progress" })[0],
+  );
+  await waitFor(() =>
+    expect(screen.getAllByText("Permanent deletion complete")).toHaveLength(2),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith("/api/library/purges/first/dismiss", {
+      method: "POST",
+    }),
+  );
+  expect(
+    screen
+      .getAllByRole("link", { name: "Inspect execution history" })
+      .map((link) => link.getAttribute("href")),
+  ).not.toContain("/runs/older");
+  view.unmount();
+  mount(<PurgeActivity />);
+  expect(
+    await screen.findAllByText("Permanent deletion complete"),
+  ).toHaveLength(2);
+  expect(
+    screen
+      .getAllByRole("link", { name: "Inspect execution history" })
+      .map((link) => link.getAttribute("href")),
+  ).toEqual(["/runs/second", "/runs/third"]);
+});
+
+it("failed dismissal restores the card and explains the error without deleting anything", async () => {
+  const completed = { ...run, status: "succeeded" };
+  const fetch = vi.fn(async (path: string) => {
+    if (path.endsWith("/dismiss")) throw new Error("Could not save dismissal");
+    return response([completed]);
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(<PurgeActivity />);
+  await screen.findByText("Permanent deletion complete");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Dismiss deletion progress" }),
+  );
+  await screen.findByText("Could not save dismissal");
+  expect(screen.getByText("Permanent deletion complete")).toBeTruthy();
+  expect(
+    fetch.mock.calls.every(
+      ([path]) => path === "/api/library/purges" || path.endsWith("/dismiss"),
+    ),
+  ).toBe(true);
+});
+
+it("an active deletion keeps Stop and cannot be hidden by a stale presentation marker", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      response([
+        {
+          ...run,
+          status: "running",
+          metadata: { purge_progress_dismissed_at: "old" },
+        },
+      ]),
+    ),
+  );
+  mount(<PurgeActivity />);
+  await screen.findByText("Deleting artifacts");
+  expect(screen.getByRole("button", { name: "Stop" })).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Dismiss deletion progress" }),
+  ).toBeNull();
+});
+
+it("older active work keeps its controls ahead of the recent completion window", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      response([
+        ...["first", "second", "third", "older"].map((id) => ({
+          ...run,
+          id,
+          status: "succeeded",
+        })),
+        { ...run, id: "still-deleting", status: "running" },
+      ]),
+    ),
+  );
+  mount(<PurgeActivity />);
+  await screen.findByText("Deleting artifacts");
+  expect(screen.getAllByText("Permanent deletion complete")).toHaveLength(3);
+  const panels = screen.getAllByRole("region", {
+    name: "Permanent deletion progress",
+  });
+  expect(within(panels[0]).getByRole("button", { name: "Stop" })).toBeTruthy();
+  expect(
+    within(panels[0])
+      .getByRole("link", { name: "Inspect execution history" })
+      .getAttribute("href"),
+  ).toBe("/runs/still-deleting");
 });

@@ -11,6 +11,7 @@ from sqlalchemy import select
 from app import whole_avatars as whole
 from app.db import utcnow
 from app.dependencies import depend_on
+from app.generation_progress import active_progress
 from app.models import Artifact, Run, RunEvent, Task
 from app.resources import latest_resource_wait
 from app.runs import create_run
@@ -130,6 +131,7 @@ def view(session, task):
         "scenes": [],
         "preview_artifact_id": None,
         "active_run_ids": [run.id for run in active],
+        "active_generation_progress": active_progress(active),
         "native_progress": generation.metadata_json.get("avatar_progress") if generation else None,
         "estimated_animation_seconds": animation_estimate(session, generation),
         "resource_wait": latest_resource_wait(active),

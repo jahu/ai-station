@@ -19,8 +19,10 @@ from app.artifact_purge import ArtifactPurgeExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
+from app.avatar_setup_job import AvatarSetupExecutor
 from app.avatars import AvatarExecutor
 from app.browser import BrowserExecutor
+from app.bundle_download_job import BundleDownloadExecutor
 from app.chat_executor import ChatExecutor
 from app.chat_reasoning import ReasoningCheckExecutor
 from app.codex_coding import CodexProposalExecutor
@@ -31,10 +33,16 @@ from app.conversation_agent_control import AgentControlExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
+from app.effects import EffectsExecutor, EffectsPreviewExecutor
+from app.effects_setup_job import EffectsSetupExecutor
 from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
+from app.film_sound import FilmSoundExecutor
+from app.fish_setup_job import FishSetupExecutor
+from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
+from app.image_setup_job import ImageSetupExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
 from app.local_coding import LocalProposalExecutor
@@ -44,9 +52,12 @@ from app.market_watch import MarketExecutor
 from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.media_translation import MediaTranslationExecutor, TranslationApplyExecutor
 from app.model_definitions import ModelInstallExecutor
+from app.model_download_job import DownloadExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.music import MusicExecutor
+from app.music_setup_job import MusicSetupExecutor
+from app.native_llama_setup_job import NativeLlamaSetupExecutor
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
 from app.private_ui import PrivateAccessExecutor
@@ -59,15 +70,21 @@ from app.python_execution import PythonExecutor
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
+from app.runtime_coordination import LlamaWaitExecutor
 from app.runtime_registry import RuntimeObservationExecutor
+from app.runtime_setup_job import RuntimeSetupExecutor
 from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecutor, PreviewExecutor
+from app.speech_setup_job import SpeechSetupExecutor
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
+from app.timeline_waveforms import WaveformExecutor
+from app.timelines import TimelineExecutor
 from app.tools import get_tool
 from app.transcription import TranscriptionExecutor
 from app.validation_executor import ProjectValidationExecutor
 from app.video import VideoExecutor
+from app.video_setup_job import VideoSetupExecutor
 from app.whole_avatars import WholeAvatarExecutor
 from app.worktree_executor import WorktreeExecutor
 from app.worktree_remove import WorktreeRemoveExecutor
@@ -310,6 +327,16 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "speech_setup": SpeechSetupExecutor(),
+    "image_setup": ImageSetupExecutor(),
+    "music_setup": MusicSetupExecutor(),
+    "video_setup": VideoSetupExecutor(),
+    "avatar_setup": AvatarSetupExecutor(),
+    "effects_setup": EffectsSetupExecutor(),
+    "fish_setup": FishSetupExecutor(),
+    "native_llama_setup": NativeLlamaSetupExecutor(),
+    "model_bundle_download": BundleDownloadExecutor(),
+    "runtime_setup": RuntimeSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),
     "media_translation_apply": TranslationApplyExecutor(),
     "artifact_purge": ArtifactPurgeExecutor(),
@@ -325,14 +352,22 @@ EXECUTORS = {
     "agent_data_result": DataResultExecutor(),
     "agent_result_alert": ResultAlertExecutor(),
     "fake": FakeExecutor(),
+    DownloadExecutor.name: DownloadExecutor(),
     "orchestrator": AssistantExecutor(),
     "station_snapshot": StationSnapshotExecutor(),
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
     "llama_health": LlamaHealthExecutor(),
+    "llama_wait": LlamaWaitExecutor(),
     "llama_resume_consumer": LlamaResumeConsumerExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
+    "fish_speech": FishSpeechExecutor(),
+    EffectsExecutor.name: EffectsExecutor(),
+    FilmSoundExecutor.name: FilmSoundExecutor(),
+    TimelineExecutor.name: TimelineExecutor(),
+    WaveformExecutor.name: WaveformExecutor(),
+    EffectsPreviewExecutor.name: EffectsPreviewExecutor(),
     "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),

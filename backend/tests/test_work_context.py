@@ -338,12 +338,12 @@ def test_coding_task_search_matches_project_and_escapes_sql_wildcards(scope):
         assert client.get("/api/coding/sessions?q=missing").json() == []
 
 
-def test_context_migration_preserves_existing_conversation_task_and_runs(scope):
+def test_context_migration_preserves_existing_conversation_task_and_runs(scope, legacy_schema):
     from alembic import command
     from app.db import alembic_config
     from app.models import ChatWorkContext
 
-    command.downgrade(alembic_config(), "0021")
+    legacy_schema("0021")
     command.upgrade(alembic_config(), "head")
     with session_factory()() as s:
         assert s.get(Conversation, scope["conversation_id"])

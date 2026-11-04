@@ -151,6 +151,8 @@ def transition(
 
 
 def claim_next(session: Session, worker_id: str) -> Run | None:
+    from app.runtime_coordination import runtime_ready_condition
+
     settings = get_settings()
     now = utcnow()
     prerequisite = aliased(Run)
@@ -161,7 +163,12 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     )
     candidate = session.scalar(
         select(Run)
-        .where(Run.status == RunStatus.QUEUED.value, Run.id.not_in(blocked), resource_ready_condition(now))
+        .where(
+            Run.status == RunStatus.QUEUED.value,
+            Run.id.not_in(blocked),
+            resource_ready_condition(now),
+            runtime_ready_condition(now),
+        )
         .order_by(Run.queued_at, Run.created_at)
         .limit(1)
     )
@@ -170,7 +177,12 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     lease = now + timedelta(seconds=settings.lease_seconds)
     result = session.execute(
         update(Run)
-        .where(Run.id == candidate.id, Run.status == RunStatus.QUEUED.value, resource_ready_condition(now))
+        .where(
+            Run.id == candidate.id,
+            Run.status == RunStatus.QUEUED.value,
+            resource_ready_condition(now),
+            runtime_ready_condition(now),
+        )
         .values(
             status=RunStatus.CLAIMED.value,
             worker_id=worker_id,
@@ -293,7 +305,21 @@ def request_cancel(session: Session, run: Run) -> Run:
     run.cancellation_requested_at = utcnow()
     if (
         run.status == RunStatus.QUEUED
-        and run.executor_type in {"llama_load", "llama_stop", "private_access"}
+        and run.executor_type
+        in {
+            "llama_load",
+            "llama_stop",
+            "private_access",
+            "runtime_setup",
+            "speech_setup",
+            "image_setup",
+            "music_setup",
+            "video_setup",
+            "avatar_setup",
+            "effects_setup",
+            "fish_setup",
+            "native_llama_setup",
+        }
         and run.metadata_json.get("dispatch_attempted")
     ):
         # A resumed lifecycle operation may still own a container. Let the next
@@ -303,7 +329,12 @@ def request_cancel(session: Session, run: Run) -> Run:
         session.flush()
         return run
     if run.status in {RunStatus.QUEUED.value}:
-        return transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+        transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+        if run.executor_type == "llama_load":
+            from app.model_cancellation import retire_unstarted_load
+
+            retire_unstarted_load(session, run)
+        return run
     if run.status in {RunStatus.CLAIMED.value, RunStatus.PREPARING.value, RunStatus.RUNNING.value}:
         return transition(
             session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested", payload={}
@@ -317,6 +348,7 @@ def request_cancel(session: Session, run: Run) -> Run:
 
 
 def run_dict(run: Run) -> dict[str, Any]:
+    from app.generation_progress import projection
     from app.resources import resource_wait
 
     def iso(value):
@@ -337,6 +369,7 @@ def run_dict(run: Run) -> dict[str, Any]:
         "started_at": iso(run.started_at),
         "finished_at": iso(run.finished_at),
         "resource_wait": resource_wait(run),
+        "generation_progress": projection(run),
         "requested_resources": run.requested_resources,
         "allocated_resources": run.allocated_resources,
         "requested_gpu": run.requested_gpu,

@@ -155,3 +155,24 @@ build. Empty or missing entrypoints do not publish a ready preview/download.
 Generic project checks retain their existing behavior. See the
 [QA repair plan](plans/qa-website-output-contract.md) for the original defect and
 browser acceptance requirements.
+
+### Reviewed film sound effects
+
+Create media supports `effects` alongside image, speech, music, video and avatar.
+Select an owned inspected film in Library and supply the overall sound description
+and optional ordered frame-bound scene cues. Disabled natural-language drafts
+leave the film unset and cannot invent reference IDs or cue timing. Activation
+requires a reviewed film and the admitted local effects engine. Fixed mode needs
+no text inference; goal mode rewrites only the overall description, retaining
+film, cue descriptions/timing and sampler settings. An omitted draft time limit
+proposes 30 minutes for this output; explicitly requested limits remain unchanged.
+
+Preparation freezes the source and reuses the existing approval, scope, deadline
+and idempotent publication contracts. The effects builder accepts a trusted
+preflight observation so publication does not perform Runner I/O inside its
+transaction. The ordinary effects Run then creates its verified preview through
+the existing compositor. Both WAV and video remain visible in agent history and
+Library; final-result summaries require the verified preview, rather than treating
+an intermediate stem as a completed film. Perceptual quality remains separate
+from technical sample/frame verification. See operator QA cases AGENT-016 and
+AUDIO-102.

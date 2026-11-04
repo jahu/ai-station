@@ -68,7 +68,7 @@ def test_interval_and_explicit_one_shot_remain_utc_instants():
     assert compute_next(once, after=after) == stamp("2026-03-29T01:20Z")
 
 
-def test_timezone_migration_preserves_legacy_schedule_and_schema():
+def test_timezone_migration_preserves_legacy_schedule_and_schema(legacy_schema):
     with TestClient(app) as client:
         original = client.post(
             "/api/agents",
@@ -81,7 +81,7 @@ def test_timezone_migration_preserves_legacy_schedule_and_schema():
                 "enabled": True,
             },
         ).json()
-        command.downgrade(alembic_config(), "0032")
+        legacy_schema("0032")
         command.upgrade(alembic_config(), "head")
         command.check(alembic_config())
         restored = client.get("/api/agents/" + original["id"]).json()

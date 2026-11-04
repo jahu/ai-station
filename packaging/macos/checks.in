@@ -1,0 +1,2 @@
+# Native test plugin required by the shared pytest configuration.
+pytest-asyncio

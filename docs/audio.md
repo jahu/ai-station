@@ -1,4 +1,32 @@
-# Local speech
+# Local audio
+
+Development builds include **Sound effects** beside Speech and Music. Choose an
+inspected completed film from Library, describe what should be heard, then retain
+a WAV stem and a separate video preview. The preview replaces audio only in the
+new film; the original remains available. **Add sound** from Library stages that
+exact video. Saved workspaces retain sources, descriptions and variations. The
+optional offline MMAudio adapter requires a configured runtime, at least 8 GiB
+free VRAM and 18 GiB load RAM; it stays unavailable until verified. See
+[setup, model licensing and actual qualification](plans/synchronized-sound.md).
+
+## Speech
+
+Development builds additionally offer **Fish S2 Pro · Expressive** in Speech
+model when its separate native runtime is configured and verified. Select voice
+direction and pace while keeping the spoken script unchanged; the reference is
+transcribed locally and saved creative versions retain the settings. Reviewed
+speech agents use the same controls. The optional two-GPU adapter, measured
+short/long/cancellation checks, configuration and outstanding audible-style
+acceptance are documented in the [expressive speech contract](plans/expressive-speech.md).
+Chatterbox remains the default.
+
+Development builds offer **Shape the delivery** when the configured Chatterbox CLI
+supports its existing expression/guidance/temperature controls. Adjust Expression;
+use **Fine-tune the voice** for guidance and variation. The option starts off,
+keeps the spoken text exact and is saved with creative versions. A clean reference
+recording also shapes delivery. These controls do not claim named emotion/whisper
+support; that requires the separately qualified model described in the
+[expressive speech plan](plans/expressive-speech.md).
 
 The Audio workspace queues `audio.speech` Tasks and `chatterbox` Runs. It wraps an administrator-configured installation of `clone_pl.py`, using its inspected `--ref`, `--text` and `--out` arguments. The current adapter produces Polish speech; it does not pretend to support music or other languages.
 

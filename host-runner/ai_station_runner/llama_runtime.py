@@ -3,9 +3,11 @@
 import fcntl
 import hashlib
 import json
+import math
 import os
 import re
 import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
@@ -13,12 +15,14 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import _split, get_settings
 from ai_station_runner.local_model import CodingCompletion, forward_completion
+from ai_station_runner.native_llama_request import NativeModelLoad
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
+from ai_station_runner.unix_sockets import unix_address
 from ai_station_runner.vision_messages import VisionCompletion
 
 router = APIRouter(prefix="/v1/llama")
@@ -36,6 +40,8 @@ class Load(BaseModel):
     instance_id: UUID
     run_id: UUID
     model_path: str = Field(min_length=1, max_length=1200)
+    app_owned: StrictBool = False
+    model_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     size_bytes: int = Field(gt=0)
     mtime: float = Field(gt=0, allow_inf_nan=False)
     gpus: list[int] = Field(max_length=16)
@@ -43,6 +49,39 @@ class Load(BaseModel):
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector: Projector | None = None
     permissions: list[str]
+    runtime_profile: Literal["llamacpp-cpu-linux-amd64-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    ram_mib: StrictInt | None = Field(default=None, ge=256, le=65536, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def coordinate(self):
+        from ai_station_runner.owned_models import validate_reference
+
+        validate_reference(self.model_path, self.model_sha256, self.app_owned)
+        if self.runtime_profile:
+            from ai_station_runner import cpu_runtime_profile as cpu
+
+            if (
+                not self.app_owned
+                or self.gpus
+                or self.projector
+                or self.cache_type != "q8_0"
+                or self.context_size != cpu.DEFAULT_CONTEXT
+                or self.ram_mib is None
+            ):
+                raise ValueError("Managed CPU requires owned weights, its fixed context/cache and RAM budget")
+        elif self.ram_mib is not None:
+            raise ValueError("A managed RAM budget requires its explicit CPU profile")
+        return self
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        value = handler(self)
+        if not self.app_owned:
+            value.pop("app_owned", None)
+            value.pop("model_sha256", None)
+        return value
 
 
 def docker(*args, missing_ok=False):
@@ -124,6 +163,19 @@ def inspected(record):
         raise HTTPException(409, "Container ownership does not match the saved runtime")
     if record.get("container_id") and item["Id"] != record["container_id"]:
         raise HTTPException(409, "Container identity changed")
+    cpu = record.get("request", {}).get("runtime_profile")
+    if cpu:
+        budget = record["request"]["ram_mib"] * 1024**2
+        host = item.get("HostConfig", {})
+        env = item.get("Config", {}).get("Env", [])
+        if (
+            host.get("Memory") != budget
+            or host.get("MemorySwap") != budget
+            or host.get("DeviceRequests")
+            or "CUDA_VISIBLE_DEVICES=-1" not in env
+            or "NVIDIA_VISIBLE_DEVICES=void" not in env
+        ):
+            raise HTTPException(409, "The owned CPU container memory/device policy changed")
     return item
 
 
@@ -203,9 +255,12 @@ def snapshot(instance_id):
     observed = {}
     if alive:
         try:
-            with httpx.Client(
-                transport=httpx.HTTPTransport(uds=str(socket_path(instance_id))), timeout=2, trust_env=False
-            ) as client:
+            with (
+                unix_address(socket_path(instance_id)) as address,
+                httpx.Client(
+                    transport=httpx.HTTPTransport(uds=address), timeout=2, trust_env=False
+                ) as client,
+            ):
                 if client.get("http://llama/health").status_code == 200:
                     status = "ready"
                     observed = query_runtime_metadata(client)
@@ -232,9 +287,21 @@ def snapshot(instance_id):
 
 
 @router.post("/load")
-def load(body: Load):
+def load(body: Load | NativeModelLoad):
+    if isinstance(body, NativeModelLoad):
+        from ai_station_runner.native_llama_api import load as native_load
+
+        return native_load(body)
+    if sys.platform != "linux":
+        raise HTTPException(503, "Container llama.cpp profiles require a Linux Host Runner")
     if not {"manage_models", "filesystem_read"}.issubset(body.permissions):
         raise HTTPException(403, "Runtime loading requires model management and filesystem read")
+    if body.gpus and get_settings().container_gpu_ready is False:
+        raise HTTPException(
+            503,
+            "Finish Graphics setup from the AI Station desktop controls and restart "
+            "AI Station, or choose a CPU conversation model",
+        )
     with locked():
         folder = directory(body.instance_id)
         request = body.model_dump(mode="json")
@@ -249,11 +316,20 @@ def load(body: Load):
                 raise HTTPException(409, "Runtime identity is immutable")
         else:
             settings = get_settings()
-            try:
-                model = ensure_within(Path(body.model_path), _split(settings.model_roots))
-            except (PathBoundaryError, OSError) as exc:
-                raise HTTPException(422, "Model is outside configured roots") from exc
-            if model.suffix.lower() != ".gguf" or not model.is_file() or "," in str(model):
+            if body.app_owned:
+                from ai_station_runner.owned_models import owned_model
+
+                model = owned_model(body.model_path, body.model_sha256)
+            else:
+                try:
+                    model = ensure_within(Path(body.model_path), _split(settings.model_roots))
+                except (PathBoundaryError, OSError) as exc:
+                    raise HTTPException(422, "Model is outside configured roots") from exc
+            if (
+                (not body.app_owned and model.suffix.lower() != ".gguf")
+                or not model.is_file()
+                or "," in str(model)
+            ):
                 raise HTTPException(422, "Choose a GGUF inside configured model roots")
             stat = model.stat()
             if stat.st_size != body.size_bytes or abs(stat.st_mtime - body.mtime) > 0.001:
@@ -278,13 +354,30 @@ def load(body: Load):
             devices = {int(g["index"]): g["uuid"] for g in hardware.get("gpus", [])}
             if any(g not in devices for g in body.gpus):
                 raise HTTPException(422, "A selected GPU is unavailable")
-            image = docker("image", "inspect", settings.llama_image, "--format", "{{.Id}}")
-            if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+            from ai_station_runner.runtime_setup import image_observation
+
+            if body.runtime_profile:
+                from ai_station_runner import cpu_runtime_profile as cpu
+                from ai_station_runner.gguf_context import inspect_context
+
+                if not cpu.QUALIFIED:
+                    raise HTTPException(409, "Managed CPU execution is still being qualified")
+                checked = inspect_context(model, body.size_bytes, body.mtime)
+                budget = cpu.memory_budget_mib(body.size_bytes, body.context_size, checked)
+                if budget != body.ram_mib:
+                    raise HTTPException(422, "The managed CPU memory budget changed")
+                free = (hardware.get("memory") or {}).get("available_mib")
+                if type(free) not in {int, float} or not math.isfinite(free) or not 0 < budget <= free:
+                    raise HTTPException(422, "Available RAM changed before managed CPU launch")
+                _, image = image_observation(app_owned=True, runtime_profile=body.runtime_profile)
+            else:
+                _, image = image_observation(app_owned=body.app_owned)
+            if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
                 raise HTTPException(409, "Configured llama.cpp image identity is invalid")
             folder.mkdir(mode=0o700, exist_ok=True)
             (folder / "io").mkdir(mode=0o700, exist_ok=True)
-            if "," in str(folder) or len(str(folder / "io/model.sock").encode()) >= 108:
-                raise HTTPException(422, "Runtime directory is too long for a private Unix socket")
+            if "," in str(folder):
+                raise HTTPException(422, "Runtime directory cannot contain a comma")
             record = {
                 "request": request,
                 "name": f"ai-station-llama-{body.instance_id}",
@@ -299,6 +392,17 @@ def load(body: Load):
             save(folder, record)
         item = inspected(record)
         if item is None:
+            if record.get("request", {}).get("app_owned"):
+                from ai_station_runner.owned_models import owned_model
+
+                current = owned_model(body.model_path, body.model_sha256)
+                observed = current.stat()
+                if (
+                    str(current) != record["model"]
+                    or observed.st_size != body.size_bytes
+                    or abs(observed.st_mtime - body.mtime) > 0.001
+                ):
+                    raise HTTPException(422, "App-owned model changed before container creation")
             if record.get("container_id"):
                 raise HTTPException(409, "Owned container disappeared; create a new runtime")
             args = [
@@ -329,8 +433,24 @@ def load(body: Load):
                 "--mount",
                 f"type=bind,src={folder / 'io'},dst=/runtime",
             ]
+            if body.runtime_profile:
+                args += [
+                    "--memory",
+                    str(body.ram_mib) + "m",
+                    "--memory-swap",
+                    str(body.ram_mib) + "m",
+                    "--cpus",
+                    str(min(8, max(1, os.cpu_count() or 1))),
+                    "--env",
+                    "CUDA_VISIBLE_DEVICES=-1",
+                    "--env",
+                    "NVIDIA_VISIBLE_DEVICES=void",
+                ]
             if record["devices"]:
-                args += ["--gpus", '"device=' + ",".join(record["devices"]) + '"']
+                # CUDA must select the allocated UUIDs too: WSL's shared /dev/dxg
+                # is not Linux's per-device mount boundary. Preserve UUID order.
+                visible = ",".join(record["devices"])
+                args += ["--gpus", '"device=' + visible + '"', "--env", "CUDA_VISIBLE_DEVICES=" + visible]
             if record.get("projector"):
                 args += [
                     "--mount",
@@ -357,6 +477,8 @@ def load(body: Load):
                 "--reasoning-budget",
                 "0",
             ]
+            if body.runtime_profile:
+                args += ["--threads", str(min(8, max(1, os.cpu_count() or 1)))]
             if body.cache_type == "q8_0":
                 args += [
                     "--cache-type-k",
@@ -395,6 +517,10 @@ def load(body: Load):
 
 @router.get("/{instance_id}")
 def inspect(instance_id: UUID):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import call
+
+        return call("inspect", instance_id)
     with locked():
         return snapshot(instance_id)
 
@@ -406,6 +532,10 @@ class Stop(BaseModel):
 
 @router.post("/{instance_id}/stop")
 def stop(instance_id: UUID, body: Stop):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import call
+
+        return call("stop", instance_id, body.permissions)
     if "manage_models" not in body.permissions:
         raise HTTPException(403, "Stopping a runtime requires model management")
     with locked():
@@ -430,18 +560,25 @@ def stop(instance_id: UUID, body: Stop):
 
 @router.post("/{instance_id}/chat/completions")
 async def completion(instance_id: UUID, body: VisionCompletion, incoming: Request):
+    if sys.platform == "darwin":
+        from ai_station_runner.native_llama_api import completion as native_completion
+
+        return await native_completion(instance_id, body, incoming)
     record = manifest(instance_id)
     if record.get("desired") != "running" or body.model != str(instance_id):
         raise HTTPException(409, "Runtime/model identity does not match")
     if any(isinstance(item.content, list) for item in body.messages) and not record.get("projector"):
         raise HTTPException(409, "Load this model with its vision projector before sending images")
-    client = httpx.AsyncClient(
-        transport=httpx.AsyncHTTPTransport(uds=str(socket_path(instance_id))),
-        timeout=httpx.Timeout(300, connect=10),
-        trust_env=False,
-        follow_redirects=False,
-    )
-    return await forward_completion(body, incoming, "http://llama/v1", client, {})
+    with unix_address(socket_path(instance_id)) as address:
+        client = httpx.AsyncClient(
+            transport=httpx.AsyncHTTPTransport(uds=address),
+            timeout=httpx.Timeout(300, connect=10),
+            trust_env=False,
+            follow_redirects=False,
+        )
+        # forward_completion establishes the connection before returning its
+        # response iterator. The connected socket then outlives this directory FD.
+        return await forward_completion(body, incoming, "http://llama/v1", client, {})
 
 
 @router.post("/{instance_id}/coding/completions")

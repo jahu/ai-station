@@ -1,3 +1,353 @@
+The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
+candidate extends the trusted desktop installer with a separate OS-authenticated
+fixed action. It prepares pinned toolkit inputs and preserves Docker settings,
+then asks the operator to restart the OS; it never restarts/reloads Docker or
+stops other workloads. A normal-user CUDA query establishes actual readiness.
+Private CPU/restart choices remain outside application storage; an optional
+Runner readiness hint gates new container GPU activation without hiding physical
+devices. It is not a Runner/agent tool and remains opt-in pending qualification.
+
+The [guided CPU conversation profile](plans/guided-cpu-conversation.md) reuses
+the same runtime preparation, verified model store and llama.cpp lifecycle.
+Explicit CPU metadata freezes its image, 4096-token Q8 context and native GGUF
+RAM budget. A durable reservation survives readiness; the owned container has
+no GPU request, disabled GPU visibility and equal RAM/swap limits. Native restart
+reattaches the same identity. Legacy GPU requests/catalog identities and existing
+shared presets are preserved; there is no implicit CPU fallback.
+
+The [managed expressive voice profile](plans/managed-fish-setup.md) extends
+the existing preparation lifecycle with one fixed Fish/Whisper recipe and two
+independent offline Python environments. Their protobuf requirements conflict;
+they exchange only a verified transcript and canonical owned PCM artifact.
+Shared models/engine readiness use opaque identities; setup history and voice
+data remain private. Normal speech and transcription Runs freeze those identities,
+while explicit existing configurations retain priority. The fixed Linux profile
+passed fresh browser/worker setup and complete inference, Stop/recovery, privacy
+and final package checks; other platforms and audible expression acceptance
+remain separate gates.
+
+Fish directions shape model delivery; its optional speaking pace applies fixed,
+pitch-preserving rates to complete EOS-checked PCM inside the same owned child.
+Natural bypasses that step. The native report retains original/final sample
+counts and rate, while the ordinary worker publishes the same private artifact.
+
+The Linux desktop packaging candidate bundles a relocatable real CPython,
+native Runner and compiled Docker image around the existing supervisor. Its
+private configuration selects a separate data root, Compose project and exact
+application image; no second application API is introduced. Installed code is
+copied into a retained version directory before supervision so OS package
+replacement cannot remove running native code. [Desktop contract](plans/desktop-installation.md).
+
+Linux/WSL desktop recovery reuses that supervisor and its exclusive launcher
+lock. A private native receipt, outside the mounted data directory, binds its
+previous Compose containers to exact IDs/configuration/mount fingerprints and
+the persistent Docker/storage namespace. A later Start can reconcile only that
+verified inventory after the old supervisor has gone. Managed model containers
+and native processes keep their existing ownership/recovery contracts; ordinary
+worker leases decide interrupted Run handling. Legacy or modified deployments
+still require inspection. This does not extend the deferred Mac launcher.
+
+The native Mac candidate keeps a private version receipt outside container-mounted
+data, binding its verified package to the data directory identity, Compose
+project, accounts profile and Runner socket coordinates. A separate same-user
+control query returns only package metadata and native owner identity; existing
+Status/Stop responses retain their format. The Mac candidate records readiness
+only after its matching API instance is ready. Changed packages/storage require
+an explicit verified upgrade. The consumer prerequisite gate remains closed
+until the complete Mac installation and preserving-update path is qualified.
+
+The internal desktop image-upgrade coordinator dispatches only the verified
+application image's fixed offline SQLite transaction commands. It journals owned
+container identity outside mounted data, checks the configured Compose project
+has shut down, and fences startup before dispatch. Publication activates a
+`starting` target version receipt before removing that fence; failed/uncertain
+requests retain their records and original database. No ordinary workload gains
+Docker authority, and the complete Mac installer remains gated.
+
+The [Mac delivery contract](plans/macos-consumer-installation.md) retains the same
+control plane and private native bridge. Native ownership, installed Python,
+AppKit presentation and application-bundle entry have passed ARM/Intel component
+checks. Read-only Docker Desktop discovery uses its fixed local context and
+installed application CLI; the transport experiment can test the chosen data
+filesystem with a separate disposable mount. Full Docker Desktop transport,
+guided model setup, Metal, preserving updates/removal and signing acceptance remain
+required before the launcher admits Mac consumer operation.
+
+The actual Intel Docker Desktop experiment starts its Linux engine but rejects
+the shared native Unix socket with `EOPNOTSUPP`. The
+[Mac connection contract](plans/macos-runner-transport.md) preserves typed HTTP
+and private Unix sockets at both ends through an authenticated local TLS leg and
+an optional connection process in the same application image. This alternative
+stays unavailable until actual transport, ownership, shutdown and full consumer
+checks pass; Linux/WSL retain the existing direct socket.
+
+Actual Intel qualification also finds missing SQLite writer exclusion on its
+shared host folder, with the original writer verified live. The tested Mac
+candidate therefore keeps native-shared artifacts/models but places the control
+plane DB on project-owned local Docker storage at `/data/db`. The same stronger
+WAL/locking/integrity/restart test passes there. Full admission still requires
+the supervisor, preserving image upgrades, explicit consistent backup/export and
+data-preserving removal to use the attested DB volume. Linux/WSL storage is
+unchanged; copying only a Mac host folder must not be presented as a full backup.
+
+The persistent native storage owner binds a private receipt to that installation
+and Docker daemon, verifies exact local-volume identity and preserves it across
+owner restarts. Its fixed image command initializes only a new empty volume;
+ordinary-user inspection reads a root-owned binding marker without opening
+SQLite. The host `db` path remains an empty owned mountpoint. This supplies the
+storage lifecycle primitive. Fixed offline upgrade commands now mount the same
+attested volume at `/data/db`; native activation compares a read-only image
+fingerprint with the acknowledged publication or original abort state. It never
+opens the VM database with native SQLite. Version namespaces now also bind the
+private ready volume identity, including its daemon, without mutable reader
+journals. First-version publication requires the fixed image to prove that the
+volume contains only its binding marker. The native candidate imports the image,
+qualifies its private authenticated connection/local-volume filesystem, and
+prepares persistent storage before publishing that first version. Its child
+rechecks the package, ready storage, version receipt and absence of foreign
+volume references; Compose receives only the attested volume and exact image.
+Consistent export/restore and actual complete consumer qualification remain required
+before Mac consumer admission.
+
+The fixed native database-export primitive mounts that VM volume read-only and
+one new private installer output folder outside application data. It clones main
+and committed WAL bytes before opening SQLite, then publishes an integrity-checked
+standalone database and source/image/hash receipt. Native code hashes the exported
+file but never opens the VM database with SQLite. Lost helper acknowledgements
+resume the same owned operation; cancellation preserves partial output and never
+replays that identity. This is the database component of the planned consistent
+backup, not a completed files export/restore feature or an enabled consumer path.
+
+The [native full-export coordinator](plans/desktop-snapshots.md) now binds that
+database to retained files, private configuration and installation provenance.
+It holds the existing desktop/launcher locks, checks native and container file
+clients, and fences ordinary startup until completion or explicit cancellation.
+Interrupted copies and database reader acknowledgements resume the same backup;
+standalone verification does not need the original source. Restoring that full
+backup and presenting the complete native consumer flow remain required before
+Mac admission. Historical receipts never become target execution authority.
+
+The fixed image-local restoration candidate reuses the existing pure offline
+account recovery helpers. It stages/migrates a verified standalone backup and
+retains raw current main/WAL bytes on the attested volume. Current account/MFA
+authority survives; sessions and autonomous execution do not resume. An explicit
+named administrator reset uses a separate private file when authority is
+unreadable. Durable prepare/publish/abort/status receipts support interruption
+without native SQL or a new HTTP/agent capability. Native fixed dispatch reuses
+the storage owner's strict helper journal and inspection, caching completion
+before removal. Stop covers only owned preparation and requires subsequent
+inspection; publication is resumed instead of blindly rolled back. The native
+full-restore coordinator now joins it to staged retained files, preserves originals
+and newer MFA key files, and fences startup until files and DB agree.
+Restore normalizes verified `models/store/<sha256>` objects back to owner-only
+read access (and execute when recorded), so model and SDK integrity checks still
+admit them. Their content hash must match the name. Export copies remain private
+writable copies; ordinary restored documents remain writable. Existing snapshot
+formats remain readable, with no new execution authority.
+Credential conflicts require explicit review. Package/runtime/volume receipts are not
+restored as execution authority. The native menu candidate now presents ordinary
+backup/restore, progress, credential conflict review and interruption continuation
+over those same coordinators. Exceptional administrator recovery now has secure
+native fields and explicit MFA/account-reset consent, using the existing private
+authority input and shared pure credential rules. Failed restarts can reach
+recovery without a live web/control instance, retaining their unready receipt;
+fresh unqualified installations cannot adopt that recovery authority. The actual
+complete Mac consumer journey remains unfinished.
+
+Native Darwin telemetry now has a read-only platform branch for public Mach CPU
+counters, physical RAM and current swap. Available RAM estimates the disjoint
+free and inactive page queues, with both components reported; speculative pages
+are already part of free and are not counted twice. Compressed/purgeable counts
+are not added. This is an estimate, not dedicated GPU memory or a hard allocation
+limit. Missing values remain unknown. This supplies observations for the Mac
+installer work; it does not enable that installer, Metal, native execution or
+Linux-style memory enforcement. Linux telemetry remains unchanged.
+
+Darwin hardware snapshots also expose a separate bounded Metal device inventory.
+The native observer runs in a fixed isolated child; failed inspection stays
+unavailable and optional unknown properties stay null. Registry identity and the
+actual unified-memory flag distinguish devices without inventing dedicated VRAM.
+Recommended working-set bytes are advisory, separate from RAM/free memory and
+the CUDA GPU list. This supplies facts for native model admission; it grants no
+Metal workload/readiness capability before actual runtime/platform qualification.
+
+The Darwin process adapter subclasses the existing ProcessManager
+at its boot, identity, liveness and launch boundaries. Journal publication,
+idempotency, reaping, cancellation and deadline handling remain shared. A native
+exec barrier keeps payload code stopped until ownership is durably recorded;
+Darwin start identities have a distinct journal format. The normal Runner now
+selects this adapter on Darwin and retains the original manager on Linux. An
+application-wide dependency admits qualified Mac health, read-only hardware,
+owned process inspection/Stop and fixed native SDK preparation operations.
+The [managed native SDK flow](plans/macos-managed-llama.md) reuses runtime setup
+Tasks/Runs, verified downloads and the owned environment controller, with opaque
+shared environment references and private preparation receipts. The existing typed
+llama.cpp routes also accept explicit native CPU model
+coordinates and resolve the opaque SDK identity privately. They reuse the same
+process owner, readiness/completion proxy, startup watchdog and durable Stop.
+Native model sockets remain outside the container-mounted Runner socket; shared
+model children outlive Runner replacement just as Linux model containers do.
+Other typed operations, including later included routers, remain unavailable
+before their own native qualification. Installed native CPU inference is qualified
+on ARM and Intel; Linux media recipes and the consumer Mac launcher remain gated.
+Native model inspection verifies only owned GGUF/context and the opaque SDK.
+Existing model load/install Runs preserve that environment reference, freeze
+startup deadlines and reserve RAM through readiness until confirmed Stop.
+Member-initiated automatic model loads validate relative model source coordinates;
+shared model readiness does not expose the initiating account's private history.
+
+An internal native llama.cpp lifecycle candidate composes that manager with the
+verified Mac SDK, owned GGUF/cache inspection and the existing completion proxy.
+Its durable dispatch/Stop journal, startup watchdog, explicit CPU/single-unified-
+Metal admission and private native inference socket preserve the shared execution
+boundary. Admission reports estimated RAM without a hard/no-swap promise. Shared
+model output is suppressed at process creation so loader-owned logs cannot retain
+other users' conversation content. Existing executors retain normal log capture.
+The public typed adapter uses this lifecycle for native CPU models. Metal remains
+an internal candidate; [complete platform/package acceptance](plans/macos-consumer-installation.md)
+is still required before consumer Mac startup.
+
+Mac packaging now has a portable build-time Python layer with separately pinned
+standalone interpreters and native wheels for ARM/Intel. It reuses immutable input
+verification, safe extraction and the existing package file inventory; cross-target
+installation stays offline and executes no target Mac code. Binary architecture/OS
+checks and complete output receipts prepare dependencies for the future consumer
+bundle. This helper is not selected by the application, Runner or agents and does
+not enable an installer or qualify actual native imports/consumer operation.
+
+The desktop owner can supervise in the background without keeping a window
+open. A private same-OS-user control socket supports only status and
+instance-bound Stop; the existing supervisor remains responsible for shutdown.
+It is outside the HTTP application and its container data mount. This adds no
+workload executor, native Runner endpoint or login/reboot service.
+
+Guided local runtime preparation now reuses owned Tasks/Runs, a native immutable
+operation journal and a bounded child over the local Docker Unix API. The child
+streams only one reviewed image digest, records actual layer progress and verifies
+its source/platform before a private receipt is published. Worker lease recovery
+reattaches that operation; revoked-owner cleanup has separate trusted cancellation
+coordination. [Setup contracts](plans/guided-model-installation.md).
+
+Guided conversation-model setup uses the [reviewed installation catalog](plans/guided-model-installation.md), ordinary owned download Tasks/Runs and private JSON receipts. Migration 0042 adds an exclusive app-data-relative ModelFile coordinate alongside existing external host paths. Workers stream and hash pinned public weights; the native Runner inspects only fixed immutable references before the existing llama.cpp adapter loads them. Models remain shared infrastructure; download histories remain account scoped.
+
+Reviewed [speech companion bundles](plans/managed-speech-setup.md) reuse that
+immutable store and normal worker queue for multiple files. Whole-bundle
+publication creates shared ModelFile observations and a private receipt only
+after every object verifies. This file-preparation operation does not install
+Python dependencies, activate a model definition or claim speech readiness.
+
+The [managed video environment](plans/managed-video-setup.md) reuses verified
+downloads, the shared offline preparation lifecycle and the existing headless Wan
+executor. Each generation freezes an opaque shared environment identity; its
+private native mapping is published before activation and never exposes another
+account's setup Run. Image animation and whole-film continuation use the same
+profile. CPU composition uses that exact environment and a separate four-GiB
+reservation; explicit Resume retains verified segments. Existing external video
+configuration, including incomplete settings, keeps priority. No ComfyUI server,
+custom-node service or second execution engine is introduced.
+
+The [managed music environment](plans/managed-music-setup.md) reuses verified
+downloads, the owned offline preparation lifecycle and the existing ACE-Step
+executor. A fixed recipe owns independent Python/SDK/dependencies and exact
+immutable model links. Ordinary music Runs freeze that runtime observation,
+eligible GPUs, deadline and CPU-offload RAM budget. Existing explicit music
+settings keep priority. Models are shared; setup histories, lyrics and results
+remain private. This qualifies one Linux NVIDIA profile, not other platforms.
+
+The [managed speech environment](plans/managed-speech-setup.md#qualified-managed-speech-flow)
+uses the existing runtime-preparation API/supervisor and a fixed typed native
+journal. Its normal worker verifies the pinned SDK, dependency, interpreter and
+model inputs before offline assembly in an owned memory scope. The guided card
+restores private history/progress and supports Stop/Resume. Successful adoption
+makes the exact prepared recipe available to ordinary Audio Runs; existing
+explicit external speech settings retain priority. Each environment owns its
+Python and stdlib independently of application versions. Model files are shared;
+preparation receipts, voice recordings and generated speech remain account scoped.
+
+The [managed image profile](plans/managed-image-setup.md#qualified-managed-image-flow)
+uses the same runtime-preparation Tasks, verified downloads and native OCI
+supervisor for five fixed model companions. Its guided card restores private
+history/progress and supports Stop/Resume. Ordinary PhotoExecutor Runs freeze
+sources, prompt, seed, resource bundle and deadline; a typed native controller
+owns the exact container independently of the Runner process. Missing dispatch
+requires a durable Stop fence before reservations are released. Generate, Edit,
+one/multiple-reference Recompose, Upscale and restart/Stop passed real separate
+API/worker/native qualification with compiled desktop/mobile UI. Existing explicit
+photo configuration, including incomplete settings, retains priority. This fixed
+Linux NVIDIA profile does not qualify other hardware or consumer installers.
+
+Conversation film sound reuses the [synchronized-sound graph](plans/synchronized-sound.md#conversation-delivery): an owned existing-film selection or an explicitly
+requested new Wan film feeds ordinary effects and preview/timeline Runs. A small
+container coordinator waits for the verified final film before publishing sound;
+no second native API or execution engine is added. The original film, WAV and
+saved editable mix retain their ownership and immutable source lineage.
+
+The [next-release contract](plans/next-release-0.1.md), owner direction
+2026-10-29, plans private accounts and shared machine resources, persistent
+creative sessions, local prompt/search preparation, expressive sound/editing and
+guided cross-platform installation. It preserves the existing execution engine.
+
+The optional [MMAudio effects adapter](plans/synchronized-sound.md) uses ordinary
+audio.effects Runs and a separate owned CPU preview Run. It freezes an owned
+video's timing/content and the pinned runtime observation, reserves one GPU and
+load RAM, and publishes a separate WAV plus a source-linked film preview. A fixed
+native wrapper samples the complete frame timeline into overlapping eight-second
+contexts; exact absolute sample endpoints prevent cumulative drift. Audio's saved
+Sound effects workspace reuses private creative history through preserving
+migration 0040. It does not introduce another execution engine.
+
+The [account services](accounts.md), qualified and deployed after PR #512, provide
+private ownership, username/password/device sessions, optional TOTP, administrator
+management/inspection and owner-bound workers and browser state. Shared physical
+models/resources do not share user content. `AI_STATION_ACCESS_PROFILE=accounts`
+is explicit and cannot revert to operator access after activation.
+
+The creative-workspace candidate adds owner-scoped sessions and append-only turns
+through migration 0039. One atomic submission uses the existing typed generator
+builder, ordinary Task/Run and an idempotent receipt; no new executor is introduced.
+Its generation/draft/history API and five workspace UIs reuse the existing typed
+generators, including full-film and whole-recording MediaJobs. Drafts, variations,
+Task-wide Stop and explicit administrator inspection share the existing private
+account boundaries. See [workspace contracts](creative-workspaces.md). Production
+rollout remains separate from qualification.
+
+The [structural edit selector](plans/structural-image-edits.md) is an opt-in typed
+model resolution before ordinary image enqueue. A read-only owner-scoped preview
+uses bounded deterministic intent and personal defaults; no inference or native
+I/O runs there. The selected checkpoint/profile and reason are frozen with the
+Run. Retry never re-routes old work, explicit models remain authoritative, and
+legacy request serialization is unchanged when Auto is absent.
+
+Optional [speech delivery controls](plans/expressive-speech.md) use the inspected
+configured CLI's existing expression, guidance and sampling arguments. A worker
+freezes the supported CLI hash; native dispatch rechecks it and passes the same
+bounded values to every chunk. Standard speech retains its original identity.
+
+The optional Fish S2 Pro adapter uses the same speech pipeline, with an ordinary
+offline transcription prerequisite for a voice reference. A checked same-owner
+transcript may be reused; requested TTS words are never treated as recognized
+speech. The frozen source/weight/wrapper observation, direction and pace follow
+each Run. The worker reserves two compatible GPUs and load RAM; a fixed native
+child owns the zero-swap scope, complete EOS-checked chunks and final WAV.
+Audio and reviewed media agents share model/direction controls and private
+creative history. No model service, new execution engine or schema is introduced.
+An explicit Fish generated-voice request omits the recording/ASR prerequisite;
+reference voice remains the legacy default. The choice is frozen in the same Run
+and native receipt, with unchanged permissions, dual-GPU/RAM and Stop contracts.
+
+The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
+existing local translation preparation/apply executors. Fixed generator/operation
+templates, original/effective receipts, same-owner source bindings and normal
+dependencies cover images, Wan, ACE-Step and Echo motion prompts. Deferred speech
+and agent sources are frozen before preparation; narration/lyrics remain exact.
+No additional execution engine, permission, native endpoint or migration is added.
+
+The [common generation-progress implementation](plans/generation-progress.md) projects
+measured sampler/chunk observations and owner-scoped comparable-job timing through
+the existing Run DTO and MediaJob views. Counters cannot publish artifacts or
+change execution state. Queue, preparation, generation and final checks remain
+distinct; no new executor, permission or schema is introduced.
+
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
 The optional configured Sonic adapter uses one version-two media plan and one
@@ -946,3 +1296,125 @@ The [recovery utility](operations.md#recovering-an-api-port-after-network-startu
 repairs a failed publish mapping only for the validated owned API and its existing
 image. It does not stop running workers, restart native executors or apply an
 upgrade.
+
+## Private saved media timelines
+
+Video editing extends CreativeSession with capability `timeline`; immutable
+TimelineRevision rows own no independent execution architecture. Each revision
+belongs to its private workspace and freezes source observations and a typed
+frame/sample manifest. Ordinary CreativeTurns enqueue `timeline_render` Runs;
+the worker reserves RAM and dispatches the native CPU renderer through the
+private Unix socket. Waveform analysis is a bounded ordinary container Run.
+The native renderer verifies source hashes, timing and output coverage before
+publishing a general video Artifact. Preview and export reuse the same verified
+result; changed drafts cannot export an earlier mix as their current edit.
+See [timeline plan](plans/media-timeline.md).
+
+Sound-effect media agents reuse the shared pure `EffectsRequest` contract and
+existing `create_effects_run` service. Agent preparation freezes the selected film
+and cues, and passes its trusted engine preflight into transactional child
+publication. GPU sound generation and CPU preview remain ordinary existing Runs;
+no agent-specific process or separate execution engine is introduced. Final
+media-result summaries recognize only the verified effects preview.
+
+
+## Guided avatar preparation
+
+The fixed Linux NVIDIA Sonic profile extends the shared model-download and
+owned environment-preparation services. Ordinary private setup Tasks/Runs freeze
+all source, model, Python and dependency hashes; a separate worker supervises a
+four-GiB zero-swap native preparation process. The prepared Python 3.10 runtime
+is independent of the Python 3.12 Host Runner and control plane. A single pinned
+pure-Python dependency is built offline with fixed tools and an exact derived
+wheel hash. Readiness follows CPU-only SDK/audio-feature/codec verification.
+
+Whole-recording avatar Runs reuse the existing Sonic executor, saved creative
+history, canonical audio, owned process and 18-GiB zero-swap budget. The model
+view contains only validated links to the fixed immutable shared companions.
+Runs freeze an opaque environment identity; another account cannot infer the
+preparing account's Run UUID. Explicit Sonic configuration retains priority,
+including partial configuration; EchoMimic remains independent. The prepared
+finishing codec is checked before dispatch so an unavailable codec cannot fall
+back to unrelated host software after a long render. See
+[the profile, admission and qualification gates](plans/managed-avatar-setup.md).
+
+
+## Guided film-sound preparation
+
+The fixed MMAudio profile extends the ordinary private setup Task/Run and shared
+owned offline environment services. Hash-verified Python, source, binary wheels,
+one fixed source-wheel exception and seven companions prepare an independent
+runtime in a four-GiB zero-swap native process. Build-only tools remain separate
+from the exact runtime dependency lock. Model references cross symlinks only in
+the closed-world immutable managed namespace; explicit/partial external settings
+retain priority. No caller selects a command, package, model URL or path.
+
+Ordinary effects Runs freeze opaque environment/GPU observations and retain the
+existing 18-GiB owned inference scope, conditioning, window/cue timing and complete
+publication. Their separate sound-preview Run freezes the same codec environment
+and reserves four GiB for CPU work. The saved timeline renderer may also use this
+prepared Python when no explicit CPU/video configuration exists, so installing
+film sound does not silently require a second video engine. Public readiness
+shares no private setup UUID or logs. See [profile qualification and component
+licenses](plans/managed-effects-setup.md).
+
+The Windows consumer packaging increment keeps the same control-plane/Runner Unix-socket boundary inside an application-owned WSL2 distribution. A native Windows lifecycle shell is separate from workload execution; it must not adopt existing distributions, expose Windows drives or change global WSL policy. The [Windows installation contract](plans/windows-consumer-installation.md) tracks the guest filesystem builder, private readiness pipe and pending real-platform acceptance. This is experimental packaging, not qualified Windows support.
+
+The offline [Windows preserving-update candidate](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract)
+replaces only a verified application package inside the same owned WSL guest.
+Its private native Update UI owns the bounded transport, with no workload
+API connection; the existing desktop/supervisor owns idle/Stop, while private
+kernel locks, a backup and exact update journal protect the retained state.
+
+Windows capacity admission uses an ordinary native quota observation for the
+owned WSL volume. A fixed helper stores only bounded byte counts in a private,
+boot-bound file outside shared data. Telemetry, catalog download workers and
+native preparation take the physical ceiling instead of trusting virtual WSL
+capacity. Native lifecycle refresh keeps it current without another server or
+Windows-drive mount. Actual platform qualification remains separate from this
+implementation; see the Windows installation contract.
+No second execution architecture or application root service is introduced.
+
+Reviewed model downloads can recover a missing Hugging Face locator inside the
+existing worker Run. Bounded public metadata may locate the same filename at a
+new immutable commit only when its LFS hash and size equal the frozen manifest.
+Normal verification/publication, cancellation, resource admission and private
+events remain authoritative. Catalog fingerprints and model coordinates do not
+change. [Content-preserving recovery](plans/catalog-source-recovery.md).
+The seven file-based media preparations share that storage/audit contract and
+retain their existing assembly reserve; no separate transfer engine is added.
+
+Guided model setup now receives explicit Runner host OS/architecture facts and
+selects its matching native Mac engine profile. The existing pinned Qwen3 4/8/14B
+weights have separate native CPU offers and RAM estimates; Linux catalog identities
+remain unchanged. Engine and weight preparation remain independent: explicit
+owned-file inspection without an SDK reports no runtime readiness, then ordinary
+verification binds the prepared opaque SDK reference before model use. The shared
+engine panel handles native SDK bytes/readiness/history separately from image
+layers while preserving the same license consent and Task/Run controls.
+
+Mac desktop image import and the existing Compose supervisor share process-local
+Docker Desktop routing: an installed application CLI and explicit local Unix
+endpoint. The child verifies the parent's discovered coordinates before starting
+or inspecting containers, and retains the same target through bootstrap and
+shutdown. No global context/settings, HTTP execution authority or Linux routing
+changes. This prepares the [Mac consumer path](plans/macos-consumer-installation.md);
+actual Docker Desktop transport and complete installation remain separate gates.
+
+The Mac startup candidate checks its native bridge using the already verified
+bundled application image, never a downloaded test image. The existing bounded
+nonce/WAL/artifact protocol runs in an owned isolated child against fresh files
+on the configured data filesystem before Compose starts. Stop waits for owned
+cleanup. Private pending receipts prevent uncertain replay and allow recovery
+only from a matching confirmed-clean result. The Linux consumer path and Mac
+consumer admission gate remain unchanged.
+
+Desktop update preparation has a trusted offline image command, separate from
+workload/HTTP execution. It uses the existing launcher/migration locks, a verified
+SQLite backup and an explicitly supplied Alembic staging connection. A durable
+operation marker blocks supervisor and API startup, including a recheck after
+waiting for the migration lock. Prepared data publishes only against its frozen
+source fingerprints; interrupted publication can resume without re-execution.
+Accounts, live login cookies, schedules and queued work are preserved rather than
+normalized as in an explicit disaster restore. Native update consent, ownership
+handoff and complete Mac qualification remain later installer steps.

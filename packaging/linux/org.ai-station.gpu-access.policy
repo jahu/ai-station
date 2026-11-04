@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>AI Station</vendor>
+  <action id="org.ai-station.gpu-access">
+    <description>Prepare NVIDIA graphics support for AI Station</description>
+    <message>Authenticate to install verified NVIDIA container tools and add their system Docker runtime. Save your work and restart your computer afterward. Drivers and models are not installed.</message>
+    <icon_name>ai-station</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/ai-station/gpu-access</annotate>
+  </action>
+</policyconfig>

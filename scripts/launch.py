@@ -5,25 +5,34 @@ from __future__ import annotations
 import argparse
 import fcntl
 import ipaddress
+import json
 import os
+import re
 import runpy
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
+from ai_station_runner.unix_sockets import unix_address
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
+# Installed desktop Python is isolated: import only this verified bundle's
+# supervisor helper, never ambient script/module search paths.
+sys.path.insert(0, str(ROOT / "scripts"))
+from desktop_engine import select as select_engine  # noqa: E402
+
 # Bind-mounted application data must survive shutdown. Never pass --volumes/-v/--rmi.
 COMPOSE_DOWN = ("down", "--timeout", "10")
 VOLUME_WIPE_FLAGS = frozenset({"-v", "--volumes", "--rmi"})
 
 
-def configuration() -> dict[str, str]:
-    load_dotenv(ROOT / ".env", override=False)
+def configuration(config_file: Path | None = None) -> dict[str, str]:
+    load_dotenv(config_file or ROOT / ".env", override=False)
     env = dict(os.environ)
     data = Path(env.get("AI_STATION_DATA_HOST_PATH") or ROOT / "data").expanduser().resolve()
     sock = (
@@ -48,11 +57,14 @@ def configuration() -> dict[str, str]:
 
 def runner_health(env: dict) -> bool:
     try:
-        with httpx.Client(
-            transport=httpx.HTTPTransport(uds=env["AI_STATION_RUNNER_SOCKET"]),
-            base_url="http://runner",
-            timeout=1,
-        ) as client:
+        with (
+            unix_address(Path(env["AI_STATION_RUNNER_SOCKET"])) as address,
+            httpx.Client(
+                transport=httpx.HTTPTransport(uds=address),
+                base_url="http://runner",
+                timeout=1,
+            ) as client,
+        ):
             response = client.get("/health")
             response.raise_for_status()
             body = response.json()
@@ -83,6 +95,18 @@ def data_preserving_compose_down(compose: list[str]) -> list[str]:
 
 
 def ensure_recovery_finished(runtime: Path) -> None:
+    native_restore = runtime / "desktop-restore-pending.json"
+    if native_restore.exists() or native_restore.is_symlink():
+        raise RuntimeError("Finish or abort the pending private restore before starting AI Station")
+    snapshot = runtime / "desktop-snapshot-pending.json"
+    if snapshot.exists() or snapshot.is_symlink():
+        raise RuntimeError("Finish or cancel the pending private backup before starting AI Station")
+    for name in ("desktop-upgrade-pending.json", "desktop-upgrade-dispatch-pending.json"):
+        upgrade = runtime / name
+        if upgrade.exists() or upgrade.is_symlink():
+            raise RuntimeError(
+                "Finish or abort the pending offline desktop upgrade before starting AI Station"
+            )
     marker = runtime / "recovery-pending.json"
     if marker.exists() or marker.is_symlink():
         raise RuntimeError(
@@ -101,13 +125,110 @@ def stop_runner(proc: subprocess.Popen | None) -> None:
             proc.wait()
 
 
+def start_native_connection(env):
+    from macos_runner_link import NativeConnection
+
+    return NativeConnection(env).start()
+
+
+def local_entry_url(client, run, url: str, api_url: str, *, instance_id: str = "") -> str:
+    """Ask only the owned container console for pending first-admin setup."""
+    if instance_id:
+        if not re.fullmatch(r"[a-f0-9]{32}", instance_id):
+            raise RuntimeError("Invalid desktop readiness identity")
+        response = client.get(api_url + "/api/health")
+        response.raise_for_status()
+        try:
+            body = response.json()
+        except ValueError:
+            raise RuntimeError(
+                "An unexpected local response answered. No setup link was requested."
+            ) from None
+        if (
+            not isinstance(body, dict)
+            or body.get("status") != "ok"
+            or body.get("desktop_instance_id") != instance_id
+        ):
+            raise RuntimeError("A different local service answered. No setup link was requested or opened.")
+    auth = client.get(api_url + "/api/auth")
+    if auth.status_code != 200 or not auth.headers.get("content-type", "").startswith("application/json"):
+        return url
+    body = auth.json()
+    if not isinstance(body, dict) or body.get("setup_required") is not True:
+        return url
+    # A URL fragment is not sent to HTTP servers or in referrers. No HTTP
+    # endpoint exposes this proof, and application/agents gain no Docker API.
+    return run(
+        "exec",
+        "-T",
+        "ai-station",
+        "python",
+        "-m",
+        "app.bootstrap_setup",
+        "--url",
+        url,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def attest_native_database(config, engine, env):
+    """Trusted packaged child: reattest ready storage, never create/adopt it."""
+    if config is None:
+        raise RuntimeError("Native desktop startup requires its explicit private configuration")
+    import desktop
+    import desktop_versions as versions
+    from macos_database_storage import RECEIPT as STORAGE_RECEIPT
+    from macos_database_storage import DatabaseStorage
+
+    value = desktop.manifest(ROOT)
+    desktop.verify(ROOT, value)
+    root = config.parent
+    from desktop_snapshots import assert_finished
+
+    assert_finished(root, Path(env["AI_STATION_DATA_HOST_PATH"]))
+    path = root / "database-storage" / STORAGE_RECEIPT
+    if not path.exists() and not path.is_symlink():
+        raise ValueError("The desktop parent must prepare persistent database storage before startup")
+    data, namespace = versions.namespace(config)
+    if str(data) != env["AI_STATION_DATA_HOST_PATH"]:
+        raise ValueError("The child database configuration differs from its private receipt")
+    current = versions.load(root)
+    if (
+        current["phase"] != "starting"
+        or current["package"] != versions.package_identity(value)
+        or current["namespace_sha256"] != namespace
+        or env.get("AI_STATION_APP_IMAGE") not in (value["image_tag"], value["image_id"])
+    ):
+        raise ValueError("The child package/version does not match the pending desktop startup")
+    owner = DatabaseStorage(root, config, engine, value)
+    owner.identity()  # Ready only; never initialize partial or foreign storage.
+    owner.quiescent()
+    owner.prepare()  # Fixed read-only marker inspection using the verified image.
+    owner.quiescent()
+    # These coordinates come only from the attested owner, never ambient settings.
+    env["AI_STATION_NATIVE_DATABASE_VOLUME"] = owner.record["name"]
+    env["AI_STATION_APP_IMAGE"] = value["image_id"]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dev", action="store_true")
     parser.add_argument("--no-build", action="store_true", help="Reuse the existing application image")
+    parser.add_argument("--config", type=Path, help="Explicit local desktop installation configuration")
+    parser.add_argument("--desktop", action="store_true", help="Report readiness to the local desktop parent")
+    parser.add_argument("--docker-desktop-cli", help=argparse.SUPPRESS)
+    parser.add_argument("--docker-desktop-endpoint", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    coordinates = (args.docker_desktop_cli, args.docker_desktop_endpoint)
+    if any(coordinates) and (not all(coordinates) or not args.desktop):
+        raise RuntimeError("Docker Desktop handoff requires both coordinates and the desktop supervisor")
     os.chdir(ROOT)
-    env = configuration()
+    env = configuration(args.config) if args.config else configuration()
+    engine = select_engine(env, expected=coordinates if all(coordinates) else None)
+    env = engine.environment
+    if args.desktop and not env.get("AI_STATION_DESKTOP_INSTANCE_ID"):
+        env["AI_STATION_DESKTOP_INSTANCE_ID"] = uuid4().hex
     if env.get("AI_STATION_LAN_HOST"):
         try:
             address = ipaddress.IPv4Address(env["AI_STATION_LAN_HOST"])
@@ -120,7 +241,20 @@ def main() -> None:
         raise RuntimeError("LAN access uses the production UI; Vite development stays on loopback")
     runtime = Path(env["AI_STATION_DATA_HOST_PATH"]) / "runtime"
     runtime.mkdir(exist_ok=True)
-    compose = ["docker", "compose", "-f", str(ROOT / "compose.yaml")]
+    compose = engine.command("compose", "-f", str(ROOT / "compose.yaml"))
+    if engine.identity is not None:
+        if not args.desktop or not args.no_build or args.dev:
+            raise RuntimeError("Native Mac startup requires the packaged desktop supervisor")
+        ensure_recovery_finished(runtime)
+        attest_native_database(args.config, engine, env)
+        # Read-only `compose ps` needs valid interpolation before the Runner
+        # starts. Zero cannot open the service; start_native_connection replaces
+        # both coordinates with a fresh owned generation before `compose up`.
+        env.update(
+            AI_STATION_NATIVE_CONNECTION_DIR=env["AI_STATION_RUNNER_SOCKET_DIR"],
+            AI_STATION_NATIVE_CONNECTION_PORT="0",
+        )
+        compose += ["-f", str(ROOT / "compose.macos.yaml")]
     if env.get("AI_STATION_LAN_HOST"):
         compose += ["-f", str(ROOT / "compose.lan.yaml")]
     if args.dev:
@@ -135,12 +269,31 @@ def main() -> None:
         except BlockingIOError:
             raise RuntimeError("AI Station is already supervised for this data directory")
         ensure_recovery_finished(runtime)
-        # Never attach cleanup ownership to a pre-existing Compose deployment.
-        if run("ps", "--all", "--quiet", capture_output=True, text=True).stdout.strip():
+        # Only a packaged Linux/WSL session with its private native receipt may
+        # recover its own previous containers. A project name grants no authority.
+        project_owner = None
+        if args.desktop and args.no_build and args.config and not args.dev and engine.identity is None:
+            if sys.platform == "linux":
+                from desktop_project import DesktopProject
+
+                project_owner = DesktopProject(
+                    args.config,
+                    env,
+                    engine,
+                    lambda: run("ps", "--all", "--quiet", capture_output=True, text=True).stdout,
+                    ROOT,
+                )
+        existing = run("ps", "--all", "--quiet", capture_output=True, text=True).stdout
+        if project_owner is not None:
+            from desktop_project import container_ids
+
+            project_owner.recover(container_ids(existing))
+        elif existing.strip():
             raise RuntimeError(
                 "This Compose project already has containers; inspect them before starting another supervisor"
             )
         proc = None
+        connection = None
         started = False
 
         def shutdown(_signum, _frame):
@@ -153,26 +306,59 @@ def main() -> None:
             if not args.no_build:
                 # One shared image; Docker build works even when the optional
                 # buildx plugin is absent from a workstation's Compose install.
-                subprocess.run(["docker", "build", "-t", "ai-station:local", str(ROOT)], env=env, check=True)
+                subprocess.run(
+                    engine.command(
+                        "build", "-t", env.get("AI_STATION_APP_IMAGE", "ai-station:local"), str(ROOT)
+                    ),
+                    env=env,
+                    check=True,
+                )
             # Building can take minutes; the preflight Runner may have exited
             # or been replaced. Recheck before reusing it.
             if not runner_health(env):
-                proc = subprocess.Popen([sys.executable, "-m", "ai_station_runner.main"], env=env)
+                proc = subprocess.Popen(
+                    [
+                        sys.executable,
+                        *(["-IB" if sys.platform == "darwin" else "-I"] if args.desktop else []),
+                        "-m",
+                        "ai_station_runner.main",
+                    ],
+                    env=env,
+                )
                 deadline = time.monotonic() + 20
                 while not runner_health(env):
                     if proc.poll() is not None or time.monotonic() > deadline:
                         raise RuntimeError("Host Runner did not become healthy")
                     time.sleep(0.2)
+            if engine.identity is not None:
+                connection = start_native_connection(env)
             started = True
             run("up", "--no-build", "--detach", "--wait", "--wait-timeout", "120")
+            if project_owner is not None:
+                project_owner.capture()
             port = "5173" if args.dev else env.get("AI_STATION_PORT", "8765")
             url = f"http://127.0.0.1:{port}"
-            with httpx.Client(timeout=3) as client:
+            with httpx.Client(timeout=3, trust_env=False, follow_redirects=False) as client:
                 client.get(url).raise_for_status()
-            print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
+                api_url = f"http://127.0.0.1:{env.get('AI_STATION_PORT', '8765')}"
+                url = local_entry_url(
+                    client, run, url, api_url, instance_id=env.get("AI_STATION_DESKTOP_INSTANCE_ID", "")
+                )
+            if args.desktop:
+                # Private pipe to the owning desktop process. The parent consumes
+                # this setup authority without persisting it in ordinary logs.
+                print(
+                    "AI_STATION_READY "
+                    + json.dumps({"url": url, "instance_id": env["AI_STATION_DESKTOP_INSTANCE_ID"]}),
+                    flush=True,
+                )
+            else:
+                print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
             if env.get("AI_STATION_LAN_HOST"):
                 print(f"Private LAN: http://{env['AI_STATION_LAN_HOST']}:{port}", flush=True)
             while True:
+                if connection is not None:
+                    connection.check()
                 if proc is not None and proc.poll() is not None:
                     raise RuntimeError("Host Runner exited unexpectedly")
                 time.sleep(1)
@@ -181,15 +367,23 @@ def main() -> None:
         finally:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            cleaned = not started
             try:
                 if started:
                     subprocess.run(data_preserving_compose_down(compose), env=env, check=True)
+                    cleaned = True
+                    if project_owner is not None:
+                        project_owner.clear()
             finally:
-                stop_runner(proc)
+                try:
+                    if connection is not None:
+                        connection.close(remove_credentials=cleaned)
+                finally:
+                    stop_runner(proc)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
+    except (ValueError, RuntimeError, subprocess.CalledProcessError, httpx.HTTPError) as error:
         raise SystemExit(str(error))

@@ -110,6 +110,43 @@ async function mount(entry = "/images", catalog = imageCatalog) {
     ).not.toContain("Loading models…"),
   );
 }
+it("submits enhancement by itself with inherited translation off and no review", async () => {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === "/api/images/runs" && options?.method === "POST")
+        writes.push(JSON.parse(String(options.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/hardware")
+            ? { gpus: [] }
+            : path.endsWith("/generation/preferences")
+              ? {
+                  revision: 0,
+                  enabled: false,
+                  model: "local",
+                  target_language: "en",
+                }
+              : { id: "run-id", status: "queued" },
+      };
+    }),
+  );
+  await mount();
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A red bicycle" },
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Improve my prompt locally/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    translation: { mode: "inherit", enhance: true, review: false },
+  });
+});
+
 it("queues Juggernaut parameters and keeps generation in the workspace", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
@@ -722,4 +759,169 @@ it("keeps an unavailable saved model visible without silently selecting Qwen", a
   expect(
     screen.getByRole("option", { name: "LUSTIFY Turbo Q4 · unavailable" }),
   ).toBeTruthy();
+});
+
+it("recommends Auto for a structural edit without replacing an explicit LUSTIFY choice", async () => {
+  const catalog = withLustify();
+  catalog.defaults.choices.img2img = lustifyId;
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/images/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/recommendation")
+            ? {
+                policy: "structural-edit-v1",
+                revision: 4,
+                reason: "object_removal",
+                choice: catalog.items[0],
+              }
+            : path.includes("/artifacts/")
+              ? {
+                  id: "source",
+                  type: "image",
+                  metadata: { width: 768, height: 1024 },
+                }
+              : path.endsWith("/generation/preferences")
+                ? { enabled: false, model: "local" }
+                : path.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : {
+                      id: "run-id",
+                      status: "queued",
+                      parameters: body,
+                      metadata: {},
+                    },
+      };
+    }),
+  );
+  await mount("/images?mode=img2img&input=source", catalog);
+  fireEvent.change(screen.getByLabelText("Edit instruction"), {
+    target: { value: "Remove the red book" },
+  });
+  await screen.findByLabelText("Structural edit recommendation");
+  expect(
+    (screen.getByRole("combobox", { name: "Model" }) as HTMLSelectElement)
+      .value,
+  ).toBe(lustifyId);
+  expect(writes).toHaveLength(0);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use Auto for this edit" }),
+  );
+  await screen.findByText("Auto selects Qwen Image");
+  expect(screen.queryByRole("button", { name: "Use as default" })).toBeNull();
+  expect(screen.queryByLabelText("Reference strength")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    model_selection: "auto",
+    model_selection_revision: 4,
+    edit_prompt: "Remove the red book",
+    steps: 30,
+  });
+  expect(writes[0]).not.toHaveProperty("backend");
+  expect(writes[0]).not.toHaveProperty("model_id");
+  expect(writes[0]).not.toHaveProperty("reference_strength");
+  expect(writes[0]).not.toHaveProperty("seed");
+});
+
+it("uses the automatic nonstructural model's presets without submitting backend-only fields", async () => {
+  const catalog = withLustify();
+  catalog.defaults.choices.img2img = lustifyId;
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/images/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/recommendation")
+            ? {
+                policy: "structural-edit-v1",
+                revision: 4,
+                reason: "station_default",
+                choice: catalog.items.at(-1),
+              }
+            : path.includes("/artifacts/")
+              ? {
+                  id: "source",
+                  type: "image",
+                  metadata: { width: 768, height: 1024 },
+                }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : {
+                    id: "run-id",
+                    status: "queued",
+                    parameters: {},
+                    metadata: {},
+                  },
+      };
+    }),
+  );
+  await mount("/images?mode=img2img&input=source&model=auto", catalog);
+  fireEvent.change(screen.getByLabelText("Edit instruction"), {
+    target: { value: "Make the lighting warmer" },
+  });
+  await screen.findByText("Auto selects LUSTIFY Turbo Q4");
+  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    model_selection: "auto",
+    model_selection_revision: 4,
+    steps: 8,
+    max_side: 1024,
+    prompt_style: "instruction",
+  });
+  for (const field of [
+    "backend",
+    "model_id",
+    "seed",
+    "negative",
+    "reference_strength",
+    "reference_layout",
+  ])
+    expect(writes[0]).not.toHaveProperty(field);
+});
+
+it("opens guided setup for an unavailable photo engine without submitting a failed generation", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (options?.method === "POST") writes.push(path);
+      return {
+        ok: true,
+        json: async () =>
+          path === "/api/images/capabilities"
+            ? { available: false, status: "unavailable" }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.endsWith("/generation/preferences")
+                ? { enabled: false, revision: 0 }
+                : [],
+      };
+    }),
+  );
+  await mount();
+  const link = await screen.findByRole("link", { name: "Set up images" });
+  expect(link.getAttribute("href")).toBe("/setup/models?capability=images");
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A forest" },
+  });
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Queue generate",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(writes).toHaveLength(0);
 });

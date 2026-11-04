@@ -11,7 +11,7 @@ from app.models import Artifact, ModelDefinition, ModelFile, Run, RuntimeInstanc
 from app.runner_client import RunnerClient
 from app.runs import create_run, create_task, request_cancel
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 
 @pytest.fixture
@@ -48,6 +48,16 @@ def model(monkeypatch):
             },
         )
         instance.endpoint = "llamacpp:" + instance.id
+        # A ready fixture must retain the same frozen source/instance binding as
+        # a real managed load. A status string alone is not startup provenance.
+        load.parameters = {
+            "instance_id": instance.id,
+            "model_path": file.host_path,
+            "size_bytes": file.size_bytes,
+            "mtime": file.mtime,
+            "projector": None,
+            "gpus": [2, 7],
+        }
         session.add(instance)
         session.commit()
         result = {"id": file.id, "model": "llamacpp:" + file.id, "instance": instance.id}
@@ -76,6 +86,21 @@ def qualify(client, model):
     run = client.get("/api/runs/" + response.json()["id"]).json()
     assert run["status"] == "succeeded", run
     return run
+
+
+def test_reasoning_check_requires_verified_startup_binding(model):
+    with session_factory()() as session:
+        instance = session.get(RuntimeInstance, model["instance"])
+        load = session.get(Run, instance.metadata_json["load_run_id"])
+        load.parameters = {**load.parameters, "instance_id": str(uuid4())}
+        session.commit()
+        before = session.scalar(select(func.count()).select_from(Run))
+    with TestClient(app) as client:
+        response = client.post("/api/llama/models/" + model["id"] + "/reasoning-check")
+        assert response.status_code == 409
+        assert "verified startup observation" in response.json()["detail"]
+    with session_factory()() as session:
+        assert session.scalar(select(func.count()).select_from(Run)) == before
 
 
 def test_qualification_enables_bound_chat_and_keeps_thinking_out_of_final_content(model):

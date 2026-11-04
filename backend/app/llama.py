@@ -1,21 +1,24 @@
 """Model selection and durable ownership of llama.cpp runtime lifecycle."""
 
 import json
+import math
 import re
 import tempfile
 import time
+from datetime import timedelta
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
+from app.model_sources import label_of, source_of, verify_source
 from app.models import ModelDefinition, ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
@@ -42,6 +45,38 @@ class LoadModel(BaseModel):
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
     projector_file_id: UUID | None = None
+    runtime_profile: (
+        Literal[
+            "llamacpp-cpu-linux-amd64-v1",
+            "llamacpp-native-darwin-arm64-b12032-v2",
+            "llamacpp-native-darwin-x86_64-b12032-v2",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
+    ram_mib: StrictInt | None = Field(default=None, ge=256, le=65536, exclude_if=lambda v: v is None)
+    environment_id: str | None = Field(
+        default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
+    )
+
+    @model_validator(mode="after")
+    def cpu_profile(self):
+        from app.native_models import native
+
+        is_native = native(self.model_dump())
+        if is_native != (self.environment_id is not None):
+            raise ValueError("A native CPU profile requires its opaque SDK environment reference")
+        if self.runtime_profile:
+            if (
+                self.gpus
+                or self.projector_file_id
+                or self.cache_type != "q8_0"
+                or (not is_native and self.context_size != 4096)
+                or self.ram_mib is None
+            ):
+                raise ValueError("Managed CPU requires its fixed context/cache and RAM budget, without GPUs")
+        elif self.ram_mib is not None:
+            raise ValueError("A RAM budget requires the explicit CPU profile")
+        return self
 
 
 class EmptyBody(BaseModel):
@@ -52,6 +87,15 @@ def q8_kv_bytes_per_token(size_bytes: int) -> int:
     """Conservative Q8 KV bytes/token from GGUF size; 27–32B GQA is much hungrier than 7B."""
     gib = max(0.0, size_bytes) / (1024**3)
     return int(max(24.0, min(160.0, 8 + 7.5 * gib)) * 1024)
+
+
+def kv_budget_mib(gpu_memory_mib, size_bytes, state_reserve_mib=0):
+    return (
+        _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
+        - size_bytes / (1024 * 1024)
+        - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpu_memory_mib)
+        - state_reserve_mib
+    )
 
 
 def fit_coding_context(
@@ -79,11 +123,8 @@ def fit_coding_context(
     if missing_vram:
         computed = proven_success or CODING_CONTEXT_FALLBACK
     else:
-        kv_mib = (
-            _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
-            - size_bytes / (1024 * 1024)
-            - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpus)
-            - (context_profile or {}).get("state_reserve_mib", 0)
+        kv_mib = kv_budget_mib(
+            gpu_memory_mib, size_bytes, (context_profile or {}).get("state_reserve_mib", 0)
         )
         if kv_mib <= 0:
             computed = CODING_CONTEXT_FLOOR
@@ -230,6 +271,8 @@ def vision_projector(session, model, companions=None):
             )
         )
         if row.filename.lower().startswith("mmproj")
+        and row.host_path is not None
+        and model.host_path is not None
         and PurePosixPath(row.host_path).parent == PurePosixPath(model.host_path).parent
     ]
     return matches[0] if len(matches) == 1 else None
@@ -250,7 +293,7 @@ def catalog(session: DB):
         "models": [
             {
                 "id": row.id,
-                "name": f"{PurePosixPath(row.host_path).parent.name} · {row.filename}",
+                "name": label_of(row),
                 "size_bytes": row.size_bytes,
                 "model_key": "llamacpp:" + row.id,
                 "vision_available": vision_projector(session, row, companions) is not None,
@@ -284,6 +327,11 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
+    if body.runtime_profile and not model.relative_path:
+        raise HTTPException(422, "The managed CPU profile requires verified app-owned weights")
+    from app.cpu_models import fields as cpu_fields
+
+    cpu = cpu_fields(body.model_dump())
     requested_context = body.context_size
     projector = None
     if body.projector_file_id is not None:
@@ -295,7 +343,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "size_bytes": companion.size_bytes,
             "mtime": companion.mtime,
         }
-    if body.cache_type == "q8_0" and not _fitted_context:
+    if body.cache_type == "q8_0" and not _fitted_context and not body.runtime_profile:
         body = body.model_copy(
             update={
                 "context_size": coding_context_target(session, model, body.gpus, ceiling=body.context_size)
@@ -309,6 +357,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         }:
             raise HTTPException(409, "This model already has a runtime; inspect it before loading again")
     instance = RuntimeInstance(
+        id=str(uuid4()),
         runtime_key="llama.cpp",
         name=model.filename,
         ownership="managed",
@@ -320,10 +369,9 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
             "projector_file_id": str(body.projector_file_id) if body.projector_file_id else None,
+            **cpu,
         },
     )
-    session.add(instance)
-    session.flush()
     task = task or create_task(
         session,
         title="Load " + model.filename,
@@ -339,27 +387,33 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         execution_target="host",
         permissions=["manage_models", "filesystem_read"],
         retry_class="inspect",
-        requested_resources={"gpus": body.gpus},
+        requested_resources={"gpus": body.gpus, **({"ram_mib": body.ram_mib} if cpu else {})},
         parameters={
             "instance_id": instance.id,
-            "model_path": model.host_path,
-            "size_bytes": model.size_bytes,
-            "mtime": model.mtime,
+            **source_of(model),
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
             "projector": projector,
+            **cpu,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
     instance.metadata_json = {**instance.metadata_json, "load_run_id": run.id, "operation_run_id": run.id}
+    from app.runtime_coordination import add_runtime_intent
+
+    add_runtime_intent(session, instance, run)
     return run
 
 
 def request_stop(session, instance, *, task=None, ignore_run_id=None):
     if instance is None or instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
         raise HTTPException(404, "Managed llama.cpp runtime not found")
+    from app.runtime_coordination import foreign_runtime_work
+
+    if foreign_runtime_work(session, instance):
+        raise HTTPException(409, "Wait for the model's active work on another account before stopping it")
     active = session.scalars(
         select(Run).where(Run.executor_type.in_(["llama_load", "llama_stop"]), Run.status.not_in(TERMINAL))
     )
@@ -397,7 +451,11 @@ def active_instance_runs(session, instance_id, executors):
 @router.post("/{instance_id}/health", status_code=202)
 def health(instance_id: UUID, body: EmptyBody, session: DB):
     instance = managed_llama(session, instance_id)
-    if active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health")):
+    from app.runtime_coordination import foreign_runtime_work
+
+    if foreign_runtime_work(
+        session, instance, operations=("llama_load", "llama_stop", "llama_health")
+    ) or active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health")):
         raise HTTPException(409, "Cancel or wait for the current runtime operation first")
     task = create_task(
         session,
@@ -416,7 +474,10 @@ def health(instance_id: UUID, body: EmptyBody, session: DB):
         retry_class="safe",
         parameters={"instance_id": instance.id},
     )
-    instance.metadata_json = {**instance.metadata_json, "health_run_id": run.id}
+    from app.data_access import ScopedSession
+
+    if not isinstance(session, ScopedSession) or session.scope.administrator:
+        instance.metadata_json = {**instance.metadata_json, "health_run_id": run.id}
     session.commit()
     return run_dict(run)
 
@@ -426,10 +487,14 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
     from app.dependencies import depend_on
 
     instance = managed_llama(session, instance_id)
+    from app.runtime_coordination import foreign_runtime_work
+
     if instance.status == "unknown":
         raise HTTPException(409, "Inspect the runtime before restarting it")
-    if instance.status in {"queued", "loading", "stopping"} or active_instance_runs(
-        session, instance.id, ("llama_load", "llama_stop", "llama_health")
+    if (
+        foreign_runtime_work(session, instance)
+        or instance.status in {"queued", "loading", "stopping"}
+        or active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health"))
     ):
         raise HTTPException(409, "Cancel or wait for the current runtime operation first")
     meta = instance.metadata_json or {}
@@ -443,6 +508,11 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
         LoadModel(
             model_file_id=file_id,
             gpus=list(meta.get("gpus") or []),
+            **{
+                key: meta[key]
+                for key in ("runtime_profile", "ram_mib", "environment_id")
+                if meta.get(key) is not None
+            },
             context_size=int(meta.get("context_size") or 4096),
             cache_type=meta.get("cache_type") if meta.get("cache_type") in {"f16", "q8_0"} else "f16",
         ),
@@ -479,6 +549,9 @@ def enqueue_stop(session, instance, *, task=None):
         retry_class="inspect",
         parameters={"instance_id": instance.id},
     )
+    from app.runtime_coordination import register_runtime_stop
+
+    register_runtime_stop(session, instance, run)
     instance.status = "stopping"
     instance.metadata_json = {**instance.metadata_json, "operation_run_id": run.id}
     return run
@@ -497,14 +570,38 @@ def reserve(session, run, indexes, *, hardware=None):
     requested = {f"gpu:{g}" for g in selected}
     if (active_locks(session) - own) & requested:
         return False
+    if run.parameters.get("runtime_profile"):
+        from app.config import get_settings
+        from app.resources import RESOURCE_WAIT_KEY, memory_observation, reserve_memory
+        from app.task_control import lock_task
+
+        free = ((hardware or {}).get("memory") or {}).get("available_mib")
+        if type(free) not in {int, float} or not math.isfinite(free):
+            free = None
+        needed = run.parameters["ram_mib"]
+        existing_ram = "ram:" + run.id in own
+        if run.metadata_json.get("dispatch_attempted") and not existing_ram:
+            raise ValueError("The dispatched CPU runtime lost its RAM reservation; inspect it")
+        if not existing_ram and not reserve_memory(session, run, free, needed):
+            wait = {"reason": "memory", **memory_observation(session, run, free, needed)}
+            run.metadata_json = {**run.metadata_json, "resource_wait": wait}
+            lock_task(session, run.task)
+            run.task.metadata_json = {
+                **run.task.metadata_json,
+                RESOURCE_WAIT_KEY: (
+                    utcnow() + timedelta(seconds=max(2, get_settings().heartbeat_seconds * 2))
+                ).isoformat(),
+            }
+            append_event(session, run.id, "resource.waiting", wait)
+            return False
     from app.llama_admission import memory_available
 
     if not run.metadata_json.get("dispatch_attempted") and not memory_available(session, run, hardware):
         return False
     for key in requested - own:
         session.add(ResourceLock(resource_key=key, run_id=run.id))
+    run.allocated_resources = {**run.allocated_resources, "gpus": selected}
     session.flush()
-    run.allocated_resources = {"gpus": selected}
     return True
 
 
@@ -542,8 +639,9 @@ def update_instance(session, instance, info):
     elif info["status"] == "failed" and _allocation_error(str(info.get("error") or "")):
         meta["context_fit"] = "too_large"
     instance.metadata_json = meta
-    if not info.get("alive") and info["status"] in {"stopped", "failed"}:
-        release_run_locks(session, instance.metadata_json["load_run_id"])
+    from app.runtime_coordination import release_runtime_allocation
+
+    release_runtime_allocation(session, instance, info)
 
 
 class LlamaExecutor:
@@ -553,13 +651,42 @@ class LlamaExecutor:
 
     def fit_context(self, session, run, instance, runner, hardware):
         require(run.effective_permissions, "filesystem_read")
+        if run.parameters.get("runtime_profile"):
+            from app.native_models import ready, verification
+
+            report = runner.verify_model(
+                {
+                    "run_id": run.id,
+                    **verify_source(run.parameters),
+                    "check_context": True,
+                    "check_image": True,
+                    **verification(run.parameters),
+                    "permissions": run.effective_permissions,
+                }
+            )
+            expected = {
+                "runtime_profile": run.parameters["runtime_profile"],
+                "ram_mib": run.parameters["ram_mib"],
+                "context_size": run.parameters["context_size"],
+            }
+            if (
+                not report.get("matches_observation")
+                or report.get("cpu") != expected
+                or not ready(report, run.parameters)
+            ):
+                instance.status = "failed"
+                run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+                mark_failed(
+                    session, run, "CpuProfileChanged", "The verified CPU source/runtime/budget changed"
+                )
+                return False
+            instance.metadata_json = {**instance.metadata_json, "context_profile": report["context_profile"]}
+            return
         try:
             report = runner.verify_model(
                 {
                     "run_id": run.id,
-                    "host_path": run.parameters["model_path"],
-                    "size_bytes": run.parameters["size_bytes"],
-                    "mtime": run.parameters["mtime"],
+                    **verify_source(run.parameters),
                     "check_context": True,
                     "permissions": run.effective_permissions,
                 }
@@ -660,22 +787,37 @@ class LlamaExecutor:
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
         instance.status = "loading" if self.operation == "load" else "stopping"
+        from app.native_models import native
+
+        if native(run.parameters) and "startup_deadline_at" not in run.parameters:
+            run.parameters = {
+                **run.parameters,
+                "startup_deadline_at": (utcnow() + timedelta(minutes=10)).isoformat(),
+            }
         session.commit()
         request = {
             key: run.parameters[key]
             for key in (
                 "instance_id",
                 "model_path",
+                "app_owned",
+                "model_sha256",
                 "size_bytes",
                 "mtime",
                 "gpus",
                 "context_size",
                 "cache_type",
                 "projector",
+                "runtime_profile",
+                "ram_mib",
+                "environment_id",
+                "startup_deadline_at",
             )
             if key in run.parameters
         }
         request.update(run_id=run.id, permissions=run.effective_permissions)
+        if native(run.parameters):
+            request.pop("projector", None)
         deadline = time.monotonic() + max(
             0, 600 - (utcnow() - (run.started_at or run.created_at)).total_seconds()
         )
@@ -695,9 +837,19 @@ class LlamaExecutor:
                     cancel_abandoned_restore(session, run)
                 canceled = run.status == "cancel_requested"
                 session.commit()
-                if canceled or time.monotonic() >= deadline:
+                from app.model_cancellation import foreign_demand, retain_ready
+
+                retained = (
+                    canceled
+                    and self.operation == "load"
+                    and time.monotonic() < deadline
+                    and foreign_demand(session, run, instance)
+                )
+                if (canceled and not retained) or time.monotonic() >= deadline:
                     info = runner.stop_llama(instance.id)
                 update_instance(session, instance, info)
+                if retained and retain_ready(session, run, instance, info):
+                    return "done"
                 if not info.get("alive") and info["status"] in {"stopped", "failed"}:
                     run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
                     if canceled:
@@ -713,7 +865,11 @@ class LlamaExecutor:
                         )
                     return "done"
                 if info["status"] == "ready" and self.operation == "load" and not canceled:
-                    run.summary = f"{instance.name} ready on GPUs {run.parameters['gpus']}"
+                    run.summary = (
+                        f"{instance.name} ready on CPU"
+                        if run.parameters.get("runtime_profile")
+                        else f"{instance.name} ready on GPUs {run.parameters['gpus']}"
+                    )
                     payload = {
                         "instance_id": instance.id,
                         "gpus": run.parameters["gpus"],
@@ -785,6 +941,9 @@ class LlamaHealthExecutor:
             return "done"
         if instance.status in {"ready", "loading", "unknown", "stopping"} or info.get("alive"):
             update_instance(session, instance, info)
+        from app.runtime_coordination import account_runtime_observation
+
+        info = account_runtime_observation(session, info)
         health = {
             "status": info.get("status"),
             "alive": bool(info.get("alive")),
@@ -817,8 +976,12 @@ class LlamaHealthExecutor:
 
 
 def reconcile(session, runner):
+    from app.runtime_coordination import foreign_runtime_work
+
     for instance in instances(session):
         if instance.status not in {"ready", "queued", "loading", "unknown", "stopping"}:
+            continue
+        if foreign_runtime_work(session, instance, operations=("llama_load", "llama_stop", "llama_health")):
             continue
         load = session.get(Run, instance.metadata_json.get("load_run_id"))
         operation = session.get(
@@ -887,6 +1050,7 @@ def prepare_consumer(session, run):
     from app.coding_model_routing import MINIMUM_CONTEXT
     from app.dependencies import depend_on
     from app.providers import ProviderError
+    from app.runtime_coordination import runtime_load_facts
 
     if run.status == "canceled":
         return
@@ -895,9 +1059,12 @@ def prepare_consumer(session, run):
         return
     file_id = model.removeprefix("llamacpp:")
     matching = [i for i in instances(session) if i.metadata_json.get("model_file_id") == file_id]
-    matching.sort(
-        key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
-    )
+    try:
+        matching.sort(
+            key=lambda item: (runtime_load_facts(session, item)["created_at"], item.id), reverse=True
+        )
+    except ValueError as exc:
+        raise ProviderError(str(exc)) from exc
     instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
     coding = run.executor_type in {"local_proposal", "agent_data_generate"}
     target = 0
@@ -919,12 +1086,16 @@ def prepare_consumer(session, run):
         )
     )
     if needs_upgrade:
+        from app.runtime_coordination import foreign_runtime_work
+
+        if foreign_runtime_work(session, instance):
+            raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
         consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL), Run.id != run.id))
         if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
             raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
         previous_load = session.get(Run, instance.metadata_json["load_run_id"])
         stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
-        if previous_load.status not in TERMINAL:
+        if previous_load is not None and previous_load.status not in TERMINAL:
             depend_on(session, stop_run, previous_load)
         append_event(
             session,
@@ -946,8 +1117,15 @@ def prepare_consumer(session, run):
             load_run = enqueue_load(
                 LoadModel(
                     model_file_id=file_id,
+                    **{
+                        key: preset[key]
+                        for key in ("runtime_profile", "ram_mib", "environment_id")
+                        if preset.get(key) is not None
+                    },
                     gpus=preset["gpus"],
-                    context_size=CODING_CONTEXT_CEILING if coding else preset["context_size"],
+                    context_size=CODING_CONTEXT_CEILING
+                    if coding and not preset.get("runtime_profile")
+                    else preset["context_size"],
                     cache_type="q8_0" if coding else preset.get("cache_type", "f16"),
                 ),
                 session,
@@ -960,10 +1138,18 @@ def prepare_consumer(session, run):
         for old in matching:
             if old.status == "stopping":
                 operation = session.get(Run, old.metadata_json["operation_run_id"])
+                if operation is None:
+                    from app.runtime_coordination import wait_for_runtime
+
+                    operation = wait_for_runtime(session, load_run, old, target="stopped")
                 depend_on(session, load_run, operation)
         instance = session.get(RuntimeInstance, load_run.parameters["instance_id"])
     if instance.status != "ready":
         loading = session.get(Run, instance.metadata_json["load_run_id"])
+        if loading is None:
+            from app.runtime_coordination import wait_for_runtime
+
+            loading = wait_for_runtime(session, run, instance)
         if loading.status in {"cancel_requested", "canceled", "failed", "interrupted"}:
             raise ProviderError("Wait for the selected model's canceled startup to finish before sending")
         depend_on(session, run, loading)
@@ -974,6 +1160,7 @@ def evict_idle_models(session, run, indexes, *, desired=None):
     """Queue owned idle runtime stops to make room; never touch external services."""
     from app.dependencies import depend_on
     from app.llama_handoff import eviction_needed
+    from app.runtime_coordination import foreign_runtime_work
 
     if not eviction_needed(session, run):
         return
@@ -982,6 +1169,8 @@ def evict_idle_models(session, run, indexes, *, desired=None):
     consumers = list(session.scalars(select(Run).where(Run.status.not_in(TERMINAL))))
     for instance in instances(session):
         if instance.status != "ready" or not desired.intersection(instance.metadata_json.get("gpus", [])):
+            continue
+        if foreign_runtime_work(session, instance):
             continue
         references = [
             r

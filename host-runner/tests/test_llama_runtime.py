@@ -53,6 +53,10 @@ def runtime(tmp_path, monkeypatch):
                 "Config": {"Labels": labels},
                 "State": {"Status": "created", "Running": False},
             }
+            if "--memory" in args:
+                budget = int(args[args.index("--memory") + 1].removesuffix("m")) * 1024**2
+                state["item"]["HostConfig"] = {"Memory": budget, "MemorySwap": budget, "DeviceRequests": []}
+                state["item"]["Config"]["Env"] = [args[i + 1] for i, v in enumerate(args) if v == "--env"]
             return "b" * 64
         if args[0] == "start":
             state["item"]["State"] = {"Status": "running", "Running": True}
@@ -70,6 +74,16 @@ def runtime(tmp_path, monkeypatch):
     clear_settings_cache()
 
 
+def test_unprepared_native_gpu_rejects_load_before_dispatch_but_retains_cpu_path(runtime, monkeypatch):
+    _, body, state = runtime
+    monkeypatch.setenv("AI_STATION_CONTAINER_GPU_READY", "false")
+    clear_settings_cache()
+    with pytest.raises(HTTPException) as error:
+        llama.load(body)
+    assert error.value.status_code == 503 and "Graphics setup" in error.value.detail
+    assert not state["calls"]
+
+
 def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     root, body, state = runtime
     assert llama.load(body)["alive"]
@@ -79,6 +93,7 @@ def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     argv = creates[0]
     assert argv[argv.index("--gpus") + 1] == '"device=GPU-2,GPU-7"'
     assert argv[argv.index("--tensor-split") + 1] == "1,1"
+    assert "CUDA_VISIBLE_DEVICES=GPU-2,GPU-7" in argv
     assert argv[argv.index("--network") + 1] == "none"
     assert argv[argv.index("--reasoning") + 1] == "off"
     assert argv[argv.index("--reasoning-budget") + 1] == "0"
@@ -88,6 +103,19 @@ def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     assert llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))["status"] == "stopped"
     with pytest.raises(HTTPException):
         llama.load(body)
+
+
+@pytest.mark.parametrize("selected,visible", [([7], "GPU-7"), ([7, 2], "GPU-7,GPU-2")])
+def test_single_and_reordered_gpu_requests_set_matching_cuda_selection(runtime, selected, visible):
+    _, body, state = runtime
+    assert llama.load(body.model_copy(update={"gpus": selected}))["alive"]
+    argv = next(args for args in state["calls"] if args[0] == "create")
+    requested = argv[argv.index("--gpus") + 1]
+    assert requested.removeprefix('"device=').removesuffix('"') == visible
+    assert [argv[i + 1] for i, value in enumerate(argv) if value == "--env"] == [
+        "CUDA_VISIBLE_DEVICES=" + visible
+    ]
+    assert ("--tensor-split" in argv) == (len(selected) > 1)
 
 
 def test_stop_before_late_load_tombstones_identity(runtime):
@@ -340,3 +368,96 @@ def test_projector_outside_roots_or_changed_observation_is_rejected(runtime, tmp
             llama.load(body.model_copy(update={"projector": selected}))
         assert denied.value.status_code == 422
     assert not any(call[0] == "create" for call in state["calls"])
+
+
+def test_long_data_root_preserves_owned_container_layout_and_request_identity(runtime, tmp_path, monkeypatch):
+    root, body, state = runtime
+    longer = tmp_path / ("long-installation-folder-" * 4)
+    longer.mkdir()
+    monkeypatch.setenv("AI_STATION_DATA_HOST_PATH", str(longer))
+    clear_settings_cache()
+    result = llama.load(body)
+    assert result["alive"]
+    record = llama.manifest(body.instance_id)
+    assert record["request"] == body.model_dump(mode="json")
+    create = next(call for call in state["calls"] if call[0] == "create")
+    assert f"type=bind,src={longer / 'runtime/llama' / str(body.instance_id) / 'io'},dst=/runtime" in create
+    assert len(os.fsencode(llama.socket_path(body.instance_id))) >= 108
+
+
+@pytest.fixture
+def cpu_runtime(runtime, monkeypatch):
+    import hashlib
+
+    from ai_station_runner import cpu_runtime_profile as cpu
+    from ai_station_runner import runtime_setup
+    from ai_station_runner.gguf_context import inspect_context
+    from test_gguf_context import fields, header
+
+    root, body, state = runtime
+    data = bytes(header(fields()))
+    sha = hashlib.sha256(data).hexdigest()
+    store = root / "models/store"
+    store.mkdir()
+    model = store / sha
+    model.write_bytes(data)
+    model.chmod(0o444)
+    info = model.stat()
+    budget = cpu.memory_budget_mib(info.st_size, 4096, inspect_context(model, info.st_size, info.st_mtime))
+    body = llama.Load.model_validate(
+        {
+            **body.model_dump(),
+            "app_owned": True,
+            "model_path": "models/store/" + sha,
+            "model_sha256": sha,
+            "size_bytes": info.st_size,
+            "mtime": info.st_mtime,
+            "gpus": [],
+            "cache_type": "q8_0",
+            "runtime_profile": cpu.PROFILE,
+            "ram_mib": budget,
+        }
+    )
+    monkeypatch.setattr(cpu, "QUALIFIED", True)
+    monkeypatch.setattr(llama, "collect", lambda _: {"gpus": [], "memory": {"available_mib": 32768}})
+    monkeypatch.setattr(
+        runtime_setup, "inspect_image", lambda _: {"image": {"id": "sha256:" + "a" * 64, "present": True}}
+    )
+    return root, body, state
+
+
+def test_managed_cpu_launch_enforces_memory_no_swap_and_no_gpu_access(cpu_runtime):
+    root, body, state = cpu_runtime
+    llama.load(body)
+    create = next(v for v in state["calls"] if v[0] == "create")
+    assert "--gpus" not in create
+    assert create[create.index("--memory") + 1] == str(body.ram_mib) + "m"
+    assert create[create.index("--memory-swap") + 1] == str(body.ram_mib) + "m"
+    assert "CUDA_VISIBLE_DEVICES=-1" in create and "NVIDIA_VISIBLE_DEVICES=void" in create
+    assert create[create.index("--gpu-layers") + 1] == "0"
+    assert "--network" in create and create[create.index("--network") + 1] == "none"
+    assert llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))["status"] == "stopped"
+    assert state["item"] is None
+
+
+@pytest.mark.parametrize(
+    "change",
+    [{"ram_mib": 9999}, {"ram_mib": None}, {"gpus": [2]}, {"cache_type": "f16"}, {"context_size": 8192}],
+)
+def test_cpu_bad_or_changed_budget_cannot_launch(cpu_runtime, change):
+    from pydantic import ValidationError
+
+    _, body, state = cpu_runtime
+    with pytest.raises((ValidationError, HTTPException, ValueError)):
+        llama.load(llama.Load.model_validate({**body.model_dump(), **change}))
+    assert not any(v[0] == "create" for v in state["calls"])
+
+
+def test_cpu_policy_change_requires_inspection_before_any_owned_signal(cpu_runtime):
+    _, body, state = cpu_runtime
+    llama.load(body)
+    state["item"]["HostConfig"]["MemorySwap"] = -1
+    before = len(state["calls"])
+    with pytest.raises(HTTPException, match="CPU container"):
+        llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))
+    assert not any(v[0] in {"stop", "rm"} for v in state["calls"][before:])

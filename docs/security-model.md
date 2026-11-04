@@ -1,3 +1,400 @@
+The optional native Linux graphics action is a separate argument-free polkit
+helper in an explicitly built Debian package, never an HTTP/Runner/agent tool.
+It admits only an ordinary invoking account, native Ubuntu 24.04 amd64 and the
+fixed root-owned system Docker socket/service. Root-owned inputs, pinned package
+hashes, the original configuration backup and operation journal are rechecked;
+unknown toolkit installations or later administrator changes refuse mutation.
+It installs only its four toolkit packages and adds the fixed NVIDIA runtime,
+retaining runc and unrelated settings. No host driver/CUDA/kernel/model changes,
+daemon restart/reload or foreign-container signal is allowed. OS restart remains
+an explicit operator action. The unprivileged probe has a private identity
+receipt, immutable app image/query, no mounts/network and exact-ID cleanup.
+[Candidate qualification](plans/linux-gpu-onboarding.md) is still required.
+
+The explicit managed CPU conversation profile accepts only its pinned image and
+verified owned GGUF. Native dispatch rechecks actual cache geometry and the exact
+RAM budget; no GPU devices/visibility, bounded threads, zero GPU layers and equal
+memory/swap limits apply. Inspection rechecks memory/device policy before any
+owned signal. A lost acknowledgement retains the original RAM reservation and
+operation identity. This adds no shell, raw Docker endpoint or public listener.
+
+The desktop packaging candidate is a trusted local installation/supervision
+process. It never grants Docker access to an HTTP client or application agent.
+The package carries a pinned Python archive, hash-pinned dependencies and a
+checksummed, exactly identified control-plane image. Fresh desktop configuration
+uses private accounts, loopback networking and a dedicated project/data root;
+ambient settings cannot attach it to another station. First-admin authority
+travels through a private parent pipe to the local browser and is omitted from
+desktop logs. [Packaging and remaining platform gates](plans/desktop-installation.md).
+
+Packaged Linux/WSL supervision can retain a private Compose ownership receipt
+outside mounted application data. It records exact container IDs and hashes of
+their immutable configuration/mounts, bound to the Docker daemon and canonical
+installation/data identities. Only after taking the existing launcher lock and
+validating the complete surviving inventory may a later Start stop/remove those
+specific containers. Unexpected IDs, unsafe/changed receipts or fingerprints
+refuse before any signal. No volume removal, native/model process cancellation,
+legacy deployment adoption, agent tool or HTTP operation is introduced. Only
+Docker's null/empty default DNS lists are equivalent; a previous literal receipt
+requires a complete matching original hash under those three default fields.
+Nonempty DNS changes and every other configuration change still refuse recovery.
+The retained Windows installation passed actual OS reboot, preserving upgrade,
+native Start recovery and normal Stop; see the
+[qualification record](plans/desktop-installation.md#qualified-packaged-recovery--2026-11-03).
+
+The [Mac connection candidate](plans/macos-runner-transport.md) retains the private
+Runner Unix socket. A supervised loopback-only helper and a non-root process in
+the same application image use mutual TLS with fresh private certificates.
+Container peers keep private Unix HTTP and the ordinary typed Runner API; there
+is no unauthenticated TCP, public bind, shell or Docker authority. Credential
+files stay outside artifacts and server keys stay native. Consumer admission
+remains gated until real transport, lifetime/recovery and installation checks pass.
+
+The Windows GPU activation candidate is confined to the application-owned WSL
+image and its explicit preserving installer update. Its root-only fixed helper
+installs verified offline toolkit packages, retains runc as default and validates
+owned Docker live-restore/process identities before completing an update. It
+rejects native-host activation and unknown guest recipe/bridge transitions;
+failure preserves the existing pending-update fence and database backup. No
+HTTP/Runner/agent operation or new privilege grant is introduced. Host drivers,
+other distributions and Docker Desktop remain outside this operation.
+[Candidate and qualification gates](plans/windows-gpu-preparation.md).
+
+The Linux package's optional one-time Docker access action runs only through
+fresh OS administrator authentication. A root-owned, argument-free helper uses
+the bundled interpreter in isolated, no-site mode and standard library only.
+It validates `PKEXEC_UID` and the fixed root-owned Docker socket before granting
+only that account's group membership. The native consent explains Docker's
+administrator-level authority; application passwords never enter this flow.
+Only the fixed installed launcher is reopened under the original ordinary UID.
+No HTTP/Runner/agent endpoint, caller-selected command, root application process,
+driver change or socket permission relaxation is added. Qualification remains
+separate from implementation: [clean Linux contract](plans/linux-consumer-qualification.md).
+
+Repeated desktop clicks read a private, bounded readiness handoff only while the
+desktop owner's file lock is held. The file permits only its validated loopback
+browser/setup address, is never served over HTTP or written to ordinary logs,
+and is removed at shutdown or before a new owner starts. The link grants no
+Docker or host-operation capability. Background desktop status/stop uses a
+separate mode-0600 Unix socket outside mounted application data, verified with
+kernel same-OS-user credentials. Stop is bound to the currently inspected
+desktop instance; only its supervisor signals its owned child. This local
+lifecycle channel carries no setup link, caller-selected PID, URL or command
+and is never exposed to web users, agents or HTTP clients.
+
+Native package identity uses a separate same-user control action, preserving
+existing Status/Stop wire formats. It projects only bundle/image IDs, bounded
+version and source epoch. The private version receipt contains neither setup
+URLs nor process IDs; readiness, package, owner and canonical installation
+coordinates must agree before a future updater can target an instance. Missing,
+changed or unsafe receipts require inspection rather than automatic adoption.
+This adds no web/agent operation or permission to migrate/stop an installation.
+
+The offline image updater freezes its local Docker connection and exact package
+image. Its containers have the application-data mount and, for an installation
+with an attested persistent database, that exact local volume at `/data/db`.
+They have no network/GPU/Runner
+socket, non-root execution and bounded CPU/RAM/pids. Private journal intent precedes
+container creation/start; signals and cleanup require matching identity, labels,
+image, command and isolation. A dispatch fence blocks API/supervisor startup before
+the image can run. Native target activation follows verified database publication;
+uncertain dispatches remain fenced rather than replayed. This is trusted local
+installer code, with no HTTP/agent entry point. Full Mac acceptance remains gated.
+
+Volume-backed activation uses a separate fixed read-only image action to hash
+the main database and WAL without opening SQLite. It verifies the root-owned
+storage marker, ordinary file ownership and unchanged file identities; unsafe
+links, shared-write files and unfinished rollback journals are refused. Every
+container referencing the volume must be absent except independently verified
+owned helpers. A foreign reference is preserved and blocks dispatch/activation.
+Lost reader acknowledgements resume the journaled reader without replaying
+database publication. The previous version and startup fence remain on mismatch.
+
+Native version identity combines the existing filesystem namespace with the
+private ready volume/daemon binding. Mutable helper journals are excluded;
+existing Linux/WSL installations without volume receipts retain the exact old
+namespace. Reading this binding grants no Docker or native SQLite access. A
+missing version receipt never turns an existing VM database into a fresh install:
+first-version publication requires the attested owner and a fixed read-only
+image check proving a marker-only volume, with no other container references.
+The native candidate prepares and attests storage before version publication.
+Its child independently verifies the package inventory, private version/storage
+receipts and quiescence before Compose interpolation. It overrides any ambient
+volume name with the attested identity and uses the exact verified image SHA.
+The startup probe requires authenticated UDS/TLS/UDS, local-volume SQLite locking
+with the original writer still held, restart and confirmed cleanup. Old direct
+socket proofs may confirm pending cleanup only; they cannot admit a new startup.
+The Mac admission gate remains closed until the full journey is qualified.
+
+Database export is a fixed native-installer operation, not an HTTP/agent tool.
+The [full-export coordinator](plans/desktop-snapshots.md) extends this operation
+with private retained files and native configuration/provenance. It holds desktop
+and launcher locks, checks platform-owned process groups and bounded container
+mount/state metadata, and refuses active data clients without signaling them.
+Private source credentials are included for recovery, never served in Library or
+ordinary downloads. Live runtime/process authority is excluded; external links
+remain references. Startup fences survive interruption until verified completion
+or explicit cancellation. This does not yet authorize importing old security or
+execution authority during restore, or qualify the complete Mac consumer path.
+
+Its non-root image helper has no network, GPU, Runner socket or additional
+capabilities; only the attested database volume (read-only) and one fresh private
+output directory (writable) are mounted. The directory stays outside application
+data because a full-station DB contains every account's private records and
+credential metadata. The helper clones main/WAL before opening the private copy
+with SQLite; original bytes and ownership remain unchanged. Native inspection
+verifies the fixed image acknowledgement, source binding and exported-file hash.
+Foreign volume users block dispatch. Stop/removal target only a completely
+inspected owned helper; completed snapshots and partial/canceled files remain.
+This primitive does not yet provide complete files backup/restoration or make
+the Mac consumer installer available.
+
+The image-local restore candidate binds a fixed backup hash, image, operation and
+target volume, with a volume-level marker blocking API/export/upgrade entry.
+Its private stage reuses offline account normalization: current credentials/MFA
+are preserved, sessions/node authority are revoked, schedules pause and active
+Runs require inspection. Unreadable authority needs a named administrator reset
+and explicit MFA acknowledgement from a private fixed-path file. Passwords never
+travel in argv or reports; only a salted normal password verifier binds a pending
+reset request. Original main/WAL copies stay private, and only a verified stage
+may atomically replace the target. Native dispatch reuses the existing verified
+storage helper lifecycle with fixed mounts/commands, cached completion and an
+explicit 512 MiB RAM/swap limit. Only owned preparation may be stopped; source
+disappearance cannot prevent its inspection/Stop. An unstarted payload is
+distinguished from a transaction with a durable request. Publication requires
+resume/inspection. Full native coordination now retains original files, stages
+on the same filesystem, preserves current credential/MFA files, refuses unknown
+file changes and fences startup until DB/files publication agree. Only the
+verified content-addressed model/SDK namespace regains owner-only immutable file
+modes on restore; hashes must match object names. Model admission checks remain
+unchanged, and ordinary restored documents remain writable. Only the
+pre-database phase allows rollback. Historical execution/package receipts remain
+provenance. Native backup presentation uses the same verified current package and
+same-user Stop handoff, borrowing the desktop lock while the coordinator holds its
+own offline gate. Folder choices and cancellation travel over private child pipes,
+not HTTP or command arguments. Cancel is disabled for database publication;
+closing presentation does not signal workloads. The exceptional native recovery
+form uses secure password/confirmation controls and explicit MFA/account-reset
+acknowledgement. A private bounded reply supplies the existing fixed authority
+file; the application and native CLI/UI share the same pure credential rules.
+Passwords do not enter command arguments, ordinary reports or logs. A failed
+restart remains `starting`: recovery eligibility uses a prior-ready timestamp plus
+the currently verified package/storage binding, never inventing API readiness or
+adopting a first-start database. The stopped owner lock and offline workload
+guards are still mandatory. Consumer restore remains gated on actual Mac
+qualification.
+
+The lifecycle credential primitive retains Linux `SO_PEERCRED` and uses Darwin
+`getpeereid` for native Mac peers. Missing/failed credential inspection and
+unknown platforms deny access; file ownership alone cannot authorize a peer.
+Darwin enforces its shorter socket address bound without a Linux `/proc`
+fallback. These primitives add no listener or endpoint and do not enable the
+unfinished [Mac installation/runtime path](plans/macos-consumer-installation.md).
+
+Mac Docker Desktop discovery is a read-only local desktop prerequisite. Its CLI
+must remain inside the installed application bundle; context inspection receives
+only a minimal environment and selects the fixed local `desktop-linux` context.
+Probe commands pin the resulting Unix endpoint and cannot inherit another
+station's Docker/provider routing. An optional chosen-data-filesystem test mounts
+only a newly created private disposable child, separate from native socket and
+client storage. Existing application data is not mounted or opened. Uncertain
+container cleanup retains both probe roots and their private receipts; changed
+directory identities are preserved. This exposes no HTTP/agent operation and
+does not admit the unqualified Mac consumer startup path.
+
+The read-only Metal inventory runs only a fixed installed Python observer in an
+isolated no-site/no-bytecode child with a minimal environment, bounded duration
+and validated output. Native framework errors/stderr are not exposed, and retained device/pool
+objects are released. Working-set guidance is not dedicated/free VRAM, a hard
+memory limit or permission to launch a model. Metal identities stay separate from
+CUDA indices, so observation cannot admit a Linux NVIDIA recipe on a Mac. Native
+runtime, memory policy and actual Mac qualification remain independent gates.
+
+The internal Darwin llama.cpp assembler accepts only built-in hash-pinned
+archives from the existing immutable store. It materializes reviewed server,
+library and license bytes into a new private operation directory. Archive link
+targets are resolved only inside the fixed archive, never passed to filesystem
+extraction. The app creates only its own in-bundle hardlinks to copied regular
+files and checks exact link counts/device-inode groups, rejecting external links.
+Output hashes, Mach-O architecture/library search boundaries, permissions and
+inventory are rechecked before a private relative-path receipt is accepted.
+Interrupted directories are retained, never silently overwritten. This prepares
+bytes only: it launches no code, changes no API permissions and cannot mark a Mac
+runtime qualified or expose its private setup identity as shared model metadata.
+
+Darwin process facts use only fixed read-only kernel/library queries, require
+the effective OS user and reject incomplete or changing snapshots. No caller
+chooses a library path, sysctl key or command. These facts are not signal authority
+and are not exposed as a new Runner API. Unsupported process execution fails
+before launch; the Linux ownership journal keeps its original interpretation.
+
+An internal Darwin ProcessManager candidate adds owned-session interpretation
+behind the existing lifecycle engine. A fixed isolated Python barrier execs an
+already-admitted argv only after native identity capture and durable journal
+publication; EOF, missing authority or failed publication cannot launch payload
+code. The fixed Darwin barrier uses isolated/no-site/no-bytecode Python so
+startup cannot modify the shipped interpreter's cache inventory. Kernel boot/UID/start/session/group checks precede each owned signal.
+Bounded native group enumeration rejects denial, malformed data and truncation;
+unknown inspection is not treated as process exit. This candidate has no new
+endpoint or user-configurable command/path and is selected by the normal Runner
+only on Darwin. A platform dependency on the complete FastAPI application
+restricts Mac access to health, read-only hardware, existing owned process
+inspection/Stop and fixed native SDK preparation. Included and future routers do not implicitly gain execution
+authority. Unknown platforms are denied before manager storage/recovery. Linux
+keeps its existing API and process implementation. The Linux-only private-tailnet
+recipe is not restored at Mac startup. Native model setup/inference API admission,
+memory policy, transport and consumer installation remain separate requirements.
+
+The [native SDK preparation](plans/macos-managed-llama.md) accepts only two fixed
+reviewed profiles and model/network/workspace permissions. An offline owned child
+uses installed isolated/no-bytecode Python, verified immutable archive bytes and
+canonical private storage. It installs no packages, changes no Docker/OS settings
+and receives no repository module paths. Shared readiness uses an opaque mapping;
+private operation IDs and receipts remain outside shared model metadata. SDK
+readiness cannot authorize model loading or unqualified platform operations.
+
+The internal native llama.cpp candidate reuses that ownership engine with fixed
+SDK/model references, private canonical inference sockets and a minimal environment.
+The Darwin child gets umask 077 at launch independently of the parent process;
+new sockets are private at creation. RAM admission estimates free plus inactive
+Mach queues without adding speculative, compressed or purgeable counters; it
+remains an estimate with retained reservations, not permission to force memory
+allocation or change OS swap policy.
+Its shared inference process discards stdout/stderr before exec; prompts from a
+second account must never enter the first loader's Run logs. The persisted output
+policy cannot change on retry. An immutable dispatch fence prevents duplicate
+starts after acknowledgement loss. Persisted Stop and the original startup
+deadline survive observer replacement; every cancellation rechecks owned identity.
+Incomplete ownership retains reservations and requires inspection. CPU/Metal RAM
+checks are explicit admission estimates, not hard cgroups or a no-swap guarantee.
+This adds no endpoint, HTTP-controlled process-output option or qualified Mac
+capability. Actual platform, transport and consumer-package gates remain open.
+
+The developer-only native recovery experiment can launch one fixed isolated
+Python owner entry with an explicit real-inference flag. Only a private bounded
+frozen model request crosses that process boundary; ambient application secrets
+are omitted. A validated response hash/instance/PID handoff and reaped successful
+owner exit precede reattachment. Timed-out helpers are signaled only through their
+immediate child handle; the existing native journal/Stop fence governs model
+cleanup. This adds no HTTP/agent operation or arbitrary command, and does not
+qualify the application launcher, Docker bridge or full station restart.
+
+The trusted Mac Python package builder fetches only built-in public checksum/size
+coordinates when explicitly requested. Immutable inputs are verified again before
+offline, hash-pinned, binary-only cross-target assembly; no target Mac interpreter,
+source build, caller-supplied package index or global Python installation runs.
+The build child receives a minimal environment. Archive/output boundaries and
+native binary architecture/minimum OS are checked before final publication.
+This is developer packaging code, not an HTTP/Runner/agent tool or an installer
+privilege grant. Native imports and consumer qualification remain independent.
+
+Guided runtime preparation is an explicit administrator action with frozen
+license acceptance, source/hash/deadline and model/network/workspace permissions.
+The native operation accepts only a built-in profile, uses the configured local
+Unix Docker context, and never exposes a general Docker API or caller-selected
+image/command/socket. Private receipts and log cursors remain owner scoped.
+Lost acknowledgements reuse the native journal; Stop and revoked-account cleanup
+retain reservations until owned transfer completion is confirmed. Existing
+configured images are preserved. [Contracts](plans/guided-model-installation.md).
+
+[Guided model setup](plans/guided-model-installation.md) requires explicit administrator authority, license acceptance and snapshotted filesystem/network/manage-model permissions. Clients select a reviewed manifest, never URLs, commands, destinations or hashes of their own. Download DNS/redirects are publicly validated and pinned; complete hash/length checks precede immutable publication. Native adoption accepts only `models/store/<sha256>`, validates read-only regular-file ownership and bounded GGUF metadata, and does not claim a second full-file hash. Stop, live account authority and worker identity are checked before shared registry/private receipt publication. Discovery cannot mark these app-owned sources missing merely because external roots were rescanned.
+
+Companion bundle preparation applies the same permissions and file checks to
+every object, with aggregate progress and the original manifest on Resume.
+Task Stop and worker/claim identity fence the entire shared-file publication;
+partial success publishes neither a bundle receipt nor model registrations.
+Downloaded PT/safetensors/JSON bytes are not imported or deserialized as model
+code. Runtime activation remains a separate qualified operation. Histories and
+receipts remain private even though model files are shared infrastructure.
+
+Managed music uses the same owned offline preparation policy as speech, with
+only its fixed built-in profile. It verifies all source, wheel, interpreter and
+model inputs before execution. Only exact closed-world links to read-only,
+single-link immutable model objects are allowed in the managed view; external
+music paths keep strict symlink rejection. Native dispatch rechecks the frozen
+environment and compatible GPU, with 12-GiB/18-GiB zero-swap scopes for short/long
+tracks. Stop and restart inspect the same owned process; partial audio is never
+published. Setup metadata, logs and receipts remain account scoped.
+
+Managed expressive voice uses two separate fixed environments and immutable
+closed-world Fish/Whisper model views. The ASR child resolves its approved model
+view using standard-library helpers, without importing the application or native
+API dependencies. Managed speech/transcription freeze an opaque environment ID,
+verify their owned interpreter/source/models, omit ambient site-packages and
+credentials, and deny Python network access. Existing explicit configurations
+retain priority and cannot silently consume a managed request's identity. Model
+preparation requires administrator authority, license acceptance and the existing
+model/network/workspace permissions; ordinary generation receives artifact
+read/write only. Native setup shares the existing four-GiB scope and journal;
+speech retains its two allocated GPUs and 24-GiB zero-swap scope. A post-load
+VRAM check handles external-runtime contention without stopping unrelated jobs.
+See [qualification and remaining gates](plans/managed-fish-setup.md).
+
+Managed speech assembly verifies every fixed source/wheel/model object before
+executing a separate offline venv install with its own pinned Python. SDK archives
+reject links/traversal/special files; the standalone Python's legitimate links
+must remain inside its owned tree. Incomplete operations cannot create readiness.
+The private typed Runner route accepts only the built-in profile, fingerprint and
+absolute deadline, never caller-selected packages, code, commands or paths.
+Existing process ownership and four-GiB/zero-swap setup scopes enforce cancellation
+and recovery. Durable pre-dispatch Stop and locked adoption prevent late activation.
+Account administrator authority, effective permissions and worker/claim identity
+fence download and receipt publication. Revoked accounts receive only trusted
+cleanup of their existing native action. Ordinary speech Runs freeze the selected
+manifest and use an eleven-GiB/zero-swap child with Python network connections
+blocked. Existing configured external Chatterbox remains authoritative. See the
+[managed speech contract](plans/managed-speech-setup.md).
+
+The qualification-controlled [image container profile](plans/managed-image-setup.md#owned-container-candidate)
+reconstructs the allowed create/start policy from native code and a pinned recipe;
+shared journal JSON cannot choose Docker commands, images, mounts or contexts.
+Station/request labels and exact container/image identities precede inspection
+and Stop. Its fixed deadline script is outside shared application storage, checks
+actual kernel memory/zero-swap limits, and runs inside the bounded container.
+An uncertain late start is fenced by deleting only its verified owned container,
+without removing bind data. Only complete confirmed PNG publication produces a
+file receipt. Typed private Runner routes now support start, inspection and Stop;
+the generic process routes delegate only an existing owned journal and never
+create image storage for unrelated process IDs. New dispatch and preparation
+can be withdrawn through the native qualification flag; inspection/Stop remain
+available for owned jobs. That policy is
+outside the immutable source recipe, keeping parent/child source hashes stable.
+The ordinary worker freezes the effective prompt, owned reference observations,
+GPU bundle, RAM reservation and deadline. Uncertain missing dispatch is fenced
+before release; unavailable cleanup retains reservations. A revoked account's
+trusted cleanup can only Stop its exact managed job, never restart inference or
+publish its output. Models are shared infrastructure; references, logs and
+generated images retain the existing private Run/artifact boundaries.
+
+Conversation sound scopes never grant Library browsing to a model. Current-turn
+commands bind a manually selected owned film or the single completed film visibly
+linked to that conversation; ambiguous, partial and latest unfinished results are
+rejected. New-film sound waits on its exact final producer, then verifies its
+bytes/timing and the admitted runtime observations. Ordinary Task Stop serializes
+with publication. Effects, the saved mix/revision, histories and output files
+remain private; no user-supplied commands, filters or model paths are introduced.
+
+The [next-release account boundary](plans/next-release-0.1.md#accounts-and-data-ownership)
+requires private resource ownership, owner-bound workers/tools, protected file
+and event access, per-account browser state and optional TOTP. These boundaries
+are qualified and active on the workstation after PR #512's preserved-data
+cutover. Shared models/GPUs never imply shared
+prompts, memory, files, credentials or execution logs.
+
+[Sound effects](plans/synchronized-sound.md) accept an owned completed video ID,
+bounded descriptions/sampling settings and a GPU choice. Native dispatch accepts
+only frozen media observations and fixed configured model files, inside an
+18-GiB zero-swap owned scope. Offline constructors resolve verified local CLIP and
+vocoder files; no caller can supply commands, imports, paths, downloads or filter
+graphs. Sources and generated stems are rechecked before preview publication;
+account scope covers sessions, Runs, file/Range access and lineage. A separate
+typed preview operation retains process identity through lost acknowledgements.
+
+[Account services](accounts.md) preserve legacy credential/session material,
+isolate device revocation and validate optional TOTP with replay protection and
+one-use recovery codes. Authentication routes are registered by the explicit
+account profile; an activated installation refuses operator fallback.
+
 The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
 frozen source hashes, a configured recipe, allocated GPUs and an absolute
 deadline over the private typed Runner API. The owned child verifies installed
@@ -16,6 +413,30 @@ Old queued agent snapshots and legacy plans retain their existing behavior.
 the configured offline CLI, with no caller-selected commands or chunk paths.
 Every child inherits the owned process group and deadline. Intermediate PCM stays
 under the Run directory; failed/canceled work never publishes a partial WAV.
+
+[Speech delivery settings](plans/expressive-speech.md) accept three finite bounded
+numbers, never extra flags, instructions or paths. Read-only capability inspection
+parses configured source without executing it. Controlled dispatch requires its
+frozen source hash; unsupported/changed CLIs fail instead of dropping settings.
+
+Optional expressive Fish speech accepts a fixed engine, bounded script, enum
+direction/pace, an explicit voice source and two allocated GPU IDs. Reference
+voice freezes the owned WAV/transcript; generated voice rejects those inputs and
+does not read or transcribe an implicit recording. Chatterbox keeps its reference
+contract. Legacy serialization and private source checks remain unchanged;
+generated voice retains normal text-preparation lineage and output ownership. Runtime
+paths and weights are native configuration; callers cannot choose commands,
+imports, flags or model downloads. Background read-only readiness verifies the
+pinned source/weights; the owned child rechecks the full observation before
+imports. An actual 24-GiB, zero-swap user scope bounds load RAM; model weights
+stay on the allocated GPUs. Stop/recovery use the existing process journal.
+Reference transcription is account-bound and revalidated at dispatch/publication;
+partial, capped-without-EOS or canceled outputs never become Library artifacts.
+Speaking pace uses only fixed rates on complete decoded PCM in that same bounded
+child. It does not alter sample rate or allocate another model; Natural bypasses
+processing. Original/final sample counts and the processing rate remain in the
+private native report, and processed PCM must pass the existing finite-value,
+duration, amplitude and complete-output checks before publication.
 
 The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
 guidance recipe and installed-source observation to new continuation plans.
@@ -372,6 +793,14 @@ The process inside the container listens on all container interfaces so Docker c
 
 ## Host Runner
 
+The Darwin telemetry branch reads only fixed public Mach CPU/VM statistics and
+the `hw.memsize`/`vm.swapusage` sysctls from the fixed system library. It sets no
+sysctl value, executes no command and releases its own host-port send right after
+each query. Short, denied or inconsistent observations remain unknown; they do
+not authorize uncapped execution. Free-page RAM is a conservative observation,
+not dedicated VRAM, Metal readiness or a hard zero-swap guarantee. Mac native
+execution and the consumer launcher remain separately gated.
+
 The runner is a user-level process. It does not use sudo. It binds a Unix socket created with mode `0600` and does not listen on TCP in this version.
 
 There is no `POST /shell`. Each operation has a schema. Subprocesses are started with an argv array (`shell=False`) in a new session so cancellation signals only that process group.
@@ -414,6 +843,13 @@ validation and credential-free HTTP bounds apply; see [source reading](agent-sea
 The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. After the hash exists, the UI/API are gated by `ais_operator` (HMAC in `operator_session` or a token-derived per-device setting, httpOnly, SameSite=strict; Secure for configured HTTPS origins). The cookie idles out after 30 minutes without authenticated API use; activity refreshes `last_seen_at` and the idle `Max-Age`. A 12-hour absolute expiry still wins. Idle or absolute expiry deletes that device’s HMAC and clears its cookie. Up to ten device sessions coexist; logout affects that device, while password rotation/removal revokes all. Login has a persistent global budget of ten attempts per minute. Removing the password is forbidden while private access is configured. Health and login remain public so the workstation can unlock itself. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API and still needs the session. Remote execution-node transport stays unpublished. Private UI transport is separate and does not grant native TCP access.
 
 SQLite backups require `manage_station` and write under the data root. Inspecting a copy re-opens that file read-only and never restores over the live database. Compose image inspect asks the Host Runner to compare the `ai-station:local` tag with running API/worker/scheduler containers; it does not build, tag, start or stop. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
+
+In the account profile, station backups additionally require a live enabled
+administrator before dispatch and publication. Their owner-bound artifacts remain
+administrator-only after completion, including cached lookups and task inputs;
+demotion cannot preserve a member's access to other users through an old database
+copy. Files start with mode 0600. Fixed schema/journal reads and an aggregate active
+Run count grant no general SQL or foreign history access to a request or executor.
 
 ## Secrets
 
@@ -601,6 +1037,14 @@ I/O and protocols, offline model loading, CPU-only threads and a hard deadline.
 Source/model integrity, process ownership and report timestamps are verified
 before transcript adoption. Audio instructions remain text, not executable tools.
 See [the transcription contract](audio-transcription.md).
+
+Fish phone references may request a canonical WAV from that same transcription
+Run. The optional output has a fixed Run-owned path, mono 16-kHz PCM, bounded
+sample count and a verified hash; callers cannot supply conversion commands or
+output paths. Successful completion gates adoption as an owner-scoped derivative
+of the original recording. Dispatch and final speech publication recheck the
+original, transcript and derivative. Old WAV requests/reports keep their existing
+contract; compressed references require a Runner advertising normalization.
 
 Follow-up transcript context is tied to a succeeded source turn and native child in the same conversation/Task. The primary TXT artifact must retain ownership, lineage and its recorded content hash. Unavailable or ambiguous sources are labeled instead of substituted. Snapshots quote source data without granting permissions; selected-provider external-AI rules still apply to later text replies. See [transcript context](transcript-conversation-context.md).
 
@@ -981,3 +1425,206 @@ private binds gate an API-only recreation pinned to its existing image. Active
 workers, native processes, other projects and deliberately stopped services are
 not taken over. Optional user-service installation cannot replace an unrelated
 unit.
+
+## Timeline revision and render boundaries
+
+TimelineRevision access inherits its CreativeSession owner. A revision parent
+must be in the same workspace; submitting another workspace's revision is
+rejected even for the same owner. Canonical app-owned MP4/PCM WAV observations
+are frozen at save and revalidated by the worker and native renderer. The typed
+Runner request accepts frame/sample edits, never shell commands or filter graphs.
+Rendering runs in an owned four-GiB/zero-swap CPU scope with a fixed deadline and
+existing process-group cancellation/recovery. It retains only one source's
+decoded PCM at a time. Waveform Runs expose only owned source measurements.
+Migration 0041 preserves populated creative history; downgrade refuses to delete
+any timeline workspace/revision. The added 4096-MiB memory-scope allowlist entry
+preserves existing GPU executors' limits; it changes their wrapper identity and
+does not constitute a fresh GPU inference qualification.
+
+Film sound agents inherit the existing private agent/media scope. Natural drafts
+cannot invent a Library film ID or scene timings; an enabled scope requires an
+owned inspected source. Frozen file bytes and metadata are checked again before
+publication and execution. Goal preparation may replace only the description,
+with source and scene timings retained. Approval, cancellation, deadlines and
+idempotent receipts remain shared with other media agents. A completed stem does
+not authorize delivery of an unverified or failed film preview.
+
+## Managed video preparation
+
+The fixed Wan setup recipe accepts no caller-selected URL, Python package,
+command, source checkout or destination. The worker verifies pinned inputs;
+native preparation installs only exact hash-locked binary wheels offline in an
+owned four-GiB/zero-swap scope. The source and all model companions are checked
+before execution. Custom/API nodes and runtime downloads remain disabled.
+
+Shared readiness exposes an opaque environment hash, never a private setup Run
+identifier. The native identity mapping must publish successfully before the
+active pointer changes. Preparation histories, receipts, prompts and generated
+media remain account scoped; models and readiness are shared infrastructure.
+Managed generation uses the reviewed GPU/CPU-offload profile and a per-process
+deadline. Composition uses the same frozen environment, CPU-only execution and
+its own four-GiB reservation/scope. Stop/recovery use existing process ownership,
+group signaling and resource-release confirmation. External video configuration
+retains priority and is never changed by setup.
+
+
+Managed Sonic preparation accepts only its built-in avatar profile, frozen hash,
+permissions and deadline through the private Runner API. It verifies immutable
+inputs before offline execution; the only source-build exception is the pinned
+ANTLR distribution with fixed tools, epoch, permissions and derived-wheel hash.
+No client-selected package, command, destination or source exception is accepted.
+Managed companion links are permitted only inside the exact recipe namespace;
+configured external Sonic models retain strict symlink rejection. Dispatch
+checks the opaque environment, its own interpreter, model links, finishing codec,
+GPU admission and source observation before starting owned inference. Setup
+receipts, histories, portraits, recordings and generated movies retain ordinary
+account ownership; only verified runtime readiness and models are shared.
+
+
+Managed film-sound preparation accepts only its built-in reviewed profile and
+uses the existing source/hash/permission/deadline and Stop/adoption fences. The
+single reviewed source-build exception accepts only two qualified interpreters,
+fixed tools and an exact reproduced wheel; build-only inputs never enter the
+runtime hash lock. Inference validates its opaque environment, fixed local model
+view, real BF16 GPU/driver and owned process scope. Sound previews freeze that
+same environment, verify their own Python and run in a separate four-GiB CPU
+scope. Shared readiness and model infrastructure confer no access to another
+account's setup, inputs, prompts, workspace, sound stems or films.
+
+The private Windows installer prototype uses a dedicated WSL2 guest with its own Docker daemon and an ordinary native Runner account. Guest configuration disables Windows-drive automounts and Windows executable interop. Its local desktop bridge accepts only fixed start/status/open/stop operations; account-bootstrap authority travels through a private parent pipe and is never an application API or ordinary log. The prototype does not establish Windows isolation or readiness before actual WSL acceptance. See [Windows consumer installation](plans/windows-consumer-installation.md).
+
+Desktop browser readiness binds the private URL to a per-launch nonsecret UUID echoed by public no-store health. The launcher checks it before requesting first-admin authority; the Windows helper independently checks it through direct loopback HTTP before invoking the OS browser. Setup fragments never enter readiness HTTP requests or ordinary installer/WSL diagnostics. This checks local routing and does not replace account authentication or establish a hostile-OS-process security boundary. The UUID is separate from private stop-channel identity.
+
+### Offline Windows application-update candidate
+
+The separate physical-volume observation is an ordinary-user, fixed installer
+operation accepting only two decimal byte counts. It exposes no command, path,
+drive or Windows process access to the API or agents. The guest report lives
+outside mounted application data; ownership, private permissions, single-link
+regular files, bounded JSON, boot identity and monotonic freshness are checked
+before admission. Stale/unsafe observations deny new model downloads and native
+preparation. The existing typed Runner telemetry carries only capacity/status.
+No Windows shell, automount or executable interoperability is enabled.
+
+The candidate guest updater is a trusted installer layer, not a Runner/API or
+agent capability. Its entry refuses the development host and another WSL
+identity. Root authority is restricted to the owned guest's fixed package update;
+the application remains ordinary-user. Exact previous/target recipes, bounded
+hash-checked package input, private kernel locks, idle Run checks, a preserved
+SQLite backup and durable operation identity precede receipt publication.
+No commands, URLs, paths, distro import/unregister, downloads or host OS settings
+are accepted. Native transport is implemented in the private candidate; real Windows recovery
+qualification remains open; see [the update contract](plans/windows-consumer-installation.md#preserving-guest-update--implementation-contract).
+
+For reviewed model files, a 404/410 may trigger one content-preserving locator
+recovery through the same public-DNS-pinned HTTPS boundary. Only the same Hugging
+Face repository/filename and identical reviewed LFS SHA-256/length are eligible;
+metadata cannot replace a model, license, expected hash or destination. The new
+URL uses an immutable commit. Metadata is bounded to one MiB per repository,
+uses no credentials or ambient proxy, and observes the download Run's existing
+authority/deadline checks. Denied/private redirects propagate as failures;
+401/403/rate-limit failures do not trigger discovery. Original cache/success
+needs no lookup. The existing final byte verification still decides publication,
+and source-refresh events inherit the requesting Run's visibility.
+The shared file-based media preparation path enforces the same physical ceiling
+throughout its input transfer, with each profile's existing assembly reserve.
+It credits retained partial bytes without removing files and refuses stale or
+missing Windows observations before native dispatch. Source events recheck the
+current preparation claim and authority too.
+
+
+Native Mac model loading uses only the built-in SDK profile and opaque verified
+environment reference through the existing llama.cpp API. Callers cannot supply
+private SDK operations, binaries, commands or socket paths. Only verified owned
+text weights and explicitly budgeted CPU execution are admitted; Metal and
+external paths are not implicitly enabled. Native model sockets use separate
+private, installation-bound short storage outside the container Runner mount.
+Runner replacement detaches observers and preserves shared native model children;
+explicit model Stop remains durable and ownership-checked. Normal shutdown still
+cancels other owned jobs. Unknown ownership or changed SDK/model metadata cannot
+release reservations or authorize a signal. Native estimates declare no hard
+memory/no-swap guarantee. Full guided Mac installation remains separately gated.
+
+Native model verification accepts only the owned model namespace plus an opaque
+SDK reference and bounded context. It exposes checked cache geometry and estimated
+RAM separately from container-image readiness, with no private SDK operation or
+absolute host path. The control-plane load Run freezes its first native startup
+deadline and reuses it after a lost acknowledgement; shared RAM remains reserved
+until owned exit is confirmed. Account-scoped automatic loads validate the actual
+relative model source/hash and complete native preset before gaining permission
+to create shared runtime metadata. Existing foreign-history and Stop guards apply.
+
+Guided Mac model setup reads the Runner's OS/architecture, not the container's.
+Pinned native CPU offers reuse reviewed weights/licenses and estimated system-RAM
+budgets. A separate, explicit files-only metadata flag permits owned GGUF/context
+inspection without a prepared SDK and always reports native runtime unavailable;
+it cannot relax the model-load SDK requirement or accept external files. Foreign
+native profiles are refused before transfer. Later metadata verification freezes
+the active prepared opaque SDK reference before registering the definition.
+No Docker-image readiness, Metal allocation or hard/no-swap guarantee is inferred.
+
+The trusted Mac desktop importer and supervisor pin every Docker command to the
+discovered installed application CLI and explicit local Unix endpoint. Context,
+TLS/config and builder environment overrides cannot redirect those commands.
+The supervisor re-discovers and matches the parent's coordinates before engine
+operations; a changed connection fails rather than cleaning up another station.
+Normal shutdown still targets only its Compose project without volume/image
+removal. These local installer arguments create no HTTP, Runner or agent tool.
+The consumer platform gate remains closed pending actual Mac transport/first-run
+qualification; successful neutral CLI tests alone do not enable Mac installation.
+
+Mac startup bridge preparation accepts only the already verified application
+image identity and independently matched native Docker connection. Its clients
+use no network on the direct-socket path, and have no host home, Docker socket
+or GPU access; only new private probe directories are mounted. The explicitly
+selected authenticated Mac candidate instead uses Docker's bridge network to
+reach the fixed native loopback TLS listener, with separate private client
+credentials mounted read-only. It adds no public listener or arbitrary target.
+The coordinator owns its child handle and never signals
+a persisted PID. A matching private clean receipt permits restart; unknown state
+retains its pending fence and resources. Neither a successful transport probe
+nor its result file grants workstation/HTTP execution authority or full Mac
+installer qualification.
+
+The Mac filesystem probe keeps all live SQLite connections inside Linux
+containers, matching the API/worker/scheduler architecture. A second independent
+container must demonstrate actual writer exclusion and no uncommitted-row
+visibility; a restarted client verifies commit, integrity and released locks.
+Native code checks artifact bytes and ownership without opening the live DB.
+The observed Mac/Linux lock-domain mismatch forbids treating native DB access
+as interchangeable. Mac offline upgrades retain the quiescent application-image
+path; the Linux host recovery CLI is not shipped in the Mac bundle. See the
+[actual transport observations](plans/macos-runner-transport.md).
+
+The strengthened actual Intel probe confirms missing shared-folder writer
+exclusion while its original transaction remains live; a disposable local Docker
+DB volume passes the same checks. The fixed QA initializer is that probe's sole
+root exception: no host paths, network, Docker socket or GPU, all capabilities dropped
+except `CHOWN`, and an emptiness check before setting ownership on its newly
+created, attested volume. Normal DB clients remain non-root. Unknown or replaced
+volume identities are preserved; uncertain creation is not replayed. Production
+Mac storage/upgrade/backup integration must be qualified before consumer admission.
+
+The native persistent database owner separately binds its private receipt to the
+selected directory identity, UID/GID, Compose namespace and pinned Docker daemon.
+Its fixed application-image initializer has only `CHOWN`, an empty local volume,
+no network and no host mounts. It syncs a root-owned mode-0444 binding marker
+before publishing mode-0700 directory ownership. The ordinary-user verifier
+mounts that volume read-only and reads only this marker, never SQLite. The empty
+host `db` mountpoint is created by the native user before Docker runs; stale host
+DB bytes fence startup rather than being treated as the active database. Exact
+helper image/argv/labels/mounts/isolation are checked before start or cleanup.
+Completed lost acknowledgements are inspected; failed or uncertain initialization
+is preserved. The owner exposes no volume deletion, arbitrary command, import,
+web API, agent tool or additional Docker access. Full launch/update/export
+integration and actual Mac consumer qualification remain required.
+
+The offline desktop-upgrade command is confined to the verified application
+image and canonical user-owned app data. It has no HTTP/Runner/agent route or
+caller-selected command. UUID-bound previous/target identities, source/backup/
+stage hashes and shared locks prevent adopting changed input. Symlinks, hardlinks,
+shared-write files and unexpected WAL/journal changes are refused. Backups stay private;
+reports contain no account records or credentials. Pending publication blocks
+normal startup, survives process exit and resumes only the original operation.
+Safe pre-publication abort retains the original data and copies; unexpected
+post-publication writes require inspection rather than automatic rollback.

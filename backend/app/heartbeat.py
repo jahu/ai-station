@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import update
 
 from app.config import get_settings
-from app.db import session_factory, utcnow
+from app.db import control_session_factory, utcnow
 from app.models import Run, WorkerRow
 from app.state import TERMINAL
 
@@ -36,7 +36,7 @@ cancel_expired_coding = cancel_expired_run
 def keep_lease(run_id: str, worker_id: str):
     stop = threading.Event()
     settings = get_settings()
-    factory = session_factory()
+    factory = control_session_factory()
 
     def renew():
         while not stop.wait(settings.heartbeat_seconds):

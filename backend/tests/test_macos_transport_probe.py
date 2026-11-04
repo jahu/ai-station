@@ -1,0 +1,838 @@
+"""Hardware-free protocol/policy checks; optional real Linux control is not Mac QA."""
+
+import csv
+import io
+import json
+import os
+import shutil
+import socket
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+import macos_transport_probe as probe
+import pytest
+
+
+@pytest.fixture
+def short_root():
+    root = Path(tempfile.mkdtemp(prefix="ast-test-", dir="/tmp")).resolve()
+    try:
+        yield root
+    finally:
+        if not (root / "retain-for-inspection").exists():
+            shutil.rmtree(root)
+
+
+class LocalClient:
+    """Same fixed client in a separate Python process, without Docker or a Mac claim."""
+
+    SQLITE_DOMAIN = "same-host-test-fixture"
+
+    def __init__(self):
+        self.children = []
+        self.tokens = []
+        self.data_roots = []
+
+    def container(self, sockets, data, phase):
+        self.data_roots.append(data)
+        self.tokens.append(json.loads((sockets / "token.json").read_text()))
+        child = subprocess.Popen(
+            [
+                sys.executable,
+                "-IBS",
+                "-c",
+                probe.CLIENT,
+                str(sockets / "channel.sock"),
+                str(data),
+                str(sockets / "token.json"),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        self.children.append(child)
+        return str(len(self.children))
+
+    def call(self, *args, **kwargs):
+        assert args[:2] == ("container", "wait")
+        code = self.children[int(args[2]) - 1].wait(timeout=10)
+        return 0, str(code)
+
+    def database_checks(self, sockets, data, stored):
+        probe.file_checks(data, stored, locked=True)
+
+    def close(self):
+        for child in self.children:
+            if child.poll() is None:
+                child.terminate()
+            child.wait(timeout=5)
+
+
+def test_separate_client_round_trip_real_wal_lock_and_restart(short_root):
+    client = LocalClient()
+    try:
+        result = probe.experiment(client, short_root)
+        assert result["socket_rebind"] and result["client_restart"]
+        assert result["sqlite_wal"] and result["concurrent_writer_lock"]
+        assert len(client.children) == 2 and all(child.returncode == 0 for child in client.children)
+        assert client.tokens[0]["nonce"] != client.tokens[1]["nonce"]
+        assert client.tokens[0]["stored"] == client.tokens[1]["stored"]
+        assert not (short_root / "sockets/channel.sock").exists()
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize("locked", [False, True])
+def test_fixed_second_writer_requires_real_exclusion_and_no_uncommitted_visibility(short_root, locked):
+    database = short_root / "probe.sqlite"
+    controller = short_root / "controller"
+    controller.mkdir(mode=0o700)
+    command = probe.DatabaseContender("/unused/docker", "unix:///unused.sock", controller, "amd64")
+    with sqlite3.connect(database) as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE probe(value TEXT NOT NULL)")
+        db.commit()
+        if locked:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("INSERT INTO probe VALUES ('uncommitted')")
+        result = subprocess.run(
+            [sys.executable, "-IBS", "-c", command.client_code(), "/unused", str(short_root), "/unused"],
+            capture_output=True,
+            timeout=5,
+        )
+        if locked:
+            assert result.returncode == 0, result.stderr
+            assert json.loads(result.stdout) == {
+                "sqlite_wal": True,
+                "concurrent_writer_lock": True,
+                "uncommitted_rows_visible": False,
+            }
+            db.rollback()
+        else:
+            assert result.returncode != 0
+            assert json.loads(result.stdout) == {
+                "probe_client_error": "SQLiteWriterNotExcluded",
+                "errno": None,
+            }
+
+
+def test_native_controller_never_opens_the_live_database(short_root, monkeypatch):
+    class Pair(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            code = probe.DatabaseContender.client_code(None)
+            result = subprocess.run(
+                [sys.executable, "-IBS", "-c", code, "/unused", str(data), "/unused"],
+                capture_output=True,
+                timeout=5,
+            )
+            assert result.returncode == 0, result.stderr
+
+    client = Pair()
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(
+                probe.sqlite3,
+                "connect",
+                lambda *a, **k: pytest.fail("Native controller opened the live SQLite database"),
+            )
+            result = probe.experiment(client, short_root)
+        assert (
+            result["concurrent_writer_lock"] and result["database_writer_domain"] == "same-host-test-fixture"
+        )
+        assert len(client.children) == 2 and all(child.returncode == 0 for child in client.children)
+    finally:
+        client.close()
+
+
+def test_disappeared_writer_is_not_misreported_as_an_unsafe_shared_filesystem(short_root, monkeypatch):
+    class TimedOut(LocalClient):
+        def database_checks(self, sockets, data, stored):
+            time.sleep(0.2)
+            raise ValueError("simulated contender check failure")
+
+    monkeypatch.setattr(probe, "CLIENT", probe.CLIENT.replace("settimeout(90)", "settimeout(0.03)"))
+    client = TimedOut()
+    try:
+        with pytest.raises((OSError, ValueError)) as error:
+            probe.experiment(client, short_root)
+        assert "simulated contender check failure" not in str(error.value)
+        assert not getattr(client, "first_writer_verified_held", False)
+    finally:
+        client.close()
+
+
+def test_chosen_data_filesystem_round_trip_keeps_existing_data_outside_the_mount(short_root, tmp_path):
+    selected = tmp_path / ("Long użytkownik Application Support " * 3)
+    selected.mkdir(mode=0o700)
+    keep = selected / "existing-data.txt"
+    keep.write_text("preserve existing user data")
+    owned = selected / ".owned-probe"
+    owned.mkdir(mode=0o700)
+    client = LocalClient()
+    try:
+        result = probe.experiment(client, short_root, data_root=owned)
+        assert result["chosen_data_filesystem"]
+        assert result["data_filesystem_device"] == selected.stat().st_dev
+        assert result["sqlite_wal"] and result["concurrent_writer_lock"]
+        assert client.data_roots[0] == client.data_roots[1]
+        assert client.data_roots[0].is_relative_to(owned)
+        assert not (short_root / "sockets").is_relative_to(selected)
+        assert keep.read_text() == "preserve existing user data"
+    finally:
+        client.close()
+
+
+def test_other_native_peer_never_reaches_file_exchange(short_root, monkeypatch):
+    monkeypatch.setattr(probe, "same_user", lambda _: False)
+    client = LocalClient()
+    try:
+        with pytest.raises(ValueError, match="native peer user"):
+            probe.experiment(client, short_root)
+        assert not list(short_root.rglob("artifact.bin"))
+    finally:
+        client.close()
+
+
+def test_fixed_client_failure_reports_only_class_and_errno_without_private_payload(short_root):
+    tmp_path = short_root
+    token = tmp_path / "token.json"
+    token.write_text(json.dumps({"nonce": "a" * 64, "stored": "b" * 64, "phase": "write"}))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-IBS",
+            "-c",
+            probe.CLIENT,
+            str(tmp_path / "missing.sock"),
+            str(tmp_path),
+            str(token),
+        ],
+        capture_output=True,
+        timeout=5,
+    )
+    assert result.returncode != 0
+    assert json.loads(result.stdout) == {"probe_client_error": "FileNotFoundError", "errno": 2}
+    assert not result.stderr and b"a" * 64 not in result.stdout and not list(tmp_path.glob("artifact.*"))
+
+
+@pytest.mark.parametrize("raw", [b"{}", b"x" * 257, b"[]\n", b'{"nonce":"wrong","stage":"connected"}\n'])
+def test_bad_or_unframed_packets_cannot_advance_protocol(raw):
+    with pytest.raises(ValueError):
+        probe.packet(None, io.BytesIO(raw), "a" * 64, "connected")
+
+
+def test_unlocked_copy_is_not_a_valid_shared_wal_database(tmp_path):
+    nonce = "a" * 64
+    artifact = tmp_path / "artifact.bin"
+    artifact.write_bytes(bytes.fromhex(nonce))
+    artifact.chmod(0o600)
+    database = tmp_path / "probe.sqlite"
+    with sqlite3.connect(database) as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE probe(value TEXT NOT NULL)")
+    database.chmod(0o600)
+    with pytest.raises(ValueError, match="not locked"):
+        probe.file_checks(tmp_path, nonce, locked=True)
+
+
+def test_artifact_symlink_is_not_followed(tmp_path):
+    outside = tmp_path / "keep"
+    outside.write_bytes(b"preserve")
+    (tmp_path / "artifact.bin").symlink_to(outside)
+    with pytest.raises(ValueError, match="private regular"):
+        probe.file_checks(tmp_path, "a" * 64, locked=False)
+    assert outside.read_bytes() == b"preserve"
+
+
+@pytest.fixture
+def docker(tmp_path):
+    value = probe.Docker("/fixed/docker", "unix:///private/desktop.sock", tmp_path, "amd64")
+    value.image_id = probe.IMAGE_IDS["amd64"]
+    return value
+
+
+def state(docker, *, label=None):
+    return {
+        "id": "a" * 64,
+        "image": probe.IMAGE_IDS["amd64"],
+        "label": label or docker.identity,
+        "user": f"{os.geteuid()}:{os.getegid()}",
+        "running": False,
+        "network": "none",
+        "readonly": True,
+        "memory": probe.MEMORY,
+        "swap": probe.MEMORY,
+        "privileged": False,
+    }
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_client_error_diagnostics_check_owned_identity_before_reading_fixed_stdout(
+    docker, monkeypatch, changed
+):
+    docker.ids = ["a" * 64]
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker, label="other-owner" if changed else None))
+        assert args == ("container", "logs", "--tail", "1", "a" * 64)
+        return 0, json.dumps({"probe_client_error": "ConnectionRefusedError", "errno": 111})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == (
+        [{"diagnostic_unavailable": True}]
+        if changed
+        else [{"probe_client_error": "ConnectionRefusedError", "errno": 111}]
+    )
+    if changed:
+        assert all(args[:2] != ("container", "logs") for args in calls)
+
+
+def test_unrecognized_client_stdout_does_not_publish_arbitrary_logs(docker, monkeypatch):
+    docker.ids = ["a" * 64]
+
+    def call(*args, **kwargs):
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker))
+        return 0, json.dumps({"probe_client_error": "PRIVATE_FIXTURE_SECRET", "errno": 13})
+
+    monkeypatch.setattr(docker, "call", call)
+    assert docker.client_failures() == [{"diagnostic_unavailable": True}]
+
+
+@pytest.mark.parametrize("lost_ack", [False, True])
+def test_second_container_is_journaled_and_uses_the_same_frozen_engine_and_dataset(
+    docker, tmp_path, monkeypatch, lost_ack
+):
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("container", "create"):
+            assert (child.root / "owner.json").is_file()
+            assert args[args.index("--network") + 1] == "none"
+            assert probe.bind_mount(tmp_path / "data", "/probe-data") in args
+            if lost_ack:
+                raise RuntimeError("Lost contender create acknowledgement")
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(child))
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        if args[:2] == ("container", "logs"):
+            return 0, json.dumps(
+                {"sqlite_wal": True, "concurrent_writer_lock": True, "uncommitted_rows_visible": False}
+            )
+        return 0, ""
+
+    monkeypatch.setattr(probe.DatabaseContender, "call", call)
+    if lost_ack:
+        with pytest.raises(RuntimeError, match="Lost contender"):
+            docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.contenders[0].uncertain
+        assert not docker.cleanup()
+        assert not any(args[:2] in {("container", "start"), ("container", "rm")} for args in calls)
+    else:
+        docker.database_checks(tmp_path / "sockets", tmp_path / "data", "a" * 64)
+        assert len(docker.contenders) == 1 and docker.cleanup()
+
+
+def test_authenticated_candidate_mounts_only_client_credentials_and_owned_code(short_root, monkeypatch):
+    value = probe.AuthenticatedDocker("/fixed/docker", "unix:///private/desktop.sock", short_root, "amd64")
+    value.image_id = probe.IMAGE_IDS["amd64"]
+    sockets, data = short_root / "sockets", short_root / "data"
+    sockets.mkdir(mode=0o700)
+    data.mkdir(mode=0o700)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "create"):
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(value), "network": "bridge"})
+        return 0, ""
+
+    monkeypatch.setattr(value, "call", call)
+    with socket.socket(socket.AF_UNIX) as native:
+        channel = sockets / "channel.sock"
+        native.bind(str(channel))
+        native.listen(1)
+        channel.chmod(0o600)
+        try:
+            assert value.container(sockets, data, "write") == "a" * 64
+            create = calls[0]
+            assert create[create.index("--network") + 1] == "bridge"
+            mounts = [create[i + 1] for i, item in enumerate(create) if item == "--mount"]
+            assert len(mounts) == 4
+            assert any(
+                "source=" + str(value.material / "client") in item and "readonly" in item for item in mounts
+            )
+            assert not any(str(value.material / "server") in item for item in mounts)
+            assert "--tmpfs" in create and "--init" in create
+            assert sorted(item.name for item in value.code.iterdir()) == [
+                "desktop_control.py",
+                "desktop_link.py",
+                "desktop_versions.py",
+            ]
+            assert value.owners[0].process.poll() is None
+        finally:
+            assert value.cleanup()
+        assert value.owners[0].process.returncode == 0
+
+
+def volume_row(volume):
+    return {
+        "Name": volume.name,
+        "Driver": "local",
+        "Scope": "local",
+        "CreatedAt": "2026-11-02T12:00:00Z",
+        "Mountpoint": "/var/lib/docker/volumes/" + volume.name + "/_data",
+        "Labels": {"ai-station.probe": volume.identity},
+        "Options": None,
+    }
+
+
+def test_local_database_volume_initializes_only_its_new_empty_mount_with_narrow_ownership_capability(
+    docker, monkeypatch
+):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(child, *args, **kwargs):
+        calls.append(args)
+        assert child.argv[:3] == docker.argv[:3]
+        if args[:2] == ("volume", "create"):
+            assert json.loads((docker.root / "database-volume/owner.json").read_text())["name"] == volume.name
+            return 0, volume.name
+        if args[:2] == ("volume", "inspect"):
+            return 0, json.dumps([volume_row(volume)])
+        if args[:2] == ("container", "create"):
+            record = json.loads((docker.root / "database-volume/initializer.json").read_text())
+            assert record["probe_id"] == child.identity and record["reserved_name"] == args[3]
+            assert args[args.index("--user") + 1] == "0:0"
+            assert args[args.index("--cap-drop") + 1] == "ALL"
+            assert args[args.index("--cap-add") + 1] == "CHOWN"
+            assert args[args.index("--network") + 1] == "none" and "--privileged" not in args
+            mounts = [args[i + 1] for i, arg in enumerate(args) if arg == "--mount"]
+            assert mounts == [volume.mount()] and not any("type=bind" in arg for arg in mounts)
+            assert args[-2:] == (str(os.geteuid()), str(os.getegid()))
+            return 0, "a" * 64
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps({**state(child), "user": "0:0"})
+        if args[:2] == ("container", "wait"):
+            return 0, "0"
+        return 0, ""
+
+    monkeypatch.setattr(probe.Docker, "call", call)
+    volume.prepare()
+    assert volume.frozen == volume.owned() and not volume.uncertain
+    assert volume.cleanup()
+    assert calls.index(("container", "rm", "a" * 64)) < calls.index(("volume", "rm", volume.name))
+
+
+def test_lost_volume_create_acknowledgement_is_preserved_and_never_adopted_or_removed(docker, monkeypatch):
+    volume = probe.DatabaseVolume(docker)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "create")
+        raise RuntimeError("Lost volume creation acknowledgement")
+
+    monkeypatch.setattr(docker, "call", call)
+    with pytest.raises(RuntimeError, match="Lost volume"):
+        volume.prepare()
+    assert volume.uncertain and not volume.cleanup() and len(calls) == 1
+    assert (docker.root / "database-volume/owner.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"Name": "existing-user-data"},
+        {"Driver": "nfs"},
+        {"Scope": "global"},
+        {"Labels": {"ai-station.probe": "other-owner"}},
+        {"Options": {"type": "none", "device": "/home/user", "o": "bind"}},
+        {"CreatedAt": "replacement-created-at"},
+        {"Mountpoint": "/replacement"},
+    ],
+)
+def test_replaced_or_foreign_database_volume_is_never_removed(docker, monkeypatch, changes):
+    volume = probe.DatabaseVolume(docker)
+    original = volume_row(volume)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        assert args[:2] == ("volume", "inspect")
+        return 0, json.dumps([{**original, **changes}])
+
+    volume.frozen = {key: original[key] for key in ("Name", "Driver", "Scope", "CreatedAt", "Mountpoint")}
+    monkeypatch.setattr(docker, "call", call)
+    assert not volume.cleanup() and calls == [("volume", "inspect", volume.name)]
+
+
+def test_container_policy_and_scoped_cleanup_have_no_arbitrary_host_access(docker, tmp_path):
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        if args[:2] == ("container", "inspect"):
+            return 0, json.dumps(state(docker))
+        return 0, "a" * 64
+
+    docker.call = call
+    docker.container(tmp_path / "sockets", tmp_path / "data", "write")
+    created = calls[0]
+    assert created[:2] == ("container", "create")
+    assert created[created.index("--network") + 1] == "none"
+    assert created[created.index("--cap-drop") + 1] == "ALL"
+    assert "--read-only" in created and "no-new-privileges" in created
+    assert not any("docker.sock" in value or value in {"--privileged", "--gpus"} for value in created)
+    assert created[created.index("--memory") + 1] == str(probe.MEMORY)
+    assert created[created.index("--pull") + 1] == "never" and probe.IMAGE in created
+    assert set(docker.env) == {"PATH", "LANG"}
+    assert json.loads(Path(docker.argv[-1], "config.json").read_text()) == {}
+    assert docker.cleanup()
+    assert calls[-1] == ("container", "rm", "a" * 64)
+
+
+@pytest.mark.parametrize("name", ["data,readonly,source=elsewhere", 'data "quoted"', "data\nwith\rnewlines"])
+def test_folder_names_cannot_add_mount_options_or_redirect_the_source(tmp_path, name):
+    source = tmp_path / name
+    parsed = next(csv.reader(io.StringIO(probe.bind_mount(source, "/probe-data"))))
+    assert parsed == ["type=bind", "source=" + str(source), "target=/probe-data"]
+    protected = next(csv.reader(io.StringIO(probe.bind_mount(source, "/probe-socket", readonly=True))))
+    assert protected == ["type=bind", "source=" + str(source), "target=/probe-socket", "readonly"]
+
+
+def test_changed_owner_is_preserved_without_stop_or_remove(docker):
+    docker.ids.append("a" * 64)
+    calls = []
+
+    def call(*args, **kwargs):
+        calls.append(args)
+        return 0, json.dumps(state(docker, label="another-owner"))
+
+    docker.call = call
+    assert not docker.cleanup()
+    assert len(calls) == 1 and calls[0][:2] == ("container", "inspect")
+
+
+def test_lost_create_acknowledgement_is_not_replayed_or_reported_clean(docker, tmp_path):
+    calls = []
+
+    def timeout(*args, **kwargs):
+        calls.append(args)
+        raise subprocess.TimeoutExpired("fixed probe create", 30)
+
+    docker.call = timeout
+    with pytest.raises(subprocess.TimeoutExpired):
+        docker.container(tmp_path, tmp_path, "write")
+    assert docker.uncertain and len(docker.reserved_names) == 1
+    assert not docker.cleanup() and len(calls) == 1
+
+
+def test_no_implicit_fixture_download(docker):
+    calls = []
+
+    def missing(*args, **kwargs):
+        calls.append(args)
+        return 1, ""
+
+    docker.call = missing
+    with pytest.raises(RuntimeError, match="prepare-image"):
+        docker.image()
+    assert calls == [("image", "inspect", probe.IMAGE)]
+
+
+def test_packaged_image_is_pinned_and_never_pulled_or_replaced(tmp_path):
+    image = "sha256:" + "c" * 64
+    docker = probe.Docker(
+        "/fixed/docker", "unix:///private/desktop.sock", tmp_path, "amd64", packaged_image=image
+    )
+    calls = []
+
+    def present(*args, **kwargs):
+        calls.append(args)
+        return 0, json.dumps([{"Id": image, "Os": "linux", "Architecture": "amd64"}])
+
+    docker.call = present
+    assert docker.image() == image and docker.accepted_images() == {image}
+    assert calls == [("image", "inspect", image)]
+    with pytest.raises(ValueError, match="never downloads"):
+        docker.image(prepare=True)
+    docker.call = lambda *a, **k: (1, "")
+    with pytest.raises(RuntimeError, match="Import the verified"):
+        docker.image()
+
+
+@pytest.mark.parametrize(
+    "image", ["ai-station:mutable", "sha256:bad", "docker.io/python:latest", "sha256:" + "A" * 64]
+)
+def test_packaged_image_must_be_an_immutable_verified_identity(tmp_path, image):
+    with pytest.raises(ValueError, match="verified bundled"):
+        probe.Docker("/fixed/docker", "unix:///private/desktop.sock", tmp_path, "amd64", packaged_image=image)
+    assert not (tmp_path / "client").exists()
+
+
+def test_packaged_probe_refuses_changed_connection_before_proof_or_engine_access(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(probe, "connection", lambda _: ("/fixed/docker", "unix:///changed.sock"))
+    with pytest.raises(ValueError, match="changed before"):
+        probe.probe(
+            tmp_path / "proof",
+            data_directory=tmp_path,
+            packaged_image="sha256:" + "c" * 64,
+            expected_connection=("/fixed/docker", "unix:///original.sock"),
+        )
+    assert not (tmp_path / "proof").exists()
+
+
+@pytest.mark.parametrize("missing", ["data", "connection", "image", "allow-download"])
+def test_packaged_probe_requires_complete_frozen_coordinates(tmp_path, monkeypatch, missing):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(
+        probe, "connection", lambda _: pytest.fail("Incomplete packaged request contacted Docker")
+    )
+    values = {
+        "data_directory": tmp_path,
+        "packaged_image": "sha256:" + "c" * 64,
+        "expected_connection": ("/fixed/docker", "unix:///fixed.sock"),
+    }
+    if missing == "data":
+        values.pop("data_directory")
+    elif missing == "connection":
+        values.pop("expected_connection")
+    elif missing == "image":
+        values.pop("packaged_image")
+    else:
+        values["prepare_image"] = True
+    with pytest.raises(ValueError):
+        probe.probe(tmp_path / "proof", **values)
+    assert not (tmp_path / "proof").exists()
+
+
+@pytest.mark.skipif(
+    os.getenv("AI_STATION_REAL_PACKAGED_TRANSPORT_CONTROL_TESTS") != "1" or sys.platform != "linux",
+    reason="Opt-in packaged-image Linux Docker control; never Mac qualification",
+)
+def test_real_linux_packaged_image_transport_control(short_root, tmp_path):
+    image = os.environ["AI_STATION_PACKAGED_TRANSPORT_IMAGE"]
+    docker = probe.Docker(
+        shutil.which("docker"), "unix:///var/run/docker.sock", short_root, "amd64", packaged_image=image
+    )
+    try:
+        assert docker.image() == image
+        data = tmp_path / 'Chosen użytkownik, "Application Support"'
+        data.mkdir(mode=0o700)
+        result = probe.experiment(docker, short_root, data_root=data)
+        assert result["chosen_data_filesystem"] and result["sqlite_wal"] and result["concurrent_writer_lock"]
+        print(
+            json.dumps(
+                {
+                    "scope": "actual packaged-image Linux control only",
+                    "macos_installer_qualified": False,
+                    "image_id": image,
+                    **result,
+                },
+                sort_keys=True,
+            )
+        )
+    finally:
+        if not docker.cleanup():
+            (short_root / "retain-for-inspection").touch()
+            pytest.fail("Owned cleanup incomplete; retained " + str(short_root))
+
+
+@pytest.mark.parametrize("store", ["configuration", "manifest", "index"])
+def test_only_the_fixed_publisher_chain_is_accepted_across_image_stores(docker, store):
+    identifiers = {
+        "configuration": probe.IMAGE_IDS["amd64"],
+        "manifest": probe.MANIFESTS["amd64"],
+        "index": probe.IMAGE.split("@", 1)[1],
+    }
+    docker.call = lambda *a, **k: (
+        0,
+        json.dumps([{"Id": identifiers[store], "Os": "linux", "Architecture": "amd64"}]),
+    )
+    assert docker.image() == identifiers[store] == docker.image_id
+
+
+@pytest.mark.parametrize("change", ["id", "architecture", "os"])
+def test_other_fixture_bytes_or_emulated_architecture_are_not_admitted(docker, change):
+    value = {"Id": probe.IMAGE_IDS["amd64"], "Os": "linux", "Architecture": "amd64"}
+    if change == "id":
+        value["Id"] = "sha256:" + "f" * 64
+    elif change == "architecture":
+        value["Architecture"] = "arm64"
+    else:
+        value["Os"] = "windows"
+    docker.call = lambda *a, **k: (0, json.dumps([value]))
+    with pytest.raises(ValueError, match="reviewed native architecture"):
+        docker.image()
+
+
+def test_tcp_endpoint_is_denied_before_any_container_or_proof_write(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    import macos_desktop_docker
+
+    monkeypatch.setattr(macos_desktop_docker, "find_cli", lambda: Path("/docker"))
+    calls = []
+
+    def context(*args, **kwargs):
+        calls.append(args)
+        return 0, "tcp://elsewhere:2375"
+
+    monkeypatch.setattr(probe, "command", context)
+    with pytest.raises(ValueError, match="local Docker Desktop Unix"):
+        probe.probe(tmp_path / "proof")
+    assert len(calls) == 1 and not (tmp_path / "proof").exists()
+
+
+@pytest.mark.parametrize("complete", [True, False])
+@pytest.mark.parametrize("chosen", [True, False])
+@pytest.mark.parametrize("changed", [True, False])
+def test_fresh_proof_preserves_uncertain_resources_and_never_claims_installer_readiness(
+    tmp_path, monkeypatch, complete, chosen, changed
+):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(probe.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(probe, "connection", lambda _: ("/fixed/docker", "unix:///private/desktop.sock"))
+    monkeypatch.setattr(probe, "command", lambda *a, **k: (0, "unix:///private/desktop.sock"))
+    captured = {}
+    selected = tmp_path / "application-data"
+    selected.mkdir(mode=0o700)
+    keep = selected / "keep.txt"
+    keep.write_text("existing user data")
+
+    class Fixture:
+        identity = "fixed-test-identity"
+        reserved_names = ["owned-probe-write"]
+        ids = []
+
+        def __init__(self, binary, endpoint, root, architecture):
+            captured["root"] = root
+
+        def call(self, *args, **kwargs):
+            return 0, json.dumps({"system": "Docker Desktop", "os": "linux", "arch": "aarch64"})
+
+        def image(self, **kwargs):
+            return probe.IMAGE_IDS["arm64"]
+
+        def cleanup(self):
+            return complete
+
+    monkeypatch.setattr(probe, "Docker", Fixture)
+
+    def experiment(*args, **kwargs):
+        captured["data_root"] = kwargs.get("data_root")
+        if changed:
+            original = args[1]
+            moved = original.with_name(original.name + "-original")
+            original.rename(moved)
+            captured["moved"] = moved
+            original.mkdir(mode=0o700)
+            (original / "unrecognized-content.txt").write_text("preserve replacement")
+        return {"synthetic_unit_case": True}
+
+    monkeypatch.setattr(probe, "experiment", experiment)
+    output = tmp_path / "fresh"
+    try:
+        result = probe.probe(output, data_directory=selected if chosen else None)
+        cleaned = complete and not changed
+        assert result["transport_passed"] is cleaned
+        assert result["macos_installer_qualified"] is False and result["other_os_user_tested"] is False
+        assert (output / "result.json").stat().st_mode & 0o777 == 0o600
+        assert json.loads((output / "result.json").read_text()) == result
+        assert (output / "pending.json").exists() is (not cleaned)
+        assert captured["root"].exists() is (not cleaned)
+        if changed:
+            assert captured["moved"].exists()
+            assert (captured["root"] / "unrecognized-content.txt").read_text() == "preserve replacement"
+        assert keep.read_text() == "existing user data"
+        if chosen:
+            assert captured["data_root"].parent == selected
+            assert captured["data_root"].exists() is (not cleaned)
+            if not cleaned:
+                assert result["retained_data_root"] == str(captured["data_root"])
+        with pytest.raises(FileExistsError):
+            probe.probe(output)
+    finally:
+        if captured["root"].exists():
+            shutil.rmtree(captured["root"])
+        if captured.get("data_root") is not None and captured["data_root"].exists():
+            shutil.rmtree(captured["data_root"])
+        if captured.get("moved") is not None and captured["moved"].exists():
+            shutil.rmtree(captured["moved"])
+
+
+def test_data_selection_rejects_symlink_boundary_or_shared_write_without_changing_files(tmp_path):
+    actual = tmp_path / "actual"
+    actual.mkdir(mode=0o700)
+    link = tmp_path / "link"
+    link.symlink_to(actual, target_is_directory=True)
+    with pytest.raises(ValueError, match="canonical application data"):
+        probe.data_parent(link)
+    actual.chmod(0o777)
+    with pytest.raises(ValueError, match="without shared write"):
+        probe.data_parent(actual)
+    assert actual.stat().st_mode & 0o777 == 0o777 and not list(actual.iterdir())
+
+
+def test_non_mac_entry_refuses_before_any_docker_or_proof_write(tmp_path, monkeypatch):
+    monkeypatch.setattr(probe.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(probe, "command", lambda *a, **k: pytest.fail("Unexpected Docker invocation"))
+    with pytest.raises(ValueError, match="ordinary-user Mac"):
+        probe.probe(tmp_path / "proof")
+    assert not (tmp_path / "proof").exists()
+
+
+@pytest.mark.skipif(
+    os.getenv("AI_STATION_REAL_TRANSPORT_CONTROL_TESTS") != "1" or sys.platform != "linux",
+    reason="Opt-in real Linux control, never Mac qualification",
+)
+@pytest.mark.parametrize("chosen", [False, True])
+def test_real_linux_docker_protocol_control(short_root, tmp_path, chosen):
+    binary = shutil.which("docker")
+    assert binary is not None
+    docker = probe.Docker(binary, "unix:///var/run/docker.sock", short_root, "amd64")
+    try:
+        assert docker.image() in docker.accepted_images()
+        data_root = tmp_path / ('Chosen użytkownik, "Application Support" ' * 3) if chosen else None
+        if data_root:
+            data_root.mkdir(mode=0o700)
+        result = probe.experiment(docker, short_root, data_root=data_root)
+        assert result["chosen_data_filesystem"] is chosen
+        result.update(
+            scope="actual Linux control only",
+            macos_installer_qualified=False,
+            image_id=docker.image_id,
+        )
+        print(json.dumps(result, sort_keys=True))
+    finally:
+        if not docker.cleanup():
+            (short_root / "retain-for-inspection").touch()
+            pytest.fail("Owned cleanup incomplete; retained " + str(short_root))
+
+
+@pytest.mark.skipif(
+    os.getenv("AI_STATION_REAL_MAC_TRANSPORT_TESTS") != "1" or sys.platform != "darwin",
+    reason="Opt-in actual Mac/Docker Desktop qualification",
+)
+def test_real_mac_docker_desktop_transport(tmp_path):
+    result = probe.probe(tmp_path / "actual-mac-proof")
+    assert result["transport_passed"] and result["cleanup_complete"]
+    assert result["macos_installer_qualified"] is False

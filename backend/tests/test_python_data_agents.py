@@ -361,9 +361,8 @@ def test_factory_creates_disabled_data_draft_without_invented_input_scope():
     assert not row.enabled and row.data is None
 
 
-def test_data_scope_migration_preserves_existing_agent():
-    from alembic import command
-    from app.db import alembic_config, migrate, reset_engine
+def test_data_scope_migration_preserves_existing_agent(legacy_schema):
+    from app.db import migrate, reset_engine
     from app.factory import draft_agent
 
     with session_factory()() as session:
@@ -372,7 +371,7 @@ def test_data_scope_migration_preserves_existing_agent():
         session.commit()
         aid = agent.id
     reset_engine()
-    command.downgrade(alembic_config(), "0026")
+    legacy_schema("0026")
     migrate()
     with session_factory()() as session:
         row = session.get(Agent, aid)

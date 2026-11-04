@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.assistant import (
@@ -30,6 +30,7 @@ from app.conversation_summary import (
     uncovered_since,
     uncovered_text,
 )
+from app.data_access import private_for_update
 from app.db import session_scope, utcnow
 from app.models import (
     ChatTurnRequest,
@@ -39,9 +40,9 @@ from app.models import (
     Message,
     ModelFile,
     Run,
-    Setting,
     Task,
 )
+from app.personal_settings import preference_row
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
@@ -81,8 +82,12 @@ def turn_execution_mode(conversation, body) -> str:
     return conversation.execution_mode if body.execution_mode == "auto" else body.execution_mode
 
 
-def conversation(session, conversation_id):
-    row = session.get(Conversation, str(conversation_id))
+def conversation(session, conversation_id, *, lock=False):
+    row = (
+        private_for_update(session, Conversation, str(conversation_id))
+        if lock
+        else session.get(Conversation, str(conversation_id))
+    )
     if row is None:
         raise HTTPException(404, "Conversation not found")
     return row
@@ -93,11 +98,11 @@ def conversation_view(session, row):
 
     label = row.model
     if row.model.startswith("llamacpp:"):
-        from pathlib import PurePosixPath
+        from app.model_sources import label_of
 
         model = session.get(ModelFile, row.model.removeprefix("llamacpp:"))
         if model:
-            label = f"{PurePosixPath(model.host_path).parent.name} · {model.filename}"
+            label = label_of(model)
     from app.chat_providers import normalize_provider_key
 
     provider = session.scalar(
@@ -196,20 +201,14 @@ class ArchiveBody(BaseModel):
 
 @router.put("/conversations/{conversation_id}/archive")
 def archive_conversation(conversation_id: UUID, body: ArchiveBody, session: DB):
-    row = conversation(session, conversation_id)
+    row = conversation(session, conversation_id, lock=True)
     ensure_idle(session, row.id, allow_archived=True)
-    now = utcnow()
-    result = session.execute(
-        update(Conversation)
-        .where(Conversation.id == row.id, Conversation.settings_version == body.expected_settings_version)
-        .values(
-            archived_at=now if body.archived else None,
-            updated_at=now,
-            settings_version=Conversation.settings_version + 1,
-        )
-    )
-    if result.rowcount != 1:
+    if row.settings_version != body.expected_settings_version:
         raise HTTPException(409, "Conversation settings changed; reload before archiving or restoring")
+    now = utcnow()
+    row.archived_at = now if body.archived else None
+    row.updated_at = now
+    row.settings_version += 1
     session.commit()
     session.refresh(row)
     return conversation_view(session, row)
@@ -302,20 +301,17 @@ class WorkSelection(BaseModel):
 def choose_work_task(conversation_id: UUID, body: WorkSelection, session: DB):
     from app.work_context import context_of, selected_source
 
-    row = conversation(session, conversation_id)
+    row = conversation(session, conversation_id, lock=True)
     ensure_idle(session, row.id)
     if body.task_id:
         task, source = selected_source(session, body.task_id, body.expected_run_id)
         selected = context_of(session, source)
     else:
         selected = None
-    result = session.execute(
-        update(Conversation)
-        .where(Conversation.id == row.id, Conversation.settings_version == body.expected_settings_version)
-        .values(settings_version=Conversation.settings_version + 1, updated_at=utcnow())
-    )
-    if result.rowcount != 1:
+    if row.settings_version != body.expected_settings_version:
         raise HTTPException(409, "Conversation settings changed; reload before selecting")
+    row.settings_version += 1
+    row.updated_at = utcnow()
     binding = session.get(ChatWorkContext, row.id)
     if binding is None:
         binding = ChatWorkContext(conversation_id=row.id)
@@ -496,6 +492,13 @@ def enqueue(
         execution_target="container",
         parameters={
             "web_search": web_search,
+            **(
+                {"web_search_plan_version": 2}
+                if web_search
+                and web_search.get("contextual")
+                and user.metadata_json.get("web_search_plan_version") == 2
+                else {}
+            ),
             "page_read": page_read,
             **(
                 {"web_search_context": conversation_query_context(session, row.id, user)}
@@ -611,12 +614,15 @@ def submit_message(conversation_id, body, session, *, commit=True):
     work_context = session.get(ChatWorkContext, row.id)
     if work_context is None or not work_context.task_id:
         body = prepare_file_creation(body, mode)
+    from app.conversation_effects import prepare_turn as prepare_effects_turn
+
+    body, effects_reference = prepare_effects_turn(session, row, body, mode)
     if mode in {"chat", "work", "orchestrator"}:
         body = prepare_turn(body)
     from app.conversation_media import resolve_result_reference
 
     body, result_reference = resolve_result_reference(session, row, body, mode)
-    result_reference = data_reference or result_reference
+    result_reference = effects_reference or data_reference or result_reference
     from app.work_web_policy import prepare_turn as prepare_work_web
 
     body = prepare_work_web(body, mode)
@@ -699,6 +705,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
         raise HTTPException(422, str(exc)) from exc
     if search_options:
         user.metadata_json = {**user.metadata_json, "web_search": search_options}
+        if search_options.get("contextual"):
+            user.metadata_json = {**user.metadata_json, "web_search_plan_version": 2}
     session.add(user)
     session.flush()
     user.metadata_json = {
@@ -859,7 +867,7 @@ def accept_turn(body: TurnBody, session: DB):
     )
     session.add(receipt)
     if body.conversation_id is None:
-        saved = session.get(Setting, "conversation_preferences")
+        saved = preference_row(session, "conversation_preferences", default={})
         previous = ChatPreferences.model_validate(saved.value if saved else {})
         values = previous.model_copy(
             update={
@@ -869,10 +877,7 @@ def accept_turn(body: TurnBody, session: DB):
                 "model": row.model,
             }
         ).model_dump()
-        if saved is None:
-            session.add(Setting(key="conversation_preferences", value=values))
-        else:
-            saved.value = values
+        saved.value = values
     session.commit()
     return turn_receipt(session, receipt)
 
@@ -898,13 +903,13 @@ class ChatPreferences(BaseModel):
 
 @router.get("/preferences")
 def preferences(session: DB):
-    row = session.get(Setting, "conversation_preferences")
+    row = preference_row(session, "conversation_preferences")
     return ChatPreferences.model_validate(row.value if row else {}).model_dump()
 
 
 @router.put("/preferences")
 def save_preferences(body: ChatPreferences, session: DB):
-    row = session.get(Setting, "conversation_preferences")
+    row = preference_row(session, "conversation_preferences", default={}, lock=True)
     current = ChatPreferences.model_validate(row.value if row else {})
     if current.version != body.version:
         raise HTTPException(409, "Preferences changed; refresh before saving")
@@ -914,11 +919,7 @@ def save_preferences(body: ChatPreferences, session: DB):
     if "web_search_enabled" not in body.model_fields_set:
         updates["web_search_enabled"] = current.web_search_enabled
     values = body.model_copy(update=updates).model_dump()
-    if row is None:
-        row = Setting(key="conversation_preferences", value=values)
-        session.add(row)
-    else:
-        row.value = values
+    row.value = values
     session.commit()
     return values
 

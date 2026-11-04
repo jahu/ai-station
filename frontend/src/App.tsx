@@ -39,6 +39,7 @@ import { Empty, PageTitle } from "./components/common";
 import { Button } from "./components/ui/button";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
+import ModelSetup from "./pages/ModelSetup";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
 import CodingSession from "./pages/CodingSessions";
@@ -50,11 +51,14 @@ import Video from "./pages/Video";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
+import CreativeWorkspace from "./components/creative/CreativeWorkspace";
 import { Library, ArtifactDetail } from "./pages/Library";
 import { SystemRoute, SystemDiagnostics } from "./pages/System";
 import Settings from "./pages/Settings";
 import { Projects, NewProject, ProjectDetail } from "./pages/Projects";
 import type { OperatorStatus } from "./pages/OperatorLogin";
+import { useAccount } from "./account-context";
+import { clearPrivateBrowserState } from "./lib/account-storage";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -132,30 +136,40 @@ export default function App() {
     location.pathname === "/chat" ||
     location.pathname.startsWith("/chat/");
   const cache = useQueryClient();
+  const account = useAccount();
+  const administrator = account.mode !== "accounts" || !!account.user?.is_admin;
   const hardware = useHardware();
   const operator = useQuery({
     queryKey: ["operator-auth"],
     queryFn: () => api<OperatorStatus>("/operator-auth"),
+    enabled: account.mode === "operator",
   });
   const logout = useMutation({
-    mutationFn: () =>
-      api<OperatorStatus>("/operator-auth/logout", {
+    mutationFn: async () => {
+      if (account.mode === "accounts") return account.signOut?.();
+      return api<OperatorStatus>("/operator-auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{}",
-      }),
+      });
+    },
     onSuccess: () => {
+      if (account.mode === "accounts") return;
+      clearPrivateBrowserState();
       void cache.invalidateQueries({ queryKey: ["operator-auth"] });
     },
   });
   const sessionActive = Boolean(
-    operator.data?.session_required && operator.data.authenticated,
+    account.mode === "accounts" ||
+    (operator.data?.session_required && operator.data.authenticated),
   );
   const page = location.pathname.startsWith("/preview/")
     ? "Website preview"
-    : (destinations.find(
-        ([path]) => path !== "/" && location.pathname.startsWith(path),
-      )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
+    : location.pathname.startsWith("/setup/")
+      ? "Model setup"
+      : (destinations.find(
+          ([path]) => path !== "/" && location.pathname.startsWith(path),
+        )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (
@@ -250,10 +264,12 @@ export default function App() {
           <AdvancedWorkspaces />
         </nav>
         <div className="sidebar-bottom">
-          <NavLink to="/system" title="System">
-            <Terminal size={17} />
-            System
-          </NavLink>
+          {administrator && (
+            <NavLink to="/system" title="System">
+              <Terminal size={17} />
+              System
+            </NavLink>
+          )}
           <NavLink to="/settings" title="Settings">
             <Settings2 size={17} />
             Settings
@@ -307,8 +323,17 @@ export default function App() {
           <div className="row">
             <span className="private-label">
               <span className="status-dot" />
-              {sessionActive ? "Operator session" : "Local control plane"}
+              {account.user
+                ? account.user.display_name || account.user.username
+                : sessionActive
+                  ? "Operator session"
+                  : "Local control plane"}
             </span>
+            {account.user && (
+              <NavLink className="text-link" to="/settings/security">
+                Account
+              </NavLink>
+            )}
             {sessionActive ? (
               <Button
                 type="button"
@@ -358,13 +383,43 @@ export default function App() {
             />
             <Route path="/chat" element={<Chat assistant />} />
             <Route path="/chat/:id" element={<Chat assistant />} />
-            <Route path="/images" element={<ImagesWorkspace />} />
+            <Route
+              path="/images"
+              element={
+                <CreativeWorkspace capability="images">
+                  <ImagesWorkspace />
+                </CreativeWorkspace>
+              }
+            />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<ArtifactDetail />} />
-            <Route path="/system" element={<SystemRoute />} />
-            <Route path="/system/diagnostics" element={<SystemDiagnostics />} />
+            <Route
+              path="/system"
+              element={
+                administrator ? (
+                  <SystemRoute />
+                ) : (
+                  <Empty title="Administrator access required">
+                    Your account settings are available in Settings.
+                  </Empty>
+                )
+              }
+            />
+            <Route
+              path="/system/diagnostics"
+              element={
+                administrator ? (
+                  <SystemDiagnostics />
+                ) : (
+                  <Empty title="Administrator access required">
+                    Installation diagnostics are managed by your administrator.
+                  </Empty>
+                )
+              }
+            />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/:section" element={<Settings />} />
+            <Route path="/setup/models" element={<ModelSetup />} />
             <Route path="/models" element={<Models />} />
             <Route path="/models/:id" element={<ModelDetail />} />
             <Route path="/agents" element={<Agents />} />
@@ -375,9 +430,16 @@ export default function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/audio" element={<Audio />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/video" element={<Video />} />
+            <Route path="/audio" element={<Audio withCreativeSessions />} />
+            <Route
+              path="/avatars"
+              element={
+                <CreativeWorkspace capability="avatars">
+                  <Avatars />
+                </CreativeWorkspace>
+              }
+            />
+            <Route path="/video" element={<Video withCreativeSessions />} />
             <Route path="*" element={<Unavailable />} />
           </Routes>
         </main>
@@ -408,40 +470,50 @@ export default function App() {
               <Command.List>
                 <Command.Empty>No matching workspace or action.</Command.Empty>
                 <Command.Group heading="Actions">
-                  {actions.map(([path, label, hint]) => (
-                    <Command.Item
-                      key={path}
-                      value={`${label} ${hint}`}
-                      onSelect={() => {
-                        navigate(path);
-                        setOpen(false);
-                      }}
-                    >
-                      <Activity size={18} />
-                      {label}
-                      <span>{hint} ↵</span>
-                    </Command.Item>
-                  ))}
+                  {actions
+                    .filter(
+                      ([path]) =>
+                        administrator ||
+                        !path.startsWith("/settings/maintenance"),
+                    )
+                    .map(([path, label, hint]) => (
+                      <Command.Item
+                        key={path}
+                        value={`${label} ${hint}`}
+                        onSelect={() => {
+                          navigate(path);
+                          setOpen(false);
+                        }}
+                      >
+                        <Activity size={18} />
+                        {label}
+                        <span>{hint} ↵</span>
+                      </Command.Item>
+                    ))}
                 </Command.Group>
                 <Command.Group heading="Workspaces">
-                  {destinations.map(([path, label, Icon]) => (
-                    <Command.Item
-                      key={path}
-                      value={label}
-                      onSelect={() => {
-                        navigate(path);
-                        setOpen(false);
-                      }}
-                    >
-                      <Icon size={18} />
-                      {label}
-                      <span>
-                        {path === "/coding" || path === "/projects"
-                          ? "Advanced workspace ↵"
-                          : "Open workspace ↵"}
-                      </span>
-                    </Command.Item>
-                  ))}
+                  {destinations
+                    .filter(
+                      ([path]) => administrator || !path.startsWith("/system"),
+                    )
+                    .map(([path, label, Icon]) => (
+                      <Command.Item
+                        key={path}
+                        value={label}
+                        onSelect={() => {
+                          navigate(path);
+                          setOpen(false);
+                        }}
+                      >
+                        <Icon size={18} />
+                        {label}
+                        <span>
+                          {path === "/coding" || path === "/projects"
+                            ? "Advanced workspace ↵"
+                            : "Open workspace ↵"}
+                        </span>
+                      </Command.Item>
+                    ))}
                 </Command.Group>
               </Command.List>
               <div className="command-footer">

@@ -8,6 +8,8 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
 
+from ai_station_runner import nvidia
+
 
 def collect():
     observed = datetime.now(UTC).isoformat()
@@ -16,7 +18,7 @@ def collect():
         with tempfile.TemporaryFile(mode="w+t", encoding="utf-8", errors="replace") as output:
             result = subprocess.run(
                 [
-                    "nvidia-smi",
+                    nvidia.executable(),
                     "--query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory",
                     "--format=csv,noheader,nounits",
                 ],

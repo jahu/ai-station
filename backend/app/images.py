@@ -34,6 +34,18 @@ MAX_PIXELS = 64 * 1024 * 1024
 FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP": (".webp", "image/webp")}
 
 
+@router.get("/images/capabilities")
+def image_capabilities(session: DB):
+    try:
+        return RunnerClient().request("GET", "/v1/photo/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        return {
+            "available": False,
+            "status": "unknown",
+            "notice": "Connect the Host Runner to inspect local image generation",
+        }
+
+
 @router.get("/images/runs/{run_id}/workflow")
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
@@ -115,7 +127,11 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         executor_type="photo_pipe",
         execution_target="host",
         parameters={
-            **original.parameters,
+            **{
+                key: value
+                for key, value in original.parameters.items()
+                if key != "managed_image_native_deadline_at"
+            },
             **(receipt["original"] if receipt and body.translation != "reuse" else {}),
         },
         requested_gpu=original.requested_gpu,
@@ -125,16 +141,21 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         parent_run_id=original.id if task.id == original.task_id else None,
         metadata={
             "image_retry_request": identity,
+            **(
+                {"image_model_selection": original.metadata_json["image_model_selection"]}
+                if original.metadata_json.get("image_model_selection")
+                else {}
+            ),
             **({"prompt_translation": receipt} if receipt and body.translation == "reuse" else {}),
         },
     )
     if receipt and body.translation == "retry":
-        from app.media_translation import enqueue_translation
+        from app.media_translation import enqueue_translation, recovery_options
 
-        enqueue_translation(
-            session, retry, {**receipt.get("options", {}), "mode": "on"}, policy=receipt["policy"]
-        )
+        enqueue_translation(session, retry, recovery_options(receipt, "retry"), policy=receipt["policy"])
     elif receipt and body.translation == "original":
+        from app.media_translation import recovery_options
+
         original_receipt = {
             key: value
             for key, value in receipt.items()
@@ -142,7 +163,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         }
         retry.parameters = {
             **retry.parameters,
-            "translation": {**receipt.get("options", {}), "mode": "off", "review": False},
+            "translation": {**recovery_options(receipt, "original"), "review": False},
         }
         retry.metadata_json = {
             **retry.metadata_json,
@@ -259,7 +280,12 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         permissions=permissions_for("image_generation"),
         retry_class="safe",
         parent_run_id=parent_run_id,
+        metadata={"image_model_selection": body._selection} if body._selection else None,
     )
+    if body._selection:
+        from app.events import append_event
+
+        append_event(session, run.id, "image.model.selected", body._selection)
     from app.media_translation import enqueue_translation
 
     enqueue_translation(session, run, body.translation)

@@ -32,6 +32,17 @@ def audio_bridge(tmp_path, monkeypatch):
     script = tmp_path / "speech.py"
     script.write_text("""import os, sys, wave, time, json
 from pathlib import Path
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--ref')
+parser.add_argument('--text')
+parser.add_argument('--out')
+parser.add_argument('--cfg', type=float, default=0.4)
+parser.add_argument('--exaggeration', type=float, default=0.8)
+parser.add_argument('--temperature', type=float, default=0.6)
+options = parser.parse_args()
+with Path(__file__).with_suffix('.options').open('a') as calls:
+ calls.write(json.dumps(vars(options), ensure_ascii=False) + '\\n')
 assert os.environ['HF_HUB_OFFLINE'] == '1'
 assert os.environ['TRANSFORMERS_OFFLINE'] == '1'
 assert os.environ['CUDA_VISIBLE_DEVICES'] == '7'
@@ -120,7 +131,8 @@ def test_invalid_audio_upload_is_rejected(data):
         assert client.get("/api/artifacts").json() == []
 
 
-def test_cancel_managed_audio_releases_resources(audio_bridge, monkeypatch):
+@pytest.mark.parametrize("delivery", [None, {}])
+def test_cancel_managed_audio_releases_resources(audio_bridge, monkeypatch, delivery):
     original = RunnerClient.request
 
     def request(self, method, path, json=None):
@@ -135,7 +147,12 @@ def test_cancel_managed_audio_releases_resources(audio_bridge, monkeypatch):
     with TestClient(app) as client:
         source = reference(client)
         run = client.post(
-            "/api/audio/runs", json={"text": "wait", "reference_artifact_id": source["id"]}
+            "/api/audio/runs",
+            json={
+                "text": "wait",
+                "reference_artifact_id": source["id"],
+                **({"delivery": delivery} if delivery is not None else {}),
+            },
         ).json()
         with session_factory()() as session:
             tick(session, "audio-test")
@@ -269,7 +286,8 @@ def test_middle_speech_part_failure_never_publishes_partial_audio(audio_bridge, 
         assert not output.exists()
 
 
-def test_cancel_long_speech_signals_the_wrapper_and_child(audio_bridge, monkeypatch):
+@pytest.mark.parametrize("delivery", [None, {}])
+def test_cancel_long_speech_signals_the_wrapper_and_child(audio_bridge, monkeypatch, delivery):
     import os
     import time
     from pathlib import Path
@@ -298,7 +316,11 @@ def test_cancel_long_speech_signals_the_wrapper_and_child(audio_bridge, monkeypa
         source = reference(client)
         run = client.post(
             "/api/audio/runs",
-            json={"text": "WAIT_CHILD " + "długa wypowiedź " * 25, "reference_artifact_id": source["id"]},
+            json={
+                "text": "WAIT_CHILD " + "długa wypowiedź " * 25,
+                "reference_artifact_id": source["id"],
+                **({"delivery": delivery} if delivery is not None else {}),
+            },
         ).json()
         with session_factory()() as session:
             tick(session, "complete-speech-cancel")
@@ -309,3 +331,166 @@ def test_cancel_long_speech_signals_the_wrapper_and_child(audio_bridge, monkeypa
         state = Path(f"/proc/{child_pid}/stat")
         assert not state.exists() or state.read_text().rsplit(") ", 1)[1].startswith("Z ")
         assert not client.get("/api/artifacts", params={"run_id": run["id"]}).json()
+
+
+@pytest.mark.parametrize("long", [False, True])
+def test_delivery_reaches_every_cli_call_and_retains_exact_text_and_provenance(audio_bridge, long):
+    import json
+    import os
+    from pathlib import Path
+
+    text = "Witaj, to jest próba głosu." if not long else "Zdanie dłuższej opowieści. " * 20
+    delivery = {"exaggeration": 1.1, "cfg_weight": 0.25, "temperature": 0.7}
+    with TestClient(app) as client:
+        capabilities = client.get("/api/audio/capabilities").json()
+        assert capabilities["delivery"]["version"] == "chatterbox-controls-v1"
+        assert client.get("/api/runs").json() == []
+        source = reference(client)
+        response = client.post(
+            "/api/audio/runs",
+            json={
+                "text": text,
+                "reference_artifact_id": source["id"],
+                "delivery": delivery,
+            },
+        )
+        assert response.status_code == 202, response.text
+        run = response.json()
+        with session_factory()() as session:
+            tick(session, "delivery-test")
+            actual = session.get(Run, run["id"])
+            assert actual.status == "succeeded", actual.error_message
+            assert actual.parameters["text"] == text.strip()
+            assert actual.parameters["delivery"] == delivery
+            assert actual.parameters["delivery_source_sha256"] == capabilities["delivery"]["source_sha256"]
+            assert not active_locks(session)
+        script = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"])
+        calls = [json.loads(line) for line in script.with_suffix(".options").read_text().splitlines()]
+        assert (len(calls) > 1) == long
+        assert " ".join(call["text"] for call in calls) == text.strip()
+        assert all(
+            call["exaggeration"] == 1.1 and call["cfg"] == 0.25 and call["temperature"] == 0.7
+            for call in calls
+        )
+        artifact = client.get("/api/artifacts", params={"run_id": run["id"]}).json()[0]
+        assert artifact["metadata"]["speech_delivery"] == {
+            **delivery,
+            "source_sha256": capabilities["delivery"]["source_sha256"],
+        }
+
+
+@pytest.mark.parametrize(
+    "delivery",
+    [
+        {"exaggeration": -0.1},
+        {"exaggeration": 1.6},
+        {"cfg_weight": 1.1},
+        {"temperature": 0},
+        {"temperature": 1.3},
+        {"temperature": True},
+        {"cfg_weight": "0.3"},
+        {"command": "shell"},
+        {"style": "whisper"},
+    ],
+)
+def test_unbounded_or_invented_delivery_is_rejected_before_enqueue(delivery):
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Witaj",
+                "reference_artifact_id": str(uuid4()),
+                "delivery": delivery,
+            },
+        )
+        assert response.status_code == 422
+        assert client.get("/api/runs").json() == []
+
+
+def test_delivery_runtime_change_between_inspection_and_dispatch_is_rejected(audio_bridge, monkeypatch):
+    import os
+    from pathlib import Path
+
+    original = RunnerClient.request
+
+    def request(self, method, path, json=None):
+        if path == "/v1/runs/audio":
+            script = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"])
+            script.write_text(script.read_text() + "\n# Changed after snapshot\n")
+        return original(self, method, path, json)
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Witaj",
+                "reference_artifact_id": source["id"],
+                "delivery": {},
+            },
+        ).json()
+        with session_factory()() as session:
+            tick(session, "changed-delivery")
+            assert session.get(Run, run["id"]).status == "failed"
+            assert not active_locks(session)
+        assert not client.get("/api/artifacts", params={"run_id": run["id"]}).json()
+        script = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"])
+        assert not script.with_suffix(".calls").exists()
+
+
+def test_unsupported_delivery_runtime_retains_standard_speech(audio_bridge, monkeypatch):
+    import os
+    from pathlib import Path
+
+    script = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"])
+    script.write_text(script.read_text().replace("'--exaggeration'", "'--legacy-expression'"))
+    with TestClient(app) as client:
+        assert client.get("/api/audio/capabilities").json()["delivery"] is None
+        source = reference(client)
+        controlled = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Witaj",
+                "reference_artifact_id": source["id"],
+                "delivery": {},
+            },
+        ).json()
+        with session_factory()() as session:
+            tick(session, "unsupported-delivery")
+            assert session.get(Run, controlled["id"]).status == "failed"
+            assert not active_locks(session)
+        standard = client.post(
+            "/api/audio/runs",
+            json={
+                "text": "Witaj",
+                "reference_artifact_id": source["id"],
+            },
+        ).json()
+        with session_factory()() as session:
+            tick(session, "standard-delivery")
+            assert session.get(Run, standard["id"]).status == "succeeded"
+
+
+def test_delivery_schema_is_finite_and_default_request_identity_is_unchanged():
+    from uuid import uuid4
+
+    from ai_station_runner.audio import SpeechDelivery as NativeDelivery
+    from app.audio_schema import SpeechDelivery, SpeechRequest
+    from pydantic import ValidationError
+
+    source = uuid4()
+    assert SpeechRequest(text="Witaj", reference_artifact_id=source).model_dump(mode="json") == {
+        "text": "Witaj",
+        "reference_artifact_id": str(source),
+        "gpu": "auto",
+    }
+    assert (
+        SpeechDelivery.model_json_schema()["properties"] == NativeDelivery.model_json_schema()["properties"]
+    )
+    for cls in (SpeechDelivery, NativeDelivery):
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with pytest.raises(ValidationError):
+                cls(temperature=value)

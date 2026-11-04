@@ -5,15 +5,20 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
+from app.media_translation_text import TranslationOptions
+
 STANDARD_RAM_MIB = 24576
 
 
 class AvatarMemorySettings(BaseModel):
     memory_profile: Literal["default", "bounded_11g"] = "default"
+    translation: TranslationOptions | None = None
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
+        if self.translation is None:
+            values.pop("translation", None)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
         if getattr(self, "generation_profile", None) is None:
@@ -46,6 +51,8 @@ class FullAvatarSettings(AvatarMemorySettings):
 
     @model_validator(mode="after")
     def whole_profile_controls(self):
+        if self.generation_profile is not None and self.translation is not None:
+            raise ValueError("The fixed whole-recording recipe has no descriptive prompt to prepare")
         if self.generation_profile is not None and (
             self.memory_profile != "default" or {"size", "steps"} & self.model_fields_set
         ):

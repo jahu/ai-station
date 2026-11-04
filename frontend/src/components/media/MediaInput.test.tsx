@@ -121,3 +121,129 @@ it("offers compressed recordings only in transcription mode", async () => {
   fireEvent.click(compressed);
   expect(onChange).toHaveBeenCalledWith("compressed");
 });
+
+it("keeps effect tracks out of voice references without hiding them from transcription", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "effects-track",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "wind.wav",
+          metadata: { capability: "audio.effects", duration_seconds: 8 },
+        },
+        {
+          id: "speech-track",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "voice.wav",
+          metadata: { duration_seconds: 8 },
+        },
+      ],
+    })),
+  );
+  const client = new QueryClient();
+  const props = {
+    kind: "audio" as const,
+    label: "Recording",
+    hint: "WAV",
+    value: "",
+    onChange: vi.fn(),
+    disabled: false,
+    onBusy: vi.fn(),
+  };
+  const { rerender } = render(
+    <QueryClientProvider client={client}>
+      <MediaInput {...props} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  await screen.findByRole("button", { name: "Choose voice.wav speech-t" });
+  expect(
+    screen.queryByRole("button", { name: "Choose wind.wav effects-" }),
+  ).toBeNull();
+  rerender(
+    <QueryClientProvider client={client}>
+      <MediaInput {...props} audioMode="transcription" />
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("button", { name: "Choose wind.wav effects-" }),
+  ).toBeTruthy();
+});
+
+it("accepts phone voice recordings while excluding long recordings and effects", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/uploads")
+        ? {
+            id: "uploaded-phone",
+            original_filename: "voice.m4a",
+            type: "audio",
+            mime_type: "audio/mp4",
+          }
+        : [
+            {
+              id: "phone",
+              original_filename: "voice.m4a",
+              type: "audio",
+              mime_type: "audio/mp4",
+              metadata: {},
+            },
+            {
+              id: "long",
+              original_filename: "meeting.mp3",
+              type: "audio",
+              mime_type: "audio/mpeg",
+              metadata: { duration_seconds: 90 },
+            },
+            {
+              id: "effect",
+              original_filename: "wind.wav",
+              type: "audio",
+              mime_type: "audio/wav",
+              metadata: { capability: "audio.effects", duration_seconds: 4 },
+            },
+          ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const onChange = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MediaInput
+        kind="audio"
+        audioMode="voice-recording"
+        uploadEndpoint="/audio/transcription/uploads"
+        label="Voice reference"
+        hint="Prepared automatically"
+        value=""
+        onChange={onChange}
+        disabled={false}
+        onBusy={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByLabelText("Upload speech").getAttribute("accept"),
+  ).toContain(".m4a");
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  await screen.findByRole("button", { name: "Choose voice.m4a phone" });
+  expect(screen.queryByRole("button", { name: /meeting.mp3/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /wind.wav/ })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Upload speech"), {
+    target: {
+      files: [new File(["voice"], "voice.m4a", { type: "audio/mp4" })],
+    },
+  });
+  await vi.waitFor(() =>
+    expect(onChange).toHaveBeenCalledWith("uploaded-phone"),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/audio/transcription/uploads",
+    expect.objectContaining({ method: "POST" }),
+  );
+});

@@ -1,3 +1,7 @@
+import ImageModelSelection from "./ImageModelSelection";
+import SpeechModelSelection from "./SpeechModelSelection";
+import EditTimelineLink from "./EditTimelineLink";
+import AddSoundLink from "./AddSoundLink";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,11 +18,12 @@ import { Badge, ErrorNotice } from "../common";
 import ResourceWaitNotice from "../ResourceWaitNotice";
 import { Button } from "../ui/button";
 
-import { mediaBusy } from "./media-run";
+import { mediaBusy, useMediaRun } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
 import { PurgeActivity } from "../../pages/LibraryPurge";
 import PromptTranslation from "./PromptTranslation";
+import { MediaRunProgress } from "./GenerationProgress";
 
 const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
@@ -67,10 +72,17 @@ export default function MediaResult({
   error: Error | null;
   steps?: Run[];
   videoMode?: "scene" | "avatar";
-  audioMode?: "speech" | "music";
+  audioMode?: "speech" | "music" | "effects";
   allowRetry?: boolean;
 }) {
   const cache = useQueryClient();
+  const preparationId = run?.parameters?.reference_transcription_run_id;
+  const preparation = useMediaRun(
+    run?.parameters?.backend === "fish_s2_pro" &&
+      typeof preparationId === "string"
+      ? preparationId
+      : "",
+  );
   const [, setSearch] = useSearchParams();
   const artifacts = useQuery({
     queryKey: ["media-result", runId],
@@ -111,6 +123,9 @@ export default function MediaResult({
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
   const busy = mediaBusy(run);
+  const progressRuns = steps ?? (run ? [run] : []);
+  const measuredProgress =
+    busy && progressRuns.some((step) => step.generation_progress);
   const text =
     kind === "video" && videoMode === "scene"
       ? {
@@ -121,16 +136,25 @@ export default function MediaResult({
           idleBody:
             "Describe a scene or choose a first frame. Your video will appear here.",
         }
-      : kind === "audio" && audioMode === "music"
+      : kind === "audio" && audioMode === "effects"
         ? {
             ...copy.audio,
-            title: "Your music, ready to play",
-            label: "Generated music",
-            idleTitle: "Set the mood. Find your sound.",
+            title: "Your effects track",
+            label: "Generated sound effects",
+            idleTitle: "Let your film be heard",
             idleBody:
-              "Describe a style, instruments and atmosphere. Your music will appear here.",
+              "Choose a film and describe its sounds. Your effects and video preview will appear here.",
           }
-        : copy[kind];
+        : kind === "audio" && audioMode === "music"
+          ? {
+              ...copy.audio,
+              title: "Your music, ready to play",
+              label: "Generated music",
+              idleTitle: "Set the mood. Find your sound.",
+              idleBody:
+                "Describe a style, instruments and atmosphere. Your music will appear here.",
+            }
+          : copy[kind];
   const translation = run?.metadata?.prompt_translation as
     { status: string } | undefined;
   const waitingPromptReview =
@@ -169,6 +193,8 @@ export default function MediaResult({
         </div>
         {run && <Badge status={run.status} />}
       </div>
+      <ImageModelSelection run={run} />
+      <SpeechModelSelection run={run} preparation={preparation.data} />
       <ErrorNotice
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />
@@ -269,6 +295,8 @@ export default function MediaResult({
               </section>
             )}
           <div className="media-result-actions">
+            <AddSoundLink artifact={result} />
+            <EditTimelineLink artifact={result} />
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>
                 <ArrowUpRight size={15} />
@@ -335,24 +363,30 @@ export default function MediaResult({
           className={`media-empty ${busy ? "is-working" : ""}`}
           aria-live="polite"
         >
-          <div className="media-empty-icon">
-            {waitingPromptReview ? (
-              <FileText size={32} />
-            ) : busy ? (
-              <LoaderCircle size={32} className="media-spinner" />
-            ) : (
-              <Icon size={36} />
-            )}
-          </div>
-          <h3>
-            {busy
-              ? statusText
-              : run && run.status !== "succeeded"
-                ? "Generation did not complete"
-                : run
-                  ? "Loading your result…"
-                  : text.idleTitle}
-          </h3>
+          {measuredProgress ? (
+            <MediaRunProgress runs={progressRuns} />
+          ) : (
+            <>
+              <div className="media-empty-icon">
+                {waitingPromptReview ? (
+                  <FileText size={32} />
+                ) : busy ? (
+                  <LoaderCircle size={32} className="media-spinner" />
+                ) : (
+                  <Icon size={36} />
+                )}
+              </div>
+              <h3>
+                {busy
+                  ? statusText
+                  : run && run.status !== "succeeded"
+                    ? "Generation did not complete"
+                    : run
+                      ? "Loading your result…"
+                      : text.idleTitle}
+              </h3>
+            </>
+          )}
           <p>
             {waitingPromptReview
               ? "Confirm the prepared prompt above to start generation."

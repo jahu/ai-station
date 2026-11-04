@@ -41,8 +41,17 @@ def resource_ready_condition(now):
 
 
 def active_locks(session: Session) -> set[str]:
-    rows = session.scalars(select(ResourceLock).where(ResourceLock.released_at.is_(None))).all()
-    return {row.resource_key for row in rows}
+    # Physical availability is shared. Expose only resource keys, never another
+    # account's Run IDs or workload data, and keep reservation in this transaction.
+    return set(
+        session.connection()
+        .execute(
+            select(ResourceLock.resource_key).where(
+                ResourceLock.released_at.is_(None), ResourceLock.resource_key.like("gpu:%")
+            )
+        )
+        .scalars()
+    )
 
 
 def reserve_gpu(session: Session, run: Run, available: list[int]) -> str | None:
@@ -138,18 +147,20 @@ def release_run_locks(session: Session, run_id: str) -> None:
 
 def memory_observation(session, run, available_mib, required_mib):
     """The same observed RAM and reservation inputs used by conservative admission."""
-    held = list(
-        session.scalars(
-            select(ResourceLock).where(
-                ResourceLock.resource_key.like("ram:%"), ResourceLock.released_at.is_(None)
+    allocations = (
+        session.connection()
+        .execute(
+            select(Run.allocated_resources)
+            .join(ResourceLock, ResourceLock.run_id == Run.id)
+            .where(
+                ResourceLock.resource_key.like("ram:%"),
+                ResourceLock.released_at.is_(None),
+                Run.id != run.id,
             )
         )
+        .scalars()
     )
-    reserved = sum(
-        (session.get(Run, item.run_id).allocated_resources or {}).get("ram_mib", 0)
-        for item in held
-        if item.run_id != run.id
-    )
+    reserved = sum((allocation or {}).get("ram_mib", 0) for allocation in allocations)
     return {
         "required_mib": required_mib,
         "available_mib": available_mib

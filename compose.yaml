@@ -1,7 +1,7 @@
 name: ai-station
 
 x-control-plane: &control-plane
-  image: ai-station:local
+  image: ${AI_STATION_APP_IMAGE:-ai-station:local}
   build: .
   user: "${AI_STATION_UID:-1000}:${AI_STATION_GID:-1000}"
   init: true
@@ -12,6 +12,8 @@ x-control-plane: &control-plane
   tmpfs:
     - /tmp:rw,noexec,nosuid,size=128m
   environment: &environment
+    AI_STATION_ACCESS_PROFILE: ${AI_STATION_ACCESS_PROFILE:-operator}
+    AI_STATION_DESKTOP_INSTANCE_ID: ${AI_STATION_DESKTOP_INSTANCE_ID:-}
     AI_STATION_LAN_HOST: ${AI_STATION_LAN_HOST:-}
     AI_STATION_ACCESS_ORIGINS: ${AI_STATION_ACCESS_ORIGINS:-}
     AI_STATION_PORT: ${AI_STATION_PORT:-8765}

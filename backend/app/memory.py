@@ -9,6 +9,19 @@ from app.db import utcnow
 from app.models import MemoryEntry
 
 
+def _index_connection(session: Session, entry: MemoryEntry):
+    """Typed index maintenance after ownership lookup, within this transaction.
+
+    FTS5 cannot use ORM loader criteria. Never accept a caller's SQL or an
+    unchecked memory ID as authority to mutate the shared index.
+    """
+    from app.data_access import DataAccessError, ScopedSession
+
+    if isinstance(session, ScopedSession) and session.get(MemoryEntry, entry.id) is None:
+        raise DataAccessError("Memory is unavailable")
+    return session.connection()
+
+
 def upsert_memory(
     session: Session,
     *,
@@ -36,7 +49,9 @@ def upsert_memory(
         entry.confidence = confidence
         entry.pinned = pinned
         entry.updated_at = utcnow()
-        session.execute(text("DELETE FROM memory_fts WHERE memory_id = :id"), {"id": entry.id})
+        _index_connection(session, entry).execute(
+            text("DELETE FROM memory_fts WHERE memory_id = :id"), {"id": entry.id}
+        )
     else:
         entry = MemoryEntry(
             scope=scope,
@@ -52,7 +67,7 @@ def upsert_memory(
         )
         session.add(entry)
         session.flush()
-    session.execute(
+    _index_connection(session, entry).execute(
         text("INSERT INTO memory_fts(memory_id, content, tags) VALUES (:id, :content, :tags)"),
         {"id": entry.id, "content": entry.content, "tags": " ".join(entry.tags or [])},
     )
@@ -117,8 +132,9 @@ def delete_memory(session: Session, entry_id: str) -> None:
     entry = session.get(MemoryEntry, entry_id)
     if entry is None:
         raise KeyError(entry_id)
-    session.execute(text("DELETE FROM memory_fts WHERE memory_id = :id"), {"id": entry.id})
-    session.execute(text("DELETE FROM memory_embeddings WHERE memory_id = :id"), {"id": entry.id})
+    connection = _index_connection(session, entry)
+    connection.execute(text("DELETE FROM memory_fts WHERE memory_id = :id"), {"id": entry.id})
+    connection.execute(text("DELETE FROM memory_embeddings WHERE memory_id = :id"), {"id": entry.id})
     session.delete(entry)
 
 

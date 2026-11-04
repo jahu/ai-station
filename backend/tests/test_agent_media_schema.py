@@ -7,6 +7,28 @@ from pydantic import TypeAdapter, ValidationError
 scope = TypeAdapter(AgentMediaScope)
 
 
+def test_expressive_speech_agent_round_trip_keeps_direction_outside_spoken_words():
+    value = {
+        "kind": "speech",
+        "description_source": "fixed",
+        "request": {
+            "text": "Dzień dobry. To są dokładne słowa.",
+            "reference_artifact_id": str(uuid4()),
+            "engine": "fish_s2_pro",
+            "direction": "whisper",
+            "pace": "slow",
+        },
+    }
+    result = scope.validate_python(value)
+    saved = result.model_dump(mode="json")
+    assert saved["request"]["text"] == value["request"]["text"]
+    assert saved["request"]["engine"] == "fish_s2_pro"
+    assert saved["request"]["direction"] == "whisper"
+    assert saved["request"]["pace"] == "slow"
+    assert "delivery" not in saved["request"]
+    assert scope.validate_python(saved).model_dump(mode="json") == saved
+
+
 def test_image_scope_reuses_real_photo_modes_and_uuid_references():
     reference = uuid4()
     result = scope.validate_python(
@@ -117,7 +139,7 @@ def test_media_scope_cannot_be_attached_to_an_unrelated_agent():
         )
 
 
-def test_nullable_media_migration_preserves_existing_agent_definition():
+def test_nullable_media_migration_preserves_existing_agent_definition(legacy_schema):
     from alembic import command
     from app.api import app
     from app.db import alembic_config
@@ -127,7 +149,7 @@ def test_nullable_media_migration_preserves_existing_agent_definition():
         original = api.post(
             "/api/agents", json={"name": "Legacy agent", "goal": "Keep this definition"}
         ).json()
-        command.downgrade(alembic_config(), "0031")
+        legacy_schema("0031")
         command.upgrade(alembic_config(), "head")
         restored = api.get("/api/agents/" + original["id"]).json()
         assert restored["media"] is None

@@ -4,7 +4,7 @@ from datetime import timedelta
 import httpx
 import pytest
 from app.api import app
-from app.db import session_factory, utcnow
+from app.db import control_session_factory, session_factory, utcnow
 from app.engine import tick
 from app.llama import instances
 from app.local_provider import LocalChatProvider
@@ -37,7 +37,7 @@ def managed(monkeypatch):
     monkeypatch.setattr(RunnerClient, "load_llama", load)
     monkeypatch.setattr(RunnerClient, "inspect_llama", lambda _, id: records[id])
     monkeypatch.setattr(RunnerClient, "stop_llama", stop)
-    with session_factory()() as session:
+    with control_session_factory()() as session:
         model = ModelFile(
             host_path="/models/model.gguf",
             filename="model.gguf",
@@ -60,7 +60,7 @@ def load(client, model):
 
 
 def tick_once():
-    with session_factory()() as session:
+    with control_session_factory()() as session:
         return tick(session, "llama-test")
 
 

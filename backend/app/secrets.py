@@ -35,6 +35,47 @@ def secret_file_ref(owner_id: str) -> str:
     return f"file:{validate_relative('secrets/' + owner_id)}"
 
 
+def record_secret_key(record) -> str:
+    """Stable account/record namespace; retain old single-operator storage paths."""
+    if not record.id:
+        raise ValueError("Persist the credential owner before storing a secret")
+    owner = getattr(record, "owner_id", None)
+    if not owner:
+        return record.id
+    return validate_relative(f"accounts/{owner}/{record.__tablename__}-{record.id}")
+
+
+def validate_record_secret_ref(record, ref: str) -> str:
+    """Ordinary accounts cannot borrow host environment or another record's secret."""
+    from sqlalchemy.orm import object_session
+
+    from app.data_access import ScopedSession
+    from app.models import ChatProvider, User
+
+    ref = parse_secret_ref(ref)
+    session = object_session(record)
+    if not ref or not isinstance(session, ScopedSession):
+        return ref
+    expected = secret_file_ref(record_secret_key(record)) if record.id else None
+    if expected and ref == expected:
+        return ref
+    # A migrated record can retain its own previous private file, not substitute
+    # any other legacy file by guessing a UUID.
+    if record.id and ref == record.secret_ref == secret_file_ref(record.id):
+        return ref
+    if ref.startswith("env:"):
+        owner = session.get(User, record.owner_id)
+        if owner is not None and owner.is_admin and owner.id == session.scope.user_id:
+            return ref
+        if isinstance(record, ChatProvider) and record.builtin:
+            from app.chat_providers import BUILTIN_KEY, local_endpoint
+
+            configured = "env:AI_STATION_LLM_API_KEY" if get_settings().llm_api_key else ""
+            if ref == configured and record.key == BUILTIN_KEY and record.endpoint == local_endpoint():
+                return ref
+    raise ValueError("Supply your own credential; this secret reference is unavailable")
+
+
 def store_secret_file(owner_id: str, value: str) -> str:
     if not value or not value.strip():
         raise ValueError("A stored secret cannot be empty")

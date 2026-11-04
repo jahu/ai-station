@@ -152,3 +152,60 @@ def test_native_api_rejects_escape_and_missing_permissions_without_start(tmp_pat
         assert escaped.status_code == 403
     assert not (tmp_path / "runs" / payload["run_id"]).exists()
     clear_settings_cache()
+
+
+def test_managed_composition_uses_frozen_environment_cpu_scope_and_private_home(tmp_path, monkeypatch):
+    import sys
+    import time
+    from types import SimpleNamespace
+
+    from ai_station_runner import media_compose, memory_scope, video_selection
+
+    observation = {
+        "profile": "wan22-5b-linux-x86-64-python312-v1",
+        "manifest_sha256": "a" * 64,
+        "environment_id": "b" * 64,
+    }
+    settings = SimpleNamespace(video_python="", mmaudio_enabled=False, host_data_dir=lambda: tmp_path)
+    monkeypatch.setattr(media_compose, "get_settings", lambda: settings)
+
+    def select(settings, observed):
+        assert observed == observation
+        return {"managed": True, "video_python": sys.executable}
+
+    monkeypatch.setattr(video_selection, "selection", select)
+    monkeypatch.setattr(memory_scope, "scope_prefix", lambda identity, ram: ["fixed-scope", str(ram)])
+    monkeypatch.setattr(memory_scope, "scope_environment", lambda: {})
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/ambient/untrusted")
+    item = clip(tmp_path, "input.mp4")
+    request = ComposeRequest(
+        run_id=uuid4(),
+        deadline_at=time.time() + 60,
+        clips=[item],
+        fps=24,
+        width=128,
+        height=128,
+        target_frames=17,
+        permissions=["filesystem_read", "workspace_write"],
+        managed_runtime=observation,
+    )
+    manager = SimpleNamespace(start=lambda **kwargs: kwargs)
+    result = media_compose.start_composition(manager, request)
+    assert result["argv"][:3] == ["fixed-scope", "4096", sys.executable]
+    assert result["env"]["CUDA_VISIBLE_DEVICES"] == "" and "LD_LIBRARY_PATH" not in result["env"]
+    assert result["env"]["HOME"] == str(result["cwd"] / "home")
+    assert result["deadline_at"] == request.deadline_at
+    saved = json.loads((result["cwd"] / "request.json").read_text())
+    assert saved["request"]["managed_runtime"] == observation
+    with pytest.raises(ValidationError, match="deadline"):
+        ComposeRequest.model_validate({**request.model_dump(mode="json"), "deadline_at": None})
+    legacy = request.model_copy(update={"managed_runtime": None})
+    assert "managed_runtime" not in legacy.model_dump(mode="json")
+
+
+def test_managed_composition_rejects_different_interpreter_before_decoding(tmp_path, monkeypatch):
+    from ai_station_runner import video_environment
+
+    monkeypatch.setattr(video_environment, "resolve_public", lambda *args: {"environment": tmp_path})
+    with pytest.raises(ValueError, match="exact frozen"):
+        compose({"request": {"managed_runtime": {"environment_id": "a" * 64}}, "root": str(tmp_path)})

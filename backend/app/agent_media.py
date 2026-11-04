@@ -40,7 +40,15 @@ def require_profile(scope):
             profile = RunnerClient().request("GET", "/v1/audio/capabilities")
         except (RunnerError, RunnerUnavailable):
             profile = {}
-        ready = profile.get("available") and "pl" in profile.get("languages", [])
+        ready = (
+            profile.get("engines", {}).get("fish_s2_pro", {}).get("available")
+            if scope.request.engine == "fish_s2_pro"
+            else profile.get("available") and "pl" in profile.get("languages", [])
+        )
+        if scope.request.voice_source == "model":
+            ready = ready and "model" in profile.get("engines", {}).get("fish_s2_pro", {}).get(
+                "voice_sources", []
+            )
     elif scope.kind == "avatar":
         try:
             path = (
@@ -61,6 +69,11 @@ def require_profile(scope):
         except (RunnerError, RunnerUnavailable):
             profile = {}
         ready = profile.get("available")
+    elif scope.kind == "effects":
+        from app.effects import available_profile, capabilities
+
+        profile = capabilities()
+        ready = available_profile(profile)
     elif scope.kind == "music":
         from app.music import PROFILE_SHA256, capabilities
 
@@ -74,7 +87,9 @@ def require_profile(scope):
         ready = profile.get("available") and scope.request.mode in profile.get("modes", [])
     if not ready:
         raise ValueError("This local media engine is unavailable; inspect its dedicated workspace setup")
-    if scope.kind == "video" and scope.request.memory_profile != "default":
+    if scope.kind == "video" and (
+        scope.request.memory_profile != "default" or profile.get("configuration_source") == "managed"
+    ):
         from fastapi import HTTPException
 
         from app.video import memory_reservation
@@ -100,6 +115,10 @@ def runtime_readiness():
     from app.music import PROFILE_SHA256, capabilities
 
     music = capabilities()
+    from app import effects as sound_effects
+
+    effects = sound_effects.capabilities()
+    effects_ready = sound_effects.available_profile(effects)
     try:
         photo = RunnerClient().request("GET", "/v1/photo/capabilities")
     except (RunnerError, RunnerUnavailable):
@@ -125,8 +144,15 @@ def runtime_readiness():
     avatar_ready = bool(avatar.get("available") or whole_avatar.get("available"))
     image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
     music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
-    speech_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
+    chatterbox_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
+    speech_ready = chatterbox_ready or bool(speech.get("engines", {}).get("fish_s2_pro", {}).get("available"))
     return {
+        "effects": {
+            "ready": effects_ready,
+            "reason": None
+            if effects_ready
+            else "Local sound effects engine is unavailable; inspect Audio setup",
+        },
         "avatar": {
             "ready": avatar_ready,
             "speech_ready": bool(speech.get("available") and "pl" in speech.get("languages", [])),
@@ -149,6 +175,14 @@ def runtime_readiness():
         },
         "speech": {
             "ready": speech_ready,
+            "engines": {
+                "chatterbox": {"ready": chatterbox_ready},
+                "fish_s2_pro": {
+                    "ready": bool(speech.get("engines", {}).get("fish_s2_pro", {}).get("available")),
+                    "reason": speech.get("engines", {}).get("fish_s2_pro", {}).get("reason")
+                    or "Expressive speech is unavailable or still being verified",
+                },
+            },
             "reason": None
             if speech_ready
             else "Speech agents are not available yet"
@@ -159,6 +193,26 @@ def runtime_readiness():
 
 
 def freeze_inputs(session, scope):
+    if scope.kind == "effects":
+        from app.effects import video_snapshot
+
+        if scope.request.video_artifact_id is None:
+            raise ValueError("Select and review a Library film before running sound effects")
+        video = video_snapshot(session, scope.request.video_artifact_id)
+        if any(cue.end_frame > video["frames"] for cue in scope.request.cues):
+            raise ValueError("Sound cue exceeds the reviewed film")
+        a = session.get(Artifact, str(scope.request.video_artifact_id))
+        return [
+            {
+                "id": a.id,
+                "path": a.relative_path,
+                "size": a.size_bytes,
+                "sha256": a.sha256,
+                "type": "video",
+                "mime": "video/mp4",
+                "video": video,
+            }
+        ]
     if scope.kind == "avatar":
         if scope.request.image_artifact_id is None or scope.request.audio_artifact_id is None:
             raise ValueError("Select a reviewed portrait and WAV reference before running an avatar")
@@ -202,6 +256,8 @@ def freeze_inputs(session, scope):
     if scope.kind == "music" or scope.kind == "video" and scope.request.image_artifact_id is None:
         return []
     if scope.kind == "speech" and scope.request.reference_artifact_id is None:
+        if scope.request.voice_source == "model":
+            return []
         raise ValueError("Select and review a Library voice reference before running speech")
     identifiers = (
         scope.request.input_artifact_ids
@@ -310,7 +366,7 @@ def verify_published_inputs(session, run):
 def description_key(scope):
     if scope.kind == "avatar":
         return "speech_text" if scope.request.speech_text is not None else "prompt"
-    if scope.kind == "video":
+    if scope.kind in {"video", "effects"}:
         return "prompt"
     if scope.kind == "speech":
         return "text"
@@ -413,6 +469,7 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             parent_run_id=run.id,
             execution_deadline_at=run.parameters["execution_deadline_at"],
             observed_profile=profile,
+            _prepare_translation=False,
             appearance_snapshot={"whole_recipe": root.parameters.get("avatar_whole_recipe")}
             if prepared_scope.request.generation_profile
             else {"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
@@ -435,6 +492,19 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
                 "parent_artifact_ids": [*stage.parameters.get("parent_artifact_ids", []), preparation_id],
             }
             stage.triggered_by = run.triggered_by
+    elif prepared_scope.kind == "effects":
+        from app.effects import create_effects_run
+        from app.effects_schema import EffectsRequest
+
+        child = create_effects_run(
+            session,
+            EffectsRequest.model_validate(prepared_scope.request.model_dump()),
+            task=run.task,
+            parent_run_id=run.id,
+            observed_profile=profile,
+        )
+        child.operation_key = key
+        child.parameters = {**child.parameters, "media_inputs": list(run.parameters.get("media_inputs", []))}
     elif prepared_scope.kind == "speech":
         from app.audio import create_audio_run
         from app.audio_schema import SpeechRequest
@@ -462,6 +532,10 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
         "agent_media_preparation_sha256": preparation_sha,
     }
     child.triggered_by = run.triggered_by
+    if prepared_scope.kind == "avatar":
+        from app.media_jobs import prepare_avatar_prompts
+
+        prepare_avatar_prompts(session, run.task)
     if prepared_scope.kind == "video":
         from app.media_translation import enqueue_groups
 
@@ -602,7 +676,7 @@ class AgentMediaExecutor:
             else 1000
             if definition.media.kind == "speech"
             else 2000
-            if definition.media.kind == "video"
+            if definition.media.kind in {"video", "effects"}
             else 10000
         )
         if definition.media.kind == "video" and definition.media.request.scenes:
@@ -615,6 +689,8 @@ class AgentMediaExecutor:
             if definition.media.kind == "speech" or avatar_speech
             else ""
         )
+        if definition.media.kind == "effects":
+            speech_guidance += " Describe only sound effects and ambience for the reviewed film; narration and musical score are separate tools. Keep all saved scene cue timings and descriptions unchanged."
         song = writes_lyrics(definition.media)
         response_contract = (
             f"a description string (at most {maximum} characters) and a lyrics string (1–4096 characters)"

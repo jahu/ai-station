@@ -46,7 +46,22 @@ export type AvatarMediaRequest = {
   seed?: number;
   gpu?: string;
 };
+export type EffectsMediaRequest = {
+  video_artifact_id: string | null;
+  prompt: string;
+  cues?: { start_frame: number; end_frame: number; prompt: string }[];
+  negative_prompt?: string;
+  steps?: number;
+  cfg?: number;
+  seed?: number | null;
+  gpu?: string;
+};
 export type AgentMediaScope =
+  | {
+      kind: "effects";
+      description_source: "fixed" | "goal";
+      request: EffectsMediaRequest;
+    }
   | {
       kind: "avatar";
       description_source: "fixed" | "goal";
@@ -62,7 +77,26 @@ export type AgentMediaScope =
       description_source: "fixed" | "goal";
       request: {
         text: string;
+        engine?: "fish_s2_pro";
+        direction?:
+          | "natural"
+          | "whisper"
+          | "happy"
+          | "sad"
+          | "afraid"
+          | "angry"
+          | "calm"
+          | "excited"
+          | "breathy"
+          | "sighing";
+        pace?: "natural" | "slow" | "fast";
+        delivery?: {
+          exaggeration: number;
+          cfg_weight: number;
+          temperature: number;
+        };
         reference_artifact_id: string | null;
+        voice_source?: "reference" | "model";
         gpu?: string;
       };
     }
@@ -86,6 +120,17 @@ export function newAgentMedia(
   goal: string,
   wholeAvatar = false,
 ): AgentMediaScope {
+  if (kind === "effects")
+    return {
+      kind,
+      description_source: "goal",
+      request: {
+        video_artifact_id: null,
+        prompt: goal.slice(0, 2000),
+        cues: [],
+        gpu: "auto",
+      },
+    };
   if (kind === "avatar")
     return {
       kind,
@@ -184,6 +229,29 @@ export function agentMediaIssue(
   options?: { allowMissingVoice?: boolean; allowMissingSources?: boolean },
 ): string | null {
   if (!scope) return "Choose the output and save its creative settings.";
+  if (scope.kind === "effects") {
+    if (!scope.request.video_artifact_id && !options?.allowMissingSources)
+      return "Choose a film from Library before enabling sound effects.";
+    if (!scope.request.prompt.trim() || scope.request.prompt.length > 2000)
+      return "Describe the sounds in 1–2000 characters.";
+    const cues = scope.request.cues ?? [];
+    if (
+      cues.length > 16 ||
+      cues.some(
+        (cue, i) =>
+          !Number.isInteger(cue.start_frame) ||
+          !Number.isInteger(cue.end_frame) ||
+          cue.start_frame < 0 ||
+          cue.end_frame <= cue.start_frame ||
+          cue.end_frame > 7500 ||
+          (i > 0 && cues[i - 1].end_frame > cue.start_frame) ||
+          !cue.prompt.trim() ||
+          cue.prompt.length > 500,
+      )
+    )
+      return "Keep scene sounds ordered, without overlap, inside the selected film.";
+    return null;
+  }
   if (scope.kind === "avatar") {
     const p = scope.request;
     if (
@@ -250,7 +318,17 @@ export function agentMediaIssue(
   if (scope.kind === "speech") {
     if (!scope.request.text.trim() || scope.request.text.length > 1000)
       return "Write the spoken text or instructions in 1–1000 characters.";
-    if (!scope.request.reference_artifact_id && !options?.allowMissingVoice)
+    if (
+      scope.request.voice_source === "model" &&
+      (scope.request.engine !== "fish_s2_pro" ||
+        scope.request.reference_artifact_id)
+    )
+      return "Generated voice requires Fish and cannot use a recording.";
+    if (
+      !scope.request.reference_artifact_id &&
+      scope.request.voice_source !== "model" &&
+      !options?.allowMissingVoice
+    )
       return "Choose a voice reference from Library or upload a WAV before enabling.";
     return null;
   }

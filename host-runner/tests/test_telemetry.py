@@ -5,6 +5,21 @@ from ai_station_runner.diagnostics import command_version
 from ai_station_runner.telemetry import gpus
 
 
+def test_native_container_readiness_does_not_replace_physical_telemetry(tmp_path, monkeypatch):
+    from ai_station_runner import telemetry
+    from ai_station_runner.config import clear_settings_cache
+
+    devices = [{"index": 3, "uuid": "GPU-observed", "memory_total_mib": 12288}]
+    monkeypatch.setattr(telemetry, "gpus", lambda: devices)
+    monkeypatch.setenv("AI_STATION_CONTAINER_GPU_READY", "false")
+    clear_settings_cache()
+    try:
+        result = telemetry.collect(tmp_path)
+        assert result["gpus"] == devices and result["container_gpu_ready"] is False
+    finally:
+        clear_settings_cache()
+
+
 def test_missing_nvidia_fields_remain_unknown(monkeypatch):
     monkeypatch.setattr(
         subprocess,
@@ -117,3 +132,19 @@ def test_compute_process_endpoint_is_operational_and_accepts_no_command(monkeypa
         assert client.get("/v1/gpu-processes").json()["status"] == "available"
         assert client.post("/v1/gpu-processes", json={"command": "unrestricted"}).status_code == 405
     assert calls == [True]
+
+
+def test_hardware_reports_runner_platform_instead_of_control_plane_platform(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    from ai_station_runner import telemetry
+
+    monkeypatch.setattr(
+        telemetry, "platform", SimpleNamespace(system=lambda: "Darwin", machine=lambda: "arm64")
+    )
+    monkeypatch.setattr(telemetry, "sys", SimpleNamespace(platform="linux"))
+    for name in ("gpus", "cpu", "memory", "load"):
+        monkeypatch.setattr(telemetry, name, lambda: {})
+    monkeypatch.setattr(telemetry, "disk", lambda _: {})
+    result = telemetry.collect(tmp_path)
+    assert result["host"] == {"system": "Darwin", "architecture": "arm64"}

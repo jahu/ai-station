@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.agent_email_schema import digest
 from app.agent_schema import AgentSettings
@@ -328,8 +328,11 @@ def verified(session, run, *, lock=False):
     ):
         raise ValueError("The referenced agent changed; inspect it and send again")
     if lock:
-        session.execute(update(Agent).where(Agent.id == agent.id).values(updated_at=Agent.updated_at))
-        session.refresh(agent)
+        from app.data_access import private_for_update
+
+        agent = private_for_update(session, Agent, agent.id)
+        if agent is None:
+            raise ValueError("The referenced agent is unavailable")
     if (
         iso(agent.updated_at) != scope["expected_updated_at"]
         or definition_hash(agent) != scope["definition_hash"]

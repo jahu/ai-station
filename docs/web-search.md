@@ -1,6 +1,6 @@
 # Optional Chat web search
 
-Web search starts enabled in ordinary Chat. The switch saves an operator preference across conversations and devices; turning it off keeps it off. Work starts without automatic search so coding, runtime control and task continuations retain their existing scopes. Each request still records its own search selection and network permission; API requests that omit search remain offline. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
+Web search starts enabled in the unified assistant. The switch saves the current account’s preference across conversations and devices; turning it off keeps it off. This does not force a search for every instruction: known non-research actions retain their existing routing and permissions. Each request still records its own search selection and network permission; API requests that omit search remain offline. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
 
 An explicit Search query is used exactly as entered, without history. Otherwise, a follow-up is resolved by the selected permission-bound model using at most six recent ordinary text messages (1200 characters each), before contacting a search engine. Only the resulting short query leaves for search; the full conversation, system prompt, pinned memory, summaries and attachment bodies are excluded. Replies based on private attachments, memory, summaries or other executors are excluded from query context. The actual query and original follow-up are recorded separately in source details. A failed or canceled topic resolution never searches the ambiguous raw instruction. Long messages use a bounded 4000-character question draft rather than imposing the search query limit on Chat. Queries are bounded. Retrieved titles/snippets are untrusted reference data, cannot grant tools/permissions, and are passed to the local model with citation instructions. The tool searches; it does not fetch arbitrary result pages, execute scripts or perform browser automation.
 
@@ -64,6 +64,34 @@ or ignoring the selected tool. Explicit incompatible action/media combinations
 remain rejected before enqueueing. Normal verification uses fake search, model
 and native jobs; real search-informed generation is recorded separately when run.
 
+## Automatic query preparation (0.1 candidate)
+
+An ordinary automatic search using the selected Chat model prepares a concise query
+before the first search request, including the first message in a conversation.
+It reuses the selected, admitted model with tools disabled, JSON output, a
+256-token budget and a 30-second preparation deadline. The preparation prompt
+contains the question and the existing bounded ordinary-text history; it does
+not inherit the conversation system prompt, attached file bodies, pinned memory
+or summary contents. A reported death or other claim is treated as something to
+verify, rather than an established fact.
+
+Preparation, the effective query and model identity are recorded on the ordinary
+Chat Run. The search JSON artifact, saved message and Sources panel retain the
+actual query, original question and preparation model/location. Failed, invalid
+or canceled preparation never falls back to sending the raw question or
+generating a factual answer. Stop closes the preparation stream. The existing
+one-attempt empty-result refinement remains bounded and auditable.
+
+A manually entered query retains its existing reviewed search/refinement path.
+Reviewed agent queries, image-research briefs and explicit page reading keep
+their existing scopes. This increment adds no hidden model load or automatic
+external provider choice. When the user explicitly selects an external Chat
+provider, preparation uses that same model and requires the Run's `external_ai`
+permission; both the events and Sources panel mark it external. This avoids an
+additional model/server setting or loading a hidden planner. Existing
+permission-bound follow-up resolution is preserved. Tests use synthetic
+model/search output. Real-model relevance qualification is recorded below.
+
 ## Real search-informed image acceptance
 
 On 2026-10-14 the deployed Assistant completed public search → a visual brief
@@ -88,3 +116,112 @@ would return results. Exact manually entered queries retain their explicit scope
 Topic resolution shares the existing provider permission, bounded generation,
 Stop and audited events; no extra tool, full-page fetching or model fact trust is
 introduced. Earlier model assertions are expressly unverified query context.
+
+## Selected-model search qualification (2026-10-30)
+
+The deployed development build completed the original ambiguous actor-question
+regression and a subject-free follow-up through the real unified assistant,
+ordinary worker, owned RVN 27B Q4 llama.cpp model and configured SearXNG search.
+Each Chat child recorded tools-free preparation with the selected local model,
+the effective query, five actual subject-specific sources and the final saved
+answer. Every returned title identified the subject or show; neither attempt
+returned the earlier dictionary/ranking or Downdetector results. The follow-up
+query explicitly recovered the actor’s name from bounded conversation context.
+This establishes relevance for those two regression cases, not independent
+verification of article claims or a guarantee for every future search.
+
+The model used the two discovered GPUs, Q8 cache and a 4096-token allocation for
+these short questions. The QA-owned instance was stopped afterward; temporary
+verification devices were revoked and no existing owner device or credentials
+were changed. Private evidence: `data/acceptance/search-preparation-20261030/`.
+
+## Contextual search necessity — observed regression
+
+The real Windows first-result test on 2026-11-01 sent
+`Reply with exactly WINDOWS_MODEL_OK.` with Web available by default. The selected
+local 4B model correctly returned the literal answer, but automatic query
+preparation first turned that instruction into `windows model ok` and retrieved
+five unrelated computer-model pages. Saved message metadata, the search artifact
+and the actual browser capture establish this failure; it is not inferred from a
+mock. Evidence: `data/acceptance/windows-native-qualification-20261031/`, result
+072. Existing actor/follow-up relevance qualification does not cover necessity.
+
+**Deployed policy (PR #554):** distinguish permission to search from a request that
+needs search. New automatic/contextual turns ask the same admitted model
+for a bounded, tools-free structured decision: search with a concise public
+query, or continue without retrieval. Literal replies, greetings, transformations
+of supplied text and other self-contained requests should not acquire sources.
+Factual requests needing retrieval and subject-dependent follow-ups keep their
+existing bounded, privacy-filtered context. An explicit Search query still
+searches; Web off must invoke neither the planner nor the network.
+
+The new user-message metadata and Run snapshots freeze
+`web_search_plan_version=2`, without changing canonical client-request receipts
+or reinterpreting old saved/retried Runs. Legacy snapshots keep their original
+query-only schema and preparation template. A no-search
+decision emits an inspectable skip event and continues ordinary completion with
+the original messages: no search request, source cards, search artifact or claim
+that retrieval happened. Invalid/canceled preparation must not silently send raw
+private instructions or bypass the existing factual-search failure policy.
+Selected provider/model, external-AI grants, deadlines, cancellation and account
+isolation stay unchanged; no planner runtime or shell surface is added. The Web
+control explains that availability is optional research; its switch, preference,
+keyboard behavior and explicit Search query are retained.
+
+Verification must cover both branches, a literal containing an apparent search
+keyword, greetings and supplied-text transformations, a genuine search and its
+subject-free follow-up, explicit queries, Web off, invalid output, Stop, external
+permission, legacy Run/retry identity and cross-account boundaries. Use fake
+model/network calls for normal tests; then exercise one actual compiled
+API/worker flow and a bounded selected-model smoke test. PR #554 was reviewed and squash-merged into `develop`, then deployed with the
+qualified application image. The rollout verified preservation of database
+content, accounts, configured engines, loaded-model identities and LAN/private
+access; the native Runner was not restarted. Actual production desktop/mobile
+controls and source hashes passed, and the temporary verification device was
+revoked. Detailed checks and remaining operator acceptance follow below.
+
+The actual same verified 4B Q4_K_M weights passed four isolated API/engine cases
+on CPU: a literal containing `WINDOWS_MODEL_OK`, a Polish greeting, an explicit
+Python documentation search and a subject-free Polish follow-up about activating
+that environment on Windows. The first two made no search and returned no source
+cards/artifact. The latter two used the real pinned SearXNG service, recovered
+the Python subject and returned five relevant results each, including official
+Python documentation. Search-engine availability/ranking is not guaranteed for
+future queries. The temporary CPU/search containers were stopped afterward;
+production and original model files were unchanged. This source-level real-model
+proof does not substitute for the compiled API/separate-worker/browser gate.
+Private evidence: `real-search-necessity.private.json` in the Windows
+qualification directory referenced above.
+
+The separately built application image also passed a disposable accounts API,
+separate worker and deterministic fake-provider/search flow. It verified the
+literal skip, factual retrieval, normal fake-executor completion/SSE and another
+account's denial. Actual compiled desktop/mobile browsers showed the literal
+reply without Sources, the researched reply with Sources, no page errors and no
+mobile horizontal overflow. Application Python and compiled frontend hashes
+matched the reviewed source inputs. An initial fixture used GET instead of the
+actual form-encoded POST search protocol; its failed synthetic Run was retained
+and explicitly regenerated after correcting only the fixture. This is separate
+from the real-model/public-search evidence above. Operator case WEB-008 is in
+catalog version 35; operator answers remain untested.
+
+Local final validation used the complete 6,461-case Python collection: 6,443
+passed, nine skipped and nine failed. All nine failures were diagnosed as stale
+test fixtures: two migration cases and maintenance pinned the former `0041`
+head, while six GPU-queue cases lacked the newer typed image-capability preflight
+and contacted the deliberately absent test socket. The tests now check the
+actual Alembic head and supply only the expected external-image capability
+response; real queue, process-ownership and foreign-key assertions remain.
+All 27 cases in those three complete families then passed. Together with the
+unchanged passing full-suite cases, this is the documented equivalent local
+validation; it is **not** a claim that the original `check.sh` invocation exited
+successfully. Ruff/format passed over all 943 Python files. No application
+source changed during these fixture corrections; the previously qualified
+compiled image still matches application/frontend inputs.
+
+After completed qualification, the three exact stopped QA containers and the
+separate 2,497,281,312-byte host-side weight copy were removed. The Windows guest
+was shut down normally; its installed disk, current private installer and compact
+proof remain for the outstanding Windows gates. Production models/data and
+shared Docker images were preserved. Private cleanup receipt:
+`completed-search-fixture-cleanup.private.json` in the same evidence directory.

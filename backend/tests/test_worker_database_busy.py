@@ -37,7 +37,7 @@ def test_busy_slot_rolls_back_closes_and_continues_without_replaying_work(monkey
             raise error(code)
         raise StopLoop()
 
-    monkeypatch.setattr(worker_main, "session_factory", lambda: factory)
+    monkeypatch.setattr(worker_main, "control_session_factory", lambda: factory)
     monkeypatch.setattr(worker_main, "tick", tick)
     monkeypatch.setattr(worker_main, "time", SimpleNamespace(sleep=sleeps.append))
     with pytest.raises(StopLoop):
@@ -54,7 +54,7 @@ def test_busy_slot_rolls_back_closes_and_continues_without_replaying_work(monkey
 def test_other_database_errors_are_not_hidden_as_transient(monkeypatch, exc):
     calls = []
     current = SimpleNamespace(rollback=lambda: calls.append("rollback"), close=lambda: calls.append("close"))
-    monkeypatch.setattr(worker_main, "session_factory", lambda: lambda: current)
+    monkeypatch.setattr(worker_main, "control_session_factory", lambda: lambda: current)
 
     def tick(*args):
         raise exc

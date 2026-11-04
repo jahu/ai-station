@@ -60,6 +60,12 @@ const ACTIONS = [
     detail: "Queues local Chatterbox speech. Not transcription or music.",
   },
   {
+    key: "audio.effects",
+    title: "Add film sound",
+    detail:
+      "Create local effects for a Library film; keep or replace its original sound.",
+  },
+  {
     key: "audio.music",
     title: "Generate music",
     detail:
@@ -74,7 +80,7 @@ const ACTIONS = [
     key: "video.generate",
     title: "Generate video",
     detail:
-      "Create a silent local scene. Optionally attach one first-frame image.",
+      "Create a local scene, optionally with described sound and one first-frame image.",
   },
   {
     key: "avatar.animate",

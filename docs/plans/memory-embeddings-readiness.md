@@ -96,3 +96,33 @@ QA catalog. Review/deployment must use the exact qualified head and retain the
 existing settings if the operator changes them before activation. The installed
 model remains outside the application image in owned cache storage. Evidence:
 `data/acceptance/managed-memory-final-20261025`, especially `real-model-result.json`.
+
+## Guided setup entry, release 0.1 candidate
+
+Models → **Set up memory** now reuses the existing fixed CPU preparation API and
+worker. It exposes two immutable file sources, the existing MIT model metadata,
+actual application disk space and a conservative replacement-file allowance.
+Cache sizes are explicitly estimates until the existing full hash verification.
+The CPU engine uses two threads and its existing two-GiB address-space ceiling;
+this path requires no GPU or native Runner operation.
+
+The card restores the current account's preparation/index activity and measured
+per-file download progress. Stop cancels only that owned Run. Retrying creates a
+new ordinary preparation and reuses verified complete files; an incomplete file
+is downloaded again, not described as byte-range Resume. Final preparation
+probes the actual 384-dimensional encoder and queues the account's memory index.
+**Open Memory** retains the existing search/index/advanced endpoint workspace.
+Configured endpoints stay selected until an administrator explicitly chooses
+local replacement; an endpoint configuration alone is not labelled tested Ready.
+Members can inspect shared model readiness/source facts but not install, alter
+configuration or read foreign activity. Missing CPU dependencies cannot become
+Ready merely because weight files are present.
+
+Real isolated qualification uses an actual fresh account, compiled desktop/mobile
+setup, queued Stop/retry, the pinned CPU model, private index and a semantic query
+whose top result is the saved studio-color fact. Existing verified workstation
+model bytes are copied without modifying originals; no additional model download
+or GPU work is needed for this test. Production and the owner's memories are not
+used. Evidence is private in `data/acceptance/guided-memory-setup-20261031/`.
+Final source/render review and deployment receipts determine rollout; this entry
+does not complete other media or cross-platform NR-13/14 requirements.

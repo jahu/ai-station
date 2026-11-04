@@ -6,12 +6,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import session_scope
-from app.models import ModelDefinition, ModelFile, Setting
+from app.models import ModelDefinition, ModelFile
+from app.personal_settings import preference_row
 
 router = APIRouter(prefix="/images", tags=["images"])
 DB = Annotated[Session, Depends(session_scope)]
@@ -36,7 +36,7 @@ DEFAULTS = {"revision": 0, "choices": {mode: "realesrgan" if mode == "upscale" e
 
 
 def defaults(session):
-    row = session.get(Setting, KEY)
+    row = preference_row(session, KEY)
     if row is None:
         return {"revision": 0, "choices": dict(DEFAULTS["choices"])}
     return {"revision": row.value["revision"], "choices": {**DEFAULTS["choices"], **row.value["choices"]}}
@@ -120,14 +120,31 @@ def resolve_request(session, body):
     """Resolve defaults before queuing; explicit legacy backend callers keep authority."""
     from app.image_schema import ImageRequest
 
+    automatic = None
+    if body.model_selection == "auto":
+        automatic = recommendation(
+            session,
+            body.mode,
+            body.edit_prompt if body.mode == "img2img" else body.prompt,
+            len(body.input_artifact_ids),
+        )
+        if (
+            body.model_selection_revision is not None
+            and body.model_selection_revision != automatic["revision"]
+        ):
+            raise HTTPException(409, "Image defaults changed; refresh the Auto preview before queuing")
     identifier = (
-        str(body.model_id)
-        if body.model_id
-        else "realesrgan"
-        if body.mode == "upscale"
-        else body.backend
-        if "backend" in body._explicit_fields
-        else defaults(session)["choices"][body.mode]
+        automatic["choice"]["id"]
+        if automatic
+        else (
+            str(body.model_id)
+            if body.model_id
+            else "realesrgan"
+            if body.mode == "upscale"
+            else body.backend
+            if "backend" in body._explicit_fields
+            else defaults(session)["choices"][body.mode]
+        )
     )
     selected, snapshot = frozen_model(session, identifier, body.mode)
     preset = selected.get("presets", {}).get(body.mode, {})
@@ -145,14 +162,51 @@ def resolve_request(session, body):
     if not isinstance(preset, dict) or set(preset) - allowed:
         raise HTTPException(409, "Image model preset contains unsupported fields")
     explicit = {key: getattr(body, key) for key in body._explicit_fields}
+    explicit.pop("model_selection", None)
+    explicit.pop("model_selection_revision", None)
     values = {**preset, **explicit, "backend": selected["backend"]}
+    if automatic:
+        values["prompt_style"] = "instruction"
     if snapshot:
         values["model_id"] = snapshot["definition_id"]
     try:
         resolved = ImageRequest.model_validate(values)
     except ValueError as exc:
         raise HTTPException(422, "Selected image model is incompatible with these parameters") from exc
+    resolved._selection = automatic
     return resolved, snapshot
+
+
+def recommendation(session, mode, prompt, reference_count):
+    from app.image_edit_routing import VERSION, structural_intent
+
+    configured = defaults(session)
+    reason = structural_intent(prompt)
+    default_id = configured["choices"][mode]
+    preferred = choice(session, default_id)
+    identifier = "qwen" if reason and preferred["backend"] != "qwen" else default_id
+    selected, _ = frozen_model(session, identifier, mode)
+    if reference_count > selected["maximum_references"]:
+        selected, _ = frozen_model(session, "qwen", mode)
+        reason = "reference_capacity"
+    return {
+        "policy": VERSION,
+        "revision": configured["revision"],
+        "reason": reason or "station_default",
+        "choice": selected,
+    }
+
+
+class RecommendationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["img2img", "recompose"]
+    prompt: str = Field(max_length=10000)
+    reference_count: int = Field(default=0, ge=0, le=8, strict=True)
+
+
+@router.post("/models/recommendation")
+def recommend_model(body: RecommendationRequest, session: DB):
+    return recommendation(session, body.mode, body.prompt, body.reference_count)
 
 
 @router.get("/models")
@@ -176,17 +230,7 @@ class DefaultsWrite(BaseModel):
 @router.put("/defaults")
 def change_default(body: DefaultsWrite, session: DB):
     frozen_model(session, body.choice, body.mode)
-    row = session.get(Setting, KEY)
-    if row is None:
-        try:
-            with session.begin_nested():
-                session.add(Setting(key=KEY, value=DEFAULTS))
-                session.flush()
-        except IntegrityError:
-            pass
-    # Acquire the same SQLite writer serialization used by other operator policy.
-    session.execute(update(Setting).where(Setting.key == KEY).values(value=Setting.value))
-    row = session.get(Setting, KEY, populate_existing=True)
+    row = preference_row(session, KEY, default=DEFAULTS, lock=True)
     current = defaults(session)
     if current["revision"] != body.revision:
         raise HTTPException(409, "Image defaults changed; refresh before saving")

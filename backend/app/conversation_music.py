@@ -22,7 +22,18 @@ _OTHER_INTENT = re.compile(
     r"code|kod\w*|script\w*|skrypt\w*|website\w*|stron\w*|app|application|aplikacj\w*)\b",
     re.I,
 )
-_SCOPES = ("github", "coding", "new_project", "continuation", "commit", "publish", "load", "stop", "data")
+_SCOPES = (
+    "github",
+    "coding",
+    "new_project",
+    "continuation",
+    "commit",
+    "publish",
+    "load",
+    "stop",
+    "data",
+    "effects",
+)
 
 
 class MusicScope(MusicOptions):

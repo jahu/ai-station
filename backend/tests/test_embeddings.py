@@ -139,13 +139,13 @@ def test_health_index_search_and_stale_or_zero_vectors(monkeypatch):
     reset_engine()
 
 
-def test_embeddings_migration_preserves_memories():
+def test_embeddings_migration_preserves_memories(legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
     api = TestClient(app)
     created = api.post("/api/memory", json={"content": "Keep me", "scope": "global"}).json()
-    command.downgrade(alembic_config(), "0016")
+    legacy_schema("0016")
     command.upgrade(alembic_config(), "head")
     reset_engine()
     assert api.get(f"/api/memory/{created['id']}").json()["content"] == "Keep me"

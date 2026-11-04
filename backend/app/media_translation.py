@@ -12,8 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
@@ -31,9 +30,10 @@ from app.media_translation_text import (
     digest,
     encode_fields,
 )
-from app.models import Artifact, ModelDefinition, ModelFile, Run, RunDependency, RuntimeInstance, Setting
+from app.models import Artifact, ModelDefinition, ModelFile, Run, RunDependency, RuntimeInstance
 from app.paths import safe_join
 from app.permissions import require
+from app.personal_settings import preference_row
 from app.runs import create_run, mark_failed, request_cancel, run_dict, transition
 from app.state import TERMINAL, RunStatus
 
@@ -45,7 +45,7 @@ DEFAULT = {"revision": 0, "enabled": False, "model": "", "target_language": "en"
 
 
 def preferences(session):
-    row = session.get(Setting, KEY)
+    row = preference_row(session, KEY)
     return {**DEFAULT, **(row.value if row else {})}
 
 
@@ -96,15 +96,7 @@ def get_preferences(session: DB):
 def save_preferences(body: PreferencesWrite, session: DB):
     if body.enabled:
         validate_model(session, body.model)
-    if session.get(Setting, KEY) is None:
-        try:
-            with session.begin_nested():
-                session.add(Setting(key=KEY, value=dict(DEFAULT)))
-                session.flush()
-        except IntegrityError:
-            pass
-    session.execute(update(Setting).where(Setting.key == KEY).values(value=Setting.value))
-    current = session.get(Setting, KEY, populate_existing=True)
+    current = preference_row(session, KEY, default=DEFAULT, lock=True)
     if current.value["revision"] != body.revision:
         raise HTTPException(409, "Generation settings changed; refresh before saving")
     current.value = {**body.model_dump(), "revision": body.revision + 1}
@@ -114,6 +106,12 @@ def save_preferences(body: PreferencesWrite, session: DB):
 
 def image_fields(run):
     params = run.parameters
+    if run.executor_type == "echomimic":
+        return {"prompt": params["prompt"]}
+    if run.executor_type == "mmaudio_effects":
+        from app.effects import descriptive_fields
+
+        return descriptive_fields(params)
     if run.executor_type == "wan_video":
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
@@ -125,7 +123,31 @@ def image_fields(run):
 
 
 def source_hash(run, fields):
+    if run.executor_type == "echomimic":
+        return digest(
+            {
+                "executor": run.executor_type,
+                "fields": fields,
+                "gpu": run.requested_gpu,
+                "inputs": {
+                    key: value
+                    for key, value in run.parameters.items()
+                    if key not in {"prompt", "translation", "previous_video_run_id"}
+                },
+            }
+        )
     keys = {
+        "mmaudio_effects": [
+            "video",
+            "video_artifact_id",
+            "profile",
+            "observation",
+            "steps",
+            "cfg",
+            "seed",
+            "backend",
+            "parent_artifact_ids",
+        ],
         "wan_video": [
             "image_relative",
             "parent_artifact_ids",
@@ -155,6 +177,10 @@ def source_hash(run, fields):
     }.get(run.executor_type)
     if keys is not None:
         inputs = {key: run.parameters.get(key) for key in keys}
+        if run.executor_type == "mmaudio_effects" and run.parameters.get("cues"):
+            inputs["cue_timing"] = [
+                {k: c[k] for k in ("start_frame", "end_frame")} for c in run.parameters["cues"]
+            ]
         if run.executor_type == "wan_video":
             # Preserve the exact input identity of pre-strategy receipts, while
             # binding new plans to their frozen conditioning policy.
@@ -186,15 +212,38 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     policy = dict(policy or preferences(session))
     enabled = policy["enabled"] if options.mode == "inherit" else options.mode == "on"
     fields = image_fields(media)
-    if not enabled or not fields:
+    if not (enabled or options.enhance) or not fields:
         return None
-    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}:
+    if media.executor_type not in {
+        "photo_pipe",
+        "wan_video",
+        "ace_step_music",
+        "echomimic",
+        "mmaudio_effects",
+    }:
         raise ValueError("Unsupported media translation consumer")
+    system = SYSTEM
+    template = None
+    if options.enhance:
+        from app.prompt_enhancement import recipe
+
+        template, system = recipe(media, translate=enabled)
+        frozen = policy.get("enhancement_template")
+        if frozen is not None and frozen != template:
+            raise ValueError("The saved enhancement template requires inspection")
+        policy.update(
+            operation="enhance",
+            enhancement_template=template,
+            translate_descriptions=enabled,
+            target_language="en" if enabled else "original",
+        )
     limits = {
-        key: 512
+        key: 500
+        if media.executor_type == "mmaudio_effects" and key.startswith("cue_")
+        else 512
         if key == "caption"
         else 2000
-        if media.executor_type == "wan_video"
+        if media.executor_type in {"wan_video", "echomimic", "mmaudio_effects"}
         else FIELD_LIMITS.get(key, 10000)
         for key in fields
     }
@@ -208,12 +257,21 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             or image_fields(item) != fields
         ):
             raise ValueError("Translation group has mismatched media consumers")
+        if template is not None and recipe(item, translate=enabled)[0] != template:
+            raise ValueError("Enhancement group has mismatched generator templates")
         targets.append({"run_id": item.id, "source_hash": source_hash(item, fields)})
     if len(targets) > 100 or len({item["run_id"] for item in targets}) != len(targets):
         raise ValueError("Translation group exceeds its unique consumer bound")
     validate_model(session, policy["model"])
     policy.setdefault("model_label", translator_label(session, policy["model"]))
-    encoded, tokens = encode_fields(fields, options.protected_terms)
+    encoded, tokens = encode_fields(
+        fields, options.protected_terms, max_fields=18 if media.executor_type == "mmaudio_effects" else 4
+    )
+    # Bind the small response to this request instead of letting a greedy model
+    # spend the entire completion budget on an unconstrained JSON string.
+    system += " Return exactly these JSON fields: " + json.dumps(list(encoded)) + "."
+    if not any(tokens.values()):
+        system += " This request has no protected placeholders. Do not invent or output any placeholder."
     provider = ensure_builtin(session)
     child = create_run(
         session,
@@ -242,11 +300,22 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             "additional_consumers": targets,
             "field_limits": limits,
             "options": options.model_dump(),
-            "temperature": 0.0,
-            "system_prompt": SYSTEM,
-            "max_tokens": 4096,
+            "temperature": 0.7 if policy["model"].startswith("llamacpp:") else 0.0,
+            "system_prompt": system,
+            "max_tokens": 8192
+            if media.executor_type == "mmaudio_effects" and media.parameters.get("cues")
+            else 4096,
             "json_output": True,
             "require_complete": True,
+            **(
+                {
+                    "response_fields": {
+                        key: min(32768, max(512, 2 * len(text))) for key, text in encoded.items()
+                    }
+                }
+                if policy["model"].startswith("llamacpp:")
+                else {}
+            ),
         },
     )
     from app.llama import prepare_consumer
@@ -275,7 +344,8 @@ def consumer(session, run):
         not media
         or media.status != "queued"
         or media.task_id != run.task_id
-        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}
+        or media.executor_type
+        not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic", "mmaudio_effects"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -379,9 +449,18 @@ def apply_effective(session, run, media, effective, *, reviewed=False):
         apply_one(session, run, item, effective, reviewed=reviewed)
 
 
+def set_descriptions(media, fields):
+    if media.executor_type == "mmaudio_effects":
+        from app.effects import apply_descriptions
+
+        media.parameters = apply_descriptions(media.parameters, fields)
+    else:
+        media.parameters = {**media.parameters, **fields}
+
+
 def apply_one(session, run, media, effective, *, reviewed=False):
     artifact = save_receipt(session, run, media, effective, reviewed=reviewed)
-    media.parameters = {**media.parameters, **effective}
+    set_descriptions(media, effective)
     media.metadata_json = {
         **media.metadata_json,
         RECEIPT: {
@@ -463,7 +542,7 @@ class MediaTranslationExecutor:
                     if (
                         not item
                         or item.task_id != media.task_id
-                        or item.executor_type != "wan_video"
+                        or item.executor_type not in {"wan_video", "echomimic"}
                         or not item.parameters.get("internal_media")
                         or item.status != "queued"
                     ):
@@ -733,6 +812,15 @@ def enqueue_groups(session, entries):
     return primary_ids
 
 
+def recovery_options(receipt, choice):
+    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    if receipt.get("options", {}).get("enhance"):
+        options["mode"] = receipt["options"].get("mode", "inherit") if choice == "retry" else "off"
+        if choice != "retry":
+            options["enhance"] = False
+    return options
+
+
 def prepare_retry(session, source, retry, choice):
     receipt = source.metadata_json.get(RECEIPT)
     if not receipt:
@@ -746,8 +834,8 @@ def prepare_retry(session, source, retry, choice):
             ) from exc
         retry.metadata_json = {**retry.metadata_json, RECEIPT: receipt}
         return None
-    retry.parameters = {**retry.parameters, **receipt["original"]}
-    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    set_descriptions(retry, receipt["original"])
+    options = recovery_options(receipt, choice)
     if choice == "retry":
         return retry, options, receipt["policy"]
     retry.parameters = {**retry.parameters, "translation": {**options, "review": False}}
@@ -781,7 +869,12 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         from app.images import ImageRetry, retry_image
 
         return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
-    if not source or source.executor_type not in {"wan_video", "ace_step_music"}:
+    if not source or source.executor_type not in {
+        "wan_video",
+        "ace_step_music",
+        "echomimic",
+        "mmaudio_effects",
+    }:
         raise HTTPException(404, "Media Run not found")
     if source.parameters.get("internal_media"):
         raise HTTPException(409, "Resume the whole film instead of an individual segment")
@@ -824,6 +917,11 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
     from app.media_retry_intent import finish_retry, task_for_retry
 
     task = task_for_retry(session, source, body.translation)
+    retry_parameters = dict(source.parameters)
+    if source.executor_type == "mmaudio_effects" and source.agent_id is None:
+        # An inspected new manual attempt gets its own execution budget. Repeated
+        # dispatch of one Run still cannot extend that Run's native deadline.
+        retry_parameters.pop("execution_deadline_at", None)
     retry = create_run(
         session,
         task,
@@ -831,7 +929,7 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         capability=source.capability,
         executor_type=source.executor_type,
         execution_target=source.execution_target,
-        parameters=dict(source.parameters),
+        parameters=retry_parameters,
         requested_gpu=source.requested_gpu,
         requested_resources=dict(source.requested_resources),
         permissions=list(source.effective_permissions),
@@ -870,7 +968,7 @@ def cancel_translation_startup(session, consumer):
 class ReviewWrite(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
-    effective: dict[str, str] = Field(min_length=1, max_length=4)
+    effective: dict[str, str] = Field(min_length=1, max_length=18)
 
 
 @router.post("/translations/{run_id}/review")

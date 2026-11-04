@@ -1,12 +1,70 @@
 # Operator QA catalog and workbook
 
+The developing v46 catalog contains **261 active cases** for Linux, Windows and
+shared application workflows. The owner deferred macOS on 2026-11-03:
+SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs
+and definitions, and are excluded from new worksheets, manifests and result
+counts. The scope notice appears on Start and in the plain-text guide. Earlier
+issued workbooks/answers remain unchanged; import those with their original
+archived catalog, as required by their manifest.
+
+On 2026-11-04 the owner scheduled physical Windows GPU tests and voice/film
+listening after release. v46 records that timing in the scope notice and adds
+SETUP-164 for the actual Windows NVIDIA first-result/Stop/reboot journey. These
+cases remain active with untested answers; postponement never becomes a pass.
+All previous 260 active and four deferred definitions are preserved.
+
+The release audit found missing explicit coverage for several 0.1 requirements.
+v45 adds 24 cases without changing the previous 236 definitions: CREATIVE-101–105
+cover each workspace's saved history/variants/restart; PROGRESS-101–102 cover
+honest whole-task progress; PROMPT-101–104 cover actual prepared input and safe
+recovery; IMAGE-101–102 cover structural Auto edits and explicit model choice;
+LIB-101 covers persistent card dismissal; ACCOUNT-101–107 cover accounts,
+isolation, remembered sessions, TOTP and administrative operations; WEB-009
+covers prepared follow-up queries; DOC-101–102 cover approved branding and model
+responsibility. Every NR-01–14 now has direct case references. These are operator
+definitions, not executed tests or a security certification. Reuse short existing
+creative journeys where specified instead of generating extra long films.
+See the [frozen-candidate readiness audit](../plans/release-0.1-readiness.md).
+
+SETUP-160–163 define the native Linux graphics healthy path, cancellation and
+CPU choice, explicit OS restart/first GPU reply, and preserved alternative engines.
+They are untested operator cases; a CPU fixture cannot pass the physical-GPU case.
+
+SETUP-159 covers reopening a packaged Linux/Windows station after a normal OS
+restart, retaining its account/data/models without manual Docker cleanup. It is
+an untested operator case; internal qualification is recorded separately.
+
+SETUP-146–148 cover native
+Docker consent and preserving OS package update/removal/reinstallation.
+ SETUP-143–145 cover the explicit
+CPU conversation starter, first reply, RAM/Stop/recovery and private setup
+history. SETUP-141–142 retain larger-model/context and old-download compatibility;
+SETUP-136–140 retain expressive voice/phone-reference setup. These are untested
+operator cases; internal qualification is recorded separately in the
+[CPU setup plan](../plans/guided-cpu-conversation.md).
+It retains SETUP-131–135 for guided film sound, SETUP-126–130 for guided avatars
+and SETUP-121–125 for guided video.
+It retains SETUP-117–120 for guided
+music installation, first-track playback, Stop/Resume, native recovery and
+account privacy. Internal qualification is recorded in the
+[music setup plan](../plans/managed-music-setup.md); operator answers remain untested.
+It retains SETUP-115–116 for guided CPU memory setup,
+semantic first results, Stop/retry, private activity and preserved endpoints.
+It also retains SETUP-110–114 for guided image installation,
+Stop/Resume, all four image operations, large-result reuse, native restart/Stop,
+private histories and preserved external configuration. These are untested
+operator cases; internal qualification is recorded separately in the
+[image setup plan](../plans/managed-image-setup.md). The previously issued
+workbook and its answers remain unchanged.
+
 2026-10-29: [the whole-recording avatar follow-up](whole-avatar-follow-up.md)
 qualifies a complete replacement Sonic profile separately from the original
 Echo failure. It preserves the issued v15 workbook and records positive owner
 feedback on the replacement; it is not a silent change to AVATAR-005 or its result.
 
-The versioned [catalog](cases.json) contains 161 Polish operator cases across 21
-areas, including all four permanent-deletion journeys and real semantic-memory
+The original v15 handoff below contains 161 Polish operator cases across 21
+areas. The developing [catalog](cases.json) adds the release-specific cases above, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
 Catalog v15 retains ready-to-upload synthetic data with independently checkable
 answers, so CSV/Excel/document and basic Vision cases need no manual boilerplate.

@@ -13,6 +13,68 @@ from app.providers import ProviderError
 from app.runs import mark_failed, transition
 from app.state import RunStatus
 
+DELIVERY_INTERVAL = 0.1
+CANCELLATION_INTERVAL = 0.25
+DELIVERY_CHARACTERS = 4096
+
+
+class _DeliveryBuffer:
+    """Bound live output without reserving a SQLite writer while awaiting tokens."""
+
+    def __init__(self, session, run, message, clock):
+        self.session, self.run, self.message, self.clock = session, run, message, clock
+        self.kind = None
+        self.parts = []
+        self.characters = 0
+        self.delivered = set()
+        self.deadline = clock() + DELIVERY_INTERVAL
+
+    def add(self, value):
+        from app.chat_reasoning import ReasoningDelta
+
+        kind, text = ("reasoning", value.text) if isinstance(value, ReasoningDelta) else ("text", value)
+        if self.kind is not None and self.kind != kind:
+            self.flush()
+        saved = (
+            self.message.metadata_json.get("reasoning_text", "")
+            if kind == "reasoning"
+            else self.message.content
+        )
+        limit = 65536 if kind == "reasoning" else 256000
+        if len(saved) + self.characters + len(text) > limit:
+            raise ProviderError(
+                "Thinking output exceeded its bound"
+                if kind == "reasoning"
+                else "Completion exceeded the output size limit"
+            )
+        if not self.parts:
+            self.deadline = self.clock() + DELIVERY_INTERVAL
+        self.kind = kind
+        self.parts.append(text)
+        self.characters += len(text)
+
+    def flush(self):
+        if not self.parts:
+            return
+        text, kind = "".join(self.parts), self.kind
+        self.parts, self.kind, self.characters = [], None, 0
+        try:
+            if kind == "reasoning":
+                self.message.metadata_json = {
+                    **self.message.metadata_json,
+                    "reasoning_text": self.message.metadata_json.get("reasoning_text", "") + text,
+                }
+                event_type = "chat.reasoning_delta"
+            else:
+                self.message.content += text
+                event_type = "chat.delta"
+            append_event(self.session, self.run.id, event_type, {"message_id": self.message.id, "text": text})
+            self.session.commit()
+            self.delivered.add(kind)
+        except BaseException:
+            self.session.rollback()
+            raise
+
 
 class ChatExecutor:
     name = "chat"
@@ -75,20 +137,34 @@ class ChatExecutor:
             messages = image_context(session, run, messages)
         params = {**run.parameters, "messages": messages}
         stream = completion_stream(session, params)
+        # Binding the provider can read private/model records. Finish that
+        # transaction before waiting on any network output.
+        session.commit()
+        loop = asyncio.get_running_loop()
+        delivery = _DeliveryBuffer(session, run, message, loop.time)
+        next_check = loop.time()
         pending = None
         try:
             async with asyncio.timeout(600):
                 while True:
-                    session.refresh(run)
-                    canceled = run.status == "cancel_requested"
-                    session.commit()
-                    if canceled:
-                        transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
-                        return
+                    if loop.time() >= next_check:
+                        session.refresh(run)
+                        canceled = run.status == "cancel_requested"
+                        session.commit()
+                        next_check = loop.time() + CANCELLATION_INTERVAL
+                        if canceled:
+                            delivery.flush()
+                            transition(
+                                session, run, RunStatus.CANCELED, event_type="run.canceled", payload={}
+                            )
+                            return
                     if pending is None:
                         pending = asyncio.create_task(anext(stream))
-                    ready, _ = await asyncio.wait([pending], timeout=0.25)
+                    deadline = min(next_check, delivery.deadline) if delivery.parts else next_check
+                    ready, _ = await asyncio.wait([pending], timeout=max(0, deadline - loop.time()))
                     if not ready:
+                        if delivery.parts and loop.time() >= delivery.deadline:
+                            delivery.flush()
                         continue
                     try:
                         token = pending.result()
@@ -96,34 +172,26 @@ class ChatExecutor:
                         break
                     finally:
                         pending = None
-                    from app.chat_reasoning import CompletionFinished, ReasoningDelta
+                    from app.chat_reasoning import CompletionFinished
 
                     if isinstance(token, CompletionFinished):
+                        delivery.flush()
                         message.metadata_json = {**message.metadata_json, "finish_reason": token.reason}
+                        session.commit()
                         if token.reason == "length":
                             raise ProviderError(
                                 "Output budget exhausted; the partial answer and thinking are preserved"
                             )
                         continue
 
-                    if isinstance(token, ReasoningDelta):
-                        text = message.metadata_json.get("reasoning_text", "") + token.text
-                        if len(text) > 65536:
-                            raise ProviderError("Thinking output exceeded its bound")
-                        message.metadata_json = {**message.metadata_json, "reasoning_text": text}
-                        append_event(
-                            session,
-                            run.id,
-                            "chat.reasoning_delta",
-                            {"message_id": message.id, "text": token.text},
-                        )
-                        session.commit()
-                        continue
-                    if len(message.content) + len(token) > 256000:
-                        raise ProviderError("Completion exceeded the output size limit")
-                    message.content += token
-                    append_event(session, run.id, "chat.delta", {"message_id": message.id, "text": token})
-                    session.commit()
+                    delivery.add(token)
+                    if (
+                        delivery.kind not in delivery.delivered
+                        or delivery.characters >= DELIVERY_CHARACTERS
+                        or loop.time() >= delivery.deadline
+                    ):
+                        delivery.flush()
+            delivery.flush()
             session.refresh(run)
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
@@ -151,6 +219,7 @@ class ChatExecutor:
             # error and always close inference, even if persistence fails.
             try:
                 if session.is_active:
+                    delivery.flush()
                     session.commit()
                 else:
                     session.rollback()

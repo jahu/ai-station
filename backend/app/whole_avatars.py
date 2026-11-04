@@ -14,7 +14,7 @@ from typing import Literal
 
 from fastapi import HTTPException
 from PIL import Image, ImageOps
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 from app.config import get_settings
 from app.db import utcnow
@@ -36,6 +36,14 @@ class WholeRecipe(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     id: Literal["sonic_whole_768_v1"]
     observation: str = Field(pattern=r"^[a-f0-9]{64}$")
+    environment_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.environment_id is None:
+            values.pop("environment_id", None)
+        return values
 
 
 def capabilities():
@@ -62,6 +70,8 @@ def verify_recipe(profile, value):
         or profile.get("max_side") != 768
         or profile.get("max_pixels") != 512 * 768
         or profile.get("fps") != 25
+        or profile.get("configuration_source") == "managed"
+        and not recipe.get("environment_id")
     ):
         raise HTTPException(
             409, "Whole-recording avatar setup changed or is unavailable; refresh before starting"
@@ -173,6 +183,18 @@ def create_whole_run(
         raise ValueError("Whole-recording execution requires its explicitly selected quality profile")
     profile = capabilities() if observed_profile is None else observed_profile
     selected = verify_recipe(profile, recipe if recipe is not None else profile.get("recipe"))
+    managed = {}
+    if selected.get("environment_id"):
+        eligible = profile.get("eligible_gpu_indices")
+        if (
+            not isinstance(eligible, list)
+            or not eligible
+            or any(type(i) is not int or i < 0 for i in eligible)
+        ):
+            raise HTTPException(409, "The managed avatar profile requires compatible GPU observations")
+        if body.gpu != "auto" and int(body.gpu) not in eligible:
+            raise HTTPException(422, "Choose a GPU compatible with the installed avatar profile")
+        managed = {"managed_avatar_gpu_indices": list(eligible)}
     inputs, observation = inspect_sources(session, body.image_artifact_id, body.audio_artifact_id)
     deadline = execution_deadline_at or (utcnow() + timedelta(seconds=MAX_SECONDS)).isoformat()
     execution_budget(deadline)
@@ -190,6 +212,7 @@ def create_whole_run(
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
+            **managed,
             "generation_profile": PROFILE,
             "whole_recipe": selected,
             "whole_inputs": inputs,
@@ -251,6 +274,15 @@ class WholeAvatarExecutor(HostMediaExecutor):
             append_event(session, run.id, "avatar.progress", current)
 
     def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters["whole_recipe"].get("environment_id"):
+            hardware = {
+                **hardware,
+                "gpus": [
+                    g
+                    for g in hardware.get("gpus", [])
+                    if int(g["index"]) in run.parameters.get("managed_avatar_gpu_indices", [])
+                ],
+            }
         count = run.parameters["gpu_count"]
         if type(count) is not int or count not in {1, 2}:
             raise ValueError("Invalid whole-recording GPU allocation policy")

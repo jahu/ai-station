@@ -1819,3 +1819,167 @@ it("shows the actual queued model dependency in the conversation result", () => 
       .getAttribute("href"),
   ).toBe("/runs/load");
 });
+
+it("opens a completed sound mix in its exact saved film editor", () => {
+  mountResults({
+    steps: [],
+    task_status: "succeeded",
+    sound_edits: [{ session_id: "private-mix", run_id: "render" }],
+  });
+  expect(
+    screen.getByRole("link", { name: "Edit sound mix" }).getAttribute("href"),
+  ).toBe("/video?mode=edit&session=private-mix");
+});
+
+it("adds described audio to a new film and clears it when switching actions", async () => {
+  let saved = emptyOptions;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [] })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    saved = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  chooseAction("video.generate");
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Add sound to this film" }),
+  );
+  fireEvent.change(
+    screen.getByRole("textbox", { name: "New film sound description" }),
+    { target: { value: "Rain in the forest" } },
+  );
+  expect(saved.effects?.prompt).toBe("Rain in the forest");
+  expect(saved.effects?.video_artifact_id).toBeNull();
+  expect(saved.effects?.preview_mode).toBe("mix");
+  expect(screen.queryByText("Source film")).toBeNull();
+  chooseAction("chat");
+  expect(saved.effects).toBeFalsy();
+  expect(
+    screen.queryByRole("textbox", { name: "New film sound description" }),
+  ).toBeNull();
+});
+
+it("keeps film sound results compact and labels the WAV as effects rather than speech", () => {
+  mountResults({
+    task_status: "succeeded",
+    steps: [
+      {
+        id: "stem",
+        capability: "audio.effects",
+        status: "succeeded",
+        summary: "",
+        error_message: "",
+        location: "local",
+      },
+    ],
+    artifacts: [
+      {
+        id: "film",
+        type: "video",
+        mime_type: "video/mp4",
+        original_filename: "film.mp4",
+        size_bytes: 20,
+        parent_artifact_ids: [],
+        metadata: {},
+        created_at: "2026-10-30T00:00:00Z",
+        run_id: "preview",
+      },
+      {
+        id: "stem",
+        type: "audio",
+        mime_type: "audio/wav",
+        original_filename: "effects.wav",
+        size_bytes: 20,
+        parent_artifact_ids: [],
+        metadata: {},
+        created_at: "2026-10-30T00:00:00Z",
+        run_id: "stem",
+      },
+    ],
+    sound_edits: [{ session_id: "mix", run_id: "preview" }],
+  });
+  expect(screen.getByLabelText("Film with sound").getAttribute("src")).toBe(
+    "/api/artifacts/film/file",
+  );
+  expect(
+    screen.getByLabelText("Generated sound effects").getAttribute("src"),
+  ).toBe("/api/artifacts/stem/file");
+  expect(
+    screen
+      .getByRole("link", { name: "Download effects WAV" })
+      .getAttribute("href"),
+  ).toBe("/api/artifacts/stem/file");
+  expect(screen.queryByText("Use as voice reference")).toBeNull();
+  expect(screen.queryByText("Lineage")).toBeNull();
+});
+
+it("does not keep an old failure alert after a sound retry succeeded", () => {
+  mountResults({
+    task_status: "succeeded",
+    steps: [
+      {
+        id: "old",
+        capability: "audio.effects",
+        status: "failed",
+        summary: "",
+        error_message: "Old inspected attempt",
+        location: "local",
+      },
+    ],
+  });
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("clears old scene timings when a new film changes back to a short preview", () => {
+  let saved: AssistantOptions = {
+    ...emptyOptions,
+    action: "video.generate",
+    media: { duration_seconds: 15, composition_mode: "continuous" },
+    effects: {
+      video_artifact_id: null,
+      prompt: "Rain",
+      cues: [{ start_frame: 0, end_frame: 360, prompt: "Thunder" }],
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [] })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(saved);
+    saved = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Video length" }), {
+    target: { value: "preview" },
+  });
+  expect(saved.media).toBeNull();
+  expect(saved.effects?.cues).toEqual([]);
+  expect(saved.effects?.prompt).toBe("Rain");
+});

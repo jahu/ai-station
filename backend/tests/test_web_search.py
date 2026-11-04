@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -39,6 +40,19 @@ def inference(monkeypatch):
     seen = []
 
     async def stream(self, **params):
+        if params.get("json_output"):
+            question = params["messages"][-1]["content"]
+            if question.startswith('{"recent_text":'):
+                question = json.loads(question)["question"]
+            yield json.dumps(
+                {
+                    "query": question,
+                    **(
+                        {"search_needed": True} if "search_needed" in params["messages"][0]["content"] else {}
+                    ),
+                }
+            )
+            return
         seen.append(params)
         yield "Supported by [llama.cpp](https://github.com/ggml-org/llama.cpp)."
 
@@ -488,7 +502,10 @@ def test_invalid_rewrite_and_irrelevant_sources_do_not_produce_a_factual_answer(
         route = conversation(client)
         queued = client.post(
             route + "/messages",
-            json={"content": "A detailed question without matching sources", "web_search": {"enabled": True}},
+            json={
+                "content": "A detailed question without matching sources",
+                "web_search": {"enabled": True, "query": "A detailed question without matching sources"},
+            },
         )
         step()
         run = client.get("/api/runs/" + queued.json()["id"]).json()
@@ -527,7 +544,7 @@ def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeyp
             route + "/messages",
             json={
                 "content": "A detailed question with missing search results",
-                "web_search": {"enabled": True},
+                "web_search": {"enabled": True, "query": "A detailed question with missing search results"},
             },
         )
         run_id = queued.json()["id"]
@@ -597,7 +614,14 @@ def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mod
         if params["messages"][0]["content"].startswith("Route the user's request"):
             yield '{"action":"chat","reason":"Research the follow-up question."}'
         elif params.get("json_output"):
-            yield '{"query":"' + resolved + '"}'
+            yield json.dumps(
+                {
+                    "query": resolved,
+                    **(
+                        {"search_needed": True} if "search_needed" in params["messages"][0]["content"] else {}
+                    ),
+                }
+            )
         else:
             yield "Check the actual sources; motives are not established."
 

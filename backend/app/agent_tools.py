@@ -57,7 +57,7 @@ AGENT_TOOLS = {
     ),
     "create_media": ToolSpec(
         name="create_media",
-        description="Create an image, music, full scene video, talking avatar or Polish speech artifact with the reviewed output settings. Speech requires an operator-selected Library WAV voice. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
+        description="Create an image, music, full scene video, talking avatar, Polish speech or film sound effects artifact with the reviewed output settings. Speech requires an operator-selected Library WAV voice; sound effects require a reviewed Library film. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
         risk_level="medium",
         required_permissions=("filesystem_read", "workspace_write"),
         timeout=MAX_AGENT_RUNTIME,

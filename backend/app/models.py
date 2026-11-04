@@ -27,7 +27,135 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
-class Task(Base):
+class Owned:
+    """Private roots. Transitional NULLs are quarantined by scoped sessions."""
+
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("NOT bootstrap_pending OR (is_admin AND NOT enabled)", name="ck_user_bootstrap"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    username: Mapped[str] = mapped_column(String(64))
+    normalized_username: Mapped[str] = mapped_column(String(128), unique=True)
+    display_name: Mapped[str] = mapped_column(String(120), default="")
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    bootstrap_pending: Mapped[bool] = mapped_column(Boolean, default=False)
+    legacy_operator: Mapped[bool] = mapped_column(Boolean, default=False)
+    password_record: Mapped[dict] = mapped_column(JSON, default=dict, deferred=True)
+    password_changed_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    totp_secret_ref: Mapped[str | None] = mapped_column(String(200), nullable=True, deferred=True)
+    totp_enabled_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recovery_code_hashes: Mapped[list] = mapped_column(JSON, default=list, deferred=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    lookup_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    token_record: Mapped[dict] = mapped_column(JSON, deferred=True)
+    label: Mapped[str] = mapped_column(String(160), default="")
+    legacy_operator_key: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    revoked_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    mfa_verified_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class UserSetting(Base):
+    __tablename__ = "user_settings"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_setting"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    key: Mapped[str] = mapped_column(String(160))
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class AccountEvent(Base):
+    __tablename__ = "account_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    actor_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subject_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(80), index=True)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
+
+
+class CreativeSession(Owned, Base):
+    __tablename__ = "creative_sessions"
+    __table_args__ = (
+        CheckConstraint(
+            "capability IN ('images','video','music','speech','avatars','effects','timeline')",
+            name="ck_creative_capability",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    capability: Mapped[str] = mapped_column(String(20), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    draft: Mapped[dict] = mapped_column(JSON, default=dict)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class CreativeTurn(Base):
+    __tablename__ = "creative_turns"
+    __table_args__ = (
+        UniqueConstraint("session_id", "client_request_id", name="uq_creative_turn_receipt"),
+        UniqueConstraint("session_id", "position", name="uq_creative_turn_position"),
+        CheckConstraint("position > 0", name="ck_creative_turn_position"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    session_id: Mapped[str] = mapped_column(ForeignKey("creative_sessions.id"), index=True)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), unique=True)
+    parent_turn_id: Mapped[str | None] = mapped_column(ForeignKey("creative_turns.id"), nullable=True)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    position: Mapped[int] = mapped_column(Integer)
+    feedback: Mapped[str] = mapped_column(Text, default="")
+    request_parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class TimelineRevision(Base):
+    __tablename__ = "timeline_revisions"
+    __table_args__ = (
+        UniqueConstraint("session_id", "client_request_id", name="uq_timeline_revision_receipt"),
+        UniqueConstraint("session_id", "position", name="uq_timeline_revision_position"),
+        CheckConstraint("position > 0", name="ck_timeline_revision_position"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    session_id: Mapped[str] = mapped_column(ForeignKey("creative_sessions.id"), index=True)
+    parent_revision_id: Mapped[str | None] = mapped_column(ForeignKey("timeline_revisions.id"), nullable=True)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    position: Mapped[int] = mapped_column(Integer)
+    manifest: Mapped[dict] = mapped_column(JSON)
+    sources: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class Task(Owned, Base):
     __tablename__ = "tasks"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -46,7 +174,7 @@ class Task(Base):
     runs: Mapped[list[Run]] = relationship(back_populates="task")
 
 
-class Run(Base):
+class Run(Owned, Base):
     __tablename__ = "runs"
     __table_args__ = (Index("uq_run_task_operation", "task_id", "operation_key", unique=True),)
     operation_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
@@ -114,7 +242,7 @@ class RunEvent(Base):
     run: Mapped[Run] = relationship(back_populates="events")
 
 
-class Artifact(Base):
+class Artifact(Owned, Base):
     __tablename__ = "artifacts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -137,7 +265,7 @@ class Artifact(Base):
     purge_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
-class Conversation(Base):
+class Conversation(Owned, Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -191,7 +319,7 @@ class Message(Base):
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
 
 
-class Project(Base):
+class Project(Owned, Base):
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -228,7 +356,7 @@ class Worktree(Base):
     expires_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
 
 
-class Agent(Base):
+class Agent(Owned, Base):
     __tablename__ = "agents"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -275,7 +403,7 @@ class Agent(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class Approval(Base):
+class Approval(Owned, Base):
     __tablename__ = "approvals"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -289,7 +417,7 @@ class Approval(Base):
     resolution: Mapped[str] = mapped_column(String(40), default="pending")
 
 
-class MemoryEntry(Base):
+class MemoryEntry(Owned, Base):
     __tablename__ = "memories"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -361,9 +489,19 @@ class ResourceLock(Base):
 
 class ModelFile(Base):
     __tablename__ = "model_files"
+    __table_args__ = (
+        UniqueConstraint("relative_path", name="uq_model_files_relative_path"),
+        CheckConstraint(
+            "(host_path IS NOT NULL AND relative_path IS NULL) OR "
+            "(host_path IS NULL AND relative_path IS NOT NULL AND sha256 IS NOT NULL)",
+            name="ck_model_file_location",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    host_path: Mapped[str] = mapped_column(String(1200), unique=True)
+    host_path: Mapped[str | None] = mapped_column(String(1200), unique=True, nullable=True)
+    relative_path: Mapped[str | None] = mapped_column(String(1200), nullable=True)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     filename: Mapped[str] = mapped_column(String(400))
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     mtime: Mapped[float] = mapped_column(Float, default=0)
@@ -419,11 +557,12 @@ class RuntimeInstance(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class Connector(Base):
+class Connector(Owned, Base):
     __tablename__ = "connectors"
+    __table_args__ = (UniqueConstraint("owner_id", "key", name="uq_connector_owner_key"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    key: Mapped[str] = mapped_column(String(80), unique=True)
+    key: Mapped[str] = mapped_column(String(80))
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(80), default="http")
     status: Mapped[str] = mapped_column(String(40), default="unconfigured")
@@ -437,11 +576,12 @@ class Connector(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class ChatProvider(Base):
+class ChatProvider(Owned, Base):
     __tablename__ = "chat_providers"
+    __table_args__ = (UniqueConstraint("owner_id", "key", name="uq_chat_provider_owner_key"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    key: Mapped[str] = mapped_column(String(80), unique=True)
+    key: Mapped[str] = mapped_column(String(80))
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(80), default="openai-compatible")
     location: Mapped[str] = mapped_column(String(20), default="local")

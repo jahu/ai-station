@@ -362,58 +362,72 @@ it("reviews a pending speech draft, selects and removes its Library voice withou
   expect(fetch.mock.calls.every(([url]) => !url.includes("/runs"))).toBe(true);
 });
 
-it("shows speech playback with the existing voice/Avatar source actions", async () => {
-  responses([
-    {
-      id: "speech",
-      type: "audio",
-      mime_type: "audio/wav",
-      title: "Daily brief",
-      original_filename: "brief.wav",
-      relative_path: "artifacts/brief.wav",
-      size_bytes: 9600,
-      run_id: "speech-run",
-      metadata: { capability: "audio.speech", duration_seconds: 0.2 },
-      parent_artifact_ids: [],
-      created_at: "2026-10-23T10:00:00Z",
-    },
-  ]);
-  render(
-    <Frame>
-      <AgentMediaResult
-        runs={[
-          {
-            id: "speech-run",
-            task_id: "speech-task",
-            project_id: null,
-            parent_run_id: null,
-            execution_target: "host",
-            created_at: "2026-10-23T10:00:00Z",
-            started_at: null,
-            finished_at: null,
-            actual_gpu: "7",
-            requested_gpu: "auto",
-            effective_permissions: ["filesystem_read", "workspace_write"],
-            summary: "Speech generated",
-            error_type: "",
-            worker_id: null,
-            executor_type: "chatterbox",
-            capability: "audio.speech",
-            status: "succeeded",
-            parameters: { text: "Dzień dobry." },
-            metadata: {},
-            error_message: "",
-          },
-        ]}
-      />
-    </Frame>,
-  );
-  await waitFor(() =>
-    expect(screen.getByLabelText("Generated audio")).toBeTruthy(),
-  );
-  expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
-});
+it.each(["chatterbox", "fish_speech"])(
+  "shows %s speech playback with the existing voice/Avatar source actions",
+  async (executor) => {
+    responses([
+      {
+        id: "speech",
+        type: "audio",
+        mime_type: "audio/wav",
+        title: "Daily brief",
+        original_filename: "brief.wav",
+        relative_path: "artifacts/brief.wav",
+        size_bytes: 9600,
+        run_id: "speech-run",
+        metadata: { capability: "audio.speech", duration_seconds: 0.2 },
+        parent_artifact_ids: [],
+        created_at: "2026-10-23T10:00:00Z",
+      },
+    ]);
+    render(
+      <Frame>
+        <AgentMediaResult
+          runs={[
+            {
+              id: "speech-run",
+              task_id: "speech-task",
+              project_id: null,
+              parent_run_id: null,
+              execution_target: "host",
+              created_at: "2026-10-23T10:00:00Z",
+              started_at: null,
+              finished_at: null,
+              actual_gpu: "7",
+              requested_gpu: "auto",
+              effective_permissions: ["filesystem_read", "workspace_write"],
+              summary: "Speech generated",
+              error_type: "",
+              worker_id: null,
+              executor_type: executor,
+              capability: "audio.speech",
+              status: "succeeded",
+              parameters: {
+                text: "Dzień dobry.",
+                ...(executor === "fish_speech"
+                  ? {
+                      backend: "fish_s2_pro",
+                      direction: "whisper",
+                      pace: "slow",
+                    }
+                  : {}),
+              },
+              metadata: {},
+              error_message: "",
+            },
+          ]}
+        />
+      </Frame>,
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Generated audio")).toBeTruthy(),
+    );
+    expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
+    if (executor === "fish_speech")
+      expect(screen.getByText("Fish S2 Pro · Whisper")).toBeTruthy();
+  },
+);
 
 it("edits full video timing and storyboard without exposing a receipt or short-clip frames", async () => {
   responses();
@@ -778,4 +792,278 @@ it("rejects generated lyric authority outside a goal-based vocal scope", () => {
       request: { ...base.request, instrumental: true },
     }),
   ).toContain("vocals");
+});
+
+it("reviews expressive speech direction separately from exact words and clears controls on model switches", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/audio/capabilities")
+          ? {
+              available: false,
+              engines: { fish_s2_pro: { available: true, readiness: "ready" } },
+            }
+          : url.includes("/hardware")
+            ? { gpus: [] }
+            : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>({
+      kind: "speech",
+      description_source: "fixed",
+      request: {
+        text: "Dokładne słowa.",
+        reference_artifact_id: "c23c77b2-e3d6-46ab-bc80-04108a4615c2",
+        delivery: { exaggeration: 1, cfg_weight: 0.4, temperature: 0.6 },
+      },
+    });
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Speak"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+          readiness={{
+            speech: { ready: false, reason: "Chatterbox unavailable" },
+          }}
+        />
+        <output aria-label="Reviewed speech">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("option", { name: "Fish S2 Pro · Expressive" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: "fish_s2_pro" },
+  });
+  fireEvent.change(screen.getByLabelText("Voice direction"), {
+    target: { value: "whisper" },
+  });
+  fireEvent.change(screen.getByLabelText("Speaking pace"), {
+    target: { value: "slow" },
+  });
+  let saved = JSON.parse(
+    screen.getByLabelText("Reviewed speech").textContent || "{}",
+  );
+  expect(saved.request).toMatchObject({
+    engine: "fish_s2_pro",
+    direction: "whisper",
+    pace: "slow",
+    text: "Dokładne słowa.",
+  });
+  expect(saved.request.delivery).toBeUndefined();
+  const agent = {
+    enabled: false,
+    name: "Narrator",
+    goal: "Speak",
+    tools: ["create_media"],
+    media: saved,
+  };
+  const catalog = [
+    {
+      name: "create_media",
+      description: "Create",
+      operational: true,
+      required_permissions: [],
+      outputs: {
+        speech: { ready: false, engines: { fish_s2_pro: { ready: true } } },
+      },
+    },
+  ];
+  expect(activationBlock(agent, catalog).blocked).toBe(false);
+  catalog[0].outputs.speech.engines.fish_s2_pro.ready = false;
+  expect(activationBlock(agent, catalog).blocked).toBe(true);
+  expect(screen.queryByText(/Chatterbox unavailable/)).toBeNull();
+  expect(
+    agentSettingsPayload({
+      updated_at: "reviewed-version",
+      name: "Narrator",
+      goal: "Speak",
+      tools: ["create_media"],
+      media: saved,
+    }).media,
+  ).toEqual(saved);
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: "" },
+  });
+  saved = JSON.parse(
+    screen.getByLabelText("Reviewed speech").textContent || "{}",
+  );
+  expect(saved.request.engine).toBeUndefined();
+  expect(saved.request.direction).toBeUndefined();
+  expect(saved.request.pace).toBeUndefined();
+  expect(saved.request.text).toBe("Dokładne słowa.");
+  expect(screen.queryByLabelText("Voice direction")).toBeNull();
+});
+
+it("reviews a Library film and exact scene sounds for a local effects agent", async () => {
+  const film = {
+    id: "11111111-1111-4111-8111-111111111111",
+    type: "video",
+    mime_type: "video/mp4",
+    original_filename: "Quiet garden.mp4",
+    metadata: { frames: 72, fps: 24, width: 1280, height: 704 },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/audio/effects/capabilities")
+          ? { available: true }
+          : path.includes("/hardware")
+            ? { gpus: [] }
+            : path === "/api/artifacts"
+              ? [film]
+              : path === "/api/artifacts/" + film.id
+                ? film
+                : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("effects", "Wind in the trees"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Wind in the trees"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Media scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  expect(screen.queryByLabelText("Upload speech")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Choose Quiet garden.mp4 11111111",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("Agent source film preview")).toBeTruthy(),
+  );
+  fireEvent.click(
+    screen.getByText("Change sounds over time", { exact: false }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Add scene direction" }));
+  fireEvent.change(screen.getByLabelText("Scene 1 sound description"), {
+    target: { value: "A bird calls in the trees" },
+  });
+  const saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(saved.kind).toBe("effects");
+  expect(saved.request.video_artifact_id).toBe(film.id);
+  expect(saved.request.prompt).toBe("Wind in the trees");
+  expect(saved.request.cues).toEqual([
+    { start_frame: 0, end_frame: 72, prompt: "A bird calls in the trees" },
+  ]);
+  expect(agentMediaIssue(saved)).toBeNull();
+  expect(
+    agentMediaIssue({
+      ...saved,
+      request: { ...saved.request, video_artifact_id: null },
+    }),
+  ).toMatch(/Choose a film/);
+});
+
+it("reviews a generated Fish voice without a recording and requires a source again when switching back", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/audio/capabilities")
+          ? {
+              engines: {
+                fish_s2_pro: {
+                  available: true,
+                  readiness: "ready",
+                  voice_sources: ["reference", "model"],
+                },
+              },
+            }
+          : url.includes("/hardware")
+            ? { gpus: [] }
+            : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>({
+      kind: "speech",
+      description_source: "fixed",
+      request: { text: "Dokładne słowa.", reference_artifact_id: null },
+    });
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Speak"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Voice review">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  const model = await screen.findByRole("combobox", { name: "Speech model" });
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("option", { name: /Fish S2 Pro/ }) as HTMLOptionElement)
+        .disabled,
+    ).toBe(false),
+  );
+  fireEvent.change(model, { target: { value: "fish_s2_pro" } });
+  let saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(saved.request).toMatchObject({
+    engine: "fish_s2_pro",
+    voice_source: "model",
+    reference_artifact_id: null,
+  });
+  expect(agentMediaIssue(saved)).toBeNull();
+  expect(screen.queryByText("Voice reference")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "Voice source" }), {
+    target: { value: "reference" },
+  });
+  saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(agentMediaIssue(saved)).toContain("voice");
+  expect(screen.getByText("Voice reference")).toBeTruthy();
+  fireEvent.change(model, { target: { value: "" } });
+  saved = JSON.parse(
+    screen.getByLabelText("Voice review").textContent!,
+  ) as AgentMediaScope;
+  expect(saved.request).not.toHaveProperty("voice_source");
 });

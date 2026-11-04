@@ -46,6 +46,9 @@ IMPLEMENTATION_FILES = (
     "whole_avatar_timing.py",
     "memory_scope.py",
     "security.py",
+    "avatar_environment.py",
+    "avatar_selection.py",
+    "environment_files.py",
 )
 
 
@@ -61,6 +64,11 @@ def direct_file(root, relative):
     root = Path(root).resolve()
     if type(relative) is not str or "\\" in relative:
         raise ValueError("Use a canonical relative file without symlinks")
+    from ai_station_runner.avatar_environment import model_reference
+
+    managed = model_reference(root, relative)
+    if managed is not None:
+        return managed
     path = resolve_child(root, relative)
     if path != root / relative or not path.is_file() or path.relative_to(root).as_posix() != relative:
         raise ValueError("Use a canonical relative file without symlinks")
@@ -108,12 +116,17 @@ def installation_observation(runtime, models):
 def checked_recipe(value):
     if (
         type(value) is not dict
-        or set(value) != {"id", "observation"}
+        or set(value) not in ({"id", "observation"}, {"id", "observation", "environment_id"})
         or value["id"] != PROFILE
         or type(value["observation"]) is not str
         or re.fullmatch("[0-9a-f]{64}", value["observation"]) is None
     ):
         raise ValueError("Choose the frozen whole-recording avatar profile")
+    if "environment_id" in value and (
+        type(value["environment_id"]) is not str
+        or re.fullmatch("[0-9a-f]{64}", value["environment_id"]) is None
+    ):
+        raise ValueError("Choose the exact opaque avatar environment")
     return dict(value)
 
 

@@ -15,10 +15,11 @@ from test_agent_drafts import state, step, submit
 from test_agent_media import implemented_media as implemented_media
 
 
-@pytest.mark.parametrize("kind", ["image", "music", "video", "avatar"])
+@pytest.mark.parametrize("kind", ["image", "music", "video", "avatar", "effects"])
 def test_media_draft_publishes_disabled_settings_without_generation(model, implemented_media, kind):
     calls, responses = model
     request = {
+        "effects": {"prompt": "Wind in the trees", "video_artifact_id": None},
         "image": {"mode": "t2i", "prompt": "New forest illustration"},
         "music": {"caption": "Calm piano", "duration_seconds": 60},
         "video": {"prompt": "Quiet forest film", "duration_seconds": 30},
@@ -56,6 +57,9 @@ def test_media_draft_publishes_disabled_settings_without_generation(model, imple
         if kind in {"video", "avatar"}:
             assert prompt["proposal_schema"]["properties"]["maximum_runtime"]["default"] is None
             assert agent["maximum_runtime"] == (14400 if kind == "video" else 7200)
+        if kind == "effects":
+            assert agent["maximum_runtime"] == 1800
+            assert agent["media"]["request"]["video_artifact_id"] is None
         if kind == "video":
             properties = prompt["proposal_schema"]["$defs"]["AgentVideoRequest"]["properties"]
             # Real local inference copied the advertised short-clip default into
@@ -177,3 +181,21 @@ def test_unspecified_non_media_runtime_keeps_existing_factory_defaults(instructi
     result = definition(proposal, instruction, "fake-local")
     assert result.maximum_runtime == expected
     assert not result.enabled and result.tools == tools
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [
+        {"video_artifact_id": str(uuid4())},
+        {"cues": [{"start_frame": 0, "end_frame": 24, "prompt": "A bird calls"}]},
+    ],
+)
+def test_effects_draft_cannot_invent_a_film_or_scene_timing(reference):
+    proposal = Proposal(
+        name="Film sound",
+        goal="Add film sounds",
+        tools=["create_media"],
+        media={"kind": "effects", "request": {"prompt": "Wind in trees", **reference}},
+    )
+    with pytest.raises(ValueError, match="Do not invent"):
+        definition(proposal, "Create an agent that adds sound to a film", "fake-local")

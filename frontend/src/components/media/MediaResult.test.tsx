@@ -16,6 +16,36 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("retains measured progress and Stop in a direct generation result", () => {
+  mount(
+    {
+      id: "running-image",
+      status: "running",
+      capability: "image.generate",
+      parameters: {},
+      generation_progress: {
+        phase: "generating",
+        fraction: { completed: 4, total: 8, unit: "sampling steps" },
+        elapsed_seconds: 30,
+        estimate: {
+          lower_seconds: 20,
+          upper_seconds: 40,
+          scope: "sampling",
+          basis: "observed sampling speed",
+        },
+      },
+    } as Run,
+    { id: "portrait1", sources: [], derived: [] },
+    portrait,
+  );
+  expect(
+    screen
+      .getByRole("progressbar", { name: "Image measured progress" })
+      .getAttribute("value"),
+  ).toBe("4");
+  expect(screen.getByRole("button", { name: /Stop/ })).not.toBeNull();
+});
+
 const portrait: Artifact = {
   id: "portrait1",
   type: "image",

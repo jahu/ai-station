@@ -20,6 +20,9 @@ from app.media_translation_text import TranslationOptions
 class ImageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     translation: TranslationOptions | None = None
+    model_selection: Literal["auto"] | None = None
+    model_selection_revision: int | None = Field(default=None, ge=0, strict=True)
+    _selection: dict | None = PrivateAttr(default=None)
 
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut", "krea2"] = "qwen"
@@ -46,9 +49,25 @@ class ImageRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_existing_image_identity(self, handler):
         values = handler(self)
-        for key in ("model_id", "reference_strength", "reference_layout", "grounding_px", "translation"):
+        for key in (
+            "model_id",
+            "reference_strength",
+            "reference_layout",
+            "grounding_px",
+            "translation",
+            "model_selection",
+            "model_selection_revision",
+        ):
             if values.get(key) is None:
                 values.pop(key, None)
+        if self.model_selection == "auto":
+            # Retain user intent rather than serializing Qwen's provisional
+            # defaults as explicit overrides for a later automatic model.
+            values = {
+                key: value
+                for key, value in values.items()
+                if key in self._explicit_fields or key == "prompt_style"
+            }
         return values
 
     @field_validator("gpu")
@@ -59,6 +78,24 @@ class ImageRequest(BaseModel):
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
         self._explicit_fields = set(self.model_fields_set)
+        if self.model_selection is not None and (
+            self.mode not in {"img2img", "recompose"}
+            or self.model_id is not None
+            or "backend" in self._explicit_fields
+        ):
+            raise ValueError("Auto applies to Edit/Recompose; omit explicit model and backend")
+        if self.model_selection is None and self.model_selection_revision is not None:
+            raise ValueError("A selection revision requires Auto")
+        if (
+            self.model_selection == "auto"
+            and "prompt_style" in self._explicit_fields
+            and self.prompt_style != "instruction"
+        ):
+            raise ValueError(
+                "Auto uses instruction-only editing; choose an explicit model for legacy styling"
+            )
+        if self.model_selection == "auto":
+            self.prompt_style = "instruction"
         if self.prompt_style == "prompt" and self.mode != "t2i":
             raise ValueError("Prompt-only styling applies to Generate")
         if self.prompt_style == "instruction" and self.mode not in {"img2img", "recompose"}:

@@ -211,6 +211,7 @@ def model_dict(row: ModelFile) -> dict:
     return {
         "id": row.id,
         "host_path": row.host_path,
+        **({"relative_path": row.relative_path, "sha256": row.sha256} if row.relative_path else {}),
         "filename": row.filename,
         "size_bytes": row.size_bytes,
         "mtime": row.mtime,
@@ -224,6 +225,24 @@ def model_dict(row: ModelFile) -> dict:
 
 
 def runtime_dict(row: RuntimeInstance) -> dict:
+    from sqlalchemy.orm import object_session
+
+    from app.data_access import ScopedSession, accessible_run_id
+    from app.runtime_coordination import account_runtime_observation
+
+    metadata = dict(row.metadata_json)
+    session = object_session(row)
+    if (
+        isinstance(session, ScopedSession)
+        and row.runtime_key == "llama.cpp"
+        and not session.scope.inspect_all
+    ):
+        for key, value in list(metadata.items()):
+            if key.endswith("_run_id") and isinstance(value, str) and accessible_run_id(row, value) is None:
+                del metadata[key]
+        for key in ("observation", "health"):
+            if isinstance(metadata.get(key), dict):
+                metadata[key] = account_runtime_observation(session, metadata[key])
     return {
         "id": row.id,
         "runtime_key": row.runtime_key,
@@ -231,6 +250,6 @@ def runtime_dict(row: RuntimeInstance) -> dict:
         "ownership": row.ownership,
         "endpoint": row.endpoint,
         "status": row.status,
-        "metadata": row.metadata_json,
+        "metadata": metadata,
         "updated_at": iso(row.updated_at),
     }

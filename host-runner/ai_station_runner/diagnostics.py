@@ -8,13 +8,15 @@ from pathlib import Path
 
 import httpx
 
+from ai_station_runner import nvidia
+
 
 def check(name: str, status: str, detail: str = "") -> dict:
     return {"name": name, "status": status, "detail": detail}
 
 
 def command_version(binary: str, args: list[str] | None = None) -> dict:
-    path = shutil.which(binary)
+    path = shutil.which(nvidia.executable() if binary == "nvidia-smi" else binary)
     if not path:
         return check(binary, "unavailable", "Not on PATH")
     try:
@@ -85,14 +87,22 @@ def _sonic() -> dict:
 
 
 def collect_diagnostics(settings) -> dict:
+    from ai_station_runner.speech_selection import selection
+
+    speech = selection(settings) or {}
+    speech_checks = [
+        file_check("chatterbox_script", str(speech.get("script") or "")),
+        file_check("chatterbox_python", str(speech.get("python") or "")),
+    ]
+    if speech.get("managed"):
+        speech_checks = [{**value, "detail": "AI Station managed speech runtime"} for value in speech_checks]
     checks = [
         command_version("docker"),
         command_version("docker", ["compose", "version"]) | {"name": "docker compose"},
         _nvidia_toolkit(),
         command_version("nvidia-smi"),
         file_check("photo_pipe", settings.photo_script),
-        file_check("chatterbox_script", settings.chatterbox_script),
-        file_check("chatterbox_python", settings.chatterbox_python),
+        *speech_checks,
         file_check("echomimic_python", settings.echomimic_python),
         file_check(
             "echomimic_entry",

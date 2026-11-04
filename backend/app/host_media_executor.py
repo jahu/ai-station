@@ -48,7 +48,7 @@ class HostMediaExecutor:
             return "done"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         session.commit()
-        runner = RunnerClient()
+        runner = self.runner(run)
         hardware = runner.hardware() if self.requires_gpu or run.requested_resources.get("ram_mib") else {}
         indexes = [int(gpu["index"]) for gpu in hardware.get("gpus", [])] if self.requires_gpu else []
         session.refresh(run)
@@ -121,6 +121,9 @@ class HostMediaExecutor:
 
         verify_media_inputs(session, run)
         self.validate_inputs(session, run)
+        from app.generation_progress import begin_timing
+
+        begin_timing(session, run, hardware)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
@@ -137,6 +140,7 @@ class HostMediaExecutor:
             except RunnerError as inspection:
                 if inspection.status_code != 404:
                     raise
+                self.fence_missing_dispatch(runner, run)
                 session.refresh(run)
                 run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
                 release_run_locks(session, run.id)
@@ -161,6 +165,12 @@ class HostMediaExecutor:
 
     def validate_inputs(self, session, run):
         """Optional bounded source check before recording a native dispatch."""
+
+    def runner(self, run):
+        return RunnerClient()
+
+    def fence_missing_dispatch(self, runner, run):
+        """Container adapters must fence a potentially delayed dispatch before release."""
 
     def reserve_devices(self, session, run, indexes):
         return reserve_gpu(session, run, indexes)
@@ -195,6 +205,7 @@ class HostMediaExecutor:
 
     def _poll(self, session, run, runner, output):
         offsets = {"stdout_offset": 0, "stderr_offset": 0}
+        progress_buffers = {}
         while True:
             session.refresh(run)
             cancel_expired_run(session, run.id)
@@ -204,6 +215,9 @@ class HostMediaExecutor:
                 runner.cancel_process(run.id)
             info = runner.inspect_process(run.id, **offsets)
             self.on_inspection(session, run, info)
+            from app.generation_progress import observe
+
+            observe(session, run, info, buffers=progress_buffers)
             for stream in ("stdout", "stderr"):
                 text = info.get(stream, "")
                 if text:

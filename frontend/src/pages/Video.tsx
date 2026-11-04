@@ -1,3 +1,11 @@
+import CreativeWorkspace from "../components/creative/CreativeWorkspace";
+import {
+  useCreative,
+  useCreativeDraft,
+  creativeRun,
+  creativeJob,
+} from "../components/creative/creative-context";
+import type { ReactNode } from "react";
 import MediaJobResult from "../components/media/MediaJobResult";
 import {
   useMediaJob,
@@ -23,6 +31,7 @@ import {
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
+import TimelineEditor from "./TimelineEditor";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
 import VideoMemoryProfile, {
   type VideoProfile,
@@ -33,7 +42,11 @@ import {
   type SceneDraft,
 } from "../components/media/video-scenes";
 
-export default function Video() {
+export default function Video({
+  withCreativeSessions = false,
+}: {
+  withCreativeSessions?: boolean;
+}) {
   const [search, setSearch] = useSearchParams();
   const currentRun = useMediaRun(search.get("run") ?? "");
   const currentJob = useMediaJob(search.get("job") ?? "");
@@ -41,18 +54,29 @@ export default function Video() {
     mediaBusy(currentRun.data) ||
     jobBusy(currentJob.data) ||
     (!!search.get("job") && currentJob.isPending);
+  const editing = search.get("mode") === "edit";
   const avatar =
     search.get("mode") === "avatar" ||
     !!search.get("audio") ||
     currentJob.data?.kind === "avatar";
+  function wrap(
+    capability: "video" | "avatars" | "timeline",
+    child: ReactNode,
+  ) {
+    return withCreativeSessions ? (
+      <CreativeWorkspace capability={capability}>{child}</CreativeWorkspace>
+    ) : (
+      child
+    );
+  }
   return (
     <>
       <nav className="mode-tabs" aria-label="Video type">
         <button
           type="button"
           disabled={busy}
-          aria-pressed={!avatar}
-          className={!avatar ? "active" : ""}
+          aria-pressed={!avatar && !editing}
+          className={!avatar && !editing ? "active" : ""}
           onClick={() => setSearch(new URLSearchParams())}
         >
           Create a scene
@@ -66,65 +90,110 @@ export default function Video() {
         >
           Talking avatar
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          aria-pressed={editing}
+          className={editing ? "active" : ""}
+          onClick={() => setSearch({ mode: "edit" })}
+        >
+          Edit a film
+        </button>
       </nav>
-      {avatar ? (
-        <Avatars video />
-      ) : (
-        <VideoForm
-          key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
-          initialImage={
-            search.get("input") ??
-            currentJob.data?.request?.image_artifact_id ??
-            ""
-          }
-          initialRequest={currentJob.data?.request}
-        />
-      )}
+      {editing
+        ? wrap("timeline", <TimelineEditor />)
+        : avatar
+          ? wrap("avatars", <Avatars video />)
+          : wrap(
+              "video",
+              <VideoForm
+                key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
+                initialImage={
+                  search.get("input") ??
+                  currentJob.data?.request?.image_artifact_id ??
+                  ""
+                }
+                initialRequest={currentJob.data?.request}
+              />,
+            )}
     </>
   );
 }
 
-function VideoForm({
+function VideoForm(props: {
+  initialImage: string;
+  initialRequest?: MediaRequest;
+}) {
+  const creative = useCreative();
+  return <SceneForm key={creative?.formKey ?? "legacy"} {...props} />;
+}
+function SceneForm({
   initialImage,
   initialRequest,
 }: {
   initialImage: string;
   initialRequest?: MediaRequest;
 }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const saved = (
+    Object.keys(initial).length
+      ? (initial.formState ?? initial)
+      : (initialRequest ?? {})
+  ) as Record<string, unknown>;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [mode, setMode] = useState(initialImage ? "animate" : "generate");
-  const [image, setImage] = useState(initialImage);
-  const [prompt, setPrompt] = useState(initialRequest?.prompt ?? "");
+  const [mode, setMode] = useState(
+    String(
+      saved.mode ??
+        ((saved.image_artifact_id ?? initialImage) ? "animate" : "generate"),
+    ),
+  );
+  const [image, setImage] = useState(
+    String(saved.image ?? saved.image_artifact_id ?? initialImage),
+  );
+  const [prompt, setPrompt] = useState(String(saved.prompt ?? ""));
   const [translation, setTranslation] = useState<TranslationOptions>(
-    initialRequest?.translation ?? {
+    (saved.translation as TranslationOptions | undefined) ?? {
       mode: "inherit",
       review: false,
       protected_terms: [],
     },
   );
   const [negative, setNegative] = useState(
-    initialRequest?.negative_prompt ?? "",
+    String(saved.negative ?? saved.negative_prompt ?? ""),
   );
-  const [resolution, setResolution] = useState(
-    initialRequest?.width && initialRequest?.height
-      ? `${initialRequest.width}x${initialRequest.height}`
-      : "1280x704",
+  const [resolutionChoice, setResolution] = useState(
+    String(
+      saved.resolution ??
+        (saved.width && saved.height
+          ? `${saved.width}x${saved.height}`
+          : "1280x704"),
+    ),
   );
   const [duration, setDuration] = useState(
-    initialRequest?.duration_seconds
-      ? `${initialRequest.duration_seconds}s`
-      : "49",
+    String(
+      saved.duration ??
+        (saved.duration_seconds
+          ? `${saved.duration_seconds}s`
+          : (saved.frames ?? "49")),
+    ),
   );
   const [compositionMode, setCompositionMode] = useState<
     "continuous" | "shots"
-  >(initialRequest?.composition_mode ?? "continuous");
+  >(
+    (saved.compositionMode ?? saved.composition_mode ?? "continuous") as
+      "continuous" | "shots",
+  );
   const [scenePlanning, setScenePlanning] = useState(
-    !!initialRequest?.scenes?.length,
+    Boolean(
+      saved.scenePlanning ??
+      (Array.isArray(saved.scenes) && saved.scenes.length),
+    ),
   );
   const [scenes, setScenes] = useState<SceneDraft[]>(
     () =>
-      initialRequest?.scenes?.map((scene, index) => ({
+      (saved.scenes as SceneDraft[] | undefined)?.map((scene, index) => ({
         ...scene,
         key: `saved-${index}`,
       })) ?? [{ key: "first", prompt: "", duration_seconds: 5 }],
@@ -136,19 +205,24 @@ function VideoForm({
     0,
   );
   const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
-  const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
+  const [stepsChoice, setSteps] = useState(Number(saved.steps ?? 20));
   const [profileChoice, setProfileChoice] = useState<VideoProfile | null>(
-    initialRequest ? (initialRequest.memory_profile ?? "default") : null,
+    (saved.profileChoice ??
+      saved.memory_profile ??
+      (initialRequest ? "default" : null)) as VideoProfile | null,
   );
-  const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
-  const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
+  const [seed, setSeed] = useState(Number(saved.seed ?? 43));
+  const [gpu, setGpu] = useState(String(saved.gpu ?? "auto"));
   const [uploading, setUploading] = useState(false);
   const capability = useQuery({
     queryKey: ["video-capabilities"],
     queryFn: () => api<VideoCapabilities>("/video/capabilities"),
   });
+  const managed = capability.data?.configuration_source === "managed";
+  const resolution = managed ? "1280x704" : resolutionChoice;
+  const steps = managed ? Math.max(20, stepsChoice) : stepsChoice;
   const memoryProfile: VideoProfile =
-    profileChoice ??
+    (managed ? "bounded_11g" : profileChoice) ??
     (mode === "generate" &&
     resolution === "1280x704" &&
     steps >= 20 &&
@@ -158,6 +232,24 @@ function VideoForm({
     capability.data.recommended_memory_profile === "bounded_11g"
       ? "bounded_11g"
       : "default");
+  useCreativeDraft({
+    formState: {
+      mode,
+      image,
+      prompt,
+      translation,
+      negative,
+      resolution,
+      duration,
+      compositionMode,
+      scenePlanning,
+      scenes,
+      steps,
+      profileChoice: capability.data ? memoryProfile : profileChoice,
+      seed,
+      gpu,
+    },
+  });
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -196,6 +288,13 @@ function VideoForm({
               }
             : {}),
         };
+        if (creative)
+          return creativeJob(
+            await creative.generate(body, {
+              kind: "job",
+              feedback: creative.draft._creative_parent_turn_id ? prompt : "",
+            }),
+          );
         const key = await chatRequestId("video-job", JSON.stringify(body));
         return api<MediaJob>("/media/jobs/video", {
           method: "POST",
@@ -203,6 +302,13 @@ function VideoForm({
           body: JSON.stringify({ ...body, client_request_id: key }),
         });
       }
+      if (creative)
+        return creativeRun(
+          await creative.generate(
+            { ...values, frames: Number(duration) },
+            { feedback: creative.draft._creative_parent_turn_id ? prompt : "" },
+          ),
+        );
       return api<Run>("/video/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -267,8 +373,19 @@ function VideoForm({
         Describe the motion, or start with an image. Create a silent video and
         preview it here.
         {memoryProfile === "bounded_11g" &&
-          " Reduced-RAM landscape profile selected. Change it in Advanced settings."}
+          (managed
+            ? " Installed landscape profile · 11 GiB RAM. Clips and longer films use the same saved workspace."
+            : " Reduced-RAM landscape profile selected. Change it in Advanced settings.")}
       </PageTitle>
+      {capability.data?.available === false && (
+        <div className="notice" role="status">
+          <strong>Set up local video to create your first film.</strong>
+          <p>{capability.data.reason}</p>
+          <Button asChild variant="secondary">
+            <Link to="/setup/models?capability=video">Set up video</Link>
+          </Button>
+        </div>
+      )}
       <div className="media-workspace">
         <form
           className="panel media-composer"
@@ -318,6 +435,7 @@ function VideoForm({
               <MediaInput
                 kind="image"
                 label="First frame"
+                uploadLabel="Upload first frame"
                 hint="PNG or JPEG · up to 20 MB"
                 value={image}
                 onChange={setImage}
@@ -352,7 +470,7 @@ function VideoForm({
                 <select
                   aria-label="Format"
                   value={resolution}
-                  disabled={profileChoice === "bounded_11g"}
+                  disabled={managed || profileChoice === "bounded_11g"}
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -478,7 +596,7 @@ function VideoForm({
                   Steps
                   <input
                     type="number"
-                    min={profileChoice === "bounded_11g" ? 20 : 4}
+                    min={managed || profileChoice === "bounded_11g" ? 20 : 4}
                     max={40}
                     value={steps}
                     onChange={(event) => setSteps(Number(event.target.value))}
@@ -497,7 +615,13 @@ function VideoForm({
               </div>
               <GpuTargetChoiceList
                 value={gpu}
-                gpus={hardware.data?.gpus ?? []}
+                gpus={
+                  hardware.data?.gpus.filter(
+                    (g) =>
+                      !managed ||
+                      capability.data?.eligible_gpu_indices?.includes(g.index),
+                  ) ?? []
+                }
                 disabled={busy || uploading}
                 onChange={setGpu}
               />
@@ -535,17 +659,18 @@ function VideoForm({
             </p>
           </fieldset>
         </form>
-        {jobId ? (
-          <MediaJobResult id={jobId} job={job.data} error={job.error} />
-        ) : (
-          <MediaResult
-            kind="video"
-            videoMode="scene"
-            runId={runId}
-            run={run.data}
-            error={run.error}
-          />
-        )}
+        {!creative &&
+          (jobId ? (
+            <MediaJobResult id={jobId} job={job.data} error={job.error} />
+          ) : (
+            <MediaResult
+              kind="video"
+              videoMode="scene"
+              runId={runId}
+              run={run.data}
+              error={run.error}
+            />
+          ))}
       </div>
     </>
   );

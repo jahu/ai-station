@@ -10,6 +10,11 @@ Initial native boundary helpers are not an operational adapter. See
 
 ## Task
 
+Creative media use an owner-scoped `CreativeSession` with a versioned draft and
+append-only `CreativeTurn` history. Each turn links an ordinary Task, initial Run,
+selected parent turn and frozen request. Full film/avatar turns retain their
+complete existing MediaJob graph. [Contracts](creative-workspaces.md).
+
 A task is user intent: a prompt, a routed capability, and optional links to a project, conversation, or agent. A task does not execute anything by itself. It owns one or more runs.
 
 ## Run

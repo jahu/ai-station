@@ -1,3 +1,8 @@
+Creative workspaces group existing generation Tasks into private version history.
+Atomic receipts prevent duplicate dispatch; full-film/avatar state and Stop follow
+the complete Task graph rather than only its initial Run. No new executor or
+native authority is introduced. [Contracts](creative-workspaces.md).
+
 The [Echo appearance recipe](plans/echo-continuation-quality.md) snapshots
 its fixed recipe in new full-avatar Tasks and agent workflows. Speech planning,
 segments, composition and retries preserve that snapshot. Resume refuses changed
@@ -35,6 +40,15 @@ reuses the existing source-bound context handoff, public tools and isolated
 workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
+
+The staged account profile shares model runtimes without sharing private Run
+graphs. A consumer of another account's pending llama.cpp startup depends on an
+owner-local readiness Run bound to immutable startup/source observations. It
+yields the worker between checks, expires within its original bound and cannot
+dispatch, inspect or cancel a host process. Recovery repeats observation only;
+producer failure or source replacement fails the private prerequisite. Physical
+GPU/RAM reservations are released by exact managed-model coordination only after
+confirmed shutdown. See [account enablement contracts](accounts.md).
 
 Permanent Library deletion parks an immutable selection in an existing Approval
 before a worker removes any bytes. Per-item committed intent makes recovery
@@ -174,6 +188,25 @@ Planned explicit retry creates a new run with `parent_run_id`; it is not exposed
 4. The run becomes `canceled`.
 
 The runner will not signal a pid that is absent from its ownership table. It never uses `pkill` or `killall`.
+
+Managed native launch reads its kernel boot identity before creating the child.
+Unavailable identity/platform preflight leaves no launched process or new Run
+logs. Existing Linux ownership records and deadline/recovery semantics remain
+unchanged. The separate [Darwin identity probe](plans/macos-consumer-installation.md)
+is read-only: it neither adopts processes nor authorizes signals. Mac execution
+still requires qualified group, descendant, deadline, recovery and resource policy.
+
+The internal DarwinProcessManager candidate shares this same lifecycle through
+platform identity/launch hooks. It starts a fixed, isolated native exec barrier,
+captures a versioned boot/UID/microsecond/session/group identity, then releases
+the already-admitted workload only after the existing atomic journal write.
+The PID, session and process group survive exec. Cancellation and recovery use
+that native format and a bounded native group query, including descendants after
+leader exit; Linux start ticks are never reinterpreted. The normal Runner still
+constructs the Linux manager. `AI_STATION_REAL_MAC_PROCESS_TESTS=1` opts into the
+same candidate contract tests on an actual Mac (no models required); normal Linux
+controls exercise the barrier and shared lifecycle with explicitly simulated
+Darwin facts and cannot qualify native Mac execution.
 
 ## Scheduler
 

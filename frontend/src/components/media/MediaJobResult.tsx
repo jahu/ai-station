@@ -11,6 +11,7 @@ import PromptTranslation, {
   type TranslationRecovery,
 } from "./PromptTranslation";
 import { useMediaRun } from "./media-run";
+import GenerationProgress from "./GenerationProgress";
 
 function animationTime(seconds: number) {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
@@ -172,6 +173,15 @@ export default function MediaJobResult({
           {["queued", "preparing", "generating", "composing"].includes(
             job.status,
           ) && <ResourceWaitNotice wait={job.resource_wait} />}
+          {busy &&
+            job.active_generation_progress?.map((stage) => (
+              <GenerationProgress
+                key={stage.run_id}
+                progress={stage}
+                status={stage.status}
+                label={`${job.kind === "avatar" ? "Avatar" : "Video"} step`}
+              />
+            ))}
           <div className="media-job-progress">
             <progress
               max={
@@ -318,6 +328,16 @@ export default function MediaJobResult({
           ))}
         </>
       )}
+      {job?.soundtrack_status &&
+        !["succeeded", "failed"].includes(job.soundtrack_status) && (
+          <p className="muted" role="status">
+            {job.soundtrack_status === "waiting_for_film"
+              ? "Sound will be created after the film."
+              : job.soundtrack_status === "mixing"
+                ? "Mixing the film and sound. The final movie will appear after verification."
+                : "Creating the synchronized sound effects track."}
+          </p>
+        )}
       <ErrorNotice
         error={
           error ?? current.error ?? artifact.error ?? stop.error ?? resume.error

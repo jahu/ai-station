@@ -79,7 +79,24 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
-        if run.executor_type in {"llama_load", "llama_stop", "private_access", "artifact_purge"}:
+        if run.executor_type in {
+            "llama_load",
+            "llama_stop",
+            "llama_wait",
+            "private_access",
+            "artifact_purge",
+            "runtime_setup",
+            "speech_setup",
+            "image_setup",
+            "music_setup",
+            "video_setup",
+            "avatar_setup",
+            "effects_setup",
+            "fish_setup",
+            "native_llama_setup",
+        }:
+            # A readiness waiter only reads shared infrastructure observations;
+            # it can resume without inspecting or dispatching any host process.
             # Purges resume only their approved artifact snapshot and committed
             # per-item intent. Unlinked bytes and tombstones are idempotent.
             # The native create/start/stop journal is keyed by immutable runtime
@@ -111,8 +128,25 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:
             continue  # A live worker renewed its lease while inspection ran.
+        if (
+            run.parameters.get("managed_image_runtime")
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("known") is False
+            and info.get("reachable") is True
+        ):
+            # 404 is not proof that a delayed start cannot still arrive. The
+            # typed Stop persists a native tombstone before resources are freed.
+            from app.managed_image_client import fence_missing_dispatch
+
+            try:
+                info = {**fence_missing_dispatch(runner, run), "reachable": True}
+            except (RunnerError, RunnerUnavailable, ValueError):
+                info = {"reachable": False}
+            session.refresh(run)
         if info.get("reachable") is False and (
-            run.execution_target == "host" or run.executor_type == "python"
+            run.execution_target == "host"
+            or run.executor_type == "python"
+            or run.parameters.get("managed_image_runtime")
         ):
             # A dispatch can succeed before its response/pid is persisted. Keep
             # reservations and retry inspection; never repeat an uncertain send.

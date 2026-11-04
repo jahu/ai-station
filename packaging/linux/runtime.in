@@ -1,0 +1,4 @@
+# Native media decoding/mixing and the desktop supervisor; no test packages.
+python-dotenv
+av
+numpy

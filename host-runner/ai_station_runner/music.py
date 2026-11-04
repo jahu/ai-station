@@ -1,6 +1,7 @@
 """Owned, typed local music launch using an explicitly configured offline preset."""
 
 import fcntl
+import json
 import os
 import subprocess
 from functools import lru_cache
@@ -8,7 +9,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.music_protocol import MANIFEST_SHA256, model_manifest, no_symlink, verify_source
@@ -30,7 +31,15 @@ class MusicRequest(BaseModel):
     seed: int = Field(ge=0, le=2**31 - 1, strict=True)
     gpu: int = Field(ge=0, strict=True)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    runtime_manifest_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.runtime_manifest_sha256 is None:
+            values.pop("runtime_manifest_sha256", None)
+        return values
 
     @model_validator(mode="after")
     def lyrics_match_mode(self):
@@ -51,17 +60,22 @@ def directory(run_id):
 
 
 def configured():
+    from ai_station_runner.music_selection import selection
+
     settings = get_settings()
-    if not all((settings.music_python, settings.music_source_dir, settings.music_model_dir)):
+    chosen = selection(settings) or {}
+    if not all(chosen.get(key) for key in ("python", "source", "models")):
         raise ValueError("Configure a separate offline ACE-Step Python, source and checkpoint first")
-    python = Path(settings.music_python).expanduser().absolute()
+    python, source, model = (chosen[key].absolute() for key in ("python", "source", "models"))
     if not python.is_file() or not os.access(python, os.X_OK):
         raise ValueError("Music Python is unavailable")
-    model = no_symlink(settings.music_model_dir)
+    model, source = no_symlink(model), no_symlink(source)
     ensure_within(model, settings.roots())
-    source = no_symlink(settings.music_source_dir)
     ensure_within(source, settings.roots())
-    model_manifest(model)
+    model_manifest(
+        model,
+        immutable_root=settings.host_data_dir().resolve() / "models/store" if chosen.get("managed") else None,
+    )
     verify_source(source)
     return python, source, model
 
@@ -96,10 +110,28 @@ def capabilities():
         python, source, model = configured()
         if not runtime_ready(python, source, python.stat().st_mtime_ns):
             raise ValueError("Offline music runtime dependencies are unavailable")
-        if not collect(get_settings().host_data_dir()).get("gpus"):
+        hardware = collect(get_settings().host_data_dir())
+        if not hardware.get("gpus"):
             raise ValueError("Local music requires an available GPU")
+        from ai_station_runner.music_selection import selection
+
+        chosen = selection(get_settings()) or {}
+        eligible = [
+            int(g["index"]) for g in hardware.get("gpus", []) if (g.get("memory_total_mib") or 0) >= 12288
+        ]
+        if chosen.get("managed") and not eligible:
+            raise ValueError("The managed music profile requires an NVIDIA GPU with 12 GiB VRAM")
         return {
             "available": True,
+            "configuration_source": "managed" if chosen.get("managed") else "configured",
+            **(
+                {
+                    "runtime_manifest_sha256": chosen["observation"]["manifest_sha256"],
+                    "eligible_gpu_indices": eligible,
+                }
+                if chosen.get("managed")
+                else {}
+            ),
             "profile_sha256": MANIFEST_SHA256,
             "backend": "ace-step-1.5",
             "min_seconds": 10,
@@ -142,10 +174,36 @@ def start(manager, body):
             pass
         else:
             raise ValueError("Run already owns a process")
-        python, source, model = configured()
+        from ai_station_runner import music_environment
+        from ai_station_runner.music_selection import selection
+
+        chosen = selection(get_settings()) or {}
+        managed = chosen.get("managed") is True
+        if managed:
+            if body.runtime_manifest_sha256 != chosen["observation"]["manifest_sha256"]:
+                raise ValueError("The managed music runtime must match its frozen manifest")
+            python, source, model = (chosen[key] for key in ("python", "source", "models"))
+            snapshot = root / "environment.json"
+            if snapshot.exists():
+                frozen = music_environment.read_json(snapshot)
+                chosen = music_environment.resolve(get_settings().host_data_dir(), frozen)
+                python, source, model = (chosen[key] for key in ("python", "source", "models"))
+            else:
+                snapshot.write_text(json.dumps(chosen["observation"]))
+                snapshot.chmod(0o600)
+        else:
+            if body.runtime_manifest_sha256:
+                raise ValueError("The selected managed music runtime is no longer active")
+            python, source, model = configured()
         data_root = get_settings().host_data_dir().resolve()
-        if body.gpu not in {int(device["index"]) for device in collect(data_root).get("gpus", [])}:
+        devices = collect(data_root).get("gpus", [])
+        if body.gpu not in {int(device["index"]) for device in devices}:
             raise ValueError("Requested music GPU is not present")
+        if managed and not any(
+            int(device["index"]) == body.gpu and (device.get("memory_total_mib") or 0) >= 12288
+            for device in devices
+        ):
+            raise ValueError("The requested GPU does not fit the managed music profile")
         output_relative = f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.wav"
         output = resolve_child(data_root, output_relative)
         if output != data_root / output_relative or output.exists():
@@ -169,17 +227,30 @@ def start(manager, body):
             "OMP_NUM_THREADS": "2",
             "TOKENIZERS_PARALLELISM": "false",
         }
+        argv = [
+            str(python),
+            "-m",
+            "ai_station_runner.music_entry",
+            run_id,
+            str(data_root),
+            str(model),
+            str(source),
+        ]
+        if managed:
+            from ai_station_runner.memory_scope import scope_environment, scope_prefix
+
+            argv = [*scope_prefix(run_id, 12288 if body.duration_seconds <= 60 else 18432), *argv]
+            home = root / "home"
+            home.mkdir(mode=0o700, exist_ok=True)
+            environment = {
+                **environment,
+                **scope_environment(),
+                "HOME": str(home),
+                "NUMBA_CACHE_DIR": str(root / "cache/numba"),
+            }
         return manager.start(
             run_id=run_id,
-            argv=[
-                str(python),
-                "-m",
-                "ai_station_runner.music_entry",
-                run_id,
-                str(data_root),
-                str(model),
-                str(source),
-            ],
+            argv=argv,
             cwd=root,
             executor=EXECUTOR,
             env=environment,

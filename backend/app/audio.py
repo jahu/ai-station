@@ -24,6 +24,16 @@ DB = Annotated[Session, Depends(session_scope)]
 MAX_BYTES = 20 * 1024 * 1024
 
 
+@router.get("/capabilities")
+def capabilities():
+    from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+
+    try:
+        return RunnerClient().request("GET", "/v1/audio/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        return {"available": False, "delivery": None}
+
+
 def wav_metadata(data, *, max_seconds=60):
     if len(data) > MAX_BYTES:
         raise ValueError("WAV must be at most 20 MiB")
@@ -70,7 +80,20 @@ def generate(body: SpeechRequest, session: DB):
 
 
 def create_audio_run(session, body, *, task=None, parent_run_id=None):
-    reference = session.get(Artifact, str(body.reference_artifact_id))
+    reference = session.get(Artifact, str(body.reference_artifact_id)) if body.reference_artifact_id else None
+    if body.engine == "fish_s2_pro":
+        from app.fish_speech import create_fish_run
+        from app.recordings import FORMATS
+
+        if body.voice_source == "model":
+            return create_fish_run(session, body, None, task=task, parent_run_id=parent_run_id)
+        if (
+            reference is None
+            or reference.artifact_type != "audio"
+            or reference.mime_type not in {value[0] for value in FORMATS.values()}
+        ):
+            raise HTTPException(422, "Choose a voice recording")
+        return create_fish_run(session, body, reference, task=task, parent_run_id=parent_run_id)
     if reference is None or reference.artifact_type != "audio" or reference.mime_type != "audio/wav":
         raise HTTPException(422, "Choose a WAV reference artifact")
     path = safe_join(get_settings().data_dir, reference.relative_path)
@@ -96,6 +119,7 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None):
             "reference_relative": reference.relative_path,
             "parent_artifact_ids": [reference.id],
             "backend": "chatterbox",
+            **({"delivery": body.delivery.model_dump()} if body.delivery is not None else {}),
         },
     )
     return run
@@ -107,7 +131,54 @@ class AudioExecutor(HostMediaExecutor):
     artifact_type = "audio"
     mime_type = "audio/wav"
 
+    def execute(self, session, run):
+        from app.runner_client import RunnerClient
+        from app.task_control import lock_task
+
+        session.refresh(run)
+        if self._cancel_before_dispatch(session, run):
+            return "done"
+        worker, claim = run.worker_id, run.claimed_at
+        session.commit()
+        capabilities = RunnerClient().request("GET", "/v1/audio/capabilities")
+        if capabilities.get("configuration_source") == "managed":
+            lock_task(session, run.task)
+            session.refresh(run)
+            if run.worker_id != worker or run.claimed_at != claim:
+                session.rollback()
+                return "done"
+            manifest = capabilities.get("runtime_manifest_sha256")
+            if not manifest or run.parameters.get("speech_runtime_manifest_sha256", manifest) != manifest:
+                raise ValueError("The selected managed speech runtime changed before execution")
+            run.requested_resources = {
+                **run.requested_resources,
+                "ram_mib": max(4096, run.requested_resources.get("ram_mib", 0)),
+            }
+            run.parameters = {
+                **run.parameters,
+                "speech_runtime_manifest_sha256": manifest,
+                "speech_runtime_eligible_gpus": capabilities.get("eligible_gpu_indices") or [],
+            }
+            session.commit()
+        return super().execute(session, run)
+
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("speech_runtime_manifest_sha256"):
+            eligible = run.parameters.get("speech_runtime_eligible_gpus") or []
+            gpus = [gpu for gpu in hardware.get("gpus", []) if int(gpu["index"]) in eligible]
+            if not gpus:
+                raise ValueError("Managed speech needs an NVIDIA GPU with at least 6 GiB VRAM")
+            hardware = {**hardware, "gpus": gpus}
+        return super().reserve_devices_from_hardware(session, run, hardware)
+
     def validate_inputs(self, session, run):
+        if run.parameters.get("delivery") is not None and not run.parameters.get("delivery_source_sha256"):
+            from app.runner_client import RunnerClient
+
+            delivery = RunnerClient().request("GET", "/v1/audio/capabilities").get("delivery")
+            if not delivery or delivery.get("version") != "chatterbox-controls-v1":
+                raise ValueError("The configured speech runtime does not support delivery controls")
+            run.parameters = {**run.parameters, "delivery_source_sha256": delivery["source_sha256"]}
         if run.parameters.get("whole_avatar_sources"):
             from app.whole_avatars import verify_snapshots
 
@@ -118,6 +189,14 @@ class AudioExecutor(HostMediaExecutor):
             verify_published_inputs(session, run)
 
     def on_success(self, session, run, artifact):
+        if run.parameters.get("delivery") is not None:
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "speech_delivery": {
+                    **run.parameters["delivery"],
+                    "source_sha256": run.parameters["delivery_source_sha256"],
+                },
+            }
         if run.parameters.get("whole_avatar_sources"):
             from app.whole_avatars import verify_snapshots
 
@@ -135,6 +214,7 @@ class AudioExecutor(HostMediaExecutor):
             AvatarRequest(**definition, audio_artifact_id=artifact.id),
             task=run.task,
             parent_run_id=run.id,
+            preparation_policy=run.parameters.get("avatar_prompt_policy"),
         )
         child.effective_permissions = list(run.effective_permissions)
         child.triggered_by = run.triggered_by
@@ -153,6 +233,19 @@ class AudioExecutor(HostMediaExecutor):
                 "reference_relative": run.parameters["reference_relative"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {"runtime_manifest_sha256": run.parameters["speech_runtime_manifest_sha256"]}
+                    if run.parameters.get("speech_runtime_manifest_sha256")
+                    else {}
+                ),
+                **(
+                    {
+                        "delivery": run.parameters["delivery"],
+                        "delivery_source_sha256": run.parameters["delivery_source_sha256"],
+                    }
+                    if run.parameters.get("delivery") is not None
+                    else {}
+                ),
                 **self.native_budget(run),
             },
         )

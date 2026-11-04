@@ -1,6 +1,7 @@
 """Durable segmented video jobs built from existing Runs, dependencies and artifacts."""
 
 import json
+from datetime import timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.dependencies import depend_on
 from app.execution_limits import MAX_AGENT_RUNTIME
+from app.generation_progress import active_progress
 from app.host_media_executor import HostMediaExecutor
 from app.media_plan import duration_frames, timeline
 from app.models import Artifact, Run, Task
@@ -26,6 +28,8 @@ from app.video import (
     VideoRequest,
     capabilities,
     create_video_run,
+    managed_native_budget,
+    managed_parameters,
     memory_reservation,
     valid_guidance_observation,
 )
@@ -103,6 +107,12 @@ def publish_video(
             raise HTTPException(409, "Media plan belongs to a different reviewed publication")
         return job_view(session, task)
     reservation = memory_reservation(body, observed_profile)
+    managed = managed_parameters(body, observed_profile)
+    if managed and not budget:
+        execution_deadline_at = (utcnow() + timedelta(hours=72)).isoformat()
+        # Manual long films previously had no whole-film expiry. Bound the
+        # managed route while preserving any explicit reviewed agent budget.
+        budget = {"execution_deadline_at": execution_deadline_at}
     # Freeze conditioning with the timeline. Old Runners and saved/resumed plans
     # retain their original prefix; a capable Runner never silently changes it.
     prefixes = observed_profile.get("continuation_frames")
@@ -193,10 +203,12 @@ def publish_video(
         capability="media.compose",
         executor_type="media_compose",
         execution_target="host",
+        requested_resources={"ram_mib": 4096} if managed else {},
         operation_key="media:1:compose:attempt:1",
         parameters={
             **budget,
             "stage_run_ids": [run.id for run in runs],
+            **({"managed_runtime": managed["managed_runtime"]} if managed else {}),
             "timeline": timing.model_dump(mode="json"),
             "width": body.width,
             "height": body.height,
@@ -223,6 +235,7 @@ def publish_video(
             **budget,
             **({"agent_media_parent_run_id": parent_run_id} if budget else {}),
             "version": 1,
+            **({"managed_runtime": managed["managed_runtime"]} if managed else {}),
             "profile_observation": observed_profile.get("profile_observation"),
             "revision": 1,
             "kind": "video",
@@ -257,6 +270,12 @@ def preview_artifact(session, plan):
 
 
 def job_view(session, task):
+    from app.film_sound import overlay
+
+    return overlay(session, task, video_job_view(session, task))
+
+
+def video_job_view(session, task):
     plan = task.metadata_json["media_plan"]
     if plan.get("version") == 2 and plan.get("kind") == "avatar":
         from app.whole_avatar_jobs import view
@@ -269,6 +288,7 @@ def job_view(session, task):
         active = [r.id for r in stages if r.status not in TERMINAL]
         return {
             "task_id": task.id,
+            "active_generation_progress": active_progress(stages),
             "request": plan["request"],
             "preview_artifact_id": None,
             "revision": plan["revision"],
@@ -323,6 +343,7 @@ def job_view(session, task):
         status = "queued"
     return {
         "task_id": task.id,
+        "active_generation_progress": active_progress(stages.values()),
         "request": plan["request"],
         "preview_artifact_id": preview_artifact(session, plan),
         "revision": plan["revision"],
@@ -490,7 +511,12 @@ class CompositionExecutor(HostMediaExecutor):
             "/v1/runs/media-compose",
             {
                 "run_id": run.id,
-                **self.native_budget(run),
+                **(
+                    {"managed_runtime": run.parameters["managed_runtime"]}
+                    if run.parameters.get("managed_runtime")
+                    else {}
+                ),
+                **managed_native_budget(run),
                 **({"audio": sound} if sound else {}),
                 "permissions": run.effective_permissions,
                 "clips": clips,
@@ -585,6 +611,10 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Media plan changed; refresh before resuming")
     if not view["resume_allowed"] or plan["revision"] >= 20:
         raise HTTPException(409, "Inspect active/completed work before resuming")
+    if task.metadata_json.get("soundtrack_plan") and video_job_view(session, task)["status"] == "succeeded":
+        from app.film_sound import resume_sound
+
+        return resume_sound(session, task, body, receipts, key, plan)
     if plan.get("version") == 2 and plan.get("kind") == "avatar":
         from app.whole_avatar_jobs import resume as resume_whole
 
@@ -604,6 +634,8 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
     elif plan.get("request", {}).get("memory_profile", "default") != "default":
         memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
     observed = profile.get("profile_observation")
+    if plan.get("managed_runtime") and plan["managed_runtime"] != profile.get("managed_runtime"):
+        raise HTTPException(409, "The managed video environment changed; start a new media job")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")
     selected_ids = (
@@ -744,6 +776,11 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         operation_key=f"media:{next_revision}:compose:attempt:1",
         parameters={**old_compose.parameters, "stage_run_ids": new_ids},
         permissions=list(old_compose.effective_permissions),
+        requested_resources=(
+            {"ram_mib": 4096}
+            if old_compose.parameters.get("managed_runtime")
+            else dict(old_compose.requested_resources)
+        ),
         parent_run_id=old_compose.id,
         retry_class="inspect",
     )
@@ -777,6 +814,23 @@ def save_resume(session, task, plan, updated, receipts, key, body):
         "media_plan": updated,
         RESOURCE_WAIT_KEY: None,
     }
+    sound = task.metadata_json.get("soundtrack_plan")
+    if sound and sound["source_run_id"] != updated.get("compose_run_id"):
+        from app.film_sound import enqueue
+
+        old = session.get(Run, sound["prepare_run_id"])
+        task.metadata_json = {
+            **task.metadata_json,
+            "soundtrack_revisions": [*task.metadata_json.get("soundtrack_revisions", []), sound],
+        }
+        enqueue(
+            session,
+            session.get(Run, sound["root_run_id"]),
+            updated["compose_run_id"],
+            old.parameters["profile"],
+            old.parameters["renderer"],
+            revision=sound["revision"] + 1,
+        )
     result = job_view(session, task)
     task.metadata_json = {
         **task.metadata_json,
@@ -798,6 +852,33 @@ class FullAvatarRequest(FullAvatarSettings):
     client_request_id: UUID
 
 
+def prepare_avatar_prompts(session, task):
+    plan = task.metadata_json["media_plan"]
+    if plan.get("version") != 1 or plan.get("kind") != "avatar" or plan.get("timing") is None:
+        return
+    body = FullAvatarRequest.model_validate(plan["request"])
+    if body.translation is None:
+        return
+    from app.media_translation import enqueue_groups
+
+    identifiers = enqueue_groups(
+        session,
+        [
+            (
+                session.get(Run, identity),
+                body.translation.model_dump(),
+                task.metadata_json.get("avatar_prompt_policy"),
+            )
+            for identity in plan["segment_run_ids"]
+        ],
+    )
+    if identifiers:
+        task.metadata_json = {
+            **task.metadata_json,
+            "media_plan": {**plan, "translation_consumer_run_ids": identifiers},
+        }
+
+
 def publish_avatar(
     session,
     body,
@@ -807,6 +888,7 @@ def publish_avatar(
     execution_deadline_at=None,
     observed_profile=None,
     appearance_snapshot=None,
+    _prepare_translation=True,
 ):
     if body.generation_profile is not None:
         from app.whole_avatar_jobs import publish
@@ -822,7 +904,7 @@ def publish_avatar(
         )
     import wave
 
-    from app.avatars import AvatarRequest, create_avatar_run
+    from app.avatars import AvatarRequest, create_avatar_run, freeze_prompt_policy
     from app.avatars import capabilities as avatar_capabilities
     from app.avatars import memory_reservation as avatar_memory
     from app.media_plan import audio_frames
@@ -892,6 +974,9 @@ def publish_avatar(
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
         raise HTTPException(422, "Choose an available PNG/JPEG portrait")
+    policy = freeze_prompt_policy(
+        session, body, task.metadata_json.get("avatar_prompt_policy") if task else None
+    )
     if body.speech_text is not None:
         from app.audio import SpeechRequest, create_audio_run
 
@@ -907,6 +992,8 @@ def publish_avatar(
             session.flush()
         lock_task(session, task)
         task.metadata_json = {**task.metadata_json, "media_request": request}
+        if policy is not None:
+            task.metadata_json = {**task.metadata_json, "avatar_prompt_policy": policy}
         speech = create_audio_run(
             session,
             SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
@@ -984,6 +1071,8 @@ def publish_avatar(
         session.add(task)
         session.flush()
     lock_task(session, task)
+    if policy is not None:
+        task.metadata_json = {**task.metadata_json, "avatar_prompt_policy": policy}
     revision = task.metadata_json.get("media_plan", {}).get("revision", 1)
     runs = []
     previous = None
@@ -998,9 +1087,15 @@ def publish_avatar(
             gpu=body.gpu,
             frames=segment.generated_frames,
             memory_profile=body.memory_profile,
+            translation=body.translation,
         )
         run = create_avatar_run(
-            session, settings, task=task, parent_run_id=parent_run_id, observed_profile=avatar_profile
+            session,
+            settings,
+            task=task,
+            parent_run_id=parent_run_id,
+            observed_profile=avatar_profile,
+            _prepare_translation=False,
         )
         run.operation_key = f"media:{revision}:segment:{segment.index}:attempt:1"
         run.requested_resources = {"ram_mib": reservation}
@@ -1064,6 +1159,8 @@ def publish_avatar(
         },
     }
     session.flush()
+    if _prepare_translation:
+        prepare_avatar_prompts(session, task)
     return job_view(session, task)
 
 
@@ -1124,6 +1221,7 @@ class AvatarPlannerExecutor:
             task=run.task,
             parent_run_id=run.id,
             execution_deadline_at=run.parameters.get("execution_deadline_at"),
+            _prepare_translation=False,
         )
         if frozen_inputs:
             for stage in session.scalars(
@@ -1138,6 +1236,7 @@ class AvatarPlannerExecutor:
                     ],
                 }
                 stage.triggered_by = run.triggered_by
+        prepare_avatar_prompts(session, run.task)
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={})
         transition(
             session,

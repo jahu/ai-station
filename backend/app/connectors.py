@@ -263,13 +263,17 @@ def active_check(session: Session, connector_id: str, *, excluding: str | None =
 
 
 def apply_secret(row: Connector, *, secret_ref: str | None = None, secret: str | None = None, clear=False):
+    from app.secrets import record_secret_key, validate_record_secret_ref
+
+    if secret_ref is not None and not clear and not secret:
+        secret_ref = validate_record_secret_ref(row, secret_ref)
     if clear:
         clear_secret_file(row.secret_ref)
         row.secret_ref = ""
         return
     if secret:
         clear_secret_file(row.secret_ref)
-        row.secret_ref = store_secret_file(row.id, secret.strip())
+        row.secret_ref = store_secret_file(record_secret_key(row), secret.strip())
         return
     if secret_ref is not None:
         if secret_ref != row.secret_ref:

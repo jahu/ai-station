@@ -29,7 +29,7 @@ function mount(entry = "/avatars") {
   return client;
 }
 
-function wholeRuntime(checking = false) {
+function wholeRuntime(checking = false, echoAvailable = true) {
   const writes: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
@@ -68,12 +68,20 @@ function wholeRuntime(checking = false) {
                 readiness: checking ? "checking" : "ready",
               }
             : path.endsWith("capabilities")
-              ? { available: true }
+              ? { available: echoAvailable }
               : path.endsWith("hardware")
                 ? { gpus: [] }
                 : path.includes("/media/jobs")
                   ? job
-                  : input,
+                  : path.includes("/runs")
+                    ? {
+                        id: "echo-run",
+                        status: "queued",
+                        parameters: {},
+                        metadata: {},
+                        executor_type: "echomimic",
+                      }
+                    : input,
       };
     }),
   );
@@ -85,6 +93,9 @@ it("defaults new full recordings to stable detail and sends only applicable cont
   mount("/avatars?image=portrait&audio=speech");
   await screen.findByRole("region", { name: "High-detail avatar quality" });
   expect(screen.queryByLabelText("Scene and motion")).toBeNull();
+  expect(
+    screen.queryByRole("checkbox", { name: /Improve my prompt locally/ }),
+  ).toBeNull();
   expect(screen.queryByLabelText("Quality 384")).toBeNull();
   const generate = screen.getByRole("button", {
     name: "Generate avatar video",
@@ -104,6 +115,46 @@ it("defaults new full recordings to stable detail and sends only applicable cont
   expect(writes[0]).not.toHaveProperty("steps");
   expect(writes[0]).not.toHaveProperty("size");
   expect(writes[0]).not.toHaveProperty("memory_profile");
+  expect(writes[0]).not.toHaveProperty("translation");
+});
+
+it("offers the installed Sonic engine when an unavailable short-preview mode is selected", async () => {
+  const writes = wholeRuntime(false, false);
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByRole("region", { name: "High-detail avatar quality" });
+  fireEvent.click(screen.getByLabelText("Full recording (up to 60 seconds)"));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use installed Sonic" }),
+  );
+  expect(
+    screen.getByRole("region", { name: "High-detail avatar quality" }),
+  ).toBeTruthy();
+  expect(writes).toHaveLength(0);
+});
+
+it("sends local enhancement only for an Echo descriptive prompt", async () => {
+  const writes = wholeRuntime();
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByRole("region", { name: "High-detail avatar quality" });
+  fireEvent.click(screen.getByLabelText("Full recording (up to 60 seconds)"));
+  fireEvent.click(
+    await screen.findByRole("checkbox", { name: /Improve my prompt locally/ }),
+  );
+  const generate = screen.getByRole("button", {
+    name: "Generate avatar video",
+  });
+  await vi.waitFor(() => expect(generate.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(generate);
+  await vi.waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    translation: {
+      mode: "off",
+      enhance: true,
+      review: false,
+      protected_terms: [],
+    },
+  });
+  expect(writes[0]).not.toHaveProperty("generation_profile");
 });
 
 it("keeps high-detail submission disabled during verification instead of switching to Echo", async () => {
@@ -561,9 +612,9 @@ it.each([false, true])(
     if (!failed)
       expect(
         screen
-          .getByRole("link", { name: "Inspect system" })
+          .getByRole("link", { name: "Set up avatars" })
           .getAttribute("href"),
-      ).toBe("/system");
+      ).toBe("/setup/models?capability=avatar");
   },
 );
 

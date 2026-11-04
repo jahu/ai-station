@@ -4,12 +4,14 @@ import fcntl
 import os
 import signal
 import socket
+import sys
 from pathlib import Path
 
 import uvicorn
 
 from ai_station_runner.app import app, manager
 from ai_station_runner.config import get_settings
+from ai_station_runner.unix_sockets import unix_address
 
 
 def main() -> None:
@@ -28,13 +30,15 @@ def main() -> None:
         if path.exists():
             with socket.socket(socket.AF_UNIX) as probe:
                 try:
-                    probe.connect(str(path))
+                    with unix_address(path) as address:
+                        probe.connect(address)
                 except ConnectionRefusedError:
                     path.unlink()
                 else:
                     raise SystemExit("The configured socket already has a listener")
         with socket.socket(socket.AF_UNIX) as listener:
-            listener.bind(str(path))
+            with unix_address(path) as address:
+                listener.bind(address)
             os.chmod(path, 0o600)
             listener.listen(128)
             try:
@@ -46,17 +50,28 @@ def main() -> None:
 
                 signal.signal(signal.SIGTERM, terminate)
                 signal.signal(signal.SIGINT, terminate)
-                from ai_station_runner.tailnet_api import manager as private_manager
+                if sys.platform == "linux":
+                    # The userspace tailnet service has a Linux-only recipe.
+                    # Native process support must not activate it on macOS.
+                    from ai_station_runner.tailnet_api import manager as private_manager
 
-                try:
-                    private_manager().restore()
-                except (ValueError, OSError, KeyError, TypeError):
-                    # No private paths, auth links or node keys in ordinary logs.
-                    print("Private access recovery needs operator inspection", flush=True)
+                    try:
+                        private_manager().restore()
+                    except (ValueError, OSError, KeyError, TypeError):
+                        # No private paths, auth links or node keys in ordinary logs.
+                        print("Private access recovery needs operator inspection", flush=True)
                 uvicorn.Server(uvicorn.Config(app, log_level="info")).run(sockets=[listener])
             finally:
                 try:
-                    manager().shutdown()
+                    from ai_station_runner.native_llama_api import close
+
+                    close()
+                    # Native shared models, like Linux model containers, outlive
+                    # Runner replacement. Explicit typed Stop owns their exit.
+                    if sys.platform == "darwin":
+                        manager().shutdown(preserve_executors=frozenset({"llama_native"}))
+                    else:
+                        manager().shutdown()
                 finally:
                     path.unlink(missing_ok=True)
 

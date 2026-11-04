@@ -1,0 +1,35 @@
+.image-model-guidance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #34432e;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #192118, #171b18);
+  color: #e4ecdf;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.image-model-guidance > strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.image-model-guidance > p,
+.image-model-guidance > small {
+  margin: 0;
+  color: var(--muted);
+}
+.image-model-guidance > small {
+  font-size: 11px;
+}
+.image-model-guidance > button {
+  max-width: 100%;
+  white-space: normal;
+}
+.image-model-guidance--suggestion {
+  border-color: #454131;
+  background: #1c1c18;
+}

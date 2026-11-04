@@ -255,6 +255,11 @@ def completion_stream(session, params):
         **({"reasoning": params["reasoning"]} if params.get("reasoning") is not None else {}),
         **({"json_output": True} if params.get("json_output") is True else {}),
         **({"require_complete": True} if params.get("require_complete") is True else {}),
+        **(
+            {"response_fields": params["response_fields"]}
+            if params.get("response_fields") is not None
+            else {}
+        ),
     )
 
 
@@ -269,6 +274,9 @@ def require_external_permission(run) -> None:
 
 
 def _apply_secret(row: ChatProvider, *, secret: str | None, secret_ref: str, clear: bool) -> None:
+    from app.secrets import record_secret_key, validate_record_secret_ref
+
+    parsed = validate_record_secret_ref(row, secret_ref) if not clear and not secret else ""
     previous = row.secret_ref
     if clear:
         clear_secret_file(previous)
@@ -276,9 +284,8 @@ def _apply_secret(row: ChatProvider, *, secret: str | None, secret_ref: str, cle
         return
     if secret:
         clear_secret_file(previous)
-        row.secret_ref = store_secret_file(row.id, secret)
+        row.secret_ref = store_secret_file(record_secret_key(row), secret)
         return
-    parsed = parse_secret_ref(secret_ref)
     if parsed != previous:
         clear_secret_file(previous)
     row.secret_ref = parsed

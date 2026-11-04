@@ -205,7 +205,7 @@ def test_previous_memory_edit_during_update_is_preserved(monkeypatch, fake):
     assert api.get(path).json()["summary"]["content"] == "User correction"
 
 
-def test_summary_migration_preserves_conversation_and_memory(fake):
+def test_summary_migration_preserves_conversation_and_memory(fake, legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
@@ -214,7 +214,7 @@ def test_summary_migration_preserves_conversation_and_memory(fake):
     api.post(f"/api/chat/conversations/{cid}/summarize")
     execute()
     memory_id = api.get(f"/api/chat/conversations/{cid}").json()["summary"]["memory_id"]
-    command.downgrade(alembic_config(), "0002")
+    legacy_schema("0002")
     command.upgrade(alembic_config(), "head")
     reset_engine()
     assert len(api.get(f"/api/chat/conversations/{cid}").json()["messages"]) == 20
@@ -325,12 +325,12 @@ def test_automatic_summary_failure_preserves_successful_reply_without_retry(fake
         assert session.scalar(select(func.count()).select_from(Run)) == expected
 
 
-def test_automatic_context_migration_defaults_off_and_preserves_history():
+def test_automatic_context_migration_defaults_off_and_preserves_history(legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
     cid = seed()
-    command.downgrade(alembic_config(), "0006")
+    legacy_schema("0006")
     command.upgrade(alembic_config(), "head")
     reset_engine()
     detail = TestClient(app).get(f"/api/chat/conversations/{cid}").json()
@@ -425,7 +425,7 @@ def test_automatic_summary_chunks_an_oversized_uncovered_message(fake):
     assert summary["enabled"] and summary["covered_offset"] > 0
 
 
-def test_coverage_offset_migration_defaults_zero_and_preserves_summary(fake):
+def test_coverage_offset_migration_defaults_zero_and_preserves_summary(fake, legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
@@ -433,7 +433,7 @@ def test_coverage_offset_migration_defaults_zero_and_preserves_summary(fake):
     api = TestClient(app)
     api.post(f"/api/chat/conversations/{cid}/summarize")
     execute()
-    command.downgrade(alembic_config(), "0015")
+    legacy_schema("0015")
     command.upgrade(alembic_config(), "head")
     reset_engine()
     summary = api.get(f"/api/chat/conversations/{cid}").json()["summary"]

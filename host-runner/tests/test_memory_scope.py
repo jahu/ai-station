@@ -6,7 +6,7 @@ import pytest
 from ai_station_runner import memory_scope
 
 
-@pytest.mark.parametrize("maximum", [11264, 12288])
+@pytest.mark.parametrize("maximum", [4096, 11264, 12288, 24576])
 def test_fixed_scope_bounds_have_no_caller_selected_systemd_properties(monkeypatch, maximum):
     monkeypatch.setattr(memory_scope.shutil, "which", lambda name: "/usr/bin/systemd-run")
     run_id = str(uuid4())
@@ -24,7 +24,7 @@ def test_unqualified_memory_bounds_never_build_a_launch_command(value):
         memory_scope.scope_prefix(str(uuid4()), value)
 
 
-@pytest.mark.parametrize("value", ["../another-unit", "not-a-uuid", str(uuid4()).upper()])
+@pytest.mark.parametrize("value", ["../another-unit", "not-a-uuid", "B63F31A8-5F14-461C-8486-AB19234BACDE"])
 def test_scope_names_cannot_escape_the_owned_run(value):
     with pytest.raises(ValueError):
         memory_scope.scope_prefix(value, 11264)

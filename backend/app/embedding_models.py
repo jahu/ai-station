@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 
 from app.paths import PathBoundaryError, safe_join
@@ -42,7 +43,16 @@ def descriptor():
         "cpu_threads": CPU_THREADS,
         "repository": REPOSITORY,
         "revision": REVISION,
-        "source_url": "https://huggingface.co/" + REPOSITORY,
+        "source_url": f"https://huggingface.co/{REPOSITORY}/tree/{REVISION}",
+        "files": [
+            {
+                "filename": name,
+                "size_bytes": item["size"],
+                "sha256": item["sha256"],
+                "url": f"https://huggingface.co/{REPOSITORY}/resolve/{REVISION}/{item['remote']}",
+            }
+            for name, item in FILES.items()
+        ],
         "original_model_url": "https://huggingface.co/intfloat/multilingual-e5-small",
     }
 
@@ -131,3 +141,22 @@ def installation(root):
 
 def dependencies_available():
     return all(importlib.util.find_spec(name) is not None for name in ["onnxruntime", "tokenizers", "numpy"])
+
+
+def storage(root):
+    present = 0
+    for name, item in FILES.items():
+        try:
+            path = model_file(root, name)
+            if path.is_file() and path.stat().st_size == item["size"]:
+                present += item["size"]
+        except (OSError, ValueError):
+            pass
+    # Size-matched cache entries are hints, not verified files. A corrupt
+    # existing object must coexist with its replacement until hash verification.
+    replacement = 0 if installation(root)["installed"] else max(item["size"] for item in FILES.values())
+    return {
+        "free_bytes": shutil.disk_usage(root).free,
+        "required_bytes": sum(item["size"] for item in FILES.values()) - present + replacement + 64 * 1024**2,
+        "cached_bytes_estimate": present,
+    }

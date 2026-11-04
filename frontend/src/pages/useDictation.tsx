@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { Settings2, Square, Upload, X } from "lucide-react";
 import { api, type Run } from "../api";
 import { randomId } from "../lib/random-id";
+import { accountStorageKey } from "../lib/account-storage";
 import { Button } from "../components/ui/button";
 import RecordingButton from "../components/media/RecordingButton";
 import { useMediaRun } from "../components/media/media-run";
@@ -51,7 +52,9 @@ export function useDictation({
   });
   const [language, setLanguage] = useState(() => {
     try {
-      return localStorage.getItem("ai-station:dictation-language") === "pl"
+      return localStorage.getItem(
+        accountStorageKey("ai-station:dictation-language"),
+      ) === "pl"
         ? "pl"
         : "auto";
     } catch {
@@ -352,7 +355,7 @@ export function useDictation({
                 setLanguage(event.target.value);
                 try {
                   localStorage.setItem(
-                    "ai-station:dictation-language",
+                    accountStorageKey("ai-station:dictation-language"),
                     event.target.value,
                   );
                 } catch {

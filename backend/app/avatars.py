@@ -84,7 +84,31 @@ def memory_reservation(body, observed_profile=None):
     return 11264
 
 
-def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
+def freeze_prompt_policy(session, body, frozen=None):
+    if body.translation is None:
+        return None
+    from app.media_translation import preferences, validate_model
+    from app.prompt_enhancement import VERSION
+
+    policy = dict(frozen if frozen is not None else preferences(session))
+    enabled = policy["enabled"] if body.translation.mode == "inherit" else body.translation.mode == "on"
+    if enabled or body.translation.enhance:
+        validate_model(session, policy["model"])
+    if body.translation.enhance:
+        policy.setdefault("enhancement_template", VERSION + ":echo")
+    return policy
+
+
+def create_avatar_run(
+    session,
+    body,
+    *,
+    task=None,
+    parent_run_id=None,
+    observed_profile=None,
+    preparation_policy=None,
+    _prepare_translation=True,
+):
     reservation = memory_reservation(body, observed_profile)
     image = session.get(Artifact, str(body.image_artifact_id))
     audio = session.get(Artifact, str(body.audio_artifact_id))
@@ -98,6 +122,7 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
     if body.speech_text is not None:
         from app.audio import SpeechRequest, create_audio_run
 
+        policy = freeze_prompt_policy(session, body, preparation_policy)
         speech = create_audio_run(
             session,
             SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
@@ -107,9 +132,10 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
         speech.parameters = {
             **speech.parameters,
             "avatar_after_speech": body.model_dump(mode="json", exclude={"speech_text", "audio_artifact_id"}),
+            **({"avatar_prompt_policy": policy} if policy is not None else {}),
         }
         return speech
-    return create_run(
+    run = create_run(
         session,
         task,
         run_type="video",
@@ -130,6 +156,11 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
             "backend": "echomimic-v3",
         },
     )
+    if body.translation is not None and _prepare_translation:
+        from app.media_translation import enqueue_translation
+
+        enqueue_translation(session, run, body.translation.model_dump(), policy=preparation_policy)
+    return run
 
 
 @router.get("/runs/{run_id}/workflow")
@@ -156,7 +187,10 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
 
     def validate_inputs(self, session, run):
         from app.avatar_appearance import frozen_recipe
+        from app.media_translation import validate_media_translation
         from app.models import Run
+
+        validate_media_translation(session, run)
 
         appearance = frozen_recipe(run.parameters)
         if run.parameters.get("previous_video_run_id"):

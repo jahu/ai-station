@@ -9,14 +9,15 @@ from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
-from ai_station_runner import __version__
+from ai_station_runner import __version__, managed_image_job
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.audio import capabilities as speech_capabilities
+from ai_station_runner.avatar_prepare import router as avatar_setup_router
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.browser_runs import BrowserRequest
 from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
@@ -28,6 +29,10 @@ from ai_station_runner.cursor_runs import CursorRequest, cursor_report, start_cu
 from ai_station_runner.dependencies import DependencyRequest, dependency_report, start_dependencies
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
+from ai_station_runner.effects_contract import EffectsRequest
+from ai_station_runner.effects_prepare import router as effects_setup_router
+from ai_station_runner.fish_contract import FishRequest
+from ai_station_runner.fish_prepare import router as fish_setup_router
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
 from ai_station_runner.github_read import GithubReadRequest
 from ai_station_runner.gitinspect import diff, status, validate_repo
@@ -41,6 +46,8 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.gpu_processes import collect as collect_gpu_processes
+from ai_station_runner.image_jobs_api import router as image_jobs_router
+from ai_station_runner.image_setup import router as image_setup_router
 from ai_station_runner.krea2 import KreaFile
 from ai_station_runner.krea2_native import KreaRunRequest
 from ai_station_runner.krea2_native import capabilities as krea_capabilities
@@ -53,6 +60,8 @@ from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
+from ai_station_runner.music_prepare import router as music_setup_router
+from ai_station_runner.native_llama_prepare import router as native_llama_setup_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.project_plan import ProjectPlanRequest, inspect_project_plan
@@ -66,22 +75,29 @@ from ai_station_runner.publication import (
 from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_report, start_reconcile
 from ai_station_runner.python_runs import PythonRequest
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
+from ai_station_runner.runner_platform import create_process_manager, require_qualified_operation
+from ai_station_runner.runtime_install import router as runtime_setup_router
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.sonic_jobs import WholeAvatarRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
+from ai_station_runner.speech_prepare import router as speech_setup_router
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
+from ai_station_runner.timeline_contract import TimelineRequest
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.video import VideoRequest, start_video
 from ai_station_runner.video import capabilities as video_capabilities
+from ai_station_runner.video_prepare import router as video_setup_router
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
-app = FastAPI(title="AI Station Host Runner", version=__version__)
+app = FastAPI(
+    title="AI Station Host Runner", version=__version__, dependencies=[Depends(require_qualified_operation)]
+)
 
 
 @app.exception_handler(RequestValidationError)
@@ -111,12 +127,15 @@ def manager() -> ProcessManager:
     settings = get_settings()
     with _manager_lock:
         if _manager is None:
-            _manager = ProcessManager(settings.host_data_dir(), settings.cancel_grace_seconds)
+            _manager = create_process_manager(settings.host_data_dir(), settings.cancel_grace_seconds)
     return _manager
 
 
 def reset_manager() -> None:
     global _manager
+    from ai_station_runner.native_llama_api import close
+
+    close()
     _manager = None
 
 
@@ -401,6 +420,33 @@ def models_scan():
 @app.get("/v1/photo/capabilities")
 def photo_capabilities():
     settings = get_settings()
+    if not any((settings.photo_python, settings.photo_script)):
+        from ai_station_runner.image_setup import catalog
+
+        report = catalog()
+        source = report["recipe"]
+        diffusion = next(item for item in source["inputs"] if item["role"] == "diffusion")
+        return {
+            "available": report["existing_images"]["available"],
+            "configuration_present": False,
+            "configuration_source": "managed",
+            "backend": "photo_pipe",
+            "modes": ["t2i", "img2img", "recompose", "upscale"],
+            "backends": ["qwen"],
+            "requires_gpu": True,
+            "managed_image": {
+                "profile": source["profile"],
+                "manifest_sha256": source["model_manifest_sha256"],
+                "gpu_count": 2,
+                "eligible_gpu_indices": [
+                    int(gpu["index"])
+                    for gpu in (report["hardware"].get("gpus") or [])
+                    if (gpu.get("memory_total_mib") or 0) >= 12288
+                ],
+                "diffusion_sha256": diffusion["sha256"],
+                "diffusion_size_bytes": diffusion["size_bytes"],
+            },
+        }
     python = Path(settings.photo_python).expanduser() if settings.photo_python else None
     script = Path(settings.photo_script).expanduser() if settings.photo_script else None
     configured = bool(
@@ -409,6 +455,7 @@ def photo_capabilities():
     return {
         "available": configured and bool(collect(_data()).get("gpus")),
         "configuration_present": configured,
+        "configuration_source": "configured",
         "backend": "photo_pipe",
         "modes": ["t2i", "img2img", "recompose", "upscale"],
         "backends": ["qwen", "juggernaut"],
@@ -532,18 +579,28 @@ def inspect_process(
     stdout_offset: Annotated[int | None, Query(ge=0)] = None,
     stderr_offset: Annotated[int | None, Query(ge=0)] = None,
 ):
+    if sys.platform == "linux" and managed_image_job.owns(run_id):
+        return managed_image_job.inspect(
+            run_id, stdout_offset=stdout_offset or 0, stderr_offset=stderr_offset or 0
+        )
     try:
         return manager().inspect(run_id, stdout_offset=stdout_offset, stderr_offset=stderr_offset)
     except ProcessNotOwned as exc:
         raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, "Owned process identity requires inspection") from exc
 
 
 @app.post("/v1/process/cancel")
 def cancel(body: CancelBody):
+    if sys.platform == "linux" and managed_image_job.owns(body.run_id):
+        return managed_image_job.cancel(body.run_id, permissions=sorted(managed_image_job.PERMISSIONS))
     try:
         return manager().cancel(body.run_id)
     except ProcessNotOwned as exc:
         raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, "Owned process identity requires inspection") from exc
 
 
 @app.post("/v1/git/validate")
@@ -702,6 +759,16 @@ app.include_router(local_model_router)
 
 
 app.include_router(llama_router)
+app.include_router(runtime_setup_router)
+app.include_router(speech_setup_router)
+app.include_router(image_setup_router)
+app.include_router(music_setup_router)
+app.include_router(video_setup_router)
+app.include_router(avatar_setup_router)
+app.include_router(effects_setup_router)
+app.include_router(fish_setup_router)
+app.include_router(native_llama_setup_router)
+app.include_router(image_jobs_router)
 
 
 @app.get("/v1/krea2/capabilities")
@@ -733,6 +800,56 @@ def audio_run(body: AudioRequest):
         raise HTTPException(403, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/v1/runs/fish-speech")
+def fish_speech_run(body: FishRequest):
+    from ai_station_runner.fish_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/audio/effects/capabilities")
+def effects_capabilities():
+    from ai_station_runner.effects_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/effects")
+def effects_run(body: EffectsRequest):
+    from ai_station_runner.effects_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/timeline/capabilities")
+def timeline_capabilities():
+    from ai_station_runner.timeline_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/timeline")
+def timeline_run(body: TimelineRequest):
+    from ai_station_runner.timeline_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.get("/v1/music/capabilities")
@@ -987,6 +1104,19 @@ def video_available():
 def video_run(body: VideoRequest):
     try:
         return {**start_video(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/v1/runs/effects-preview")
+def compose_effects_preview(body: ComposeRequest):
+    try:
+        return {
+            **start_composition(manager(), body, effects_preview=True),
+            "runner_id": get_settings().runner_id,
+        }
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
     except ValueError as exc:

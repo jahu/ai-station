@@ -28,6 +28,22 @@ export type ImageModelDefaults = {
   revision: number;
   choices: Record<ImageOperation, string>;
 };
+export type ImageRecommendation = {
+  policy: string;
+  revision: number;
+  reason: string;
+  choice: ImageModel;
+};
+
+export function recommendationReason(reason: string) {
+  if (reason === "pose")
+    return "Qwen is recommended for changes to pose, position or orientation.";
+  if (reason === "object_removal")
+    return "Qwen is recommended for removing an object from the source image.";
+  if (reason === "reference_capacity")
+    return "Qwen can use all of your selected references.";
+  return "Uses your configured model for this kind of edit.";
+}
 export type ImageModelCatalog = {
   items: ImageModel[];
   defaults: ImageModelDefaults;

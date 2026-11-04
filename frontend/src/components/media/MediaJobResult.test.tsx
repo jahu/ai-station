@@ -62,6 +62,38 @@ function mount(
   return writes;
 }
 
+it("shows measured active film steps separately from completed segments", () => {
+  mount("generating", undefined, {
+    active_generation_progress: [
+      {
+        run_id: "active-segment",
+        capability: "video.generate",
+        status: "running",
+        phase: "generating",
+        elapsed_seconds: 30,
+        fraction: { completed: 4, total: 20, unit: "sampling steps" },
+        estimate: {
+          lower_seconds: 90,
+          upper_seconds: 120,
+          scope: "sampling",
+          basis: "observed sampling speed",
+        },
+      },
+    ],
+  });
+  expect(
+    screen
+      .getByRole("progressbar", { name: "Video step measured progress" })
+      .getAttribute("value"),
+  ).toBe("4");
+  expect(
+    screen
+      .getByRole("progressbar", { name: "Completed video stages" })
+      .getAttribute("value"),
+  ).toBe("2");
+  expect(screen.getByText("About 1m 30s – 2m of sampling left")).not.toBeNull();
+});
+
 it("shows measured whole-recording animation progress without inventing segments", () => {
   mount("generating", undefined, {
     kind: "avatar",
@@ -326,4 +358,16 @@ it("does not promise automatic retry after a composed job failed with remaining 
   });
   expect(screen.queryByLabelText("Resource wait")).toBeNull();
   expect(screen.getByText("A segment failed")).toBeTruthy();
+});
+
+it("reports audio finishing separately after all silent video segments complete", async () => {
+  mount("composing", undefined, {
+    soundtrack_status: "mixing",
+    completed_segments: 23,
+    final_artifact_id: null,
+  });
+  expect(
+    (await screen.findByText(/Mixing the film and sound/)).textContent,
+  ).toContain("after verification");
+  expect(screen.queryByRole("link", { name: /Download/ })).toBeNull();
 });

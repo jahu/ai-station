@@ -1,5 +1,6 @@
 import { FreshMediaRetry } from "../components/media/PromptTranslation";
 import ResourceWaitNotice from "../components/ResourceWaitNotice";
+import GenerationProgress from "../components/media/GenerationProgress";
 import RunTimeline from "./RunTimeline";
 import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
@@ -513,6 +514,10 @@ export function RunDetail() {
             {run.data.status === "queued" && (
               <ResourceWaitNotice wait={run.data.resource_wait} />
             )}
+            <GenerationProgress
+              progress={run.data.generation_progress}
+              status={run.data.status}
+            />
             {run.data.status === "waiting_for_approval" &&
               run.data.approval?.resolution === "pending" && (
                 <section className="panel">
