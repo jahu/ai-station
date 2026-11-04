@@ -8,8 +8,13 @@ metadata, immutable source observations and hardware assessments. They download
 no weights and cannot activate a runtime. New single-file GGUF plans freeze a
 supported architecture's publisher configuration and file identities; the existing
 download/adoption lifecycle rechecks native geometry before registering them for
-Chat. Media recipe slots and multimodal workspace/orchestrator binding remain
-separate required delivery steps.
+Chat. Native model inspection also accepts one fixed image-checkpoint profile
+for already verified app-owned GGUFs. The shared bounded GGUF reader checks the
+complete tensor-name/dimension signature and storage layout against the exact
+qualified runtime/reference recipe, without reading tensor payloads or loading a
+GPU. This structural evidence is not runtime readiness or inference qualification.
+Download/adoption, companion binding, model selectors and workspace/orchestrator
+execution for new media checkpoints remain separate required delivery steps.
 
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated

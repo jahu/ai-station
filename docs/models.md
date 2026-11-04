@@ -67,6 +67,25 @@ installation/consent/progress/refresh checks replay the exact saved projections
 without repeating the download or inference. Private evidence:
 `data/acceptance/model-discovery-20261104/`.
 
+## Native media checkpoint admission
+
+The existing typed model verifier has an optional `checkpoint_profile` for a
+fixed Qwen Image 2.1 diffusion slot. It admits only verified app-owned objects,
+checks all tensor names/dimensions against a fingerprint of the exact qualified
+reference, and validates allowed GGML storage layouts, alignment, extents and
+non-overlap. Language-model context inspection shares the same bounded reader
+and keeps its existing metadata-only contract.
+
+A filename or `general.architecture` tag is insufficient: the existing Qwen2.1
+reference has no architecture metadata, while the existing Lustify GGUF declares
+`qwen_image` but has a different graph. The read-only real-file check confirmed
+the Qwen reference's recipe SHA256/size and 297-tensor signature, and refused the
+430-tensor Lustify graph for that slot. No weights were downloaded, altered or
+loaded; normal tests use tiny synthetic GGUFs. The inspection result explicitly
+does **not** qualify inference. New image download/registration, complete
+companions and runtime/workspace bindings are not yet operational through this
+coordinate and remain required by the release plan.
+
 ## Installed files
 
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. Observed files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.

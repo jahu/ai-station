@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "profile": "qwen-image21-diffusion-v1",
+  "runtime_profile": "qwen-image21-cuda-linux-amd64-v1",
+  "role": "diffusion",
+  "tensor_count": 297,
+  "schema_sha256": "171168e687529345777a9c7ef5141e8a355df61ea1fc3734185f59677c07e17c",
+  "reference": {
+    "sha256": "833439e91bc1152d28f37aa198c7f6f4218b7de95754c2f7a318a2422ab4b2f8",
+    "size_bytes": 4604557984
+  },
+  "allowed_ggml_types": [
+    0,
+    1,
+    2,
+    3,
+    6,
+    7,
+    8,
+    10,
+    11,
+    12,
+    13,
+    14,
+    30
+  ],
+  "runtime_image_reference": "ghcr.io/leejet/stable-diffusion.cpp@sha256:800ba95bf36cbb24dd6c4cf116bd0c9a319b7b0ff00e1111ad1a6ea76944c33d"
+}
