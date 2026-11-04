@@ -32,25 +32,38 @@ profiles remain intact; there is no new execution architecture or UI rewrite.
 
 The remaining release gates are explicit:
 
-- Complete a fresh physical Linux NVIDIA first-result journey through the
-  prepared graphics path. Existing-machine readiness plus clean CPU-VM
-  preparation/reboot do not establish that combined hardware result. Preserve
-  host runtimes and require native administrator consent for OS changes.
-- Qualify actual Windows NVIDIA model load/reply, scoped Stop and recovery on
-  physical hardware before claiming that GPU path works for consumers.
-- Resolve installer signing/distribution acceptance. Current private Windows
-  candidates are unsigned; a successful build is not a signed public installer.
-- Complete human listening/style acceptance for NR-06 and sound/synchronization
-  quality acceptance for NR-07. Real generation, complete-file and lifecycle
-  checks have passed; they do not establish perceptual quality. Eight existing
-  GPU voice samples are available in the private Library as **Release QA · Fish**.
-- Issue the final v45/260-case operator workbook against the accepted release
+- Prepare the approved unsigned Windows distribution with visible publisher/
+  SmartScreen information. Do not represent it as a signed installer.
+- Issue the final v46/261-case operator workbook against the accepted release
   identity, and prepare the owner-reviewed promotion to `master`. The catalog
   now explicitly covers every NR-01–14 requirement, including accounts, creative
   histories, progress and prompt improvement. Drafts retain untested answers;
   they do not replace final handoff. Only the human owner may approve/merge `master`.
 
 Do not mark this release or the full goal complete while these gates remain open.
+
+### Owner acceptance timing — 2026-11-04
+
+The owner will perform physical Windows GPU tests and evaluate voice/film samples
+**after release**. These are post-release QA, not pre-publication blockers and
+not successful tests. Keep their cases and record actual later answers. The
+Windows claim remains CPU-qualified, with NVIDIA inference explicitly unverified.
+Eight existing **Release QA · Fish** samples and the neutral film/sound auditions
+are already available privately; no new generation is needed for the evaluation.
+
+The Linux release claim is bounded by actual evidence: clean Ubuntu CPU install,
+native OS-authenticated toolkit preparation/reboot in the disposable installation,
+and independent existing-workstation GPU readiness/inference. The combined fresh
+physical Linux GPU journey remains an additional qualification item, not a
+claimed pass. It must not be used to justify changes to the owner's working host.
+This does not remove GPU functionality or change its readiness checks.
+
+The owner explicitly approved shipping 0.1 without a Windows code signature on
+2026-11-04; signing is future work. Include the known warning/blocking behavior
+in README, the website and release notes. Do not disable OS protections or claim
+that signing would guarantee the absence of SmartScreen prompts.
+Prepare the final handoff and release proposal; only the human owner may approve
+and merge master.
 
 ## Scope and acceptance
 

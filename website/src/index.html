@@ -80,7 +80,7 @@
           >
         </div>
         <p class="hero-footnote">
-          Linux first <span>·</span> Cloud optional <span>·</span> Free for
+          Linux &amp; Windows <span>·</span> Cloud optional <span>·</span> Free for
           noncommercial use
         </p>
 
@@ -393,7 +393,7 @@
       >
         <div class="install-card">
           <div class="install-intro">
-            <span class="install-version">LINUX · v{{VERSION}}</span>
+            <span class="install-version">LINUX &amp; WINDOWS · v{{VERSION}}</span>
             <h2 id="install-title">Download.<br />Install. Create.</h2>
             <p>
               You bring the hardware. We're building a simple path from
@@ -404,11 +404,17 @@
               >Try the early release <span aria-hidden="true">↗</span></a
             >
             <p class="install-requirements">
-              Today: v{{VERSION}} uses Linux, Python, Docker and configured
-              models. Development builds offer guided model setup. Release 0.1
-              targets Linux and Windows; macOS is deferred due to known startup
-              issues.
-              <a href="{{SETUP_URL}}">Current setup guide →</a>
+              v{{VERSION}} offers desktop packages for Ubuntu 24.04 x86-64 and
+              Windows 11 x64, with guided account and model setup. Windows first
+              use is CPU-tested; physical NVIDIA tests follow release. macOS is
+              not supported yet.
+              <a href="{{REPO}}/blob/{{BRANCH}}/docs/releases/0.1.0.md">Installation and known issues →</a>
+            </p>
+            <p class="install-requirements">
+              <strong>Unsigned Windows installer.</strong> SmartScreen may show an unknown
+              publisher; Smart App Control or managed policies may block it.
+              Verify the official download and SHA256SUMS. Do not disable OS
+              protections. Signing will follow in a later release.
             </p>
           </div>
           <div class="simple-start">
@@ -446,8 +452,8 @@
         </div>
         <details class="current-setup">
           <summary>
-            Set up today's Linux release
-            <span>Early testers · v{{VERSION}}</span>
+            Advanced: manual Linux setup
+            <span>From the release branch</span>
           </summary>
           <div class="terminal">
             <div class="terminal-bar">
@@ -566,12 +572,13 @@ cp .env.example .env
             <p>
               That's who we're building it for. The goal is simple: download the
               app, follow the setup and start creating, without learning model
-              servers or technical configuration. The published v{{VERSION}}
-              release still needs Linux, Docker, Python and configured models.
-              Guided model setup is available in development builds. Release 0.1
-              focuses on Linux and Windows; macOS is not yet supported because
-              of startup issues. Your feedback will help us get there.
-              <a href="{{ROADMAP_URL}}">See the guided-setup plan.</a>
+              servers or technical configuration. v{{VERSION}} packages Python
+              and the app, guides required OS permissions and recommends models
+              for your hardware. Model downloads still need storage and suitable
+              RAM/VRAM. Windows CPU first use is tested; physical NVIDIA and
+              human voice/film evaluation follow release. macOS is unsupported.
+              Your feedback will help us make setup better.
+              <a href="{{REPO}}/blob/{{BRANCH}}/docs/releases/0.1.0.md">See qualification and known issues.</a>
             </p>
           </details>
           <details>

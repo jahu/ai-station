@@ -54,9 +54,10 @@ to `master` are created by the existing bot and remain for human-owner approval.
 
 - The main message is approachable local AI: download, guided installation and a
   familiar conversation, with creation tools in the same app. The three-step
-  journey is explicitly presented as the experience being built; current release
-  prerequisites remain visible and working Linux commands stay in native details.
-  Release 0.1 targets Linux and Windows. The owner deferred macOS on 2026-11-03;
+  journey uses the 0.1 Linux/Windows packages; qualification and unsigned-Windows
+  behavior remain visible, and manual Linux commands stay in native details.
+  Physical Windows NVIDIA and voice/film listening are post-release QA by owner
+  decision, not claimed passes. The owner deferred macOS on 2026-11-03;
   it is an unsupported known startup issue, not an active release promise.
 - Testing and feedback have a dedicated section with direct issue/suggestion
   links. No technical background or code contribution is required to help.

@@ -1,5 +1,5 @@
 {
-  "version": 45,
+  "version": 46,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -5991,9 +5991,36 @@
       "requirements": [
         "NR-10"
       ]
+    },
+    {
+      "id": "SETUP-164",
+      "area": "Instalacja i modele",
+      "title": "Po release: Windows NVIDIA, rzeczywista odpowiedź GPU i odzyskiwanie",
+      "priority": "P0",
+      "prerequisites": [
+        "Fizyczny Windows 11 x64 z kompatybilną kartą NVIDIA i działającym sterownikiem; oficjalny instalator 0.1. Próba zaplanowana przez właściciela po release, nie jest dotychczas zaliczona.",
+        "Nie instaluj/zmieniaj sterowników, nie wyłączaj ochrony Windows i nie zmieniaj cudzych dystrybucji WSL. Używaj wyłącznie jednorazowego konta/rozmowy QA."
+      ],
+      "steps": [
+        "Zapisz wersję instalatora, Windows, sterownika, model karty i VRAM. Otwórz AI Station i sprawdź rzeczywiste wykrycie karty oraz dostępność profilu GPU.",
+        "Wybierz rekomendowany pasujący lokalny model; zatwierdź widoczne pobieranie i przygotowanie. Wyślij krótkie pytanie oraz zapisz Run, wybrany model, faktyczne przydzielenie GPU i odpowiedź.",
+        "Użyj Stop podczas kolejnej odpowiedzi, zwolnij/załaduj własny model normalnymi kontrolkami i sprawdź dalszą rozmowę. Nie zatrzymuj cudzych procesów ani całego WSL.",
+        "Zakończ zadania, wykonaj zwykły restart Windows i otwórz AI Station ponownie. Sprawdź konto, model, historię, kolejną krótką odpowiedź i zwykły Stop."
+      ],
+      "expected": [
+        "Model rzeczywiście pracuje na wykrytym GPU z przydziałem pasującym do VRAM; sama nazwa karty lub udana odpowiedź CPU nie zalicza tej próby.",
+        "Pierwsza odpowiedź jest kompletna; Stop/ponowne ładowanie obejmują wyłącznie własne zadanie/runtime.",
+        "Po restarcie dane pozostają zachowane i działa kolejna odpowiedź. Brak gotowości/niezgodny sprzęt jest jawny; zapisz błąd lub blokadę zamiast pozornego OK."
+      ],
+      "resources": "Rzeczywisty Windows/NVIDIA/WSL2; pobranie pasującego modelu, VRAM/RAM i dodatkowe miejsce według profilu; dwie krótkie odpowiedzi oraz restart wyłącznie komputera testowego; bez płatnych API.",
+      "minutes": 30,
+      "requirements": [
+        "NR-13",
+        "NR-14"
+      ]
     }
   ],
-  "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano.",
+  "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows 0.1 jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
   "deferred_cases": [
     {
       "id": "SETUP-155",

@@ -1,12 +1,18 @@
 # Operator QA catalog and workbook
 
-The developing v45 catalog contains **260 active cases** for Linux, Windows and
+The developing v46 catalog contains **261 active cases** for Linux, Windows and
 shared application workflows. The owner deferred macOS on 2026-11-03:
 SETUP-155–158 remain in `deferred_cases` for future work, retain their stable IDs
 and definitions, and are excluded from new worksheets, manifests and result
 counts. The scope notice appears on Start and in the plain-text guide. Earlier
 issued workbooks/answers remain unchanged; import those with their original
 archived catalog, as required by their manifest.
+
+On 2026-11-04 the owner scheduled physical Windows GPU tests and voice/film
+listening after release. v46 records that timing in the scope notice and adds
+SETUP-164 for the actual Windows NVIDIA first-result/Stop/reboot journey. These
+cases remain active with untested answers; postponement never becomes a pass.
+All previous 260 active and four deferred definitions are preserved.
 
 The release audit found missing explicit coverage for several 0.1 requirements.
 v45 adds 24 cases without changing the previous 236 definitions: CREATIVE-101–105
