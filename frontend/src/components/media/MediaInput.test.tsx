@@ -247,3 +247,59 @@ it("accepts phone voice recordings while excluding long recordings and effects",
     expect.objectContaining({ method: "POST" }),
   );
 });
+
+it("pages through older images and searches the whole collection on the server", async () => {
+  const image = (id: string) => ({
+    id,
+    original_filename: `${id}.png`,
+    type: "image",
+    mime_type: "image/png",
+    metadata: {},
+  });
+  const fetch = vi.fn(async (path: string) => {
+    const url = new URL(path, "http://localhost");
+    expect(url.searchParams.get("kind")).toBe("image");
+    return {
+      ok: true,
+      json: async () =>
+        url.searchParams.get("search") === "old favourite"
+          ? [{ ...image("old"), title: "Old favourite" }]
+          : url.searchParams.get("offset") === "40"
+            ? [image("older")]
+            : Array.from({ length: 40 }, (_, i) => image(`recent-${i}`)),
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  const onChange = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MediaInput
+        kind="image"
+        label="Portrait"
+        hint="PNG"
+        value=""
+        onChange={onChange}
+        disabled={false}
+        onBusy={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  await screen.findByRole("button", { name: "Choose recent-0.png recent-0" });
+  fireEvent.click(screen.getByRole("button", { name: "Load more files" }));
+  await screen.findByRole("button", { name: "Choose older.png older" });
+  expect(
+    screen.getByRole("button", { name: "Choose recent-0.png recent-0" }),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Search portrait"), {
+    target: { value: "old favourite" },
+  });
+  const result = await screen.findByRole("button", {
+    name: "Choose Old favourite old",
+  });
+  expect(
+    screen.queryByRole("button", { name: "Choose recent-0.png recent-0" }),
+  ).toBeNull();
+  fireEvent.click(result);
+  expect(onChange).toHaveBeenCalledWith("old");
+});

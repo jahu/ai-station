@@ -498,3 +498,25 @@ it("stages Library images and speech into Avatars without a Run", async () => {
       .getAttribute("href"),
   ).toBe("/audio?input=voiceclip");
 });
+
+it("opens on media while All and Files still expose technical artifacts", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () => (path === "/api/library/purges" ? [] : [original]),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/library");
+  await screen.findByRole("link", { name: /Inspect source.png/ });
+  expect(
+    screen.getByRole("button", { name: "Media" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  expect(fetch.mock.calls.some(([p]) => p.includes("kind=media"))).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Files" }));
+  await waitFor(() =>
+    expect(fetch.mock.calls.some(([p]) => p.includes("kind=files"))).toBe(true),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "All" }));
+  await waitFor(() =>
+    expect(fetch.mock.calls.some(([p]) => p.includes("kind=&"))).toBe(true),
+  );
+});

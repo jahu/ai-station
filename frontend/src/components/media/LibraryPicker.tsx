@@ -1,8 +1,7 @@
 import { canReadDocument } from "../../pages/document-context";
 import { TRANSCRIPTION_AUDIO_TYPES } from "../../recording-formats";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   AudioLines,
   Check,
@@ -11,7 +10,10 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { api, type Artifact } from "../../api";
+import { type Artifact } from "../../api";
+import { useLibraryAssets } from "./useLibraryAssets";
+import LibraryMore from "./LibraryMore";
+import ArtifactThumbnail from "./ArtifactThumbnail";
 import { ErrorNotice, Loading } from "../common";
 import { Button } from "../ui/button";
 import { useListKeyboard } from "../../pages/useListKeyboard";
@@ -35,23 +37,12 @@ export default function LibraryPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [term, setTerm] = useState("");
   const [selected, setSelected] = useState<Artifact[]>([]);
-  useEffect(() => {
-    const timer = setTimeout(() => setTerm(search.trim()), 200);
-    return () => clearTimeout(timer);
-  }, [search]);
-  const query = useInfiniteQuery({
-    queryKey: ["library", "picker", kind, term, documentMode],
-    enabled: open,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
-      api<Artifact[]>(
-        `/artifacts?${new URLSearchParams({ kind: kind === "document" && documentMode === "reference" ? "references" : kind, search: term, limit: "40", offset: String(pageParam) })}`,
-      ),
-    getNextPageParam: (last, pages) =>
-      last.length === 40 ? pages.length * 40 : undefined,
-  });
+  const query = useLibraryAssets(
+    kind === "document" && documentMode === "reference" ? "references" : kind,
+    search,
+    open,
+  );
   const available = (query.data?.pages.flat() ?? []).filter((a) =>
     kind === "audio"
       ? (audioMode === "transcription"
@@ -80,7 +71,6 @@ export default function LibraryPicker({
       onOpenChange={(next) => {
         if (next) {
           setSearch("");
-          setTerm("");
           setSelected([]);
         }
         setOpen(next);
@@ -192,7 +182,7 @@ export default function LibraryPicker({
                       }
                     >
                       {kind === "image" ? (
-                        <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
+                        <ArtifactThumbnail id={a.id} kind="image" />
                       ) : (
                         <div className="library-picker-audio">
                           {kind === "document" ? (
@@ -228,25 +218,16 @@ export default function LibraryPicker({
                     </button>
                   );
                 })}
+                <LibraryMore {...query} />
               </div>
             </section>
           )}
           {!query.isPending && !available.length && (
             <p className="model-empty">
-              {term
+              {search.trim()
                 ? "No matching files. Try a different name or note."
                 : "No compatible files in Library yet. Upload one in the composer."}
             </p>
-          )}
-          {query.hasNextPage && (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              {query.isFetchingNextPage ? "Loading…" : "Load more"}
-            </Button>
           )}
           <div className="library-dialog-footer">
             <span className="muted">

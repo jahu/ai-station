@@ -45,7 +45,8 @@
           Menu <span aria-hidden="true">☰</span>
         </button>
         <nav id="navigation" aria-label="Main navigation">
-          <a href="#possibilities">Possibilities</a
+          <a href="#updates">What's new</a
+          ><a href="#possibilities">Possibilities</a
           ><a href="#local">Why local</a><a href="#feedback">Feedback</a>
           <a class="nav-github" href="{{REPO}}"
             ><svg width="18" height="18" aria-hidden="true">
@@ -66,7 +67,9 @@
         >
         <p class="eyebrow">LOCAL AI. ONE SIMPLE APP.</p>
         <h1 id="hero-title">Your own AI.<br /><span>Made simple.</span></h1>
-        <p class="hero-freedom">No platform censorship. Your models. Your rules.</p>
+        <p class="hero-freedom">
+          No platform censorship. Your models. Your rules.
+        </p>
         <p class="hero-copy">
           A familiar ChatGPT-style experience, on your own computer.<br />
           No AI or IT background needed. Chat, images, video, voice, music and
@@ -81,8 +84,8 @@
           >
         </div>
         <p class="hero-footnote">
-          Linux &amp; Windows <span>·</span> Cloud optional <span>·</span> Free for
-          noncommercial use
+          Linux &amp; Windows <span>·</span> Cloud optional <span>·</span> Free
+          for noncommercial use
         </p>
 
         <div class="workspace-preview">
@@ -229,7 +232,8 @@
             <h3>Give your ideas<br />some dimensions.</h3>
             <p>
               Images, edits, short films, talking portraits, speech and music.
-              Keep the inputs, settings and results in one shared Library.
+              Find and reuse references from your private Library, with larger
+              image previews and stills from your films.
             </p>
             <div class="tags">
               <span>Images & video</span><span>Voice & music</span>
@@ -242,15 +246,74 @@
             </div>
             <h3>Put an idea<br />on a schedule.</h3>
             <p>
-              Draft an agent in plain language. Review its tools and
-              permissions, then let it handle recurring research, local files or
-              small coding tasks.
+              Describe a recurring task in chat. Review its model, tools and
+              schedule, then enable it right there. Pause or remove agents when
+              you no longer need them.
             </p>
             <div class="tags">
               <span>Agents</span><span>Python tools</span><span>Schedules</span>
             </div>
           </article>
         </div>
+      </section>
+
+      <section
+        class="section shell release-update"
+        id="updates"
+        aria-labelledby="updates-title"
+      >
+        <div class="section-heading">
+          <p class="eyebrow">NEW IN v{{VERSION}}</p>
+          <h2 id="updates-title">
+            A clearer Library.<br /><span>Jobs that keep going.</span>
+          </h2>
+          <p>
+            A clearer Library and more resilient media jobs.<br />Small changes
+            that make everyday use better.
+          </p>
+        </div>
+        <div class="capability-grid">
+          <article>
+            <div class="capability-top">
+              <span class="index">01 / FIND</span
+              ><svg aria-hidden="true"><use href="#icon-image" /></svg>
+            </div>
+            <h3>Your references.<br />All within reach.</h3>
+            <p>
+              Search the whole Library when choosing inputs, including older
+              images. Larger previews help you pick the right reference without
+              squinting.
+            </p>
+          </article>
+          <article>
+            <div class="capability-top">
+              <span class="index">02 / EXPLORE</span
+              ><svg aria-hidden="true"><use href="#icon-image" /></svg>
+            </div>
+            <h3>Your creations.<br />Front and center.</h3>
+            <p>
+              Images, films and audio appear first. Video and avatar cards show
+              a still from the actual film. Documents and technical files are
+              one filter away.
+            </p>
+          </article>
+          <article>
+            <div class="capability-top">
+              <span class="index">03 / KEEP GOING</span
+              ><svg aria-hidden="true"><use href="#icon-agent" /></svg>
+            </div>
+            <h3>Longer jobs.<br />Better recovery.</h3>
+            <p>
+              Media jobs can reconnect to an already-running generation after a
+              background interruption. Recover the existing result without
+              automatically starting over.
+            </p>
+          </article>
+        </div>
+        <a class="text-link" href="{{RELEASE_NOTES_URL}}"
+          >See what's changed in {{VERSION}}
+          <span aria-hidden="true">↗</span></a
+        >
       </section>
 
       <section class="local-section" id="local" aria-labelledby="local-title">
@@ -394,28 +457,40 @@
       >
         <div class="install-card">
           <div class="install-intro">
-            <span class="install-version">LINUX &amp; WINDOWS · v{{VERSION}}</span>
+            <span class="install-version"
+              >LINUX &amp; WINDOWS · v{{VERSION}}</span
+            >
             <h2 id="install-title">Download.<br />Install. Create.</h2>
             <p>
               You bring the hardware. We're building a simple path from
               installing the app to your first conversation, without terminal
               commands or model-server configuration.
             </p>
-            <a class="button dark-button" href="{{RELEASE_URL}}"
-              >Try the early release <span aria-hidden="true">↗</span></a
-            >
+            <div class="install-downloads">
+              <a class="button dark-button" href="{{WINDOWS_DOWNLOAD_URL}}"
+                >Download for Windows <span aria-hidden="true">↓</span></a
+              >
+              <a class="button dark-button" href="{{LINUX_DOWNLOAD_URL}}"
+                >Download for Ubuntu <span aria-hidden="true">↓</span></a
+              >
+              <a href="{{RELEASE_URL}}"
+                >All release files &amp; SHA256 checksums ↗</a
+              >
+            </div>
             <p class="install-requirements">
               v{{VERSION}} offers desktop packages for Ubuntu 24.04 x86-64 and
               Windows 11 x64, with guided account and model setup. Windows first
               use is CPU-tested; physical NVIDIA tests follow release. macOS is
               not supported yet.
-              <a href="{{REPO}}/blob/{{BRANCH}}/docs/releases/0.1.1.md">Installation and known issues →</a>
+              <a href="{{RELEASE_NOTES_URL}}"
+                >Installation and known issues →</a
+              >
             </p>
             <p class="install-requirements">
-              <strong>Unsigned Windows installer.</strong> SmartScreen may show an unknown
-              publisher; Smart App Control or managed policies may block it.
-              Verify the official download and SHA256SUMS. Do not disable OS
-              protections. Signing will follow in a later release.
+              <strong>Unsigned Windows installer.</strong> SmartScreen may show
+              an unknown publisher; Smart App Control or managed policies may
+              block it. Verify the official download and SHA256SUMS. Do not
+              disable OS protections. Signing will follow in a later release.
             </p>
           </div>
           <div class="simple-start">
@@ -514,6 +589,9 @@ cp .env.example .env
             <a class="button secondary" href="{{SUGGEST_URL}}"
               >Share an idea <span aria-hidden="true">↗</span></a
             >
+            <a class="text-link" href="{{QA_DOWNLOAD_URL}}"
+              >Get the QA workbook &amp; test files ↗</a
+            >
           </div>
         </div>
       </section>
@@ -579,7 +657,9 @@ cp .env.example .env
               RAM/VRAM. Windows CPU first use is tested; physical NVIDIA and
               human voice/film evaluation follow release. macOS is unsupported.
               Your feedback will help us make setup better.
-              <a href="{{REPO}}/blob/{{BRANCH}}/docs/releases/0.1.1.md">See qualification and known issues.</a>
+              <a href="{{RELEASE_NOTES_URL}}"
+                >See qualification and known issues.</a
+              >
             </p>
           </details>
           <details>

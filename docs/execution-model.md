@@ -41,6 +41,12 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+[Owned media lease recovery](plans/media-lease-recovery.md) retries only rolled-back
+SQLite persistence and resumes matching native process inspection/collection after
+a lost worker. It never replays generation. Claims, resource locks, original
+deadlines and Stop remain authoritative. Scheduler telemetry performs native I/O
+after releasing its database transaction.
+
 The staged account profile shares model runtimes without sharing private Run
 graphs. A consumer of another account's pending llama.cpp startup depends on an
 owner-local readiness Run bound to immutable startup/source observations. It

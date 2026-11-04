@@ -182,3 +182,62 @@ it("keeps voice references short WAVs while transcription can reuse other record
     screen.getByRole("button", { name: "Choose meeting.wav long" }),
   ).toBeTruthy();
 });
+
+it("retains ordered selections across pages and server searches", async () => {
+  const image = (id: string) => ({
+    id,
+    original_filename: `${id}.png`,
+    type: "image",
+    mime_type: "image/png",
+    metadata: {},
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => {
+      const params = new URL(path, "http://localhost").searchParams;
+      return {
+        ok: true,
+        json: async () =>
+          params.get("search") === "favourite"
+            ? [image("favourite")]
+            : params.get("offset") === "40"
+              ? [image("older")]
+              : Array.from({ length: 40 }, (_, i) => image(`recent-${i}`)),
+      };
+    }),
+  );
+  const onSelect = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LibraryPicker
+        kind="image"
+        existing={[]}
+        limit={4}
+        busy={false}
+        onSelect={onSelect}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Choose recent-0.png recent-0" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Load more files" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Choose older.png older" }),
+  );
+  fireEvent.change(screen.getByLabelText("Search input Library"), {
+    target: { value: "favourite" },
+  });
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Choose favourite.png favourit",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Attach 3 files" }));
+  expect(onSelect.mock.calls[0][0].map((a: { id: string }) => a.id)).toEqual([
+    "recent-0",
+    "older",
+    "favourite",
+  ]);
+});
