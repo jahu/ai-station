@@ -8366,3 +8366,25 @@ section:has(> .memory-grid) > .dashboard-note {
   font-size: 11px;
   line-height: 1.5;
 }
+
+/* Agent outputs precede workflow/history in a vertical stack. */
+.agent-media-result {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-media-result .media-result {
+  position: static;
+  top: auto;
+  min-width: 0;
+}
+.assistant-agent-image-model {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.assistant-agent-image-model label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}

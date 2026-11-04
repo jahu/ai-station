@@ -17,6 +17,13 @@ export type ImageMediaRequest = {
   max_side?: number;
   gpu?: string;
   seed?: number | null;
+  negative?: string | null;
+  model_id?: string | null;
+  model_selection?: "auto" | null;
+  model_selection_revision?: number | null;
+  reference_strength?: number | null;
+  reference_layout?: "aligned" | "beside" | null;
+  grounding_px?: number | null;
   upscale_result?: boolean;
 };
 export type VideoMediaRequest = {
