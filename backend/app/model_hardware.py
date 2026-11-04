@@ -11,7 +11,7 @@ def number(value):
 
 
 def assess_file(file, hardware, storage, *, candidates=None):
-    """Only exact reviewed identities inherit a workload's memory estimate.
+    """Only exact recipes or pinned supported configurations supply an estimate.
 
     Unknown checkpoint formats/architectures have unknown residency, KV geometry
     and companion requirements. Their byte size is only a disk lower bound.
@@ -43,6 +43,19 @@ def assess_file(file, hardware, storage, *, candidates=None):
         if is_native and entry.runtime_profile != host_profile(hardware) or mac and not is_native:
             continue
         planned = recommendation(entry, hardware)
+        ram = number((hardware.get("memory") or {}).get("total_mib"))
+        capacity_known = ram is not None and ram > 0
+        if not entry.runtime_profile:
+            capacity_known = (
+                capacity_known
+                and isinstance(hardware.get("gpus"), list)
+                and all(
+                    isinstance(gpu, dict)
+                    and number(gpu.get("memory_total_mib")) is not None
+                    and gpu["memory_total_mib"] > 0
+                    for gpu in hardware.get("gpus", [])
+                )
+            )
         selected = planned.get("gpus", [])
         current = {g.get("index"): g for g in hardware.get("gpus", []) if isinstance(g, dict)}
         # Capacity is distinct from present occupation. Do not sum arbitrary
@@ -64,9 +77,14 @@ def assess_file(file, hardware, storage, *, candidates=None):
             {
                 "catalog_id": entry.id,
                 "name": entry.name,
+                "quantization": entry.quantization,
                 "capability": entry.capability,
                 "runtime": entry.runtime,
-                "fit": "estimated_fit" if planned["fits"] else "not_recommended",
+                "fit": "estimated_fit"
+                if planned["fits"]
+                else "not_recommended"
+                if capacity_known
+                else "unknown",
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
@@ -91,6 +109,8 @@ def assess_file(file, hardware, storage, *, candidates=None):
         else "needs_compatible_recipe",
         "hardware_status": "estimated_fit"
         if any(p["fit"] == "estimated_fit" for p in plans)
+        else "unknown"
+        if any(p["fit"] == "unknown" for p in plans)
         else "not_recommended"
         if plans
         else "unknown",

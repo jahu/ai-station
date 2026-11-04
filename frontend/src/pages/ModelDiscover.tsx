@@ -33,6 +33,13 @@ type ModelFile = {
     reason: string;
     profiles: Profile[];
     disk: { status: string; free_bytes: number | null };
+    variant_advice?: {
+      recommended: boolean;
+      context_target: number;
+      meets_context_target: boolean;
+      precision_tradeoff: boolean;
+      reason: string;
+    };
   };
 };
 type Report = {
@@ -47,6 +54,8 @@ type Report = {
   source_url?: string;
   license_url?: string;
   gated?: boolean;
+  requirements_error?: string;
+  context_target?: number;
   observed_at: string;
   items?: {
     repository: string;
@@ -73,6 +82,7 @@ export default function ModelDiscover() {
     account.mode === "operator" || account.user?.is_admin === true;
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState({ runId: "", filename: "" });
+  const [contextTarget, setContextTarget] = useState(32768);
   const [params, setParams] = useSearchParams();
   const runId = params.get("run") || "";
   const inspection = useQuery({
@@ -119,6 +129,7 @@ export default function ModelDiscover() {
           inspection_run_id: runId,
           observation_sha256: observation,
           filename,
+          context_target: contextTarget,
         }),
       ),
     onSuccess: (run) => setParams({ run: run.id }),
@@ -133,11 +144,13 @@ export default function ModelDiscover() {
   const trustedRun = run?.executor_type === "model_hub_inspect";
   const variants = report?.files ?? [];
   const preferred =
+    variants.find((file) => file.assessment.variant_advice?.recommended) ??
     variants.find((file) =>
       file.assessment.profiles.some(
         (profile) => profile.fit === "estimated_fit",
       ),
-    ) ?? variants[0];
+    ) ??
+    variants[0];
   const selectedVariant =
     (selection.runId === runId
       ? variants.find((file) => file.filename === selection.filename)
@@ -291,6 +304,12 @@ export default function ModelDiscover() {
               were sent.
             </p>
           )}
+          {report.requirements_error && (
+            <p className="notice">
+              Hardware requirements could not be established:{" "}
+              {report.requirements_error}
+            </p>
+          )}
           {variants.length > 1 && (
             <div className="hub-variant-choice">
               <label htmlFor="model-hub-variant">Choose a variant</label>
@@ -304,17 +323,20 @@ export default function ModelDiscover() {
                 {variants.map((file) => (
                   <option key={file.filename} value={file.filename}>
                     {file.filename} · {bytes(file.size_bytes)}
-                    {file.assessment.profiles.some(
-                      (p) => p.fit === "estimated_fit",
-                    )
-                      ? " · Estimated fit"
-                      : ""}
+                    {file.assessment.variant_advice?.recommended
+                      ? " · Recommended for this station"
+                      : file.assessment.profiles.some(
+                            (p) => p.fit === "estimated_fit",
+                          )
+                        ? " · Estimated fit"
+                        : ""}
                   </option>
                 ))}
               </select>
               <p className="muted">
-                A matching reviewed profile is selected first when available.
-                Compare size and hardware requirements before choosing.
+                Recommendations balance context, GPU count and quantization
+                within this model. They are estimates, not speed or quality
+                benchmarks. You can choose another variant.
               </p>
             </div>
           )}
@@ -323,10 +345,34 @@ export default function ModelDiscover() {
               <div className="hub-section-heading">
                 <h3>{file.filename}</h3>
                 <span className="tiny-tag">
+                  {file.assessment.variant_advice?.recommended
+                    ? "Recommended · "
+                    : ""}
                   {file.format} · {bytes(file.size_bytes)}
                 </span>
               </div>
               <p>{file.assessment.reason}</p>
+              {file.assessment.variant_advice &&
+                !!file.assessment.profiles.length && (
+                  <div className="hub-fit-summary">
+                    <strong>{file.assessment.variant_advice.reason}</strong>
+                    {!file.assessment.variant_advice.meets_context_target && (
+                      <p>
+                        This variant does not meet the{" "}
+                        {file.assessment.variant_advice.context_target.toLocaleString()}
+                        -token target on this station. Choose another model,
+                        variant or a shorter target. The model’s trained limit
+                        also applies.
+                      </p>
+                    )}
+                    {file.assessment.variant_advice.precision_tradeoff && (
+                      <p>
+                        Low-bit quantization reduces memory use with a larger
+                        precision tradeoff.
+                      </p>
+                    )}
+                  </div>
+                )}
               <p className="muted">
                 {file.assessment.disk.status === "insufficient"
                   ? "Not enough disk space, including safety headroom."
@@ -367,20 +413,48 @@ export default function ModelDiscover() {
               {report.kind !== "install_plan" &&
                 file.format === "gguf" &&
                 file.sha256 && (
-                  <Button
-                    variant="secondary"
-                    disabled={
-                      !canManage || !report.observation_sha256 || plan.isPending
-                    }
-                    onClick={() =>
-                      plan.mutate({
-                        filename: file.filename,
-                        observation: report.observation_sha256!,
-                      })
-                    }
-                  >
-                    Review installation <ArrowRight size={16} />
-                  </Button>
+                  <>
+                    <details className="hub-context-options">
+                      <summary>Context options</summary>
+                      <label htmlFor="model-hub-context">
+                        Context for installation
+                      </label>
+                      <select
+                        id="model-hub-context"
+                        value={contextTarget}
+                        onChange={(event) =>
+                          setContextTarget(Number(event.target.value))
+                        }
+                      >
+                        <option value={32768}>
+                          32K · Balanced conversation
+                        </option>
+                        <option value={131072}>128K · Longer tasks</option>
+                      </select>
+                      <p className="muted">
+                        Variant recommendations use a 32K target. The
+                        installation review checks your chosen target against
+                        GPU memory and the model’s trained limit, and shows the
+                        context that fits.
+                      </p>
+                    </details>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        !canManage ||
+                        !report.observation_sha256 ||
+                        plan.isPending
+                      }
+                      onClick={() =>
+                        plan.mutate({
+                          filename: file.filename,
+                          observation: report.observation_sha256!,
+                        })
+                      }
+                    >
+                      Review installation <ArrowRight size={16} />
+                    </Button>
+                  </>
                 )}
               {!!file.assessment.profiles.length &&
                 report.kind !== "install_plan" && (

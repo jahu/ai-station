@@ -216,3 +216,130 @@ it("starts with a fitting variant and lets the user inspect a smaller unsupporte
   expect(screen.getByRole("heading", { name: "image.gguf" })).toBeTruthy();
   expect(screen.queryByText("Reviewed GPU model")).toBeNull();
 });
+
+it("prefers the hardware recommendation and freezes an explicit longer-context target in the plan", async () => {
+  const fitting = (filename: string, recommended: boolean) => ({
+    ...report.files[0],
+    filename,
+    sha256: "b".repeat(64),
+    assessment: {
+      ...report.files[0].assessment,
+      disk: { status: "file_fits", free_bytes: 100 * 1024 ** 3 },
+      variant_advice: {
+        recommended,
+        context_target: 32768,
+        meets_context_target: true,
+        precision_tradeoff: false,
+        reason: "Estimated 32,768-token context on 1 GPU(s)",
+      },
+      profiles: [
+        {
+          catalog_id: filename,
+          name: filename,
+          fit: "estimated_fit",
+          occupancy: "in_use",
+          recommendation: {
+            reason: "Estimated GPU fit",
+            gpus: [7],
+            context_size: 32768,
+          },
+        },
+      ],
+    },
+  });
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "plan" }
+        : {
+            id: "saved",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: {
+              source_inspection: {
+                ...report,
+                observation_sha256: "a".repeat(64),
+                files: [
+                  fitting("large.Q8_0.gguf", false),
+                  fitting("balanced.Q4_K_M.gguf", true),
+                ],
+              },
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/models/discover?run=saved");
+  await screen.findByRole("heading", { name: "balanced.Q4_K_M.gguf" });
+  expect(screen.getByText("Recommended · gguf · 8.00 GiB")).toBeTruthy();
+  fireEvent.click(screen.getByText("Context options"));
+  fireEvent.change(screen.getByLabelText("Context for installation"), {
+    target: { value: "131072" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Review installation" }));
+  await waitFor(() =>
+    expect(fetch.mock.calls.some(([p]) => p === "/api/model-hub/plans")).toBe(
+      true,
+    ),
+  );
+  const [, options] = fetch.mock.calls.find(
+    ([p]) => p === "/api/model-hub/plans",
+  )!;
+  expect(JSON.parse(String(options?.body))).toMatchObject({
+    inspection_run_id: "saved",
+    filename: "balanced.Q4_K_M.gguf",
+    context_target: 131072,
+    observation_sha256: "a".repeat(64),
+  });
+});
+
+it("explains short context and low precision instead of presenting them as a recommendation", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "saved",
+        executor_type: "model_hub_inspect",
+        status: "succeeded",
+        metadata: {
+          source_inspection: {
+            ...report,
+            files: [
+              {
+                ...report.files[0],
+                assessment: {
+                  ...report.files[0].assessment,
+                  variant_advice: {
+                    recommended: false,
+                    context_target: 32768,
+                    meets_context_target: false,
+                    precision_tradeoff: true,
+                    reason: "Estimated 4,096-token context on 1 GPU(s)",
+                  },
+                  profiles: [
+                    {
+                      catalog_id: "limited",
+                      name: "Limited GPU profile",
+                      fit: "estimated_fit",
+                      occupancy: "unknown",
+                      recommendation: {
+                        gpus: [7],
+                        context_size: 4096,
+                        reason: "Estimated fit",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      }),
+    })),
+  );
+  mount("/models/discover?run=saved");
+  await screen.findByRole("heading", { name: "image.gguf" });
+  expect(screen.getByText(/does not meet the 32,768-token/)).toBeTruthy();
+  expect(screen.getByText(/larger precision tradeoff/)).toBeTruthy();
+});

@@ -1,6 +1,9 @@
 The next-release [open model discovery contract](plans/open-model-discovery.md)
-extends existing model setup rather than adding an execution system. Public source
-inspections/searches are private administrator-owned Tasks/Runs, with bounded HF
+extends existing model setup rather than adding an execution system. A source
+observation may retain one pinned supported language configuration for all file
+variants. Local hardware advice and later context-specific plans reuse that
+snapshot; they do not download weights or query a moving base once accepted.
+Public source inspections/searches are private administrator-owned Tasks/Runs, with bounded HF
 metadata, immutable source observations and hardware assessments. They download
 no weights and cannot activate a runtime. New single-file GGUF plans freeze a
 supported architecture's publisher configuration and file identities; the existing

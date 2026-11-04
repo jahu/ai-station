@@ -218,3 +218,48 @@ def test_unknown_file_or_changed_observation_never_creates_install_plan(new_mode
         body.update(observation_sha256=source["observation_sha256"], filename="../outside.gguf")
         assert api.post("/api/model-hub/plans", json=body).status_code == 422
         assert not new_model["calls"]
+
+
+def test_new_and_legacy_requests_freeze_their_context_target(new_model, monkeypatch):
+    targets = []
+
+    async def resolve(observation, filename, check, target):
+        check()
+        targets.append(target)
+        return HubCandidate.model_validate(
+            {**new_model["hub_entry"].model_dump(mode="json"), "context_ceiling": target}
+        )
+
+    monkeypatch.setattr(hub_candidates, "resolve_candidate", resolve)
+    with TestClient(app) as api:
+        first = reviewed_plan(api, new_model)
+        assert targets == [32768]
+        source_id = first["metadata"]["source_inspection"]["source_inspection_run_id"]
+        source = api.get("/api/runs/" + source_id).json()["metadata"]["source_inspection"]
+        for legacy in (False, True):
+            request = {
+                "client_request_id": str(uuid4()),
+                "inspection_run_id": source_id,
+                "observation_sha256": source["observation_sha256"],
+                "filename": new_model["hub_entry"].filename,
+                "context_target": 131072,
+            }
+            accepted = api.post("/api/model-hub/plans", json=request)
+            assert accepted.status_code == 202
+            if legacy:
+                from app.models import Run
+
+                with control_session_factory()() as db:
+                    run = db.get(Run, accepted.json()["id"])
+                    run.parameters = {
+                        "planning": {
+                            k: v for k, v in run.parameters["planning"].items() if k != "context_target"
+                        }
+                    }
+                    db.commit()
+            work()
+            result = api.get("/api/runs/" + accepted.json()["id"]).json()
+            assert result["status"] == "succeeded", result
+            assert result["metadata"]["source_inspection"]["context_target"] == 131072
+        assert targets == [32768, 131072, 131072]
+        assert not new_model["calls"]

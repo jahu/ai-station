@@ -163,7 +163,9 @@ def recommendation(entry, hardware):
             best = result
         # Preserve legacy presets; long-context profiles may need a GPU pair
         # even when the weights alone fit one device with a very short cache.
-        if entry.context_ceiling <= 32768 or context >= entry.context_ceiling:
+        if context >= entry.context_ceiling or (
+            entry.context_ceiling <= 32768 and getattr(entry, "origin", None) != "hub"
+        ):
             return result
     if best is not None:
         return best

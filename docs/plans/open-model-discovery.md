@@ -122,11 +122,23 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
 - Source/search/hardware-review UI and private inspection lifecycle: merged in
   PR #645. Its unused test-parameter TypeScript correction is included in the
   subsequent installation branch; runtime build/component checks were distinct.
-- New single-file GGUF plan/install/adopt/Chat route: implemented on the following
-  feature branch, with native disagreement and Stop/Resume tests. Real isolated
+- New single-file GGUF plan/install/adopt/Chat route: merged in PR #646, including
+  the TypeScript correction, native disagreement and Stop/Resume tests. Real isolated
   Docker/native/GPU qualification downloaded a new 491 MB Qwen2.5 0.5B object and
   received its first reply; the owned test runtime is stopped. See `docs/models.md`.
-- Still required: hardware-ranked discovery (including fresh unknown variants),
+- Repository variant advice: the supported publisher configuration is resolved
+  once, shared across immutable file variants and reused by installation plans.
+  A 32K balanced target compares useful fitted context, known quantization and
+  GPU count; explicit 128K plans preserve their target and trained limit. Unknown
+  sensors/storage and low-bit precision tradeoffs are shown separately. Local
+  validation and browser evidence accompany the implementation PR.
+- Still required: cross-model hardware-ranked discovery,
   complete split/companion plans, validated multimodal model slots and selectors,
   install/update/removal UX and release QA/packages. These remain part of the
   requested release; a successful single-file language-model flow is not completion.
+
+Next: extend compatible media recipe slots, preserving exact companion/runtime
+identities and native verification. Cross-model recommendations and complete
+bundle plans remain required. Popularity is not quality or hardware compatibility;
+never label an unmeasured choice the fastest/best. Unknown media/companion families
+retain their actual missing-recipe reason.

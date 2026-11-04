@@ -3,7 +3,7 @@
 import re
 from typing import Literal
 
-from pydantic import Field, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from app.hub_sources import COMMIT, HubSource, inspect_source, metadata_json, parse_source
 from app.model_download_files import FileSpec
@@ -62,7 +62,7 @@ def download_candidate(payload):
     )
 
 
-def geometry(config, architecture):
+def geometry(config, architecture=None):
     if not isinstance(config, dict):
         raise ValueError("Publisher configuration must be a JSON object")
     text = config.get("text_config", config)
@@ -77,7 +77,9 @@ def geometry(config, architecture):
         "qwen3_5_text": "qwen35",
     }
     model_type = text.get("model_type", config.get("model_type"))
-    if not isinstance(model_type, str) or types.get(model_type) != architecture:
+    if architecture is None and isinstance(model_type, str):
+        architecture = types.get(model_type)
+    if architecture is None or not isinstance(model_type, str) or types.get(model_type) != architecture:
         raise ValueError("This architecture has no matching supported llama.cpp planning profile")
     causal_classes = {
         "llama": {"LlamaForCausalLM", "MistralForCausalLM"},
@@ -121,31 +123,41 @@ def geometry(config, architecture):
     }
 
 
-async def resolve_candidate(observation, filename, check):
+class LanguageProfile(BaseModel):
+    """One immutable publisher configuration shared by compatible file variants."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    source_repository: str
+    source_revision: str = Field(pattern=r"^[a-f0-9]{40}$")
+    configuration_repository: str
+    configuration_revision: str = Field(pattern=r"^[a-f0-9]{40}$")
+    configuration_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    config_url: str
+    architecture: Literal["llama", "qwen2", "qwen3", "qwen35"]
+    trained_context: StrictInt = Field(ge=4096, le=16777216)
+    attention_layers: StrictInt = Field(ge=1, le=512)
+    kv_heads: StrictInt = Field(ge=1, le=512)
+    key_length: StrictInt = Field(ge=32, le=4096)
+    value_length: StrictInt = Field(ge=32, le=4096)
+    state_reserve_mib: StrictInt = Field(ge=0, le=4096)
+
+
+async def resolve_profile(observation, check):
+    check()
     if not isinstance(observation, dict) or not COMMIT.fullmatch(str(observation.get("revision", ""))):
         raise ValueError("Inspect an immutable model source first")
-    repository = parse_source(observation.get("repository", "")).repository
-    selected = [f for f in observation.get("files", []) if f.get("filename") == filename]
-    if len(selected) != 1 or not selected[0].get("identity_available") or selected[0].get("format") != "gguf":
-        raise ValueError("Choose a GGUF with a publisher SHA256 and exact size")
-    if re.search(r"mmproj|projector|\d{5}-of-\d{5}\.gguf$", filename, re.I):
-        raise ValueError("Vision companions and split GGUFs need a complete compatible bundle plan")
-    # Refresh only the immutable observation, never a moving branch or another hash.
-    inspected = await inspect_source(
-        HubSource(repository=repository, revision=observation["revision"], filename=filename), check
-    )
-    file = inspected["files"][0]
-    if any(file.get(k) != selected[0].get(k) for k in ("filename", "sha256", "size_bytes")):
-        raise ValueError("The selected publisher object identity changed")
-    architecture = inspected["architecture_hint"]
-    if inspected.get("pipeline_hint") not in {"", "text-generation"}:
+    architecture = observation.get("architecture_hint") or None
+    if observation.get("pipeline_hint") not in {"", "text-generation"}:
         raise ValueError("This capability needs its own compatible recipe, not a language-model installation")
-    if architecture not in {"llama", "qwen2", "qwen3", "qwen35"}:
+    if architecture not in {None, "llama", "qwen2", "qwen3", "qwen35"}:
         raise ValueError("This GGUF needs a supported architecture profile before installation")
-    bases = inspected["base_models"]
-    if len(bases) > 1:
+    repository = parse_source(observation["repository"]).repository
+    bases = observation.get("base_models", [])
+    if not isinstance(bases, list) or len(bases) > 1:
         raise ValueError("Multiple base configurations require a compatible reviewed recipe")
     configuration_repository = bases[0] if bases else repository
+    if parse_source(configuration_repository).repository != configuration_repository:
+        raise ValueError("The configuration must name an HF model repository")
     revision = "main" if bases else observation["revision"]
     meta = await metadata_json(
         f"https://huggingface.co/api/models/{configuration_repository}/revision/{revision}", check
@@ -163,25 +175,74 @@ async def resolve_candidate(observation, filename, check):
     )
     config = await metadata_json(config_url, check)
     dimensions = geometry(config, architecture)
-    quant = re.search(r"(?:^|[.-])((?:I?Q|BF|F)[0-9][A-Z0-9_]*)(?=\.gguf$)", filename.upper(), re.I)
-    ceiling = min(131072, (dimensions["trained_context"] // 256) * 256)
-    if ceiling < 4096:
-        raise ValueError("This model cannot provide the minimum supported 4096-token GPU context")
-    return HubCandidate(
-        id="hub-" + file["sha256"][:24],
-        name=repository.rsplit("/", 1)[-1][:180],
-        quantization=quant.group(1).upper() if quant else "GGUF",
-        filename=filename,
-        file=FileSpec(sha256=file["sha256"], size_bytes=file["size_bytes"], urls=(file["source_url"],)),
-        repository=repository,
-        revision=observation["revision"],
-        license=inspected["license"],
-        source_url=inspected["source_url"],
-        license_url=inspected["license_url"],
-        config_url=config_url,
+    return LanguageProfile(
+        source_repository=repository,
+        source_revision=observation["revision"],
         configuration_repository=configuration_repository,
         configuration_revision=configuration_revision,
         configuration_sha256=fingerprint(config),
-        context_ceiling=ceiling,
+        config_url=config_url,
         **dimensions,
     )
+
+
+def candidate_from_profile(observation, filename, profile, *, context_ceiling=32768):
+    profile = LanguageProfile.model_validate(profile)
+    if (profile.source_repository, profile.source_revision) != (
+        observation["repository"],
+        observation["revision"],
+    ):
+        raise ValueError("The publisher profile belongs to another immutable source")
+    selected = [f for f in observation["files"] if f["filename"] == filename]
+    if len(selected) != 1 or not selected[0].get("identity_available") or selected[0].get("format") != "gguf":
+        raise ValueError("Choose a GGUF with a publisher SHA256 and exact size")
+    if re.search(r"mmproj|projector|\d{5}-of-\d{5}\.gguf$", filename, re.I):
+        raise ValueError("Vision companions and split GGUFs need a complete compatible bundle plan")
+    file = selected[0]
+    quant = re.search(r"(?:^|[.-])((?:I?Q|BF|F)[0-9][A-Z0-9_]*)(?=\.gguf$)", filename.upper(), re.I)
+    if type(context_ceiling) is not int or context_ceiling not in {32768, 131072}:
+        raise ValueError("Choose a supported context target")
+    ceiling = min(context_ceiling, (profile.trained_context // 256) * 256)
+    fields = profile.model_dump(exclude={"source_repository", "source_revision"})
+    return HubCandidate(
+        id="hub-" + file["sha256"][:24],
+        name=observation["repository"].rsplit("/", 1)[-1][:180],
+        quantization=quant.group(1).upper() if quant else "GGUF",
+        filename=filename,
+        file=FileSpec(sha256=file["sha256"], size_bytes=file["size_bytes"], urls=(file["source_url"],)),
+        repository=observation["repository"],
+        revision=observation["revision"],
+        license=observation["license"],
+        source_url=observation["source_url"],
+        license_url=observation["license_url"],
+        context_ceiling=ceiling,
+        **fields,
+    )
+
+
+async def resolve_candidate(observation, filename, check, context_ceiling=131072):
+    # Old accepted requests retain their original context target. New requests
+    # explicitly record their balanced or longer-context target.
+    if observation.get("language_profile"):
+        check()
+        return candidate_from_profile(
+            observation, filename, observation["language_profile"], context_ceiling=context_ceiling
+        )
+    if not isinstance(observation, dict) or not COMMIT.fullmatch(str(observation.get("revision", ""))):
+        raise ValueError("Inspect an immutable model source first")
+    repository = parse_source(observation.get("repository", "")).repository
+    selected = [f for f in observation.get("files", []) if f.get("filename") == filename]
+    if len(selected) != 1 or not selected[0].get("identity_available") or selected[0].get("format") != "gguf":
+        raise ValueError("Choose a GGUF with a publisher SHA256 and exact size")
+    if re.search(r"mmproj|projector|\d{5}-of-\d{5}\.gguf$", filename, re.I):
+        raise ValueError("Vision companions and split GGUFs need a complete compatible bundle plan")
+    # Refresh only the immutable observation, never a moving branch or another hash.
+    inspected = await inspect_source(
+        HubSource(repository=repository, revision=observation["revision"], filename=filename), check
+    )
+    file = inspected["files"][0]
+    if any(file.get(k) != selected[0].get(k) for k in ("filename", "sha256", "size_bytes")):
+        raise ValueError("The selected publisher object identity changed")
+
+    profile = await resolve_profile(inspected, check)
+    return candidate_from_profile(inspected, filename, profile, context_ceiling=context_ceiling)

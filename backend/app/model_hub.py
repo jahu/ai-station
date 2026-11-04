@@ -173,7 +173,9 @@ class ModelHubExecutor:
                             session, plan["inspection_run_id"], plan["observation_sha256"]
                         )
                         check()
-                        candidate = await resolve_candidate(observation, plan["filename"], check)
+                        candidate = await resolve_candidate(
+                            observation, plan["filename"], check, plan.get("context_target", 131072)
+                        )
                         file = next(
                             dict(f) for f in observation["files"] if f["filename"] == plan["filename"]
                         )
@@ -189,9 +191,16 @@ class ModelHubExecutor:
                             "source_inspection_run_id": plan["inspection_run_id"],
                             "files": [file],
                             "metadata_only": True,
+                            "context_target": plan.get("context_target", 131072),
                         }
                     if "source" in run.parameters:
-                        return await inspect_source(HubSource.model_validate(run.parameters["source"]), check)
+                        from app.model_variant_advice import enrich_source
+
+                        report = await inspect_source(
+                            HubSource.model_validate(run.parameters["source"]), check
+                        )
+                        await enrich_source(report, check)
+                        return report
                     return await search_models(run.parameters["query"], check)
 
             report = asyncio.run(inspect())
@@ -204,13 +213,24 @@ class ModelHubExecutor:
                     pass
             check()
             storage = storage_info(hardware) if report.get("kind") != "search" else None
-            for file in report["files"]:
+            for index, file in enumerate(report["files"]):
+                if index % 16 == 0:
+                    check()
                 candidates = None
                 if report.get("kind") == "install_plan":
                     from app.hub_candidates import HubCandidate
 
                     candidates = (HubCandidate.model_validate(report["candidate"]),)
-                file["assessment"] = assess_file(file, hardware, storage, candidates=candidates)
+                if candidates:
+                    file["assessment"] = assess_file(file, hardware, storage, candidates=candidates)
+                else:
+                    from app.model_variant_advice import assess_variant
+
+                    file["assessment"] = assess_variant(file, report, hardware, storage)
+            if report.get("kind") != "search":
+                from app.model_variant_advice import rank_variants
+
+                rank_variants(report, context_target=report.get("context_target", 32768))
             report.update(
                 observed_at=utcnow().isoformat(),
                 hardware_observed=not hardware.get("storage_unavailable", False),
