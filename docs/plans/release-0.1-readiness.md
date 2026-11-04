@@ -21,6 +21,11 @@ The Windows EXE's measured ProductVersion is `0.1.0` and signature status is
 links or approved public assets. Signing/rebuilding changes bytes and requires
 new checksums. QA documentation may advance independently of this runtime source.
 
+**Owner update, 2026-11-04:** physical Windows GPU tests and voice/film listening
+will happen after release. Preserve them as untested post-release QA, not gates
+to publication. The owner also explicitly approved unsigned Windows distribution
+for 0.1, with signing deferred and warnings disclosed.
+
 ## Requirement audit
 
 “Delivered” below means implemented and internally qualified at the recorded
@@ -34,19 +39,20 @@ claim every hardware/vendor combination works.
 | NR-03: structural image editing | Delivered for recorded neutral Qwen fixtures; explicit LUSTIFY preserved. LUSTIFY's observed structural weaknesses remain recorded. | IMAGE-101–102 |
 | NR-04: local prompt improvement | Delivered with actual local preparation → image result, frozen effective inputs, script/lyrics preservation and recovery contracts. | PROMPT-101–104 |
 | NR-05: completed deletion cards | Delivered with persistent dismissal and retained Run history. | LIB-101 |
-| NR-06: expressive speech | Functional delivery and real short/long/pace/Stop checks passed. **Human emotion/fidelity listening remains open.** | AUDIO-101, VOICE-001–005 |
-| NR-07: synchronized effects | Real video → MMAudio → timeline/export and complete-file checks passed. **Human sound/scene and multi-scene quality acceptance remains open.** | AUDIO-102, CHAT-101–102 |
+| NR-06: expressive speech | Functional delivery and real short/long/pace/Stop checks passed. Human emotion/fidelity listening is owner-planned post-release QA. | AUDIO-101, VOICE-001–005 |
+| NR-07: synchronized effects | Real video → MMAudio → timeline/export and complete-file checks passed. Human sound/scene and multi-scene quality acceptance is owner-planned post-release QA. | AUDIO-102, CHAT-101–102 |
 | NR-08: editor | Delivered: saved revisions, independent tracks, waveform/timing controls, preview/export and scoped Stop. | VIDEO-101–102 |
 | NR-09: name | Owner approved AI Station / Your own AI. Made simple. | DOC-101 |
 | NR-10: model freedom/responsibility | Delivered in README with format, license and legal boundaries. | DOC-102 |
 | NR-11: private accounts | Delivered: migration/isolation, explicit admin inspection, remembered cookie sessions, TOTP/recovery, account controls and private caches. | ACCOUNT-101–107 |
 | NR-12: prepared Web queries | Delivered: selected-model preparation, contextual follow-ups, visible queries, permission-bound search and direct page reading. | WEB-008–009 |
-| NR-13: consumer installation | Linux clean CPU journey and Windows 11 private-WSL CPU journey, preserving update/Stop/restart passed. **Fresh physical GPU journeys and distribution acceptance remain open.** | INSTALL-101, SETUP-146–154, SETUP-159–163 |
-| NR-14: hardware-aware setup | Guided conversation/media/memory profiles and verified download/recovery are delivered at recorded configurations. **Physical Windows GPU first result remains unqualified.** | SETUP-101–145, SETUP-160–163 |
+| NR-13: consumer installation | Linux clean CPU journey and Windows 11 private-WSL CPU journey, preserving update/Stop/restart passed. Unsigned distribution accepted; fresh physical GPU journeys remain unqualified. | INSTALL-101, SETUP-146–154, SETUP-159–164 |
+| NR-14: hardware-aware setup | Guided conversation/media/memory profiles and verified download/recovery are delivered at recorded configurations. Physical Windows GPU first result is owner-planned post-release QA. | SETUP-101–145, SETUP-160–164 |
 
-The v45 catalog contains **260 active cases**, retaining four deferred Mac
-definitions separately. The 24 additions close explicit requirement coverage
-gaps; all previous 236 definitions/IDs remain intact. Existing v15 answers and
+The v46 catalog contains **261 active cases**, retaining four deferred Mac
+definitions separately. v45 added 24 cases to close explicit requirement coverage
+gaps; v46 adds the physical Windows GPU journey for post-release QA. All previous
+definitions/IDs remain intact. Existing v15 answers and
 later draft workbooks are preserved. Catalog coverage is not test execution.
 
 ## Evidence that need not be repeated
@@ -77,25 +83,29 @@ no credentials, private Library media or operator answers belong in this documen
 
 ## Remaining release decisions and work
 
-1. **Physical Windows NVIDIA:** install on real hardware, confirm detected GPU,
+1. **Post-release physical Windows NVIDIA (owner):** install on real hardware, confirm detected GPU,
    obtain the recommended model's real first reply, Stop/reload and ordinary
    reboot recovery, preserving unrelated software. A CPU VM, mocked GPU result
    or Linux execution cannot satisfy this gate. Capture OS/driver/card/profile
    and installer identity, without secrets. Availability was requested from the
-   owner; it has not been established.
-2. **Fresh Linux NVIDIA journey:** qualify prepare → explicit ordinary OS restart
+   owner. The owner now explicitly schedules this after publication (SETUP-164).
+2. **Additional fresh Linux NVIDIA qualification:** qualify prepare → explicit ordinary OS restart
    → unprivileged readiness → first recommended GPU result on a separate suitable
    physical installation. Existing workstation readiness and clean CPU-VM
    preparation are useful independent evidence, not that combined journey.
    Do not alter the owner's working graphics/daemon setup to simulate a fresh PC.
-3. **Distribution:** decide the accepted Windows signing/publisher path before
-   claiming a frictionless public installer. Current unsigned artifacts remain
-   private. Do not tell first users to disable operating-system protections.
-4. **Human media acceptance:** listen to the retained eight neutral Fish samples
+   Advertise the actual independently qualified Linux paths above; this additional
+   combined-hardware trial remains a documented coverage limit, not a claimed pass.
+3. **Distribution accepted:** publish the unsigned Windows installer only after
+   human-owned master promotion. State that SmartScreen can show an unknown
+   publisher and Smart App Control/managed policies may block execution. Do not
+   tell users to disable operating-system protections. A paid signature is future
+   work; it would not guarantee immediate SmartScreen reputation.
+4. **Post-release human media acceptance (owner):** listen to the retained eight neutral Fish samples
    and inspect the private film/sound auditions; record expression/completeness,
    sound correspondence and specific defects. Existing artifacts can be reused;
    do not regenerate expensive media to substitute for a listening decision.
-5. **Final QA and promotion:** after those gates, freeze accepted artifact hashes,
+5. **Final QA and promotion:** freeze accepted artifact hashes,
    generate/inspect/round-trip the final Polish workbook and fixtures, prepare
    release notes and the reviewed bot-authored PR to `master`. **Only @jahu may
    approve/merge master.** Publication/signing must retain the accepted source

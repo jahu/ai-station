@@ -1,8 +1,12 @@
 # Windows consumer installation — NR-13/14
 
 The full [0.1.0 requirements](next-release-0.1.md) remain authoritative.
-Windows is not yet qualified or advertised as supported. Linux/Ubuntu acceptance
-cannot establish Windows networking, lifecycle, GPU or security behavior.
+The Windows 11 x64 private-WSL CPU installation, first reply, preserving update,
+native Start/Stop and normal OS restart are qualified. Physical NVIDIA inference
+is unverified; the owner will test it after release. Linux acceptance cannot
+establish Windows GPU behavior. The owner approved an unsigned 0.1 installer on
+2026-11-04, with signing deferred. The historical stages below retain their
+original observations; [current release notes](../releases/0.1.0.md) take priority.
 
 ## Chosen boundary
 

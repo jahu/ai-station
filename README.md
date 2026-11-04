@@ -10,7 +10,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.0.2` · `Linux first` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.1.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -36,13 +36,15 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
-> **Early access:** the published v0.0.2 release uses the Linux setup guide below.
-> Development builds already offer guided model setup; release 0.1 targets
-> Linux and Windows. macOS is deferred due to known startup issues. The full download-and-install
-> experience is still being completed. [Installation status](docs/plans/desktop-installation.md).
+> **Early access:** 0.1 brings desktop installers and guided model setup for
+> Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
+> Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
+> and human evaluation of the new voice/film samples follow release.
+> [Exact qualification and known issues](docs/releases/0.1.0.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
+[0.1 release notes and qualification status](docs/releases/0.1.0.md).
 
 ## Help make it simple
 
@@ -69,15 +71,15 @@ of public reports.
 | **Keep your creative work** | A shared Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
 
-On `develop`, optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
+Optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
 adds a model choice, delivery directions and pacing in Audio and reviewed speech
 agents. Choose **Generate a voice** for expressive delivery, or **Use a recording**
 to keep a particular speaker; a neutral recording can soften emotional delivery.
 Slower/Faster adjusts speaking speed while preserving pitch; Natural keeps the
 model's original pace.
 It requires a configured two-GPU runtime and retains Fish Audio's separate
-model license. Chatterbox remains the default; this is next-release development,
-not a change to the published v0.0.2 package.
+model license. Chatterbox remains the default; historical v0.0.2 packages are
+unchanged.
 
 <table>
 <tr>
@@ -172,11 +174,28 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 **[Try the current release →](https://github.com/jahu/ai-station/releases/latest)**
 
-Guided desktop installers are being tested. The published v0.0.2 release uses the
-Linux setup guide; its current installation steps are below.
+Download the package for your computer from the release assets:
+
+- **Windows 11 x64:** `AI-Station-0.1.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.1.0-linux-amd64.deb`.
+
+Open AI Station, follow the setup, create your administrator account and choose
+a recommended model. Downloads show their size and license before you agree.
+Python and the app are bundled; the installer guides required OS permissions.
+Windows uses its own WSL2 environment and may require an OS restart.
+Model downloads and larger media need additional disk space and suitable hardware.
+
+**Windows installer notice:** 0.1 is **not digitally signed**. Windows may show
+an unknown-publisher/SmartScreen warning; Smart App Control or managed-device
+policies may block it. Use only this repository's official assets and compare
+`SHA256SUMS`. Do not disable system protections. Signing is planned for a later
+release. A checksum checks file identity; it does not replace a code signature.
+
+[Installation, updates and known issues](docs/releases/0.1.0.md).
+The manual Linux path remains available below for advanced users.
 
 <details>
-<summary><strong>Set up today's Linux release (v0.0.2)</strong></summary>
+<summary><strong>Advanced: manual Linux setup from source</strong></summary>
 
 **Current release prerequisites:** Linux, Git, Python 3.12 with venv support,
 Docker Engine and Docker Compose. GPU media additionally requires a compatible
@@ -204,18 +223,17 @@ feature branches and PRs into `develop`.
 </details>
 
 <details>
-<summary><strong>Explore next-release features and guided model setup</strong></summary>
+<summary><strong>Explore 0.1 features and guided model setup</strong></summary>
 
-Development toward **0.1.0** follows the [next-release plan](docs/plans/next-release-0.1.md):
+**0.1.0** follows the [release plan](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
-expressive audio, timeline editing and guided setup. These remain development
-targets rather than features claimed for v0.0.2.
+expressive audio, timeline editing and guided setup. Qualified hardware and
+post-release QA are listed in the [release notes](docs/releases/0.1.0.md).
 
-Private accounts are now implemented and qualified on `develop`: per-user
+Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
 two-factor authentication and administrator management. They are an explicit
-access-profile cutover; see [accounts and migration](docs/accounts.md). This does
-not declare the remaining 0.1.0 work complete.
+access-profile cutover; see [accounts and migration](docs/accounts.md).
 
 Development builds offer **Models → Set up a local model** for reviewed local
 conversation-model downloads. See actual RAM/VRAM and free application storage,
@@ -234,7 +252,7 @@ until you choose another model. [CPU setup](docs/plans/guided-cpu-conversation.m
 On supported Linux NVIDIA workstations, the same page offers **Set up local
 speech**: review hardware, storage and component licenses, prepare Chatterbox,
 then open Audio with your reference recording. Setup history and Stop/Resume are
-saved; an existing configured speech runtime keeps priority. This development
+saved; an existing configured speech runtime keeps priority. This setup
 flow prepares its own Python and offline dependencies, rather than asking you to
 wire up a separate environment.
 [Speech setup and qualification](docs/plans/managed-speech-setup.md).
@@ -294,14 +312,15 @@ Stop/Resume use private ordinary Runs. Existing Fish/Whisper settings retain
 priority. Review the component licenses before installation.
 [Expressive voice setup and qualification](docs/plans/managed-fish-setup.md).
 
-Development desktop builds bundle Python and the application image, open
+Desktop packages bundle Python and the application image, open
 account/model setup in your browser and keep data outside the installed package.
 Clean installation, a real first CPU conversation and preserving update/reinstall
 have been verified on [Linux x86-64](docs/plans/linux-consumer-qualification.md)
 and [Windows 11 / WSL2](docs/plans/windows-consumer-installation.md).
 The Linux package explains any required Docker permission through a native dialog
-and keeps the app running as your ordinary user. These are release candidates;
-broader GPU qualification remains in progress.
+and keeps the app running as your ordinary user. Physical Windows NVIDIA and
+combined fresh Linux GPU qualification remain unverified; CPU first use and
+existing Linux GPU profiles have separate actual evidence.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
 
 **Known issue — macOS:** the native installer is **not supported in release 0.1**.
@@ -324,22 +343,22 @@ effective prompt. Lyrics and spoken scripts are preserved. Fixed Sonic and
 upscale operations have no descriptive prompt to enhance.
 [Prompt preparation contracts](docs/plans/local-prompt-enhancement.md).
 
-For edits, development builds also offer **Auto · match this edit** with a visible
+For edits, **Auto · match this edit** offers a visible
 model recommendation. Pose changes and object removal can use Qwen while explicit
 LUSTIFY choices remain available. [Image workflows](docs/image-workflows.md).
 
-Speech development builds offer optional **Shape the delivery** controls for a
+Speech offers optional **Shape the delivery** controls for a
 compatible configured Chatterbox CLI. Expression, guidance and variation stay with
 each version; the spoken script and standard defaults remain intact.
-[Speech development](docs/plans/expressive-speech.md).
+[Speech controls and qualification](docs/plans/expressive-speech.md).
 
-Development builds also offer **Sound effects** in Audio: choose a completed
+**Sound effects** in Audio lets you choose a completed
 film, describe its sounds and keep both a reusable WAV track and a synchronized
 video preview. **Add sound** on a film opens the saved workspace with that source.
 The optional offline MMAudio runtime uses one GPU and retains its separate
 noncommercial model license. [Configuration and qualification](docs/plans/synchronized-sound.md).
 
-### Saved film editing (release 0.1 candidate)
+### Saved film editing
 
 Video → **Edit a film** opens a saved editing workspace. Add inspected films and
 WAV speech, music or effects from Library; trim, move and reorder clips, adjust
@@ -447,14 +466,13 @@ React/TypeScript/Vite, a durable worker/scheduler and a private native bridge.
 ```
 
 Normal tests use temporary databases and fake executors. Expensive real integrations
-are opt-in. The v0.0.2 qualification covers **4,755 backend/Runner cases**, including
-nine opt-in skips, through the complete passing baseline and all changed test
-families with unchanged remaining source. The full **887 frontend tests** and
-format/lint/typecheck/build gates pass. These are equivalent local checks, not a
-claim that every Python case was rerun in one final invocation. Separate offline
-QA tools have 26 tests and 21 subtests. Those results do not automatically qualify
-every model, media profile or machine.
-[Release verification](docs/releases/0.0.2.md#verification-and-upgrade) ·
+are opt-in. The 0.1 Python regression passed **8,020 tests**, with 19 explicit skips;
+late package/helper changes additionally passed 77 and 159 affected cases.
+Frontend/build and actual packaged platform evidence is recorded separately;
+unchanged code is not described as freshly retested. The offline QA tools pass
+29 tests. These results do not automatically qualify every model, media profile
+or machine.
+[Release verification](docs/releases/0.1.0.md#qualification-and-known-issues) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
