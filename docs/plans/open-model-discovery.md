@@ -149,6 +149,13 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   and desktop/mobile browser checks; the Docker image also built successfully.
   Other image architectures and all remaining media families still
   require their own compatible slots.
+- Native video admission: bounded SafeTensors descriptors and a fixed Wan 2.2 5B
+  diffusion slot verify tensor names/shapes, F16 storage and complete nonoverlapping
+  payload coverage without loading weights or code. The slot binds the exact
+  existing engine and companion recipe; the typed verification operation requires
+  immutable app-owned storage and model/read permissions. Read-only reference hash
+  and structural evidence are recorded privately. Discovery/install/selectors and
+  first-result qualification for a new video checkpoint remain required.
 - Still required: cross-model hardware-ranked discovery,
   complete split/companion plans, validated multimodal model slots and selectors,
   install/update/removal UX and release QA/packages. These remain part of the

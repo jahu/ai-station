@@ -131,6 +131,25 @@ a seed field rejected by the existing Qwen API. No generation had been queued.
 After confirmed native cleanup, the request was corrected to match the workspace
 and reused the same verified objects; all three GPU operations then succeeded.
 
+
+### Native video checkpoint inspection (next release)
+
+The fixed Wan 2.2 5B diffusion slot now has a bounded SafeTensors descriptor
+inspection using the existing typed model-verification operation. It checks the
+complete 825-tensor name/shape signature, F16 storage, exact byte extents, full
+payload coverage and the fixed engine/companion recipe identity. Duplicate JSON
+keys, unsupported storage, overlapping/holey/truncated buffers and unindexed
+trailing bytes are refused. No tensor payload, Torch, publisher code or GPU is
+loaded. The parser follows the [SafeTensors format](https://github.com/safetensors/safetensors#format).
+Only immutable app-owned store objects may use this API coordinate; legacy LLM
+inspection and activation remain GGUF-only.
+
+Read-only inspection of the existing Wan reference confirmed its recipe SHA256,
+825-tensor signature and 83,424-byte header. This is structural evidence, **not**
+a new video installation path or inference qualification. New source plans,
+companion preparation, explicit workload/offload consent and video/film/agent
+selection still need to be connected before a discovered checkpoint is usable.
+
 ## Installed files
 
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. Observed files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.

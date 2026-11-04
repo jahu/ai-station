@@ -3,6 +3,7 @@
 import os
 import re
 import stat
+import struct
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -16,10 +17,18 @@ def owned_model(relative, digest):
     return verify_owned_model(get_settings().host_data_dir(), relative, digest)
 
 
-def verify_owned_model(root, relative, digest):
+def owned_safetensors(relative, digest):
+    return verify_owned_model(
+        get_settings().host_data_dir(), relative, digest, checkpoint_format="safetensors"
+    )
+
+
+def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
     """The same immutable-model boundary for an explicitly owned native data root."""
     if not isinstance(digest, str) or not SHA.fullmatch(digest) or relative != "models/store/" + digest:
         raise HTTPException(422, "Choose a verified app-owned model reference")
+    if checkpoint_format not in {"gguf", "safetensors"}:
+        raise HTTPException(422, "Unsupported owned model format")
     root = Path(root).resolve()
     path = root
     for part in Path(relative).parts:
@@ -37,10 +46,17 @@ def verify_owned_model(root, relative, digest):
             raise ValueError("The model is not an immutable owned regular file")
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(fd, "rb") as source:
-            if source.read(4) != b"GGUF":
+            if checkpoint_format == "safetensors":
+                prefix = source.read(8)
+                if len(prefix) != 8 or not 2 <= struct.unpack("<Q", prefix)[0] <= 32 * 1024**2:
+                    raise ValueError("The model does not have a bounded SafeTensors header")
+                if source.read(1) != b"{":
+                    raise ValueError("The model does not have a SafeTensors header")
+            elif source.read(4) != b"GGUF":
                 raise ValueError("The model does not have a GGUF header")
     except (OSError, ValueError) as exc:
-        raise HTTPException(422, "The verified app-owned GGUF is unavailable or changed") from exc
+        label = "GGUF" if checkpoint_format == "gguf" else "SafeTensors checkpoint"
+        raise HTTPException(422, f"The verified app-owned {label} is unavailable or changed") from exc
     return path
 
 

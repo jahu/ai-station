@@ -17,6 +17,8 @@ from ai_station_runner.memory_scope import available
 from ai_station_runner.memory_scope import scope_environment as scope_environment
 from ai_station_runner.memory_scope import scope_prefix as scope_prefix
 from ai_station_runner.telemetry import collect
+from ai_station_runner.video_checkpoints import PROFILE as CHECKPOINT_PROFILE
+from ai_station_runner.video_checkpoints import recipe as checkpoint_recipe
 from ai_station_runner.windows_storage import disk_usage
 
 # Fixed profile qualified through fresh setup, animation, continuation, CPU
@@ -128,6 +130,7 @@ def catalog():
         else None
     )
     return {
+        "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
         "recipe": frozen,
         "manifest_sha256": video_environment.fingerprint(frozen),
         "platform_supported": supported,

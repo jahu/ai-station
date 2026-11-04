@@ -92,6 +92,15 @@ Native ownership, deadlines, cancellation, inspection and recovery use the exist
 image journal. Legacy request serialization excludes the new optional coordinate.
 Shared model readiness never exposes another account's source/preparation Runs.
 
+
+The fixed Wan checkpoint inspection uses the same private model store namespace
+and permissions, with a distinct SafeTensors coordinate. The bounded JSON reader
+rejects duplicate keys, invalid shapes/types, payload gaps/overlap and unindexed
+bytes. Only the recipe-bound graph and F16 storage are admitted structurally;
+no tensor is deserialized, imported or loaded. This grants no video launch,
+arbitrary checkpoint role, runtime preparation or command capability. Existing
+LLM inspection and activation still require a GGUF source.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates
