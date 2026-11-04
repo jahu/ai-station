@@ -132,6 +132,11 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   GPU count; explicit 128K plans preserve their target and trained limit. Unknown
   sensors/storage and low-bit precision tradeoffs are shown separately. Local
   validation and browser evidence accompany the implementation PR.
+- Native media admission primitive: a fixed Qwen2.1 checkpoint profile shares the
+  bounded GGUF reader with existing LLM inspection, validates the full graph and
+  payload layout, and binds its reference to the exact runtime recipe. Tiny fake
+  headers and read-only actual reference/different-graph checks cover it. This is
+  structural inspection only; new media installation and runtime use remain open.
 - Still required: cross-model hardware-ranked discovery,
   complete split/companion plans, validated multimodal model slots and selectors,
   install/update/removal UX and release QA/packages. These remain part of the

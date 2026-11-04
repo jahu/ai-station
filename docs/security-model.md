@@ -64,6 +64,17 @@ the plan and its fingerprint. Existing owned streaming, native architecture/cach
 inspection, resource admission and registry fences remain authoritative. Runtime
 preparation and arbitrary publisher code are outside this permission.
 
+The optional native `checkpoint_profile` inspection coordinate is a fixed image
+slot, not an arbitrary graph/schema selector. It requires `filesystem_read` and
+`manage_models`, an immutable `models/store/<sha256>` object, exact file observation
+and no language-runtime/image-activation options. The bounded metadata reader
+rejects changed/symlink sources, duplicate/oversized descriptors, incompatible
+names/dimensions, unsupported storage types, bad alignment, truncated extents and
+overlapping payloads. It reads no tensor payload and launches no process. A
+publisher architecture tag cannot override the fixed graph signature. Its reference
+SHA256/size and engine image are bound to the existing native recipe. Inspection
+does not grant download, registration, GPU execution or companion substitution.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates

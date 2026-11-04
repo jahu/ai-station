@@ -29,6 +29,9 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
+    checkpoint_profile: Literal["qwen-image21-diffusion-v1"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
     runtime_profile: (
         Literal[
             "llamacpp-cpu-linux-amd64-v1",
@@ -51,6 +54,12 @@ class VerifyModel(BaseModel):
         from ai_station_runner.owned_models import validate_reference
 
         validate_reference(self.host_path, self.model_sha256, self.app_owned)
+        if self.checkpoint_profile and (
+            not self.app_owned or self.check_context or self.check_image or self.runtime_profile
+        ):
+            raise ValueError(
+                "Checkpoint slot inspection requires an owned object and no language-runtime options"
+            )
         if self.runtime_profile and self.runtime_profile.startswith("llamacpp-native-darwin-"):
             if (
                 not self.app_owned
@@ -131,6 +140,17 @@ def verify_model(body: VerifyModel) -> dict:
             sha256=body.model_sha256,
             checksum_source="verified_download",
         )
+    if body.checkpoint_profile:
+        if not matches:
+            raise HTTPException(409, "Checkpoint changed since its verified observation")
+        from ai_station_runner.media_checkpoints import inspect_checkpoint
+
+        try:
+            result["checkpoint_profile"] = inspect_checkpoint(
+                path, stat.st_size, stat.st_mtime, body.checkpoint_profile
+            )
+        except (OSError, ValueError) as exc:
+            raise HTTPException(422, f"Incompatible image checkpoint: {exc}") from exc
     if body.check_context and matches:
         try:
             result["context_profile"] = inspect_context(path, stat.st_size, stat.st_mtime)
