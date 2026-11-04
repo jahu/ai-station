@@ -53,7 +53,7 @@ def resolve_project_reference(session, body, mode):
     markers = list(MARKER.finditer(line))
     if not markers or not (CHANGE.match(line) or markers[0].start() == 0):
         return body, None
-    projects = list(session.scalars(select(Project)))
+    projects = list(session.scalars(select(Project).where(Project.deleted_at.is_(None))))
     matches = []
     for marker in markers:
         found = []

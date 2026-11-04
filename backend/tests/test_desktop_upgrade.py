@@ -42,10 +42,17 @@ def installer_permissions(root):
 def rows(path):
     with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
         tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
-        return {
-            name: sorted(db.execute('SELECT * FROM "' + name.replace('"', '""') + '"').fetchall(), key=repr)
-            for name in tables
-        }
+        result = {}
+        for name in tables:
+            quoted = '"' + name.replace('"', '""') + '"'
+            values = db.execute("SELECT * FROM " + quoted).fetchall()
+            columns = {row[1] for row in db.execute("PRAGMA table_info(" + quoted + ")")}
+            # 0043 only appends a nullable tombstone. Preserve all old values
+            # and verify populated tombstones too when comparing modern DBs.
+            if name in {"agents", "projects"} and "deleted_at" not in columns:
+                values = [(*row, None) for row in values]
+            result[name] = sorted(values, key=repr)
+        return result
 
 
 @pytest.fixture
@@ -173,7 +180,7 @@ def test_database_local_migration_resumes_publication_without_rewriting_its_back
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0042",)] and before == after
+    assert after.pop("alembic_version") == [("0043",)] and before == after
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen
 
 
@@ -480,7 +487,7 @@ def test_interrupted_publication_resumes_same_operation_without_recopied_backup(
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0042",)]
+    assert after.pop("alembic_version") == [("0043",)]
     assert after == before
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == backup_identity
 

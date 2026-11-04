@@ -69,6 +69,7 @@ from app.providers import ProviderError
 from app.publication import router as publication_router
 from app.recovery import lease_health
 from app.redact import redact_obj
+from app.registry_lifecycle import RegistryDeletedError
 from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
@@ -185,6 +186,11 @@ async def invalid_request(_request, error):
         {"detail": [{key: item[key] for key in ("loc", "msg", "type")} for item in error.errors()]},
         status_code=422,
     )
+
+
+@app.exception_handler(RegistryDeletedError)
+async def removed_definition(_request, error):
+    return JSONResponse({"detail": str(error)}, status_code=409)
 
 
 @app.exception_handler(InvalidTransition)

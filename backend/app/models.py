@@ -339,6 +339,7 @@ class Project(Owned, Base):
     pr_policy: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    deleted_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class Worktree(Base):
@@ -401,6 +402,7 @@ class Agent(Owned, Base):
     failure_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    deleted_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
 
 
 class Approval(Owned, Base):

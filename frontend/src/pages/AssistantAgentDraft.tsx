@@ -42,7 +42,7 @@ import { useRef, useState } from "react";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type Run } from "../api";
+import { api, ApiError, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
@@ -884,8 +884,17 @@ export function AssistantAgentDraft({
         aria-label="Agent draft summary"
       >
         <ErrorNotice
-          error={detail.error ?? runNow.error ?? saveSettings.error}
+          error={
+            detail.error instanceof ApiError && detail.error.status === 410
+              ? null
+              : (detail.error ?? runNow.error ?? saveSettings.error)
+          }
         />
+        {detail.error instanceof ApiError && detail.error.status === 410 && (
+          <p className="muted">
+            This agent was deleted. Previous results remain in Runs and Library.
+          </p>
+        )}
         {agent ? (
           <>
             <div className="assistant-agent-brief-head">
