@@ -597,6 +597,13 @@ def submit_message(conversation_id, body, session, *, commit=True):
     from app.conversation_agent_control import prepare as prepare_agent_control
 
     body, agent_control = prepare_agent_control(session, row, body, mode)
+    if unified and body.action == "auto":
+        from app.chat_policy import agent_draft_requested
+
+        # Resolve current creation authority before implicit media/file helpers
+        # can consume a recurring goal as a one-off generation request.
+        if agent_draft_requested(body.model_dump(mode="json", exclude={"attachments"})):
+            body = body.model_copy(update={"action": "agent.create"})
     from app.conversation_data import prepare_turn as prepare_data_turn
     from app.conversation_music import prepare_turn
     from app.selected_data_agent import prepare as prepare_selected_agent
