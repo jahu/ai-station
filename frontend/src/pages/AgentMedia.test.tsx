@@ -1083,14 +1083,16 @@ it("shows the stored Juggernaut negative prompt and clears incompatible options 
         negative: "blur, noise",
       },
     });
-    saved = value;
     return (
       <AgentMediaScopeEditor
         value={value}
         goal="Calm mountains"
         disabled={false}
         onBusy={() => {}}
-        onChange={setValue}
+        onChange={(next) => {
+          saved = next;
+          setValue(next);
+        }}
       />
     );
   }
