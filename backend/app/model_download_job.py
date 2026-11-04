@@ -15,6 +15,7 @@ from app.db import utcnow
 from app.download_storage import DownloadStorage
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
+from app.hub_candidates import download_candidate
 from app.model_download_files import DownloadBusy, directory, obtain
 from app.model_setup import fingerprint, recommendation
 from app.models import ModelDefinition, ModelFile, User
@@ -22,7 +23,6 @@ from app.permissions import require
 from app.resources import RESOURCE_WAIT_KEY, memory_observation, release_run_locks, reserve_memory
 from app.runner_client import RunnerClient
 from app.runs import transition
-from app.setup_models import Candidate
 from app.state import RunStatus
 from app.task_control import lock_task
 
@@ -63,7 +63,7 @@ class DownloadExecutor:
 
         try:
             check()
-            entry = Candidate.model_validate(run.parameters["entry"])
+            entry = download_candidate(run.parameters["entry"])
             if fingerprint(run.parameters["entry"]) != run.parameters["manifest_sha256"]:
                 raise ValueError("The reviewed model download manifest changed")
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")

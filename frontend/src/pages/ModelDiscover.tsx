@@ -7,6 +7,7 @@ import { useAccount } from "../account-context";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
+import HubInstallPanel from "./HubInstallPanel";
 import "./ModelDiscover.css";
 
 type Profile = {
@@ -28,13 +29,17 @@ type ModelFile = {
   format: string;
   unsafe_serialization: boolean;
   assessment: {
+    hardware_status: string;
     reason: string;
     profiles: Profile[];
     disk: { status: string; free_bytes: number | null };
   };
 };
 type Report = {
-  kind?: "search";
+  kind?: "search" | "install_plan";
+  observation_sha256?: string;
+  manifest_sha256?: string;
+  source_inspection_run_id?: string;
   query?: string;
   repository?: string;
   revision?: string;
@@ -99,8 +104,31 @@ export default function ModelDiscover() {
     mutationFn: () => api<Run>(`/runs/${runId}/cancel`, post({})),
     onSuccess: () => void inspection.refetch(),
   });
+  const plan = useMutation({
+    mutationFn: ({
+      filename,
+      observation,
+    }: {
+      filename: string;
+      observation: string;
+    }) =>
+      api<Run>(
+        "/model-hub/plans",
+        post({
+          client_request_id: randomId(),
+          inspection_run_id: runId,
+          observation_sha256: observation,
+          filename,
+        }),
+      ),
+    onSuccess: (run) => setParams({ run: run.id }),
+  });
   const run = inspection.data;
-  const busy = find.isPending || (!!run && !terminal.includes(run.status));
+  const busy =
+    find.isPending ||
+    plan.isPending ||
+    (!!runId && inspection.isPending) ||
+    (!!run && !terminal.includes(run.status));
   const report = run?.metadata?.source_inspection as Report | undefined;
   const trustedRun = run?.executor_type === "model_hub_inspect";
   const variants = report?.files ?? [];
@@ -163,7 +191,9 @@ export default function ModelDiscover() {
           </p>
         )}
       </form>
-      <ErrorNotice error={find.error ?? inspection.error ?? stop.error} />
+      <ErrorNotice
+        error={find.error ?? plan.error ?? inspection.error ?? stop.error}
+      />
       {run && trustedRun && !find.isPending && (
         <div className="hub-inspection-status" role="status">
           <span>
@@ -228,6 +258,17 @@ export default function ModelDiscover() {
       )}
       {!busy && trustedRun && report?.repository && (
         <section className="hub-results" aria-label="Model source review">
+          {report.kind === "install_plan" &&
+            report.source_inspection_run_id && (
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setParams({ run: report.source_inspection_run_id! })
+                }
+              >
+                ← Back to variants
+              </Button>
+            )}
           <div className="hub-section-heading">
             <h2>{report.repository}</h2>
             <span className="tiny-tag">Metadata reviewed</span>
@@ -323,11 +364,30 @@ export default function ModelDiscover() {
                   </div>
                 </div>
               ))}
-              {!!file.assessment.profiles.length && (
-                <Link className="text-link" to="/setup/models">
-                  Review matching guided setup options →
-                </Link>
-              )}
+              {report.kind !== "install_plan" &&
+                file.format === "gguf" &&
+                file.sha256 && (
+                  <Button
+                    variant="secondary"
+                    disabled={
+                      !canManage || !report.observation_sha256 || plan.isPending
+                    }
+                    onClick={() =>
+                      plan.mutate({
+                        filename: file.filename,
+                        observation: report.observation_sha256!,
+                      })
+                    }
+                  >
+                    Review installation <ArrowRight size={16} />
+                  </Button>
+                )}
+              {!!file.assessment.profiles.length &&
+                report.kind !== "install_plan" && (
+                  <Link className="text-link" to="/setup/models">
+                    Review matching guided setup options →
+                  </Link>
+                )}
               <details>
                 <summary>File identity</summary>
                 <p className="model-path">
@@ -338,6 +398,21 @@ export default function ModelDiscover() {
               </details>
             </article>
           ))}
+          {report.kind === "install_plan" && report.manifest_sha256 && (
+            <HubInstallPanel
+              key={runId}
+              runId={runId}
+              plan={{
+                manifest_sha256: report.manifest_sha256,
+                license: report.license ?? "Not declared",
+                license_url: report.license_url ?? report.source_url ?? "",
+                files: report.files,
+              }}
+              canManage={canManage}
+              downloadId={params.get("download") ?? ""}
+              onDownload={(id) => setParams({ run: runId, download: id })}
+            />
+          )}
           {!report.files.length && (
             <p>
               No inspectable weight files in this selection. Choose a model

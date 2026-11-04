@@ -116,3 +116,17 @@ and tiny files; real model downloads/inference must be explicitly identified.
 
 Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
 [HF model metadata client](https://huggingface.co/docs/huggingface_hub/package_reference/hf_api).
+
+## Implementation tracking
+
+- Source/search/hardware-review UI and private inspection lifecycle: merged in
+  PR #645. Its unused test-parameter TypeScript correction is included in the
+  subsequent installation branch; runtime build/component checks were distinct.
+- New single-file GGUF plan/install/adopt/Chat route: implemented on the following
+  feature branch, with native disagreement and Stop/Resume tests. Real isolated
+  Docker/native/GPU qualification downloaded a new 491 MB Qwen2.5 0.5B object and
+  received its first reply; the owned test runtime is stopped. See `docs/models.md`.
+- Still required: hardware-ranked discovery (including fresh unknown variants),
+  complete split/companion plans, validated multimodal model slots and selectors,
+  install/update/removal UX and release QA/packages. These remain part of the
+  requested release; a successful single-file language-model flow is not completion.

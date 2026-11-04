@@ -1,7 +1,8 @@
 """Pinned app-owned model files: resumable HTTPS, verified bytes, atomic publication.
 
-Only reviewed catalog recipes may construct FileSpec. This is not a caller-URL
-API or a runtime installer; no downloaded code is imported or executed.
+Reviewed catalog recipes and server-resolved compatible model plans construct
+FileSpec. Download endpoints never accept a caller URL/hash override. This is not
+a runtime installer; no downloaded code is imported or executed.
 """
 
 import asyncio

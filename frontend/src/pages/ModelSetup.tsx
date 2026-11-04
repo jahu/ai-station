@@ -69,9 +69,9 @@ type Catalog = {
     headroom_bytes: number;
   } | null;
 };
-type Preparation = {
+export type Preparation = {
   id: string;
-  entry: Entry;
+  entry: Pick<Entry, "name" | "file" | "quantization">;
   attempt: number;
   run: Run;
   model_key: string | null;
@@ -112,7 +112,7 @@ function PreparedModel({
     </Button>
   );
 }
-function PreparationCard({
+export function PreparationCard({
   value,
   canPrepare,
   refresh,

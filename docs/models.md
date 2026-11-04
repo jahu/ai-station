@@ -16,15 +16,40 @@ context/GPU group. Matching platform profiles come first; Mac-only profiles are
 not offered on Linux. Current GPU occupation is separate from capacity. Unknown
 architectures and companion sets retain **unknown** memory requirements; a GGUF
 extension or a file fitting on disk does not qualify it for Chat or Images.
-Reviewed profile matches link to the existing guided setup. Dynamic installation
-of new identities, media recipe slots and universal selectors remain required
-steps of [the complete next-release plan](plans/open-model-discovery.md).
+Reviewed profile matches link to the existing guided setup. **Review installation**
+also resolves a new single-file GGUF outside that catalog. Supported llama.cpp
+planning families are Llama/Mistral, Qwen2, Qwen3 and Qwen3.5. The publisher must
+declare a compatible causal-model configuration; embedding models, vision
+projectors, ambiguous base models and incomplete shards are not installed as Chat.
+The configuration's repository/commit/hash, weight SHA256/size, source and license
+are frozen before the administrator accepts a download. GPU fit and storage are
+checked again by the existing downloader. The native Runner must agree with the
+actual GGUF's architecture, context and cache geometry before registry publication.
+No downloaded Python, custom-code flag or arbitrary runtime is admitted.
+
+New downloads use the existing model preparation history and Stop/Resume. Their
+verified files/definitions appear in the shared Chat catalog; **Open Chat with
+this model** creates a conversation without changing personal defaults. Other
+accounts cannot inspect the source/plan/download history. Media recipe slots,
+general discovery ranking and multimodal binding remain required steps of
+[the complete next-release plan](plans/open-model-discovery.md).
 
 Verification uses bounded fake public metadata, real private-account API/worker
 tests and temporary storage. Live HF metadata/search and read-only workstation
 telemetry were checked without weights or inference. Compiled desktop/mobile UI
 checks use those public metadata results with fixture HTTP/hardware; they are not
-a production model installation or inference qualification. Private evidence:
+a production model installation or inference qualification.
+
+A separate explicit real qualification built the Docker control plane and used
+an independent native Runner/data root. It downloaded a fresh 491,400,032-byte
+Qwen2.5 0.5B Q4_K_M from the publisher, resolved a new plan outside curated IDs,
+verified/adopted it through the native GGUF contract, exposed it in Chat and
+obtained `model import works.` from an actual GPU conversation. The route took
+32 seconds on this workstation with the runtime image already installed; this
+is not a general performance promise or a recommendation for complex agents.
+Only its newly owned runtime was stopped; production data was untouched. Browser
+installation/consent/progress/refresh checks replay the exact saved projections
+without repeating the download or inference. Private evidence:
 `data/acceptance/model-discovery-20261104/`.
 
 ## Installed files
