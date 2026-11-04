@@ -3,10 +3,62 @@
 import hashlib
 import json
 from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from ai_station_runner.safetensors_headers import inspect_header
 
 PROFILE = "wan22-5b-diffusion-v1"
+
+
+class CheckpointSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    profile: Literal["wan22-5b-diffusion-v1"]
+    relative_path: str
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    size_bytes: StrictInt = Field(gt=0, le=32 * 1024**3)
+    mtime: float = Field(ge=0, allow_inf_nan=False)
+    schema_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+    @model_validator(mode="after")
+    def namespace(self):
+        if self.relative_path != "models/store/" + self.sha256:
+            raise ValueError("Select a verified video checkpoint from application storage")
+        return self
+
+
+def managed_environment(root, runtime=None):
+    from ai_station_runner import video_environment
+    from ai_station_runner.video_prepare import QUALIFIED
+
+    if not QUALIFIED:
+        raise ValueError("This managed video engine is not qualified")
+    root = Path(root).resolve()
+    if runtime is None:
+        private = video_environment.read_json(root / "runtime/video-environments/active.json")
+        runtime = video_environment.public_observation(private)
+    selected = video_environment.resolve_public(root, runtime)
+    return selected
+
+
+def selected_environment(root, source, runtime=None, *, verify_weights=False):
+    from ai_station_runner.owned_models import verify_owned_model
+
+    root = Path(root).resolve()
+    selected = managed_environment(root, runtime)
+    expected = recipe(source.profile)
+    if selected["observation"]["manifest_sha256"] != expected["runtime_manifest_sha256"]:
+        raise ValueError("This checkpoint needs its reviewed video engine and companions")
+    path = verify_owned_model(root, source.relative_path, source.sha256, checkpoint_format="safetensors")
+    proof = inspect_checkpoint(path, source.size_bytes, source.mtime, source.profile)
+    if proof["schema_sha256"] != source.schema_sha256:
+        raise ValueError("The selected video checkpoint graph changed")
+    if verify_weights:
+        with path.open("rb") as handle:
+            if hashlib.file_digest(handle, "sha256").hexdigest() != source.sha256:
+                raise ValueError("The selected video checkpoint content changed")
+    return {**selected, "wan_model": path}
 
 
 def recipe(profile):
@@ -52,6 +104,7 @@ def inspect_checkpoint(path, size_bytes, mtime, profile):
         "dtypes": dtypes,
         "tensor_storage_bytes": report["tensor_storage_bytes"],
         "header_bytes": report["header_bytes"],
+        "header_sha256": report["header_sha256"],
         "runtime_qualified": False,
         "notice": "Graph/layout compatibility only; complete engine, companion, hardware and first-result qualification remain separate.",
     }

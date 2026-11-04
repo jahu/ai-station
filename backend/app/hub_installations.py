@@ -66,6 +66,7 @@ class InstallRequest(BaseModel):
     plan_run_id: UUID
     manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     license_accepted: StrictBool
+    workload_accepted: StrictBool = False
 
 
 @router.post("/downloads", status_code=202)
@@ -81,12 +82,14 @@ def install(body: InstallRequest, session: DB):
         raise HTTPException(409, "Review a complete model installation plan first")
     candidate = download_candidate(report["candidate"])
     snapshot = candidate.model_dump(mode="json")
-    if candidate.capability == "image" and not candidate.preparation_available:
+    if candidate.capability in {"image", "video"} and not candidate.preparation_available:
         raise HTTPException(
             409,
             candidate.preparation_notice
             or "Prepare the supported image runtime prerequisites before installing this checkpoint",
         )
+    if candidate.capability == "video" and not body.workload_accepted:
+        raise HTTPException(422, "Review and accept the fixed video workload and explicit CPU offload")
     if fingerprint(snapshot) != body.manifest_sha256 or report.get("manifest_sha256") != body.manifest_sha256:
         raise HTTPException(409, "The model manifest changed; review its source, hardware and license again")
     prior = session.get(Task, str(body.client_request_id))
@@ -111,6 +114,7 @@ def install(body: InstallRequest, session: DB):
         "manifest_sha256": body.manifest_sha256,
         "entry": snapshot,
         "license_accepted": True,
+        **({"workload_accepted": True} if candidate.capability == "video" else {}),
         "download_only": False,
         "attempt": 1,
         "receipts": {},

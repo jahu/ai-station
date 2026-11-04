@@ -1121,3 +1121,60 @@ it("shows the stored Juggernaut negative prompt and clears incompatible options 
   });
   expect(screen.queryByLabelText("Agent negative prompt")).toBeNull();
 });
+
+it("keeps an installed video choice in the agent scope despite unavailable default setup", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/video/models")
+          ? { items: [{ id, name: "Installed Wan", available: true }] }
+          : path.includes(`/video/models/${id}/capabilities`)
+            ? { available: true, configuration_source: "managed" }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : { available: false },
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("video", "A river"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="A river"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+          readiness={{
+            video: { ready: false, reason: "Default setup unavailable" },
+          }}
+        />
+        <output data-testid="video-scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  fireEvent.change(await screen.findByLabelText("Video model"), {
+    target: { value: id },
+  });
+  await waitFor(() =>
+    expect(screen.queryByText(/Default setup unavailable/)).toBeNull(),
+  );
+  expect(
+    JSON.parse(screen.getByTestId("video-scope").textContent ?? "{}").request,
+  ).toMatchObject({
+    model_id: id,
+    width: 1280,
+    height: 704,
+    memory_profile: "bounded_11g",
+  });
+});

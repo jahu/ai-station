@@ -30,7 +30,7 @@ def validate_operation(run, *, executor_type="runtime_setup"):
     saved = run.task.metadata_json.get("runtime_preparation") or {}
     parameters = run.parameters
     allowed_task = run.task.intent == INTENT
-    if not allowed_task and run.executor_type == "image_setup":
+    if not allowed_task and run.executor_type in {"image_setup", "video_setup"}:
         from app.hub_image_preparation import owns_preparation
 
         allowed_task = owns_preparation(run)

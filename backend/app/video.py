@@ -131,6 +131,11 @@ def managed_parameters(body, profile):
         "managed_runtime": dict(observed),
         "managed_video_gpu_indices": list(eligible),
         "memory_profile": "bounded_11g",
+        **(
+            {"video_model": profile["video_model"], "checkpoint": profile["video_model"]["checkpoint"]}
+            if profile.get("video_model")
+            else {}
+        ),
     }
 
 
@@ -149,6 +154,10 @@ def create_video_run(
     session, body, *, task=None, parent_run_id=None, observed_profile=None, _prepare_translation=True
 ):
     observed_profile = capabilities() if observed_profile is None else observed_profile
+    if body.model_id:
+        from app.video_models import profile_for
+
+        observed_profile = profile_for(session, body.model_id, observed_profile)
     managed = managed_parameters(body, observed_profile)
     reservation = None
     if body.memory_profile != "default" or managed:
@@ -205,7 +214,9 @@ def create_video_run(
 
 @router.post("/runs", status_code=202)
 def generate(body: VideoRequest, session: DB):
-    observed = capabilities()
+    from app.video_models import profile_for
+
+    observed = profile_for(session, body.model_id)
     if not observed["available"]:
         raise HTTPException(409, "Local video is unavailable; inspect Video setup before generating")
     run = create_video_run(session, body, observed_profile=observed)
@@ -298,6 +309,7 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
             "/v1/runs/video",
             {
                 "run_id": run.id,
+                **({"checkpoint": run.parameters["checkpoint"]} if run.parameters.get("checkpoint") else {}),
                 **(
                     {"managed_runtime": run.parameters["managed_runtime"]}
                     if run.parameters.get("managed_runtime")

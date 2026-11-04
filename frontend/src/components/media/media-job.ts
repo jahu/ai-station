@@ -4,6 +4,7 @@ import type { TranslationOptions } from "./PromptTranslation";
 import type { AvatarGenerationProfile } from "./AvatarWholeProfile";
 
 export type MediaRequest = {
+  model_id?: string;
   generation_profile?: AvatarGenerationProfile;
   translation?: TranslationOptions;
   image_artifact_id?: string | null;

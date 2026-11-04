@@ -24,10 +24,18 @@ export default function AgentVideoSetup({
   actionLabel?: string;
   tabIndex?: number;
 }) {
+  const modelId = value?.kind === "video" ? value.request.model_id : undefined;
   const capability = useQuery({
-    queryKey: ["video-capabilities"],
+    queryKey: modelId
+      ? ["video-capabilities", modelId]
+      : ["video-capabilities"],
     enabled: value?.kind === "video",
-    queryFn: () => api<VideoCapabilities>("/video/capabilities"),
+    queryFn: () =>
+      api<VideoCapabilities>(
+        modelId
+          ? `/video/models/${modelId}/capabilities`
+          : "/video/capabilities",
+      ),
   });
   if (value?.kind !== "video" || !capability.data?.available) return null;
   const request = value.request;

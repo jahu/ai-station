@@ -27,6 +27,7 @@ export type ImageMediaRequest = {
   upscale_result?: boolean;
 };
 export type VideoMediaRequest = {
+  model_id?: string;
   memory_profile?: "default" | "bounded_11g";
   prompt: string;
   negative_prompt?: string;

@@ -161,6 +161,18 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   install/update/removal UX and release QA/packages. These remain part of the
   requested release; a successful single-file language-model flow is not completion.
 
+Video implementation in qualification: a new single-file F16 Wan 2.2 5B plan binds
+its actual immutable header and the full native engine/companion recipe.
+A missing model card does not block a file with a supported verified graph.
+It will use the existing model downloader with an optional owned video-setup
+prerequisite, explicit license and CPU-offload workload acceptance, native graph
+admission and shared definitions with private history. Explicit Video/film/agent
+selection will freeze the owned checkpoint and original opaque engine identity;
+only the diffusion source may change. Existing configured paths and saved legacy
+requests retain priority unless a new model is explicitly selected. Readiness
+and dispatch must recheck each selected GPU, physical RAM, user memory scope and
+unchanged checkpoint. This path remains unqualified until end-to-end tests pass.
+
 Next: extend compatible media recipe slots, preserving exact companion/runtime
 identities and native verification. Cross-model recommendations and complete
 bundle plans remain required. Popularity is not quality or hardware compatibility;

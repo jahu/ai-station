@@ -1,8 +1,8 @@
-"""A licensed model Task may own exactly its pinned image-engine prerequisite."""
+"""A licensed model Task may own exactly its pinned image/video prerequisite."""
 
 from sqlalchemy.orm import object_session
 
-from app.hub_image_candidates import HubImageCandidate
+from app.hub_candidates import download_candidate
 from app.model_setup import INTENT, fingerprint
 from app.models import Run, RunDependency
 
@@ -12,14 +12,18 @@ def owns_preparation(run):
     saved = task.metadata_json.get("model_download") or {}
     if (
         task.intent != INTENT
-        or run.executor_type != "image_setup"
+        or ((saved.get("entry") or {}).get("origin"), run.executor_type)
+        not in {("hub_image", "image_setup"), ("hub_video", "video_setup")}
         or task.owner_id != run.owner_id
         or saved.get("license_accepted") is not True
-        or (saved.get("entry") or {}).get("origin") != "hub_image"
+        or (
+            (saved.get("entry") or {}).get("origin") == "hub_video"
+            and saved.get("workload_accepted") is not True
+        )
         or fingerprint(saved.get("entry")) != saved.get("manifest_sha256")
     ):
         return False
-    entry = HubImageCandidate.model_validate(saved["entry"])
+    entry = download_candidate(saved["entry"])
     session = object_session(run)
     parent = session.get(Run, saved.get("run_id")) if session and saved.get("run_id") else None
     return bool(

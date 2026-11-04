@@ -16,15 +16,24 @@ export default function VideoMemoryProfile({
   onChange,
   disabled,
   recommended,
+  modelId,
 }: {
   value: VideoProfile;
   onChange: (value: VideoProfile) => void;
   disabled?: boolean;
   recommended?: boolean;
+  modelId?: string;
 }) {
   const capability = useQuery({
-    queryKey: ["video-capabilities"],
-    queryFn: () => api<VideoCapabilities>("/video/capabilities"),
+    queryKey: modelId
+      ? ["video-capabilities", modelId]
+      : ["video-capabilities"],
+    queryFn: () =>
+      api<VideoCapabilities>(
+        modelId
+          ? `/video/models/${modelId}/capabilities`
+          : "/video/capabilities",
+      ),
   });
   const ready =
     capability.data?.available &&

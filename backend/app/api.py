@@ -85,6 +85,7 @@ from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router
 from app.transcription import router as transcription_router
 from app.video import router as video_router
+from app.video_models import router as video_models_router
 
 DB = Annotated[Session, Depends(session_scope)]
 
@@ -471,6 +472,7 @@ app.include_router(waveform_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
 app.include_router(video_router)
+app.include_router(video_models_router)
 app.include_router(media_jobs_router)
 app.include_router(commit_router)
 app.include_router(codex_router)

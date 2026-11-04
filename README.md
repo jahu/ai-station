@@ -53,7 +53,8 @@ On `develop`, the next release adds **Models → Find new models**: search Huggi
 Face or paste a publisher link, review hardware fit and licenses, then install
 compatible conversation models and Qwen Image 2.1 checkpoints. Verified image
 choices work in Images and assistant/agent tools. These additions are not in the
-0.1.2 installers; other media-model families are still being integrated.
+0.1.2 installers. Video checkpoint imports are being qualified against the local
+video pipeline; other media-model families are still being integrated.
 [Discovery and installation status](docs/plans/open-model-discovery.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
