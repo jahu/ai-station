@@ -250,3 +250,17 @@ def test_fixed_expiry_can_keep_own_housekeeping_after_project_removal():
         run = create_run(session, task, capability="coding.worktree.remove", executor_type="worktree_remove")
         session.commit()
         assert run.project_id == project.id
+
+
+def test_cached_parent_from_previous_transaction_cannot_bypass_deletion():
+    with session_factory()() as stale:
+        agent = Agent(name="Previously loaded", enabled=False)
+        stale.add(agent)
+        stale.commit()
+        aid = agent.id
+        with session_factory()() as deleting:
+            deleting.get(Agent, aid).deleted_at = utcnow()
+            deleting.commit()
+        assert agent.deleted_at is None  # expire_on_commit=False retains this cache.
+        with pytest.raises(RegistryDeletedError):
+            create_task(stale, title="Late cached retry", agent_id=aid, capability="testing.fake")

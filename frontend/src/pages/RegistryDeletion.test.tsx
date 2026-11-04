@@ -73,6 +73,11 @@ it("focuses Cancel, names the selection and performs no write on cancel", async 
   );
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(screen.queryByRole("dialog")).toBeNull();
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Delete Morning report" }),
+    ),
+  );
   expect(fetch).not.toHaveBeenCalled();
 });
 

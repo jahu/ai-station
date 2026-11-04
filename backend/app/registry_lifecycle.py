@@ -117,7 +117,13 @@ def guard_registry_references(session, _context, _instances):
             )
             if parent is None:
                 parent = session.get(model, value)
-            if parent is not None and parent.deleted_at is not None:
+            # Long-lived workers and metadata preparation may commit without
+            # expiring their identity map. Re-read the tombstone in this write
+            # transaction as well as honoring a pending in-memory deletion.
+            if parent is not None and (
+                parent.deleted_at is not None
+                or session.scalar(select(model.deleted_at).where(model.id == value)) is not None
+            ):
                 raise RegistryDeletedError(
                     f"{model.__name__} was deleted. Choose an existing definition for new work."
                 )

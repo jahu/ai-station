@@ -18,6 +18,7 @@ export function useRegistryDeletion(
 ) {
   const cache = useQueryClient();
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const [selection, setSelection] = useState<{ scope: string; ids: string[] }>({
     scope,
     ids: [],
@@ -58,7 +59,8 @@ export function useRegistryDeletion(
       void cache.invalidateQueries({ queryKey: [kind] });
     },
   });
-  const open = (rows: RegistryItem[]) => {
+  const open = (rows: RegistryItem[], opener: HTMLElement) => {
+    openerRef.current = opener;
     mutation.reset();
     setTargets(rows.map((item) => ({ ...item })));
   };
@@ -87,7 +89,7 @@ export function useRegistryDeletion(
           variant="ghost"
           className="registry-delete"
           aria-label={`Delete ${item.name}`}
-          onClick={() => open([item])}
+          onClick={(event) => open([item], event.currentTarget)}
         >
           <Trash2 size={15} aria-hidden="true" />
           Delete
@@ -122,7 +124,7 @@ export function useRegistryDeletion(
           <Button
             variant="secondary"
             className="registry-delete"
-            onClick={() => open(selected)}
+            onClick={(event) => open(selected, event.currentTarget)}
           >
             <Trash2 size={15} aria-hidden="true" />
             Delete selected ({selected.length})
@@ -141,6 +143,12 @@ export function useRegistryDeletion(
           <Dialog.Overlay className="dialog-overlay" />
           <Dialog.Content
             className="registry-delete-dialog"
+            onCloseAutoFocus={(event) => {
+              if (openerRef.current?.isConnected) {
+                event.preventDefault();
+                openerRef.current.focus();
+              }
+            }}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               cancelRef.current?.focus();

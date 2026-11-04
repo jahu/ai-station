@@ -795,7 +795,10 @@ export function AssistantAgentDraft({
     queryFn: () => api<{ models: { id: string; name: string }[] }>("/llama"),
     enabled: compact && !!detail.data?.model.startsWith("llamacpp:"),
   });
-  const agent = detail.data;
+  const agent =
+    detail.error instanceof ApiError && detail.error.status === 410
+      ? undefined
+      : detail.data;
   const block = agent
     ? activationBlock(agent, catalog.data, skillsCatalog.data)
     : { blocked: false, reason: null };
