@@ -29,7 +29,7 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
-    checkpoint_profile: Literal["qwen-image21-diffusion-v1"] | None = Field(
+    checkpoint_profile: Literal["qwen-image21-diffusion-v1", "wan22-5b-diffusion-v1"] | None = Field(
         default=None, exclude_if=lambda v: v is None
     )
     runtime_profile: (
@@ -102,9 +102,10 @@ def verify_model(body: VerifyModel) -> dict:
         raise HTTPException(503, "This model inspection profile requires a Linux Host Runner")
     settings = get_settings()
     if body.app_owned:
-        from ai_station_runner.owned_models import owned_model
+        from ai_station_runner.owned_models import owned_model, owned_safetensors
 
-        path = owned_model(body.host_path, body.model_sha256)
+        resolve = owned_safetensors if body.checkpoint_profile == "wan22-5b-diffusion-v1" else owned_model
+        path = resolve(body.host_path, body.model_sha256)
     else:
         roots = _split(settings.model_roots)
         if not roots:
@@ -143,14 +144,18 @@ def verify_model(body: VerifyModel) -> dict:
     if body.checkpoint_profile:
         if not matches:
             raise HTTPException(409, "Checkpoint changed since its verified observation")
-        from ai_station_runner.media_checkpoints import inspect_checkpoint
+        if body.checkpoint_profile == "wan22-5b-diffusion-v1":
+            from ai_station_runner.video_checkpoints import inspect_checkpoint
+        else:
+            from ai_station_runner.media_checkpoints import inspect_checkpoint
 
         try:
             result["checkpoint_profile"] = inspect_checkpoint(
                 path, stat.st_size, stat.st_mtime, body.checkpoint_profile
             )
         except (OSError, ValueError) as exc:
-            raise HTTPException(422, f"Incompatible image checkpoint: {exc}") from exc
+            family = "video" if body.checkpoint_profile == "wan22-5b-diffusion-v1" else "image"
+            raise HTTPException(422, f"Incompatible {family} checkpoint: {exc}") from exc
     if body.check_context and matches:
         try:
             result["context_profile"] = inspect_context(path, stat.st_size, stat.st_mtime)

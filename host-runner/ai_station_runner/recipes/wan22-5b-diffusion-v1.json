@@ -1,0 +1,18 @@
+{
+  "profile": "wan22-5b-diffusion-v1",
+  "runtime_profile": "wan22-5b-linux-x86-64-python312-v1",
+  "role": "wan_model",
+  "format": "safetensors",
+  "runtime_source_sha256": "45bd4fdbc1b01ad023e66fe4fbe44a932932c60de8eee535cfbe5c59cdca4805",
+  "runtime_manifest_sha256": "13014b57a58c515483d8528a1fc2cb81a39bb698e6962a8cc606081d13314386",
+  "reference": {
+    "sha256": "456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e",
+    "size_bytes": 9999658848
+  },
+  "tensor_count": 825,
+  "schema_sha256": "acbca6440127c847d824f17609e71c3c477f52f2a48000f6f783343126314df6",
+  "allowed_dtypes": [
+    "F16"
+  ],
+  "notice": "Structural inspection only; fixed text encoder, VAE, engine identity and workload qualification are independently required."
+}

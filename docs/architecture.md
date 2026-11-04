@@ -22,6 +22,13 @@ mount. Ordinary workspace and assistant/agent selection reuses those definitions
 Other media checkpoint families and complete cross-capability discovery remain
 required delivery steps.
 
+
+The same typed metadata-only verifier now accepts a fixed Wan 2.2 5B diffusion
+slot. Its bounded SafeTensors reader validates complete graph and byte layout,
+without Torch or payload reads. The slot binds the complete existing native
+video recipe; legacy language-model admission stays GGUF-only. This primitive
+provides structural evidence, not new video installation or runtime selection.
+
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated
 fixed action. It prepares pinned toolkit inputs and preserves Docker settings,
