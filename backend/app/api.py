@@ -104,7 +104,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="AI Station", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AI Station", version="0.1.1", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -226,7 +226,7 @@ def health(response: Response):
     with get_engine().connect() as connection:
         connection.execute(text("SELECT 1"))
     response.headers["Cache-Control"] = "no-store"
-    result = {"status": "ok", "version": "0.1.0"}
+    result = {"status": "ok", "version": "0.1.1"}
     if instance_id := get_settings().desktop_instance_id:
         result["desktop_instance_id"] = instance_id
     return result

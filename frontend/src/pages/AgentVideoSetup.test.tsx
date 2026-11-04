@@ -227,5 +227,5 @@ it("saves a compact conversation draft through one versioned settings update wit
       },
     },
   });
-  expect(screen.getByRole("link", { name: "Review & enable" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Review and Edit" })).toBeTruthy();
 });

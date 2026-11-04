@@ -6,7 +6,7 @@
   #error Retained source version is required
 #endif
 #ifndef InstallerVersion
-  #define InstallerVersion "0.1.0"
+  #define InstallerVersion "0.1.1"
 #endif
 [Setup]
 AppId={{556C5DB1-CA40-4920-A26F-6140E96D407C}
