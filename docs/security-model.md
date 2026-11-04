@@ -50,6 +50,15 @@ is no unauthenticated TCP, public bind, shell or Docker authority. Credential
 files stay outside artifacts and server keys stay native. Consumer admission
 remains gated until real transport, lifetime/recovery and installation checks pass.
 
+Open model [discovery](plans/open-model-discovery.md) accepts HF repository/file
+links and bounded searches only through explicit administrator-owned inspection
+Runs. HTTP handlers enqueue; workers reuse public-DNS-pinned HTTPS transport.
+Publisher metadata cannot supply code, SDK commands, filesystem destinations,
+credentials or replacement hashes. Search popularity and filename extensions are
+not runtime admission. Inspections are private; no local paths, prompts, serials
+or private media are sent to publishers. This metadata operation does not grant
+installation permission to agents or automatically download/activate models.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates

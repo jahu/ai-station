@@ -1,5 +1,34 @@
 # Model files, definitions and installation
 
+## Discover public model sources
+
+The next-release discovery increment adds **Models → Find new models**
+(`/models/discover`). Search public Hugging Face repositories or paste a
+repository/file link. An administrator explicitly starts a private metadata-only
+Task/Run; saved review URLs restore results without another source request.
+The worker resolves a commit and available SHA256/size identities, records source
+and license links, and compares exact objects with reviewed installation profiles.
+Stop, account revocation, worker-claim replacement and deadlines fence publication.
+No weight download, runtime preparation or inference is performed by inspection.
+
+Choose a variant to inspect its file budget, supported profile and estimated
+context/GPU group. Matching platform profiles come first; Mac-only profiles are
+not offered on Linux. Current GPU occupation is separate from capacity. Unknown
+architectures and companion sets retain **unknown** memory requirements; a GGUF
+extension or a file fitting on disk does not qualify it for Chat or Images.
+Reviewed profile matches link to the existing guided setup. Dynamic installation
+of new identities, media recipe slots and universal selectors remain required
+steps of [the complete next-release plan](plans/open-model-discovery.md).
+
+Verification uses bounded fake public metadata, real private-account API/worker
+tests and temporary storage. Live HF metadata/search and read-only workstation
+telemetry were checked without weights or inference. Compiled desktop/mobile UI
+checks use those public metadata results with fixture HTTP/hardware; they are not
+a production model installation or inference qualification. Private evidence:
+`data/acceptance/model-discovery-20261104/`.
+
+## Installed files
+
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. Observed files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.
 
 Discovery uses descriptor-relative metadata inspection, does not open model contents, skips symlink files/directories and non-regular files, and rejects traversal into a different filesystem. Mount roots can be configured explicitly. It is bounded to 100,000 traversed entries, 5,000 models and a 60-second traversal budget. Filesystem calls blocked in the kernel can exceed the traversal budget; owned-process cancellation remains available. Models are never loaded, moved, renamed, deleted, copied or downloaded. UUID report paths remain under app-owned artifact storage and reject symlink redirection. The previous synchronous scan endpoint is no longer operational.
