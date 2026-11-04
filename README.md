@@ -474,7 +474,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.1.1.md#qualification-and-known-issues) ·
+[Release verification](docs/releases/0.1.1.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
