@@ -66,6 +66,11 @@ def inspect_header(path, size_bytes, mtime):
         metadata = header.pop("__metadata__", {})
         if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
             raise ValueError("SafeTensors metadata must contain strings only")
+        try:
+            for value in (*header, *metadata, *metadata.values()):
+                value.encode("utf-8")
+        except UnicodeError as exc:
+            raise ValueError("SafeTensors strings must be valid Unicode") from exc
         if not 1 <= len(header) <= 100000:
             raise ValueError("SafeTensors tensor descriptor budget exceeded")
         tensors = []

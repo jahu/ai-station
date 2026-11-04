@@ -86,6 +86,7 @@ def test_complete_graph_storage_and_no_payload_read(tmp_path, synthetic, monkeyp
         (b'{"x":NaN}', "Non-finite"),
         (b'{"__metadata__":{"data":{}}}', "strings only"),
         (b'{"__metadata__":[]}', "strings only"),
+        (b'{"__metadata__":{"value":"\\ud800"}}', "valid Unicode"),
         (b'{"x":{"dtype":"F16","shape":[true],"data_offsets":[0,2]}}', "shape"),
         (b'{"x":{"dtype":"F16","shape":[-1],"data_offsets":[0,2]}}', "shape"),
         (b'{"x":{"dtype":"F16","shape":[2],"data_offsets":[false,4]}}', "offsets"),
