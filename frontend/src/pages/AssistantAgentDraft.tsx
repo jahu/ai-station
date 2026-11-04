@@ -81,6 +81,7 @@ type AgentDraft = {
   goal?: string;
   system_prompt?: string;
   tools?: string[];
+  effective_permissions?: string[];
   media?: AgentMediaScope | null;
   data?: DataScope | null;
   market?: MarketScope | null;
@@ -690,6 +691,7 @@ export function AssistantAgentDraft({
       }));
       void cache.invalidateQueries({ queryKey: ["agent", agentId] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
   const duplicate = useMutation({
@@ -821,6 +823,16 @@ export function AssistantAgentDraft({
     saveSettings.isPending ||
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
+  const enableDisabled =
+    busy ||
+    block.blocked ||
+    (!agent?.enabled &&
+      (agent?.report_email_authorization?.ready === false ||
+        (agent?.notification_policy?.report_email?.mode === "automatic" &&
+          resultEmailConsent !== resultEmailConsentKey(agent)) ||
+        (!!agent?.market?.email &&
+          (!emailReady ||
+            emailConsent !== marketEmailConsentKey(agent.id, agent.market)))));
   const editLocked =
     busy ||
     active ||
@@ -868,6 +880,10 @@ export function AssistantAgentDraft({
       agent?.trigger === "cron"
         ? /^(\d{1,2}) (\d{1,2}) \* \* \*$/.exec(agent.cron_expr ?? "")
         : null;
+    const minuteStep =
+      agent?.trigger === "cron"
+        ? /^\*\/([1-9]|[1-5]\d) \* \* \* \*$/.exec(agent.cron_expr ?? "")
+        : null;
     const cadence = !agent
       ? ""
       : agent.trigger === "interval" && interval > 0
@@ -876,11 +892,13 @@ export function AssistantAgentDraft({
           : interval % 60 === 0
             ? `Every ${interval / 60} ${interval === 60 ? "minute" : "minutes"}`
             : `Every ${interval} seconds`
-        : daily
-          ? `Daily at ${daily[2].padStart(2, "0")}:${daily[1].padStart(2, "0")} ${agent.schedule_timezone ?? "UTC"}`
-          : agent.trigger === "cron"
-            ? `Custom schedule · ${agent.schedule_timezone ?? "UTC"}`
-            : scheduleLabel(agent);
+        : minuteStep
+          ? `Every ${minuteStep[1]} ${minuteStep[1] === "1" ? "minute" : "minutes"} · ${agent.schedule_timezone ?? "UTC"}`
+          : daily
+            ? `Daily at ${daily[2].padStart(2, "0")}:${daily[1].padStart(2, "0")} ${agent.schedule_timezone ?? "UTC"}`
+            : agent.trigger === "cron"
+              ? `Custom schedule · ${agent.schedule_timezone ?? "UTC"}`
+              : scheduleLabel(agent);
     return (
       <section
         className="assistant-agent-brief"
@@ -890,7 +908,10 @@ export function AssistantAgentDraft({
           error={
             detail.error instanceof ApiError && detail.error.status === 410
               ? null
-              : (detail.error ?? runNow.error ?? saveSettings.error)
+              : (detail.error ??
+                toggle.error ??
+                runNow.error ??
+                saveSettings.error)
           }
         />
         {detail.error instanceof ApiError && detail.error.status === 410 && (
@@ -934,6 +955,18 @@ export function AssistantAgentDraft({
                     : "No tools selected"}
                 </dd>
               </div>
+              {agent.effective_permissions && (
+                <div>
+                  <dt>Access</dt>
+                  <dd>
+                    {agent.effective_permissions.length
+                      ? agent.effective_permissions
+                          .map((permission) => permission.replaceAll("_", " "))
+                          .join(" · ")
+                      : "No additional permissions"}
+                  </dd>
+                </div>
+              )}
               {agent.search_query && (
                 <div>
                   <dt>Public search query</dt>
@@ -962,13 +995,65 @@ export function AssistantAgentDraft({
                   : "Review its instructions and scope before enabling. No agent work has started."}
               </p>
             )}
+            {!agent.enabled && (
+              <>
+                {block.blocked && (
+                  <p className="muted" role="status">
+                    {block.reason}
+                  </p>
+                )}
+                <ResultEmailApproval
+                  scope={agent.notification_policy?.report_email}
+                  enabled={agent.enabled}
+                  authorization={agent.report_email_authorization}
+                  checked={resultEmailConsent === resultEmailConsentKey(agent)}
+                  onChange={(checked) =>
+                    setResultEmailConsent(
+                      checked ? resultEmailConsentKey(agent) : null,
+                    )
+                  }
+                />
+                <MarketEmailApproval
+                  market={agent.market}
+                  enabled={agent.enabled}
+                  authorization={agent.market_email_authorization}
+                  checked={
+                    emailConsent ===
+                    marketEmailConsentKey(agent.id, agent.market)
+                  }
+                  onChange={(checked) =>
+                    setEmailConsent(
+                      checked
+                        ? marketEmailConsentKey(agent.id, agent.market)
+                        : null,
+                    )
+                  }
+                  onReadyChange={setEmailReady}
+                />
+              </>
+            )}
+            {agent.enabled && agent.next_run_at && (
+              <p className="muted">
+                Next scheduled run: {time(agent.next_run_at)}
+              </p>
+            )}
             <div className="assistant-agent-brief-actions">
-              <Button asChild>
+              {!agent.enabled && (
+                <Button
+                  type="button"
+                  tabIndex={tabIndex}
+                  disabled={enableDisabled}
+                  onClick={() => toggle.mutate(true)}
+                >
+                  {toggle.isPending ? "Enabling…" : "Accept and Enable"}
+                </Button>
+              )}
+              <Button asChild variant={agent.enabled ? "default" : "secondary"}>
                 <Link
                   tabIndex={tabIndex}
                   to={`/agents/${agent.id}?view=${agent.enabled ? "workspace" : "settings"}`}
                 >
-                  {agent.enabled ? "Open agent workspace" : "Review & enable"}
+                  {agent.enabled ? "Open agent workspace" : "Review and Edit"}
                 </Link>
               </Button>
               {agent.enabled && (

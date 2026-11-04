@@ -168,7 +168,9 @@ def definition(proposal, instruction, model, schedule_timezone="UTC"):
     create_files = bool(base.data and base.data.get("operation") == "create")
     if create_files and proposal.tools != ["python_data"]:
         raise ValueError("Instruction-based file creation requires only the local Python data tool")
-    settings = schedule_values(proposal.model_dump(mode="json", exclude={"report_condition"}))
+    settings = schedule_values(
+        proposal.model_dump(mode="json", exclude={"report_condition"}), instruction=instruction
+    )
     if proposal.maximum_runtime is None:
         # These are visible proposals for a new disabled definition, never an
         # edit of an existing or running allowance. Keep numeric requests exact.
@@ -563,6 +565,7 @@ class AgentDraftExecutor:
                             SelectedProposal.model_validate_json(text),
                             run.parameters.get("schedule_timezone", "UTC"),
                             report_model=run.parameters["model"],
+                            instruction=run.parameters["instruction"],
                         )
                     elif source:
                         from app.data_agent_draft import repeat_definition
@@ -571,6 +574,7 @@ class AgentDraftExecutor:
                             source,
                             RepeatProposal.model_validate_json(text),
                             run.parameters.get("schedule_timezone", "UTC"),
+                            instruction=run.parameters["instruction"],
                         )
                     else:
                         settings = definition(

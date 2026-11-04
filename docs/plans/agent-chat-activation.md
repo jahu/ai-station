@@ -1,0 +1,7 @@
+# Agent drafts: preserve cadence and activate from the conversation
+
+An explicit supported schedule in the current user instruction takes precedence over an omitted/manual or contradictory model proposal. This applies to normal drafts, selected sources and repeated analyses. A minute cadence that divides an hour uses wall-clock cron ("co 15 minut" → `*/15 * * * *`); divisible hour cadences use hourly cron. Other valid cadences retain elapsed intervals, so 90 minutes never becomes an incorrect cron step. Preserve the reviewed timezone and clear inactive schedule fields. Existing definitions remain unchanged.
+
+The compact conversation card shows the goal, execution, schedule, tools and effective access. **Accept and Enable** uses the existing version-checked activation API, keeping readiness/permission gates and explicit email consent. Activation enables future scheduling without silently generating an immediate result. Display the next scheduled Run after success and surface activation errors inline. **Review and Edit** opens the full settings; inline editing stays available. Draft creation alone never enables an agent.
+
+Verify Polish/English cadence preservation despite a model's manual/default or conflicting schedule; unsupported cadence keeps model interpretation. Verify inline success, failures, readiness blocking, consent and no implicit immediate Run. Preserve the existing active agent on the workstation; QA uses disabled disposable definitions and pauses any temporary schedule before its due time.

@@ -199,3 +199,52 @@ def test_effects_draft_cannot_invent_a_film_or_scene_timing(reference):
     )
     with pytest.raises(ValueError, match="Do not invent"):
         definition(proposal, "Create an agent that adds sound to a film", "fake-local")
+
+
+@pytest.mark.parametrize(
+    "model_schedule", [{"trigger": "manual"}, {"trigger": "cron", "cron_expr": "0 9 * * *"}]
+)
+def test_polish_quarter_hour_media_draft_keeps_cadence_and_enables_without_generating(
+    model, implemented_media, model_schedule, monkeypatch
+):
+    from app.runner_client import RunnerClient
+
+    def profile(_self, method, path, **_kwargs):
+        assert (method, path) == ("GET", "/v1/photo/capabilities")
+        return {"available": True, "modes": ["t2i"]}
+
+    monkeypatch.setattr(RunnerClient, "request", profile)
+    _, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                "name": "Mountain illustration",
+                "goal": "Generate a peaceful mountain illustration",
+                "tools": ["create_media"],
+                "media": {
+                    "kind": "image",
+                    "request": {"mode": "t2i", "prompt": "Peaceful mountain illustration"},
+                },
+                **model_schedule,
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(
+            api, instruction="Co 15 minut generuj mi zdjęcie gór.", schedule_timezone="Europe/Warsaw"
+        )
+        assert step() == run["id"]
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["trigger"] == "cron" and agent["cron_expr"] == "*/15 * * * *"
+        assert agent["schedule_timezone"] == "Europe/Warsaw" and not agent["enabled"]
+        enabled = api.post(
+            "/api/agents/" + agent["id"] + "/enabled",
+            json={"expected_updated_at": agent["updated_at"], "enabled": True},
+        )
+        assert enabled.status_code == 200, enabled.text
+        assert enabled.json()["next_run_at"] and enabled.json()["enabled"]
+        with session_factory()() as session:
+            # Activation must not silently enqueue or execute image generation.
+            assert len(list(session.scalars(select(Run)))) == 1
