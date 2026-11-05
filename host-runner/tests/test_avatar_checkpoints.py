@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from ai_station_runner import avatar_checkpoints as slots
+from ai_station_runner import avatar_prepare
 from ai_station_runner.config import clear_settings_cache
 from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.owned_models import owned_model, owned_safetensors
@@ -160,7 +161,7 @@ def test_typed_native_inspection_does_not_admit_generic_pickle_or_language_weigh
 def test_native_slot_requires_real_device_ram_driver_and_complete_disk_budget(
     tmp_path, monkeypatch, capacities, ram, driver, free, fits, available
 ):
-    from ai_station_runner import avatar_prepare, sonic_runtime
+    from ai_station_runner import sonic_runtime
 
     monkeypatch.setattr(
         avatar_prepare,

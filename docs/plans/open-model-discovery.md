@@ -343,6 +343,11 @@ and all-tensor CPU equivalence against the trusted legacy load, without GPU
 initialization. Normal tests exercise malformed/executable metadata, owned paths,
 graph/companion drift and per-device GPU/RAM/driver/disk gates. This is step 2
 admission evidence, not completed source installation or avatar inference.
+Publisher inspection also passed on the immutable official file using six
+metadata-only ranges (480,930 bytes), with the same graph/version/header
+fingerprints. It uses the existing public pinned HTTPS transport and cannot read
+tensor storage or claim native layout validity. Source-plan/installation wiring
+and selected-model inference remain required before this is an operational import.
 
 1. Inspect the actual Sonic loading path before choosing a replaceable role.
    Current inference builds the adapted UNet from SVD configuration but loads

@@ -121,6 +121,76 @@ def _local(handle, info, size):
     return info.header_offset + 30 + header[9] + header[10]
 
 
+def _inventory(archive, offset, count):
+    items = archive.infolist()
+    if len(items) != count or archive.start_dir != offset or items[0].header_offset != 0:
+        raise ValueError("Unexpected tensor archive inventory")
+    names, prefix = {}, None
+    for info in items:
+        match = _NAME.fullmatch(info.filename)
+        mode = stat.S_IFMT(info.external_attr >> 16)
+        if (
+            match is None
+            or match[1] in {".", ".."}
+            or info.filename in names
+            or prefix is not None
+            and match[1] != prefix
+            or mode not in {0, stat.S_IFREG}
+            or info.flag_bits & ~0x808
+            or info.compress_type != zipfile.ZIP_STORED
+            or info.compress_size != info.file_size
+            or info.header_offset < 0
+            or info.header_offset + 30 + len(info.filename) + info.file_size > offset
+        ):
+            raise ValueError("Only bounded, direct, uncompressed tensor files are supported")
+        prefix = match[1]
+        names[info.filename] = info
+    base = prefix + "/"
+    if any(base + name not in names for name in ("data.pkl", "byteorder", "version")):
+        raise ValueError("Missing tensor archive metadata")
+    ordered = sorted(items, key=lambda info: info.header_offset)
+    for index, info in enumerate(ordered):
+        following = ordered[index + 1].header_offset if index + 1 < len(ordered) else offset
+        if info.header_offset + 30 + len(info.filename) + info.file_size > following:
+            raise ValueError("Overlapping tensor archive entries")
+    return names, base, ordered
+
+
+def _metadata_size(relative, info):
+    if not 0 < info.file_size <= (MAX_METADATA if relative == "data.pkl" else 64):
+        raise ValueError("Tensor archive metadata exceeds its bound")
+
+
+def metadata_ranges(handle):
+    """Return metadata-only local extents after bounded directory validation.
+
+    A remote caller may provide only tail/directory bytes initially. Each
+    returned interval ends before the next entry's header, so no tensor entry
+    (header or raw storage) needs to be fetched. All local metadata bytes are
+    then decoded by the same read_archive implementation.
+    """
+    handle.seek(0, 2)
+    size = handle.tell()
+    offset, length, count = directory_end(_read(handle, size - 128, 128, size), size)
+    _read(handle, offset, length, size)
+    result = []
+    with zipfile.ZipFile(handle) as archive:
+        _, base, ordered = _inventory(archive, offset, count)
+        for index, info in enumerate(ordered):
+            relative = info.filename[len(base) :]
+            if relative.startswith("data/"):
+                continue
+            _metadata_size(relative, info)
+            following = ordered[index + 1].header_offset if index + 1 < len(ordered) else offset
+            # Local names/extras and a streaming descriptor have finite bounds.
+            # No arbitrary gap can become an ostensibly harmless metadata read.
+            maximum = 30 + len(info.filename) + 4096 + info.file_size + 24
+            if following - info.header_offset > maximum:
+                raise ValueError("Tensor metadata local extent exceeds its bound")
+            result.append((info.header_offset, following - 1))
+    return result
+
+
 def read_archive(handle, *, verify_local=True):
     """Inspect a seekable metadata view; remote views may defer local payload spans."""
     handle.seek(0, 2)
@@ -129,40 +199,13 @@ def read_archive(handle, *, verify_local=True):
     offset, length, count = directory_end(tail, size)
     central = _read(handle, offset, length, size)
     with zipfile.ZipFile(handle) as archive:
-        items = archive.infolist()
-        if len(items) != count or archive.start_dir != offset or items[0].header_offset != 0:
-            raise ValueError("Unexpected tensor archive inventory")
-        names, prefix = {}, None
-        for info in items:
-            match = _NAME.fullmatch(info.filename)
-            mode = stat.S_IFMT(info.external_attr >> 16)
-            if (
-                match is None
-                or match[1] in {".", ".."}
-                or info.filename in names
-                or prefix is not None
-                and match[1] != prefix
-                or mode not in {0, stat.S_IFREG}
-                or info.flag_bits & ~0x808
-                or info.compress_type != zipfile.ZIP_STORED
-                or info.compress_size != info.file_size
-                or info.header_offset < 0
-                or info.header_offset + 30 + len(info.filename) + info.file_size > offset
-            ):
-                raise ValueError("Only bounded, direct, uncompressed tensor files are supported")
-            prefix = match[1]
-            names[info.filename] = info
-        base = prefix + "/"
-        for name in ("data.pkl", "byteorder", "version"):
-            if base + name not in names:
-                raise ValueError("Missing tensor archive metadata")
+        names, base, ordered = _inventory(archive, offset, count)
         metadata = {}
         for name, info in names.items():
             relative = name[len(base) :]
             if relative.startswith("data/"):
                 continue
-            if not 0 < info.file_size <= (MAX_METADATA if relative == "data.pkl" else 64):
-                raise ValueError("Tensor archive metadata exceeds its bound")
+            _metadata_size(relative, info)
             metadata[relative] = archive.read(info)
         if metadata["byteorder"] != b"little" or metadata["version"] != b"3\n":
             raise ValueError("Use the supported little-endian tensor ZIP version")
@@ -177,7 +220,6 @@ def read_archive(handle, *, verify_local=True):
         expected = {base + "data/" + tensor.storage.key for tensor in state.values()}
         if expected != {name for name in names if name[len(base) :].startswith("data/")}:
             raise ValueError("Tensor storages and archive files disagree")
-        ordered = sorted(items, key=lambda info: info.header_offset)
         data_offsets = {}
         if verify_local:
             for index, info in enumerate(ordered):

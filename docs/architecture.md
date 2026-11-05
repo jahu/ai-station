@@ -28,6 +28,11 @@ closed tensor-data ZIP format and complete graph/module-version signatures.
 It binds the existing SDK and all thirteen other model inputs. The native
 catalog retains per-device VRAM, physical RAM, driver and complete disk checks;
 matching descriptors do not install weights or grant inference readiness.
+Publisher inspection shares only the two pure metadata-parser modules with the
+control-plane image, without shipping the native Runner API or inference stack.
+It fetches a bounded tail/directory and at most six metadata entries through the
+existing pinned public HTTPS transport. Sparse reads cannot enter tensor storage;
+full native local-layout/content checks remain required after actual installation.
 
 
 The same typed metadata-only verifier now accepts a fixed Wan 2.2 5B diffusion

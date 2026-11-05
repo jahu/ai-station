@@ -1767,3 +1767,12 @@ also requires the exact Sonic graph, precision and trusted companion manifest.
 This adds no generic PyTorch loader or execution permission. The separate offline
 tensor mapper verifies immutable owned-file identity and full SHA-256 before
 mapping CPU storage privately; it does not yet replace the avatar inference path.
+
+Remote tensor metadata inspection first validates the finite archive directory,
+then permits only disjoint metadata-entry extents. At most eight exact HTTP
+ranges and roughly four MiB are accepted. Ignored ranges, compression, invalid
+directories, code entries, changed lengths and reads into unobserved storage fail
+closed. Transport reuses public-DNS pinning and redirect validation. The sparse
+reader has no network capability; the Docker image shares only the pure parsers,
+without the native Runner API or Torch. A remote graph match does not establish
+native storage-layout validity or grant installation/execution authority.
