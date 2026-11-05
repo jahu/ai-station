@@ -101,7 +101,19 @@ def catalog():
         licenses.append(
             {"name": item["name"], "url": f"https://github.com/{repository}/blob/{item['revision']}/LICENSE"}
         )
+    managed = {"available": False}
+    try:
+        from ai_station_runner.speech_runtime import active, public_observation
+
+        selected = active(root)
+        managed = {
+            "available": bool(QUALIFIED and supported and fitting),
+            "managed_runtime": public_observation(selected["observation"]),
+        }
+    except (OSError, ValueError, KeyError):
+        pass
     return {
+        "managed_speech": managed,
         "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
         "recipe": frozen,
         "manifest_sha256": speech_environment.fingerprint(frozen),
@@ -149,7 +161,11 @@ def save(identity, value):
 
 
 def controller():
-    return OwnedEnvironmentPreparation(sys.modules[__name__], speech_environment, "speech", "speech")
+    from ai_station_runner.speech_runtime import before_adoption
+
+    return OwnedEnvironmentPreparation(
+        sys.modules[__name__], speech_environment, "speech", "speech", before_adoption=before_adoption
+    )
 
 
 def inspection(manager, identity, *, stdout_offset=0, stderr_offset=0):
@@ -167,7 +183,10 @@ def cancel(manager, identity, body: Selection):
 
 
 def adopt(manager, identity, body: Selection):
-    return controller().adopt(manager, identity, body)
+    try:
+        return controller().adopt(manager, identity, body)
+    except (OSError, ValueError, KeyError) as exc:
+        raise HTTPException(409, "The prepared speech engine changed; inspect it before activation") from exc
 
 
 @router.get("")

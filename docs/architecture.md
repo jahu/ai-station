@@ -1479,3 +1479,13 @@ Registry deletion uses account-scoped, versioned tombstones for Agents and Proje
 New agent drafts preserve controller-parsed explicit user schedules over model defaults across ordinary, selected-source and repeat-analysis paths. Compact conversation cards activate the saved revision through the existing permission/readiness-checked API; draft creation remains disabled. See [conversation activation](plans/agent-chat-activation.md).
 
 Image-agent proposals default to Qwen unless the user names another supported engine. Agent model selectors share backend-specific option cleanup; the typed image API keeps rejecting incompatible settings. Vertical agent media results use static positioning while Images keeps its sticky preview. See [agent image models](plans/agent-image-models.md).
+
+Prepared speech engines expose a separate opaque identity for explicit model
+bindings. A private index resolves that identity to the exact prepared Python,
+ready receipt and fixed model view; the public value contains no preparation
+Run/account coordinate. Read-only fallback admits an older active engine without
+rewriting its metadata. Explicit adoption remembers the previous and new engines
+before changing the active pointer, so later activation preserves existing
+bindings. The catalog reports managed-engine readiness separately from an
+externally configured speech default. New model installation/dispatch still
+requires the reviewed source/graph/workload contract above.
