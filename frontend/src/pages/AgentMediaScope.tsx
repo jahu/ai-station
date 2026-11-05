@@ -98,45 +98,67 @@ export default function AgentMediaScopeEditor({
         `/video/models/${videoModelId}/capabilities`,
       ),
   });
-  const selectedReadiness = videoModelId
+  const musicModelId =
+    scope.kind === "music" ? scope.request.model_id : undefined;
+  const selectedMusic = useQuery({
+    queryKey: ["music-capabilities", musicModelId],
+    enabled: !!musicModelId,
+    queryFn: () =>
+      api<{ available: boolean; reason?: string }>(
+        `/audio/music/models/${musicModelId}/capabilities`,
+      ),
+  });
+  const selectedReadiness = musicModelId
     ? {
-        ready: selectedVideo.isPending
+        ready: selectedMusic.isPending
           ? undefined
-          : selectedVideo.data?.available === true,
+          : selectedMusic.data?.available === true,
         reason:
-          selectedVideo.error?.message ??
-          selectedVideo.data?.reason ??
-          "Checking selected video model…",
+          selectedMusic.error?.message ??
+          selectedMusic.data?.reason ??
+          "Checking selected music model…",
       }
-    : speechModelId
+    : videoModelId
       ? {
-          ready: speech.isPending ? undefined : speech.data?.available === true,
-          reason: speech.error?.message ?? "Checking selected speech model…",
+          ready: selectedVideo.isPending
+            ? undefined
+            : selectedVideo.data?.available === true,
+          reason:
+            selectedVideo.error?.message ??
+            selectedVideo.data?.reason ??
+            "Checking selected video model…",
         }
-      : scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+      : speechModelId
         ? {
-            ready:
-              speech.data?.engines?.fish_s2_pro?.available === true &&
-              (scope.request.voice_source !== "model" ||
-                speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
-                  "model",
-                ) === true),
-            reason:
-              scope.request.voice_source === "model" &&
-              speech.data &&
-              !speech.data.engines?.fish_s2_pro?.voice_sources?.includes(
-                "model",
-              )
-                ? "Update AI Station or choose a voice recording."
-                : (speech.data?.engines?.fish_s2_pro?.reason ??
-                  "Checking expressive speech setup…"),
+            ready: speech.isPending
+              ? undefined
+              : speech.data?.available === true,
+            reason: speech.error?.message ?? "Checking selected speech model…",
           }
-        : scope.kind === "effects"
+        : scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
           ? {
-              ready: effects.data?.available === true,
-              reason: effects.data?.reason ?? "Checking sound effects setup…",
+              ready:
+                speech.data?.engines?.fish_s2_pro?.available === true &&
+                (scope.request.voice_source !== "model" ||
+                  speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                    "model",
+                  ) === true),
+              reason:
+                scope.request.voice_source === "model" &&
+                speech.data &&
+                !speech.data.engines?.fish_s2_pro?.voice_sources?.includes(
+                  "model",
+                )
+                  ? "Update AI Station or choose a voice recording."
+                  : (speech.data?.engines?.fish_s2_pro?.reason ??
+                    "Checking expressive speech setup…"),
             }
-          : readiness?.[scope.kind];
+          : scope.kind === "effects"
+            ? {
+                ready: effects.data?.available === true,
+                reason: effects.data?.reason ?? "Checking sound effects setup…",
+              }
+            : readiness?.[scope.kind];
   const recordedWhole =
     scope.kind === "avatar" &&
     !!scope.request.generation_profile &&

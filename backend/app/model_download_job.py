@@ -191,6 +191,10 @@ class DownloadExecutor:
                 },
             }
             session.commit()
+            if entry.capability == "music":
+                from app.hub_music_install import adopt as adopt_music
+
+                return adopt_music(session, run, entry, path, runner, hardware, check)
             if entry.capability == "speech":
                 from app.hub_speech_install import adopt as adopt_speech
 

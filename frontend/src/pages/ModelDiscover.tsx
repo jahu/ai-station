@@ -76,7 +76,7 @@ type Report = {
     observation?: Report;
   }[];
   candidate?: {
-    capability: "chat" | "image" | "video" | "speech" | "embedding";
+    capability: "chat" | "image" | "video" | "speech" | "music" | "embedding";
     tokenizer?: { size_bytes: number };
     setup_recipe?: {
       component_licenses: { name: string; url: string }[];

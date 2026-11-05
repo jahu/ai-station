@@ -61,6 +61,7 @@ from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
 from ai_station_runner.music_prepare import router as music_setup_router
+from ai_station_runner.music_runtime_schema import CheckpointSelection as MusicCheckpointSelection
 from ai_station_runner.native_llama_prepare import router as native_llama_setup_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -856,6 +857,13 @@ def timeline_run(body: TimelineRequest):
 @app.get("/v1/music/capabilities")
 def local_music_capabilities():
     return music_capabilities()
+
+
+@app.post("/v1/music/model-capabilities")
+def music_model_available(body: MusicCheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Music model inspection requires filesystem read permission")
+    return music_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
 
 
 @app.post("/v1/runs/music")

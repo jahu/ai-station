@@ -1120,6 +1120,7 @@ class AssistantExecutor:
             plan = constrain_plan(plan, run.parameters)
         music_profile = None
         if plan and plan.action == "audio.music":
+            from app.conversation_music import settings as selected_music_settings
             from app.music import capabilities as music_capabilities
 
             authorized = explicit_plan(run.parameters)
@@ -1129,7 +1130,13 @@ class AssistantExecutor:
                     reason="Choose Generate music or directly request a new track. Prior context cannot authorize a new music job.",
                 )
             else:
-                music_profile = music_capabilities()
+                selected_model = selected_music_settings(run.parameters).model_id
+                if selected_model:
+                    from app.music_models import profile_for
+
+                    music_profile = profile_for(session, selected_model)
+                else:
+                    music_profile = music_capabilities()
                 if not music_profile.get("available"):
                     plan = Plan(
                         action="clarify",

@@ -710,3 +710,59 @@ it("opens an installed video model in a fresh workspace and preserves its select
     ),
   ).toBe(false);
 });
+
+it("opens an installed music model in a fresh workspace and preserves its selection", async () => {
+  const backend = fixture({ capability: "music", title: "Previous track" });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      const reply = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (path === "/api/creative/sessions" && options?.method === "POST") {
+        return reply({
+          ...backend.state,
+          id: "fresh-track",
+          title: "Untitled track",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/creative/sessions/fresh-track") {
+        return reply({
+          ...backend.state,
+          id: "fresh-track",
+          title: "Untitled track",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/audio/music/models")
+        return reply({
+          items: [
+            {
+              id: "installed-ace",
+              name: "Installed ACE-Step",
+              available: true,
+            },
+          ],
+        });
+      return original(input, options);
+    }),
+  );
+  mount("music", "/audio?mode=music&model=installed-ace");
+  const choice = await screen.findByLabelText("Music model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-ace");
+  expect(
+    screen.getByRole("textbox", { name: "Workspace name" }),
+  ).toHaveProperty("value", "Untitled track");
+  expect(
+    backend.fetch.mock.calls.some(
+      ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+    ),
+  ).toBe(false);
+});

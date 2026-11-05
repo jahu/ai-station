@@ -582,6 +582,10 @@ class AgentMediaExecutor:
                 from app.audio_models import profile_for
 
                 profile = profile_for(session, definition.media.request.model_id)
+            elif definition.media.kind == "music" and definition.media.request.model_id:
+                from app.music_models import profile_for
+
+                profile = profile_for(session, definition.media.request.model_id)
             else:
                 profile = require_profile(definition.media)
             scope = definition.media

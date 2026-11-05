@@ -250,6 +250,16 @@ export function PreparationCard({
               Choose this encoder in Memory →
             </Link>
           )}
+        {value.entry.capability === "music" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/audio?mode=music&model=${value.definition_id}`}
+            >
+              Create with this music model →
+            </Link>
+          )}
         {value.entry.capability === "speech" &&
           value.definition_id &&
           value.progress.ready_to_try && (

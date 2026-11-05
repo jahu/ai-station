@@ -293,3 +293,23 @@ it("disables speech installation when the complete installation does not fit dis
   fireEvent.click(button);
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("requires separate consent for the music workload and its CPU offload", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "music-preparation" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount({ ...plan, capability: "music" });
+  const submit = screen.getByRole("button", { name: "Install model" });
+  const checks = screen.getAllByRole("checkbox");
+  expect(checks).toHaveLength(2);
+  fireEvent.click(checks[0]);
+  expect((submit as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(checks[1]);
+  expect((submit as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(submit);
+  await waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+  const [, options] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+  expect(JSON.parse(String(options.body)).workload_accepted).toBe(true);
+});
