@@ -6,6 +6,7 @@ import os
 import resource
 import signal
 import sys
+import time
 from pathlib import Path
 
 from app.embedding_models import CPU_THREADS, DIMENSION, FILES, MAX_CHARACTERS, model_file, verify_file
@@ -23,9 +24,23 @@ def bind_parent(expected_pid):
 
 
 class Encoder:
-    def __init__(self, root):
-        for name in FILES:
-            verify_file(root, name)
+    def __init__(self, root, binding=None, *, admit=False):
+        self.proof = None
+        if binding is None:
+            for name in FILES:
+                verify_file(root, name)
+            model_path, tokenizer_path = (
+                model_file(root, "model_quantized.onnx"),
+                model_file(root, "tokenizer.json"),
+            )
+        else:
+            from app.embedding_binding import objects
+            from app.embedding_graph import inspect
+
+            _, paths = objects(root, binding, rehash=True)
+            model_path, tokenizer_path = paths["model"], paths["tokenizer"]
+            if admit:
+                self.proof = inspect(model_path)
         import onnxruntime as ort
         from tokenizers import Tokenizer
 
@@ -34,10 +49,8 @@ class Encoder:
         options.inter_op_num_threads = 1
         options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         options.add_session_config_entry("session.intra_op.allow_spinning", "0")
-        self.session = ort.InferenceSession(
-            str(model_file(root, "model_quantized.onnx")), options, providers=["CPUExecutionProvider"]
-        )
-        self.tokenizer = Tokenizer.from_file(str(model_file(root, "tokenizer.json")))
+        self.session = ort.InferenceSession(str(model_path), options, providers=["CPUExecutionProvider"])
+        self.tokenizer = Tokenizer.from_file(str(tokenizer_path))
         self.tokenizer.no_truncation()
         self.tokenizer.no_padding()
 
@@ -105,8 +118,39 @@ class Encoder:
 
 def main():
     bind_parent(int(sys.argv[2]))
-    encoder = Encoder(Path(sys.argv[1]))
-    print(json.dumps({"ready": True, "device": "CPU", "dimension": DIMENSION}), flush=True)
+    binding, admit = None, False
+    if len(sys.argv) > 3:
+        from app.embedding_binding import read_job
+
+        if len(sys.argv) not in {4, 5} or len(sys.argv) == 5 and sys.argv[4] != "admit":
+            raise ValueError("Use the fixed selected encoder operation")
+        job = read_job(Path(sys.argv[1]), sys.argv[3])
+        remaining = job.deadline_at - time.time()
+        if remaining <= 0:
+            raise TimeoutError("The selected encoder deadline expired")
+
+        def expired(signum, frame):
+            raise TimeoutError("The selected encoder deadline expired")
+
+        signal.signal(signal.SIGALRM, expired)
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        binding, admit = job.binding.model_dump(mode="json"), len(sys.argv) == 5
+        import socket
+
+        def deny_network(*args, **kwargs):
+            raise RuntimeError("The encoder is offline")
+
+        socket.socket.connect = deny_network
+        socket.create_connection = deny_network
+    encoder = Encoder(Path(sys.argv[1]), binding, admit=admit)
+    ready = {"ready": True, "device": "CPU", "dimension": DIMENSION}
+    if binding is not None:
+        from app.embedding_graph import fingerprint
+
+        ready["model_identity"] = fingerprint(binding)
+        if admit:
+            ready["graph"] = encoder.proof
+    print(json.dumps(ready), flush=True)
     while line := sys.stdin.readline(160001):
         if len(line) > 160000:
             raise ValueError("Embedding request exceeded its bound")

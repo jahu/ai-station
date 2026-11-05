@@ -13,6 +13,7 @@ type Setup = {
   can_prepare: boolean;
   configured: boolean;
   backend: string;
+  selected_model?: { name: string; available: boolean } | null;
   model: string;
   revision: number;
   local_model: {
@@ -64,10 +65,16 @@ export default function MemorySetupPanel() {
   });
   const data = setup.data;
   const local = data?.local_model;
-  const external = !!data?.configured && data.backend !== "local_cpu";
+  const registered = data?.backend === "registered_cpu";
+  const external =
+    !!data?.configured &&
+    !["local_cpu", "registered_cpu"].includes(data.backend);
   const ready =
     !!data?.configured &&
-    (external || (local?.installed === true && local.available === true));
+    (external ||
+      (registered
+        ? data?.selected_model?.available === true
+        : local?.installed === true && local.available === true));
   const running = [data?.prepare_run, data?.index_run, data?.health_run].find(
     active,
   );
@@ -158,21 +165,27 @@ export default function MemorySetupPanel() {
                     <strong>Memory search is configured.</strong>{" "}
                     {external
                       ? `Your existing endpoint (${data.model}) stays selected.`
-                      : `${local.name} is installed locally.`}
+                      : registered
+                        ? `${data.selected_model?.name} is selected locally.`
+                        : `${local.name} is installed locally.`}
                   </p>
                   <Button asChild>
                     <Link to="/memory">
                       Open Memory <ArrowRight size={15} />
                     </Link>
                   </Button>
-                  {external && data.can_prepare && (
+                  {(external || registered) && data.can_prepare && (
                     <button
                       className="text-link"
                       onClick={() => setReplace(!replace)}
                     >
                       {replace
-                        ? "Keep existing endpoint"
-                        : "Use a local CPU model instead"}
+                        ? registered
+                          ? "Keep the selected encoder"
+                          : "Keep existing endpoint"
+                        : registered
+                          ? "Use the starter CPU encoder instead"
+                          : "Use a local CPU model instead"}
                     </button>
                   )}
                 </div>

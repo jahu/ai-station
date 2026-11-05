@@ -10,7 +10,7 @@ import { PreparationCard, type Preparation } from "./ModelSetup";
 
 export type InstallPlan = {
   manifest_sha256: string;
-  capability?: "chat" | "image" | "video" | "speech";
+  capability?: "chat" | "image" | "video" | "speech" | "embedding";
   components?: { role: string; filename: string; size_bytes: number }[];
   component_licenses?: { name: string; url: string }[];
   license: string;
@@ -101,13 +101,15 @@ export default function HubInstallPanel({
         {downloadId ? "Model preparation" : "Ready to review and install"}
       </h2>
       <p className="muted">
-        {plan.capability === "speech"
-          ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
-          : plan.capability === "video"
-            ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
-            : plan.capability === "image"
-              ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
-              : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
+        {plan.capability === "embedding"
+          ? "AI Station downloads the encoder and its fixed tokenizer, checks the complete graph and probes it on CPU. Use for memory is a separate choice; installation keeps your current encoder."
+          : plan.capability === "speech"
+            ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
+            : plan.capability === "video"
+              ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
+              : plan.capability === "image"
+                ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
+                : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
       {!!plan.component_licenses?.length && (
         <details className="hub-context-options">
@@ -150,7 +152,9 @@ export default function HubInstallPanel({
                 model license ({plan.license})
               </a>{" "}
               and agree to download this model
-              {["image", "video", "speech"].includes(plan.capability ?? "")
+              {["image", "video", "speech", "embedding"].includes(
+                plan.capability ?? "",
+              )
                 ? " and its required licensed components"
                 : ""}
               .

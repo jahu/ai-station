@@ -30,6 +30,7 @@ function mount({
   expanded = true,
   ready = false,
   external = false,
+  registered = false,
   admin = true,
   installed = false,
   available = true,
@@ -52,7 +53,14 @@ function mount({
       json: async () => ({
         can_prepare: admin,
         configured: ready,
-        backend: external ? "endpoint" : "local_cpu",
+        backend: registered
+          ? "registered_cpu"
+          : external
+            ? "endpoint"
+            : "local_cpu",
+        selected_model: registered
+          ? { name: "My discovered encoder", available }
+          : null,
         model: external ? "my-existing-model" : "e5",
         revision: 7,
         prepare_run: preparation,
@@ -64,7 +72,7 @@ function mount({
           source_url: "https://huggingface.co/example/tree/fixed-revision",
           size_bytes: 100 * 1024 ** 2,
           available,
-          installed: installed || (ready && !external),
+          installed: installed || (ready && !external && !registered),
           storage: {
             free_bytes: free * 1024 ** 2,
             required_bytes: 164 * 1024 ** 2,
@@ -172,6 +180,26 @@ it("shows shared readiness but no install controls to an ordinary member", async
     screen.queryByRole("button", { name: "Download & set up memory" }),
   ).toBeNull();
   expect(screen.queryByRole("checkbox")).toBeNull();
+});
+it("shows the selected encoder without claiming the starter model is installed", async () => {
+  const { writes } = mount({ ready: true, registered: true });
+  await screen.findByRole("link", { name: /Open Memory/ });
+  expect(screen.getByText(/My discovered encoder/)).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Download & set up memory" }),
+  ).toBeNull();
+  expect(writes).toEqual([]);
+  fireEvent.click(screen.getByRole("button", { name: /starter CPU encoder/i }));
+  expect(
+    screen.getByRole("button", { name: "Keep the selected encoder" }),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Download & set up memory",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
 });
 it("restores measured download activity and Stops only the saved Run", async () => {
   const { writes } = mount({ current: run() });

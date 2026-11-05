@@ -274,3 +274,35 @@ their own admission work; this increment does not complete the release goal.
    Then opt into one isolated real source/import/GPU speech result and validate
    its audio and cleanup. Distinguish reused reference weights or descriptor
    fixtures from a newly trained model and a real-weight generation test.
+
+### Next: discovered memory encoder bundles
+
+Preserve the existing CPU ONNX E5 encoder and advanced compatible endpoint. This
+family should extend that bounded worker-side CPU service, not launch or evict a
+chat GPU runtime. Before admitting a new encoder:
+
+1. Inspect the existing `embedding_models`, `embedding_cpu`, `embedding_process`,
+   preparation/settings revision and vector-identity contracts. Pick one explicit
+   compatible E5 export profile; do not claim universal ONNX support or confuse a
+   generative/vision model with a retrieval encoder.
+2. Freeze the publisher configuration, model file and tokenizer as a complete
+   immutable bundle. Source metadata provides a conservative CPU/RAM/disk estimate
+   before transfer; unknown architecture or tokenizer relationships remain
+   unsupported. Reuse model Tasks, consent, the object store and verified downloads.
+3. After download, inspect the graph in a bounded offline owned CPU child before
+   registry publication. Forbid external tensor data, custom operators/libraries,
+   remote code and arbitrary paths. Check the admitted inputs/outputs, dimensions
+   and tokenizer contract. Add a pinned parser dependency only after checking the
+   existing image/dependencies; never install packages from a model repository.
+4. Register a shared model binding and expose an explicit **Use for memory**
+   action. Installation alone must not change the machine's encoder or endpoint.
+   Freeze model/bundle/encoding identity in each health/index/search Run; selecting
+   another encoder invalidates incompatible vectors through existing revisions.
+   Preserve private account indexing/history and shared-model visibility.
+5. Preserve CPU thread/address-space limits, parent-death/Stop/recovery, scoped
+   retrieval and FTS during setup/failure. Larger or different exports require
+   their own measured profile; never silently increase the heap or use a GPU.
+6. Qualify one public compatible export through source → complete bundle →
+   explicit selection → actual nonzero vectors and Polish semantic retrieval.
+   Fake tests cover source/hash/tokenizer/graph drift, settings races and account
+   boundaries; browser checks cover install/selection and indexing progress.

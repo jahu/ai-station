@@ -6,6 +6,31 @@ import pytest
 from app.hub_candidates import LanguageProfile
 from app.model_variant_advice import assess_variant, rank_variants
 
+
+def test_an_optional_onnx_file_does_not_hide_supported_language_variants(monkeypatch):
+    import asyncio
+
+    from app import hub_embedding_candidates, model_variant_advice
+    from app.hub_candidates import LanguageProfile
+
+    report = source()
+    profile = LanguageProfile.model_validate(report.pop("language_profile"))
+    report.update(architecture_hint="qwen3", pipeline_hint="text-generation", base_models=[])
+    report["files"].append({"filename": "optional.onnx", "format": "onnx"})
+
+    async def unrelated(*args):
+        raise ValueError("Not an E5 encoder")
+
+    async def language(*args):
+        return profile
+
+    monkeypatch.setattr(hub_embedding_candidates, "resolve_profile", unrelated)
+    monkeypatch.setattr(model_variant_advice, "resolve_profile", language)
+    asyncio.run(model_variant_advice.enrich_source(report, lambda: None))
+    assert report["language_profile"] == profile.model_dump(mode="json")
+    assert "requirements_error" not in report
+
+
 GiB = 1024**3
 
 

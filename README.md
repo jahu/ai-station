@@ -295,6 +295,11 @@ your GPUs stay free and memory content remains private. Existing embedding
 endpoints remain selected unless you explicitly replace them.
 [Memory setup](docs/plans/memory-embeddings-readiness.md).
 
+Development builds can also inspect and install compatible E5 F32 encoder bundles
+from a Hugging Face link. Hardware and complete storage estimates come first;
+choosing **Use for memory** explicitly switches the CPU encoder and rebuilds your
+private index. [Supported imports](docs/models.md#discovered-memory-encoder-bundles-candidate-under-qualification).
+
 **Set up music** prepares ACE-Step 1.5 Turbo on supported Linux NVIDIA
 workstations with at least 12 GiB VRAM and 24 GiB system RAM. Review sources and
 component licenses, install with saved progress and Stop/Resume, then create an

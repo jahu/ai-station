@@ -1497,3 +1497,13 @@ observations. Existing planning may select only one of those verified nested
 observations; it does not resolve a moving publisher branch again. Partial source
 unavailability stays explicit, while Stop, claim and administrator fences cover
 the entire inspection. Comparison grants no installation or inference authority.
+
+Discovered memory encoders reuse the bounded worker-side CPU service. A finite
+E5 ONNX profile freezes the whole encoder, fixed tokenizer and export graph;
+source/configuration estimates precede the existing download Run. An offline,
+owned 2-GiB child verifies the complete graph and a normalized probe before shared
+registry publication. Explicit administrator selection freezes that bundle in
+ordinary account-private health/index/search Runs. CPU reservations also observe
+the worker's cgroup limit. Installation never replaces current semantic settings;
+FTS and existing CPU/endpoint configurations remain available. See
+[encoder bundles and qualification](models.md#discovered-memory-encoder-bundles-candidate-under-qualification).

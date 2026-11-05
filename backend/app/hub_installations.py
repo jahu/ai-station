@@ -99,7 +99,9 @@ def install(body: InstallRequest, session: DB):
         not report.get("files")
         or report["files"][0].get("assessment", {}).get("hardware_status") != "estimated_fit"
     ):
-        raise HTTPException(409, "This plan has no fitted GPU profile; review the model or hardware first")
+        raise HTTPException(
+            409, "This plan has no fitted execution profile; review the model or hardware first"
+        )
     if report["files"][0]["assessment"]["disk"]["status"] != "file_fits":
         raise HTTPException(409, "Confirm sufficient application storage in a new hardware plan")
     saved = {

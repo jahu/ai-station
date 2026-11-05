@@ -67,6 +67,59 @@ installation/consent/progress/refresh checks replay the exact saved projections
 without repeating the download or inference. Private evidence:
 `data/acceptance/model-discovery-20261104/`.
 
+## Discovered memory encoder bundles (candidate under qualification)
+
+The E5 Small F32 ONNX slot uses the existing bounded CPU memory service. A source
+plan freezes its publisher configuration, whole encoder object and the fixed
+17-MB E5 tokenizer. CPU/RAM and complete disk estimates precede transfer; no GPU
+or implicit endpoint substitution is involved. The source configuration and size
+envelope are estimates, not proof of ONNX precision: after download an owned
+offline child checks all 197 embedded tensor descriptors and 1,244 nodes against
+the qualified export graph. External tensor data, custom domains/functions and
+nested execution graphs are rejected before ONNX Runtime loads the model.
+
+Admission rehashes the immutable bundle and checks a nonzero normalized
+384-dimensional probe, using two CPU threads and a 2-GiB address-space limit.
+The worker respects both physical memory reservations and its container cgroup.
+The verified shared definition appears in Memory; preparation history remains
+private. Installation preserves the current encoder/endpoint. **Use for memory**
+is an explicit administrator action that queues ordinary health/index Runs.
+Each account indexes its own memories; another account sees model readiness,
+not the administrator's private activity. File/bundle/encoding and settings
+revision checks prevent old vectors being used for a changed model. FTS remains
+available during setup/failure.
+
+The model detail supports name changes and an owned CPU re-check without another
+weight download. It exposes no LLM context/cache/GPU load controls. Selected CPU
+jobs retain absolute deadlines, parent-death handling, owned process-group Stop
+and worker-claim fences; a replaced worker cannot publish another owner's result.
+The graph contract allows new tensor values, not arbitrary export architectures
+or tokenizers. Other E5 sizes, quantizations and graph versions need their own
+profile rather than a guessed compatible label.
+
+Normal fake/tiny-graph tests cover the workflow, account privacy, changed hardware,
+graph/custom/external-data rejection, settings revisions, Stop and owned selected
+process cancellation. An explicitly opted-in isolated Docker/native check used
+the reference F32 export downloaded for this feature (470,268,533 bytes), its
+fixed tokenizer and ordinary source/plan/install/selection APIs. It completed
+actual CPU health, indexed three neutral facts and returned the intended fact for
+a Polish paraphrase query. All three vectors were normalized; no GPU was used.
+This used existing reference weights in a newly supported import/precision path,
+not a newly trained model. Initial complete qualification took 15.73 seconds with
+verified files cached; this is not a download-time or general speed benchmark.
+Private evidence is under `data/acceptance/model-discovery-20261104/`.
+
+The reviewed CPU image also passed an actual no-download graph re-check, health
+probe and Polish search over the retained vectors. All owned children exited and
+RAM reservations were released. Focused Python regression passed 154 cases;
+46 UI tests, lint/type/build, and compiled desktop/mobile/keyboard checks passed.
+Browser fixtures replay actual API projections and a controlled prior endpoint;
+they are separate from the actual Docker CPU test. This development candidate is
+not in published 0.1.2 packages.
+
+The parser follows the [ONNX format](https://github.com/onnx/onnx/blob/main/onnx/onnx.proto)
+and deliberately excludes [external tensor data](https://onnx.ai/onnx/repo-docs/ExternalData.html).
+
 ## Comparing search results against this station
 
 **Compare top 3 for my hardware** starts one ordinary private inspection Run from

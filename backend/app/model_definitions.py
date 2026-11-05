@@ -182,6 +182,14 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "summary": "Select this installed checkpoint in Video. Its fixed workload uses explicit CPU offload.",
         }
     speech = (row.metadata_json or {}).get("speech")
+    embedding = row.category == "other" and bool((row.metadata_json.get("embedding") or {}).get("binding"))
+    if embedding:
+        spec = {
+            "runtime": "ONNX · CPU encoder",
+            "adapter": "control-plane-cpu",
+            "operational": row.status == "registered",
+            "summary": "Choose this encoder explicitly in Memory. It uses CPU and its fixed tokenizer; it does not replace a chat model.",
+        }
     speech_backend = row.category == "audio" and isinstance(speech, dict) and bool(speech.get("binding"))
     if speech_backend:
         spec = {
@@ -194,6 +202,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
         **({"speech_backend": "chatterbox"} if speech_backend else {}),
+        **({"embedding_backend": "e5_cpu"} if embedding else {}),
         **(
             {"video_backend": "wan22"}
             if row.category == "video" and isinstance(video, dict) and video.get("binding")
@@ -320,8 +329,10 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         raise HTTPException(409, "Cancel or finish the installation Run before editing this definition")
     if body.name is not None:
         row.name = body.name
-    if (row.metadata_json.get("video") or {}).get("binding") or (row.metadata_json.get("speech") or {}).get(
-        "binding"
+    if (
+        (row.metadata_json.get("embedding") or {}).get("binding")
+        or (row.metadata_json.get("video") or {}).get("binding")
+        or (row.metadata_json.get("speech") or {}).get("binding")
     ):
         if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
             raise HTTPException(
@@ -366,10 +377,17 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
     from app.native_models import native
 
     check_image = needs_llama_image(file) and not native(row.metadata_json)
+    embedding_model = {}
+    if (row.metadata_json.get("embedding") or {}).get("binding"):
+        from app.registered_embeddings import frozen
+
+        embedding_model = {"embedding_model": frozen(session, row.id)}
     task = create_task(
         session,
         title="Install " + row.name,
-        prompt="Verify a local model file and its prepared native llama.cpp engine"
+        prompt="Verify the owned encoder/tokenizer graph and a nonzero CPU probe"
+        if embedding_model
+        else "Verify a local model file and its prepared native llama.cpp engine"
         if native(row.metadata_json)
         else "Verify a local model file and any already-installed llama.cpp image",
         capability="models.install",
@@ -380,10 +398,12 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         run_type="runtime",
         capability="models.install",
         executor_type="model_install",
-        execution_target="host",
+        execution_target="container" if embedding_model else "host",
+        requested_resources={"cpu_threads": 2, "ram_mib": 2048} if embedding_model else {},
         permissions=["filesystem_read", "manage_models"],
         retry_class="safe",
         parameters={
+            **embedding_model,
             "definition_id": row.id,
             "file_id": file.id,
             **verify_source(source_of(file)),
@@ -464,6 +484,10 @@ class ModelInstallExecutor:
         if row is None or file is None:
             mark_failed(session, run, "DefinitionMissing", "The model definition or file disappeared")
             return "done"
+        if run.parameters.get("embedding_model"):
+            from app.embedding_recheck import execute
+
+            return execute(session, run, row)
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         transition(
             session, run, RunStatus.RUNNING, event_type="executor.started", payload={"mode": "metadata_only"}

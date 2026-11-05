@@ -17,6 +17,7 @@ dependencies = [
   "pillow>=11.0",
   "pypdf>=5.0",
   "onnxruntime==1.31.0",
+  "onnx==1.23.2",
   "tokenizers==0.23.3",
   "pyotp==2.9.0",
 ]
@@ -26,7 +27,6 @@ dev = [
   "pytest>=8.3",
   "pytest-asyncio>=0.24",
   "ruff>=0.8",
-  "onnx==1.23.2",
 ]
 
 [build-system]
@@ -36,6 +36,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["recipes/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "../host-runner", "../scripts"]

@@ -1,8 +1,22 @@
 .memory-semantic {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   padding: 1.25rem;
   margin-bottom: 1.25rem;
+}
+.memory-semantic > *,
+.memory-semantic-setup > * {
+  min-width: 0;
+}
+.memory-model-choice {
+  display: grid;
+  gap: 0.4rem;
+}
+.memory-model-choice select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 .memory-semantic h2 {
   display: flex;
