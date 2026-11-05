@@ -609,3 +609,24 @@ def test_wrong_recurrent_state_budget_is_rejected_before_model_registration(setu
         with control_session_factory()() as db:
             assert list(db.scalars(select(ModelDefinition))) == []
             assert list(db.scalars(select(ModelFile))) == []
+
+
+def test_equal_layer_recommendation_cannot_pool_unequal_cards_or_count_one_device_twice():
+    from app.setup_models import candidate
+
+    entry = candidate("mlabonne-qwen3-14b-q80")
+    hardware = {
+        "memory": {"total_mib": 32768},
+        "gpus": [
+            {"index": 3, "memory_total_mib": 16384},
+            {"index": 8, "memory_total_mib": 8192},
+        ],
+    }
+    # The 14.6-GiB weights do not fit one 16-GiB device with its cache/margin,
+    # and an equal two-way split would overload the 8-GiB device. The old
+    # pooled calculation wrongly promised the full 32K context on these cards.
+    assert not model_setup.recommendation(entry, hardware)["fits"]
+    balanced = {**hardware, "gpus": [{**gpu, "memory_total_mib": 12288} for gpu in hardware["gpus"]]}
+    assert model_setup.recommendation(entry, balanced)["fits"]
+    repeated = {**balanced, "gpus": [balanced["gpus"][0], balanced["gpus"][0]]}
+    assert not model_setup.recommendation(entry, repeated)["fits"]

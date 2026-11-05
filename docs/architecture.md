@@ -1578,3 +1578,11 @@ serialization is retained. The source-installation gate is enabled after real pu
 ordinary Linux GPU Chat/agent qualification. The native file context may exceed
 the publisher config without changing the reviewed default; attention geometry
 and sufficient native context remain required.
+
+
+Single-file llama.cpp context/discovery estimates follow the native equal-layer
+CUDA split: each selected device must hold an equal share, so usable aggregate
+capacity is capped by the smallest selected device times the device count. Extra
+VRAM on a larger device is not pooled into another device's allocation. Curated
+equal-capacity presets and explicit CPU profiles are unchanged; native inspection
+and actual runtime readiness remain separate from this pre-download estimate.

@@ -156,3 +156,24 @@ def test_invalid_native_telemetry_remains_unknown_not_zero_or_free(bad_capacity)
     assert result["hardware_status"] == "unknown"
     assert result["profiles"][0]["fit"] == "unknown"
     assert not result["profiles"][0]["recommendation"]["fits"]
+
+
+def test_source_advice_does_not_recommend_unequal_gpus_as_pooled_vram():
+    report = source()
+    file = report["files"][0]
+    file["size_bytes"] = 15698534208
+    report["files"] = [file]
+    hardware = {
+        "memory": {"total_mib": 32768},
+        "gpus": [
+            {"index": 3, "memory_total_mib": 16384},
+            {"index": 8, "memory_total_mib": 8192},
+        ],
+    }
+    file["assessment"] = assess_variant(
+        file, report, hardware, {"free_bytes": 100 * GiB, "headroom_bytes": GiB}
+    )
+    rank_variants(report)
+    assert file["assessment"]["hardware_status"] == "not_recommended"
+    assert not file["assessment"]["variant_advice"]["recommended"]
+    assert not file["assessment"]["profiles"][0]["recommendation"]["fits"]
