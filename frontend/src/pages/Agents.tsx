@@ -1226,7 +1226,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             aria-label="Goal"
             placeholder={
               imageInstructions
-                ? "Create a new photo of the same person each time. Keep their face and hairstyle; vary the place, pose and expression…"
+                ? "Create a series from these references. Describe what must stay consistent and what may change…"
                 : undefined
             }
             required
@@ -1298,7 +1298,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               {values.system_prompt ? " · saved" : " (optional)"}
             </summary>
             <p className="muted">
-              Additional model guidance. The photo instruction and reviewed
+              Additional model guidance. The image instruction and reviewed
               media settings remain authoritative.
             </p>
             <label className="agent-wide">

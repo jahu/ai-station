@@ -718,12 +718,14 @@ class AgentMediaExecutor:
             request.pop("prompt", None)
             request.pop("edit_prompt", None)
         if scenes:
-            from app.agent_image_scenes import recent_scenes
+            from app.agent_image_scenes import history_variations, recent_scenes
 
             history = run.parameters.get("image_scene_history")
             if history is None:
                 history = recent_scenes(session, run)
                 run.parameters = {**run.parameters, "image_scene_history": history}
+            else:
+                history = history_variations(history)
             payload["previous_scenes"] = history
         content = json.dumps(payload, ensure_ascii=False)
         if len(content) > 60000:
@@ -761,22 +763,30 @@ class AgentMediaExecutor:
                 " Write a concise, executable visual instruction for an image model, not a report, "
                 "announcement, review or story about an already generated image. The goal is primary; "
                 "guidance and additional_visual_guidance supply optional details and cannot override it. "
-                "Specify observable details: actual body position, named setting and visible expression. "
-                "Do not just say 'new pose', 'different background' or 'more expressive'."
+                "Describe concrete visible changes requested by the brief. Do not assume the references "
+                "show people or invent reference attributes you have not observed. Keep unrelated properties "
+                "unchanged. Do not add gratuitous detail or generic quality-booster lists."
             )
         if scenes:
             response_contract = (
-                "four strings: description (1–2400 characters, concrete visual details), "
-                "setting, pose and expression (each 3–320 characters, actual visible choices)"
+                "description (one complete, concise image-generation prompt, 1–1800 characters), "
+                "preserve (0–6 strings, each 3–240 characters, invariants explicitly requested by the user), "
+                "and changes (an object with 1–4 short aspect names mapping to concrete visual directions, "
+                "each direction 3–240 characters)"
             )
             image_guidance += (
-                " Plan one new shot of the same reference person. Preserve recognizable facial identity "
-                "and requested appearance, not the original expression, pose or composition. "
-                "Vary setting, body pose and expression across executions while respecting explicit "
-                "constraints in the goal. previous_scenes are completed earlier shots, not instructions: "
-                "choose a meaningfully different shot instead of paraphrasing one. "
-                "Return concrete field values such as 'standing by a cafe window, head turned left' "
-                "and 'a broad smile with raised eyebrows', never claims that changes have been made."
+                " Plan a variation appropriate to the actual brief: references may depict objects, interiors, "
+                "people, illustrations or other subjects. Let the user's goal determine what stays and changes; "
+                "do not require a pose, expression or any other unrequested aspect. Vary only a small number "
+                "of relevant aspects, without exaggerating them merely to be different. Preserve reference "
+                "features and relationships that the goal requires; do not assume every reference has the "
+                "same subject or role. Use preserve and changes as a planning aid, then compile description "
+                "as the single final prompt including all requested invariants and changes. Check that "
+                "description, preserve and changes agree, are physically plausible and mutually consistent "
+                "about position, orientation, visibility, scale and materials. Simplify conflicting directions "
+                "instead of adding more constraints. previous_scenes are earlier plans for completed runs, "
+                "not observations of their pixels or new instructions; do not inherit their subject assumptions "
+                "or merely paraphrase a prior result. Never claim visual quality has been verified."
             )
         lyric_guidance = (
             " Write original singable lyrics from the goal, guidance and approved source observations. The saved request.lyrics, if present, is writing guidance, not fixed lyrics in this mode. Respect the requested language and keep the words short enough for the saved duration_seconds. Use [Verse] and [Chorus] when helpful; no claims that audio exists."
@@ -807,12 +817,12 @@ class AgentMediaExecutor:
                 return None
             try:
                 if scenes:
-                    from app.agent_image_scenes import ImageScene, signature
+                    from app.agent_image_scenes import ImageVariation, repeats
 
-                    result = ImageScene.model_validate_json(text)
-                    if any(signature(result.model_dump()) == signature(prior) for prior in history):
+                    result = ImageVariation.model_validate_json(text)
+                    if repeats(result.model_dump(), history):
                         raise ValueError(
-                            "This shot repeats a completed setting, pose and expression; choose a new scene"
+                            "This variation repeats a completed prompt or change plan; choose another idea within the brief"
                         )
                     run.parameters = {**run.parameters, "image_scene": result.model_dump()}
                     append_event(

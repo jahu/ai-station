@@ -2,7 +2,7 @@ import json
 from datetime import timedelta
 
 import pytest
-from app.agent_image_scenes import ImageScene, recent_scenes
+from app.agent_image_scenes import ImageVariation, history_variations, recent_scenes, repeats
 from app.agent_media_schema import AgentImageScope
 from app.api import app
 from app.db import session_factory, utcnow
@@ -16,16 +16,14 @@ from test_images import bridge as bridge
 from test_images import upload
 
 A = {
-    "description": "Soft daylight, a blue jacket, realistic portrait",
-    "setting": "A quiet cafe with tall windows",
-    "pose": "Sitting sideways on a chair, hands on the table",
-    "expression": "Broad smile, raised eyebrows",
+    "description": "Keep the reference wardrobe's oak finish and brass hardware. Show it in a bright hallway, three-quarter view, with soft daylight.",
+    "preserve": ["oak finish", "brass hardware"],
+    "changes": {"setting": "A bright hallway with pale walls", "composition": "Three-quarter product view"},
 }
 B = {
-    "description": "Evening light, a blue jacket, realistic portrait",
-    "setting": "A leafy garden beside a stone wall",
-    "pose": "Standing upright, left hand resting on a railing",
-    "expression": "Thoughtful gaze, relaxed closed lips",
+    "description": "Keep the reference wardrobe's oak finish and brass hardware. Show it front-on in a quiet bedroom under warm diffuse light.",
+    "preserve": ["oak finish", "brass hardware"],
+    "changes": {"setting": "A quiet bedroom with a woven rug", "composition": "Straight-on product view"},
 }
 
 
@@ -51,7 +49,7 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
         agent = create(
             api,
             kind="image",
-            goal="Keep the reference person, vary their setting, pose and expression",
+            goal="Create varied images of this wardrobe; keep its oak finish and brass hardware",
             model="fake-local",
             media={
                 "kind": "image",
@@ -60,7 +58,7 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
                 "request": {
                     "mode": "recompose",
                     "prompt_style": "instruction",
-                    "prompt": "Keep the reference person, vary their setting, pose and expression",
+                    "prompt": "Create varied images of this wardrobe; keep its oak finish and brass hardware",
                     "input_artifact_ids": [source],
                     "seed": None,
                     "gpu": "7",
@@ -84,8 +82,8 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
                 )
             )
             assert len(images) == 2 and all(row.status == "succeeded" for row in images)
-            assert images[0].parameters["prompt"] == ImageScene(**A).image_prompt()
-            assert images[1].parameters["prompt"] == ImageScene(**B).image_prompt()
+            assert images[0].parameters["prompt"] == ImageVariation(**A).image_prompt()
+            assert images[1].parameters["prompt"] == ImageVariation(**B).image_prompt()
             assert all(
                 row.parameters["seed"] is None
                 and row.requested_resources["gpu"] == "7"
@@ -170,4 +168,41 @@ def test_legacy_scope_serialization_is_unchanged_and_new_scenes_require_reviewed
         with pytest.raises(ValueError):
             AgentImageScope.model_validate({**scope, **change})
     with pytest.raises(ValueError):
-        ImageScene(**{**A, "pose": "a different pose"})
+        ImageVariation(**{**A, "changes": {"composition": "a different view"}})
+
+
+@pytest.mark.parametrize(
+    "description,changes",
+    [
+        ("An oak wardrobe in a bright hallway", {"setting": "A bright hallway"}),
+        ("The reference building at dusk, preserving its facade", {"lighting": "Diffuse evening light"}),
+        ("The same illustrated mark printed on textured paper", {"presentation": "Textured cream paper"}),
+        ("A relaxed portrait of the reference subject by a window", {"lighting": "Soft window light"}),
+    ],
+)
+def test_compiled_prompt_does_not_inject_a_subject_medium_or_anatomy(description, changes):
+    plan = ImageVariation(description=description, changes=changes)
+    assert plan.image_prompt() == description
+
+
+def test_repeat_detection_checks_both_the_actual_prompt_and_the_change_plan():
+    assert repeats({**A, "changes": B["changes"]}, [A])
+    assert repeats({**A, "description": "A paraphrase of the same idea"}, [A])
+    assert not repeats(B, [A])
+    with pytest.raises(ValueError):
+        ImageVariation(**{**A, "changes": {"Lighting": "Soft daylight", "lighting": "Hard direct flash"}})
+
+
+def test_old_saved_plans_and_frozen_histories_remain_readable_without_mutation():
+    old = {
+        "run_id": "previous",
+        "description": "Neutral portrait",
+        "setting": "A quiet cafe",
+        "pose": "Sitting by the window",
+        "expression": "A relaxed smile",
+    }
+    snapshot = json.loads(json.dumps(old))
+    converted = history_variations([old])
+    assert converted[0]["run_id"] == "previous"
+    assert converted[0]["changes"]["setting"] == "A quiet cafe"
+    assert old == snapshot

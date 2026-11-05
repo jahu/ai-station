@@ -1,6 +1,7 @@
 """Concrete, bounded scene plans for opt-in recurring reference-image agents."""
 
 import re
+from typing import Annotated
 
 from pydantic import Field, field_validator
 from sqlalchemy import select
@@ -10,6 +11,8 @@ from app.models import Run
 
 
 class ImageScene(Description):
+    """Read-only compatibility for previously saved person-oriented plans."""
+
     description: str = Field(min_length=1, max_length=2400)
     setting: str = Field(min_length=3, max_length=320)
     pose: str = Field(min_length=3, max_length=320)
@@ -18,25 +21,73 @@ class ImageScene(Description):
     @field_validator("setting", "pose", "expression")
     @classmethod
     def concrete_choice(cls, value):
-        if re.fullmatch(r"(?i)(a |an |the )?(new|different|changed|another)( \w+){0,2}", value):
-            raise ValueError(
-                "Choose an actual visible setting, body pose or facial expression, not 'different'"
-            )
-        return value
+        return require_concrete(value)
+
+
+def require_concrete(value):
+    if re.fullmatch(r"(?i)(a |an |the )?(new|different|changed|another)( \w+){0,2}", value):
+        raise ValueError("Choose a concrete visual direction, not just 'different'")
+    return value
+
+
+Aspect = Annotated[str, Field(min_length=2, max_length=60)]
+Direction = Annotated[str, Field(min_length=3, max_length=240)]
+
+
+class ImageVariation(Description):
+    """One final image instruction and only the changes appropriate to its brief."""
+
+    description: str = Field(min_length=1, max_length=1800)
+    preserve: list[Direction] = Field(default_factory=list, max_length=6)
+    changes: dict[Aspect, Direction] = Field(min_length=1, max_length=4)
+
+    @field_validator("changes")
+    @classmethod
+    def distinct_concrete_changes(cls, values):
+        if len({normalize(key) for key in values}) != len(values):
+            raise ValueError("Choose one consistent direction for each aspect")
+        for value in values.values():
+            require_concrete(value)
+        return values
 
     def image_prompt(self):
-        return (
-            "Create a new photograph of the same person shown in the reference images. "
-            "Keep recognizable facial identity and the requested appearance. "
-            "Use the references for identity, not as a pose or composition to copy. "
-            f"Setting: {self.setting}. Body pose: {self.pose}. Facial expression: {self.expression}. "
-            f"Visual details: {self.description}"
-        )
+        # The planner compiles one complete instruction. No subject-specific
+        # prefix, photographic style, anatomy or extra creative goal is injected.
+        return self.description
+
+
+def saved_variation(value):
+    if isinstance(value, dict) and "changes" in value:
+        return ImageVariation.model_validate(value)
+    legacy = ImageScene.model_validate(value)
+    return ImageVariation(
+        description=legacy.description[:1800],
+        changes={key: getattr(legacy, key)[:240] for key in ("setting", "pose", "expression")},
+    )
+
+
+def history_variations(rows):
+    """Read old frozen histories without rewriting their stored snapshot."""
+    result = []
+    for row in rows:
+        plan = {key: value for key, value in row.items() if key != "run_id"}
+        result.append({"run_id": row["run_id"], **saved_variation(plan).model_dump()})
+    return result
 
 
 def signature(scene):
-    return tuple(
-        " ".join(re.findall(r"\w+", scene[key].casefold())) for key in ("setting", "pose", "expression")
+    return tuple(sorted((normalize(key), normalize(value)) for key, value in scene["changes"].items()))
+
+
+def normalize(value):
+    return " ".join(re.findall(r"\w+", value.casefold()))
+
+
+def repeats(scene, history):
+    return any(
+        normalize(scene["description"]) == normalize(prior["description"])
+        or signature(scene) == signature(prior)
+        for prior in history
     )
 
 
@@ -78,7 +129,7 @@ def recent_scenes(session, run):
         ):
             continue
         try:
-            scene = ImageScene.model_validate(prior.parameters.get("image_scene"))
+            scene = saved_variation(prior.parameters.get("image_scene"))
         except ValueError:
             continue
         history.append({"run_id": child.id, **scene.model_dump()})

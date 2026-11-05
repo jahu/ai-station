@@ -1,60 +1,75 @@
-# Recurring reference-photo agents
+# Generic recurring image variations
 
-The user's goal is to keep a recognizable character while obtaining distinct
-poses, settings and expressions over time. A small-edit operation is a poor
-starting point: its legacy identity prefix explicitly preserves pose, camera
-angle and composition. The old preparation contract also accepted descriptions
-of an already completed image and supplied goal, system guidance and duplicated
-prompt/edit fields without a clear hierarchy. It supplied no prior-shot context.
+## Intent and correction
 
-## User flow
+An image agent must work with products, rooms, buildings, illustrations, people
+and other subjects. The first reference-photo implementation overfit to people:
+it required setting/pose/expression and injected a same-person photograph prefix.
+Examples also encouraged particular expressions. That can add unrequested changes
+and excessive detail. User feedback on unnatural details prompted this correction.
+One saved plan also contained contradictory visibility/orientation directions;
+that is evidence of a planning issue, not proof of a particular model defect.
 
-In an image agent, **What should this agent create?** is the main instruction.
-**Same person, new scenes** selects Recompose with instruction-only prompting,
-reviewed references and local-model preparation. **Vary shots between runs**
-requests concrete setting, body pose and expression choices. **Small changes to
-the original photo** retains ordinary Edit behavior and offers an explicit
-**Use new scenes** action when that is the desired outcome.
+The generic planner now takes one authoritative user brief and optional secondary
+guidance. It determines only the aspects relevant to that brief. It returns:
 
-Additional visual details and advanced agent instructions are optional expandable
-sections, marked when saved. A duplicated goal stays synchronized as the user
-edits it; independently entered style guidance is retained. Image preparation
-receives the goal as primary and optional guidance separately, without duplicated
-prompt/edit fields. The planned setting/pose/expression and actual image prompt
-are inspectable beside the result.
+- `description`: one complete image-generation prompt, up to 1800 characters.
+- `preserve`: up to six invariants explicitly requested by the user.
+- `changes`: one to four named aspects with concrete visual directions.
 
-## Execution and history
+No aspect is intrinsically a pose, facial expression, location or human attribute.
+References may have different subjects/roles. The text planner must not invent
+unobserved reference attributes. Its description includes all requested invariants
+and changes, without extra subject, photography, anatomy or quality-booster prefixes
+at compilation. The final image executor receives that single description.
+
+Preparation instructions ask for a small number of appropriate changes and a
+self-check of physical plausibility and consistency across position, orientation,
+visibility, scale and materials. This is a prompt-writing instruction, not an
+implemented visual judge or a certificate of generated-pixel quality. Increasing
+steps, changing CFG or adding face/teeth keywords is not a generic solution.
+Runtime/model settings and existing model-specific recipes are unchanged.
+
+## UI and compatibility
+
+**New variations from references** and **Vary results between runs** replace the
+person-oriented labels. The main instruction explains what stays and changes;
+additional visual/system guidance remains optional and expandable. Results display
+the plan, requested invariants, actual prompt and recorded generation settings
+when available. That separates intent/planning from the backend/steps/CFG used.
+
+The existing `vary_scenes` JSON policy and reviewed references/settings are retained.
+False is omitted from serialization to preserve legacy scope identities. Old
+setting/pose/expression plans and frozen histories remain readable through a
+read-only adapter; stored records/artifacts are not rewritten. New plans use the
+generic contract. There is no database migration or automatic agent-definition edit.
+
+## Execution boundaries
 
 The existing Task → workflow Run → media-preparation Run → image Run → artifacts
-flow remains authoritative. The local model can only propose bounded text fields;
-references, backend, dimensions, resources, seed and other reviewed settings are
-unchanged by preparation. The new opt-in `vary_scenes` field is stored in the
-existing JSON media scope; false is omitted during serialization to preserve
-legacy snapshot identities. No database migration or automatic rewrite of saved
-agents is needed.
+flow remains authoritative. Models can propose bounded text only; they cannot
+change backend, dimensions, references, resources, seed, permissions or execution.
 
-A new-scene plan has a short description and concrete setting/pose/expression
-fields. The final instruction separates recognizable identity from reference
-composition; no legacy preserve-pose prefix is appended. Generic choices such as
-"a different pose" are rejected. An exact normalized setting/pose/expression
-repeat is corrected once; a second invalid/repeated plan fails before image
-execution. This is planning validation, not visual face-recognition or an image
-similarity classifier.
+History scans at most 20 recent successful preparations and supplies at most three
+plans whose image children completed successfully for this same owner/agent and
+frozen reference IDs/hashes. Historical plans are context, not observations of
+pixels, requirements or authority. Both an identical normalized final prompt and
+an identical normalized change map trigger one correction attempt; a second
+invalid/repeated plan fails before image execution. Differently cased duplicate
+aspect keys also fail. This is bounded planning validation, not semantic image
+similarity detection. Cancellation, deadlines, file checks, leases and publication
+validation retain their existing contracts.
 
-History scans at most 20 recent successful preparation Runs and supplies at most
-three matching completed scenes. Both preparation and image child must belong
-to this same owner/agent; the child must reference that preparation, have succeeded
-as an image-recomposition Run and use the same frozen reference IDs/hashes.
-Failed, canceled, unrelated and unassigned-agent records are excluded. The history
-snapshot is retained in Run parameters before inference, with structured scene
-choices and a preparation event. Existing file checks, permissions, cancellation,
-leases, deadlines and publication validation still apply. No new tool authority,
-external provider or image access is granted.
+## Validation and further diagnosis
 
-## Verification
+Use temporary databases, the fake local provider/photo executor, and neutral
+wardrobe, building, illustration and portrait cases. Verify no injected subject
+or medium, preserved settings, owner/reference isolation, duplicate rejection,
+legacy-history compatibility, editor behavior and mobile layout.
 
-Normal tests use neutral examples, temporary databases, a fake local text provider
-and the existing fake image executor. Cover repeated-plan correction and refusal,
-settings preservation, owner/agent/reference isolation, legacy serialization,
-explicit UI mode changes, optional-guidance handling, result visibility and
-narrow-screen layout. Do not call fake generated images real inference evidence.
+To attribute a visual defect, keep a neutral reference and concise prompt fixed
+and vary one factor at a time: planning output, a model-supported sampling setting,
+or the model itself. Record the exact prompt/settings and compare the results.
+Do not call fake workflow tests real image-quality evidence or change global
+sampling presets without a qualified, model-specific comparison. A future visual
+review capability would need its own explicit permissions, executor and evidence.

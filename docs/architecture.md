@@ -1620,6 +1620,7 @@ installed model's publisher-update link still only prefills the source; it never
 launches inspection, download or replacement by itself.
 
 Recurring reference-image agents reuse the existing preparation and image Run
-lifecycle. The opt-in [scene-planning contract](plans/agent-image-scenes.md)
-separates identity from composition, bounds owner-scoped completed-shot context
-and keeps execution settings outside model authority.
+lifecycle. The opt-in [generic variation contract](plans/agent-image-scenes.md)
+plans only changes appropriate to the user brief, without assuming a human subject,
+bounds owner-scoped completed-run context and keeps execution settings outside
+model authority.

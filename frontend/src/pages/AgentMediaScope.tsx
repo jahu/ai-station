@@ -336,9 +336,9 @@ export default function AgentMediaScopeEditor({
             >
               <option value="t2i">Create from text</option>
               <option value="img2img">
-                Small changes to the original photo
+                Small changes to the reference image
               </option>
-              <option value="recompose">Same person, new scenes</option>
+              <option value="recompose">New variations from references</option>
               <option value="upscale">Upscale 4×</option>
             </select>
           </label>
@@ -346,10 +346,11 @@ export default function AgentMediaScopeEditor({
         {image?.mode === "img2img" && (
           <div className="agent-image-purpose notice">
             <div>
-              <strong>Want a new pose, location or expression?</strong>
+              <strong>Want a new composition or setting?</strong>
               <p>
-                Small edits keep the original composition. New scenes use your
-                photo as an identity reference and plan a fresh shot each time.
+                Small edits stay close to the reference. Variations follow your
+                brief to decide which features stay consistent and which may
+                change.
               </p>
             </div>
             <Button
@@ -357,7 +358,7 @@ export default function AgentMediaScopeEditor({
               variant="secondary"
               onClick={() => changeImageMode("recompose")}
             >
-              Use new scenes
+              Use variations
             </Button>
           </div>
         )}
@@ -382,10 +383,11 @@ export default function AgentMediaScopeEditor({
                 }
               />
               <span>
-                <strong>Vary shots between runs</strong>
+                <strong>Vary results between runs</strong>
                 <small>
-                  Plan a concrete pose, setting and expression. Check the last
-                  three completed shots to avoid repeating the same scene.
+                  Plan changes appropriate to your subject and instruction. Use
+                  the last three completed runs to avoid repeating the same
+                  idea.
                 </small>
               </span>
             </label>
@@ -412,7 +414,7 @@ export default function AgentMediaScopeEditor({
               >
                 <option value="goal">
                   {image
-                    ? "Prepare a photo from my instruction"
+                    ? "Prepare an image from my instruction"
                     : "Let Local AI prepare it from the goal and sources"}
                 </option>
                 <option value="fixed">
@@ -425,7 +427,7 @@ export default function AgentMediaScopeEditor({
             <p className="muted">
               {scope.description_source === "goal"
                 ? image
-                  ? "Your main instruction above drives each photo. The local model prepares the image prompt; references and generation settings stay as reviewed."
+                  ? "Your main instruction above drives each image. The local model prepares the image prompt; references and generation settings stay as reviewed."
                   : "Your selected local model writes the description. The references and settings below stay fixed."
                 : "Runs directly with the media engine. No language model is needed."}
             </p>
@@ -739,7 +741,7 @@ export default function AgentMediaScopeEditor({
                 {image.mode === "img2img"
                   ? "Preserves the original image as much as possible."
                   : image.mode === "recompose"
-                    ? "Preserves identity while allowing clothing, pose and composition to change."
+                    ? "Uses the references according to your brief: keep requested features and vary only the relevant aspects."
                     : "Makes the reviewed image four times larger. Research tools are available with Generate, Edit and Recompose."}
               </p>
             )}

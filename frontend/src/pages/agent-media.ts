@@ -380,7 +380,7 @@ export function agentMediaIssue(
         p.mode !== "recompose" ||
         p.prompt_style !== "instruction")
     )
-      return "New scenes need a prepared prompt and an identity reference.";
+      return "Variations need a prepared prompt and a reviewed reference.";
     if (p.mode === "upscale" && scope.description_source !== "fixed")
       return "Upscale uses its exact source image without a generated description.";
     if (

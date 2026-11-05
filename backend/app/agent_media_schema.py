@@ -39,7 +39,7 @@ class AgentImageScope(BaseModel):
             or self.request.mode != "recompose"
             or self.request.prompt_style != "instruction"
         ):
-            raise ValueError("New scenes require goal-based Recompose with instruction-only prompts")
+            raise ValueError("New variations require goal-based Recompose with instruction-only prompts")
         return self
 
 
