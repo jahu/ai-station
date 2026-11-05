@@ -1757,3 +1757,13 @@ retains the exact SDK/configuration/companions and uses an independent deadline
 inside the owned memory scope. The per-Run view can replace only diffusion, never
 publisher Python. Repeat-start/inspection preserves the original request and
 engine, and cannot launch another process against a later current default.
+
+Sonic checkpoint inspection uses a closed data decoder rather than an unpickler.
+Known GLOBAL/REDUCE/BUILD tokens are interpreted as bounded symbolic tensor or
+module-version data; no referenced function/class is imported or called. Unknown
+instructions, hooks, storage aliases, arbitrary strides, compressed/code entries,
+overlapping extents and excessive metadata are refused. A finite native profile
+also requires the exact Sonic graph, precision and trusted companion manifest.
+This adds no generic PyTorch loader or execution permission. The separate offline
+tensor mapper verifies immutable owned-file identity and full SHA-256 before
+mapping CPU storage privately; it does not yet replace the avatar inference path.

@@ -19,6 +19,12 @@ def owned_safetensors(relative, digest):
     )
 
 
+def owned_tensor_zip(relative, digest):
+    return verify_owned_model(
+        get_settings().host_data_dir(), relative, digest, checkpoint_format="pytorch_zip_tensor_data"
+    )
+
+
 def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
     """The same immutable-model boundary for an explicitly owned native data root."""
     from ai_station_runner.owned_model_files import verify_owned_model as inspect_file

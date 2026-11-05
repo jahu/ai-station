@@ -12,7 +12,7 @@ SHA = re.compile(r"[a-f0-9]{64}\Z")
 def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
     if not isinstance(digest, str) or not SHA.fullmatch(digest) or relative != "models/store/" + digest:
         raise ValueError("Choose a verified app-owned model reference")
-    if checkpoint_format not in {"gguf", "safetensors"}:
+    if checkpoint_format not in {"gguf", "safetensors", "pytorch_zip_tensor_data"}:
         raise ValueError("Unsupported owned model format")
     root = Path(root).resolve()
     path = root
@@ -37,9 +37,16 @@ def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
                     raise ValueError("The model does not have a bounded SafeTensors header")
                 if source.read(1) != b"{":
                     raise ValueError("The model does not have a SafeTensors header")
+            elif checkpoint_format == "pytorch_zip_tensor_data":
+                if source.read(4) != b"PK\x03\x04":
+                    raise ValueError("The model does not have a tensor ZIP header")
             elif source.read(4) != b"GGUF":
                 raise ValueError("The model does not have a GGUF header")
     except (OSError, ValueError) as exc:
-        label = "GGUF" if checkpoint_format == "gguf" else "SafeTensors checkpoint"
+        label = {
+            "gguf": "GGUF",
+            "safetensors": "SafeTensors checkpoint",
+            "pytorch_zip_tensor_data": "tensor ZIP",
+        }[checkpoint_format]
         raise ValueError(f"The verified app-owned {label} is unavailable or changed") from exc
     return path
