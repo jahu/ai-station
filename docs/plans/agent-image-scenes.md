@@ -20,8 +20,13 @@ guidance. It determines only the aspects relevant to that brief. It returns:
 No aspect is intrinsically a pose, facial expression, location or human attribute.
 References may have different subjects/roles. The text planner must not invent
 unobserved reference attributes. Its description includes all requested invariants
-and changes, without extra subject, photography, anatomy or quality-booster prefixes
-at compilation. The final image executor receives that single description.
+and changes. The compiler builds one executable prompt containing the description,
+every requested invariant and every concrete change, without subject, photography,
+anatomy or quality-booster prefixes. Explicitly changed properties must differ from
+the references; preserving one feature cannot freeze other attributes requested to
+vary. The planner must cover every aspect requested by the brief and must not add
+unrequested invariants. This prevents planned changes from being silently omitted
+from the actual image prompt; it is not a guarantee that a model obeys every direction.
 
 Preparation instructions ask for a small number of appropriate changes and a
 self-check of physical plausibility and consistency across position, orientation,
@@ -79,6 +84,23 @@ only two attempts, within the existing deadline/cancellation contract. A second
 duplicate fails before generation; repeated images are not accepted as a fallback.
 Tests replay the duplicate → fresh-plan sequence, verify correction context and
 the complete audit snapshot, and retain duplicate → duplicate refusal coverage.
+
+### Database contention during streaming
+
+A subsequent preparation failed after streaming 158 deltas because SQLite's
+`BEGIN IMMEDIATE` could not acquire a writer slot within its busy timeout. WAL
+was already enabled. Treating transient contention as a terminal executor error
+discarded the in-flight preparation; increasing the global timeout or redispatching
+the model is not the remedy.
+
+The media stream now retries only rolled-back database observations/event writes
+within its existing execution deadline, retaining the same provider stream and
+pending token. Each attempt rechecks the durable worker/claim and terminal/cancel
+state. Lost ownership stops observation, cancellation closes the stream, and
+non-busy errors propagate. No model call, native dispatch, generation or other
+external side effect is retried. Complete Run history remains unchanged. Tests
+hold a real temporary SQLite writer lock across both token arrival and cancellation
+polling, then verify a single provider request and ordered, exactly-once deltas.
 
 ## Validation and further diagnosis
 

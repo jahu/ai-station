@@ -51,9 +51,21 @@ class ImageVariation(Description):
         return values
 
     def image_prompt(self):
-        # The planner compiles one complete instruction. No subject-specific
-        # prefix, photographic style, anatomy or extra creative goal is injected.
-        return self.description
+        # Compile every reviewed plan field, rather than trusting prose to repeat
+        # the requested changes. No subject, medium or concrete variation is added.
+        parts = [self.description]
+        if self.preserve:
+            parts.append("Keep these reference features: " + "; ".join(self.preserve) + ".")
+        parts.append(
+            "Apply these changes relative to the references: "
+            + "; ".join(f"{aspect}: {direction}" for aspect, direction in self.changes.items())
+            + "."
+        )
+        parts.append(
+            "Use the references for the features to keep, not to copy the properties requested to change. "
+            "Keeping a feature must not freeze its other attributes that are explicitly requested to change."
+        )
+        return "\n".join(parts)
 
 
 def saved_variation(value):

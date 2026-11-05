@@ -197,7 +197,22 @@ def test_legacy_scope_serialization_is_unchanged_and_new_scenes_require_reviewed
 )
 def test_compiled_prompt_does_not_inject_a_subject_medium_or_anatomy(description, changes):
     plan = ImageVariation(description=description, changes=changes)
-    assert plan.image_prompt() == description
+    prompt = plan.image_prompt()
+    assert prompt.startswith(description)
+    assert all(direction in prompt for direction in changes.values())
+    assert "same person" not in prompt and "photograph" not in prompt
+
+
+def test_compilation_cannot_drop_planned_changes_missing_from_the_freeform_description():
+    plan = ImageVariation(
+        description="A product image of the wardrobe",
+        preserve=["oak finish", "brass hardware"],
+        changes={"lighting": "Green light from the left", "setting": "A dark blue studio"},
+    )
+    prompt = plan.image_prompt()
+    assert "Green light from the left" in prompt and "A dark blue studio" in prompt
+    assert all(value in prompt for value in plan.preserve)
+    assert "relative to the references" in prompt
 
 
 def test_repeat_detection_checks_both_the_actual_prompt_and_the_change_plan():

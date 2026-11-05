@@ -1624,3 +1624,9 @@ lifecycle. The opt-in [generic variation contract](plans/agent-image-scenes.md)
 plans only changes appropriate to the user brief, without assuming a human subject,
 bounds owner-scoped completed-run context and keeps execution settings outside
 model authority.
+
+Agent media streaming retains one provider request across transient SQLite
+contention: only rolled-back observations/event writes retry, bounded by the
+existing deadline and durable claim/cancellation checks. The generic image-plan
+compiler includes all declared invariants and changes in the single image prompt;
+it does not assume a subject or add model-specific sampling changes.
