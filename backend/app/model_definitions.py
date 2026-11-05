@@ -262,6 +262,11 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "updated_at": iso(row.updated_at),
         "preset": preset_of(row),
         **({"gguf_bundle": bundle_summary} if bundle_summary else {}),
+        **(
+            {"context_notice": row.metadata_json["context_notice"]}
+            if (row.metadata_json or {}).get("context_notice")
+            else {}
+        ),
         "compatibility": spec,
         "file": (
             None

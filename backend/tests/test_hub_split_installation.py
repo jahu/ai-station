@@ -19,14 +19,14 @@ from test_model_setup import setup_bridge  # noqa: F401
 from test_model_variant_advice import source
 
 
-def part_bytes(index, count=2):
+def part_bytes(index, count=2, *, context=131072):
     from test_model_setup import gguf
 
     fields = (
         {
             "general.architecture": "qwen3",
             "qwen3.block_count": 36,
-            "qwen3.context_length": 131072,
+            "qwen3.context_length": context,
             "qwen3.embedding_length": 2560,
             "qwen3.attention.head_count": 32,
             "qwen3.attention.head_count_kv": 8,
@@ -155,6 +155,7 @@ def test_nonfirst_source_link_downloads_and_registers_the_complete_model(split_m
         assert not split_model["calls"]
         assessment = planned["metadata"]["source_inspection"]["files"][0]["assessment"]
         assert assessment["runtime_status"] == "supported_complete_bundle_plan"
+        assert assessment["disk"]["file_bytes"] == split_model["rows"][1]["size_bytes"]
         assert assessment["disk"]["model_bundle_bytes"] == sum(r["size_bytes"] for r in split_model["rows"])
         saved = download(api, planned)
         assert saved["run"]["status"] == "succeeded", saved["run"].get("error_message")
@@ -163,6 +164,8 @@ def test_nonfirst_source_link_downloads_and_registers_the_complete_model(split_m
         assert item["size_bytes"] == split_model["rows"][0]["size_bytes"]
         assert item["gguf_bundle"]["size_bytes"] == sum(r["size_bytes"] for r in split_model["rows"])
         assert [part["sha256"] for part in item["gguf_bundle"]["parts"]] == split_model["calls"]
+        choice = api.get("/api/llama").json()["models"][0]
+        assert choice["size_bytes"] == item["gguf_bundle"]["size_bytes"]
         assert any(
             m["model_ref"] == saved["model_key"] for m in api.get("/api/chat/model-catalog").json()["models"]
         )
@@ -197,6 +200,65 @@ def test_native_part_count_disagreement_never_registers_a_model(split_model):
     with control_session_factory()() as db:
         assert db.scalar(select(func.count()).select_from(ModelFile)) == 0
         assert db.scalar(select(func.count()).select_from(ModelDefinition)) == 0
+
+
+@pytest.mark.parametrize("native_context", [65536, 262144])
+def test_native_context_can_differ_from_publisher_if_it_covers_reviewed_preset(split_model, native_context):
+    data = part_bytes(0, context=native_context)
+    row = split_model["rows"][0]
+    split_model["objects"].pop(row["sha256"])
+    row.update(sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data))
+    split_model["objects"][row["sha256"]] = data
+    split_model["report"]["model_bundles"] = annotate(split_model["rows"])
+    with TestClient(app) as api:
+        saved = download(api, plan(api, split_model))
+        assert saved["run"]["status"] == "succeeded", saved["run"].get("error_message")
+        definition = api.get("/api/models/definitions").json()["items"][0]
+        assert definition["preset"]["context_size"] <= 32768
+        assert f"{native_context:,}" in definition["context_notice"]
+    with control_session_factory()() as db:
+        definition = db.scalar(select(ModelDefinition))
+        assert (
+            definition.metadata_json["bundle_proof"]["context_profile"]["trained_context"] == native_context
+        )
+
+
+def test_native_limit_below_reviewed_context_cannot_register_silently_smaller_model(split_model):
+    data = part_bytes(0, context=16384)
+    row = split_model["rows"][0]
+    split_model["objects"].pop(row["sha256"])
+    row.update(sha256=hashlib.sha256(data).hexdigest(), size_bytes=len(data))
+    split_model["objects"][row["sha256"]] = data
+    split_model["report"]["model_bundles"] = annotate(split_model["rows"])
+    with TestClient(app) as api:
+        saved = download(api, plan(api, split_model))
+        assert saved["run"]["status"] == "failed"
+        assert "below the reviewed" in saved["run"]["error_message"]
+    with control_session_factory()() as db:
+        assert db.scalar(select(func.count()).select_from(ModelDefinition)) == 0
+
+
+def test_accepted_host_container_timestamp_tolerance_preserves_exact_bundle_coordinate(
+    split_model, monkeypatch
+):
+    from app.model_sources import source_of
+    from app.runner_client import RunnerClient
+
+    original = RunnerClient.verify_model
+
+    def verify(self, payload):
+        result = original(self, payload)
+        result["mtime"] += 0.0005
+        return result
+
+    monkeypatch.setattr(RunnerClient, "verify_model", verify)
+    with TestClient(app) as api:
+        saved = download(api, plan(api, split_model))
+        assert saved["run"]["status"] == "succeeded", saved["run"].get("error_message")
+    with control_session_factory()() as db:
+        model = db.scalar(select(ModelFile))
+        coordinate = source_of(model, db)
+        assert coordinate["mtime"] == coordinate["model_bundle"]["parts"][0]["mtime"]
 
 
 def test_ordinary_load_and_chat_freeze_all_parts_and_release_gpu_ram_on_stop(split_model, monkeypatch):

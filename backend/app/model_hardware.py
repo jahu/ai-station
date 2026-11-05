@@ -25,6 +25,7 @@ def assess_file(file, hardware, storage, *, candidates=None, bundle=None):
         entry
         for entry in (candidates or ())
         if getattr(entry, "origin", None) == "hub_split"
+        and file.get("identity_available") is True
         and any(
             part.filename == file.get("filename")
             and part.file.sha256 == file.get("sha256")
@@ -35,7 +36,7 @@ def assess_file(file, hardware, storage, *, candidates=None, bundle=None):
     if len(split_candidates) == 1:
         from app.hub_split_candidates import assessment
 
-        return assessment(split_candidates[0], hardware, storage)
+        return assessment(split_candidates[0], hardware, storage, selected_size=size)
     disk = (
         "unknown"
         if size is None or free is None or headroom is None

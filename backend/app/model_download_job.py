@@ -342,12 +342,33 @@ class DownloadExecutor:
                 and profile.get("source") == "gguf_header"
                 and profile.get("architecture") == entry.architecture
                 and profile.get("attention_layers") == entry.attention_layers
-                and profile.get("trained_context") == entry.trained_context
+                and type(profile.get("trained_context")) is int
+                and 512 <= profile["trained_context"] <= 16777216
                 and profile.get("q8_kv_bytes_per_token") == per_token
                 and profile.get("state_reserve_mib", 0) == entry.state_reserve_mib
             ):
                 raise ValueError(
                     "The downloaded model does not match its native source/architecture inspection"
+                )
+            reviewed_context = 4096 if entry.runtime_profile else entry.context_ceiling
+            if profile["trained_context"] < reviewed_context:
+                raise ValueError(
+                    f"The model file supports only {profile['trained_context']} tokens, below the reviewed {reviewed_context}-token limit; review a smaller context before using these cached files"
+                )
+            context_metadata = {}
+            if profile["trained_context"] != entry.trained_context:
+                context_metadata = {
+                    "context_notice": f"The model file declares {profile['trained_context']:,} context tokens; publisher configuration declares {entry.trained_context:,}. The initial preset stays within the reviewed {reviewed_context:,}-token limit."
+                }
+                append_event(
+                    session,
+                    run.id,
+                    "model.context.reviewed",
+                    {
+                        "file_context": profile["trained_context"],
+                        "publisher_context": entry.trained_context,
+                        "reviewed_limit": reviewed_context,
+                    },
                 )
             if entry.runtime_profile:
                 from app.cpu_models import estimate
@@ -388,7 +409,10 @@ class DownloadExecutor:
                     sha256=entry.file.sha256,
                     filename=(entry.filename.rsplit("-", 3)[0] + ".gguf") if split else entry.filename,
                     size_bytes=entry.file.size_bytes,
-                    mtime=report["mtime"],
+                    # Keep the exact accepted bundle coordinate. Native and
+                    # container filesystem views may legitimately differ within
+                    # the verifier's 1-ms observation tolerance.
+                    mtime=bundle.parts[0].mtime if bundle else report["mtime"],
                     format="gguf",
                     category="llm",
                     family=entry.architecture,
@@ -444,6 +468,7 @@ class DownloadExecutor:
                         "catalog_manifest_sha256": run.parameters["manifest_sha256"],
                         "source_sha256": entry.file.sha256,
                         **bundle_metadata,
+                        **context_metadata,
                     },
                 )
                 session.add(definition)
@@ -468,6 +493,7 @@ class DownloadExecutor:
                 ),
                 "preset": preset,
                 **({"model_size_bytes": total_size, **bundle_metadata} if bundle else {}),
+                **context_metadata,
             }
             with tempfile.NamedTemporaryFile("w", suffix=".json") as receipt:
                 json.dump(result, receipt)

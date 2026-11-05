@@ -606,7 +606,9 @@ export default function ModelDiscover() {
                   className="hub-model-parts"
                   aria-label="Complete model parts"
                 >
-                  <p className="notice">
+                  <p
+                    className={supportsInstallation(file) ? "muted" : "notice"}
+                  >
                     {selectedBundle?.status === "complete_metadata"
                       ? `All ${selectedBundle.expected_parts} publisher files are listed. Model weights total ${bytes(selectedBundle.total_size_bytes)}; runtime and context need additional resources.`
                       : "The complete part set could not be confirmed. A single fragment does not establish model size or hardware fit."}{" "}

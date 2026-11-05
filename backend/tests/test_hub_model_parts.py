@@ -55,7 +55,7 @@ async def test_nonfirst_part_link_captures_all_required_identities_from_same_rev
 
 
 @pytest.mark.asyncio
-async def test_full_model_size_not_fragment_drives_disk_and_never_creates_a_runtime_recommendation(
+async def test_full_model_size_not_fragment_drives_disk_and_refuses_insufficient_gpu_capacity(
     monkeypatch,
 ):
     report = await inspect(monkeypatch, [part(1), part(2)])
@@ -70,7 +70,9 @@ async def test_full_model_size_not_fragment_drives_disk_and_never_creates_a_runt
         )
         assert file["assessment"]["disk"]["model_bundle_bytes"] == 16 * GiB
         assert file["assessment"]["disk"]["status"] == "insufficient"
-        assert file["assessment"]["hardware_status"] == "unknown" and not file["assessment"]["profiles"]
+        assert file["assessment"]["hardware_status"] == "insufficient"
+        assert file["assessment"]["runtime_status"] == "supported_complete_bundle_plan"
+        assert not file["assessment"]["profiles"][0]["recommendation"]["fits"]
         with pytest.raises(ValueError, match="split GGUFs"):
             candidate_from_profile(report, file["filename"], report["language_profile"])
     rank_variants(report)

@@ -1819,10 +1819,12 @@ binding without reopening files that may have disappeared. Structural agreement
 alone does not grant model-specific inference qualification or source installation.
 
 
-The pending complete GGUF source installer freezes one revision's complete ordered
+The complete GGUF source installer freezes one revision's complete ordered
 SHA/size/URL set and pinned language configuration. It reuses existing download
 ownership, account authority, Stop, resume, storage headroom and registry fences.
 No model is published from an individual part; native whole-set evidence must
 match before registration and again before dispatch. Only shared owned model
 coordinates cross private runtime ownership boundaries, with no initiating prompt
-or conversation. Its source activation remains gated pending full qualification.
+or conversation. Its Linux source activation follows complete public-transfer/native/Chat/agent
+qualification. Differing context claims never bypass attention/cache checks or
+silently enlarge the reviewed preset. A file limit below that review is refused.

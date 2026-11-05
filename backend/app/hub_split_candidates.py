@@ -12,7 +12,9 @@ from app.model_download_files import FileSpec
 from app.model_setup import fingerprint
 from app.model_source_recovery import source_identity
 
-INSTALLATION_QUALIFIED = False
+# Complete controlled-source transfer/resume, native verification and ordinary
+# GPU Chat passed on Linux with the pinned llama.cpp CUDA image; see the plan.
+INSTALLATION_QUALIFIED = True
 
 
 class PublisherPart(BaseModel):
@@ -117,8 +119,13 @@ def recommendation(entry, hardware, proof=None):
         "gpus": [],
         "context_size": None,
     }
-    if (hardware.get("host") or {}).get("system") == "Darwin" or hardware.get("container_gpu_ready") is False:
-        return denied
+    if (hardware.get("host") or {}).get("system") == "Darwin":
+        return {**denied, "reason": "This complete-model profile requires a Linux or WSL CUDA Host Runner"}
+    if hardware.get("container_gpu_ready") is False:
+        return {
+            **denied,
+            "reason": "Finish Graphics setup from the AI Station desktop controls before installing this CUDA model",
+        }
     ram = (hardware.get("memory") or {}).get("total_mib")
     required_ram = math.ceil(entry.total_size_bytes * 1.15 / 1024**2) + 1024
     if type(ram) not in {int, float} or not math.isfinite(ram) or ram < required_ram:
@@ -174,12 +181,32 @@ def recommendation(entry, hardware, proof=None):
     }
 
 
-def assessment(entry, hardware, storage):
+def assessment(entry, hardware, storage, *, selected_size=None):
     from app.model_hardware import number
 
     free = number((storage or {}).get("free_bytes"))
     headroom = number((storage or {}).get("headroom_bytes"))
     choice = recommendation(entry, hardware)
+    by_index = {g.get("index"): g for g in hardware.get("gpus", [])}
+    used = [number(by_index.get(index, {}).get("memory_used_mib")) for index in choice["gpus"]]
+    occupancy = (
+        "not_applicable"
+        if not choice["gpus"]
+        else "unknown"
+        if any(value is None for value in used)
+        else "in_use"
+        if any(value > 256 for value in used)
+        else "low_usage"
+    )
+    raw_gpus = hardware.get("gpus")
+    observed = (
+        number((hardware.get("memory") or {}).get("total_mib")) not in {None, 0}
+        and isinstance(raw_gpus, list)
+        and all(
+            type(g.get("index")) is int and number(g.get("memory_total_mib")) not in {None, 0}
+            for g in raw_gpus
+        )
+    )
     return {
         "disk": {
             "status": "unknown"
@@ -187,7 +214,7 @@ def assessment(entry, hardware, storage):
             else "file_fits"
             if free >= entry.total_size_bytes + headroom
             else "insufficient",
-            "file_bytes": entry.file.size_bytes,
+            "file_bytes": entry.file.size_bytes if selected_size is None else selected_size,
             "model_bundle_bytes": entry.total_size_bytes,
             "free_bytes": free,
             "headroom_bytes": headroom,
@@ -195,7 +222,7 @@ def assessment(entry, hardware, storage):
             "note": "Every part is included; runtime image and staging may need separate space.",
         },
         "runtime_status": "supported_complete_bundle_plan",
-        "hardware_status": "estimated_fit" if choice["fits"] else "insufficient",
+        "hardware_status": "estimated_fit" if choice["fits"] else "insufficient" if observed else "unknown",
         "profiles": [
             {
                 "catalog_id": entry.id,
@@ -203,6 +230,7 @@ def assessment(entry, hardware, storage):
                 "capability": "chat",
                 "runtime": "llama.cpp",
                 "quantization": entry.quantization,
+                "occupancy": occupancy,
                 "fit": "estimated_fit" if choice["fits"] else "insufficient",
                 "recommendation": choice,
                 "locally_qualified": False,

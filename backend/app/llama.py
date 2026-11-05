@@ -289,6 +289,8 @@ def vision_projector(session, model, companions=None):
 
 @router.get("")
 def catalog(session: DB):
+    from app.gguf_bindings import size_of
+
     companions = list(
         session.scalars(
             select(ModelFile).where(
@@ -303,7 +305,7 @@ def catalog(session: DB):
             {
                 "id": row.id,
                 "name": label_of(row),
-                "size_bytes": row.size_bytes,
+                "size_bytes": size_of(session, row),
                 "model_key": "llamacpp:" + row.id,
                 "vision_available": vision_projector(session, row, companions) is not None,
             }

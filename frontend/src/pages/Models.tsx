@@ -29,6 +29,7 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  context_notice?: string;
   gguf_bundle?: {
     status: string;
     size_bytes?: number;
@@ -695,6 +696,9 @@ export function ModelDetail() {
                 ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
                 : definition.compatibility.summary}
           </p>
+        )}
+        {definition?.context_notice && (
+          <p className="muted">{definition.context_notice}</p>
         )}
         <form
           className="model-definition-form"

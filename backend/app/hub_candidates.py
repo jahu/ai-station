@@ -261,7 +261,11 @@ async def resolve_candidate(observation, filename, check, context_ceiling=131072
 
         if not INSTALLATION_QUALIFIED:
             raise ValueError("Split GGUFs need a complete compatible bundle plan")
-        profile = observation.get("language_profile") or await resolve_profile(observation, check)
+        profile = observation.get("language_profile")
+        if not profile:
+            raise ValueError(
+                "Split GGUFs need a complete compatible bundle plan and pinned language profile; inspect the source again"
+            )
         check()
         return split_candidate(observation, filename, profile, context_ceiling=context_ceiling)
     if selected_file and selected_file.get("format") in {"pth", "pt", "bin"}:

@@ -105,6 +105,19 @@ def test_hardware_estimate_uses_complete_weights_and_individual_gpu_capacity():
     assert not recommendation(entry, {**hardware(24576), "memory": {"total_mib": 4096}})["fits"]
 
 
+def test_missing_hardware_sensors_stay_unknown_and_graphics_setup_is_explicit():
+    from app.hub_split_candidates import assessment
+
+    entry = candidate()
+    for machine in [{}, {"memory": {"total_mib": 32768}, "gpus": [{"index": 3}]}]:
+        assert (
+            assessment(entry, machine, {"free_bytes": 100 * GiB, "headroom_bytes": GiB})["hardware_status"]
+            == "unknown"
+        )
+    waiting = recommendation(entry, {**hardware(12288), "container_gpu_ready": False})
+    assert not waiting["fits"] and "Graphics setup" in waiting["reason"]
+
+
 def test_frozen_owned_binding_proof_covers_the_entire_part_set():
     bundle = OwnedBundle(
         parts=[{"sha256": str(index) * 64, "size_bytes": index * 100, "mtime": 123.0} for index in (1, 2)]

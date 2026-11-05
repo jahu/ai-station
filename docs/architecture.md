@@ -1552,7 +1552,8 @@ Files reference one shared manifest rather than duplicating its members. Source
 advice uses the complete declared weights for disk lower bounds, while unknown
 or incomplete sets retain unknown requirements. Filename grouping grants neither
 native graph verification nor installation: existing fragment refusal stays in
-place until typed complete-bundle execution is qualified.
+place for incomplete or unsupported sets. Complete compatible installation is
+described below.
 
 
 Native split-GGUF admission now has a closed owned-object coordinate. The bounded
@@ -1562,16 +1563,18 @@ each immutable store object read-only under server-generated part names; request
 replay freezes the whole set and inspection/Stop check its complete mount policy.
 Per-device admission uses complete weight size, equal-layer rounding, shared
 weights, Q8 context/state and runtime headroom, with a separate available-RAM
-check. The native path is qualified against one pinned CUDA image; discovery
-installation/registry and ordinary Chat selection for bundles remain separate work.
+check. The native path is qualified against one pinned CUDA image; the complete
+source installation and ordinary Chat qualification are described below.
 
 
-The pending complete-source installation candidate extends the existing download
+The complete-source installation path extends the existing download
 executor and model definitions. A closed publisher set becomes an owned binding
 only after every object and the native whole-model proof pass. The physical
 primary ModelFile size is preserved; complete size and immutable component
 observations belong to the binding. Runtime source/handoff facts include all
 parts without exposing private initiating Runs. A numeric SQL read preserves the
 new bundle coordinate's exact timestamp double; legacy single-file source
-serialization is retained. The source-installation qualification gate remains off
-until its complete downloader/Runner/conversation acceptance passes.
+serialization is retained. The source-installation gate is enabled after real public multipart download and
+ordinary Linux GPU Chat/agent qualification. The native file context may exceed
+the publisher config without changing the reviewed default; attention geometry
+and sufficient native context remain required.
