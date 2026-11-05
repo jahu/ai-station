@@ -599,3 +599,24 @@ presets, parts, reasoning qualification and runtime history. Operator UI selects
 configurations explicitly, preserves that selection on refresh and never carries
 an unsaved preset into another configuration. Qualification remains recorded in
 the implementation/review evidence; this is not yet a packaged release.
+
+
+Publisher lifecycle: definitions expose a narrow canonical public source record,
+not their private download Run or complete recipe. Existing media source snapshots
+and new language/split installs share this projection. Known older curated files
+may use an exact SHA/size catalog match; unknown origins stay unknown. Opening
+"Review publisher updates" pre-fills the existing discovery input. It performs
+no automatic source request, transfer, runtime change or default replacement;
+new metadata and installation still require the ordinary reviewed Task/Run flow.
+
+
+Cache-aware advice uses only prior shared owned-object observations and bounded
+read-only filesystem metadata, through directory descriptors without following
+symlinks. Complete GGUF proofs contribute every part; unregistered, missing,
+changed, linked or writable objects do not reduce the estimate. The UI separates
+whole-model size, reusable weights, estimated model transfer and additional disk
+reserve. Runtime/companion/staging allowances and hardware fit are preserved.
+Metadata matching is advisory, not a fresh content proof: even an object whose
+stat fields were maliciously restored is rehashed by the downloader before native
+verification/use. Ranking never upgrades unsupported hardware/runtime because a
+file is cached. New plans recompute observations; saved hints grant no authority.

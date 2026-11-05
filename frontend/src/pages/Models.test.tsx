@@ -452,6 +452,14 @@ it("keeps sibling model configurations independent when they share a physical fi
     status: "registered",
     category: "llm",
     model_key: `llamacpp:${index ? id : "shared-file"}`,
+    publisher_source: {
+      repository: `publisher/${id}`,
+      revision: "a".repeat(40),
+      filename: "model.gguf",
+      license: "apache-2.0",
+      pinned_url: `https://huggingface.co/publisher/${id}/blob/${"a".repeat(40)}/model.gguf`,
+      review_url: `https://huggingface.co/publisher/${id}/blob/main/model.gguf`,
+    },
     preset: {
       gpus: [7],
       context_size: index ? 16384 : 8192,
@@ -509,6 +517,16 @@ it("keeps sibling model configurations independent when they share a physical fi
   expect(
     (screen.getByLabelText("Display name") as HTMLInputElement).value,
   ).toBe("Variant 2");
+  expect(
+    screen
+      .getByRole("link", { name: "Review publisher updates" })
+      .getAttribute("href"),
+  ).toBe(
+    "/models/discover?source=" +
+      encodeURIComponent(
+        "https://huggingface.co/publisher/second/blob/main/model.gguf",
+      ),
+  );
   expect(
     (screen.getByLabelText("Context size") as HTMLInputElement).value,
   ).toBe("16384");

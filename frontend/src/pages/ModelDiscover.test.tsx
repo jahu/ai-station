@@ -691,3 +691,84 @@ it("reviews all parts together only when the server supplies a supported complet
     inspection_run_id: "saved",
   });
 });
+
+it("prefills a publisher update review without automatically inspecting or downloading", async () => {
+  const source = "https://huggingface.co/publisher/model/blob/main/model.gguf";
+  const fetch = vi.fn(async (_url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "review" }
+        : {
+            id: "review",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: { source_inspection: report },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/models/discover?source=" + encodeURIComponent(source));
+  expect(
+    (
+      screen.getByLabelText(
+        "Model name or Hugging Face link",
+      ) as HTMLInputElement
+    ).value,
+  ).toBe(source);
+  expect(
+    fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+  ).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Check model" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+    ).toBe(true),
+  );
+  const request = fetch.mock.calls.find(
+    ([, options]) => options?.method === "POST",
+  )!;
+  expect(request[0]).toBe("/api/model-hub/inspections");
+  expect(JSON.parse(request[1]!.body as string).source).toBe(source);
+  expect(fetch.mock.calls.some(([url]) => url.includes("/downloads"))).toBe(
+    false,
+  );
+});
+
+it("explains cached weights without treating an unknown runtime as compatible", async () => {
+  const cached = {
+    ...report,
+    files: [
+      {
+        ...report.files[0],
+        assessment: {
+          ...report.files[0].assessment,
+          disk: {
+            status: "file_fits",
+            free_bytes: 1024,
+            reusable_model_bytes: 8 * 1024 ** 3,
+            model_weights_available: true,
+            model_download_bytes_estimate: 0,
+            additional_bytes_upper_bound: 0,
+          },
+        },
+      },
+    ],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "cached",
+        executor_type: "model_hub_inspect",
+        status: "succeeded",
+        metadata: { source_inspection: cached },
+      }),
+    })),
+  );
+  mount("/models/discover?run=cached");
+  await screen.findByText("Model weights already present");
+  expect(screen.getByText(/Estimated model download: 0 B/)).toBeTruthy();
+  expect(screen.getByText(/No validated workload profile/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Install model" })).toBeNull();
+});

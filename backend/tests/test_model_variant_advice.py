@@ -177,3 +177,23 @@ def test_source_advice_does_not_recommend_unequal_gpus_as_pooled_vram():
     assert file["assessment"]["hardware_status"] == "not_recommended"
     assert not file["assessment"]["variant_advice"]["recommended"]
     assert not file["assessment"]["profiles"][0]["recommendation"]["fits"]
+
+
+def test_cached_balanced_choice_is_preferred_but_does_not_excuse_low_precision_or_context():
+    report = source()
+    files = assess(report)
+    cached = next(f for f in files if f["filename"].endswith("Q6_K.gguf"))
+    cached["assessment"]["disk"].update(model_weights_available=True, additional_bytes_upper_bound=0)
+    rank_variants(report)
+    assert cached["assessment"]["variant_advice"]["recommended"]
+    cached["assessment"]["disk"]["model_weights_available"] = False
+    low = next(f for f in files if f["filename"].endswith("Q2_K.gguf"))
+    low["assessment"]["disk"].update(model_weights_available=True, additional_bytes_upper_bound=0)
+    rank_variants(report)
+    assert not low["assessment"]["variant_advice"]["recommended"]
+    limited = source()
+    assess(limited, gpus=1, context_target=131072)
+    for file in limited["files"]:
+        file["assessment"]["disk"]["model_weights_available"] = True
+    rank_variants(limited, context_target=131072)
+    assert not any(f["assessment"]["variant_advice"]["recommended"] for f in limited["files"])

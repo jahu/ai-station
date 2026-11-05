@@ -34,6 +34,14 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  publisher_source?: {
+    repository: string;
+    revision: string;
+    filename: string;
+    license: string;
+    pinned_url: string;
+    review_url: string;
+  };
   model_key?: string;
   context_notice?: string;
   gguf_bundle?: {
@@ -638,6 +646,40 @@ export function ModelDetail() {
         </label>
       )}
       <section className="panel model-card">
+        {definition?.publisher_source && (
+          <div className="model-bundle-summary">
+            <strong>Publisher source</strong>
+            <p className="model-path">
+              {definition.publisher_source.repository} ·{" "}
+              {definition.publisher_source.filename}
+            </p>
+            <p>
+              License: {definition.publisher_source.license} · Revision{" "}
+              {definition.publisher_source.revision.slice(0, 12)}
+            </p>
+            <div className="row">
+              <a
+                href={definition.publisher_source.pinned_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View installed revision ↗
+              </a>
+              {canManage && (
+                <Link
+                  to={`/models/discover?source=${encodeURIComponent(definition.publisher_source.review_url)}`}
+                >
+                  Review publisher updates
+                </Link>
+              )}
+            </div>
+            <p className="muted">
+              Checking a newer revision does not replace this model or change
+              your defaults. Review its files, hardware fit and license before
+              installing.
+            </p>
+          </div>
+        )}
         {completeBundle && (
           <div className="model-bundle-summary">
             <strong>Complete model</strong>

@@ -160,6 +160,9 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
     from app.data_access import accessible_run_id
 
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
+    from app.model_provenance import publisher_source
+
+    provenance = publisher_source(row, file)
     bundle_summary = None
     if (row.metadata_json or {}).get("model_bundle"):
         from app.gguf_bindings import OwnedBundle, checked_proof
@@ -263,6 +266,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "model_key": "llamacpp:" + (row.id if row.binding_key else row.file_id)
         if row.file_id and row.category == "llm"
         else None,
+        **({"publisher_source": provenance} if provenance else {}),
         "preset": preset_of(row),
         **({"gguf_bundle": bundle_summary} if bundle_summary else {}),
         **(

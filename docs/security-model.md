@@ -1839,3 +1839,18 @@ Removal preserves a tombstone and refuses an active/uncertain matching runtime;
 foreign private Runs remain private. Migration downgrade refuses additional
 bindings rather than discard references. Explicit restore verifies the original
 source without overwriting another model or deleting shared objects.
+
+
+Shared model provenance exposes only validated public publisher coordinates,
+license name and canonical URLs matching the observed object. It never projects
+raw download recipes, private Run IDs, arbitrary source URLs or credentials.
+Opening update review requires an explicit inspection action and retains the
+existing administrator, metadata-only and immutable-plan consent boundaries.
+
+
+Model cache hints open only the configured application root/models/store directory
+chain with no-follow directory descriptors and inspect bounded SHA object names
+without opening payloads. Only matching prior verified registry observations on
+owned, single-link, read-only regular files reduce disk estimates. The downloader
+still rehashes every reused object and native dispatch verifies its binding; the
+advice does not assert that matching size/time proves current content integrity.
