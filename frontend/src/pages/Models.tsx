@@ -32,6 +32,7 @@ interface Definition {
   image_backend?: "qwen" | "krea2";
   video_backend?: "wan22";
   speech_backend?: "chatterbox";
+  embedding_backend?: "e5_cpu";
   id: string;
   name: string;
   family: string;
@@ -195,15 +196,17 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
               {item.file?.filename ?? "Linked file missing"}
             </p>
             <small className="muted">
-              {item.speech_backend
-                ? "Speech model · configure in Audio"
-                : item.video_backend
-                  ? "Video model · configure in Video"
-                  : item.image_backend
-                    ? "Image model · configure in Images"
-                    : item.compatibility?.operational
-                      ? "Managed llama.cpp after a successful install"
-                      : "Catalogued only · no managed adapter"}
+              {item.embedding_backend
+                ? "Memory encoder · configure in Memory"
+                : item.speech_backend
+                  ? "Speech model · configure in Audio"
+                  : item.video_backend
+                    ? "Video model · configure in Video"
+                    : item.image_backend
+                      ? "Image model · configure in Images"
+                      : item.compatibility?.operational
+                        ? "Managed llama.cpp after a successful install"
+                        : "Catalogued only · no managed adapter"}
             </small>
           </Link>
         ))}
@@ -474,7 +477,8 @@ export function ModelDetail() {
               ...(!(
                 definition.image_backend ||
                 definition.video_backend ||
-                definition.speech_backend
+                definition.speech_backend ||
+                definition.embedding_backend
               )
                 ? {
                     gpus: selectedGpus,
@@ -597,13 +601,15 @@ export function ModelDetail() {
       </section>
       <section className="panel model-card">
         <h2>
-          {definition?.speech_backend
-            ? "Speech model"
-            : definition?.video_backend
-              ? "Video model"
-              : definition?.image_backend
-                ? "Image model"
-                : "Model definition and load preset"}
+          {definition?.embedding_backend
+            ? "Memory encoder"
+            : definition?.speech_backend
+              ? "Speech model"
+              : definition?.video_backend
+                ? "Video model"
+                : definition?.image_backend
+                  ? "Image model"
+                  : "Model definition and load preset"}
         </h2>
         {definition ? (
           <p>
@@ -630,7 +636,8 @@ export function ModelDetail() {
           <p>
             {definition.image_backend ||
             definition.video_backend ||
-            definition.speech_backend
+            definition.speech_backend ||
+            definition.embedding_backend
               ? definition.compatibility.summary
               : definition.compatibility.operational
                 ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
@@ -658,7 +665,8 @@ export function ModelDetail() {
               {!(
                 definition?.image_backend ||
                 definition?.video_backend ||
-                definition?.speech_backend
+                definition?.speech_backend ||
+                definition?.embedding_backend
               ) && (
                 <>
                   <label>
@@ -711,7 +719,8 @@ export function ModelDetail() {
               {!(
                 definition.image_backend ||
                 definition.video_backend ||
-                definition.speech_backend
+                definition.speech_backend ||
+                definition.embedding_backend
               ) && (
                 <>
                   <dt>Saved context</dt>
@@ -730,6 +739,11 @@ export function ModelDetail() {
               )}
             </dl>
           ) : null}
+          {definition?.embedding_backend && (
+            <Link to={`/memory?embedding_model=${definition.id}`}>
+              Choose this encoder in Memory
+            </Link>
+          )}
           {definition?.speech_backend && (
             <Link to={`/audio?model=${definition.id}`}>
               Choose this model in Audio
@@ -750,7 +764,8 @@ export function ModelDetail() {
               <Button type="submit" disabled={save.isPending}>
                 {definition?.image_backend ||
                 definition?.video_backend ||
-                definition?.speech_backend
+                definition?.speech_backend ||
+                definition?.embedding_backend
                   ? "Save name"
                   : definition
                     ? "Save preset"
@@ -773,7 +788,8 @@ export function ModelDetail() {
               !(
                 definition.image_backend ||
                 definition.video_backend ||
-                definition.speech_backend
+                definition.speech_backend ||
+                definition.embedding_backend
               ) &&
               definition.compatibility?.operational && (
                 <Button

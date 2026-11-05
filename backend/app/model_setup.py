@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_embedding":
+        from app.hub_embedding_candidates import recommendation as embedding_recommendation
+
+        return embedding_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_speech":
         from app.hub_speech_candidates import recommendation as speech_recommendation
 
@@ -222,7 +226,7 @@ def view(session, task):
         "model_file_id": run.metadata_json.get("model_file_id"),
         "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
         if run.metadata_json.get("model_file_id")
-        and saved["entry"].get("capability") not in {"image", "video", "speech"}
+        and saved["entry"].get("capability") not in {"image", "video", "speech", "embedding"}
         else None,
         "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
@@ -366,7 +370,7 @@ def attempt(session, task, saved, *, previous=None):
             "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         permissions=PERMISSIONS,
-        requested_resources={"ram_mib": 256},
+        requested_resources={"ram_mib": 2048 if saved["entry"].get("capability") == "embedding" else 256},
         retry_class="inspect",
         parent_run_id=previous.id if previous else None,
     )

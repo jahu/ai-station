@@ -37,6 +37,17 @@ BALANCED = {
 
 
 async def enrich_source(report, check):
+    if any(file.get("format") == "onnx" for file in report["files"]):
+        from app.hub_embedding_candidates import resolve_profile as embedding_profile
+
+        encoder_only = not any(file.get("format") in {"gguf", "safetensors"} for file in report["files"])
+        try:
+            report["embedding_profile"] = await embedding_profile(report, check)
+        except (ValueError, httpx.HTTPError) as exc:
+            if encoder_only:
+                report["requirements_error"] = str(exc)[:300]
+        if encoder_only:
+            return
     if len(report["files"]) == 1 and any(
         file.get("format") == "safetensors" and file.get("identity_available") for file in report["files"]
     ):
@@ -83,6 +94,16 @@ async def enrich_source(report, check):
 
 def assess_variant(file, report, hardware, storage, *, context_target=32768):
     existing = assess_file(file, hardware, storage)
+    if report.get("embedding_profile") and file.get("format") == "onnx":
+        from app.hub_embedding_candidates import candidate_from_profile as embedding_candidate
+
+        try:
+            return assess_file(
+                file, hardware, storage, candidates=(embedding_candidate(report, file["filename"]),)
+            )
+        except ValueError as exc:
+            existing["reason"] = str(exc)[:300]
+            return existing
     from app.hub_native_profiles import adapters
 
     for key, adapter in adapters():
@@ -132,7 +153,8 @@ def rank_variants(report, *, context_target=32768):
         profiles = [
             p
             for p in assessment["profiles"]
-            if p["fit"] == "estimated_fit" and p["recommendation"].get("gpus")
+            if p["fit"] == "estimated_fit"
+            and (p["recommendation"].get("gpus") or p["recommendation"].get("execution_device") == "cpu")
         ]
         best = max(
             profiles,
@@ -147,7 +169,9 @@ def rank_variants(report, *, context_target=32768):
         gpus = best["recommendation"]["gpus"] if best else []
         disk_fits = assessment["disk"]["status"] == "file_fits"
         usable = bool(best and disk_fits)
-        image = any(p.get("capability") in {"image", "video", "speech"} for p in assessment["profiles"])
+        image = any(
+            p.get("capability") in {"image", "video", "speech", "embedding"} for p in assessment["profiles"]
+        )
         meets_context = bool(best and (image or context >= context_target))
         quant = best.get("quantization", "") if best else ""
         precision_known = quant in BALANCED and not quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))
@@ -167,7 +191,9 @@ def rank_variants(report, *, context_target=32768):
             "meets_context_target": None if image else bool(meets_context),
             "precision_tradeoff": bool(best and quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))),
             "rank": 0,
-            "reason": "Estimated Polish speech, one 6-GiB GPU and fixed F32 profile"
+            "reason": "CPU memory encoder · 384 dimensions · GPUs stay free"
+            if best and best.get("capability") == "embedding"
+            else "Estimated Polish speech, one 6-GiB GPU and fixed F32 profile"
             if best and best.get("capability") == "speech"
             else "Estimated 1280×704 video, one GPU and explicit CPU offload"
             if best and best.get("capability") == "video"

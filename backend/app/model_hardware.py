@@ -34,6 +34,11 @@ def assess_file(file, hardware, storage, *, candidates=None):
         and entry.file.sha256 == file.get("sha256")
         and entry.file.size_bytes == size
     ]
+    embedding = [entry for entry in matches if getattr(entry, "origin", None) == "hub_embedding"]
+    if embedding:
+        from app.hub_embedding_candidates import assessment
+
+        return assessment(embedding[0], hardware, storage)
     images = [v for v in matches if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech"}]
     if images:
         entry = images[0]

@@ -76,7 +76,8 @@ type Report = {
     observation?: Report;
   }[];
   candidate?: {
-    capability: "chat" | "image" | "video" | "speech";
+    capability: "chat" | "image" | "video" | "speech" | "embedding";
+    tokenizer?: { size_bytes: number };
     setup_recipe?: {
       component_licenses: { name: string; url: string }[];
       inputs: {
@@ -612,14 +613,15 @@ export default function ModelDiscover() {
                 </div>
               ))}
               {report.kind !== "install_plan" &&
-                ["gguf", "safetensors"].includes(file.format) &&
+                ["gguf", "safetensors", "onnx"].includes(file.format) &&
                 file.sha256 && (
                   <>
                     {!file.assessment.profiles.some(
                       (p) =>
                         p.capability === "image" ||
                         p.capability === "video" ||
-                        p.capability === "speech",
+                        p.capability === "speech" ||
+                        p.capability === "embedding",
                     ) && (
                       <details className="hub-context-options">
                         <summary>Context options</summary>
@@ -687,20 +689,35 @@ export default function ModelDiscover() {
               plan={{
                 manifest_sha256: report.manifest_sha256,
                 capability: report.candidate?.capability,
-                components: report.candidate?.prepare_engine
-                  ? report.candidate.setup_recipe?.inputs
-                      .filter(
-                        (file) =>
-                          !!file.role ||
-                          file.kind === "model" ||
-                          file.kind === "python" ||
-                          file.kind === "sdk",
-                      )
-                      .map((file) => ({
-                        ...file,
-                        role: file.role ?? file.filename,
-                      }))
-                  : undefined,
+                components:
+                  report.candidate?.capability === "embedding" &&
+                  report.candidate.tokenizer
+                    ? [
+                        {
+                          role: "model",
+                          filename: selectedVariant?.filename ?? "Encoder",
+                          size_bytes: selectedVariant?.size_bytes ?? 0,
+                        },
+                        {
+                          role: "tokenizer",
+                          filename: "Fixed E5 tokenizer",
+                          size_bytes: report.candidate.tokenizer.size_bytes,
+                        },
+                      ]
+                    : report.candidate?.prepare_engine
+                      ? report.candidate.setup_recipe?.inputs
+                          .filter(
+                            (file) =>
+                              !!file.role ||
+                              file.kind === "model" ||
+                              file.kind === "python" ||
+                              file.kind === "sdk",
+                          )
+                          .map((file) => ({
+                            ...file,
+                            role: file.role ?? file.filename,
+                          }))
+                      : undefined,
                 component_licenses:
                   report.candidate?.component_licenses ??
                   report.candidate?.setup_recipe?.component_licenses,

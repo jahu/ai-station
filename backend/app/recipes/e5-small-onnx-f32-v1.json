@@ -1,0 +1,41 @@
+{
+  "profile": "e5-small-onnx-f32-v1",
+  "schema_sha256": "4ac6c8b9300bb32b13ce3382a08bbc9dc604c351c9746e68e91558e3379f009b",
+  "tensor_count": 197,
+  "node_count": 1244,
+  "input_names": ["input_ids", "attention_mask", "token_type_ids"],
+  "output_names": ["last_hidden_state"],
+  "dtypes": [1],
+  "dimension": 384,
+  "cpu_threads": 2,
+  "maximum_address_space_bytes": 2147483648,
+  "minimum_physical_ram_mib": 4096,
+  "reference": {
+    "repository": "Xenova/multilingual-e5-small",
+    "revision": "761b726dd34fb83930e26aab4e9ac3899aa1fa78",
+    "filename": "onnx/model.onnx",
+    "sha256": "4aa845c27760e06e9a686b9d8b5d440eae4b6612cd09e5b522b716d3941f77ff",
+    "size_bytes": 470268533
+  },
+  "tokenizer": {
+    "filename": "tokenizer.json",
+    "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+    "size_bytes": 17082730,
+    "url": "https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78/tokenizer.json"
+  },
+  "configuration": {
+    "model_type": "bert",
+    "architectures": ["BertModel"],
+    "hidden_size": 384,
+    "intermediate_size": 1536,
+    "num_attention_heads": 12,
+    "num_hidden_layers": 12,
+    "vocab_size": 250037,
+    "max_position_embeddings": 512,
+    "type_vocab_size": 2,
+    "tokenizer_class": "XLMRobertaTokenizer",
+    "hidden_act": "gelu",
+    "position_embedding_type": "absolute"
+  },
+  "license_url": "https://huggingface.co/Xenova/multilingual-e5-small/blob/761b726dd34fb83930e26aab4e9ac3899aa1fa78/README.md"
+}

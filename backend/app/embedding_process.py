@@ -5,6 +5,7 @@ import json
 import os
 import signal
 import sys
+from datetime import datetime, timedelta
 
 from app.db import utcnow
 from app.embedding_models import DIMENSION, MAX_CHARACTERS, installation
@@ -12,16 +13,45 @@ from app.events import append_event
 from app.paths import safe_join
 
 
+def reserve_cpu(session, run):
+    from app.control_memory import available_mib
+    from app.resources import RESOURCE_WAIT_KEY, memory_observation, release_run_locks, reserve_memory
+    from app.runs import transition
+    from app.state import RunStatus
+
+    available = available_mib()
+    if reserve_memory(session, run, available, 2048):
+        session.commit()
+        return True
+    release_run_locks(session, run.id)
+    run.task.metadata_json = {
+        **run.task.metadata_json,
+        RESOURCE_WAIT_KEY: (utcnow() + timedelta(seconds=5)).isoformat(),
+    }
+    run.metadata_json = {
+        **run.metadata_json,
+        "resource_wait": memory_observation(session, run, available, 2048),
+    }
+    transition(session, run, RunStatus.INTERRUPTED, event_type="resource.waiting")
+    transition(session, run, RunStatus.QUEUED, event_type="run.requeued")
+    run.finished_at = run.worker_id = run.lease_expires_at = None
+    session.commit()
+    return False
+
+
 class EmbeddingStopped(Exception):
     pass
 
 
-def check_running(session, run):
+def check_running(session, run, *, commit=True):
     session.refresh(run)
     active = run.status in {"claimed", "preparing", "running"}
-    session.commit()
-    if not active:
+    claim = getattr(run, "_embedding_claim", (run.worker_id, run.claimed_at))
+    if not active or (run.worker_id, run.claimed_at) != claim:
+        session.rollback()
         raise EmbeddingStopped("The embedding Run is no longer active")
+    if commit:
+        session.commit()
 
 
 async def wait_running(session, run, awaitable, seconds=60):
@@ -47,6 +77,8 @@ class CpuEmbeddingProcess:
     def __init__(self, session, run, root):
         self.session, self.run, self.root = session, run, root
         self.process = None
+        self.claim = run.worker_id, run.claimed_at
+        run._embedding_claim = self.claim
 
     async def wait(self, awaitable, seconds=60):
         return await wait_running(self.session, self.run, awaitable, seconds)
@@ -60,10 +92,28 @@ class CpuEmbeddingProcess:
         except ValueError as exc:
             raise ValueError("The CPU embedding process returned invalid JSON") from exc
 
-    async def open(self):
-        if not installation(self.root)["installed"]:
+    async def open(self, *, admit=False):
+        binding = self.run.parameters.get("embedding_model")
+        if binding is None and not installation(self.root)["installed"]:
             raise ValueError("Prepare the local embedding model first")
         check_running(self.session, self.run)
+        arguments = []
+        if binding is not None:
+            from app.embedding_binding import Binding, Job
+
+            value = Binding.model_validate(binding)
+            end = utcnow().timestamp() + (90 if admit else 600)
+            if self.run.parameters.get("execution_deadline_at"):
+                end = min(
+                    end, datetime.fromisoformat(self.run.parameters["execution_deadline_at"]).timestamp()
+                )
+            job = Job(run_id=self.run.id, deadline_at=end, binding=value)
+            config = safe_join(self.root, f"runs/{self.run.id}/embedding-model.json")
+            config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            fd = os.open(config, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            with os.fdopen(fd, "w") as output:
+                output.write(job.model_dump_json())
+            arguments = [str(config)] + (["admit"] if admit else [])
         environment = {
             key: value
             for key, value in os.environ.items()
@@ -88,6 +138,7 @@ class CpuEmbeddingProcess:
                 "app.embedding_cpu",
                 str(self.root),
                 str(os.getpid()),
+                *arguments,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=log,
@@ -115,7 +166,20 @@ class CpuEmbeddingProcess:
         )
         self.session.commit()
         value = await self.read()
-        if value != {"ready": True, "device": "CPU", "dimension": DIMENSION}:
+        self.proof = value.get("graph") if isinstance(value, dict) else None
+        expected = {"ready": True, "device": "CPU", "dimension": DIMENSION}
+        if binding is not None:
+            from app.embedding_graph import fingerprint
+
+            expected["model_identity"] = fingerprint(binding)
+            if admit:
+                expected["graph"] = self.proof
+                if (
+                    not isinstance(self.proof, dict)
+                    or self.proof.get("schema_sha256") != binding["schema_sha256"]
+                ):
+                    raise ValueError("The encoder graph was not verified")
+        if value != expected:
             raise ValueError("CPU embedding model readiness was not verified")
         return self
 
@@ -170,6 +234,9 @@ class CpuEmbeddingProcess:
         if not self.session.is_active:
             self.session.rollback()
         self.session.refresh(self.run)
+        if (self.run.worker_id, self.run.claimed_at) != self.claim:
+            self.session.rollback()
+            return
         self.run.metadata_json = {**self.run.metadata_json, "cpu_process_confirmed_gone": True}
         append_event(self.session, self.run.id, "embedding.cpu.stopped", {"exit_code": process.returncode})
         self.session.commit()

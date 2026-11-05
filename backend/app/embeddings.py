@@ -111,7 +111,9 @@ class PrepareBody(BaseModel):
 def vector_identity(value):
     identity = {key: value.get(key) for key in ("backend", "endpoint", "model", "model_id")}
     identity["backend"] = identity["backend"] or "endpoint"
-    identity["encoding"] = "e5-prefix-chunks-v1" if identity["backend"] == "local_cpu" else "compatible-v1"
+    identity["encoding"] = (
+        "e5-prefix-chunks-v1" if identity["backend"] in {"local_cpu", "registered_cpu"} else "compatible-v1"
+    )
     return "embedding:" + content_hash(json.dumps(identity, sort_keys=True))
 
 
@@ -125,6 +127,12 @@ def validate_binding(session, run):
             raise ValueError("Semantic memory settings changed; start a new Run")
     elif (current["endpoint"], current["model"]) != (frozen.get("endpoint"), frozen.get("model")):
         raise ValueError("Semantic memory settings changed; start a new Run")
+    if current["backend"] == "registered_cpu":
+        from app.registered_embeddings import frozen, identity
+
+        binding = frozen(session, current["model_id"])
+        if identity(binding) != current["model"] or run.parameters.get("embedding_model") != binding:
+            raise ValueError("The registered encoder changed; select and index the model again")
     return current
 
 
@@ -190,6 +198,8 @@ def load_setup(session) -> dict:
                 value.get("endpoint")
                 or value.get("backend") == "local_cpu"
                 and value.get("model_id") == MODEL_ID
+                or value.get("backend") == "registered_cpu"
+                and bool(value.get("model_id"))
             )
         ),
     }
@@ -349,7 +359,25 @@ def setup_view(session, setup=None):
             "secret_source": "station" if setup["secret_ref"] else "none",
         }
 
+    from app.registered_embeddings import choices, frozen, present
+
+    registered = choices(session)
+    selected = (
+        next((item for item in registered if item["id"] == setup["model_id"]), None)
+        if setup["backend"] == "registered_cpu"
+        else None
+    )
+    if selected and selected["available"]:
+        try:
+            selected = {
+                **selected,
+                "available": present(get_settings().data_dir, frozen(session, selected["id"])),
+            }
+        except HTTPException:
+            selected = {**selected, "available": False}
     return {
+        "registered_models": registered,
+        "selected_model": selected,
         **{
             key: setup[key]
             for key in ("backend", "revision", "endpoint", "model", "model_id", "configured", "dimension")
@@ -438,6 +466,14 @@ def _enqueue(session, *, capability, title, extra, setup, task=None, parent=None
     if active:
         raise HTTPException(409, "Cancel the active embeddings Run before starting another")
     task = task or create_task(session, title=title, prompt=title, capability=capability)
+    binding = {}
+    if setup["backend"] == "registered_cpu":
+        from app.registered_embeddings import frozen, identity
+
+        selected = frozen(session, setup["model_id"])
+        if identity(selected) != setup["model"]:
+            raise HTTPException(409, "Select the changed encoder again before indexing")
+        binding = {"embedding_model": selected}
     run = create_run(
         session,
         task,
@@ -457,13 +493,18 @@ def _enqueue(session, *, capability, title, extra, setup, task=None, parent=None
             if parent
             else (utcnow() + timedelta(minutes=10)).isoformat(),
             **extra,
+            **binding,
         },
         parent_run_id=parent.id if parent else None,
         permissions=(["manage_models"] + (["network_read"] if extra.get("confirm_download") is True else []))
         if capability == "memory.embed.prepare"
         else [],
-        requested_resources={"cpu_threads": 2, "ram_limit_bytes": 2 * 1024**3}
-        if setup["backend"] == "local_cpu" or capability == "memory.embed.prepare"
+        requested_resources={
+            "cpu_threads": 2,
+            "ram_limit_bytes": 2 * 1024**3,
+            **({"ram_mib": 2048} if setup["backend"] == "registered_cpu" else {}),
+        }
+        if setup["backend"] in {"local_cpu", "registered_cpu"} or capability == "memory.embed.prepare"
         else {},
         retry_class="inspect",
         triggered_by="user",
@@ -473,6 +514,58 @@ def _enqueue(session, *, capability, title, extra, setup, task=None, parent=None
 
         depend_on(session, run, parent)
     return run
+
+
+class SelectModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=0, strict=True)
+    confirm: StrictBool
+
+
+@router.post("/models/{identity}/select", status_code=202)
+def select_model(identity: UUID, body: SelectModel, session: DB):
+    from app.registered_embeddings import frozen, present
+    from app.registered_embeddings import identity as model_identity
+
+    current = load_setup(session)
+    if not body.confirm or current["revision"] != body.expected_revision:
+        raise HTTPException(409, "Review the selected encoder against the current memory settings")
+    binding = frozen(session, identity)
+    if not present(get_settings().data_dir, binding):
+        raise HTTPException(409, "The selected encoder bundle is missing or changed")
+    if not dependencies_available():
+        raise HTTPException(409, "The local CPU encoder engine is unavailable")
+    saved = save_setup(
+        session,
+        {
+            "backend": "registered_cpu",
+            "model_id": str(identity),
+            "model": model_identity(binding),
+            "endpoint": "",
+            "secret_ref": "",
+            "revision": current["revision"] + 1,
+        },
+    )
+    health = _enqueue(
+        session,
+        capability="memory.embed.health",
+        title="Check selected memory encoder",
+        extra={},
+        setup=saved,
+    )
+    indexed = _enqueue(
+        session,
+        capability="memory.embed.index",
+        title="Index memories with selected encoder",
+        extra={"all_memories": True, "batch_size": INDEX_BATCH},
+        setup=saved,
+        task=health.task,
+        parent=health,
+    )
+    saved.update(last_health_run_id=health.id, last_index_run_id=indexed.id)
+    save_setup(session, saved)
+    session.commit()
+    return setup_view(session)
 
 
 @router.post("/prepare", status_code=202)
@@ -584,9 +677,15 @@ class MemoryEmbedExecutor:
 
     def execute(self, session, run):
         session.refresh(run)
+        run._embedding_claim = run.worker_id, run.claimed_at
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             return "done"
+        if run.parameters.get("backend") == "registered_cpu":
+            from app.embedding_process import reserve_cpu
+
+            if not reserve_cpu(session, run):
+                return "requeued"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
@@ -603,6 +702,10 @@ class MemoryEmbedExecutor:
                 return "done"
             if run.status != "running":
                 return "done"
+            from app.task_control import lock_task
+
+            lock_task(session, run.task)
+            check_running(session, run, commit=False)
             if run.capability != "memory.embed.prepare":
                 validate_binding(session, run)
             if run.capability in {"memory.embed.index", "memory.embed.search"}:
@@ -625,6 +728,15 @@ class MemoryEmbedExecutor:
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             elif run.status not in {"canceled", "interrupted", "failed", "succeeded"}:
                 mark_failed(session, run, type(exc).__name__, str(exc) or "Embeddings Run failed")
+        finally:
+            if (
+                (run.worker_id, run.claimed_at) == run._embedding_claim
+                and run.parameters.get("backend") == "registered_cpu"
+                and (run.pid is None or run.metadata_json.get("cpu_process_confirmed_gone"))
+            ):
+                from app.resources import release_run_locks
+
+                release_run_locks(session, run.id)
         return "done"
 
     async def _run(self, session, run):
@@ -644,7 +756,7 @@ class MemoryEmbedExecutor:
                 if run.capability == "memory.embed.prepare":
                     return await self._prepare(session, run)
                 bound = validate_binding(session, run)
-                if run.parameters.get("backend") == "local_cpu":
+                if run.parameters.get("backend") in {"local_cpu", "registered_cpu"}:
                     cpu = CpuEmbeddingProcess(session, run, get_settings().data_dir)
 
                     async def encode(text, kind):

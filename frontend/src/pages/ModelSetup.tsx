@@ -240,6 +240,16 @@ export function PreparationCard({
             Resume preparation
           </Button>
         )}
+        {value.entry.capability === "embedding" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/memory?embedding_model=${value.definition_id}`}
+            >
+              Choose this encoder in Memory →
+            </Link>
+          )}
         {value.entry.capability === "speech" &&
           value.definition_id &&
           value.progress.ready_to_try && (

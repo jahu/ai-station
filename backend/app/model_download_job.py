@@ -88,9 +88,23 @@ class DownloadExecutor:
                     "This model does not fit the detected hardware. Review setup or explicitly choose download files only."
                 )
             available = (hardware.get("memory") or {}).get("available_mib")
-            if not reserve_memory(session, run, available, 256):
+            if entry.capability == "embedding":
+                from app.control_memory import available_mib
+
+                container_available = available_mib()
+                available = (
+                    min(available, container_available)
+                    if type(available) in {int, float} and container_available is not None
+                    else None
+                )
+            memory_mib = 2048 if entry.capability == "embedding" else 256
+            if not reserve_memory(session, run, available, memory_mib):
                 return self.defer(
-                    session, run, memory_observation(session, run, available, 256), worker=worker, claim=claim
+                    session,
+                    run,
+                    memory_observation(session, run, available, memory_mib),
+                    worker=worker,
+                    claim=claim,
                 )
             session.commit()
             root = get_settings().data_dir
@@ -100,6 +114,17 @@ class DownloadExecutor:
             final = folder / entry.file.sha256
 
             def remaining():
+                if entry.capability == "embedding":
+                    total = 0
+                    for spec in (entry.file, entry.tokenizer):
+                        object_path, partial_path = folder / spec.sha256, folder / (spec.sha256 + ".part")
+                        already = (
+                            partial_path.stat().st_size
+                            if partial_path.exists() and not partial_path.is_symlink()
+                            else 0
+                        )
+                        total += 0 if object_path.exists() else max(0, spec.size_bytes - already)
+                    return total
                 already = partial.stat().st_size if partial.exists() and not partial.is_symlink() else 0
                 return 0 if final.exists() else max(0, entry.file.size_bytes - already)
 
@@ -133,11 +158,30 @@ class DownloadExecutor:
 
             try:
                 path = asyncio.run(
-                    obtain(root, entry.file, check=check, progress=progress, source_recovered=recovered)
+                    obtain(
+                        root,
+                        entry.file,
+                        check=check,
+                        progress=(
+                            lambda received, total: progress(
+                                received, entry.file.size_bytes + entry.tokenizer.size_bytes
+                            )
+                        )
+                        if entry.capability == "embedding"
+                        else progress,
+                        source_recovered=recovered,
+                    )
                 )
             except DownloadBusy:
                 return self.defer(session, run, worker=worker, claim=claim)
             check()
+            if entry.capability == "embedding":
+                from app.hub_embedding_install import adopt
+
+                try:
+                    return adopt(session, run, entry, path, check, progress, recovered, obtain)
+                except DownloadBusy:
+                    return self.defer(session, run, worker=worker, claim=claim)
             run.metadata_json = {
                 **run.metadata_json,
                 "model_download": {

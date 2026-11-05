@@ -55,6 +55,10 @@ class HubCandidate(Candidate):
 
 
 def download_candidate(payload):
+    if payload.get("origin") == "hub_embedding":
+        from app.hub_embedding_candidates import HubEmbeddingCandidate
+
+        return HubEmbeddingCandidate.model_validate(payload)
     if payload.get("origin") == "hub_speech":
         from app.hub_speech_candidates import HubSpeechCandidate
 
@@ -234,6 +238,12 @@ def candidate_from_profile(observation, filename, profile, *, context_ceiling=32
 
 async def resolve_candidate(observation, filename, check, context_ceiling=131072):
     selected_file = next((f for f in observation["files"] if f["filename"] == filename), None)
+    if selected_file and selected_file.get("format") == "onnx":
+        from app.hub_embedding_candidates import candidate_from_profile as embedding_candidate
+        from app.hub_embedding_candidates import resolve_profile as embedding_profile
+
+        profile = observation.get("embedding_profile") or await embedding_profile(observation, check)
+        return embedding_candidate({**observation, "embedding_profile": profile}, filename)
     if selected_file and selected_file.get("format") == "safetensors":
         from app.hub_native_profiles import candidate
 

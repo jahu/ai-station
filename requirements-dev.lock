@@ -137,6 +137,7 @@ markupsafe==3.0.3
 ml-dtypes==0.6.0
     # via
     #   -c requirements-dev.lock
+    #   -c requirements.lock
     #   onnx
 numpy==2.5.4
     # via
@@ -148,6 +149,7 @@ numpy==2.5.4
 onnx==1.23.2
     # via
     #   -c requirements-dev.lock
+    #   -c requirements.lock
     #   ai-station (backend/pyproject.toml)
 onnxruntime==1.31.0
     # via
@@ -202,6 +204,7 @@ pygments==2.21.0
     #   pytest
 pyotp==2.9.0
     # via
+    #   -c requirements-dev.lock
     #   -c requirements.lock
     #   ai-station (backend/pyproject.toml)
 pypdf==6.19.0
