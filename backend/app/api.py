@@ -17,6 +17,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app import __version__
 from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
@@ -110,7 +111,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="AI Station", version="0.1.2", lifespan=lifespan)
+app = FastAPI(title="AI Station", version=__version__, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -232,7 +233,7 @@ def health(response: Response):
     with get_engine().connect() as connection:
         connection.execute(text("SELECT 1"))
     response.headers["Cache-Control"] = "no-store"
-    result = {"status": "ok", "version": "0.1.2"}
+    result = {"status": "ok", "version": __version__}
     if instance_id := get_settings().desktop_instance_id:
         result["desktop_instance_id"] = instance_id
     return result

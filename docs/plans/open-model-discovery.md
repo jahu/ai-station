@@ -632,3 +632,11 @@ runtime starting points are labelled examples, never compatibility authority.
 Publisher matches and starting points both pass ordinary source/graph/hardware
 inspection. Direct publisher-update links still only prefill the input. No
 application-startup search, weight transfer or runtime activation is introduced.
+
+
+Release preparation now targets **0.2.0**. Discovery, complete bindings, supported
+family qualification and the guided hardware-aware entry are merged to develop
+through PR #668. Release notes consolidate admitted families and evidence rather
+than claiming arbitrary future architectures work. Installer/QA asset checks and
+the human-owner master promotion remain open gates; preparing a version does not
+deploy or publish it.
