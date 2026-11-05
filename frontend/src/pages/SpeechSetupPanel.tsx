@@ -377,7 +377,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const completed = useRef(new Set<string>());
   const section = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (expanded && search.get("capability") === family)
+    if (
+      expanded &&
+      search.get("capability") === family &&
+      !section.current?.closest("[data-model-category-panel]")
+    )
       section.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }, [expanded, search, family]);
   const refresh = () => {

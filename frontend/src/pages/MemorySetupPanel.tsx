@@ -113,7 +113,11 @@ export default function MemorySetupPanel() {
     onSettled: refresh,
   });
   useEffect(() => {
-    if (expanded && search.get("capability") === "memory")
+    if (
+      expanded &&
+      search.get("capability") === "memory" &&
+      !section.current?.closest("[data-model-category-panel]")
+    )
       section.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }, [expanded, search]);
   const download = running?.metadata?.embedding_download as

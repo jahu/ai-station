@@ -163,11 +163,12 @@ it("saves a definition and installs it only after an explicit action", async () 
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  fireEvent.click(screen.getByText("Supported formats & runtime details"));
   expect(
     await screen.findByText(/Declared pairings, not a successful load/),
   ).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Definitions" }));
-  await screen.findByRole("heading", { name: "No curated definitions yet" });
+  fireEvent.click(screen.getByRole("button", { name: "Saved models" }));
+  await screen.findByRole("heading", { name: "No saved models yet" });
   expect(
     fetch.mock.calls.some((call) => String(call[0]).includes("/install")),
   ).toBe(false);
@@ -196,7 +197,7 @@ it("starts discovery only after explicit action and opens its durable Run", asyn
   );
   await screen.findByRole("heading", { name: "No model files in this view" });
   expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
-  fireEvent.click(screen.getByRole("button", { name: "Discover models" }));
+  fireEvent.click(screen.getByRole("button", { name: "Scan local folders" }));
   await screen.findByRole("heading", { name: "Discovery Run" });
   const call = fetch.mock.calls.find((call) => call[1])!;
   expect(call[0]).toBe("/api/models/discover");

@@ -255,7 +255,11 @@ export default function ImageSetupPanel() {
       void cache.invalidateQueries({ queryKey: [key] });
   }
   useEffect(() => {
-    if (expanded && search.get("capability") === "images")
+    if (
+      expanded &&
+      search.get("capability") === "images" &&
+      !section.current?.closest("[data-model-category-panel]")
+    )
       section.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }, [expanded, search]);
   useEffect(() => {

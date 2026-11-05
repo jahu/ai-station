@@ -1,19 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Search,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { api, type Run } from "../api";
 import { useAccount } from "../account-context";
-import { ErrorNotice, PageTitle } from "../components/common";
+import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 import HubInstallPanel from "./HubInstallPanel";
+import ModelManagement from "./ModelManagement";
 import "./ModelDiscover.css";
 
 const capabilities = [
@@ -321,137 +316,156 @@ export default function ModelDiscover() {
     : undefined;
   return (
     <div className="model-discover">
-      <Link className="text-link" to="/models">
-        <ArrowLeft size={14} /> Installed models
-      </Link>
-      <PageTitle eyebrow="MODELS / DISCOVER" title="Find your next model">
-        Search Hugging Face or paste a repository or file link. Review the
-        source, supported runtime and fit for your station before downloading.
-      </PageTitle>
-      {!params.get("source") &&
-        (!rootReport ||
-          ["search", "comparison"].includes(rootReport.kind ?? "")) && (
-          <section
-            className="panel hub-recommendations"
-            aria-label="Find models for this station"
+      <ModelManagement current="browse" title="Add a model">
+        Choose what you want to create, or search for a model you already know.
+        We check compatibility and hardware fit before you download.
+      </ModelManagement>
+      <ol className="model-install-steps" aria-label="Add model progress">
+        {["Choose a model", "Review fit", "Install"].map((label, i) => (
+          <li
+            key={label}
+            aria-current={
+              i ===
+              (report?.kind === "install_plan" ? 2 : report?.repository ? 1 : 0)
+                ? "step"
+                : undefined
+            }
           >
-            <div>
-              <h2>Start with what you want to create</h2>
-              <p className="muted">
-                Compare up to three sources against your GPUs, memory and
-                storage. Pinned runtime starting points and publisher matches
-                are inspected before any download.
-              </p>
-            </div>
-            <div className="hub-discovery-controls">
-              <div className="hub-discovery-field">
-                <label htmlFor="model-discovery-capability">Use for</label>
-                <select
-                  id="model-discovery-capability"
-                  value={capability}
-                  disabled={!canManage || busy}
-                  onChange={(event) =>
-                    setCapability(event.target.value as Capability)
-                  }
-                >
-                  {capabilities.map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="hub-discovery-field">
-                <label htmlFor="model-discovery-order">Browse</label>
-                <select
-                  id="model-discovery-order"
-                  value={order}
-                  disabled={!canManage || busy}
-                  onChange={(event) =>
-                    setOrder(event.target.value as "popular" | "recent")
-                  }
-                >
-                  <option value="popular">Popular</option>
-                  <option value="recent">Recently updated</option>
-                </select>
-              </div>
-              <Button
-                disabled={!canManage || busy}
-                onClick={() => recommend.mutate(capability)}
-              >
-                <Sparkles size={16} />
-                {recommend.isPending ? "Starting…" : "Find for my station"}
-              </Button>
-            </div>
-            {capability === "chat" && rootReport?.kind !== "search" && (
-              <details className="hub-context-options">
-                <summary>Context options</summary>
-                <label htmlFor="model-guided-context">
-                  Conversation context target
-                </label>
-                <select
-                  id="model-guided-context"
-                  value={contextTarget}
-                  disabled={!canManage || busy}
-                  onChange={(event) =>
-                    setContextTarget(Number(event.target.value))
-                  }
-                >
-                  <option value={32768}>32K · Balanced conversation</option>
-                  <option value={131072}>128K · Longer tasks</option>
-                </select>
+            <span>{i + 1}</span>
+            {label}
+          </li>
+        ))}
+      </ol>
+      <div className="hub-entry-options">
+        {!params.get("source") &&
+          (!rootReport ||
+            ["search", "comparison"].includes(rootReport.kind ?? "")) && (
+            <section
+              className="panel hub-recommendations"
+              aria-label="Find models for this station"
+            >
+              <div>
+                <h2>Help me choose</h2>
                 <p className="muted">
-                  The recommendation includes memory for this conversation
-                  context.
+                  Pick a category. We compare models with your computer’s
+                  graphics cards, memory and available storage.
                 </p>
-              </details>
-            )}
-            <p className="muted">
-              Metadata only. You review files, hardware fit and licenses before
-              installing.
-            </p>
-          </section>
-        )}
-      <form
-        className="panel hub-search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (query.trim().length >= 2 && !busy) find.mutate(query.trim());
-        }}
-      >
-        <label htmlFor="model-hub-query">Model name or Hugging Face link</label>
-        <div className="hub-search-row">
-          <Search size={20} aria-hidden="true" />
-          <input
-            id="model-hub-query"
-            value={query}
-            maxLength={1800}
-            placeholder="Search models, or paste https://huggingface.co/…"
-            onChange={(event) => setQuery(event.target.value)}
-            disabled={!canManage}
-          />
-          <Button
-            type="submit"
-            disabled={!canManage || busy || query.trim().length < 2}
-          >
-            {find.isPending
-              ? "Starting…"
-              : isSource(query.trim())
-                ? "Check model"
-                : "Search"}
-            <ArrowRight size={16} />
-          </Button>
-        </div>
-        <p className="muted">
-          Only public metadata is read. No weights are downloaded or models
-          loaded.
-        </p>
-        {!canManage && (
+              </div>
+              <div className="hub-discovery-controls">
+                <div className="hub-discovery-field">
+                  <label htmlFor="model-discovery-capability">Use for</label>
+                  <select
+                    id="model-discovery-capability"
+                    value={capability}
+                    disabled={!canManage || busy}
+                    onChange={(event) =>
+                      setCapability(event.target.value as Capability)
+                    }
+                  >
+                    {capabilities.map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hub-discovery-field">
+                  <label htmlFor="model-discovery-order">Browse</label>
+                  <select
+                    id="model-discovery-order"
+                    value={order}
+                    disabled={!canManage || busy}
+                    onChange={(event) =>
+                      setOrder(event.target.value as "popular" | "recent")
+                    }
+                  >
+                    <option value="popular">Popular</option>
+                    <option value="recent">Recently updated</option>
+                  </select>
+                </div>
+                <Button
+                  disabled={!canManage || busy}
+                  onClick={() => recommend.mutate(capability)}
+                >
+                  <Sparkles size={16} />
+                  {recommend.isPending ? "Starting…" : "Find for my station"}
+                </Button>
+              </div>
+              {capability === "chat" && rootReport?.kind !== "search" && (
+                <details className="hub-context-options">
+                  <summary>Context options</summary>
+                  <label htmlFor="model-guided-context">
+                    Conversation context target
+                  </label>
+                  <select
+                    id="model-guided-context"
+                    value={contextTarget}
+                    disabled={!canManage || busy}
+                    onChange={(event) =>
+                      setContextTarget(Number(event.target.value))
+                    }
+                  >
+                    <option value={32768}>32K · Balanced conversation</option>
+                    <option value={131072}>128K · Longer tasks</option>
+                  </select>
+                  <p className="muted">
+                    The recommendation includes memory for this conversation
+                    context.
+                  </p>
+                </details>
+              )}
+              <p className="muted">
+                No download starts until you review and confirm it.
+              </p>
+            </section>
+          )}
+        <form
+          className="panel hub-search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (query.trim().length >= 2 && !busy) find.mutate(query.trim());
+          }}
+        >
+          <h2>I have a model in mind</h2>
           <p className="muted">
-            An administrator manages shared model discovery and installation.
+            Search the community catalog or check a specific model link.
           </p>
-        )}
-      </form>
+          <label htmlFor="model-hub-query">
+            Model name or Hugging Face link
+          </label>
+          <div className="hub-search-row">
+            <Search size={20} aria-hidden="true" />
+            <input
+              id="model-hub-query"
+              value={query}
+              maxLength={1800}
+              placeholder="Search models, or paste https://huggingface.co/…"
+              onChange={(event) => setQuery(event.target.value)}
+              disabled={!canManage}
+            />
+            <Button
+              type="submit"
+              disabled={!canManage || busy || query.trim().length < 2}
+            >
+              {find.isPending
+                ? "Starting…"
+                : isSource(query.trim())
+                  ? "Check model"
+                  : "Search"}
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+          <p className="muted">
+            Only public metadata is read. No weights are downloaded or models
+            loaded.
+          </p>
+          {!canManage && (
+            <p className="muted">
+              An administrator manages shared model discovery and installation.
+            </p>
+          )}
+        </form>
+      </div>
       <ErrorNotice
         error={
           find.error ??
@@ -1051,17 +1065,20 @@ export default function ModelDiscover() {
         </section>
       )}
       {!runId && (
-        <div className="hub-intro panel">
-          <ShieldCheck size={24} />
-          <h2>A model that suits your station</h2>
-          <p>
-            Compatibility, memory and disk space are separate checks. A GGUF
-            file can be a language model, image model or companion — its name
-            alone is not enough.
-          </p>
-          <Link className="text-link" to="/setup/models">
-            Start with a reviewed setup recommendation →
-          </Link>
+        <div className="hub-setup-shortcut panel">
+          <Sparkles size={24} />
+          <div>
+            <h2>New to local AI?</h2>
+            <p className="muted">
+              Start with a supported setup profile. We guide you through
+              preparing the engine and your first model.
+            </p>
+          </div>
+          <Button asChild variant="secondary">
+            <Link to="/setup/models">
+              Open quick setup <ArrowRight size={16} />
+            </Link>
+          </Button>
         </div>
       )}
     </div>

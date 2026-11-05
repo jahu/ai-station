@@ -44,7 +44,7 @@ more control.
 > and human evaluation of the new voice/film samples follow release.
 > [Exact qualification and known issues](docs/releases/0.2.0.md).
 
-**New in 0.2: find your next local model.** Open **Models → Find new models**,
+**New in 0.2: find your next local model.** Open **Models → Add model**,
 choose what you want to create, or paste a Hugging Face link. Browse popular or
 recently updated sources for conversation, images, video, voice, music, avatars
 and memory — then review and install a compatible choice.
