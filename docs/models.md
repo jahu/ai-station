@@ -1,8 +1,38 @@
 # Model files, definitions and installation
 
+## Manage models in the app
+
+**Models** is the entry point for both existing models and new downloads.
+The large **Add model** button and **Find & download models** card open the same
+browse screen. Choose **Help me choose** for hardware-aware recommendations or
+**I have a model in mind** to search/paste a public Hugging Face link. The visible
+steps are choose → review fit → install. Search and recommendation actions inspect
+metadata only; licenses and workload consent still precede an actual download.
+
+**Set up your first model / Quick setup** offers supported installation profiles.
+Choose Conversation, Images, Video, Voice, Music, Avatars, Memory or Sound effects.
+Only the chosen category is displayed. Existing capability deep links (including
+Fish voice) and browser Back/Forward continue to work. Category changes never
+start a download or cancel an existing installation. Return to that category to
+inspect its saved preparation progress.
+
+The shared navigation keeps **Installed models**, **Browse & download** and
+**Quick setup** accessible on model details and setup/review screens. Under
+**On this station**, **Model files** shows observed local files; **Saved models**
+shows saved configurations, whose presence alone does not prove runtime readiness.
+**Scan local folders** scans configured roots without moving/downloading files.
+Format/runtime details are expandable. Administrator permission still controls
+shared discovery, scans and installation.
+
+UX verification: on desktop and a narrow phone, enter via Add model or either
+large card; search/paste a source and review without an unintended download;
+switch setup categories and use browser Back; return to installed models and scan
+only after explicitly choosing that action. Non-administrators retain their
+existing restricted view. Normal tests use fixtures and never download weights.
+
 ## Discover public model sources
 
-Release 0.2 adds **Models → Find new models**
+Release 0.2 adds **Models → Add model / Browse & download**
 (`/models/discover`). Search public Hugging Face repositories or paste a
 repository/file link. An administrator explicitly starts a private metadata-only
 Task/Run; saved review URLs restore results without another source request.

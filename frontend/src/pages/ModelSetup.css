@@ -374,3 +374,11 @@
   display: grid;
   gap: 1rem;
 }
+
+.model-setup-question {
+  font-size: 19px;
+  margin: 0;
+}
+.setup-additional[aria-label="Capability setup"] {
+  margin-top: 0;
+}
