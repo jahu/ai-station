@@ -337,17 +337,31 @@ profiles. This does not complete the cross-capability discovery release.
 
 ### Next: avatar checkpoint bundles
 
+The native structural slot and closed data reader are implemented on the
+development branch. The real pinned reference passed read-only layout inspection
+and all-tensor CPU equivalence against the trusted legacy load, without GPU
+initialization. Normal tests exercise malformed/executable metadata, owned paths,
+graph/companion drift and per-device GPU/RAM/driver/disk gates. This is step 2
+admission evidence, not completed source installation or avatar inference.
+
 1. Inspect the actual Sonic loading path before choosing a replaceable role.
    Current inference builds the adapted UNet from SVD configuration but loads
    `Sonic/unet.pth`, including its identity/attention adapters. An SVD UNet file
    that inference never reads is not a working avatar import.
-2. Define a finite SafeTensors export slot for that actual complete Sonic UNet
-   graph. Keep legacy trusted, hash-pinned checkpoint inputs in their existing
-   recipe; never parse arbitrary publisher pickle/PyTorch archives during source
-   inspection. Reference descriptors may be derived only from the exact verified
-   existing checkpoint in an opted-in, offline bounded engineering process. New
-   source metadata stays framework-free and new weights use the bounded existing
-   SafeTensors admission contract.
+2. The actual publisher checkpoint is an uncompressed PyTorch ZIP state dict.
+   First qualify a closed data-only decoder for its finite wire format: bounded
+   ZIP directory/local records, primitive metadata and tensor/storage descriptors.
+   Use `pickletools` only for opcode inspection; never call pickle loading,
+   publisher globals, reducers, constructors or `torch.load` on new weights.
+   Symbolic reconstruction may recognize only the fixed plain dictionary/tensor
+   forms and must reject executable/unknown instructions, aliases, arbitrary
+   strides, compressed/external entries, invalid spans and unbounded inputs.
+   Inference can map verified raw storage into CPU tensors without unpickling.
+   Keep legacy trusted inputs separate. Qualify the exact complete Sonic graph,
+   precision, module-version metadata and original companion recipe; a generic
+   PyTorch archive is not a supported model. SafeTensors can be a subsequent
+   serialization of the same qualified graph rather than a substitute for the
+   actual published format.
 3. Bind the fixed Sonic runtime, audio-to-token/bucket, portrait/voice encoders,
    VAE, scheduler/configuration and all other companions. New source model Python,
    arbitrary workflows or a filename must not change the trusted inference path.
@@ -363,3 +377,8 @@ profiles. This does not complete the cross-capability discovery release.
    that route, not a new trained model's quality. Test fake admission/ownership/
    hardware boundaries, then complete an isolated actual selected-model avatar
    result and inspect video/audio integrity before enabling that profile.
+
+The data-format work follows the official
+[PyTorch archive contract](https://docs.pytorch.org/docs/stable/notes/serialization.html#serialized-file-format-for-torch-save)
+and Python's [non-executing pickle inspection tools](https://docs.python.org/3/library/pickletools.html).
+Those references describe formats; they do not grant arbitrary model code authority.

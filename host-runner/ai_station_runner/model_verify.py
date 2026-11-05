@@ -35,6 +35,7 @@ class VerifyModel(BaseModel):
             "wan22-5b-diffusion-v1",
             "chatterbox-v3-t3-v1",
             "ace-step15-turbo-diffusion-v1",
+            "sonic-whole-unet-v1",
         ]
         | None
     ) = Field(default=None, exclude_if=lambda v: v is None)
@@ -108,10 +109,12 @@ def verify_model(body: VerifyModel) -> dict:
         raise HTTPException(503, "This model inspection profile requires a Linux Host Runner")
     settings = get_settings()
     if body.app_owned:
-        from ai_station_runner.owned_models import owned_model, owned_safetensors
+        from ai_station_runner.owned_models import owned_model, owned_safetensors, owned_tensor_zip
 
         resolve = (
-            owned_safetensors
+            owned_tensor_zip
+            if body.checkpoint_profile == "sonic-whole-unet-v1"
+            else owned_safetensors
             if body.checkpoint_profile
             in {"wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1", "ace-step15-turbo-diffusion-v1"}
             else owned_model
@@ -161,6 +164,8 @@ def verify_model(body: VerifyModel) -> dict:
             from ai_station_runner.speech_checkpoints import inspect_checkpoint
         elif body.checkpoint_profile == "ace-step15-turbo-diffusion-v1":
             from ai_station_runner.music_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "sonic-whole-unet-v1":
+            from ai_station_runner.avatar_checkpoints import inspect_checkpoint
         else:
             from ai_station_runner.media_checkpoints import inspect_checkpoint
 
@@ -176,6 +181,8 @@ def verify_model(body: VerifyModel) -> dict:
                 if body.checkpoint_profile == "chatterbox-v3-t3-v1"
                 else "music"
                 if body.checkpoint_profile == "ace-step15-turbo-diffusion-v1"
+                else "avatar"
+                if body.checkpoint_profile == "sonic-whole-unet-v1"
                 else "image"
             )
             raise HTTPException(422, f"Incompatible {family} checkpoint: {exc}") from exc

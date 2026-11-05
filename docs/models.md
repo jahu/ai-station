@@ -433,6 +433,34 @@ layout drift, companion closure, private owned-path and permission enforcement,
 legacy GGUF rejection, and per-device GPU/RAM gates. Evidence remains private
 under `data/acceptance/model-discovery-20261104/`.
 
+## Native avatar checkpoint slot
+
+The native verifier recognizes one finite Sonic adapted-UNet graph: 1,492 F32
+tensors plus its exact module-version metadata, in the publisher's uncompressed
+tensor-data ZIP. It checks bounded metadata, complete storage extents and graph
+signatures without unpickling, importing Torch, reading tensor payloads or using
+a GPU. It replaces neither the base SVD model nor an arbitrary PyTorch object:
+Sonic actually loads `Sonic/unet.pth`, while its SVD UNet input is configuration.
+The slot binds the original runtime/SDK recipe and all thirteen other model inputs.
+
+Preparation retains the real workload gate: one compatible 12-GiB GPU, at least
+24-GiB physical RAM, a supported driver and space for the complete 92-input
+runtime. CPU offload remains explicit and inference keeps its 18-GiB zero-swap
+scope. Two smaller GPUs do not satisfy the single-device requirement. Descriptor
+admission alone cannot start installation or inference.
+
+Read-only metadata inspection matched the existing official reference
+`2fb0b0b8fe07232f9c4e8af4ce64fc3b33593bf6dfd7c840b60585dc6017128b`
+(6,303,636,358 bytes). A separate explicitly opted-in CPU test compared the closed
+raw-tensor mapper with the legacy loader on an immutable private copy of that
+exact full-hash-verified reference. All 1,492 tensors (6,302,964,648 raw bytes) and
+1,734 module-version records matched; a private tensor mutation left the original
+file unchanged. The owned child used an 11-GiB zero-swap memory scope, initialized
+no GPU and exited normally. This qualifies data equivalence, not avatar generation,
+installation or the visual quality of new trained weights. Source planning,
+binding, workspace selection and selected-model inference remain delivery steps.
+Private test artifacts stay under `data/acceptance/model-discovery-20261104/`.
+
 ## Discovered music bundles (under qualification)
 
 The development candidate connects the ACE-Step slot to ordinary source inspection,

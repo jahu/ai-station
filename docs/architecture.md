@@ -22,6 +22,13 @@ mount. Ordinary workspace and assistant/agent selection reuses those definitions
 Other media checkpoint families and complete cross-capability discovery remain
 required delivery steps.
 
+The finite Sonic avatar slot inspects the actual adapted `Sonic/unet.pth`, not
+an unused base SVD weight. A bounded, non-executing decoder recognizes only its
+closed tensor-data ZIP format and complete graph/module-version signatures.
+It binds the existing SDK and all thirteen other model inputs. The native
+catalog retains per-device VRAM, physical RAM, driver and complete disk checks;
+matching descriptors do not install weights or grant inference readiness.
+
 
 The same typed metadata-only verifier now accepts a fixed Wan 2.2 5B diffusion
 slot. Its bounded SafeTensors reader validates complete graph and byte layout,

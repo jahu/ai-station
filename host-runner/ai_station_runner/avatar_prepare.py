@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ai_station_runner import avatar_environment, nvidia, runtime_install
+from ai_station_runner.avatar_checkpoints import PROFILE as CHECKPOINT_PROFILE
+from ai_station_runner.avatar_checkpoints import recipe as checkpoint_recipe
 from ai_station_runner.config import get_settings
 from ai_station_runner.environment_prepare import OwnedEnvironmentPreparation
 from ai_station_runner.memory_scope import available
@@ -128,6 +130,7 @@ def catalog():
     )
     return {
         "recipe": frozen,
+        "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
         "manifest_sha256": avatar_environment.fingerprint(frozen),
         "platform_supported": supported,
         "installation_available": notice is None,
