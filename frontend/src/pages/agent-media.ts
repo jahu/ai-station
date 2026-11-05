@@ -9,6 +9,7 @@ export type ImageMediaRequest = {
   backend?: "qwen" | "juggernaut";
   prompt?: string;
   edit_prompt?: string;
+  prompt_style?: "pipeline" | "prompt" | "instruction";
   input_artifact_ids?: string[];
   width?: number;
   height?: number;
@@ -112,6 +113,7 @@ export type AgentMediaScope =
     }
   | {
       kind: "image";
+      vary_scenes?: boolean;
       description_source: "fixed" | "goal";
       request: ImageMediaRequest;
     }
@@ -372,6 +374,13 @@ export function agentMediaIssue(
       return "Choose a whole seed between 0 and 2147483647.";
   } else {
     const p = scope.request;
+    if (
+      scope.vary_scenes &&
+      (scope.description_source !== "goal" ||
+        p.mode !== "recompose" ||
+        p.prompt_style !== "instruction")
+    )
+      return "New scenes need a prepared prompt and an identity reference.";
     if (p.mode === "upscale" && scope.description_source !== "fixed")
       return "Upscale uses its exact source image without a generated description.";
     if (
@@ -388,4 +397,19 @@ export function agentMediaIssue(
       return "Choose at most eight reference images.";
   }
   return null;
+}
+
+export function syncImageBrief(
+  media: AgentMediaScope | null | undefined,
+  previous: string,
+  next: string,
+) {
+  if (!media || media.kind !== "image" || media.description_source !== "goal")
+    return media;
+  const key = media.request.mode === "img2img" ? "edit_prompt" : "prompt";
+  if (media.request[key] && media.request[key] !== previous) return media;
+  return {
+    ...media,
+    request: { ...media.request, [key]: next.slice(0, 10000) },
+  };
 }

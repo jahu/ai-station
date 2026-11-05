@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_serializer, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 from app.audio_schema import SpeechRequest
@@ -19,6 +19,14 @@ class AgentImageScope(BaseModel):
     kind: Literal["image"]
     request: ImageRequest
     description_source: Literal["fixed", "goal"] = "fixed"
+    vary_scenes: StrictBool = False
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_scope(self, handler):
+        values = handler(self)
+        if not self.vary_scenes:
+            values.pop("vary_scenes", None)
+        return values
 
     @model_validator(mode="after")
     def supported_output(self):
@@ -26,6 +34,12 @@ class AgentImageScope(BaseModel):
             raise ValueError("Image agents cannot select an unimplemented video output scope")
         if self.description_source == "goal" and self.request.mode == "upscale":
             raise ValueError("Upscale uses its reviewed source image without a generated description")
+        if self.vary_scenes and (
+            self.description_source != "goal"
+            or self.request.mode != "recompose"
+            or self.request.prompt_style != "instruction"
+        ):
+            raise ValueError("New scenes require goal-based Recompose with instruction-only prompts")
         return self
 
 
