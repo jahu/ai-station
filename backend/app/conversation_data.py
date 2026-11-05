@@ -435,7 +435,9 @@ def result_projection(session, root, steps):
         model = generation.parameters.get("model", "")
         from app.model_selection import resolve
 
-        file, definition = resolve(session, model) if model.startswith("llamacpp:") else (None, None)
+        file, definition = (
+            resolve(session, model, include_removed=True) if model.startswith("llamacpp:") else (None, None)
+        )
         model_name = definition.name if definition else file.filename if file else model
     return {
         "data_runs": [run_dict(step) for step in reversed(current)],

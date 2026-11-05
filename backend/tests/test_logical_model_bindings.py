@@ -145,8 +145,12 @@ def test_secondary_selection_loads_its_own_parts_and_cannot_reuse_sibling_runtim
 def test_removed_default_cannot_be_replaced_by_a_sibling_and_can_be_restored(split_model):  # noqa: F811
     with TestClient(app) as api:
         first, second = install_pair(api, split_model)
+        conversation = api.post("/api/chat/conversations", json={"model": first["model_key"]}).json()
         assert api.delete("/api/models/definitions/" + first["definition_id"]).status_code == 204
         assert {row["model_key"] for row in api.get("/api/llama").json()["models"]} == {second["model_key"]}
+        retained = api.get("/api/chat/conversations/" + conversation["id"])
+        assert retained.status_code == 200
+        assert retained.json()["model_label"] == conversation["model_label"]
         with control_session_factory()() as db:
             from app.model_selection import resolve
 

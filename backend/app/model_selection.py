@@ -28,7 +28,7 @@ def definition_for(session, model, definition_id=None):
     return definition
 
 
-def resolve(session, reference):
+def resolve(session, reference, *, include_removed=False):
     try:
         identity = str(UUID(str(reference).removeprefix("llamacpp:")))
     except ValueError:
@@ -37,7 +37,9 @@ def resolve(session, reference):
     if model is not None:
         definition = default_definition(session, model.id)
         return (
-            (None, None) if definition is not None and definition.status == "removed" else (model, definition)
+            (None, None)
+            if definition is not None and definition.status == "removed" and not include_removed
+            else (model, definition)
         )
     definition = session.get(ModelDefinition, identity)
     if (
@@ -45,6 +47,7 @@ def resolve(session, reference):
         or not definition.binding_key
         or not definition.file_id
         or definition.status == "removed"
+        and not include_removed
     ):
         return None, None
     return session.get(ModelFile, definition.file_id), definition

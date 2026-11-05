@@ -100,7 +100,7 @@ def conversation_view(session, row):
         from app.model_selection import resolve
         from app.model_sources import label_of
 
-        model, definition = resolve(session, row.model)
+        model, definition = resolve(session, row.model, include_removed=True)
         if model:
             label = definition.name if definition and definition.binding_key else label_of(model)
     from app.chat_providers import normalize_provider_key

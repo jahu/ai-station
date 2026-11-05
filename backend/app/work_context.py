@@ -71,7 +71,11 @@ def context_of(session, source):
     model_key = source.parameters.get("model", "")
     from app.model_selection import resolve
 
-    model, definition = resolve(session, model_key) if model_key.startswith("llamacpp:") else (None, None)
+    model, definition = (
+        resolve(session, model_key, include_removed=True)
+        if model_key.startswith("llamacpp:")
+        else (None, None)
+    )
     model_label = (
         definition.name
         if definition

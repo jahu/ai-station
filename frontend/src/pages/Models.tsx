@@ -614,7 +614,7 @@ export function ModelDetail() {
         }
       />
       {!!row.definitions && row.definitions.length > 1 && (
-        <label className="field">
+        <label className="model-configuration">
           Model configuration
           <select
             value={definition?.id ?? ""}
@@ -639,7 +639,7 @@ export function ModelDetail() {
       )}
       <section className="panel model-card">
         {completeBundle && (
-          <div className="notice">
+          <div className="model-bundle-summary">
             <strong>Complete model</strong>
             <p>
               {size(completeBundle.size_bytes!)} across{" "}
@@ -823,8 +823,9 @@ export function ModelDetail() {
                       />
                     ) : (
                       <p className="muted">
-                        No GPUs reported. An empty preset loads on CPU after
-                        installation.
+                        {definition?.gguf_bundle
+                          ? "No GPUs reported. This complete model requires CUDA; inspect System diagnostics before loading."
+                          : "No GPUs reported. An empty preset loads on CPU after installation."}
                       </p>
                     )}
                   </fieldset>
