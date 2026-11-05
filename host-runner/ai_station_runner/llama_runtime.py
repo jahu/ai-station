@@ -18,6 +18,13 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import _split, get_settings
+from ai_station_runner.gguf_bundle import (
+    ModelBundle,
+    admit_hardware,
+    destinations,
+    inspect_bundle,
+    inspect_single,
+)
 from ai_station_runner.local_model import CodingCompletion, forward_completion
 from ai_station_runner.native_llama_request import NativeModelLoad
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
@@ -26,6 +33,10 @@ from ai_station_runner.unix_sockets import unix_address
 from ai_station_runner.vision_messages import VisionCompletion
 
 router = APIRouter(prefix="/v1/llama")
+# Qualified with actual ordinary/zero-tensor-first Qwen2 GGUF sets on Linux
+# and the immutable CUDA image below. Source installation is a separate gate.
+BUNDLE_LOAD_QUALIFIED = True
+BUNDLE_IMAGE_ID = "sha256:95cdc1510dbc5bc15735529353d72ace9fc96b9aeb0dd6c4cdaf1a6b3f70776f"
 
 
 class Projector(BaseModel):
@@ -42,6 +53,7 @@ class Load(BaseModel):
     model_path: str = Field(min_length=1, max_length=1200)
     app_owned: StrictBool = False
     model_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    model_bundle: ModelBundle | None = Field(default=None, exclude_if=lambda v: v is None)
     size_bytes: int = Field(gt=0)
     mtime: float = Field(gt=0, allow_inf_nan=False)
     gpus: list[int] = Field(max_length=16)
@@ -59,6 +71,10 @@ class Load(BaseModel):
         from ai_station_runner.owned_models import validate_reference
 
         validate_reference(self.model_path, self.model_sha256, self.app_owned)
+        if self.model_bundle:
+            if not self.app_owned or self.projector or self.runtime_profile or self.cache_type != "q8_0":
+                raise ValueError("Split GGUF loading requires owned CUDA weights and Q8 cache")
+            self.model_bundle.check_primary(self.model_path, self.model_sha256, self.size_bytes, self.mtime)
         if self.runtime_profile:
             from ai_station_runner import cpu_runtime_profile as cpu
 
@@ -163,6 +179,17 @@ def inspected(record):
         raise HTTPException(409, "Container ownership does not match the saved runtime")
     if record.get("container_id") and item["Id"] != record["container_id"]:
         raise HTTPException(409, "Container identity changed")
+    if record.get("model_bundle"):
+        expected = [(p["source"], p["destination"], False) for p in record["model_mounts"]]
+        expected.append((str(directory(record["request"]["instance_id"]) / "io"), "/runtime", True))
+        mounts = item.get("Mounts", [])
+        actual = [
+            (m.get("Source"), m.get("Destination"), m.get("RW"))
+            for m in mounts
+            if m.get("Type") == "bind" and type(m.get("RW")) is bool
+        ]
+        if set(actual) != set(expected) or len(mounts) != len(expected) or len(actual) != len(expected):
+            raise HTTPException(409, "The owned GGUF bundle mount policy changed")
     cpu = record.get("request", {}).get("runtime_profile")
     if cpu:
         budget = record["request"]["ram_mib"] * 1024**2
@@ -334,6 +361,19 @@ def load(body: Load | NativeModelLoad):
             stat = model.stat()
             if stat.st_size != body.size_bytes or abs(stat.st_mtime - body.mtime) > 0.001:
                 raise HTTPException(422, "Model file changed since discovery; scan it again")
+            bundle_proof = None
+            if body.model_bundle:
+                try:
+                    bundle_proof = inspect_bundle(settings.host_data_dir(), body.model_bundle)
+                except (OSError, ValueError) as exc:
+                    raise HTTPException(422, f"Incompatible GGUF bundle: {exc}") from exc
+                if not BUNDLE_LOAD_QUALIFIED:
+                    raise HTTPException(409, "Complete GGUF bundle loading is still being qualified")
+            else:
+                try:
+                    inspect_single(model, body.size_bytes, body.mtime)
+                except (OSError, ValueError) as exc:
+                    raise HTTPException(422, str(exc)) from exc
             projector = None
             if body.projector is not None:
                 try:
@@ -354,6 +394,13 @@ def load(body: Load | NativeModelLoad):
             devices = {int(g["index"]): g["uuid"] for g in hardware.get("gpus", [])}
             if any(g not in devices for g in body.gpus):
                 raise HTTPException(422, "A selected GPU is unavailable")
+            if bundle_proof:
+                try:
+                    bundle_proof["hardware_budget"] = admit_hardware(
+                        bundle_proof, body.context_size, body.gpus, hardware
+                    )
+                except ValueError as exc:
+                    raise HTTPException(422, str(exc)) from exc
             from ai_station_runner.runtime_setup import image_observation
 
             if body.runtime_profile:
@@ -370,10 +417,17 @@ def load(body: Load | NativeModelLoad):
                 if type(free) not in {int, float} or not math.isfinite(free) or not 0 < budget <= free:
                     raise HTTPException(422, "Available RAM changed before managed CPU launch")
                 _, image = image_observation(app_owned=True, runtime_profile=body.runtime_profile)
+            elif bundle_proof:
+                from ai_station_runner.runtime_setup import RuntimeSelection, inspect_image
+
+                pinned = inspect_image(RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1"))
+                image = pinned["image"].get("id") if pinned["image"]["present"] else None
             else:
                 _, image = image_observation(app_owned=body.app_owned)
             if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
                 raise HTTPException(409, "Configured llama.cpp image identity is invalid")
+            if bundle_proof and image != BUNDLE_IMAGE_ID:
+                raise HTTPException(409, "Split GGUF loading requires its qualified llama.cpp image")
             folder.mkdir(mode=0o700, exist_ok=True)
             (folder / "io").mkdir(mode=0o700, exist_ok=True)
             if "," in str(folder):
@@ -389,6 +443,17 @@ def load(body: Load | NativeModelLoad):
                 "devices": [devices[g] for g in body.gpus],
                 "desired": "running",
             }
+            if bundle_proof:
+                record["model_bundle"] = bundle_proof
+                record["model_mounts"] = [
+                    {
+                        "source": str(settings.host_data_dir().resolve() / part.relative_path),
+                        "destination": target,
+                    }
+                    for part, target in zip(
+                        body.model_bundle.parts, destinations(len(body.model_bundle.parts))
+                    )
+                ]
             save(folder, record)
         item = inspected(record)
         if item is None:
@@ -403,6 +468,25 @@ def load(body: Load | NativeModelLoad):
                     or abs(observed.st_mtime - body.mtime) > 0.001
                 ):
                     raise HTTPException(422, "App-owned model changed before container creation")
+            if body.model_bundle:
+                try:
+                    proof = inspect_bundle(get_settings().host_data_dir(), body.model_bundle)
+                except (OSError, ValueError) as exc:
+                    raise HTTPException(422, f"GGUF bundle changed before container creation: {exc}") from exc
+                if proof != {
+                    k: v for k, v in record.get("model_bundle", {}).items() if k != "hardware_budget"
+                }:
+                    raise HTTPException(422, "GGUF bundle proof changed before container creation")
+                try:
+                    budget = admit_hardware(
+                        proof, body.context_size, body.gpus, collect(get_settings().host_data_dir())
+                    )
+                except ValueError as exc:
+                    raise HTTPException(422, str(exc)) from exc
+                if budget != record["model_bundle"]["hardware_budget"]:
+                    raise HTTPException(422, "GGUF bundle hardware budget changed before creation")
+                if any("," in entry["source"] or "\n" in entry["source"] for entry in record["model_mounts"]):
+                    raise HTTPException(422, "Owned GGUF paths cannot contain Docker mount delimiters")
             if record.get("container_id"):
                 raise HTTPException(409, "Owned container disappeared; create a new runtime")
             args = [
@@ -428,11 +512,12 @@ def load(body: Load | NativeModelLoad):
                 "512",
                 "--tmpfs",
                 "/tmp:rw,noexec,nosuid,size=128m",
-                "--mount",
-                f"type=bind,src={record['model']},dst=/models/model.gguf,readonly",
-                "--mount",
-                f"type=bind,src={folder / 'io'},dst=/runtime",
             ]
+            for entry in record.get(
+                "model_mounts", [{"source": record["model"], "destination": "/models/model.gguf"}]
+            ):
+                args += ["--mount", f"type=bind,src={entry['source']},dst={entry['destination']},readonly"]
+            args += ["--mount", f"type=bind,src={folder / 'io'},dst=/runtime"]
             if body.runtime_profile:
                 args += [
                     "--memory",
@@ -459,7 +544,7 @@ def load(body: Load | NativeModelLoad):
             args += [
                 record["image"],
                 "--model",
-                "/models/model.gguf",
+                record["model_mounts"][0]["destination"] if body.model_bundle else "/models/model.gguf",
                 "--host",
                 "/runtime/model.sock",
                 "--alias",

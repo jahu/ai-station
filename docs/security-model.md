@@ -1805,3 +1805,15 @@ bounded part count; incomplete/conflicting sets cannot claim a complete byte tot
 The inspection never follows publisher commands or fetches weight payloads. Group
 manifests are included in the ordinary private observation fingerprint, and an
 individual fragment still cannot obtain a model installation plan or native launch.
+
+
+Split GGUF verification accepts 2–64 distinct immutable owned SHA references,
+never publisher paths or Docker options. It bounds aggregate bytes, header reads
+and tensor descriptors, checks all files before/after inspection, and refuses
+renamed fragments through single-file loading. Bundle execution requires its
+qualified immutable llama.cpp image, selected real GPUs, a trained Q8 context
+and independently sufficient free VRAM/RAM. No CPU/cloud fallback is introduced.
+All object mounts are read-only; the complete saved model/runtime mount set must
+match before inspection or any owned signal. Stop/recovery use that container
+binding without reopening files that may have disappeared. Structural agreement
+alone does not grant model-specific inference qualification or source installation.

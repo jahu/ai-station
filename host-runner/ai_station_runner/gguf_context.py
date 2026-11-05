@@ -23,8 +23,12 @@ def inspect_context(path: Path, size_bytes: int, mtime: float) -> dict:
         path,
         size_bytes,
         mtime,
-        keep_field=lambda key: key == "general.architecture" or key.partition(".")[2] in _FIELDS,
+        keep_field=lambda key: (
+            key in {"general.architecture", "split.count", "split.no"} or key.partition(".")[2] in _FIELDS
+        ),
     )
+    if report["fields"].get("split.count", 1) != 1 or report["fields"].get("split.no", 0) != 0:
+        raise ValueError("A split GGUF requires its verified complete bundle")
     return context_profile(report["fields"])
 
 

@@ -482,3 +482,38 @@ to repeat the first part's architecture/context fields.
 [Splitter implementation](https://github.com/ggml-org/llama.cpp/blob/master/tools/gguf-split/gguf-split.cpp),
 [metadata key definitions](https://github.com/ggml-org/llama.cpp/blob/master/src/llama-arch.cpp).
 These document the format; qualification must still use a pinned trusted SDK.
+
+
+### Native complete GGUF admission — 2026-11-05
+
+The typed native verifier and Linux llama.cpp loader now accept frozen complete
+owned part sets. All split wire types, zero-based positions/counts, bounded global
+tensor inventories, unique names, quantized-row/storage extents and repeated
+geometry are checked. Full context comes from the first file; a metadata-only
+first part is valid. Single-file loading refuses actual split metadata even after
+renaming. Existing single-file request/receipt serialization remains unchanged.
+
+The whole-set size drives per-device admission, with a conservative full Q8 cache
+on each GPU, equal-layer rounding/shared tensor allowance and runtime margin.
+Available RAM is checked separately. Missing sensors, an individually insufficient
+GPU, unsupported context, incomplete/changed sources or a different runtime image
+refuse dispatch. Mounts use canonical server names and read-only individual files;
+replay/recovery and Stop preserve exact container ownership even after source loss.
+
+Qualification used the already downloaded, checksum-verified public Qwen2.5 0.5B
+Q4_K_M fixture, split locally by llama.cpp source revision
+`aa39d7a3e145a88202793a89462d65e94a5fc25f`. Its original file was unchanged.
+The pinned CUDA image `95cdc1510dbc…` returned `split model works.` on two RTX 3060
+12 GB devices from both a two-part ordinary set (491,400,256 bytes, 291 tensors)
+and a three-part zero-tensor-first set (491,400,384 bytes). The ordinary set
+survived a real Runner restart with the same container; both sets stopped after
+one original source disappeared. All owned test containers/Runner are closed.
+This qualifies the native bundle path for that fixture/image on Linux, not all
+model architectures or Windows GPU execution. No new publisher weights or media
+were downloaded/published in this qualification.
+
+Next: compose whole-part source download/Stop/Resume, shared registry binding and
+ordinary workspace/agent selection, then qualify that complete workflow. Source
+UI installation remains refused until those contracts pass; native structural
+success alone must not enable a source recommendation. Finish lifecycle, QA,
+documentation/site and packaged Linux/Windows release gates afterward.

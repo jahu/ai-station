@@ -1553,3 +1553,14 @@ advice uses the complete declared weights for disk lower bounds, while unknown
 or incomplete sets retain unknown requirements. Filename grouping grants neither
 native graph verification nor installation: existing fragment refusal stays in
 place until typed complete-bundle execution is qualified.
+
+
+Native split-GGUF admission now has a closed owned-object coordinate. The bounded
+reader verifies every part's wire types/order/count, complete unique tensor
+inventory, storage extents and first-part context. A Linux llama.cpp load binds
+each immutable store object read-only under server-generated part names; request
+replay freezes the whole set and inspection/Stop check its complete mount policy.
+Per-device admission uses complete weight size, equal-layer rounding, shared
+weights, Q8 context/state and runtime headroom, with a separate available-RAM
+check. The native path is qualified against one pinned CUDA image; discovery
+installation/registry and ordinary Chat selection for bundles remain separate work.
