@@ -82,6 +82,12 @@ class DownloadExecutor:
                 "context_size": 4096,
                 "environment_id": environment_id,
             }
+            if getattr(entry, "origin", None) == "hub_avatar":
+                from app.hub_avatar_candidates import refresh_plan
+
+                current = refresh_plan(entry, check)
+                if not current.preparation_available or not recommendation(current, hardware)["fits"]:
+                    raise ValueError("The avatar runtime or hardware changed before transferring weights")
             planned = recommendation(entry, hardware)
             if not planned["fits"] and not run.parameters.get("download_only", False):
                 raise ValueError(
@@ -191,6 +197,10 @@ class DownloadExecutor:
                 },
             }
             session.commit()
+            if entry.capability == "avatar":
+                from app.hub_avatar_install import adopt as adopt_avatar
+
+                return adopt_avatar(session, run, entry, path, runner, hardware, check)
             if entry.capability == "music":
                 from app.hub_music_install import adopt as adopt_music
 

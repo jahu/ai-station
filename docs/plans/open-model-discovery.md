@@ -349,6 +349,18 @@ fingerprints. It uses the existing public pinned HTTPS transport and cannot read
 tensor storage or claim native layout validity. Source-plan/installation wiring
 and selected-model inference remain required before this is an operational import.
 
+The working import candidate now connects closed tensor source inspection,
+hardware/licensing/workload review and the ordinary downloader to an avatar
+definition. Fake API tests cover publication, private history, cancellation,
+exact setup dependencies and hardware changes before either prerequisite or
+weight transfers. Native version-2 requests freeze the chosen checkpoint and
+opaque engine while version-1 receipts remain unchanged; the selected loader
+checks complete content before Torch/upstream imports and preserves existing
+one-/two-GPU guidance. Normal selected-checkpoint inference remains gated until
+the complete route is qualified. Workspace/agent/conversation selection,
+re-check lifecycle, browser checks and a real complete selected-model avatar
+are still required; source registration tests do not prove these steps.
+
 1. Inspect the actual Sonic loading path before choosing a replaceable role.
    Current inference builds the adapted UNet from SVD configuration but loads
    `Sonic/unet.pth`, including its identity/attention adapters. An SVD UNet file

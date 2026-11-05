@@ -37,6 +37,15 @@ BALANCED = {
 
 
 async def enrich_source(report, check):
+    if len(report["files"]) == 1 and report["files"][0].get("format") in {"pth", "pt", "bin"}:
+        from app.hub_avatar_candidates import resolve_profile as avatar_profile
+        from app.runner_client import RunnerError, RunnerUnavailable
+
+        try:
+            report["avatar_profile"] = await avatar_profile(report, check)
+        except (ValueError, httpx.HTTPError, RunnerError, RunnerUnavailable) as exc:
+            report["requirements_error"] = str(exc)[:300]
+        return
     if any(file.get("format") == "onnx" for file in report["files"]):
         from app.hub_embedding_candidates import resolve_profile as embedding_profile
 
@@ -94,6 +103,16 @@ async def enrich_source(report, check):
 
 def assess_variant(file, report, hardware, storage, *, context_target=32768):
     existing = assess_file(file, hardware, storage)
+    if report.get("avatar_profile") and file.get("format") in {"pth", "pt", "bin"}:
+        from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
+
+        try:
+            return assess_file(
+                file, hardware, storage, candidates=(avatar_candidate(report, file["filename"]),)
+            )
+        except ValueError as exc:
+            existing["reason"] = str(exc)[:300]
+            return existing
     if report.get("embedding_profile") and file.get("format") == "onnx":
         from app.hub_embedding_candidates import candidate_from_profile as embedding_candidate
 
@@ -168,9 +187,9 @@ def rank_variants(report, *, context_target=32768):
         context = (best["recommendation"].get("context_size") or 0) if best else 0
         gpus = best["recommendation"]["gpus"] if best else []
         disk_fits = assessment["disk"]["status"] == "file_fits"
-        usable = bool(best and disk_fits)
+        usable = bool(best and disk_fits and assessment.get("runtime_status") != "runtime_unavailable")
         image = any(
-            p.get("capability") in {"image", "video", "speech", "music", "embedding"}
+            p.get("capability") in {"image", "video", "speech", "music", "avatar", "embedding"}
             for p in assessment["profiles"]
         )
         meets_context = bool(best and (image or context >= context_target))
@@ -194,6 +213,8 @@ def rank_variants(report, *, context_target=32768):
             "rank": 0,
             "reason": "CPU memory encoder · 384 dimensions · GPUs stay free"
             if best and best.get("capability") == "embedding"
+            else "Estimated avatar, one 12-GiB GPU, 24-GiB RAM and explicit CPU offload"
+            if best and best.get("capability") == "avatar"
             else "Estimated music, one 12-GiB GPU, 24-GiB RAM and explicit CPU offload"
             if best and best.get("capability") == "music"
             else "Estimated Polish speech, one 6-GiB GPU and fixed F32 profile"

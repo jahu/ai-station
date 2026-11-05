@@ -1776,3 +1776,15 @@ closed. Transport reuses public-DNS pinning and redirect validation. The sparse
 reader has no network capability; the Docker image shares only the pure parsers,
 without the native Runner API or Torch. A remote graph match does not establish
 native storage-layout validity or grant installation/execution authority.
+
+The working avatar import candidate admits only that closed graph into normal
+model Tasks. Its optional setup Run must match the owner, immutable complete
+recipe, license/workload consent and parent dependency. Hardware is checked
+again before engine and selected-weight transfers. Shared bindings accept only
+profile/manifest/opaque-environment coordinates, refusing private setup IDs.
+Native selected-checkpoint requests freeze the source in a version-2 owned
+receipt; older requests retain their exact version-1 form. Full content and graph
+admission precede framework imports. Only the adapted UNet state changes, while
+SDK/companions, scopes, deadlines, GPU ownership and replay remain fixed.
+The inference route is unavailable to normal dispatch pending qualification;
+the explicit internal real-GPU engineering entry retains its existing opt-in.

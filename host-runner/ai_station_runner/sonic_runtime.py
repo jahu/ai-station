@@ -88,7 +88,7 @@ def current_recipe(runtime, models):
     return {"id": PROFILE, "observation": _observed(runtime, models, signature)}
 
 
-def ready_recipe(runtime, models):
+def ready_recipe(runtime, models, *, environment_identity=None):
     """Bounded, read-only discovery; hashing never blocks an HTTP handler.
 
     This imports no models and starts no execution. A single metadata reader
@@ -115,7 +115,11 @@ def ready_recipe(runtime, models):
     from ai_station_runner.avatar_environment import environment_id, read_json, resolve
     from ai_station_runner.avatar_selection import selection
 
-    chosen = selection(get_settings()) or {}
+    chosen = (
+        selection(get_settings(), environment_identity)
+        if environment_identity is not None
+        else selection(get_settings())
+    ) or {}
     if chosen.get("managed"):
         ready = read_json(models.parent / "ready.json")
         observed = {k: ready[k] for k in ("profile", "manifest_sha256", "operation_id")}
@@ -126,7 +130,7 @@ def ready_recipe(runtime, models):
     return value
 
 
-def capabilities():
+def capabilities(identity=None):
     base = {
         "backend": "sonic",
         "generation": "whole_recording",
@@ -140,8 +144,17 @@ def capabilities():
     }
     from ai_station_runner.avatar_selection import selection
 
-    chosen = selection(get_settings()) or {}
+    chosen = (
+        selection(get_settings(), identity) if identity is not None else selection(get_settings())
+    ) or {}
     managed = chosen.get("managed") is True
+    if identity is not None and not managed:
+        return {
+            **base,
+            "available": False,
+            "readiness": "unavailable",
+            "reason": "The selected managed avatar engine is unavailable",
+        }
     if not get_settings().sonic_whole_enabled and not managed:
         return {
             **base,
@@ -150,8 +163,12 @@ def capabilities():
             "reason": "Whole-recording avatar integration is not enabled",
         }
     try:
-        _, runtime, models = installation()
-        recipe = ready_recipe(runtime, models)
+        _, runtime, models = installation(identity) if identity is not None else installation()
+        recipe = (
+            ready_recipe(runtime, models, environment_identity=identity)
+            if identity is not None
+            else ready_recipe(runtime, models)
+        )
         if managed and not recipe.get("environment_id"):
             raise ValueError("Managed avatar readiness requires its frozen environment identity")
         gpus = collect(get_settings().host_data_dir()).get("gpus", [])

@@ -162,6 +162,7 @@ def run(options):
         request["seed"],
         request["device_count"],
         progress=progress,
+        **({"checkpoint": request["checkpoint"], "data_root": root} if "checkpoint" in request else {}),
     )
     progress.finishing()
     print("avatar.finishing: interpolating the complete recording", flush=True)
@@ -208,7 +209,7 @@ def run(options):
     if time.time() >= request["deadline_at"]:
         raise ValueError("Whole-recording deadline expired before publication")
     report = {
-        "version": 1,
+        "version": request["version"],
         "verified": True,
         "run_id": run_id,
         "backend": "sonic",
@@ -216,6 +217,7 @@ def run(options):
         "observed_input": observed,
         "input_sha256": {key: request[key]["sha256"] for key in ("portrait", "audio")},
         "video_sha256": digest(partial),
+        **({"checkpoint": request["checkpoint"]} if "checkpoint" in request else {}),
     }
     # Recheck canonical output boundaries immediately before atomic publication.
     if output != resolve_child(root, output.relative_to(root).as_posix()) or output.exists():

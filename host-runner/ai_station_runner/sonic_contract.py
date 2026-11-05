@@ -49,6 +49,12 @@ IMPLEMENTATION_FILES = (
     "avatar_environment.py",
     "avatar_selection.py",
     "environment_files.py",
+    "avatar_checkpoints.py",
+    "torch_state_data.py",
+    "torch_state_zip.py",
+    "torch_state_loader.py",
+    "owned_model_files.py",
+    "recipes/sonic-whole-unet-v1.json",
 )
 
 
@@ -143,16 +149,25 @@ def checked_request(value, *, check_deadline=True):
         "deadline_at",
         "permissions",
     }
+    selected = type(value) is dict and "checkpoint" in value
+    if selected:
+        expected.add("checkpoint")
     if (
         type(value) is not dict
         or set(value) != expected
         or type(value["version"]) is not int
-        or value["version"] != 1
+        or value["version"] != (2 if selected else 1)
     ):
         raise ValueError("Invalid fixed whole-recording request")
     if type(value["run_id"]) is not str or str(UUID(value["run_id"])) != value["run_id"]:
         raise ValueError("Use a canonical Run UUID")
     checked_recipe(value["recipe"])
+    if selected:
+        from ai_station_runner.avatar_checkpoints import checked_source
+
+        checked_source(value["checkpoint"])
+        if not value["recipe"].get("environment_id"):
+            raise ValueError("Selected avatar checkpoints require their exact managed profile")
     if (
         type(value["permissions"]) is not list
         or any(type(item) is not str for item in value["permissions"])

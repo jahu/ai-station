@@ -75,13 +75,16 @@ def install(body: InstallRequest, session: DB):
         raise HTTPException(409, "Review a complete model installation plan first")
     candidate = download_candidate(report["candidate"])
     snapshot = candidate.model_dump(mode="json")
-    if candidate.capability in {"image", "video", "speech", "music"} and not candidate.preparation_available:
+    if (
+        candidate.capability in {"image", "video", "speech", "music", "avatar"}
+        and not candidate.preparation_available
+    ):
         raise HTTPException(
             409,
             candidate.preparation_notice
             or "Prepare the supported media runtime prerequisites before installing this checkpoint",
         )
-    if candidate.capability in {"video", "music"} and not body.workload_accepted:
+    if candidate.capability in {"video", "music", "avatar"} and not body.workload_accepted:
         raise HTTPException(422, "Review and accept the fixed media workload and explicit CPU offload")
     if fingerprint(snapshot) != body.manifest_sha256 or report.get("manifest_sha256") != body.manifest_sha256:
         raise HTTPException(409, "The model manifest changed; review its source, hardware and license again")
@@ -112,7 +115,7 @@ def install(body: InstallRequest, session: DB):
         "manifest_sha256": body.manifest_sha256,
         "entry": snapshot,
         "license_accepted": True,
-        **({"workload_accepted": True} if candidate.capability in {"video", "music"} else {}),
+        **({"workload_accepted": True} if candidate.capability in {"video", "music", "avatar"} else {}),
         "download_only": False,
         "attempt": 1,
         "receipts": {},
