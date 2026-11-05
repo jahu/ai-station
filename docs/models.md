@@ -461,6 +461,15 @@ installation or the visual quality of new trained weights. Source planning,
 binding, workspace selection and selected-model inference remain delivery steps.
 Private test artifacts stay under `data/acceptance/model-discovery-20261104/`.
 
+The publisher metadata reader can assess that same closed graph before a full
+download. An opted-in public HF check of the immutable official reference used
+six exact ranges totaling 480,930 bytes; graph, precision, module-version and
+metadata fingerprints matched the native reference. No tensor payload, model
+code, runtime or GPU was loaded. Normal tests reject ignored ranges, executable
+or malformed metadata, overlapping entries, nonimmutable URLs and cancellation.
+Remote evidence deliberately leaves native layout and inference unqualified;
+connecting it to the full avatar installation journey remains the next step.
+
 ## Discovered music bundles (under qualification)
 
 The development candidate connects the ACE-Step slot to ordinary source inspection,
