@@ -202,6 +202,19 @@ was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sha
 other Wan architectures and other media families require their own supported
 slots and complete plans, not this F16 admission path.
 
+### Registered choices in agent drafts
+
+Local agent-definition preparation receives a bounded shared-registry catalog
+(up to 16 image and 16 video definitions) with names, IDs and applicable
+backend/workload settings. It contains no host paths, source download URLs or
+installation authority. Names are reference data, not instructions. A proposal
+can retain a matching installed model or leave it unset for current defaults.
+Unlisted identifiers, incompatible backends, changed availability and an
+unaccepted video workload are rejected within the existing single correction
+attempt. These are disabled suggestions; operator review, native hardware/
+runtime checks and the existing execution snapshots still precede inference.
+Preparing the definition does not download, switch or launch a media model.
+
 ## Installed files
 
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. Observed files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.
