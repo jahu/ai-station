@@ -1,5 +1,5 @@
 {
-  "version": 50,
+  "version": 51,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6326,6 +6326,54 @@
       "expected": [
         "Usunięcie działającego lub niepewnego runtime jest blokowane z jasną prośbą o jego zatrzymanie. Usunięcie konfiguracji nie kasuje plików ani historii.",
         "Przywrócenie weryfikuje wszystkie pierwotne części i zachowuje ten sam wybór modelu. Inne modele i ich konfiguracje pozostają bez zmian."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany model z discovery albo zgodny model z katalogu startowego, z widocznym pochodzeniem Hugging Face."
+      ],
+      "resources": "Tylko publiczne metadane; bez pobierania wag do tego testu.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-011",
+      "title": "Pochodzenie modelu i jawny przegląd nowej wersji",
+      "steps": [
+        "Otwórz szczegóły modelu i zanotuj Publisher source, rewizję oraz licencję. Sprawdź View installed revision.",
+        "Kliknij Review publisher updates. Potwierdź, że link jest wpisany w discovery i nie ruszyła jeszcze żadna inspekcja ani instalacja.",
+        "Kliknij Check model, przejrzyj otrzymaną rewizję i dopasowanie do sprzętu. Wróć do modelu i dawnej rozmowy bez klikania Install."
+      ],
+      "expected": [
+        "Link do zainstalowanej rewizji jest przypięty do konkretnego commita. Widok nie ujawnia prywatnych Runów ani kluczy.",
+        "Sprawdzenie nowszej rewizji jest osobnym zadaniem metadanych. Nie zastępuje działającego modelu ani Twoich domyślnych wyborów."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany zgodny model z discovery; pozostaw jego pliki bez zmian."
+      ],
+      "resources": "Tylko publiczne metadane; bez pobierania wag do tego testu.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-012",
+      "title": "Wykorzystanie pobranych wag w nowym planie",
+      "steps": [
+        "Sprawdź ponownie jego link w discovery i przejrzyj plan tej samej wersji.",
+        "Porównaj pełny rozmiar modelu z Model weights already present oraz szacowanym pobraniem. Dla kompletu GGUF sprawdź wszystkie części.",
+        "Potwierdź, że ocena kontekstu/GPU i wymagania runtime nadal są pokazane osobno. Nie usuwaj plików ani nie zmieniaj sterowników do testu."
+      ],
+      "expected": [
+        "Obecne, uprzednio zweryfikowane obiekty zmniejszają dodatkowe pobranie i rezerwę dyskową. Runtime i pliki pomocnicze zachowują własny budżet.",
+        "Widok wyjaśnia, że hashe są sprawdzane ponownie podczas instalacji. Sam cache nie oznacza zgodności modelu ani gotowości runtime."
       ]
     }
   ],

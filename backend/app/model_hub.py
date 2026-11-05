@@ -280,6 +280,9 @@ class ModelHubExecutor:
 
                     file["assessment"] = assess_variant(file, report, hardware, storage)
             if report.get("kind") not in {"search", "comparison"}:
+                from app.model_cache_advice import apply as apply_cache_advice
+
+                apply_cache_advice(session, report, check)
                 from app.model_variant_advice import rank_variants
 
                 rank_variants(report, context_target=report.get("context_target", 32768))

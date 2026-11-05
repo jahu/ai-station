@@ -1597,3 +1597,11 @@ Runner still receives its closed complete owned-object coordinate. Runtime reuse
 context history, reasoning and deferred resumes distinguish sibling selections.
 Removed bundle definitions retain their identity and source binding; only an
 explicit verified restoration re-enables that choice. No weights are deleted.
+
+
+Publisher origin is a closed shared metadata projection of the verified source
+snapshot and physical primary identity. Known curated legacy files require an
+exact current catalog SHA/size match; unknown origins are not inferred from
+private download Runs. Generated publisher URLs use validated HF coordinates,
+never caller-provided raw recipe URLs. Update review pre-fills the existing
+metadata-only discovery flow, with no background download or model replacement.

@@ -40,6 +40,11 @@ type ModelFile = {
       free_bytes: number | null;
       install_bytes_upper_bound?: number;
       model_bundle_bytes?: number | null;
+      reusable_model_bytes?: number;
+      model_download_bytes_estimate?: number;
+      additional_bytes_upper_bound?: number;
+      model_weights_available?: boolean;
+      complete_install_budget_known?: boolean;
     };
     variant_advice?: {
       recommended: boolean;
@@ -116,7 +121,11 @@ const supportsInstallation = (file: ModelFile) =>
   file.assessment.runtime_status === "supported_complete_bundle_plan";
 const terminal = ["succeeded", "failed", "canceled", "interrupted"];
 const bytes = (value: number | null) =>
-  value === null ? "Size unknown" : `${(value / 1024 ** 3).toFixed(2)} GiB`;
+  value === null
+    ? "Size unknown"
+    : value === 0
+      ? "0 B"
+      : `${(value / 1024 ** 3).toFixed(2)} GiB`;
 const post = (body: unknown) => ({
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -130,13 +139,13 @@ export default function ModelDiscover() {
   const account = useAccount();
   const canManage =
     account.mode === "operator" || account.user?.is_admin === true;
-  const [query, setQuery] = useState("");
+  const [params, setParams] = useSearchParams();
+  const [query, setQuery] = useState(() => params.get("source") ?? "");
   const [selection, setSelection] = useState({ runId: "", filename: "" });
   const [contextChoice, setContextChoice] = useState<{
     runId: string;
     target: number;
   } | null>(null);
-  const [params, setParams] = useSearchParams();
   const runId = params.get("run") || "";
   const inspection = useQuery({
     queryKey: ["model-hub", runId],
@@ -668,11 +677,36 @@ export default function ModelDiscover() {
                     )}
                   </div>
                 )}
+              {!!file.assessment.disk.reusable_model_bytes && (
+                <div className="hub-fit-summary">
+                  <strong>
+                    {file.assessment.disk.model_weights_available
+                      ? "Model weights already present"
+                      : `Reuse ${bytes(file.assessment.disk.reusable_model_bytes)} of model weights`}
+                  </strong>
+                  <p>
+                    Estimated model download:{" "}
+                    {bytes(
+                      file.assessment.disk.model_download_bytes_estimate ??
+                        null,
+                    )}
+                    . Files are hash-checked again during installation; runtime
+                    and companion files may still be needed.
+                  </p>
+                </div>
+              )}
               <p className="muted">
-                {file.assessment.disk.install_bytes_upper_bound != null && (
+                {(file.assessment.disk.additional_bytes_upper_bound ??
+                  file.assessment.disk.install_bytes_upper_bound) != null && (
                   <>
-                    Additional installation reserve: up to{" "}
-                    {bytes(file.assessment.disk.install_bytes_upper_bound)}{" "}
+                    {file.assessment.disk.complete_install_budget_known
+                      ? "Additional installation reserve"
+                      : "Additional model-file space"}
+                    : up to{" "}
+                    {bytes(
+                      (file.assessment.disk.additional_bytes_upper_bound ??
+                        file.assessment.disk.install_bytes_upper_bound)!,
+                    )}{" "}
                     after verified cache reuse.{" "}
                   </>
                 )}

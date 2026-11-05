@@ -4,7 +4,6 @@ import asyncio
 import json
 
 import httpx
-from sqlalchemy import select
 
 from app.db import utcnow
 from app.events import append_event
@@ -12,7 +11,6 @@ from app.hub_observations import search as search_observation
 from app.hub_sources import parse_source
 from app.model_setup import fingerprint
 from app.model_variant_advice import assess_variant, enrich_source, rank_variants
-from app.models import ModelFile
 from app.runner_client import RunnerError, RunnerUnavailable
 
 LIMIT = 3
@@ -35,8 +33,11 @@ def suitability(observation, installed, context_target):
         advice = assessment.get("variant_advice") or {}
         context = advice.get("meets_context_target")
         meets = fit and context is not False
-        present = file.get("sha256") in installed
-        cost = assessment["disk"].get("install_bytes_upper_bound", file.get("size_bytes"))
+        present = assessment["disk"].get("model_weights_available", file.get("sha256") in installed)
+        cost = assessment["disk"].get(
+            "additional_bytes_upper_bound",
+            assessment["disk"].get("install_bytes_upper_bound", file.get("size_bytes")),
+        )
         cost = cost if type(cost) is int and cost >= 0 else 2**63
         # Installed bytes do not excuse insufficient context or an unsupported adapter.
         score = (
@@ -80,7 +81,10 @@ def suitability(observation, installed, context_target):
                     "suitability": status,
                     "filename": file["filename"],
                     "installed_object": present,
-                    "download_bytes_estimate": None if cost == 2**63 else cost,
+                    "download_bytes_estimate": assessment["disk"].get(
+                        "model_download_bytes_estimate", file.get("size_bytes")
+                    ),
+                    "additional_installation_bytes_upper_bound": None if cost == 2**63 else cost,
                     "summary": summary or assessment["reason"],
                     "context_target": context_target if context is not None else None,
                     "busy_now": any(p.get("occupancy") == "in_use" for p in assessment["profiles"]),
@@ -105,15 +109,6 @@ async def inspect(session, run, check, inspect_source, hardware, storage):
     search = search_observation(session, request["search_run_id"], request["observation_sha256"])
     rows = search.get("items", [])[:LIMIT]
     context = request["context_target"]
-    installed = {
-        sha
-        for sha, relative in session.execute(
-            select(ModelFile.sha256, ModelFile.relative_path).where(
-                ModelFile.availability == "present", ModelFile.sha256.is_not(None)
-            )
-        )
-        if relative == "models/store/" + sha
-    }
     session.commit()
     results = []
     for index, row in enumerate(rows):
@@ -147,6 +142,9 @@ async def inspect(session, run, check, inspect_source, hardware, storage):
                 file["assessment"] = assess_variant(
                     file, observation, hardware, storage, context_target=context
                 )
+            from app.model_cache_advice import apply as apply_cache_advice
+
+            installed = apply_cache_advice(session, observation, check)
             rank_variants(observation, context_target=context)
             observation.update(
                 observed_at=utcnow().isoformat(),

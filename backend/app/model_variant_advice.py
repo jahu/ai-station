@@ -215,9 +215,13 @@ def rank_variants(report, *, context_target=32768):
             int(usable and meets_context and precision_known),
             int(usable and meets_context),
             int(usable),
+            int(assessment["disk"].get("model_weights_available", False)),
             -len(gpus) if best else -100,
             BALANCED.get(quant, 0),
-            -(assessment["disk"].get("model_bundle_bytes") or file.get("size_bytes") or 2**60),
+            -assessment["disk"].get(
+                "additional_bytes_upper_bound",
+                assessment["disk"].get("model_bundle_bytes") or file.get("size_bytes") or 2**60,
+            ),
         )
         assessment["variant_advice"] = {
             "policy": POLICY,

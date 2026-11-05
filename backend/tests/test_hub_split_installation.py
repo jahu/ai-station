@@ -161,6 +161,9 @@ def test_nonfirst_source_link_downloads_and_registers_the_complete_model(split_m
         assert saved["run"]["status"] == "succeeded", saved["run"].get("error_message")
         assert split_model["calls"] == [r["sha256"] for r in split_model["rows"]]
         item = api.get("/api/models").json()["items"][0]
+        definition_view = api.get("/api/models/definitions").json()["items"][0]
+        assert definition_view["publisher_source"]["repository"] == split_model["report"]["repository"]
+        assert definition_view["publisher_source"]["revision"] == split_model["report"]["revision"]
         assert item["size_bytes"] == split_model["rows"][0]["size_bytes"]
         assert item["gguf_bundle"]["size_bytes"] == sum(r["size_bytes"] for r in split_model["rows"])
         assert [part["sha256"] for part in item["gguf_bundle"]["parts"]] == split_model["calls"]

@@ -485,12 +485,18 @@ class DownloadExecutor:
                         "catalog_id": entry.id,
                         "catalog_manifest_sha256": run.parameters["manifest_sha256"],
                         "source_sha256": entry.file.sha256,
+                        "source": entry.model_dump(mode="json"),
                         **bundle_metadata,
                         **context_metadata,
                     },
                 )
                 session.add(definition)
                 session.flush()
+            if not (definition.metadata_json or {}).get("source"):
+                definition.metadata_json = {
+                    **(definition.metadata_json or {}),
+                    "source": entry.model_dump(mode="json"),
+                }
             if bundle and definition.status == "removed":
                 definition.status = "registered" if runtime_present else "downloaded"
                 definition.updated_at = utcnow()
