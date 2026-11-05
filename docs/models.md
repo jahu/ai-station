@@ -150,7 +150,7 @@ a new video installation path or inference qualification. New source plans,
 companion preparation, explicit workload/offload consent and video/film/agent
 selection still need to be connected before a discovered checkpoint is usable.
 
-### Discovered video models (candidate under qualification)
+### Discovered video models (development branch)
 
 A specific SafeTensors file can now be planned from its actual immutable header,
 including publishers with no model card/base-model declaration. Two exact HTTP
@@ -181,8 +181,24 @@ Re-check verifies the existing object and engine without another download.
 
 Unit/native process tests use tiny weights and a fake inference executable.
 A live public-HF range check verified an 83,424-byte header without model tensor
-payload. Actual GPU qualification of this import path is still in progress;
-0.1.2 packages and production preview are unchanged. FP8/GGUF/sharded video files,
+payload. An isolated Docker/native qualification inspected a public mirror of
+the existing reference weights, prepared its fixed engine, registered the selected
+checkpoint and completed actual Linux RTX 3060 Generate: 17 frames at 1280×704,
+24 fps, 20 steps. All frames decoded and the output hash matched its artifact.
+The reference model/encoder/VAE were temporary verified cache copies, not a new
+trained model or fresh all-files download. The successful Run also retained its
+normal internal motion context. The first attempt found an offline-child HTTP
+import dependency, now corrected and regression-tested; no generation was claimed
+for that failed attempt. Owned jobs and the private Runner are stopped.
+
+Local checks include 461 broader Python regressions and a subsequent 154-test
+native/source recheck (overlapping sets), global Ruff/format, 89 frontend tests,
+frontend lint/typecheck/build/format, a final Docker build and desktop/mobile
+browser checks. The browser check caught and fixed a model-link bootstrap bug:
+opening an installed choice now starts a fresh workspace and preserves that model.
+Film/Resume, agent publication and native owned Stop use fake executors/process
+fixtures; they are not additional real GPU qualifications. No Windows GPU run
+was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sharded video files,
 other Wan architectures and other media families require their own supported
 slots and complete plans, not this F16 admission path.
 

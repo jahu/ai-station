@@ -161,17 +161,22 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   install/update/removal UX and release QA/packages. These remain part of the
   requested release; a successful single-file language-model flow is not completion.
 
-Video implementation in qualification: a new single-file F16 Wan 2.2 5B plan binds
+Video installation and selection: a new single-file F16 Wan 2.2 5B plan binds
 its actual immutable header and the full native engine/companion recipe.
 A missing model card does not block a file with a supported verified graph.
-It will use the existing model downloader with an optional owned video-setup
+It uses the existing model downloader with an optional owned video-setup
 prerequisite, explicit license and CPU-offload workload acceptance, native graph
 admission and shared definitions with private history. Explicit Video/film/agent
-selection will freeze the owned checkpoint and original opaque engine identity;
+selection freezes the owned checkpoint and original opaque engine identity;
 only the diffusion source may change. Existing configured paths and saved legacy
 requests retain priority unless a new model is explicitly selected. Readiness
 and dispatch must recheck each selected GPU, physical RAM, user memory scope and
-unchanged checkpoint. This path remains unqualified until end-to-end tests pass.
+unchanged checkpoint. Local source/install/process/agent/film regressions,
+frontend checks and desktop/mobile browser qualification passed. An isolated real
+Docker/native import of a public mirror of existing reference weights completed
+GPU Generate (17 frames, 1280×704, 20 steps); all frames decoded and owned processes
+are stopped. This qualifies that Linux path, not a new trained model, full fresh
+download, other precisions or Windows GPU execution. See `docs/models.md`.
 
 Next: extend compatible media recipe slots, preserving exact companion/runtime
 identities and native verification. Cross-model recommendations and complete
