@@ -144,11 +144,13 @@ it("lets a member inspect and load a shared preset without advertising administr
 it("restricts discovery to the administrator while keeping model files visible to members", async () => {
   workspace(false);
   await screen.findByRole("link", { name: /Inspect Shared.gguf/ });
-  expect(screen.queryByRole("button", { name: "Discover models" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Scan local folders" }),
+  ).toBeNull();
   cleanup();
   const fetch = workspace(true);
   fireEvent.click(
-    await screen.findByRole("button", { name: "Discover models" }),
+    await screen.findByRole("button", { name: "Scan local folders" }),
   );
   await screen.findByRole("heading", { name: "Owned model operation" });
   expect(

@@ -4,10 +4,14 @@ The 0.2 release adds model discovery after setup: a capability-guided entry,
 public search/publisher links, hardware checks before weights, complete model
 components, reviewed installation and persistent choices. The admitted families,
 actual inference evidence and unsupported cases are in [the model guide](models.md).
-[0.2 release notes](releases/0.2.0.md) track installer/publication gates; preparing
+[Current release notes](releases/0.2.1.md) track installer/publication gates; preparing
 a candidate does not mean a release is published or the workstation is upgraded.
 
-The operator QA catalog contains **277 active cases**; exported answers start
+The 0.2.1 patch makes model downloads visible and simplifies setup by category;
+its UX change is integrated and deployed on the development station. Release
+packaging and owner promotion are tracked in the linked release notes.
+
+The operator QA catalog contains **278 active cases**; exported answers start
 untested. Linux and Windows are the release targets. Physical Windows NVIDIA
 checks and human voice/film evaluation remain the owner's post-release tests;
 macOS and SMTP remain deferred. The original long-term product vision remains

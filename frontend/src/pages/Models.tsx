@@ -6,19 +6,14 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { Box, RefreshCw } from "lucide-react";
+import { ArrowRight, Box, Download, RefreshCw, Sparkles } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { useAccount } from "../account-context";
-import {
-  Badge,
-  Empty,
-  ErrorNotice,
-  Loading,
-  PageTitle,
-} from "../components/common";
+import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
 import { GpuChoiceList } from "./GpuChoiceList";
+import ModelManagement from "./ModelManagement";
 
 interface Compatibility {
   format: string;
@@ -167,7 +162,7 @@ function ModelFileCards({ models }: { models: ModelFile[] }) {
               {model.quantization && <span>{model.quantization}</span>}
               <span>
                 {model.availability === "present"
-                  ? "Observed"
+                  ? "On disk"
                   : model.availability === "missing"
                     ? "Not found in last scan"
                     : "Not checked"}
@@ -298,39 +293,55 @@ export function Models() {
   const active = latest && !terminal.includes(latest.status);
   return (
     <>
-      <PageTitle
-        eyebrow="REGISTRY / INSTALLED FILES"
-        title="Models"
-        action={
-          canManage && (
-            <Button
-              onClick={() => scan.mutate()}
-              disabled={scan.isPending || Boolean(active)}
-            >
-              <RefreshCw size={16} />
-              {active ? "Scan in progress" : "Discover models"}
-            </Button>
-          )
-        }
-      >
-        Your existing models and saved load presets. Discovery reads host
-        metadata and keeps files in place. Guided setup downloads new models
-        into AI Station storage.
-      </PageTitle>
-      <p className="muted">
+      <ModelManagement current="installed" title="Models">
+        Find the right models for your computer. Download new ones, set up your
+        first local AI, or manage what is already on this station.
+      </ModelManagement>
+      {canManage && (
+        <section className="model-management-actions" aria-label="Add models">
+          <Link className="panel model-management-action" to="/models/discover">
+            <Download size={27} />
+            <div>
+              <strong>Find & download models</strong>
+              <p>
+                Browse recommendations for your hardware, search by name or
+                paste a Hugging Face link.
+              </p>
+            </div>
+            <ArrowRight size={21} />
+          </Link>
+          <Link className="panel model-management-action" to="/setup/models">
+            <Sparkles size={27} />
+            <div>
+              <strong>Set up your first model</strong>
+              <p>
+                Pick what you want to create. Guided setup prepares the model
+                and the engine it needs.
+              </p>
+            </div>
+            <ArrowRight size={21} />
+          </Link>
+        </section>
+      )}
+      <div className="model-inventory-heading">
+        <div>
+          <h2>On this station</h2>
+          <p className="muted">
+            Model files and saved configurations. Open a model to check
+            readiness and use it.
+          </p>
+        </div>
         {canManage && (
-          <>
-            <Link className="text-link" to="/models/discover?recommend=chat">
-              Find new models →
-            </Link>
-            {" · "}
-          </>
+          <Button
+            variant="secondary"
+            onClick={() => scan.mutate()}
+            disabled={scan.isPending || Boolean(active)}
+          >
+            <RefreshCw size={16} />
+            {active ? "Scan in progress" : "Scan local folders"}
+          </Button>
         )}
-        <Link className="text-link" to="/setup/models">
-          Set up a local model →
-        </Link>{" "}
-        · Guided downloads, hardware fit and saved progress.
-      </p>
+      </div>
       <ErrorNotice error={inventory.error ?? definitions.error ?? scan.error} />
       <section className="panel model-toolbar">
         <div className="row model-tabs">
@@ -338,13 +349,13 @@ export function Models() {
             variant={view === "files" ? "default" : "secondary"}
             onClick={() => setView("files")}
           >
-            Observed files
+            Model files
           </Button>
           <Button
             variant={view === "definitions" ? "default" : "secondary"}
             onClick={() => setView("definitions")}
           >
-            Definitions
+            Saved models
           </Button>
         </div>
         {view === "files" && (
@@ -379,7 +390,7 @@ export function Models() {
         )}
         {latest && (
           <div className="row">
-            <Link to={`/runs/${latest.id}`}>Latest discovery Run</Link>
+            <Link to={`/runs/${latest.id}`}>Latest folder scan</Link>
             <Badge status={latest.status} />
           </div>
         )}
@@ -392,8 +403,8 @@ export function Models() {
         ) : (
           <section className="panel">
             <Empty title="No model files in this view">
-              Use Discover models to scan the Host Runner’s configured roots, or
-              adjust the filter. No models are downloaded automatically.
+              Add a model above, scan your configured local folders, or adjust
+              the filter. Scanning never downloads or moves files.
             </Empty>
           </section>
         )
@@ -403,10 +414,9 @@ export function Models() {
         <DefinitionCards definitions={definitions.data.items} />
       ) : (
         <section className="panel">
-          <Empty title="No curated definitions yet">
-            Open an observed file and save a definition. Installation then
-            verifies that local file and, for llama.cpp, an already-installed
-            image.
+          <Empty title="No saved models yet">
+            Open a model file and save its configuration, or add a model using
+            guided setup. Readiness is checked before use.
           </Empty>
         </section>
       )}
@@ -429,8 +439,8 @@ export function Models() {
           </Button>
         </div>
       )}
-      <section className="panel model-card">
-        <h2>Declared compatibility</h2>
+      <details className="panel model-management-technical">
+        <summary>Supported formats & runtime details</summary>
         <p className="muted">
           {compatibility.data?.note ??
             "Format and category pairings with a runtime family. They do not prove a successful load."}
@@ -449,7 +459,7 @@ export function Models() {
             </li>
           ))}
         </ul>
-      </section>
+      </details>
     </>
   );
 }
@@ -601,15 +611,11 @@ export function ModelDetail() {
       : undefined;
   return (
     <>
-      <PageTitle
-        eyebrow="REGISTRY / EXTERNAL MODEL FILE"
-        title={row.filename}
-        action={<Link to="/models">All models</Link>}
-      >
+      <ModelManagement current="installed" title={row.filename}>
         {row.relative_path
           ? "AI Station manages these verified model files in application storage."
           : "This file stays in its existing host location. AI Station stores metadata only and never downloads replacement weights."}
-      </PageTitle>
+      </ModelManagement>
       <ErrorNotice
         error={
           save.error ??
