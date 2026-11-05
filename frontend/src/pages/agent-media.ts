@@ -84,6 +84,7 @@ export type AgentMediaScope =
       kind: "speech";
       description_source: "fixed" | "goal";
       request: {
+        model_id?: string;
         text: string;
         engine?: "fish_s2_pro";
         direction?:

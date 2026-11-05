@@ -82,11 +82,11 @@ def install(body: InstallRequest, session: DB):
         raise HTTPException(409, "Review a complete model installation plan first")
     candidate = download_candidate(report["candidate"])
     snapshot = candidate.model_dump(mode="json")
-    if candidate.capability in {"image", "video"} and not candidate.preparation_available:
+    if candidate.capability in {"image", "video", "speech"} and not candidate.preparation_available:
         raise HTTPException(
             409,
             candidate.preparation_notice
-            or "Prepare the supported image runtime prerequisites before installing this checkpoint",
+            or "Prepare the supported media runtime prerequisites before installing this checkpoint",
         )
     if candidate.capability == "video" and not body.workload_accepted:
         raise HTTPException(422, "Review and accept the fixed video workload and explicit CPU offload")

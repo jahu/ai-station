@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_speech":
+        from app.hub_speech_candidates import recommendation as speech_recommendation
+
+        return speech_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_video":
         from app.hub_video_candidates import recommendation as video_recommendation
 
@@ -189,16 +193,17 @@ def view(session, task):
     saved = task.metadata_json["model_download"]
     run = session.get(Run, saved["run_id"])
     progress = dict(run.metadata_json.get("model_download", {}))
-    if saved["entry"].get("origin") in {"hub_image", "hub_video"} and run.status not in TERMINAL:
+    if (
+        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"}
+        and run.status not in TERMINAL
+    ):
         engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         engine = session.get(Run, engine_id) if engine_id else None
         if engine is not None and engine.task_id == task.id and engine.status != "succeeded":
             native_progress = engine.metadata_json.get("runtime_preparation", {})
             recipe = saved["entry"]["setup_recipe"]
             progress.update(
-                phase="preparing_video_engine"
-                if saved["entry"]["capability"] == "video"
-                else "preparing_image_engine",
+                phase=f"preparing_{saved['entry']['capability']}_engine",
                 engine_run_id=engine.id,
                 received_bytes=native_progress.get("received_bytes", 0),
                 expected_bytes=native_progress.get(
@@ -217,7 +222,7 @@ def view(session, task):
         "model_file_id": run.metadata_json.get("model_file_id"),
         "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
         if run.metadata_json.get("model_file_id")
-        and saved["entry"].get("capability") not in {"image", "video"}
+        and saved["entry"].get("capability") not in {"image", "video", "speech"}
         else None,
         "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
@@ -330,7 +335,9 @@ class Resume(BaseModel):
 
 def attempt(session, task, saved, *, previous=None):
     prerequisite = None
-    if saved["entry"].get("origin") in {"hub_image", "hub_video"} and saved["entry"].get("prepare_engine"):
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"} and saved["entry"].get(
+        "prepare_engine"
+    ):
         from app.runtime_setup_api import attempt as prepare_runtime
 
         prepare_runtime(
@@ -467,7 +474,7 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
-    if saved["entry"].get("origin") in {"hub_image", "hub_video"}:
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"}:
         prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
         if prerequisite is not None and (

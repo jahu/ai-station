@@ -225,10 +225,41 @@ qualification remain required before newly discovered checkpoints are usable.
 Other speech versions, precisions and Fish bundles need their own compatible
 profiles. Existing configured/managed speech behavior is unchanged.
 
+### Discovered speech models (candidate under qualification)
+
+A reviewed single-file Chatterbox multilingual v3 T3 plan now reuses the ordinary
+model downloader and, when needed, an owned `speech_setup` prerequisite. Native
+speech/video detection shares one bounded header read; publisher names/tags cannot
+select a different runtime. The immutable source/header and complete fixed
+engine/companion manifest remain separate from actual GPU qualification. The
+speech estimate needs one 6-GiB GPU and 16-GiB physical RAM; execution reserves an
+11-GiB zero-swap process scope. GPUs are not pooled and CPU offload is not enabled.
+The disk review includes missing runtime inputs, starter weights and staging
+reserve. Source and component licenses are reviewed before transfer.
+
+Successful verification registers a shared audio-category definition, keeping
+preparation history private. The choice appears in Audio's existing speech-model
+control, reviewed agents and explicit Speech settings in a conversation. Installing
+never changes a default; switching to Fish clears the Chatterbox choice, and the
+API rejects a mixed request. Every speech Run freezes the owned checkpoint and
+original opaque engine. The native child rehashes the T3 source and creates a
+Run-owned model view replacing only T3; original tokenizer, voice encoder, decoder,
+conditionals and SDK stay fixed. Voice recording, Polish language, text/chunk limits,
+offline behavior and owned cancellation/recovery remain mandatory. An inspection
+resume uses the already owned process, without requiring a mutable current model
+catalog. Direct selected-model speech defaults to a 30-minute absolute deadline;
+agent execution retains its reviewed parent budget. Re-check does not redownload.
+
+Fake integration and native-process tests cover this path; actual source/import/
+GPU speech qualification is still required before merging the installation PR.
+This section describes the candidate feature branch, not published 0.1.2 packages
+or a deployment change. Avatar voice stages and automatic model selection outside
+the explicit conversation Speech scope still need their own routing integration.
+
 ### Registered choices in agent drafts
 
 Local agent-definition preparation receives a bounded shared-registry catalog
-(up to 16 image and 16 video definitions) with names, IDs and applicable
+(up to 16 image, 16 video and 16 speech definitions) with names, IDs and applicable
 backend/workload settings. It contains no host paths, source download URLs or
 installation authority. Names are reference data, not instructions. A proposal
 can retain a matching installed model or leave it unset for current defaults.

@@ -29,7 +29,8 @@ export function acceptsLocalAttachments(options: AssistantOptions) {
     !options.effects &&
     !options.media &&
     !options.upscale_result &&
-    !options.speech_text
+    !options.speech_text &&
+    !options.speech_model_id
   );
 }
 

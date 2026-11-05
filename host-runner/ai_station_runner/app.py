@@ -83,6 +83,7 @@ from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.sonic_jobs import WholeAvatarRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.speech_prepare import router as speech_setup_router
+from ai_station_runner.speech_runtime_schema import CheckpointSelection as SpeechCheckpointSelection
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
@@ -1098,6 +1099,18 @@ def browser_report_endpoint(run_id: UUID):
 @app.get("/v1/video/capabilities")
 def video_available():
     return video_capabilities()
+
+
+@app.post("/v1/audio/model-capabilities")
+def speech_model_available(body: SpeechCheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Speech model inspection requires filesystem read permission")
+    try:
+        return speech_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
+    except (OSError, ValueError, KeyError) as exc:
+        raise HTTPException(
+            409, "The selected speech engine or checkpoint is unavailable or changed"
+        ) from exc
 
 
 @app.post("/v1/video/model-capabilities")

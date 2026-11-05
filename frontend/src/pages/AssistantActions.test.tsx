@@ -1983,3 +1983,57 @@ it("clears old scene timings when a new film changes back to a short preview", (
   expect(saved.effects?.cues).toEqual([]);
   expect(saved.effects?.prompt).toBe("Rain");
 });
+
+it("selects an installed conversation speech model and clears it when changing action", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/audio/models"
+          ? { items: [{ id, name: "Studio voice", available: true }] }
+          : path.includes("/artifacts/")
+            ? {
+                id: "voice",
+                type: "audio",
+                mime_type: "audio/wav",
+                original_filename: "voice.wav",
+              }
+            : [],
+    })),
+  );
+  let current: AssistantOptions;
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      action: "audio.speech",
+      audio_artifact_id: "voice",
+    });
+    current = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <Composer />
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("option", { name: "Studio voice" });
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: id },
+  });
+  expect(current!.speech_model_id).toBe(id);
+  chooseAction("audio.transcribe");
+  expect(current!.speech_model_id).toBeUndefined();
+});

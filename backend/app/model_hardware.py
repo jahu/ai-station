@@ -34,7 +34,7 @@ def assess_file(file, hardware, storage, *, candidates=None):
         and entry.file.sha256 == file.get("sha256")
         and entry.file.size_bytes == size
     ]
-    images = [v for v in matches if getattr(v, "origin", None) in {"hub_image", "hub_video"}]
+    images = [v for v in matches if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech"}]
     if images:
         entry = images[0]
         prerequisites = entry.prerequisite_budget_bytes
@@ -107,7 +107,9 @@ def assess_file(file, hardware, storage, *, candidates=None):
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
-                "provenance": "pinned_video_recipe_and_checkpoint_header"
+                "provenance": "pinned_speech_recipe_and_checkpoint_header"
+                if getattr(entry, "origin", None) == "hub_speech"
+                else "pinned_video_recipe_and_checkpoint_header"
                 if getattr(entry, "origin", None) == "hub_video"
                 else "pinned_image_recipe_and_configuration"
                 if getattr(entry, "origin", None) == "hub_image"
@@ -130,7 +132,10 @@ def assess_file(file, hardware, storage, *, candidates=None):
         if images and not images[0].preparation_available
         else "supported_architecture_plan"
         if plans
-        and any(getattr(entry, "origin", None) in {"hub", "hub_image", "hub_video"} for entry in matches)
+        and any(
+            getattr(entry, "origin", None) in {"hub", "hub_image", "hub_video", "hub_speech"}
+            for entry in matches
+        )
         else "reviewed_profile"
         if plans
         else "needs_compatible_recipe",

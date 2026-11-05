@@ -1178,3 +1178,57 @@ it("keeps an installed video choice in the agent scope despite unavailable defau
     memory_profile: "bounded_11g",
   });
 });
+
+it("keeps an installed speech model in the reviewed agent scope without default speech readiness", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/audio/models"
+          ? { items: [{ id, name: "Installed studio voice", available: true }] }
+          : path.includes(`/audio/models/${id}/capabilities`)
+            ? { available: true }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : { available: false },
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("speech", "Dzień dobry"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Dzień dobry"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+          readiness={{
+            speech: { ready: false, reason: "Default speech missing" },
+          }}
+        />
+        <output data-testid="speech-scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  await screen.findByRole("option", { name: "Installed studio voice" });
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: `installed:${id}` },
+  });
+  await waitFor(() =>
+    expect(screen.queryByText("Default speech missing")).toBeNull(),
+  );
+  expect(
+    JSON.parse(screen.getByTestId("speech-scope").textContent ?? "{}").request
+      .model_id,
+  ).toBe(id);
+});

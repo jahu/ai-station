@@ -1,6 +1,7 @@
 """Typed offline Chatterbox adapter using the installed clone_pl.py contract."""
 
 import json
+import math
 import os
 import wave
 from pathlib import Path
@@ -8,13 +9,15 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.security import resolve_child
+from ai_station_runner.speech_checkpoints import selected_environment
 from ai_station_runner.speech_chunks import text_chunks
 from ai_station_runner.speech_chunks_job import delivery_arguments
 from ai_station_runner.speech_delivery import inspect_delivery
+from ai_station_runner.speech_runtime_schema import CheckpointSource, ManagedRuntime
 from ai_station_runner.speech_selection import selection
 from ai_station_runner.telemetry import collect
 
@@ -37,13 +40,47 @@ class AudioRequest(BaseModel):
     delivery: SpeechDelivery | None = None
     delivery_source_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     runtime_manifest_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    checkpoint: CheckpointSource | None = Field(default=None, exclude_if=lambda value: value is None)
+    managed_runtime: ManagedRuntime | None = Field(default=None, exclude_if=lambda value: value is None)
+
+    @model_validator(mode="after")
+    def frozen_selection(self):
+        if (self.checkpoint is None) != (self.managed_runtime is None):
+            raise ValueError("A selected speech checkpoint needs its exact managed environment")
+        if self.checkpoint is not None and (
+            self.deadline_at is None or self.runtime_manifest_sha256 != self.managed_runtime.manifest_sha256
+        ):
+            raise ValueError("Selected speech requires its absolute deadline and fixed runtime manifest")
+        return self
 
 
-def capabilities():
+def fitting_gpu(device):
+    total = device.get("memory_total_mib")
+    return type(total) in {int, float} and math.isfinite(total) and total >= 6144
+
+
+def selected_source(settings, checkpoint, runtime):
+    from ai_station_runner.memory_scope import available
+    from ai_station_runner.speech_prepare import QUALIFIED
+
+    if not QUALIFIED or not available():
+        raise HTTPException(409, "The managed speech engine and user memory scope must be available")
+    ram = (collect(settings.host_data_dir()).get("memory") or {}).get("total_mib")
+    if type(ram) not in {int, float} or not math.isfinite(ram) or ram < 16384:
+        raise HTTPException(409, "The selected speech workload needs at least 16 GiB physical RAM")
+    try:
+        return selected_environment(settings.host_data_dir(), checkpoint, runtime)
+    except (OSError, ValueError, KeyError) as exc:
+        raise HTTPException(
+            409, "The selected speech engine or checkpoint is unavailable or changed"
+        ) from exc
+
+
+def capabilities(checkpoint=None, runtime=None):
     from ai_station_runner.fish_runtime import capabilities as fish_capabilities
 
     settings = get_settings()
-    source = selection(settings) or {}
+    source = selected_source(settings, checkpoint, runtime) if checkpoint else selection(settings) or {}
     python, script, cache = (source.get(key) for key in ("python", "script", "cache"))
     configured = bool(
         python
@@ -61,7 +98,7 @@ def capabilities():
         from ai_station_runner.memory_scope import available
         from ai_station_runner.speech_environment import fingerprint, recipe
 
-        eligible = [int(gpu["index"]) for gpu in gpus if (gpu.get("memory_total_mib") or 0) >= 6144]
+        eligible = [int(gpu["index"]) for gpu in gpus if fitting_gpu(gpu)]
         supported = bool(eligible) and available()
         runtime_manifest = fingerprint(recipe())
     else:
@@ -73,6 +110,7 @@ def capabilities():
         "configuration_source": "managed" if source.get("managed") else "configured",
         "eligible_gpu_indices": eligible,
         "runtime_manifest_sha256": runtime_manifest,
+        **({"managed_runtime": runtime} if checkpoint else {}),
         "languages": ["pl"],
         "max_text_characters": 1000,
         "reference_min_seconds": 0.1,
@@ -87,7 +125,11 @@ def start_audio(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Audio read/write permissions are required")
     settings = get_settings()
-    source = selection(settings) or {}
+    source = (
+        selected_source(settings, body.checkpoint, body.managed_runtime.model_dump(mode="json"))
+        if body.checkpoint
+        else selection(settings) or {}
+    )
     python, script, cache = (source.get(key) for key in ("python", "script", "cache"))
     if not all((python, script, cache)):
         raise HTTPException(409, "Configure Chatterbox Python, script and existing offline cache")
@@ -180,6 +222,27 @@ def start_audio(manager, body):
         from ai_station_runner.memory_scope import scope_environment, scope_prefix
         from ai_station_runner.speech_environment import offline_environment
 
+        if body.checkpoint:
+            devices = collect(root).get("gpus", [])
+            if not any(int(device["index"]) == body.gpu and fitting_gpu(device) for device in devices):
+                raise HTTPException(409, "The selected speech GPU needs at least 6 GiB VRAM")
+            work = resolve_child(root, f"runs/{run_id}/speech")
+            if work != root / f"runs/{run_id}/speech" or work.exists():
+                raise HTTPException(409, "Inspect existing selected speech work before retrying")
+            work.mkdir(parents=True, mode=0o700)
+            config = work / "checkpoint.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "deadline_at": body.deadline_at,
+                        "checkpoint": body.checkpoint.model_dump(mode="json"),
+                        "managed_runtime": body.managed_runtime.model_dump(mode="json"),
+                    }
+                )
+            )
+            config.chmod(0o600)
+            argv.extend(("--checkpoint-request", str(config)))
         argv.extend(("--environment", str(source["environment"]), "--run-id", run_id))
         argv = [*scope_prefix(run_id, 11264), *argv]
         environment = {

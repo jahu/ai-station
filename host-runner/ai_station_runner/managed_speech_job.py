@@ -21,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", type=UUID, required=True)
     parser.add_argument("--environment", type=Path, required=True)
+    parser.add_argument("--checkpoint-request", type=Path)
     parser.add_argument("--ref", type=Path, required=True)
     parser.add_argument("--text", required=True)
     parser.add_argument("--out", type=Path, required=True)
@@ -59,6 +60,11 @@ def main():
     )
     socket.socket.connect = deny_network
     socket.create_connection = deny_network
+    models = folder / "models"
+    if args.checkpoint_request is not None:
+        from ai_station_runner.speech_checkpoint_view import selected_models
+
+        models = selected_models(args.checkpoint_request, args.run_id, folder)
     import numpy as np
     import soundfile
     import torch
@@ -67,7 +73,7 @@ def main():
     if not torch.cuda.is_available():
         raise RuntimeError("This speech profile requires an available CUDA GPU")
     torch.cuda.reset_peak_memory_stats()
-    model = ChatterboxMultilingualTTS.from_local(folder / "models", device="cuda", t3_model="v3")
+    model = ChatterboxMultilingualTTS.from_local(models, device="cuda", t3_model="v3")
     parts = []
     chunks = text_chunks(args.text)
     for index, text in enumerate(chunks):

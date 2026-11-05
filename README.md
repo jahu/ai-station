@@ -55,7 +55,8 @@ compatible conversation models, Qwen Image 2.1 checkpoints and F16 Wan 2.2 5B
 video checkpoints. Reviewed choices work in their workspaces and compatible
 assistant/agent settings, with hardware and workload requirements shown before
 download. These additions are not in the 0.1.2 installers; other media-model
-families are still being integrated.
+families are still being integrated. A Chatterbox speech-checkpoint import path
+is being qualified before its installation feature is merged.
 [Discovery and installation status](docs/plans/open-model-discovery.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local

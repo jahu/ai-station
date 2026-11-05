@@ -9,11 +9,15 @@ LIMIT = 16
 
 
 def catalog(session, *, identifier=None):
+    from app.agent_media import SPEECH_AGENTS_ENABLED
+    from app.audio_models import frozen_model as speech_model
     from app.image_models import choice
     from app.video_models import frozen_model
 
     result = []
-    for kind, category in (("image", "image"), ("video", "video")):
+    for kind, category in (("image", "image"), ("video", "video"), ("speech", "audio")):
+        if kind == "speech" and not SPEECH_AGENTS_ENABLED:
+            continue
         query = select(ModelDefinition).where(
             ModelDefinition.category == category, ModelDefinition.status == "registered"
         )
@@ -27,6 +31,16 @@ def catalog(session, *, identifier=None):
                     if not selected["available"] or "t2i" not in selected["modes"]:
                         continue
                     item = {"backend": selected["backend"], "mode": "t2i"}
+                elif kind == "speech":
+                    speech_model(session, row.id)
+                    item = {
+                        "engine": None,
+                        "language": "pl",
+                        "reference_required": True,
+                        "cpu_offload": False,
+                        "minimum_vram_mib": 6144,
+                        "minimum_physical_ram_mib": 16384,
+                    }
                 else:
                     frozen_model(session, row.id)
                     item = {
@@ -45,7 +59,7 @@ def catalog(session, *, identifier=None):
 
 
 def validate_selection(session, media, offered):
-    if media is None or media.kind not in {"image", "video"} or media.request.model_id is None:
+    if media is None or media.kind not in {"image", "video", "speech"} or media.request.model_id is None:
         return
     identifier = str(media.request.model_id)
     matches = [item for item in offered if item["kind"] == media.kind and item["model_id"] == identifier]

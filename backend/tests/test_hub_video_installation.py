@@ -11,7 +11,14 @@ from ai_station_runner import video_checkpoints as slots
 from ai_station_runner.config import clear_settings_cache
 from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.video import CheckpointSelection, VideoRequest
-from app import hub_checkpoint_headers, hub_sources, hub_video_candidates, model_download_job, model_hub
+from app import (
+    hub_checkpoint_headers,
+    hub_native_profiles,
+    hub_sources,
+    hub_video_candidates,
+    model_download_job,
+    model_hub,
+)
 from app.api import app
 from app.config import get_settings
 from app.db import control_session_factory
@@ -113,7 +120,7 @@ def video_bridge(monkeypatch):
         check()
         return hub_checkpoint_headers.describe(header, len(data))
 
-    monkeypatch.setattr(hub_video_candidates, "inspect_header", header_metadata)
+    monkeypatch.setattr(hub_native_profiles, "inspect_header", header_metadata)
 
     async def obtain(root, spec, *, check, progress, source_recovered=lambda u: None):
         check()

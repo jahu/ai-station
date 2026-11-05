@@ -69,3 +69,23 @@ def inspect_checkpoint(path, size_bytes, mtime, profile):
         "runtime_qualified": False,
         "notice": expected["notice"],
     }
+
+
+def selected_environment(root, source, runtime, *, verify_weights=False):
+    from ai_station_runner.owned_model_files import verify_owned_model
+    from ai_station_runner.speech_runtime import resolve_public
+
+    root = Path(root).resolve(strict=True)
+    selected = resolve_public(root, runtime)
+    expected = recipe(source.profile)
+    if selected["observation"]["manifest_sha256"] != expected["runtime_manifest_sha256"]:
+        raise ValueError("This speech checkpoint needs its reviewed engine and fixed companions")
+    path = verify_owned_model(root, source.relative_path, source.sha256, checkpoint_format="safetensors")
+    proof = inspect_checkpoint(path, source.size_bytes, source.mtime, source.profile)
+    if proof["schema_sha256"] != source.schema_sha256:
+        raise ValueError("The selected speech checkpoint graph changed")
+    if verify_weights:
+        with path.open("rb") as handle:
+            if hashlib.file_digest(handle, "sha256").hexdigest() != source.sha256:
+                raise ValueError("The selected speech checkpoint content changed")
+    return {**selected, "checkpoint_path": path}

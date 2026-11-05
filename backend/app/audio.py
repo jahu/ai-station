@@ -3,6 +3,7 @@
 import io
 import tempfile
 import wave
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.audio_schema import SpeechRequest
 from app.config import get_settings
-from app.db import session_scope
+from app.db import session_scope, utcnow
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
 from app.paths import safe_join
@@ -79,7 +80,7 @@ def generate(body: SpeechRequest, session: DB):
     return run_dict(run)
 
 
-def create_audio_run(session, body, *, task=None, parent_run_id=None):
+def create_audio_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
     reference = session.get(Artifact, str(body.reference_artifact_id)) if body.reference_artifact_id else None
     if body.engine == "fish_s2_pro":
         from app.fish_speech import create_fish_run
@@ -102,6 +103,21 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None):
             wav_metadata(source.read(MAX_BYTES + 1))
     except (OSError, ValueError) as exc:
         raise HTTPException(422, "Reference audio is unavailable or invalid") from exc
+    selected = {}
+    if body.model_id:
+        from app.audio_models import profile_for
+
+        profile = profile_for(session, body.model_id, observed_profile)
+        model = profile["speech_model"]
+        selected = {
+            "execution_deadline_at": (utcnow() + timedelta(minutes=30)).isoformat(),
+            "model_id": str(body.model_id),
+            "speech_model": model,
+            "checkpoint": model["checkpoint"],
+            "speech_managed_runtime": model["binding"]["managed_runtime"],
+            "speech_runtime_manifest_sha256": model["binding"]["managed_runtime"]["manifest_sha256"],
+            "speech_runtime_eligible_gpus": profile.get("eligible_gpu_indices") or [],
+        }
     task = task or create_task(session, title=body.text[:80], prompt=body.text, capability="audio.speech")
     run = create_run(
         session,
@@ -113,7 +129,9 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None):
         requested_gpu=body.gpu,
         retry_class="inspect",
         parent_run_id=parent_run_id,
+        requested_resources={"ram_mib": 11264} if selected else {},
         parameters={
+            **selected,
             "text": body.text,
             "language": "pl",
             "reference_relative": reference.relative_path,
@@ -136,11 +154,25 @@ class AudioExecutor(HostMediaExecutor):
         from app.task_control import lock_task
 
         session.refresh(run)
+        if run.metadata_json.get("media_inspection_resume"):
+            return super().execute(session, run)
         if self._cancel_before_dispatch(session, run):
             return "done"
         worker, claim = run.worker_id, run.claimed_at
         session.commit()
-        capabilities = RunnerClient().request("GET", "/v1/audio/capabilities")
+        if run.parameters.get("speech_model"):
+            from app.audio_models import profile_for, same_model
+
+            capabilities = profile_for(session, run.parameters["speech_model"]["definition_id"])
+            if not same_model(capabilities.get("speech_model"), run.parameters["speech_model"]):
+                raise ValueError("The selected speech model changed after this Run was queued")
+            if run.parameters.get("delivery") is not None:
+                delivery = capabilities.get("delivery") or {}
+                if delivery.get("version") != "chatterbox-controls-v1":
+                    raise ValueError("The selected speech engine does not support delivery controls")
+                run.parameters = {**run.parameters, "delivery_source_sha256": delivery["source_sha256"]}
+        else:
+            capabilities = RunnerClient().request("GET", "/v1/audio/capabilities")
         if capabilities.get("configuration_source") == "managed":
             lock_task(session, run.task)
             session.refresh(run)
@@ -233,6 +265,14 @@ class AudioExecutor(HostMediaExecutor):
                 "reference_relative": run.parameters["reference_relative"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {
+                        "checkpoint": run.parameters["checkpoint"],
+                        "managed_runtime": run.parameters["speech_managed_runtime"],
+                    }
+                    if run.parameters.get("speech_model")
+                    else {}
+                ),
                 **(
                     {"runtime_manifest_sha256": run.parameters["speech_runtime_manifest_sha256"]}
                     if run.parameters.get("speech_runtime_manifest_sha256")

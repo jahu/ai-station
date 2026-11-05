@@ -181,8 +181,19 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "operational": row.status == "registered",
             "summary": "Select this installed checkpoint in Video. Its fixed workload uses explicit CPU offload.",
         }
+    speech = (row.metadata_json or {}).get("speech")
+    speech_backend = row.category == "audio" and isinstance(speech, dict) and bool(speech.get("binding"))
+    if speech_backend:
+        spec = {
+            **(spec or {}),
+            "runtime": "Chatterbox multilingual v3",
+            "adapter": "managed-native",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Audio. It retains its fixed local engine and voice-reference requirements.",
+        }
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
+        **({"speech_backend": "chatterbox"} if speech_backend else {}),
         **(
             {"video_backend": "wan22"}
             if row.category == "video" and isinstance(video, dict) and video.get("binding")
@@ -309,11 +320,13 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         raise HTTPException(409, "Cancel or finish the installation Run before editing this definition")
     if body.name is not None:
         row.name = body.name
-    if (row.metadata_json.get("video") or {}).get("binding"):
+    if (row.metadata_json.get("video") or {}).get("binding") or (row.metadata_json.get("speech") or {}).get(
+        "binding"
+    ):
         if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
             raise HTTPException(
                 422,
-                "Change video operation settings in Video; this model retains its reviewed runtime binding",
+                "Change media operation settings in its workspace; this model retains its reviewed runtime binding",
             )
         row.updated_at = utcnow()
         session.commit()
@@ -375,6 +388,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **(
+                {"speech_checkpoint_binding": dict(row.metadata_json["speech"]["binding"])}
+                if (row.metadata_json.get("speech") or {}).get("binding")
+                else {}
+            ),
             **(
                 {"video_checkpoint_binding": dict(row.metadata_json["video"]["binding"])}
                 if (row.metadata_json.get("video") or {}).get("binding")
@@ -496,10 +514,34 @@ class ModelInstallExecutor:
                         if run.parameters.get("checkpoint_binding")
                         else {}
                     ),
+                    **(
+                        {
+                            "checkpoint_profile": run.parameters["speech_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("speech_checkpoint_binding")
+                        else {}
+                    ),
                     **(verification(run.parameters) if run.parameters.get("runtime_profile") else {}),
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("speech_checkpoint_binding"):
+                from app.audio_models import profile_for
+
+                binding = run.parameters["speech_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected speech checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
             if run.parameters.get("video_checkpoint_binding"):
                 from app.video_models import profile_for
 
