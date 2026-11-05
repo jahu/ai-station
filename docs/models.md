@@ -421,8 +421,8 @@ Torch, tensor payload reads or GPU allocation.
 The preparation catalog exposes that finite descriptor alongside its existing
 hardware requirements: one supported 12-GiB GPU, 24-GiB system RAM and explicit
 CPU offload. Two smaller devices are not pooled. A descriptor match is structural
-evidence only: new music source planning, bundle installation, selection and
-actual inference qualification remain the next steps in the
+evidence only: the discovered bundle path below adds source planning, installation, selection
+and measured inference qualification through the
 [discovery plan](plans/open-model-discovery.md#next-ace-step-music-checkpoint-bundles).
 
 Read-only inspection and a complete SHA-256 check matched the existing reference
@@ -476,5 +476,6 @@ correction passed all 18 import cases and global Ruff/format; actual numeric RAM
 admission remains 24 GiB. Sixty-four frontend tests, lint/type/build/format and
 compiled desktop/mobile/keyboard installation/consent/fresh-workspace checks
 passed. Browser checks replay saved real API projections, separately from the GPU
-qualification. Final integration review remains required. This candidate is not
+qualification. These checks cover this fixed import path; other export graphs
+need their own profiles. This development candidate is not
 in published 0.1.2 packages.
