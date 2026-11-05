@@ -309,6 +309,12 @@ chat GPU runtime. Before admitting a new encoder:
 
 ### Next: ACE-Step music checkpoint bundles
 
+Delivered on develop in #657/#658: bounded native graph admission, licensed
+complete installation, opaque engine bindings and explicit Music/agent/chat
+selection. The isolated reference import produced a fully validated 10-second
+WAV; see `docs/models.md`. Other music architectures still require their own
+profiles. This does not complete the cross-capability discovery release.
+
 1. Establish one metadata-only native slot for the complete existing ACE-Step
    1.5 Turbo diffusion graph, using the bounded SafeTensors reader. Freeze its
    exact graph/storage precision, existing runtime recipe, SDK, configuration,
@@ -328,3 +334,32 @@ chat GPU runtime. Before admitting a new encoder:
    source/hash/graph drift, permissions and cancellation with fake executors, then
    an isolated actual GPU music result. Update qualification evidence honestly;
    a metadata slot is only the first implementation step.
+
+### Next: avatar checkpoint bundles
+
+1. Inspect the actual Sonic loading path before choosing a replaceable role.
+   Current inference builds the adapted UNet from SVD configuration but loads
+   `Sonic/unet.pth`, including its identity/attention adapters. An SVD UNet file
+   that inference never reads is not a working avatar import.
+2. Define a finite SafeTensors export slot for that actual complete Sonic UNet
+   graph. Keep legacy trusted, hash-pinned checkpoint inputs in their existing
+   recipe; never parse arbitrary publisher pickle/PyTorch archives during source
+   inspection. Reference descriptors may be derived only from the exact verified
+   existing checkpoint in an opted-in, offline bounded engineering process. New
+   source metadata stays framework-free and new weights use the bounded existing
+   SafeTensors admission contract.
+3. Bind the fixed Sonic runtime, audio-to-token/bucket, portrait/voice encoders,
+   VAE, scheduler/configuration and all other companions. New source model Python,
+   arbitrary workflows or a filename must not change the trusted inference path.
+   Qualify the actual selected safe export loader rather than assuming a different
+   serialization is interchangeable.
+4. Reuse the model Task/download/prerequisite lifecycle and opaque runtime
+   identities. Estimate its real one-/multi-device workload, per-device memory,
+   physical RAM, complete storage and any explicit offload policy before transfer.
+   Preserve whole-audio/windowed execution, private input lineage, absolute
+   deadlines, owned cancellation and inspection recovery.
+5. Expose the installed choice in Avatars and applicable reviewed agent/chat
+   settings. A known reference converted to a newly supported serialization proves
+   that route, not a new trained model's quality. Test fake admission/ownership/
+   hardware boundaries, then complete an isolated actual selected-model avatar
+   result and inspect video/audio integrity before enabling that profile.
