@@ -181,7 +181,7 @@ def consume_runtime_intent(session, instance):
         or instance.metadata_json != intent["metadata"]
         or bool(run.parameters.get("app_owned")) != bool(model.relative_path)
         or run.parameters.get("model_sha256") != (model.sha256 if model.relative_path else None)
-        or any(run.parameters.get(key) != value for key, value in source_of(model).items())
+        or any(run.parameters.get(key) != value for key, value in source_of(model, session).items())
         or any(
             instance.metadata_json.get(key) != run.parameters.get(key)
             for key in (
@@ -192,6 +192,8 @@ def consume_runtime_intent(session, instance):
                 "runtime_profile",
                 "ram_mib",
                 "environment_id",
+                "bundle_proof",
+                "bundle_ram_mib",
             )
         )
     ):
@@ -294,10 +296,11 @@ def runtime_load_facts(session, instance):
         Run.status,
         Run.metadata_json["shared_model_retained"].as_boolean().label("retained"),
         Run.parameters["app_owned"].as_boolean().label("app_owned"),
+        Run.parameters["mtime"].as_float().label("bundle_primary_mtime"),
     ]
     fields.extend(
         Run.parameters[key].label(key)
-        for key in ("model_path", "size_bytes", "mtime", "projector", "gpus", "model_sha256")
+        for key in ("model_path", "size_bytes", "mtime", "projector", "gpus", "model_sha256", "model_bundle")
     )
     result = (
         session.connection()
@@ -316,6 +319,24 @@ def runtime_load_facts(session, instance):
     source = {key: result[key] for key in ("model_path", "size_bytes", "mtime", "projector")}
     if result.get("app_owned") is True:
         source.update(app_owned=True, model_sha256=result["model_sha256"])
+    if result.get("model_bundle") is not None:
+        from app.gguf_bindings import OwnedBundle
+
+        bundle = OwnedBundle.model_validate(result["model_bundle"])
+        first = bundle.parts[0]
+        # SQLite JSON_QUOTE of a scalar real may shorten its decimal precision,
+        # while nested part JSON retains the original observed double. Read the
+        # scalar as a real for the new exact bundle coordinate; preserve legacy
+        # source serialization for already persisted single-file observations.
+        source["mtime"] = result["bundle_primary_mtime"]
+        if not source.get("app_owned") or (
+            source["model_path"],
+            source["model_sha256"],
+            source["size_bytes"],
+            source["mtime"],
+        ) != ("models/store/" + first.sha256, first.sha256, first.size_bytes, first.mtime):
+            raise ValueError("The shared runtime has a different complete GGUF source")
+        source["model_bundle"] = bundle.model_dump(mode="json")
     if (
         not isinstance(source["model_path"], str)
         or not source["model_path"]

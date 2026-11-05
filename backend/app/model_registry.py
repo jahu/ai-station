@@ -71,12 +71,33 @@ def models(
     if q.strip():
         statement = statement.where(ModelFile.filename.icontains(q.strip(), autoescape=True))
     total = session.scalar(select(func.count()).select_from(statement.subquery()))
-    rows = session.scalars(statement.order_by(ModelFile.filename, ModelFile.id).limit(limit).offset(offset))
+    rows = list(
+        session.scalars(statement.order_by(ModelFile.filename, ModelFile.id).limit(limit).offset(offset))
+    )
+    definitions = (
+        {
+            item.file_id: item
+            for item in session.scalars(
+                select(ModelDefinition).where(ModelDefinition.file_id.in_([row.id for row in rows]))
+            )
+        }
+        if rows
+        else {}
+    )
+    items = []
+    for row in rows:
+        value = file_dict(row)
+        definition = definitions.get(row.id)
+        if definition and (definition.metadata_json or {}).get("model_bundle"):
+            summary = definition_dict(definition, row).get("gguf_bundle")
+            if summary:
+                value["gguf_bundle"] = summary
+        items.append(value)
     latest = session.scalar(
         select(Run).where(Run.executor_type == "model_discovery").order_by(Run.created_at.desc()).limit(1)
     )
     return {
-        "items": [file_dict(row) for row in rows],
+        "items": items,
         "total": total,
         "latest_scan": run_dict(latest) if latest else None,
     }

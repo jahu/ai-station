@@ -160,6 +160,28 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
     from app.data_access import accessible_run_id
 
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
+    bundle_summary = None
+    if (row.metadata_json or {}).get("model_bundle"):
+        from app.gguf_bindings import OwnedBundle, checked_proof
+
+        try:
+            bundle = OwnedBundle.model_validate(row.metadata_json["model_bundle"])
+            checked_proof(bundle, row.metadata_json.get("bundle_proof"))
+            names = row.metadata_json.get("source_parts", [])
+            bundle_summary = {
+                "status": "verified",
+                "size_bytes": bundle.size_bytes,
+                "part_count": len(bundle.parts),
+                "parts": [
+                    {
+                        **part.model_dump(),
+                        "filename": names[index].get("filename", "") if index < len(names) else "",
+                    }
+                    for index, part in enumerate(bundle.parts)
+                ],
+            }
+        except ValueError:
+            bundle_summary = {"status": "inspection_required"}
     image = (row.metadata_json or {}).get("image")
     image_backend = image.get("backend") if isinstance(image, dict) and row.category == "image" else None
     if spec and image_backend in {"qwen", "krea2"}:
@@ -239,6 +261,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
         "preset": preset_of(row),
+        **({"gguf_bundle": bundle_summary} if bundle_summary else {}),
         "compatibility": spec,
         "file": (
             None
@@ -428,7 +451,7 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             **embedding_model,
             "definition_id": row.id,
             "file_id": file.id,
-            **verify_source(source_of(file)),
+            **verify_source(source_of(file, session)),
             "check_image": check_image,
             **(
                 {"avatar_checkpoint_binding": dict(row.metadata_json["avatar"]["binding"])}
@@ -557,6 +580,11 @@ class ModelInstallExecutor:
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
                     **(
+                        {"model_bundle": run.parameters["model_bundle"], "check_context": True}
+                        if run.parameters.get("model_bundle")
+                        else {}
+                    ),
+                    **(
                         {
                             "checkpoint_profile": run.parameters["avatar_checkpoint_binding"][
                                 "checkpoint_profile"
@@ -601,6 +629,17 @@ class ModelInstallExecutor:
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("model_bundle"):
+                from app.gguf_bindings import OwnedBundle, checked_proof
+
+                try:
+                    proof = checked_proof(
+                        OwnedBundle.model_validate(run.parameters["model_bundle"]), report.get("model_bundle")
+                    )
+                    if proof != row.metadata_json.get("bundle_proof"):
+                        raise ValueError("The complete model geometry changed since installation")
+                except ValueError as exc:
+                    report["error"] = str(exc)
             if run.parameters.get("avatar_checkpoint_binding"):
                 from app.avatar_models import profile_for
 

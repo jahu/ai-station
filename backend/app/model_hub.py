@@ -239,6 +239,11 @@ class ModelHubExecutor:
                             "files": [file],
                             "metadata_only": True,
                             "context_target": plan.get("context_target", 131072),
+                            **(
+                                {"model_bundles": observation["model_bundles"]}
+                                if getattr(candidate, "origin", None) == "hub_split"
+                                else {}
+                            ),
                         }
                     if "source" in run.parameters:
                         from app.model_variant_advice import enrich_source

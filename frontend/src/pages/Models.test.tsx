@@ -9,6 +9,54 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("shows the complete model size and part count while retaining the primary file observation", async () => {
+  const model = {
+    id: "complete",
+    filename: "Coder.Q4_K_M.gguf",
+    host_path: null,
+    relative_path: "models/store/" + "a".repeat(64),
+    root_label: "AI Station storage",
+    category: "llm",
+    format: "gguf",
+    size_bytes: 4 * 1024 ** 3,
+    family: "qwen3",
+    quantization: "Q4_K_M",
+    capabilities: ["chat"],
+    availability: "present",
+    discovered_at: "2026-01-01T00:00:00Z",
+    gguf_bundle: {
+      status: "verified",
+      size_bytes: 8 * 1024 ** 3,
+      part_count: 2,
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.includes("/models?")
+          ? { items: [model], total: 1 }
+          : { items: [], total: 0 },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Models />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("heading", { name: "Coder.Q4_K_M.gguf" });
+  expect(screen.getByText("8.00 GiB")).toBeTruthy();
+  expect(screen.getByText("Complete model · 2 parts")).toBeTruthy();
+  expect(screen.queryByText("4.00 GiB")).toBeNull();
+});
+
 it("opens an installed avatar model in Avatars and hides language-model controls", async () => {
   const definition = {
     id: "avatar-definition",

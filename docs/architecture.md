@@ -1564,3 +1564,14 @@ Per-device admission uses complete weight size, equal-layer rounding, shared
 weights, Q8 context/state and runtime headroom, with a separate available-RAM
 check. The native path is qualified against one pinned CUDA image; discovery
 installation/registry and ordinary Chat selection for bundles remain separate work.
+
+
+The pending complete-source installation candidate extends the existing download
+executor and model definitions. A closed publisher set becomes an owned binding
+only after every object and the native whole-model proof pass. The physical
+primary ModelFile size is preserved; complete size and immutable component
+observations belong to the binding. Runtime source/handoff facts include all
+parts without exposing private initiating Runs. A numeric SQL read preserves the
+new bundle coordinate's exact timestamp double; legacy single-file source
+serialization is retained. The source-installation qualification gate remains off
+until its complete downloader/Runner/conversation acceptance passes.

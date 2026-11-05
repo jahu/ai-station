@@ -106,6 +106,17 @@ def assess_variant(file, report, hardware, storage, *, context_target=32768):
 
     existing = assess_file(file, hardware, storage, bundle=for_file(report, file))
     if file.get("bundle_id") or looks_split(file.get("filename", "")):
+        from app.hub_split_candidates import INSTALLATION_QUALIFIED
+        from app.hub_split_candidates import candidate_from_profile as split_candidate
+
+        if INSTALLATION_QUALIFIED and report.get("language_profile"):
+            try:
+                entry = split_candidate(
+                    report, file["filename"], report["language_profile"], context_ceiling=context_target
+                )
+                return assess_file(file, hardware, storage, candidates=(entry,))
+            except ValueError as exc:
+                existing["reason"] = str(exc)[:300]
         return existing
     if report.get("avatar_profile") and file.get("format") in {"pth", "pt", "bin"}:
         from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
@@ -206,7 +217,7 @@ def rank_variants(report, *, context_target=32768):
             int(usable),
             -len(gpus) if best else -100,
             BALANCED.get(quant, 0),
-            -(file.get("size_bytes") or 2**60),
+            -(assessment["disk"].get("model_bundle_bytes") or file.get("size_bytes") or 2**60),
         )
         assessment["variant_advice"] = {
             "policy": POLICY,
@@ -234,9 +245,13 @@ def rank_variants(report, *, context_target=32768):
         scored.append((score, file, bool(usable and meets_context and precision_known)))
     scored.sort(key=lambda row: (row[0], row[1]["filename"]), reverse=True)
     recommended = next((file for _, file, eligible in scored if eligible), None)
-    for rank, (_, file, _) in enumerate(scored, 1):
-        file["assessment"]["variant_advice"]["rank"] = rank
-        file["assessment"]["variant_advice"]["recommended"] = file is recommended
+    ranks = {}
+    recommended_group = (recommended.get("bundle_id") or recommended["filename"]) if recommended else None
+    for _, file, _ in scored:
+        group = file.get("bundle_id") or file["filename"]
+        ranks.setdefault(group, len(ranks) + 1)
+        file["assessment"]["variant_advice"]["rank"] = ranks[group]
+        file["assessment"]["variant_advice"]["recommended"] = group == recommended_group
     report["files"] = [file for _, file, _ in scored]
     report["recommendation_policy"] = POLICY
     report["context_target"] = context_target

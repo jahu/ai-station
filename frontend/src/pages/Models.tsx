@@ -29,6 +29,12 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  gguf_bundle?: {
+    status: string;
+    size_bytes?: number;
+    part_count?: number;
+    parts?: { filename: string; size_bytes: number; sha256: string }[];
+  };
   image_backend?: "qwen" | "krea2";
   video_backend?: "wan22";
   speech_backend?: "chatterbox";
@@ -57,6 +63,7 @@ interface Definition {
   } | null;
 }
 interface ModelFile {
+  gguf_bundle?: Definition["gguf_bundle"];
   id: string;
   filename: string;
   host_path: string | null;
@@ -130,9 +137,16 @@ function ModelFileCards({ models }: { models: ModelFile[] }) {
             <div className="row">
               <Box size={20} aria-hidden="true" />
               <span className="tiny-tag">{model.format}</span>
-              <span className="muted">{size(model.size_bytes)}</span>
+              <span className="muted">
+                {size(model.gguf_bundle?.size_bytes ?? model.size_bytes)}
+              </span>
             </div>
             <h2>{model.filename}</h2>
+            {model.gguf_bundle?.part_count && (
+              <p className="muted">
+                Complete model · {model.gguf_bundle!.part_count} parts
+              </p>
+            )}
             <div className="row model-tags">
               <span>{model.category}</span>
               {model.quantization && <span>{model.quantization}</span>}
@@ -545,6 +559,9 @@ export function ModelDetail() {
   if (model.isPending) return <Loading />;
   if (model.error) return <ErrorNotice error={model.error} />;
   const row = model.data!;
+  const completeBundle = row.definitions?.find(
+    (item) => item.gguf_bundle?.status === "verified",
+  )?.gguf_bundle;
   return (
     <>
       <PageTitle
@@ -552,8 +569,9 @@ export function ModelDetail() {
         title={row.filename}
         action={<Link to="/models">All models</Link>}
       >
-        This file stays in its existing host location. AI Station stores
-        metadata only and never downloads replacement weights.
+        {row.relative_path
+          ? "AI Station manages these verified model files in application storage."
+          : "This file stays in its existing host location. AI Station stores metadata only and never downloads replacement weights."}
       </PageTitle>
       <ErrorNotice
         error={
@@ -567,6 +585,26 @@ export function ModelDetail() {
         }
       />
       <section className="panel model-card">
+        {completeBundle && (
+          <div className="notice">
+            <strong>Complete model</strong>
+            <p>
+              {size(completeBundle.size_bytes!)} across{" "}
+              {completeBundle.part_count} verified parts. The file observation
+              below describes the primary part.
+            </p>
+            <details>
+              <summary>Model parts</summary>
+              <ul>
+                {completeBundle.parts?.map((part) => (
+                  <li key={part.sha256} className="model-path">
+                    {part.filename} · {size(part.size_bytes)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        )}
         <h2>File observation</h2>
         <dl className="model-properties">
           <dt>Host path</dt>

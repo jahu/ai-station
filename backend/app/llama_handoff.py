@@ -329,7 +329,7 @@ class LlamaResumeConsumerExecutor:
         observation = p["model_observation"]
         from app.model_sources import source_of
 
-        coordinate = source_of(model)
+        coordinate = source_of(model, session)
         if coordinate != {key: observation.get(key) for key in coordinate} or bool(
             observation.get("app_owned")
         ) != bool(model.relative_path):

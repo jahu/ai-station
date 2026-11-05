@@ -517,3 +517,28 @@ ordinary workspace/agent selection, then qualify that complete workflow. Source
 UI installation remains refused until those contracts pass; native structural
 success alone must not enable a source recommendation. Finish lifecycle, QA,
 documentation/site and packaged Linux/Windows release gates afterward.
+
+
+### Complete source installation candidate — qualification in progress
+
+The control-plane candidate now freezes every publisher part and its common
+configuration, preserving the primary file's physical size. Its source plan,
+hardware/disk assessment and resumable download account for the whole set.
+Registration requires the complete native proof and matching context geometry;
+components remain bound to one shared model definition. Ordinary runtime load,
+conversation selection, source handoff and ownership facts retain the whole
+binding, with GPU and host-RAM reservations released only after confirmed Stop.
+The Models and discovery views distinguish complete model size from the primary
+file and present all required parts together.
+
+`hub_split_candidates.INSTALLATION_QUALIFIED` remains **false**. Temporary-database
+integration tests exercise the candidate behind that gate with fake transfers,
+real native metadata verification, normal Chat dispatch and owned Stop. They cover
+second-file source links, interrupted second-part resume, cancellation before
+registration, incompatible part counts and scalar timestamp precision across
+SQLite shared-runtime facts. This is not the final source/download/GPU acceptance.
+Before activation and merge: qualify the actual resumable downloader, native
+Runner and normal model/Chat workflow with a controlled small split fixture,
+inspect the compiled desktop/mobile UI, build the control-plane image and review
+all changes. Public publisher inspection, controlled-source payload transport and
+actual GPU inference must be reported as separate evidence.
