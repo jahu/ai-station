@@ -1605,3 +1605,16 @@ exact current catalog SHA/size match; unknown origins are not inferred from
 private download Runs. Generated publisher URLs use validated HF coordinates,
 never caller-provided raw recipe URLs. Update review pre-fills the existing
 metadata-only discovery flow, with no background download or model replacement.
+
+### Guided discovery entry
+
+The model discovery entry queues one ordinary administrator-owned metadata Run,
+not an installation. A capability and popular/recent preference select a pinned
+runtime starting point plus at most two other public repository matches. The
+existing bounded comparer inspects all three sources, freezes their observations
+and applies actual hardware, disk and optional conversation-context budgets.
+Starting points convey navigation rather than compatibility authority; unrelated
+profiles cannot earn a fit for the selected capability. A publisher search outage
+keeps the individually inspected starting point with a visible notice. Opening an
+installed model's publisher-update link still only prefills the source; it never
+launches inspection, download or replacement by itself.

@@ -569,3 +569,25 @@ the file must cover the reviewed context and cannot silently raise its default.
 These are Linux integration results, not general model-quality/context accuracy
 benchmarks or physical Windows GPU qualification. Private data/media were not
 published and the running production data was not modified.
+
+### Guided discovery and hardware assessment — 2026-11-05
+
+`Models → Find new models` now opens one private metadata comparison. Choose
+Conversation, Images, Video, Voice, Music, Avatars or Memory, then browse popular
+or recently updated public sources. A labelled pinned runtime starting point and
+at most two other publisher matches pass the ordinary source/graph inspection.
+A recommendation accounts for actual per-device GPU allocation, context cache,
+physical RAM and application storage; it does not infer fit from a model's name,
+file size, popularity or pooled VRAM. In-use GPUs remain visibly distinguished
+from available resources. Review files and licenses before installing.
+
+An isolated current Runner/API/worker check performed real public recent searches
+for all seven capabilities on the reference Linux workstation. All seven pinned
+starting points acquired supported observations and an estimated fit; unrelated
+or gated matches remained unsupported/access-required. No model weights were
+transferred, runtime installed or inference launched in this check. Existing
+family-specific inference results above remain separate evidence. Compiled
+Chrome checks exercised the actual metadata projections at desktop/phone widths,
+refresh without duplicate submission, recent Voice selection and keyboard access
+to variant review. Those browser HTTP responses were projections, not a second
+live backend test; screenshots remain private. QA MODEL-013 adds operator coverage.

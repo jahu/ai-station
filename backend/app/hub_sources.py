@@ -210,9 +210,18 @@ def search_query(value):
     return value.strip()
 
 
-async def search_models(query, check):
+async def search_models(query, check, *, order="popular"):
     query = search_query(query)
-    params = urlencode({"search": query, "sort": "downloads", "direction": -1, "limit": 12})
+    if order not in {"popular", "recent"}:
+        raise ValueError("Choose popular or recently updated models")
+    params = urlencode(
+        {
+            "search": query,
+            "sort": "lastModified" if order == "recent" else "downloads",
+            "direction": -1,
+            "limit": 12,
+        }
+    )
     raw = await metadata_json(f"https://huggingface.co/api/models?{params}", check)
     if not isinstance(raw, list) or len(raw) > 12:
         raise ValueError("Publisher search exceeded its result limit")
@@ -240,5 +249,8 @@ async def search_models(query, check):
         "items": items,
         "files": [],
         "metadata_only": True,
-        "note": "Up to 12 publisher matches, ordered by downloads. Popularity is not compatibility or hardware fit.",
+        **({"order": "recent"} if order == "recent" else {}),
+        "note": "Up to 12 publisher matches, ordered by recent updates. Recency is not compatibility or hardware fit."
+        if order == "recent"
+        else "Up to 12 publisher matches, ordered by downloads. Popularity is not compatibility or hardware fit.",
     }

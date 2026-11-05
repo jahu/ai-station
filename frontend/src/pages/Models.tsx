@@ -320,7 +320,7 @@ export function Models() {
       <p className="muted">
         {canManage && (
           <>
-            <Link className="text-link" to="/models/discover">
+            <Link className="text-link" to="/models/discover?recommend=chat">
               Find new models →
             </Link>
             {" · "}

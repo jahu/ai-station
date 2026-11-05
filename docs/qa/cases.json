@@ -1,5 +1,5 @@
 {
-  "version": 51,
+  "version": 52,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6374,6 +6374,30 @@
       "expected": [
         "Obecne, uprzednio zweryfikowane obiekty zmniejszają dodatkowe pobranie i rezerwę dyskową. Runtime i pliki pomocnicze zachowują własny budżet.",
         "Widok wyjaśnia, że hashe są sprawdzane ponownie podczas instalacji. Sam cache nie oznacza zgodności modelu ani gotowości runtime."
+      ]
+    },
+    {
+      "id": "MODEL-013",
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "title": "Wybór zastosowania i rekomendacje dopasowane do stacji",
+      "prerequisites": [
+        "Konto administratora i dostęp do publicznego Hugging Face."
+      ],
+      "resources": "Publiczne metadane; bez pobierania wag i bez generowania w tym teście.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "steps": [
+        "W Models kliknij Find new models. Poczekaj na porównanie maksymalnie trzech źródeł dla rozmów. Otwórz Context options i porównaj ponownie dla 128K, jeśli chcesz dłuższy kontekst.",
+        "W Use for wybierz Images albo Voice, w Browse wybierz Recently updated i kliknij Find for my station. Sprawdź nazwy, oznaczenie punktu startowego i ocenę sprzętu.",
+        "Otwórz Review variants dla zgodnego modelu. Przejrzyj pamięć GPU/RAM, dysk, licencję i wymagane pliki. Nie uruchamiaj instalacji. Odśwież ekran i wróć do zapisanej inspekcji."
+      ],
+      "expected": [
+        "Wyniki dotyczą wybranego zastosowania. Popularność, nowość i punkt startowy nie zastępują inspekcji ani oceny sprzętu. Nieznane zasoby i niezgodne runtime nie dostają oceny pasuje.",
+        "Powstaje zwykłe prywatne zadanie metadanych z historią i Stop. Wagi nie są pobierane, żaden model nie jest ładowany i domyślne wybory nie zmieniają się. Odświeżenie zapisanej inspekcji jej nie powiela."
       ]
     }
   ],
