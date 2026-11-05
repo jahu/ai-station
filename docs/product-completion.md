@@ -1,3 +1,24 @@
+# AI Station delivery status
+
+The 0.2 release adds model discovery after setup: a capability-guided entry,
+public search/publisher links, hardware checks before weights, complete model
+components, reviewed installation and persistent choices. The admitted families,
+actual inference evidence and unsupported cases are in [the model guide](models.md).
+[0.2 release notes](releases/0.2.0.md) track installer/publication gates; preparing
+a candidate does not mean a release is published or the workstation is upgraded.
+
+The operator QA catalog contains **277 active cases**; exported answers start
+untested. Linux and Windows are the release targets. Physical Windows NVIDIA
+checks and human voice/film evaluation remain the owner's post-release tests;
+macOS and SMTP remain deferred. The original long-term product vision remains
+a roadmap, rather than a claim that every future runtime already works.
+
+## Historical implementation journal
+
+The dated entries below preserve earlier decisions and test evidence. Their
+"next"/"planned" wording describes those dates; use the current release notes and
+model guide for the delivery status.
+
 Next milestone (owner direction, 2026-10-29): the
 
 2026-10-31 guided image setup qualification: the fixed Linux NVIDIA profile now
