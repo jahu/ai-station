@@ -407,3 +407,28 @@ For GGUF language models it also inspects the administrator-configured llama.cpp
 Owned llama.cpp health and restart are separate inspectable Runs. Health records process liveness and observed context without signalling external runtimes. Restart unloads an idle owned instance, then loads the saved GPU/context preset. Unknown ownership still requires inspection. System diagnostics remain available for the host.
 
 Migration `0002` adds nullable observation timestamps/Run links and an `unknown` default for pre-existing rows. Migration `0018` adds definition status, verification Run links and timestamps. Upgrade/downgrade coverage verifies existing file metadata survives. Tests use disposable small fixtures, real managed subprocesses and an in-process typed runner transport. The browser smoke uses a native runner over UDS and a worker. Neither test loads model weights or pulls images.
+
+## Native music checkpoint slot
+
+The typed native model verifier now also recognizes the fixed ACE-Step 1.5 Turbo
+BF16 diffusion graph: 677 tensor names/dimensions, complete SafeTensors layout and
+its exact existing runtime/SDK manifest. The slot fixes all 15 other model inputs,
+including the embedding model, VAE, configuration, silence latent and trusted
+Python companions. A new publisher's Python is not admitted by a matching weight
+header. This uses the same bounded metadata reader as video and speech, without
+Torch, tensor payload reads or GPU allocation.
+
+The preparation catalog exposes that finite descriptor alongside its existing
+hardware requirements: one supported 12-GiB GPU, 24-GiB system RAM and explicit
+CPU offload. Two smaller devices are not pooled. A descriptor match is structural
+evidence only: new music source planning, bundle installation, selection and
+actual inference qualification remain the next steps in the
+[discovery plan](plans/open-model-discovery.md#next-ace-step-music-checkpoint-bundles).
+
+Read-only inspection and a complete SHA-256 check matched the existing reference
+`3f6e0797fad420a39bd33979eb6e840e30989e34a3794e843d23b60ec6e422d7`
+(4,787,825,604 bytes). No weights were downloaded or changed and no music was
+generated for this slot qualification. Normal synthetic tests cover graph/type/
+layout drift, companion closure, private owned-path and permission enforcement,
+legacy GGUF rejection, and per-device GPU/RAM gates. Evidence remains private
+under `data/acceptance/model-discovery-20261104/`.

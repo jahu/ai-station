@@ -30,7 +30,13 @@ class VerifyModel(BaseModel):
     check_image: StrictBool = False
     check_context: StrictBool = False
     checkpoint_profile: (
-        Literal["qwen-image21-diffusion-v1", "wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1"] | None
+        Literal[
+            "qwen-image21-diffusion-v1",
+            "wan22-5b-diffusion-v1",
+            "chatterbox-v3-t3-v1",
+            "ace-step15-turbo-diffusion-v1",
+        ]
+        | None
     ) = Field(default=None, exclude_if=lambda v: v is None)
     runtime_profile: (
         Literal[
@@ -106,7 +112,8 @@ def verify_model(body: VerifyModel) -> dict:
 
         resolve = (
             owned_safetensors
-            if body.checkpoint_profile in {"wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1"}
+            if body.checkpoint_profile
+            in {"wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1", "ace-step15-turbo-diffusion-v1"}
             else owned_model
         )
         path = resolve(body.host_path, body.model_sha256)
@@ -152,6 +159,8 @@ def verify_model(body: VerifyModel) -> dict:
             from ai_station_runner.video_checkpoints import inspect_checkpoint
         elif body.checkpoint_profile == "chatterbox-v3-t3-v1":
             from ai_station_runner.speech_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "ace-step15-turbo-diffusion-v1":
+            from ai_station_runner.music_checkpoints import inspect_checkpoint
         else:
             from ai_station_runner.media_checkpoints import inspect_checkpoint
 
@@ -165,6 +174,8 @@ def verify_model(body: VerifyModel) -> dict:
                 if body.checkpoint_profile == "wan22-5b-diffusion-v1"
                 else "speech"
                 if body.checkpoint_profile == "chatterbox-v3-t3-v1"
+                else "music"
+                if body.checkpoint_profile == "ace-step15-turbo-diffusion-v1"
                 else "image"
             )
             raise HTTPException(422, f"Incompatible {family} checkpoint: {exc}") from exc

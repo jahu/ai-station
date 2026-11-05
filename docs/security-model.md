@@ -1738,3 +1738,11 @@ Private Run configuration permits only those identities and an absolute deadline
 CPU Stop signals only the owned group; completion/error publication checks the
 original worker claim. An explicit administrator settings revision changes the
 station's encoder, while memory content, indexing and activity stay account scoped.
+
+The ACE-Step music checkpoint inspection adds only a finite metadata profile to
+the existing owned-model verifier. It grants no download, arbitrary path, code or
+runtime execution authority. Tensor names, dimensions, BF16 storage and complete
+layout must match; the slot binds the exact trusted SDK and companion manifest.
+Its catalog descriptor cannot bypass the existing per-device GPU and physical
+RAM gate. New source installation and private Run model views remain separately
+required contracts.
