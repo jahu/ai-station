@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.1.2` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.2.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -38,49 +38,31 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
-> **Early access:** 0.1 brings desktop installers and guided model setup for
+> **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.1.2.md).
+> [Exact qualification and known issues](docs/releases/0.2.0.md).
 
-**New in 0.1.2:** find older references across your whole Library, choose them
-with larger previews, browse media first and see actual film/avatar stills.
-Media jobs recover observation of an existing process after a lost worker without
-automatically starting generation again. [What changed](docs/releases/0.1.2.md).
+**New in 0.2: find your next local model.** Open **Models → Find new models**,
+choose what you want to create, or paste a Hugging Face link. Browse popular or
+recently updated sources for conversation, images, video, voice, music, avatars
+and memory — then review and install a compatible choice.
 
-On `develop`, the next release adds **Models → Find new models**: choose what you
-want to create and compare a small set for your station, search Hugging Face, or
-paste a publisher link. Review hardware fit and licenses, then install
-compatible conversation models, Qwen Image 2.1 checkpoints, F16 Wan 2.2 5B
-video checkpoints, Chatterbox v3 T3 speech checkpoints, ACE-Step music checkpoints,
-compatible CPU memory encoders and Sonic avatar checkpoints. Reviewed choices work
-in their workspaces and compatible assistant/agent settings, with hardware and workload requirements shown before
-download. These additions are not in the 0.1.2 installers; other media-model
-families need a matching supported runtime. Sonic avatar import passed its complete
-Linux installation and selected-model recording check.
-Speech import passed an isolated Linux GPU
-installation and first-recording check; this is not Windows GPU qualification.
-Search results can also compare their top three models against this station's
-hardware before any weight download, with context and storage requirements shown.
-Installed model details show their pinned publisher source and let you review a
-new revision. Discovery separates reusable weights from additional download and
-disk requirements; existing selections change only after an explicit review.
-Recommendations account for the actual GPU split: a larger card cannot silently
-cover an overloaded smaller card. RAM and free disk space are checked separately.
-Compatible split GGUFs install as **one complete model**, including when you paste
-a link to a later part. Hardware and storage estimates count all parts; incomplete
-sets stay blocked. Models sharing a weight file keep separate configurations;
-removing a complete model from the list retains its files and allows verified
-restoration. A public two-part Qwen 7B passed real Linux download, verification,
-Chat and agent execution; its reviewed 32K preset stays unchanged when the file
-advertises a larger context. Native three-part/Runner recovery and interrupted
-transfer tests provide separate coverage.
-[Discovery and installation status](docs/plans/open-model-discovery.md).
+**Check the fit before downloading.** AI Station considers each GPU separately,
+conversation context, RAM, disk and the complete model's companion files. It
+explains unknown requirements and unsupported families instead of guessing.
+Models sharing weights keep independent configurations; reusable owned files
+reduce repeated downloads and are verified again during installation.
 
-Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
+Your models become available in their workspaces and compatible assistant/agent
+settings. Publisher update review is explicit: a new revision never replaces your
+choice silently. [Supported families and actual tests](docs/models.md) ·
+[Discovery design and installation lifecycle](docs/plans/open-model-discovery.md).
+
+Release 0.2 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.1 release notes and qualification status](docs/releases/0.1.2.md).
+[0.2 release notes and qualification status](docs/releases/0.2.0.md).
 
 ## Help make it simple
 
@@ -216,8 +198,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.1.2-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.1.2-linux-amd64.deb`.
+- **Windows 11 x64:** `AI-Station-0.2.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.2.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -225,13 +207,13 @@ Python and the app are bundled; the installer guides required OS permissions.
 Windows uses its own WSL2 environment and may require an OS restart.
 Model downloads and larger media need additional disk space and suitable hardware.
 
-**Windows installer notice:** 0.1 is **not digitally signed**. Windows may show
+**Windows installer notice:** the installer is **not digitally signed**. Windows may show
 an unknown-publisher/SmartScreen warning; Smart App Control or managed-device
 policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.1.2.md).
+[Installation, updates and known issues](docs/releases/0.2.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -265,10 +247,11 @@ feature branches and PRs into `develop`.
 <details>
 <summary><strong>Explore 0.1 features and guided model setup</strong></summary>
 
-**0.1.2** follows the [release plan](docs/plans/next-release-0.1.md):
+**0.2** adds [open model discovery](docs/plans/open-model-discovery.md) to the
+existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.1.2.md).
+post-release QA are listed in the [release notes](docs/releases/0.2.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -373,7 +356,7 @@ combined fresh Linux GPU qualification remain unverified; CPU first use and
 existing Linux GPU profiles have separate actual evidence.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
 
-**Known issue — macOS:** the native installer is **not supported in release 0.1**.
+**Known issue — macOS:** the native installer is **not supported in release 0.2**.
 Full installed startup remains unreliable; the latest attempt timed out waiting
 for Docker Desktop's local engine before account/model setup. Passing native
 component tests does not establish a working Mac installation. Mac work is
@@ -522,7 +505,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.1.2.md#validation) ·
+[Release verification](docs/releases/0.2.0.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)

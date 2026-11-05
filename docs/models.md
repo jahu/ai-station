@@ -2,7 +2,7 @@
 
 ## Discover public model sources
 
-The next-release discovery increment adds **Models → Find new models**
+Release 0.2 adds **Models → Find new models**
 (`/models/discover`). Search public Hugging Face repositories or paste a
 repository/file link. An administrator explicitly starts a private metadata-only
 Task/Run; saved review URLs restore results without another source request.
