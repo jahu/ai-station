@@ -523,10 +523,14 @@ class DataGenerateExecutor:
                     RuntimeInstance.runtime_key == "llama.cpp",
                 )
             )
+            from app.model_selection import matches, resolve
+
+            file, definition = resolve(session, model)
             if (
-                instance is None
+                file is None
+                or instance is None
                 or instance.endpoint != f"llamacpp:{instance.id}"
-                or instance.metadata_json.get("model_file_id") != model.removeprefix("llamacpp:")
+                or not matches(instance.metadata_json, file, definition)
                 or int(instance.metadata_json.get("context_size", 0)) < 100352
             ):
                 raise ValueError("The selected model needs 100k+ actual context before code generation")

@@ -1,5 +1,5 @@
 {
-  "version": 49,
+  "version": 50,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6302,6 +6302,30 @@
       "expected": [
         "Wymagania uwzględniają wszystkie części, kontekst i osobne pojemności GPU. Brak czujników oznacza niepewność, a nie zmyśloną pojemność.",
         "Niepasujący model ma jasną przyczynę odmowy. Nie następuje ukryte przełączenie na chmurę/RAM ani transfer dużych plików."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany kompletny model GGUF i zachowana rozmowa z jego jawnym wyborem. Zatrzymaj jego runtime w Models przed usunięciem konfiguracji."
+      ],
+      "resources": "Istniejący zgodny model GGUF z kilkoma częściami; bez ponownego pobierania dużych wag.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-010",
+      "title": "Usunięcie i przywrócenie kompletnego modelu bez zmiany dawnych wyborów",
+      "steps": [
+        "W Models otwórz model i zapisz jego nazwę oraz części. Wybierz Remove definition.",
+        "Sprawdź, że model znika z wyboru w nowej rozmowie. Dawna rozmowa nie może bez Twojej decyzji przełączyć się na inny model. Wagi pozostają na dysku.",
+        "Otwórz zachowaną konfigurację w Models i wybierz Restore model configuration. Poczekaj na zakończenie weryfikacji, następnie wybierz dawny model w rozmowie i wyślij wiadomość."
+      ],
+      "expected": [
+        "Usunięcie działającego lub niepewnego runtime jest blokowane z jasną prośbą o jego zatrzymanie. Usunięcie konfiguracji nie kasuje plików ani historii.",
+        "Przywrócenie weryfikuje wszystkie pierwotne części i zachowuje ten sam wybór modelu. Inne modele i ich konfiguracje pozostają bez zmian."
       ]
     }
   ],

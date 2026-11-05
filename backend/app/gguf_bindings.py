@@ -3,10 +3,9 @@
 import math
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
-from sqlalchemy import select
 
+from app.model_selection import definition_for
 from app.model_setup import fingerprint
-from app.models import ModelDefinition
 
 
 class OwnedPart(BaseModel):
@@ -44,13 +43,15 @@ def checked_proof(bundle, proof):
     return proof
 
 
-def binding_of(session, model):
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == model.id))
+def binding_of(session, model, definition_id=None):
+    definition = definition_for(session, model, definition_id)
     metadata = definition.metadata_json if definition else {}
     raw = metadata.get("model_bundle")
     if raw is None:
         return None
     bundle = OwnedBundle.model_validate(raw)
+    if definition.binding_key is not None and definition.binding_key != content_key(raw):
+        raise ValueError("The logical model identity differs from its frozen complete weights")
     first = bundle.parts[0]
     if (
         model.host_path is not None
@@ -62,8 +63,8 @@ def binding_of(session, model):
     return bundle.model_dump(mode="json")
 
 
-def size_of(session, model):
-    bundle = binding_of(session, model)
+def size_of(session, model, definition_id=None):
+    bundle = binding_of(session, model, definition_id)
     return sum(p["size_bytes"] for p in bundle["parts"]) if bundle else model.size_bytes
 
 
@@ -83,10 +84,10 @@ def fitted_context(proof, gpu_memory_mib, ceiling):
     return min(tokens, ceiling, context["trained_context"]) // 256 * 256
 
 
-def definition_proof(session, model):
-    if binding_of(session, model) is None:
+def definition_proof(session, model, definition_id=None):
+    if binding_of(session, model, definition_id) is None:
         return None
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == model.id))
+    definition = definition_for(session, model, definition_id)
     return definition.metadata_json["bundle_proof"]
 
 
@@ -100,3 +101,9 @@ def transfer_files(entry):
 
 def candidate_size(entry):
     return getattr(entry, "total_size_bytes", entry.file.size_bytes)
+
+
+def content_key(bundle):
+    """Logical weight identity excludes source aliases and timestamp observations."""
+    checked = OwnedBundle.model_validate(bundle)
+    return fingerprint([{"sha256": p.sha256, "size_bytes": p.size_bytes} for p in checked.parts])

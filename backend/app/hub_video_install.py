@@ -125,7 +125,11 @@ def adopt(session, run, entry, path, runner, hardware, check):
         "minimum_steps": 20,
         "maximum_frames": 81,
     }
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+    definition = session.scalar(
+        select(ModelDefinition).where(
+            ModelDefinition.file_id == file.id, ModelDefinition.binding_key.is_(None)
+        )
+    )
     if definition is not None and (
         definition.category != "video" or definition.metadata_json.get("video", {}).get("binding") != binding
     ):

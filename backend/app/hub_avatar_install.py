@@ -138,7 +138,11 @@ def adopt(session, run, entry, path, runner, hardware, check):
         "minimum_vram_mib": 12288,
         "maximum_seconds": 60,
     }
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+    definition = session.scalar(
+        select(ModelDefinition).where(
+            ModelDefinition.file_id == file.id, ModelDefinition.binding_key.is_(None)
+        )
+    )
     if definition is not None and (
         definition.category != "video" or definition.metadata_json.get("avatar", {}).get("binding") != binding
     ):

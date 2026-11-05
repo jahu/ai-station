@@ -1586,3 +1586,14 @@ capacity is capped by the smallest selected device times the device count. Extra
 VRAM on a larger device is not pooled into another device's allocation. Curated
 equal-capacity presets and explicit CPU profiles are unchanged; native inspection
 and actual runtime readiness remain separate from this pre-download estimate.
+
+
+Additional complete GGUF definitions may share one physical ModelFile. Migration
+0044 preserves a unique default definition per file and adds a unique optional
+ordered-content binding key for additional sets. Legacy file UUID references are
+unchanged; additional definitions use their own UUID in the existing llama.cpp
+selection namespace. The optional logical ID is control-plane metadata only; the
+Runner still receives its closed complete owned-object coordinate. Runtime reuse,
+context history, reasoning and deferred resumes distinguish sibling selections.
+Removed bundle definitions retain their identity and source binding; only an
+explicit verified restoration re-enables that choice. No weights are deleted.

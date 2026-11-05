@@ -1,6 +1,11 @@
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { Box, RefreshCw } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { useAccount } from "../account-context";
@@ -29,6 +34,7 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  model_key?: string;
   context_notice?: string;
   gguf_bundle?: {
     status: string;
@@ -199,7 +205,11 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
         {definitions.map((item, i) => (
           <Link
             className="panel model-card"
-            to={item.file_id ? `/models/${item.file_id}` : "/models"}
+            to={
+              item.file_id
+                ? `/models/${item.file_id}?definition=${item.id}`
+                : "/models"
+            }
             key={item.id}
             aria-label={`Inspect ${item.name} ${item.id.slice(0, 8)}`}
             {...itemProps(i, item.id)}
@@ -442,6 +452,7 @@ export function ModelDetail() {
     account.mode === "operator" || account.user?.is_admin === true;
   const { id } = useParams();
   const navigate = useNavigate();
+  const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
   const hardware = useHardware();
   const model = useQuery({
@@ -457,6 +468,7 @@ export function ModelDetail() {
           status: string;
           metadata: {
             model_file_id?: string;
+            model_definition_id?: string;
             health_run_id?: string;
             health?: { status?: string; alive?: boolean; n_ctx?: number };
           };
@@ -464,10 +476,21 @@ export function ModelDetail() {
       }>("/llama"),
     refetchInterval: 5000,
   });
-  const definition = model.data?.definitions?.[0];
+  const definition =
+    model.data?.definitions?.find(
+      (item) => item.id === search.get("definition"),
+    ) ??
+    model.data?.definitions?.find((item) => item.status !== "removed") ??
+    model.data?.definitions?.[0];
+  const logicalId =
+    definition?.model_key && definition.model_key !== `llamacpp:${id}`
+      ? definition.id
+      : undefined;
   const matchingInstances =
     runtimes.data?.instances?.filter(
-      (item) => item.metadata.model_file_id === id,
+      (item) =>
+        item.metadata.model_file_id === id &&
+        item.metadata.model_definition_id === logicalId,
     ) ?? [];
   const instance =
     matchingInstances.find(
@@ -539,7 +562,11 @@ export function ModelDetail() {
   const remove = useMutation({
     mutationFn: (definitionId: string) =>
       api(`/models/definitions/${definitionId}`, { method: "DELETE" }),
-    onSuccess: () => void cache.invalidateQueries({ queryKey: ["model", id] }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["model", id] });
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+      void cache.invalidateQueries({ queryKey: ["chat-model-catalog"] });
+    },
   });
   const health = useMutation({
     mutationFn: (instanceId: string) =>
@@ -560,9 +587,10 @@ export function ModelDetail() {
   if (model.isPending) return <Loading />;
   if (model.error) return <ErrorNotice error={model.error} />;
   const row = model.data!;
-  const completeBundle = row.definitions?.find(
-    (item) => item.gguf_bundle?.status === "verified",
-  )?.gguf_bundle;
+  const completeBundle =
+    definition?.gguf_bundle?.status === "verified"
+      ? definition.gguf_bundle
+      : undefined;
   return (
     <>
       <PageTitle
@@ -585,9 +613,33 @@ export function ModelDetail() {
           null
         }
       />
+      {!!row.definitions && row.definitions.length > 1 && (
+        <label className="model-configuration">
+          Model configuration
+          <select
+            value={definition?.id ?? ""}
+            onChange={(event) => {
+              const next = new URLSearchParams(search);
+              next.set("definition", event.target.value);
+              setSearch(next);
+              setName(null);
+              setContext(null);
+              setCacheType(null);
+              setGpus(null);
+            }}
+          >
+            {row.definitions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+                {item.status === "removed" ? " (removed)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <section className="panel model-card">
         {completeBundle && (
-          <div className="notice">
+          <div className="model-bundle-summary">
             <strong>Complete model</strong>
             <p>
               {size(completeBundle.size_bytes!)} across{" "}
@@ -697,6 +749,13 @@ export function ModelDetail() {
                 : definition.compatibility.summary}
           </p>
         )}
+        {definition?.status === "removed" && (
+          <p className="notice">
+            Removed from model selection. Files and history are preserved.
+            Restore this configuration to verify its original weights and use it
+            again.
+          </p>
+        )}
         {definition?.context_notice && (
           <p className="muted">{definition.context_notice}</p>
         )}
@@ -731,7 +790,7 @@ export function ModelDetail() {
                     Context size
                     <input
                       type="number"
-                      min={512}
+                      min={definition?.gguf_bundle ? 4096 : 512}
                       max={262144}
                       step={256}
                       value={selectedContext}
@@ -748,7 +807,9 @@ export function ModelDetail() {
                         setCacheType(event.target.value as "f16" | "q8_0")
                       }
                     >
-                      <option value="f16">f16</option>
+                      <option value="f16" disabled={!!definition?.gguf_bundle}>
+                        f16
+                      </option>
                       <option value="q8_0">q8_0</option>
                     </select>
                   </label>
@@ -762,8 +823,9 @@ export function ModelDetail() {
                       />
                     ) : (
                       <p className="muted">
-                        No GPUs reported. An empty preset loads on CPU after
-                        installation.
+                        {definition?.gguf_bundle
+                          ? "No GPUs reported. This complete model requires CUDA; inspect System diagnostics before loading."
+                          : "No GPUs reported. An empty preset loads on CPU after installation."}
                       </p>
                     )}
                   </fieldset>
@@ -853,7 +915,9 @@ export function ModelDetail() {
               >
                 {definition.status === "registered"
                   ? "Re-check installation"
-                  : "Install locally"}
+                  : definition.status === "removed"
+                    ? "Restore model configuration"
+                    : "Install locally"}
               </Button>
             )}
             {definition?.status === "registered" &&

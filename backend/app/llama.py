@@ -15,11 +15,12 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import model_selection as selections
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
 from app.model_sources import label_of, source_of, verify_source
-from app.models import ModelDefinition, ModelFile, ResourceLock, Run, RuntimeInstance, Task
+from app.models import ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -41,6 +42,7 @@ _CUDA_OVERHEAD_MIB_PER_GPU = 768
 class LoadModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model_file_id: UUID
+    model_definition_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
     gpus: list[Annotated[int, Field(ge=0)]] = Field(max_length=16)
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
@@ -177,6 +179,7 @@ def _q8_history(session, model_file_id, gpus):
         meta = instance.metadata_json or {}
         if (
             meta.get("model_file_id") == model_file_id
+            and meta.get("model_definition_id") is None
             and list(meta.get("gpus") or []) == list(gpus)
             and meta.get("cache_type", "f16") == "q8_0"
         ):
@@ -215,10 +218,10 @@ def proven_context_size(session, model_file_id, gpus) -> int | None:
     return best
 
 
-def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILING) -> int:
+def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILING, definition_id=None) -> int:
     from app.gguf_bindings import definition_proof, fitted_context
 
-    proof = definition_proof(session, model)
+    proof = definition_proof(session, model, definition_id)
     if proof:
         fitted = fitted_context(proof, gpu_memory_totals(gpus), ceiling)
         if fitted < CODING_CONTEXT_FLOOR:
@@ -305,22 +308,15 @@ def catalog(session: DB):
     return {
         "models": [
             {
-                "id": row.id,
-                "name": label_of(row),
-                "size_bytes": size_of(session, row),
-                "model_key": "llamacpp:" + row.id,
+                "id": selections.selection_id(row, definition),
+                "file_id": row.id,
+                "definition_id": definition.id if definition else None,
+                "name": definition.name if definition else label_of(row),
+                "size_bytes": size_of(session, row, selections.definition_id(definition)),
+                "model_key": "llamacpp:" + selections.selection_id(row, definition),
                 "vision_available": vision_projector(session, row, companions) is not None,
             }
-            for row in session.scalars(
-                select(ModelFile)
-                .where(
-                    ModelFile.category == "llm",
-                    ModelFile.format == "gguf",
-                    ModelFile.availability == "present",
-                )
-                .order_by(ModelFile.filename)
-                .limit(200)
-            )
+            for row, definition in selections.choices(session)
             if loadable_model(row)
         ],
         "instances": [runtime_dict(row) for row in instances(session)],
@@ -338,6 +334,14 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
     model = session.get(ModelFile, str(body.model_file_id))
     if not loadable_model(model):
         raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
+    try:
+        definition = selections.definition_for(session, model, body.model_definition_id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if definition is not None and definition.status == "removed":
+        raise HTTPException(409, "Restore the removed model configuration before loading it")
+    definition_id = selections.definition_id(definition)
+    logical = {"model_definition_id": definition_id} if definition_id else {}
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     if body.runtime_profile and not model.relative_path:
@@ -345,12 +349,12 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
     from app.cpu_models import fields as cpu_fields
 
     cpu = cpu_fields(body.model_dump())
-    source = source_of(model, session)
+    source = source_of(model, session, definition_id)
     bundle_metadata = {}
     if source.get("model_bundle"):
         from app.gguf_bindings import definition_proof
 
-        proof = definition_proof(session, model)
+        proof = definition_proof(session, model, definition_id)
         needed = (proof["size_bytes"] * 115 + 100 * 1024**2 - 1) // (100 * 1024**2) + 1024
         bundle_metadata = {"bundle_proof": proof, "bundle_ram_mib": needed}
     if source.get("model_bundle") and (
@@ -371,11 +375,13 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
     if body.cache_type == "q8_0" and not _fitted_context and not body.runtime_profile:
         body = body.model_copy(
             update={
-                "context_size": coding_context_target(session, model, body.gpus, ceiling=body.context_size)
+                "context_size": coding_context_target(
+                    session, model, body.gpus, ceiling=body.context_size, definition_id=definition_id
+                )
             }
         )
     for instance in instances(session):
-        if instance.metadata_json.get("model_file_id") == model.id and instance.status not in {
+        if selections.matches(instance.metadata_json, model, definition) and instance.status not in {
             "stopped",
             "failed",
             *(["stopping"] if allow_stopping else []),
@@ -389,6 +395,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         status="queued",
         metadata_json={
             "model_file_id": model.id,
+            **logical,
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
@@ -421,6 +428,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         parameters={
             "instance_id": instance.id,
             **source,
+            **logical,
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
@@ -538,6 +546,7 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
     load_run = enqueue_load(
         LoadModel(
             model_file_id=file_id,
+            model_definition_id=meta.get("model_definition_id"),
             gpus=list(meta.get("gpus") or []),
             **{
                 key: meta[key]
@@ -1092,26 +1101,23 @@ def reconcile(session, runner):
 def model_endpoint(model, session, *, allow_pending=False):
     from app.providers import ProviderError
 
-    try:
-        file_id = str(UUID(model.removeprefix("llamacpp:")))
-    except ValueError as exc:
-        raise ProviderError("Invalid llama.cpp model selection") from exc
+    row, definition = selections.resolve(session, model)
+    if row is None:
+        raise ProviderError("Invalid llama.cpp model selection")
     for instance in instances(session):
-        if instance.status == "ready" and instance.metadata_json.get("model_file_id") == file_id:
+        if instance.status == "ready" and selections.matches(instance.metadata_json, row, definition):
             return instance.endpoint
-    if allow_pending:
-        row = session.get(ModelFile, file_id)
-        if loadable_model(row):
-            return "llamacpp:pending:" + file_id
+    if allow_pending and loadable_model(row):
+        return "llamacpp:pending:" + selections.selection_id(row, definition)
     raise ProviderError("Load the selected model with llama.cpp before sending a message")
 
 
-def initial_preset(session, file_id):
+def initial_preset(session, file_id, definition_id=None):
     """Use explicit curated preferences, otherwise discovered local devices."""
     from app.model_definitions import preset_of
     from app.providers import ProviderError
 
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file_id))
+    definition = selections.definition_for(session, session.get(ModelFile, file_id), definition_id)
     if definition is not None and "gpus" in (definition.metadata_json or {}):
         return preset_of(definition)
     try:
@@ -1140,8 +1146,12 @@ def prepare_consumer(session, run):
     model = run.parameters.get("model") or run.parameters.get("definition", {}).get("model", "")
     if not model.startswith("llamacpp:"):
         return
-    file_id = model.removeprefix("llamacpp:")
-    matching = [i for i in instances(session) if i.metadata_json.get("model_file_id") == file_id]
+    row, definition = selections.resolve(session, model)
+    if row is None or not loadable_model(row):
+        raise ProviderError("Choose a present language-model GGUF")
+    file_id = row.id
+    definition_id = selections.definition_id(definition)
+    matching = [i for i in instances(session) if selections.matches(i.metadata_json, row, definition)]
     try:
         matching.sort(
             key=lambda item: (runtime_load_facts(session, item)["created_at"], item.id), reverse=True
@@ -1156,8 +1166,8 @@ def prepare_consumer(session, run):
         if not loadable_model(row):
             raise ProviderError("Choose a present language-model GGUF; mmproj files are vision companions")
         source = instance or (matching[0] if matching else None)
-        preset = source.metadata_json if source else initial_preset(session, file_id)
-        target = coding_context_target(session, row, preset["gpus"])
+        preset = source.metadata_json if source else initial_preset(session, file_id, definition_id)
+        target = coding_context_target(session, row, preset["gpus"], definition_id=definition_id)
     needs_upgrade = bool(
         instance is not None
         and target
@@ -1195,11 +1205,12 @@ def prepare_consumer(session, run):
     if instance is None:
         if any(i.status == "unknown" for i in matching):
             raise ProviderError("Inspect the model runtime before loading it again")
-        preset = matching[0].metadata_json if matching else initial_preset(session, file_id)
+        preset = matching[0].metadata_json if matching else initial_preset(session, file_id, definition_id)
         try:
             load_run = enqueue_load(
                 LoadModel(
                     model_file_id=file_id,
+                    model_definition_id=definition_id,
                     **{
                         key: preset[key]
                         for key in ("runtime_profile", "ram_mib", "environment_id")

@@ -7,14 +7,14 @@ def path_of(model):
     return model.relative_path or model.host_path
 
 
-def source_of(model, session=None):
+def source_of(model, session=None, definition_id=None):
     result = {"model_path": path_of(model), "size_bytes": model.size_bytes, "mtime": model.mtime}
     if model.relative_path:
         result.update(app_owned=True, model_sha256=model.sha256)
     if session is not None:
         from app.gguf_bindings import binding_of
 
-        bundle = binding_of(session, model)
+        bundle = binding_of(session, model, definition_id)
         if bundle:
             result["model_bundle"] = bundle
     return result

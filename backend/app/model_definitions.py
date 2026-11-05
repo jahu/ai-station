@@ -260,6 +260,9 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "last_verify_run_id": accessible_run_id(row, row.last_verify_run_id),
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
+        "model_key": "llamacpp:" + (row.id if row.binding_key else row.file_id)
+        if row.file_id and row.category == "llm"
+        else None,
         "preset": preset_of(row),
         **({"gguf_bundle": bundle_summary} if bundle_summary else {}),
         **(
@@ -307,6 +310,12 @@ def store_preset(row: ModelDefinition, *, gpus, context_size, cache_type):
         gpus or context_size != 4096 or cache_type != "q8_0"
     ):
         raise HTTPException(422, "This managed CPU profile keeps its reviewed 4096-token Q8 preset")
+    if (row.metadata_json or {}).get("model_bundle") and (
+        not gpus or cache_type != "q8_0" or context_size < 4096
+    ):
+        raise HTTPException(
+            422, "Complete GGUF models require CUDA GPUs, Q8 cache and at least 4096 context tokens"
+        )
     if len(set(gpus)) != len(gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     row.metadata_json = {
@@ -406,10 +415,24 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
 
 @router.delete("/definitions/{definition_id}", status_code=204)
 def remove(definition_id: UUID, session: DB):
-    row, _file = get_definition(session, definition_id)
+    row, file = get_definition(session, definition_id)
     if active_install(session, row.id):
         raise HTTPException(409, "Cancel the installation Run before removing this definition")
-    session.delete(row)
+    if (row.metadata_json or {}).get("model_bundle"):
+        from app.llama import instances
+        from app.model_selection import matches
+
+        if file is not None and any(
+            matches(item.metadata_json, file, row) and item.status not in {"stopped", "failed"}
+            for item in instances(session)
+        ):
+            raise HTTPException(409, "Stop this model runtime before removing its configuration")
+        # Keep its immutable identity: deleting a default binding would let a
+        # later sibling silently capture old conversation/agent file references.
+        row.status = "removed"
+        row.updated_at = utcnow()
+    else:
+        session.delete(row)
     session.commit()
 
 
@@ -456,7 +479,7 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             **embedding_model,
             "definition_id": row.id,
             "file_id": file.id,
-            **verify_source(source_of(file, session)),
+            **verify_source(source_of(file, session, row.id if row.binding_key else None)),
             "check_image": check_image,
             **(
                 {"avatar_checkpoint_binding": dict(row.metadata_json["avatar"]["binding"])}
@@ -511,6 +534,7 @@ def load_definition(definition_id: UUID, body: EmptyBody, session: DB):
     run = enqueue_load(
         LoadModel(
             model_file_id=file.id,
+            model_definition_id=row.id if row.binding_key else None,
             **{
                 k: preset[k]
                 for k in ("runtime_profile", "ram_mib", "environment_id")

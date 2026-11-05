@@ -95,8 +95,8 @@ Scoped (`conversation`, `agent`, `project`, `global`) and typed (`fact`, `decisi
 
 These are different records.
 
-- A **model file** is a discovered file in a configured root.
-- A **model definition** is a user-curated logical model (family, capabilities, load preset) that points at one observed file. Discovery never creates it. Explicit installation verifies the local file and, for llama.cpp, an already-installed image; it does not download weights.
+- A **model file** is a physical file observed in a configured root or verified in the application-owned object store. A complete logical model can require several such objects.
+- A **model definition** is a reviewed logical model (family, capabilities, load preset) linked to a primary observed file and, for complete models, an immutable component binding. Additional complete GGUF sets may share the same physical primary file and keep distinct selection UUIDs/content keys. Metadata discovery alone creates no executable definition. Reviewed source installation downloads and verifies the complete plan; re-checking an existing definition verifies its retained files and runtime without downloading replacement weights. Removing a complete definition retains an identity tombstone and its files for explicit restoration.
 - A **runtime** is an engine (llama.cpp, photo_pipe, stable-diffusion.cpp).
 - A **runtime instance** is a process or endpoint, marked `external` or `managed`.
 

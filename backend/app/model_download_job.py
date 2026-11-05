@@ -432,7 +432,24 @@ class DownloadExecutor:
                 raise ValueError(
                     "The installed model registry observation changed; inspect it before replacing anything"
                 )
-            definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+            from app.gguf_bindings import content_key
+            from app.model_selection import default_definition, selection_id
+
+            default = default_definition(session, file.id)
+            key = content_key(bundle.model_dump(mode="json")) if bundle else None
+            definition = default
+            if bundle:
+                definition = next(
+                    (
+                        item
+                        for item in session.scalars(
+                            select(ModelDefinition).where(ModelDefinition.file_id == file.id)
+                        )
+                        if (item.metadata_json or {}).get("model_bundle")
+                        and content_key(item.metadata_json["model_bundle"]) == key
+                    ),
+                    None,
+                )
             if definition is not None:
                 from app.cpu_models import compatible
 
@@ -447,6 +464,7 @@ class DownloadExecutor:
             if definition is None:
                 definition = ModelDefinition(
                     file_id=file.id,
+                    binding_key=key if bundle and default is not None else None,
                     name=entry.name,
                     category="llm",
                     family=entry.architecture,
@@ -473,11 +491,15 @@ class DownloadExecutor:
                 )
                 session.add(definition)
                 session.flush()
+            if bundle and definition.status == "removed":
+                definition.status = "registered" if runtime_present else "downloaded"
+                definition.updated_at = utcnow()
             result = {
                 "catalog_id": entry.id,
                 "manifest_sha256": run.parameters["manifest_sha256"],
                 "model_file_id": file.id,
                 "definition_id": definition.id,
+                "model_key": "llamacpp:" + selection_id(file, definition),
                 "relative_path": relative,
                 "sha256": entry.file.sha256,
                 "size_bytes": entry.file.size_bytes,
@@ -510,6 +532,8 @@ class DownloadExecutor:
             run.metadata_json = {
                 **run.metadata_json,
                 "model_file_id": file.id,
+                "model_key": result["model_key"],
+                "definition_id": definition.id,
                 "model_download": {
                     "phase": "files_verified",
                     "received_bytes": total_size,

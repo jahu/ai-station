@@ -392,13 +392,13 @@ Removed external files remain visible for inspection; no destructive endpoint is
 
 Model File, Model Definition, Runtime and Runtime Instance remain separate records. Discovery creates Model File observations only. It does not invent curated model definitions or claim existing runtimes are managed.
 
-A definition is created by an explicit UI/API action from a file observed as `present`. It stores a display name, inherited family/category/capability hints, and a load preset (`gpus`, `context_size`, `cache_type`). One definition is linked to one file. Removing the definition does not delete the file.
+A definition is created by an explicit UI/API action from a file observed as `present`. It stores a display name, inherited family/category/capability hints, and a load preset (`gpus`, `context_size`, `cache_type`). Each definition links to its primary file. Complete GGUF definitions also freeze all parts; several logical definitions may share the primary object without copying it. The default retains existing file references, while additional complete sets use their own selection UUIDs. Removing a complete definition hides the choice and preserves its identity/files for explicit verified restoration. A running or uncertain matching runtime must be stopped first. Removing a definition never deletes its weight files.
 
 `GET /api/models/compatibility` returns declared format/category pairings with a runtime family. Those rows are labels, not a successful load, health probe or proof that weights run on this workstation. GGUF language models (except `mmproj` companions) declare the managed llama.cpp adapter. Other formats stay catalogued until a real adapter exists.
 
 ## Explicit installation
 
-`POST /api/models/definitions/{id}/install` enqueues a Task/Run (`models.install`) with `filesystem_read` and `manage_models`. The worker calls the typed Host Runner `/v1/models/verify` endpoint. Callers cannot supply roots, commands, pull flags or output paths. The runner stats the snapshotted path inside configured model roots, rejects symlinks and non-regular files, and does not open model contents.
+`POST /api/models/definitions/{id}/install` enqueues a Task/Run (`models.install`) with `filesystem_read` and `manage_models`. The worker calls the typed Host Runner `/v1/models/verify` endpoint. Callers cannot supply roots, commands, pull flags or output paths. The runner checks the snapshotted path inside configured roots or the owned object store and rejects symlinks and non-regular files. When the reviewed recipe requires it, the runner reads bounded model metadata and verifies complete component bindings; it never executes publisher code.
 
 For GGUF language models it also inspects the administrator-configured llama.cpp image ID. Missing images fail closed. The runner never runs `docker pull`, never copies GGUFs and never starts a runtime. A JSON report becomes a normal artifact. Cancellation, errors and a changed size/mtime leave the definition unregistered (`unverified` or `failed`) and do not rewrite discovery observations. Retry is a new Run.
 

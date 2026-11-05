@@ -38,7 +38,6 @@ from app.models import (
     Conversation,
     MemoryEntry,
     Message,
-    ModelFile,
     Run,
     Task,
 )
@@ -98,11 +97,12 @@ def conversation_view(session, row):
 
     label = row.model
     if row.model.startswith("llamacpp:"):
+        from app.model_selection import resolve
         from app.model_sources import label_of
 
-        model = session.get(ModelFile, row.model.removeprefix("llamacpp:"))
+        model, definition = resolve(session, row.model, include_removed=True)
         if model:
-            label = label_of(model)
+            label = definition.name if definition and definition.binding_key else label_of(model)
     from app.chat_providers import normalize_provider_key
 
     provider = session.scalar(
