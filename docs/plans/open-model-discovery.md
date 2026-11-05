@@ -155,7 +155,7 @@ Primary source contract: [HF Hub API](https://huggingface.co/docs/hub/api),
   existing engine and companion recipe; the typed verification operation requires
   immutable app-owned storage and model/read permissions. Read-only reference hash
   and structural evidence are recorded privately. Discovery/install/selectors and
-  first-result qualification for a new video checkpoint remain required.
+  first-result qualification are connected in the video installation path below.
 - Still required: cross-model hardware-ranked discovery,
   complete split/companion plans, validated multimodal model slots and selectors,
   install/update/removal UX and release QA/packages. These remain part of the
@@ -183,3 +183,11 @@ identities and native verification. Cross-model recommendations and complete
 bundle plans remain required. Popularity is not quality or hardware compatibility;
 never label an unmeasured choice the fastest/best. Unknown media/companion families
 retain their actual missing-recipe reason.
+
+Agent-definition routing increment: give the queued local draft generator bounded
+registered image/video choices and their actual adapter/workload constraints.
+Validate IDs against the supplied catalog and current registry before publishing
+a disabled definition. Names are untrusted reference data; no paths, model setup
+permissions or download URLs enter this catalog. Runtime and hardware validation
+still happen at reviewed activation/execution. This does not complete automatic
+selection in every direct-chat media path or add the remaining media families.
