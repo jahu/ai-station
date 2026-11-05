@@ -219,16 +219,68 @@ made from that header with a sparse synthetic payload. This verifies metadata
 agreement only: no full speech weights were downloaded, hashed or loaded for this
 increment and no new speech generation succeeded by implication. Tiny fixtures
 cover wrong graph/precision/layout, ownership, permissions and fixed-recipe drift;
-inspection also runs with Torch/Chatterbox/FastAPI imports blocked. New speech
-source plans, installation, runtime bindings, selectors and actual first-result
-qualification remain required before newly discovered checkpoints are usable.
+inspection also runs with Torch/Chatterbox/FastAPI imports blocked. That primitive
+alone did not admit new speech sources; the installation and selection path below
+connects its separate source, preparation and first-result gates.
 Other speech versions, precisions and Fish bundles need their own compatible
 profiles. Existing configured/managed speech behavior is unchanged.
+
+### Discovered speech models
+
+A reviewed single-file Chatterbox multilingual v3 T3 plan now reuses the ordinary
+model downloader and, when needed, an owned `speech_setup` prerequisite. Native
+speech/video detection shares one bounded header read; publisher names/tags cannot
+select a different runtime. The immutable source/header and complete fixed
+engine/companion manifest remain separate from actual GPU qualification. The
+speech estimate needs one 6-GiB GPU and 16-GiB physical RAM; execution reserves an
+11-GiB zero-swap process scope. GPUs are not pooled and CPU offload is not enabled.
+The disk review includes missing runtime inputs, starter weights and staging
+reserve. Source and component licenses are reviewed before transfer.
+
+Successful verification registers a shared audio-category definition, keeping
+preparation history private. The choice appears in Audio's existing speech-model
+control, reviewed agents and explicit Speech settings in a conversation. Installing
+never changes a default; switching to Fish clears the Chatterbox choice, and the
+API rejects a mixed request. Every speech Run freezes the owned checkpoint and
+original opaque engine. The native child rehashes the T3 source and creates a
+Run-owned model view replacing only T3; original tokenizer, voice encoder, decoder,
+conditionals and SDK stay fixed. Voice recording, Polish language, text/chunk limits,
+offline behavior and owned cancellation/recovery remain mandatory. An inspection
+resume uses the already owned process, without requiring a mutable current model
+catalog. Direct selected-model speech defaults to a 30-minute absolute deadline;
+agent execution retains its reviewed parent budget. Re-check does not redownload.
+
+Fake integration and native-process tests cover source admission, account privacy,
+publication/Stop fences, owned cancellation/recovery, default compatibility and
+agent/conversation selection. Unknown/insufficient GPU, RAM or disk blocks install
+before transfer; changed GPU/RAM also blocks a queued engine prerequisite before
+it downloads companions. Busy devices are reported separately from capacity.
+Compiled desktop/mobile browser checks cover license review, complete component
+list, keyboard installation, reload without duplicate submission and opening the
+same selected model in Audio, without repeating inference.
+
+An explicitly opted-in isolated Docker/native qualification resolved the actual
+pinned official source, reviewed this workstation's hardware/disk plan, downloaded
+all 136 fixed inputs (6,489,550,701 bytes), prepared/adopted the engine and generated
+one neutral Polish greeting with the explicitly installed checkpoint. The model
+was the existing official reference T3 weights, not a newly trained model. Setup
+took 584 seconds; the speech Run took about 55 seconds and produced a complete
+14.88-second mono 24-kHz PCM WAV. Full decoding, size and SHA256 checks passed.
+The engine reported 3,840,970,752 bytes peak allocated GPU memory on an RTX 3060
+12 GiB; this is one observation, not a hardware-wide performance guarantee or a
+subjective listening assessment. Owned setup/inference processes, container and
+private Runner are stopped; production storage/defaults were untouched. Private
+evidence is retained under `data/acceptance/model-discovery-20261104/`.
+
+These additions are not in the published 0.1.2 packages. No Windows GPU test was
+performed for this import. Avatar voice stages and automatic model selection
+outside the explicit conversation Speech scope still need their own routing
+integration.
 
 ### Registered choices in agent drafts
 
 Local agent-definition preparation receives a bounded shared-registry catalog
-(up to 16 image and 16 video definitions) with names, IDs and applicable
+(up to 16 image, 16 video and 16 speech definitions) with names, IDs and applicable
 backend/workload settings. It contains no host paths, source download URLs or
 installation authority. Names are reference data, not instructions. A proposal
 can retain a matching installed model or leave it unset for current defaults.

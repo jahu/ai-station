@@ -18,7 +18,13 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setattr(runtime_install, "get_settings", lambda: settings)
     monkeypatch.setattr(speech_prepare, "get_settings", lambda: settings)
     monkeypatch.setattr(speech_prepare, "QUALIFIED", True)
-    frozen = speech_environment.recipe()
+    # This suite fakes native installation. Its model object is deliberately tiny;
+    # complete recipe assembly/inference are covered by their own suites.
+    frozen = {
+        "profile": speech_environment.PROFILE,
+        "inputs": [{"kind": "model", "filename": "ve.pt", "sha256": "a" * 64, "size_bytes": 5}],
+    }
+    monkeypatch.setattr(speech_environment, "recipe", lambda: frozen)
     digest = speech_environment.fingerprint(frozen)
     monkeypatch.setattr(
         speech_prepare, "catalog", lambda: {"installation_available": True, "manifest_sha256": digest}
@@ -73,6 +79,18 @@ def complete(setup, **changes):
         "environment_prepared": True,
         **changes,
     }
+    for name in ("python/bin", "venv/bin", "cache", "models"):
+        (folder / name).mkdir(parents=True, exist_ok=True)
+    binary = folder / "python/bin/python3.12"
+    binary.write_bytes(b"fixed")
+    binary.chmod(0o700)
+    (folder / "venv/bin/python").symlink_to("../../python/bin/python3.12")
+    store = root / "models/store"
+    store.mkdir(parents=True, exist_ok=True)
+    weight = store / ("a" * 64)
+    weight.write_bytes(b"fixed")
+    weight.chmod(0o400)
+    (folder / "models/ve.pt").symlink_to(weight)
     (folder / "ready.json").write_text(json.dumps(receipt))
     (folder / "ready.json").chmod(0o600)
     return folder

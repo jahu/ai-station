@@ -68,7 +68,7 @@ type Report = {
     downloads: number | null;
   }[];
   candidate?: {
-    capability: "chat" | "image" | "video";
+    capability: "chat" | "image" | "video" | "speech";
     setup_recipe?: {
       component_licenses: { name: string; url: string }[];
       inputs: {
@@ -445,7 +445,9 @@ export default function ModelDiscover() {
                   <>
                     {!file.assessment.profiles.some(
                       (p) =>
-                        p.capability === "image" || p.capability === "video",
+                        p.capability === "image" ||
+                        p.capability === "video" ||
+                        p.capability === "speech",
                     ) && (
                       <details className="hub-context-options">
                         <summary>Context options</summary>
@@ -518,12 +520,13 @@ export default function ModelDiscover() {
                       .filter(
                         (file) =>
                           !!file.role ||
+                          file.kind === "model" ||
                           file.kind === "python" ||
                           file.kind === "sdk",
                       )
                       .map((file) => ({
                         ...file,
-                        role: file.role ?? file.kind ?? file.filename,
+                        role: file.role ?? file.filename,
                       }))
                   : undefined,
                 component_licenses:

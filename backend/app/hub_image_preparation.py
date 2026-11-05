@@ -1,4 +1,4 @@
-"""A licensed model Task may own exactly its pinned image/video prerequisite."""
+"""A licensed model Task may own exactly its pinned media prerequisite."""
 
 from sqlalchemy.orm import object_session
 
@@ -13,7 +13,7 @@ def owns_preparation(run):
     if (
         task.intent != INTENT
         or ((saved.get("entry") or {}).get("origin"), run.executor_type)
-        not in {("hub_image", "image_setup"), ("hub_video", "video_setup")}
+        not in {("hub_image", "image_setup"), ("hub_video", "video_setup"), ("hub_speech", "speech_setup")}
         or task.owner_id != run.owner_id
         or saved.get("license_accepted") is not True
         or (
@@ -38,3 +38,13 @@ def owns_preparation(run):
         and entry.setup_manifest_sha256 == run.parameters.get("manifest_sha256")
         and session.get(RunDependency, (parent.id, run.id)) is not None
     )
+
+
+def recheck_hardware(run, hardware):
+    """An accepted source plan cannot authorize transfers on newly unsuitable hardware."""
+    if owns_preparation(run):
+        from app.model_setup import recommendation
+
+        entry = download_candidate(run.task.metadata_json["model_download"]["entry"])
+        if not recommendation(entry, hardware)["fits"]:
+            raise ValueError("The model hardware profile changed; review it before downloading engine inputs")

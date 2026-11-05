@@ -126,6 +126,10 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 from app.video_models import profile_for
 
                 memory_reservation(body.media.request, profile_for(session, body.media.request.model_id))
+            elif body.media.kind == "speech" and body.media.request.model_id:
+                from app.audio_models import profile_for
+
+                profile_for(session, body.media.request.model_id)
             else:
                 require_profile(body.media)
             freeze_inputs(session, body.media)

@@ -52,6 +52,12 @@ does not change a personal default or replace a running model without consent.
 
 ## Hardware recommendations
 
+Owner clarification, 2026-11-05: assessing whether a download makes sense on
+the machine running AI Station is a mandatory part of discovery and installation,
+not an optional benchmark after the weights arrive. Unknown or unsuitable
+hardware must not receive a recommended/installable badge. A successful transfer
+alone never establishes that the model is usable on this station.
+
 Use live native telemetry, installed runtime/platform capability and free space
 on the actual application backing volume. Never assume a GPU count or pool two
 GPUs unless the chosen adapter supports that exact sharding strategy.
@@ -70,6 +76,9 @@ GPUs unless the chosen adapter supports that exact sharding strategy.
 - Disk includes missing weights, runtime preparation, staging and safety space;
   reuse verified object identities. Recheck before and during transfer. Include
   host physical-volume limits on Windows, not only guest filesystem free space.
+- An accepted plan is not permanent hardware authority: recheck capacity before
+  downloading its prerequisite engine/companions as well as its selected weights.
+  A changed or missing GPU/RAM profile must stop transfer and request a new review.
 - No implicit CPU/RAM offload, swap, cloud substitution, eviction of external
   processes or driver modification. Any CPU/offload option is explicit.
 - Estimates are not benchmarks. Actual first-result qualification can promote an
@@ -203,3 +212,48 @@ plans, complete preparation, runtime binding/selectors and first-result executio
 in the following increment; until then new speech checkpoints remain unavailable
 for operational use. Other Chatterbox versions/precisions and Fish bundles need
 separate compatible slots; never infer compatibility from a model name.
+
+
+### Connecting installed speech checkpoints
+
+Implemented in the speech installation increment: the source/plan/downloader,
+opaque engine binding, native execution and Audio/agent/explicit-conversation
+choices below share existing lifecycle services. Hardware, publication, recovery
+and UI regressions passed; isolated actual source/setup/GPU speech and owned cleanup
+also passed on Linux. See [measured evidence and scope](../models.md#discovered-speech-models).
+Other speech formats, avatar voice stages and automatic routing still require
+their own admission work; this increment does not complete the release goal.
+
+1. Extend the existing Chatterbox environment resolver with a frozen opaque
+   identity, as for video. Shared readiness and execution must not expose the
+   preparing account's Run ID or accept paths/commands from clients. Explicit
+   selection can use that prepared engine while legacy configured speech keeps
+   its current priority for requests without a model choice.
+2. Plan one publisher T3 file against the native slot, immutable header/full-file
+   identity and complete existing engine manifest. Review all companion/SDK
+   licenses and the actual workstation's GPU, RAM and backing-volume budget
+   before transfer. Fixed F32 is the only admitted precision initially; file size
+   alone does not prove fit. Reuse the existing model Task/downloader with a
+   narrowly authorized `speech_setup` prerequisite, not a second install queue.
+3. After full download verification and native graph/header recheck, publish an
+   audio-category definition with a speech binding, private preparation history
+   and no changed default. Stop, administrator revocation or source changes must
+   prevent publication. Re-check must use the existing object rather than start
+   another download.
+4. Freeze explicit model and opaque engine in ordinary speech Runs. The native
+   parent and offline child check the owned T3 graph/content and original engine;
+   a run-owned model view can replace only the T3 coordinate. The tokenizer,
+   decoder, voice encoder, conditionals and prepared SDK stay fixed. Preserve
+   original process ownership, bounded memory scope, deadline, offline behavior,
+   reference validation, chunking and cancellation/recovery. No new arbitrary
+   Python, shell, model-directory or runtime controls.
+5. Share the installed choice between Audio, reviewed agents and applicable
+   conversation settings. Fish remains a separate engine; a Chatterbox model ID
+   must never be silently ignored on a Fish request. Saved scopes retain their
+   model and runtime through execution. The draft catalog describes registered
+   choices, not proof of live runtime health.
+6. Cover source/install/publication fences, default compatibility, agent/chat
+   scopes, process Stop/recovery and desktop/mobile interaction with fake inputs.
+   Then opt into one isolated real source/import/GPU speech result and validate
+   its audio and cleanup. Distinguish reused reference weights or descriptor
+   fixtures from a newly trained model and a real-weight generation test.

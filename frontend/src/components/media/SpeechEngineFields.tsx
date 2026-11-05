@@ -1,4 +1,5 @@
 import "./SpeechEngineFields.css";
+import type { SpeechModelChoice } from "./speech-models";
 import { speechDirections, type SpeechCapabilities } from "./speech-delivery";
 
 export default function SpeechEngineFields({
@@ -11,7 +12,13 @@ export default function SpeechEngineFields({
   onPace,
   voiceSource,
   onVoiceSource,
+  modelId,
+  models,
+  onModel,
 }: {
+  modelId?: string;
+  models?: SpeechModelChoice[];
+  onModel?: (value: string) => void;
   engine: string;
   direction: string;
   pace: string;
@@ -30,10 +37,40 @@ export default function SpeechEngineFields({
         Speech model
         <select
           aria-label="Speech model"
-          value={engine}
-          onChange={(event) => onEngine(event.target.value)}
+          value={
+            modelId && engine !== "fish_s2_pro"
+              ? `installed:${modelId}`
+              : engine
+          }
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value.startsWith("installed:") && onModel)
+              onModel(value.slice(10));
+            else onEngine(value);
+          }}
         >
           <option value="">Chatterbox · Polish voice</option>
+          {modelId && !models?.some((model) => model.id === modelId) && (
+            <option value={`installed:${modelId}`} disabled>
+              {models
+                ? "Saved local model · unavailable"
+                : "Checking saved local model…"}
+            </option>
+          )}
+          {!!models?.length && (
+            <optgroup label="Installed Chatterbox models">
+              {models.map((model) => (
+                <option
+                  key={model.id}
+                  value={`installed:${model.id}`}
+                  disabled={!model.available}
+                >
+                  {model.name}
+                  {model.available ? "" : " · unavailable"}
+                </option>
+              ))}
+            </optgroup>
+          )}
           <option value="fish_s2_pro" disabled={!fish?.available}>
             Fish S2 Pro · Expressive
             {fish?.available

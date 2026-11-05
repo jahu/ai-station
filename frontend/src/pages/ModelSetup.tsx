@@ -163,8 +163,9 @@ export function PreparationCard({
         : value.run.status === "failed" || value.run.status === "interrupted"
           ? "Preparation needs attention"
           : phase === "preparing_image_engine" ||
-              phase === "preparing_video_engine"
-            ? `Preparing ${phase === "preparing_video_engine" ? "video" : "image"} engine and companions`
+              phase === "preparing_video_engine" ||
+              phase === "preparing_speech_engine"
+            ? `Preparing ${phase.split("_")[1]} engine and companions`
             : phase === "verifying"
               ? "Checking the complete file"
               : phase === "inspecting"
@@ -239,6 +240,16 @@ export function PreparationCard({
             Resume preparation
           </Button>
         )}
+        {value.entry.capability === "speech" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/audio?model=${value.definition_id}`}
+            >
+              Open Audio with this model →
+            </Link>
+          )}
         {value.entry.capability === "video" &&
           value.definition_id &&
           value.progress.ready_to_try && (

@@ -1702,3 +1702,20 @@ reports contain no account records or credentials. Pending publication blocks
 normal startup, survives process exit and resumes only the original operation.
 Safe pre-publication abort retains the original data and copies; unexpected
 post-publication writes require inspection rather than automatic rollback.
+
+The speech import candidate extends the normal model Task with only an exact
+`hub_speech` → `speech_setup` prerequisite under the existing owner, license,
+manifest and RunDependency checks. Model publication rechecks administrator/Stop
+state and immutable file identity after native verification. New audio definitions
+contain an opaque prepared engine, never another account's preparation Run ID.
+An accepted discovery plan also rechecks its GPU/RAM capacity before transferring
+the prerequisite engine or companions; changed hardware cannot defer that check
+until after a large prerequisite download. Storage remains checked during transfer.
+Generation grants no model-install permission: only a fixed owned T3 coordinate
+and engine can enter the native audio operation. Parent resource/reference checks
+and child full-content verification precede loading; a private Run config may
+create only the closed model view, with an independent absolute deadline. Fish
+cannot ignore a supplied Chatterbox model ID. Agent/conversation publication
+reuses its observed model profile, avoiding Runner RPC under a publication lock.
+Inspection recovery resumes the owned process rather than consulting a different
+current model or repeating its start. Existing configured defaults are preserved.

@@ -219,3 +219,77 @@ it("requires separate explicit video workload consent before installing", async 
     workload_accepted: true,
   });
 });
+
+it("reviews speech companions with one license consent and opens the installed Audio model", async () => {
+  const fetch = vi.fn(async (_path: string, _options?: RequestInit) => ({
+    ok:
+      _path === "/api/model-hub/downloads"
+        ? _options?.method === "POST"
+        : _path === "/api/setup/downloads/speech-preparation",
+    json: async () => ({
+      id: "speech-preparation",
+      manifest_sha256: plan.manifest_sha256,
+      entry: {
+        name: "My speech checkpoint",
+        capability: "speech",
+        quantization: "F32",
+        file: { size_bytes: 1000, sha256: "b".repeat(64) },
+      },
+      definition_id: "installed-speech",
+      attempt: 1,
+      run: { id: "speech-download", status: "succeeded" },
+      model_key: null,
+      resume_allowed: false,
+      progress: { ready_to_try: true },
+    }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const accepted = mount({
+    ...plan,
+    capability: "speech",
+    components: [
+      { role: "voice_encoder", filename: "ve.pt", size_bytes: 1024 },
+    ],
+    component_licenses: [{ name: "Speech MIT", url: plan.license_url }],
+  });
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: "Install model" }));
+  await waitFor(() =>
+    expect(accepted).toHaveBeenCalledWith("speech-preparation"),
+  );
+  expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).not.toHaveProperty(
+    "workload_accepted",
+  );
+  cleanup();
+  mount({ ...plan, capability: "speech" }, "speech-preparation");
+  const open = await screen.findByRole("link", {
+    name: /Open Audio with this model/,
+  });
+  expect(open.getAttribute("href")).toBe("/audio?model=installed-speech");
+  expect(screen.queryByRole("button", { name: /Open Chat/ })).toBeNull();
+});
+
+it("disables speech installation when the complete installation does not fit disk", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  mount({
+    ...plan,
+    capability: "speech",
+    files: [
+      {
+        assessment: {
+          hardware_status: "estimated_fit",
+          disk: { status: "insufficient" },
+        },
+      },
+    ],
+  });
+  fireEvent.click(screen.getByRole("checkbox"));
+  const button = screen.getByRole("button", {
+    name: "Install model",
+  }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  fireEvent.click(button);
+  expect(fetch).not.toHaveBeenCalled();
+});

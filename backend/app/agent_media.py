@@ -514,6 +514,7 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             SpeechRequest.model_validate(prepared_scope.request.model_dump()),
             task=run.task,
             parent_run_id=run.id,
+            observed_profile=profile,
         )
         child.operation_key = key
     else:
@@ -575,6 +576,10 @@ class AgentMediaExecutor:
             verify_files(run)
             if definition.media.kind == "video" and definition.media.request.model_id:
                 from app.video_models import profile_for
+
+                profile = profile_for(session, definition.media.request.model_id)
+            elif definition.media.kind == "speech" and definition.media.request.model_id:
+                from app.audio_models import profile_for
 
                 profile = profile_for(session, definition.media.request.model_id)
             else:

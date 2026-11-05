@@ -238,6 +238,7 @@ class AssistantInputs(BaseModel):
     web_search: SearchOptions = Field(default_factory=SearchOptions)
     upscale_result: StrictBool = False
     speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
+    speech_model_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Plan(BaseModel):
@@ -581,6 +582,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         raise HTTPException(
             422, "Coding uses selected repository files. Remove media and text attachments before sending."
         )
+    if body.speech_model_id:
+        if body.action != "audio.speech" or not body.audio_artifact_id or body.image_artifact_ids:
+            raise HTTPException(422, "Select Speech and a voice recording to use an installed speech model")
+        from app.audio_models import frozen_model
+
+        frozen_model(session, body.speech_model_id)
     if body.audio_artifact_id:
         audio = session.get(Artifact, str(body.audio_artifact_id))
         from app.recordings import FORMATS
@@ -1170,6 +1177,14 @@ class AssistantExecutor:
                             action="clarify",
                             reason="The CPU film editor is unavailable or checking its setup. Open Video → Edit a film, then try again.",
                         )
+        selected_speech_profile = None
+        if plan and plan.action == "audio.speech" and run.parameters.get("speech_model_id"):
+            from app.audio_models import profile_for
+
+            try:
+                selected_speech_profile = profile_for(session, run.parameters["speech_model_id"])
+            except HTTPException as exc:
+                plan = Plan(action="clarify", reason=str(exc.detail))
         video_profile = None
         if plan and plan.action in {"video.generate", "image.generate_video"}:
             from app.video import capabilities
@@ -1519,14 +1534,22 @@ class AssistantExecutor:
 
             try:
                 request = SpeechRequest(
-                    text=params["content"], reference_artifact_id=params.get("audio_artifact_id")
+                    text=params["content"],
+                    reference_artifact_id=params.get("audio_artifact_id"),
+                    model_id=params.get("speech_model_id"),
                 )
             except ValidationError:
                 message.content = (
                     "Attach a WAV voice reference and send the text to speak, up to 1000 characters."
                 )
             else:
-                child = create_audio_run(session, request, task=run.task, parent_run_id=run.id)
+                child = create_audio_run(
+                    session,
+                    request,
+                    task=run.task,
+                    parent_run_id=run.id,
+                    observed_profile=selected_speech_profile,
+                )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
         elif plan.action == "page.describe":
             from app.chat_page_design import enqueue_design

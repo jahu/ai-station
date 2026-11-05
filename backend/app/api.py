@@ -23,6 +23,7 @@ from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
 from app.artifact_purge import router as artifact_purge_router
 from app.audio import router as audio_router
+from app.audio_models import router as audio_models_router
 from app.avatars import router as avatar_router
 from app.browser import router as browser_router
 from app.bundle_setup import router as bundle_setup_router
@@ -465,6 +466,7 @@ app.include_router(connector_router)
 app.include_router(email_router)
 app.include_router(market_feed_router)
 app.include_router(audio_router)
+app.include_router(audio_models_router)
 app.include_router(music_router)
 app.include_router(effects_router)
 app.include_router(timeline_router)

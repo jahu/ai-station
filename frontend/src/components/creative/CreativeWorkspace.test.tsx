@@ -98,6 +98,7 @@ function fixture(
           status,
           headers: { "Content-Type": "application/json" },
         });
+      if (path === "/api/audio/models") return reply({ items: [] });
       if (path === "/api/images/models")
         return reply({
           items: [
