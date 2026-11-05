@@ -88,6 +88,23 @@ GPUs unless the chosen adapter supports that exact sharding strategy.
 
 ## Discovery ranking
 
+An explicit comparison checks the top three results of a saved search.
+One private inspection Run reads bounded public metadata/configurations, reuses
+one hardware/storage observation and assesses all admitted variants locally; it
+downloads no weights and starts no runtime. Keep partial source failures visible
+per repository rather than recommending them. Rank supported workload fit, useful
+context and already present verified objects before transfer cost/popularity;
+this is suitability, not a model-quality or speed benchmark.
+
+Each successfully inspected repository keeps its immutable hashed observation
+inside the comparison. Opening a result shows that same source/variant review;
+installation planning accepts only a matching nested observation from the owned
+completed comparison. It must not silently resolve a moving publisher branch
+again. The existing plan/license/download path, Stop/claim/administrator fences
+and private history remain authoritative. Normal tests cover partial failures,
+unknown hardware, ranking, nested-observation tampering and account boundaries;
+desktop/mobile/keyboard checks cover comparison progress and returning to results.
+
 Rank usable profiles ahead of merely downloadable files: installed/reusable,
 supported on this runtime/platform, fits requested workload, publisher provenance,
 license/access, download cost, then recency/popularity. Preserve explicit user

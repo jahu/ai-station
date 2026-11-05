@@ -48,10 +48,11 @@ type ModelFile = {
   };
 };
 type Report = {
-  kind?: "search" | "install_plan";
+  kind?: "search" | "install_plan" | "comparison";
   observation_sha256?: string;
   manifest_sha256?: string;
   source_inspection_run_id?: string;
+  source_inspection_repository?: string;
   query?: string;
   repository?: string;
   revision?: string;
@@ -66,6 +67,12 @@ type Report = {
     repository: string;
     pipeline_hint: string;
     downloads: number | null;
+    suitability?: string;
+    summary?: string;
+    filename?: string;
+    busy_now?: boolean;
+    installed_object?: boolean;
+    observation?: Report;
   }[];
   candidate?: {
     capability: "chat" | "image" | "video" | "speech";
@@ -133,6 +140,19 @@ export default function ModelDiscover() {
     mutationFn: () => api<Run>(`/runs/${runId}/cancel`, post({})),
     onSuccess: () => void inspection.refetch(),
   });
+  const compare = useMutation({
+    mutationFn: () =>
+      api<Run>(
+        "/model-hub/comparisons",
+        post({
+          client_request_id: randomId(),
+          search_run_id: runId,
+          observation_sha256: rootReport?.observation_sha256,
+          context_target: contextTarget,
+        }),
+      ),
+    onSuccess: (run) => setParams({ run: run.id }),
+  });
   const plan = useMutation({
     mutationFn: ({
       filename,
@@ -156,10 +176,17 @@ export default function ModelDiscover() {
   const run = inspection.data;
   const busy =
     find.isPending ||
+    compare.isPending ||
     plan.isPending ||
     (!!runId && inspection.isPending) ||
     (!!run && !terminal.includes(run.status));
-  const report = run?.metadata?.source_inspection as Report | undefined;
+  const rootReport = run?.metadata?.source_inspection as Report | undefined;
+  const repository = params.get("repository");
+  const report =
+    (rootReport?.kind === "comparison" && repository
+      ? rootReport.items?.find((item) => item.repository === repository)
+          ?.observation
+      : undefined) ?? rootReport;
   const trustedRun = run?.executor_type === "model_hub_inspect";
   const variants = report?.files ?? [];
   const preferred =
@@ -224,7 +251,13 @@ export default function ModelDiscover() {
         )}
       </form>
       <ErrorNotice
-        error={find.error ?? plan.error ?? inspection.error ?? stop.error}
+        error={
+          find.error ??
+          compare.error ??
+          plan.error ??
+          inspection.error ??
+          stop.error
+        }
       />
       {run && trustedRun && !find.isPending && (
         <div className="hub-inspection-status" role="status">
@@ -261,6 +294,15 @@ export default function ModelDiscover() {
             Ordered by downloads. Popularity does not establish compatibility or
             hardware fit.
           </p>
+          {!!report.items?.length && (
+            <Button
+              variant="secondary"
+              disabled={!canManage || compare.isPending}
+              onClick={() => compare.mutate()}
+            >
+              Compare top 3 for my hardware
+            </Button>
+          )}
           {report.items?.map((item) => (
             <article className="panel hub-repository" key={item.repository}>
               <div>
@@ -288,6 +330,90 @@ export default function ModelDiscover() {
           )}
         </section>
       )}
+      {!busy && trustedRun && report?.kind === "comparison" && (
+        <section
+          className="hub-results"
+          aria-label="Hardware comparison results"
+        >
+          <div className="hub-section-heading">
+            <h2>Models for your station</h2>
+            <span className="muted">Compared up to 3 matches</span>
+          </div>
+          <p className="muted">
+            {report.query && <>For “{report.query}”. </>}
+            Supported workload, fitted context and storage come before
+            popularity. These are estimates, not quality or speed benchmarks. No
+            weights were downloaded.
+          </p>
+          <p className="muted">
+            Conversation target:{" "}
+            {(report.context_target ?? 32768).toLocaleString()} tokens. Media
+            models use their supported workload profile.
+          </p>
+          {report.items?.map((item) => (
+            <article className="panel hub-repository" key={item.repository}>
+              <div>
+                <h3>{item.repository}</h3>
+                <span className="badge">
+                  {(
+                    {
+                      fits: "Estimated fit",
+                      access_required: "Publisher access required",
+                      limited_context: "Shorter context only",
+                      unsupported: "Needs a compatible runtime",
+                      unknown: "Requirements unknown",
+                      insufficient_storage: "Not enough storage",
+                      does_not_fit: "Does not fit",
+                      unavailable: "Source unavailable",
+                    } as Record<string, string>
+                  )[item.suitability ?? ""] ?? "Needs review"}
+                </span>
+                <p>{item.summary}</p>
+                {item.filename && (
+                  <small className="muted model-path">{item.filename}</small>
+                )}
+                {item.busy_now && (
+                  <p className="muted">
+                    Fits with resources free; GPU memory is currently in use.
+                  </p>
+                )}
+                {item.installed_object && (
+                  <p className="muted">
+                    Previously registered object · checked again during
+                    installation.
+                  </p>
+                )}
+              </div>
+              {item.observation ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSelection({ runId: "", filename: "" });
+                    setParams({ run: runId, repository: item.repository });
+                  }}
+                >
+                  Review variants <ArrowRight size={15} />
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setQuery(item.repository);
+                    find.mutate(item.repository);
+                  }}
+                >
+                  Inspect separately <ArrowRight size={15} />
+                </Button>
+              )}
+            </article>
+          ))}
+        </section>
+      )}
+      {rootReport?.kind === "comparison" && report !== rootReport && (
+        <Button variant="ghost" onClick={() => setParams({ run: runId })}>
+          ← Back to compared models
+        </Button>
+      )}
       {!busy && trustedRun && report?.repository && (
         <section className="hub-results" aria-label="Model source review">
           {report.kind === "install_plan" &&
@@ -295,7 +421,12 @@ export default function ModelDiscover() {
               <Button
                 variant="ghost"
                 onClick={() =>
-                  setParams({ run: report.source_inspection_run_id! })
+                  setParams({
+                    run: report.source_inspection_run_id!,
+                    ...(report.source_inspection_repository
+                      ? { repository: report.source_inspection_repository }
+                      : {}),
+                  })
                 }
               >
                 ← Back to variants
