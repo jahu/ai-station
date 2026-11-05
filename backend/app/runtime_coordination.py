@@ -181,7 +181,12 @@ def consume_runtime_intent(session, instance):
         or instance.metadata_json != intent["metadata"]
         or bool(run.parameters.get("app_owned")) != bool(model.relative_path)
         or run.parameters.get("model_sha256") != (model.sha256 if model.relative_path else None)
-        or any(run.parameters.get(key) != value for key, value in source_of(model, session).items())
+        or any(
+            run.parameters.get(key) != value
+            for key, value in source_of(
+                model, session, instance.metadata_json.get("model_definition_id")
+            ).items()
+        )
         or any(
             instance.metadata_json.get(key) != run.parameters.get(key)
             for key in (
@@ -192,6 +197,7 @@ def consume_runtime_intent(session, instance):
                 "runtime_profile",
                 "ram_mib",
                 "environment_id",
+                "model_definition_id",
                 "bundle_proof",
                 "bundle_ram_mib",
             )
@@ -297,6 +303,7 @@ def runtime_load_facts(session, instance):
         Run.metadata_json["shared_model_retained"].as_boolean().label("retained"),
         Run.parameters["app_owned"].as_boolean().label("app_owned"),
         Run.parameters["mtime"].as_float().label("bundle_primary_mtime"),
+        Run.parameters["model_definition_id"].as_string().label("model_definition_id"),
     ]
     fields.extend(
         Run.parameters[key].label(key)
@@ -316,6 +323,8 @@ def runtime_load_facts(session, instance):
     )
     if result is None:
         raise ValueError("The managed model has no verified startup observation")
+    if result["model_definition_id"] != instance.metadata_json.get("model_definition_id"):
+        raise ValueError("The shared runtime logical selection differs from its load request")
     source = {key: result[key] for key in ("model_path", "size_bytes", "mtime", "projector")}
     if result.get("app_owned") is True:
         source.update(app_owned=True, model_sha256=result["model_sha256"])

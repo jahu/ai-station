@@ -66,7 +66,9 @@ Recommendations account for the actual GPU split: a larger card cannot silently
 cover an overloaded smaller card. RAM and free disk space are checked separately.
 Compatible split GGUFs install as **one complete model**, including when you paste
 a link to a later part. Hardware and storage estimates count all parts; incomplete
-sets stay blocked. A public two-part Qwen 7B passed real Linux download, verification,
+sets stay blocked. Models sharing a weight file keep separate configurations;
+removing a complete model from the list retains its files and allows verified
+restoration. A public two-part Qwen 7B passed real Linux download, verification,
 Chat and agent execution; its reviewed 32K preset stays unchanged when the file
 advertises a larger context. Native three-part/Runner recovery and interrupted
 transfer tests provide separate coverage.

@@ -395,7 +395,6 @@ def validate_workflow(session, workflow, *, for_execution=True):
 
 def result_projection(session, root, steps):
     """Read-only result/status projection; never rerun execution validation after expiry."""
-    from app.models import ModelFile
     from app.runs import run_dict
 
     if not root.parameters.get("data"):
@@ -434,10 +433,10 @@ def result_projection(session, root, steps):
     model_name = None
     if generation:
         model = generation.parameters.get("model", "")
-        file = (
-            session.get(ModelFile, model.removeprefix("llamacpp:")) if model.startswith("llamacpp:") else None
-        )
-        model_name = file.filename if file else model
+        from app.model_selection import resolve
+
+        file, definition = resolve(session, model) if model.startswith("llamacpp:") else (None, None)
+        model_name = definition.name if definition else file.filename if file else model
     return {
         "data_runs": [run_dict(step) for step in reversed(current)],
         "data_model": model_name,

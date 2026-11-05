@@ -304,7 +304,8 @@ def _provider_models(session: Session, row: ChatProvider) -> tuple[list[str], st
             from app.llama import instances
 
             models = list(models) + [
-                "llamacpp:" + item.metadata_json["model_file_id"]
+                "llamacpp:"
+                + (item.metadata_json.get("model_definition_id") or item.metadata_json["model_file_id"])
                 for item in instances(session)
                 if item.status == "ready" and item.metadata_json.get("model_file_id")
             ]

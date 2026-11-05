@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.coding_sessions import PROPOSALS, Followup, enqueue_followup
 from app.db import utcnow
-from app.models import ChatWorkContext, Message, ModelFile, Project, Run, Task, Worktree
+from app.models import ChatWorkContext, Message, Project, Run, Task, Worktree
 from app.project_activity import project_write_condition
 from app.state import TERMINAL
 
@@ -69,13 +69,15 @@ def context_of(session, source):
     elif source.status != "succeeded" and not safe_failure:
         reason = "Inspect the previous execution before continuing."
     model_key = source.parameters.get("model", "")
-    model = (
-        session.get(ModelFile, model_key.removeprefix("llamacpp:"))
-        if model_key.startswith("llamacpp:")
-        else None
-    )
+    from app.model_selection import resolve
+
+    model, definition = resolve(session, model_key) if model_key.startswith("llamacpp:") else (None, None)
     model_label = (
-        model.filename if model else source.parameters.get("model_selection", {}).get("name", model_key)
+        definition.name
+        if definition
+        else model.filename
+        if model
+        else source.parameters.get("model_selection", {}).get("name", model_key)
     )
     return {
         "task_id": task.id,

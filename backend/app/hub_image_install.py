@@ -117,7 +117,11 @@ def adopt(session, run, entry, path, runner, hardware, check):
         "minimum_companion_vram_mib": preset["companion_vram_mib"],
         "maximum_side": preset["maximum_side"],
     }
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+    definition = session.scalar(
+        select(ModelDefinition).where(
+            ModelDefinition.file_id == file.id, ModelDefinition.binding_key.is_(None)
+        )
+    )
     if definition is not None and (
         definition.category != "image" or definition.metadata_json.get("image", {}).get("binding") != binding
     ):

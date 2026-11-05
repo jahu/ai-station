@@ -11,8 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import model_selection as selections
 from app.db import session_scope, utcnow
-from app.models import ModelDefinition, ModelFile, Run
+from app.models import ModelDefinition, Run
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
 from app.runs import create_run, create_task, transition
@@ -41,9 +42,7 @@ class CompletionFinished:
 def certificate(session, model):
     if not model.startswith("llamacpp:"):
         return None
-    file_id = model.removeprefix("llamacpp:")
-    file = session.get(ModelFile, file_id)
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file_id))
+    file, definition = selections.resolve(session, model)
     value = (definition.metadata_json or {}).get("reasoning_qualification") if definition else None
     if (
         not file
@@ -100,7 +99,7 @@ def check_binding(params, session):
     if params.get("reasoning") is None:
         return
     expected = params.get("reasoning_certificate")
-    file = session.get(ModelFile, params["model"].removeprefix("llamacpp:"))
+    file, _ = selections.resolve(session, params["model"])
     if (
         not expected
         or expected.get("model_key") != params["model"]
@@ -122,10 +121,10 @@ def qualify(file_id: UUID, session: DB):
     from app.models import Conversation
     from app.runs import run_dict
 
-    file = session.get(ModelFile, str(file_id))
+    file, selected_definition = selections.resolve(session, str(file_id))
     if not loadable_model(file):
         raise HTTPException(422, "Choose a present language-model GGUF")
-    model = "llamacpp:" + file.id
+    model = "llamacpp:" + selections.selection_id(file, selected_definition)
     existing = session.scalars(
         select(Run).where(
             Run.executor_type == "reasoning_check",
@@ -191,7 +190,7 @@ class ReasoningCheckExecutor:
         if run.status != "running":
             raise ProviderError("Qualification lost its active lease before publication")
         result = {**result, "model_key": run.parameters["model"]}
-        file = session.get(ModelFile, run.parameters["model"].removeprefix("llamacpp:"))
+        file, definition = selections.resolve(session, run.parameters["model"])
         if (
             file is None
             or file.size_bytes != run.parameters["model_size"]
@@ -199,7 +198,6 @@ class ReasoningCheckExecutor:
             or file.availability != "present"
         ):
             raise ProviderError("Model observation changed during qualification")
-        definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
         if definition is None:
             definition = ModelDefinition(
                 name=file.filename, file_id=file.id, category="llm", status="unverified"

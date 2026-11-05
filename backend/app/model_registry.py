@@ -78,7 +78,10 @@ def models(
         {
             item.file_id: item
             for item in session.scalars(
-                select(ModelDefinition).where(ModelDefinition.file_id.in_([row.id for row in rows]))
+                select(ModelDefinition).where(
+                    ModelDefinition.file_id.in_([row.id for row in rows]),
+                    ModelDefinition.binding_key.is_(None),
+                )
             )
         }
         if rows
@@ -139,7 +142,11 @@ def model_detail(file_id: UUID, session: DB):
     row = session.get(ModelFile, str(file_id))
     if row is None:
         raise HTTPException(404, "Model file not found")
-    definitions = session.scalars(select(ModelDefinition).where(ModelDefinition.file_id == row.id))
+    definitions = session.scalars(
+        select(ModelDefinition)
+        .where(ModelDefinition.file_id == row.id)
+        .order_by(ModelDefinition.binding_key.is_not(None), ModelDefinition.created_at, ModelDefinition.id)
+    )
     return {
         **file_dict(row),
         "definitions": [definition_dict(item, row) for item in definitions],

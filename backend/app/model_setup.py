@@ -244,7 +244,7 @@ def view(session, task):
         "run": run_dict(run),
         "progress": progress,
         "model_file_id": run.metadata_json.get("model_file_id"),
-        "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
+        "model_key": run.metadata_json.get("model_key") or "llamacpp:" + run.metadata_json["model_file_id"]
         if run.metadata_json.get("model_file_id")
         and saved["entry"].get("capability") not in {"image", "video", "speech", "music", "embedding"}
         else None,
@@ -290,7 +290,11 @@ def catalog(session: DB):
         )
         preset = recommendation(item, hardware)
         definition = (
-            session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == installed.id))
+            session.scalar(
+                select(ModelDefinition).where(
+                    ModelDefinition.file_id == installed.id, ModelDefinition.binding_key.is_(None)
+                )
+            )
             if installed
             else None
         )

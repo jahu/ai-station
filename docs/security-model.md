@@ -1828,3 +1828,14 @@ coordinates cross private runtime ownership boundaries, with no initiating promp
 or conversation. Its Linux source activation follows complete public-transfer/native/Chat/agent
 qualification. Differing context claims never bypass attention/cache checks or
 silently enlarge the reviewed preset. A file limit below that review is refused.
+
+
+Complete models sharing a primary object retain separate immutable bindings.
+A typed optional logical definition must belong to the stated physical file and
+its ordered-content key must match the whole set. Load intents and shared runtime
+facts check that logical ID as well as the complete source; a sibling runtime is
+never evidence for this selection. No additional Runner authority is introduced.
+Removal preserves a tombstone and refuses an active/uncertain matching runtime;
+foreign private Runs remain private. Migration downgrade refuses additional
+bindings rather than discard references. Explicit restore verifies the original
+source without overwriting another model or deleting shared objects.

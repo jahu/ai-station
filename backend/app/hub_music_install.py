@@ -121,7 +121,11 @@ def adopt(session, run, entry, path, runner, hardware, check):
         "minimum_vram_mib": 12288,
         "maximum_seconds": 600,
     }
-    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file.id))
+    definition = session.scalar(
+        select(ModelDefinition).where(
+            ModelDefinition.file_id == file.id, ModelDefinition.binding_key.is_(None)
+        )
+    )
     if definition is not None and (
         definition.category != "audio" or definition.metadata_json.get("music", {}).get("binding") != binding
     ):

@@ -573,10 +573,29 @@ Linux/Windows regression and owner-reviewed release promotion before closing the
 full discovery goal.
 
 
-Before release, finish logical identity and lifecycle across shared components.
-The current registry still has one definition per primary ModelFile and rejects
-conflicting complete sets rather than overwriting them. Distinct valid models
-that share the same first part must receive separate logical bindings/selections
-without copying the shared weights or rewriting an existing definition. Preserve
-legacy file-model references while adding that contract, its migration, source
-update/removal behavior and cross-account/runtime recovery tests.
+Logical identity and lifecycle across shared GGUF components are implemented
+below. Release review must retain evidence for independent selections, legacy
+references, migration, source aliases, removal/restore and account/runtime
+ownership. Shared weights must never be copied or an existing definition overwritten.
+
+
+Logical selection implementation: retain existing `llamacpp:<file UUID>` references
+for each primary/default definition. Additional complete GGUF sets sharing that
+physical file use `llamacpp:<definition UUID>` and a unique ordered SHA/size content
+key, excluding mutable timestamps and publisher aliases. A partial unique index
+retains one default definition per file. Typed loading freezes the optional
+logical definition ID alongside the complete binding; context history, runtime
+reuse, reasoning, handoff and agent routing must never confuse sibling sets.
+No duplicate file rows or copied shared weights are introduced. Migration downgrade
+must refuse while additional bindings exist rather than discard model choices.
+
+
+The logical-binding candidate also retains removed complete-model definitions as
+identity tombstones. Removal is refused while that logical runtime is active or
+uncertain; it hides the choice without deleting cached weights or capturing old
+conversation references with a sibling model. Explicit native re-verification or
+reviewed installation restores the same choice. Sibling models keep their own
+presets, parts, reasoning qualification and runtime history. Operator UI selects
+configurations explicitly, preserves that selection on refresh and never carries
+an unsaved preset into another configuration. Qualification remains recorded in
+the implementation/review evidence; this is not yet a packaged release.
