@@ -1,5 +1,5 @@
 {
-  "version": 53,
+  "version": 54,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -3916,7 +3916,7 @@
         "Kandydat 0.1 z guided setup; konto administratora; dostęp do internetu i istniejący kompatybilny runtime llama.cpp. Używaj jednorazowych danych QA."
       ],
       "steps": [
-        "Jako administrator otwórz Models → Set up a local model. Porównaj RAM, GPU, wolne miejsce i wariant Q4_K_M z rzeczywistym sprzętem.",
+        "Jako administrator otwórz Models → Quick setup. Porównaj RAM, GPU, wolne miejsce i wariant Q4_K_M z rzeczywistym sprzętem.",
         "Przeczytaj źródło/licencję, zaakceptuj ją i pobierz wariant mieszczący się w pamięci. Obejrzyj postęp, szczegóły Run i Files verified.",
         "Kliknij Open Chat with this model, wyślij krótką wiadomość i sprawdź rzeczywistą lokalną odpowiedź oraz użyty model."
       ],
@@ -3961,7 +3961,7 @@
       ],
       "steps": [
         "Po przygotowaniu modelu przez administratora zaloguj się drugim zwykłym kontem.",
-        "Otwórz Set up a local model oraz Chat; sprawdź dostępny współdzielony model i własną pustą historię przygotowań.",
+        "Otwórz Quick setup oraz Chat; sprawdź dostępny współdzielony model i własną pustą historię przygotowań.",
         "Spróbuj wejść pod zapamiętany URL Run przygotowania administratora."
       ],
       "expected": [
@@ -3982,7 +3982,7 @@
         "Kandydat 0.1 z przygotowaniem runtime; konto administratora; Linux x86-64, działający lokalny Docker i NVIDIA dla pierwszej generacji. Nie usuwaj istniejących obrazów Dockera ani modeli tylko na potrzeby testu."
       ],
       "steps": [
-        "Otwórz Models → Set up a local model. Jeśli istniejący obraz jest dostępny, sprawdź komunikat Image available i przejdź do modelu bez ponownego pobierania runtime.",
+        "Otwórz Models → Quick setup. Jeśli istniejący obraz jest dostępny, sprawdź komunikat Image available i przejdź do modelu bez ponownego pobierania runtime.",
         "Jeżeli runtime wymaga przygotowania, sprawdź rozmiar, wolne miejsce i licencje. Zaakceptuj warunki i kliknij Prepare llama.cpp. W czasie transferu przejdź na inną stronę, wróć i odśwież.",
         "Przy potrzebnym transferze kliknij Stop runtime preparation, następnie Resume runtime preparation. Po weryfikacji wybierz/pobierz model i wyślij krótką wiadomość w Chat. Jeśli pliki pobrano wcześniej bez runtime, użyj Verify model readiness."
       ],
@@ -4005,7 +4005,7 @@
         "Kandydat 0.1 z rozszerzonym katalogiem; konto administratora. Sam przegląd nie pobiera wag."
       ],
       "steps": [
-        "Otwórz Models → Set up a local model; sprawdź dwa startowe warianty 4B. Kliknij Explore larger models.",
+        "Otwórz Models → Quick setup; sprawdź dwa startowe warianty 4B. Kliknij Explore larger models.",
         "Wyszukaj 14B, następnie Q8_0. Włącz Only models that fit this workstation i porównaj dostępne warianty, rozmiary oraz estymację GPU/kontekstu.",
         "Wybierz inny wariant i sprawdź jego nazwę w Your download, źródło, licencję i SHA-256. Potwierdzenie licencji powinno zostać wyzerowane po zmianie wyboru. Nie musisz rozpoczynać wielogigabajtowego pobrania w tym przypadku."
       ],
@@ -4051,7 +4051,7 @@
         "Osobny profil QA Linux x86-64 z NVIDIA ≥6 GiB VRAM i dostępnym zarządzaniem zasobami; administrator; referencyjny WAV. Wymagane do 6,49 GB pobrania oraz dodatkowe 8 GiB miejsca."
       ],
       "steps": [
-        "Otwórz Models → Set up a local model → Set up local speech. Sprawdź wykryty sprzęt, rozmiar, źródła oraz licencje.",
+        "Otwórz Models → Quick setup → Set up local speech. Sprawdź wykryty sprzęt, rozmiar, źródła oraz licencje.",
         "Potwierdź licencje i rozpocznij przygotowanie. Przejdź do Chat i wróć; poczekaj na zakończenie etapów pobierania i instalacji.",
         "Otwórz Audio, dodaj własny referencyjny WAV i krótki polski tekst. Wygeneruj, odsłuchaj i znajdź wynik w Library."
       ],
@@ -6225,7 +6225,7 @@
       "id": "MODEL-006",
       "title": "Link do drugiej części modelu i ocena całego zestawu",
       "steps": [
-        "Otwórz Models → Find new models. Wklej https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/blob/bb5d59e06d9551d752d08b292a50eb208b07ab1f/qwen2.5-7b-instruct-q4_0-00002-of-00002.gguf",
+        "Otwórz Models → Add model. Wklej https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/blob/bb5d59e06d9551d752d08b292a50eb208b07ab1f/qwen2.5-7b-instruct-q4_0-00002-of-00002.gguf",
         "Sprawdź listę wymaganych plików, całkowity rozmiar, zalecane GPU/kontekst i miejsce na dysku. Nie rozpoczynaj jeszcze instalacji."
       ],
       "expected": [
@@ -6391,7 +6391,7 @@
         "Task → Run → Events → Artifacts"
       ],
       "steps": [
-        "W Models kliknij Find new models. Poczekaj na porównanie maksymalnie trzech źródeł dla rozmów. Otwórz Context options i porównaj ponownie dla 128K, jeśli chcesz dłuższy kontekst.",
+        "W Models kliknij Add model, a następnie Find for my station. Poczekaj na porównanie maksymalnie trzech źródeł dla rozmów. Otwórz Context options i porównaj ponownie dla 128K, jeśli chcesz dłuższy kontekst.",
         "W Use for wybierz Images albo Voice, w Browse wybierz Recently updated i kliknij Find for my station. Sprawdź nazwy, oznaczenie punktu startowego i ocenę sprzętu.",
         "Otwórz Review variants dla zgodnego modelu. Przejrzyj pamięć GPU/RAM, dysk, licencję i wymagane pliki. Nie uruchamiaj instalacji. Odśwież ekran i wróć do zapisanej inspekcji."
       ],
@@ -6399,6 +6399,31 @@
         "Wyniki dotyczą wybranego zastosowania. Popularność, nowość i punkt startowy nie zastępują inspekcji ani oceny sprzętu. Nieznane zasoby i niezgodne runtime nie dostają oceny pasuje.",
         "Powstaje zwykłe prywatne zadanie metadanych z historią i Stop. Wagi nie są pobierane, żaden model nie jest ładowany i domyślne wybory nie zmieniają się. Odświeżenie zapisanej inspekcji jej nie powiela."
       ]
+    },
+    {
+      "id": "MODEL-014",
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "title": "Proste dodawanie modeli i nawigacja konfiguracji",
+      "prerequisites": [
+        "Konto administratora. Dostęp do AI Station na komputerze i telefonie; bez konieczności pobierania nowych wag."
+      ],
+      "steps": [
+        "Otwórz Models. Sprawdź widoczność dużego Add model i kart Find & download models oraz Set up your first model. Otwórz Add model: zobacz Help me choose, wyszukiwarkę nazwy/linku i kroki wyboru, oceny oraz instalacji.",
+        "Przejdź do Quick setup i wybierz Images, Video, Memory oraz Voice. Sprawdź, że widoczna jest wybrana kategoria, bez formularzy pozostałych kategorii; wróć przyciskiem Wstecz przeglądarki.",
+        "Na telefonie sprawdź wszystkie trzy zakładki: Installed models, Browse & download i Quick setup. Wróć do Models: Scan local folders służy tylko do skanowania dysku. Na zwykłym koncie sprawdź brak administracyjnych akcji dodawania i skanowania."
+      ],
+      "expected": [
+        "Główne akcje są czytelne i widoczne bez szukania małych linków. Samo otwieranie ekranów i zmiana kategorii nie rozpoczynają pobierania wag.",
+        "Wybrana kategoria i historia przeglądarki działają; na telefonie zakładki nie są obcięte i strona nie przewija się poziomo.",
+        "Istniejące modele i historia przygotowań są zachowane. Zwykły użytkownik nie otrzymuje uprawnień administratora."
+      ],
+      "resources": "Bez uruchamiania inferencji ani pobierania modeli. Komputer i telefon z dostępem do stacji.",
+      "minutes": 5
     }
   ],
   "scope_notice": "Wydanie 0.2: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",

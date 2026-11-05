@@ -1,5 +1,10 @@
 # Operator QA catalog and workbook
 
+Catalog v54 updates model-navigation labels for 0.2.1 and adds MODEL-014 for
+visible primary actions, category setup, browser history, mobile tabs and
+administrator gates. All 278 active cases start untested; previous exports
+remain unchanged.
+
 The 0.2 release catalog v53 contains 277 active cases. MODEL-013 covers the
 capability-guided entry, popular/recent discovery and hardware assessment before
 weights transfer. v53 updates the release scope without changing case IDs or

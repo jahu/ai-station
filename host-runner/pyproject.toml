@@ -1,6 +1,6 @@
 [project]
 name = "ai-station-runner"
-version = "0.2.0"
+version = "0.2.1"
 description = "Native host runner for AI Station"
 requires-python = ">=3.12"
 dependencies = [
