@@ -28,36 +28,85 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const image = runs.find(
     (row) => row.task_id === task && row.executor_type === "photo_pipe",
   );
-  const sceneKeys = ["setting", "pose", "expression"] as const;
-  const hasScene =
-    !!scene &&
-    typeof scene === "object" &&
-    sceneKeys.every((key) => key in scene && typeof scene[key] === "string");
+  const changes =
+    scene && typeof scene.changes === "object" && scene.changes !== null
+      ? Object.entries(scene.changes).filter(
+          (row): row is [string, string] => typeof row[1] === "string",
+        )
+      : scene &&
+          ["setting", "pose", "expression"].every(
+            (key) => typeof scene[key] === "string",
+          )
+        ? ["setting", "pose", "expression"].map(
+            (key) => [key, String(scene[key])] as [string, string],
+          )
+        : [];
+  const preserve = Array.isArray(scene?.preserve)
+    ? scene.preserve.filter(
+        (value): value is string => typeof value === "string",
+      )
+    : [];
+  const generation = image?.parameters;
+  const settings = generation
+    ? [
+        [
+          "Backend",
+          typeof generation.backend === "string" ? generation.backend : null,
+        ],
+        [
+          "Steps",
+          typeof generation.steps === "number"
+            ? String(generation.steps)
+            : null,
+        ],
+        [
+          "Guidance (CFG)",
+          typeof generation.cfg === "number" ? String(generation.cfg) : null,
+        ],
+        [
+          "Dimensions",
+          typeof generation.width === "number" &&
+          typeof generation.height === "number"
+            ? `${generation.width} × ${generation.height}`
+            : null,
+        ],
+      ].filter((row): row is [string, string] => row[1] !== null)
+    : [];
   return (
     <div className="agent-media-result">
       <AgentDocumentSources captures={documents} />
-      {hasScene && (
+      {changes.length > 0 && (
         <section
           className="agent-image-scene-summary"
           aria-label="Image scene plan"
         >
-          <h3>
-            {image?.status === "succeeded" ? "This shot" : "Planned shot"}
-          </h3>
+          <h3>This run's image plan</h3>
+          {preserve.length > 0 && (
+            <p>
+              <strong>Keep consistent:</strong> {preserve.join(" · ")}
+            </p>
+          )}
           <dl>
-            {sceneKeys.map((key) => (
+            {changes.map(([key, value]) => (
               <div key={key}>
-                <dt>
-                  {key === "setting"
-                    ? "Setting"
-                    : key === "pose"
-                      ? "Pose"
-                      : "Expression"}
-                </dt>
-                <dd>{String(scene[key])}</dd>
+                <dt>{key.charAt(0).toUpperCase() + key.slice(1)}</dt>
+                <dd>{value}</dd>
               </div>
             ))}
           </dl>
+          {settings.length > 0 && (
+            <details>
+              <summary>Generation settings</summary>
+              <dl>
+                {settings.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          )}
           {typeof image?.parameters?.prompt === "string" && (
             <details>
               <summary>Image prompt</summary>

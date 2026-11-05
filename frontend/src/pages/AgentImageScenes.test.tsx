@@ -68,10 +68,8 @@ it("explains why small edits preserve composition and switches to reviewed new-s
       <Editor />
     </Frame>,
   );
-  expect(
-    screen.getByText("Want a new pose, location or expression?"),
-  ).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Use new scenes" }));
+  expect(screen.getByText("Want a new composition or setting?")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
   const scope = saved();
   expect(scope.kind === "image" && scope.vary_scenes).toBe(true);
   expect(scope.request).toMatchObject({
@@ -80,11 +78,9 @@ it("explains why small edits preserve composition and switches to reviewed new-s
     input_artifact_ids: [""],
   });
   expect(
-    screen.getByRole("checkbox", { name: /Vary shots between runs/ }),
+    screen.getByRole("checkbox", { name: /Vary results between runs/ }),
   ).toBeTruthy();
-  expect(
-    screen.queryByText("Want a new pose, location or expression?"),
-  ).toBeNull();
+  expect(screen.queryByText("Want a new composition or setting?")).toBeNull();
   expect(
     (screen.getByLabelText("Media creative direction") as HTMLTextAreaElement)
       .value,
@@ -102,7 +98,7 @@ it("turns off planning when the user chooses an exact prompt and retains the ide
       <Editor />
     </Frame>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Use new scenes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
   fireEvent.change(screen.getByLabelText("Media description policy"), {
     target: { value: "fixed" },
   });
@@ -129,7 +125,7 @@ it("synchronizes a duplicated main instruction but preserves intentional optiona
   expect(syncImageBrief(styled, brief, "A new instruction")).toEqual(styled);
   if (styled.kind === "image")
     expect(agentMediaIssue({ ...styled, vary_scenes: true })).toContain(
-      "identity reference",
+      "reviewed reference",
     );
 });
 
@@ -142,9 +138,11 @@ it("shows the planned shot and actual image prompt beside an agent result", () =
       status: "succeeded",
       parameters: {
         image_scene: {
-          setting: "A quiet cafe",
-          pose: "Sitting by a window",
-          expression: "A broad smile",
+          preserve: ["Oak finish"],
+          changes: {
+            setting: "A quiet hallway",
+            composition: "Three-quarter view",
+          },
         },
       },
     },
@@ -153,7 +151,14 @@ it("shows the planned shot and actual image prompt beside an agent result", () =
       task_id: "task",
       executor_type: "photo_pipe",
       status: "succeeded",
-      parameters: { prompt: "Create a portrait by a cafe window" },
+      parameters: {
+        prompt: "Create a wardrobe product image in a hallway",
+        backend: "qwen",
+        steps: 30,
+        cfg: 6,
+        width: 832,
+        height: 1216,
+      },
     },
   ] as unknown as Run[];
   render(
@@ -161,8 +166,15 @@ it("shows the planned shot and actual image prompt beside an agent result", () =
       <AgentMediaResult runs={runs} />
     </Frame>,
   );
-  expect(screen.getByRole("heading", { name: "This shot" })).toBeTruthy();
-  expect(screen.getByText("A quiet cafe")).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "This run's image plan" }),
+  ).toBeTruthy();
+  expect(screen.getByText("A quiet hallway")).toBeTruthy();
+  fireEvent.click(screen.getByText("Generation settings"));
+  expect(screen.getByText("30")).toBeTruthy();
+  expect(screen.getByText("832 × 1216")).toBeTruthy();
   fireEvent.click(screen.getByText("Image prompt"));
-  expect(screen.getByText("Create a portrait by a cafe window")).toBeTruthy();
+  expect(
+    screen.getByText("Create a wardrobe product image in a hallway"),
+  ).toBeTruthy();
 });
