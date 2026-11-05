@@ -15,7 +15,7 @@ from app.agent_media_schema import writes_lyrics
 from app.agent_schema import AgentSettings
 from app.artifacts import register_file
 from app.config import get_settings
-from app.db import utcnow
+from app.db import sqlite_busy, utcnow
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.local_provider import LocalChatProvider
@@ -26,10 +26,14 @@ from app.permissions import require
 from app.providers import ProviderError
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, transition
-from app.state import RunStatus
+from app.state import TERMINAL, RunStatus
 from app.task_control import lock_task
 
 SPEECH_AGENTS_ENABLED = True
+
+
+class MediaClaimLost(RuntimeError):
+    """Stop observing a stream after its durable execution ownership changes."""
 
 
 def selected_avatar_profile(session, request, *, frozen=None):
@@ -649,6 +653,8 @@ class AgentMediaExecutor:
             run.metadata_json = {**run.metadata_json, "media_run_id": child.id}
             run.summary = "Prepared media; generation is queued."
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+        except MediaClaimLost:
+            session.rollback()
         except Exception as exc:
             session.rollback()
             if not self.stopped(session, run):
@@ -780,7 +786,11 @@ class AgentMediaExecutor:
                 "do not require a pose, expression or any other unrequested aspect. Vary only a small number "
                 "of relevant aspects, without exaggerating them merely to be different. Preserve reference "
                 "features and relationships that the goal requires; do not assume every reference has the "
-                "same subject or role. Use preserve and changes as a planning aid, then compile description "
+                "same subject or role. Preserve only explicitly requested invariants, not the whole reference "
+                "or unrequested properties of a component. A feature to preserve must not freeze other "
+                "attributes of it that the user wants varied. Cover ALL aspects the brief requests to change, "
+                "not just one convenient aspect. Do not invent extra invariants. Use preserve and changes "
+                "as a planning aid, then compile description "
                 "as the single final prompt including all requested invariants and changes. Check that "
                 "description, preserve and changes agree, are physically plausible and mutually consistent "
                 "about position, orientation, visibility, scale and materials. Simplify conflicting directions "
@@ -880,10 +890,34 @@ class AgentMediaExecutor:
                 ]
         raise ValueError("No media description was prepared")
 
+    async def stream_database_step(self, session, run, claim, deadline, action):
+        """Retry a rolled-back observation/event, never the provider request."""
+        while True:
+            try:
+                session.refresh(run)
+                if (run.worker_id, run.claimed_at) != claim or run.status in TERMINAL:
+                    raise MediaClaimLost("Media stream no longer owns this Run")
+                if run.status == "cancel_requested":
+                    transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+                    session.commit()
+                    raise MediaClaimLost("Media stream was canceled")
+                result = action()
+                session.commit()
+                return result
+            except Exception as exc:
+                session.rollback()
+                if not sqlite_busy(exc):
+                    raise
+                if utcnow() >= deadline:
+                    raise ProviderError(
+                        "Agent runtime limit exceeded while waiting for database access"
+                    ) from exc
+                await asyncio.sleep(0.05)
+
     async def consume(self, session, run, definition, messages):
-        remaining = (
-            datetime.fromisoformat(run.parameters["execution_deadline_at"]) - utcnow()
-        ).total_seconds()
+        claim = (run.worker_id, run.claimed_at)
+        deadline = datetime.fromisoformat(run.parameters["execution_deadline_at"])
+        remaining = (deadline - utcnow()).total_seconds()
         if remaining <= 0:
             raise ProviderError("Agent runtime limit exceeded before media preparation")
         stream = LocalChatProvider().stream(
@@ -898,7 +932,9 @@ class AgentMediaExecutor:
         try:
             async with asyncio.timeout(remaining):
                 while True:
-                    if self.stopped(session, run):
+                    if await self.stream_database_step(
+                        session, run, claim, deadline, lambda: self.stopped(session, run)
+                    ):
                         return ""
                     if pending is None:
                         pending = asyncio.create_task(anext(stream))
@@ -914,8 +950,13 @@ class AgentMediaExecutor:
                     if not isinstance(token, str) or len(text) + len(token) > 16000:
                         raise ProviderError("Media description exceeded its response contract")
                     text += token
-                    append_event(session, run.id, "agent.delta", {"text": token})
-                    session.commit()
+                    await self.stream_database_step(
+                        session,
+                        run,
+                        claim,
+                        deadline,
+                        lambda: append_event(session, run.id, "agent.delta", {"text": token}),
+                    )
         finally:
             if pending is not None:
                 pending.cancel()
