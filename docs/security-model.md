@@ -1708,6 +1708,9 @@ The speech import candidate extends the normal model Task with only an exact
 manifest and RunDependency checks. Model publication rechecks administrator/Stop
 state and immutable file identity after native verification. New audio definitions
 contain an opaque prepared engine, never another account's preparation Run ID.
+An accepted discovery plan also rechecks its GPU/RAM capacity before transferring
+the prerequisite engine or companions; changed hardware cannot defer that check
+until after a large prerequisite download. Storage remains checked during transfer.
 Generation grants no model-install permission: only a fixed owned T3 coordinate
 and engine can enter the native audio operation. Parent resource/reference checks
 and child full-content verification precede loading; a private Run config may

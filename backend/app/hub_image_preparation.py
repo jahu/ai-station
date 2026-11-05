@@ -38,3 +38,13 @@ def owns_preparation(run):
         and entry.setup_manifest_sha256 == run.parameters.get("manifest_sha256")
         and session.get(RunDependency, (parent.id, run.id)) is not None
     )
+
+
+def recheck_hardware(run, hardware):
+    """An accepted source plan cannot authorize transfers on newly unsuitable hardware."""
+    if owns_preparation(run):
+        from app.model_setup import recommendation
+
+        entry = download_candidate(run.task.metadata_json["model_download"]["entry"])
+        if not recommendation(entry, hardware)["fits"]:
+            raise ValueError("The model hardware profile changed; review it before downloading engine inputs")

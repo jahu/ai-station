@@ -78,6 +78,7 @@ def speech_bridge(monkeypatch):
         "downloads": [],
         "headers": [],
         "starts": [],
+        "storage": {"free_bytes": 100 * 1024**3, "headroom_bytes": 1024**3},
     }
 
     def catalog(self):
@@ -93,9 +94,7 @@ def speech_bridge(monkeypatch):
         }
 
     monkeypatch.setattr(SpeechSetupClient, "runtime_setup_catalog", catalog)
-    monkeypatch.setattr(
-        model_hub, "storage_info", lambda h: {"free_bytes": 100 * 1024**3, "headroom_bytes": 1024**3}
-    )
+    monkeypatch.setattr(model_hub, "storage_info", lambda h: state["storage"])
 
     async def metadata(url, check):
         check()
@@ -351,6 +350,78 @@ def test_speech_hardware_needs_real_capacity_and_does_not_pool_smaller_cards(spe
     assert hub_speech_candidates.recommendation(entry, hardware)["gpus"] == [9]
     hardware["memory"]["total_mib"] = 8192
     assert not hub_speech_candidates.recommendation(entry, hardware)["fits"]
+
+
+@pytest.mark.parametrize("shortage", ["gpu", "ram", "disk", "unknown_gpu", "unknown_ram", "unknown_disk"])
+def test_unsuitable_or_unknown_hardware_blocks_install_before_any_transfer(speech_bridge, shortage):
+    if shortage == "gpu":
+        # Two smaller cards cannot satisfy an adapter that requires one 6-GiB card.
+        speech_bridge["hardware"]["gpus"] = [
+            {"index": 3, "memory_total_mib": 4096},
+            {"index": 9, "memory_total_mib": 4096},
+        ]
+    elif shortage == "ram":
+        speech_bridge["hardware"]["memory"]["total_mib"] = 8192
+    elif shortage == "disk":
+        speech_bridge["storage"]["free_bytes"] = 1
+    elif shortage == "unknown_gpu":
+        speech_bridge["hardware"]["gpus"][0].pop("memory_total_mib")
+    elif shortage == "unknown_ram":
+        speech_bridge["hardware"]["memory"].pop("total_mib")
+    else:
+        speech_bridge["storage"] = None
+    with TestClient(app) as api:
+        reviewed = plan(api)
+        report = reviewed["metadata"]["source_inspection"]
+        response = api.post(
+            "/api/model-hub/downloads",
+            json={
+                "client_request_id": str(uuid4()),
+                "plan_run_id": reviewed["id"],
+                "manifest_sha256": report["manifest_sha256"],
+                "license_accepted": True,
+            },
+        )
+        assert response.status_code == 409, response.text
+    assert not speech_bridge["downloads"] and not speech_bridge["starts"]
+    with control_session_factory()() as db:
+        assert not list(
+            db.scalars(select(Run).where(Run.executor_type.in_(["model_download", "speech_setup"])))
+        )
+
+
+def test_temporarily_busy_gpu_is_reported_separately_from_capacity(speech_bridge):
+    speech_bridge["hardware"]["gpus"][0]["memory_used_mib"] = 10000
+    with TestClient(app) as api:
+        reviewed = plan(api)
+    assessment = reviewed["metadata"]["source_inspection"]["files"][0]["assessment"]
+    assert assessment["hardware_status"] == "estimated_fit"
+    assert assessment["profiles"][0]["occupancy"] == "in_use"
+    assert assessment["automatic_ram_offload"] is False
+    assert assessment["automatic_cloud_fallback"] is False
+    assert not speech_bridge["downloads"] and not speech_bridge["starts"]
+
+
+@pytest.mark.parametrize("changed", ["gpu", "ram"])
+def test_hardware_change_after_review_blocks_even_prerequisite_transfers(speech_bridge, monkeypatch, changed):
+    from app import speech_setup_job
+
+    async def forbidden(*args, **kwargs):
+        pytest.fail("Changed hardware must be checked before downloading engine or companion weights")
+
+    monkeypatch.setattr(speech_setup_job, "obtain", forbidden)
+    speech_bridge["ready"] = False
+    with TestClient(app) as api:
+        queued = install(api, plan(api))
+        engine = queued["progress"]["engine_run_id"]
+        if changed == "gpu":
+            speech_bridge["hardware"]["gpus"][0]["memory_total_mib"] = 4096
+        else:
+            speech_bridge["hardware"]["memory"]["total_mib"] = 8192
+        work()
+        run = api.get("/api/runs/" + engine).json()
+        assert run["status"] == "failed" and "hardware profile changed" in run["error_message"], run
+    assert not speech_bridge["downloads"] and not speech_bridge["starts"]
 
 
 def test_fish_cannot_silently_ignore_a_chatterbox_model_choice():

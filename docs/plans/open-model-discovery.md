@@ -52,6 +52,12 @@ does not change a personal default or replace a running model without consent.
 
 ## Hardware recommendations
 
+Owner clarification, 2026-11-05: assessing whether a download makes sense on
+the machine running AI Station is a mandatory part of discovery and installation,
+not an optional benchmark after the weights arrive. Unknown or unsuitable
+hardware must not receive a recommended/installable badge. A successful transfer
+alone never establishes that the model is usable on this station.
+
 Use live native telemetry, installed runtime/platform capability and free space
 on the actual application backing volume. Never assume a GPU count or pool two
 GPUs unless the chosen adapter supports that exact sharding strategy.
@@ -70,6 +76,9 @@ GPUs unless the chosen adapter supports that exact sharding strategy.
 - Disk includes missing weights, runtime preparation, staging and safety space;
   reuse verified object identities. Recheck before and during transfer. Include
   host physical-volume limits on Windows, not only guest filesystem free space.
+- An accepted plan is not permanent hardware authority: recheck capacity before
+  downloading its prerequisite engine/companions as well as its selected weights.
+  A changed or missing GPU/RAM profile must stop transfer and request a new review.
 - No implicit CPU/RAM offload, swap, cloud substitution, eviction of external
   processes or driver modification. Any CPU/offload option is explicit.
 - Estimates are not benchmarks. Actual first-result qualification can promote an

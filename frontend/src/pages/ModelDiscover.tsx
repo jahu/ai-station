@@ -526,7 +526,7 @@ export default function ModelDiscover() {
                       )
                       .map((file) => ({
                         ...file,
-                        role: file.role ?? file.kind ?? file.filename,
+                        role: file.role ?? file.filename,
                       }))
                   : undefined,
                 component_licenses:
