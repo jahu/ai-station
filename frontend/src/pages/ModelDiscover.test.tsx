@@ -73,6 +73,8 @@ it("compares a saved search and reviews its immutable variants without another i
   };
   const comparison = {
     kind: "comparison",
+    search_run_id: "search",
+    context_target: 131072,
     files: [],
     observed_at: report.observed_at,
     items: [
@@ -100,6 +102,10 @@ it("compares a saved search and reviews its immutable variants without another i
   }));
   vi.stubGlobal("fetch", fetch);
   mount("/models/discover?run=search");
+  await screen.findByRole("button", { name: "Compare top 3 for my hardware" });
+  fireEvent.change(screen.getByLabelText("Conversation context target"), {
+    target: { value: "131072" },
+  });
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Compare top 3 for my hardware",
@@ -109,6 +115,10 @@ it("compares a saved search and reviews its immutable variants without another i
   expect(screen.getByText("Needs a compatible runtime")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Review variants/ }));
   await screen.findByRole("heading", { name: "image.gguf" });
+  expect(
+    (screen.getByLabelText("Context for installation") as HTMLSelectElement)
+      .value,
+  ).toBe("131072");
   fireEvent.click(
     screen.getByRole("button", { name: /Back to compared models/ }),
   );
@@ -121,6 +131,7 @@ it("compares a saved search and reviews its immutable variants without another i
   expect(JSON.parse(String(posts[0][1]?.body))).toMatchObject({
     search_run_id: "search",
     observation_sha256: search.observation_sha256,
+    context_target: 131072,
   });
   expect(fetch.mock.calls.some(([path]) => path.endsWith("/inspections"))).toBe(
     false,

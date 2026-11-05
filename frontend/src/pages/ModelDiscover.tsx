@@ -53,6 +53,7 @@ type Report = {
   manifest_sha256?: string;
   source_inspection_run_id?: string;
   source_inspection_repository?: string;
+  search_run_id?: string;
   query?: string;
   repository?: string;
   revision?: string;
@@ -108,7 +109,10 @@ export default function ModelDiscover() {
     account.mode === "operator" || account.user?.is_admin === true;
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState({ runId: "", filename: "" });
-  const [contextTarget, setContextTarget] = useState(32768);
+  const [contextChoice, setContextChoice] = useState<{
+    runId: string;
+    target: number;
+  } | null>(null);
   const [params, setParams] = useSearchParams();
   const runId = params.get("run") || "";
   const inspection = useQuery({
@@ -181,6 +185,13 @@ export default function ModelDiscover() {
     (!!runId && inspection.isPending) ||
     (!!run && !terminal.includes(run.status));
   const rootReport = run?.metadata?.source_inspection as Report | undefined;
+  const contextTarget =
+    contextChoice?.runId === runId
+      ? contextChoice.target
+      : (rootReport?.context_target ?? 32768);
+  function setContextTarget(target: number) {
+    setContextChoice({ runId, target });
+  }
   const repository = params.get("repository");
   const report =
     (rootReport?.kind === "comparison" && repository
@@ -295,13 +306,35 @@ export default function ModelDiscover() {
             hardware fit.
           </p>
           {!!report.items?.length && (
-            <Button
-              variant="secondary"
-              disabled={!canManage || compare.isPending}
-              onClick={() => compare.mutate()}
-            >
-              Compare top 3 for my hardware
-            </Button>
+            <>
+              <details className="hub-context-options">
+                <summary>Context options</summary>
+                <label htmlFor="model-comparison-context">
+                  Conversation context target
+                </label>
+                <select
+                  id="model-comparison-context"
+                  value={contextTarget}
+                  onChange={(event) =>
+                    setContextTarget(Number(event.target.value))
+                  }
+                >
+                  <option value={32768}>32K · Balanced conversation</option>
+                  <option value={131072}>128K · Longer tasks</option>
+                </select>
+                <p className="muted">
+                  For conversation models. Media uses its supported workload
+                  profile.
+                </p>
+              </details>
+              <Button
+                variant="secondary"
+                disabled={!canManage || compare.isPending}
+                onClick={() => compare.mutate()}
+              >
+                Compare top 3 for my hardware
+              </Button>
+            </>
           )}
           {report.items?.map((item) => (
             <article className="panel hub-repository" key={item.repository}>
@@ -335,6 +368,14 @@ export default function ModelDiscover() {
           className="hub-results"
           aria-label="Hardware comparison results"
         >
+          {report.search_run_id && (
+            <Button
+              variant="ghost"
+              onClick={() => setParams({ run: report.search_run_id! })}
+            >
+              ← Back to search results
+            </Button>
+          )}
           <div className="hub-section-heading">
             <h2>Models for your station</h2>
             <span className="muted">Compared up to 3 matches</span>
