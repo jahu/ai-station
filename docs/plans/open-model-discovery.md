@@ -216,6 +216,14 @@ separate compatible slots; never infer compatibility from a model name.
 
 ### Connecting installed speech checkpoints
 
+Implemented in the speech installation increment: the source/plan/downloader,
+opaque engine binding, native execution and Audio/agent/explicit-conversation
+choices below share existing lifecycle services. Hardware, publication, recovery
+and UI regressions passed; isolated actual source/setup/GPU speech and owned cleanup
+also passed on Linux. See [measured evidence and scope](../models.md#discovered-speech-models).
+Other speech formats, avatar voice stages and automatic routing still require
+their own admission work; this increment does not complete the release goal.
+
 1. Extend the existing Chatterbox environment resolver with a frozen opaque
    identity, as for video. Shared readiness and execution must not expose the
    preparing account's Run ID or accept paths/commands from clients. Explicit
