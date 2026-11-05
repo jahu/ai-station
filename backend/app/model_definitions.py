@@ -172,8 +172,22 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         }
         if image.get("binding"):
             spec.update(runtime="stable-diffusion.cpp", adapter="managed-container")
+    video = (row.metadata_json or {}).get("video")
+    if row.category == "video" and isinstance(video, dict) and video.get("binding"):
+        spec = {
+            **(spec or {}),
+            "runtime": "Wan · headless ComfyUI",
+            "adapter": "managed-native",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Video. Its fixed workload uses explicit CPU offload.",
+        }
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
+        **(
+            {"video_backend": "wan22"}
+            if row.category == "video" and isinstance(video, dict) and video.get("binding")
+            else {}
+        ),
         "id": row.id,
         "name": row.name,
         "family": row.family,
@@ -295,6 +309,15 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         raise HTTPException(409, "Cancel or finish the installation Run before editing this definition")
     if body.name is not None:
         row.name = body.name
+    if (row.metadata_json.get("video") or {}).get("binding"):
+        if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
+            raise HTTPException(
+                422,
+                "Change video operation settings in Video; this model retains its reviewed runtime binding",
+            )
+        row.updated_at = utcnow()
+        session.commit()
+        return definition_dict(row, file)
     preset = preset_of(row)
     store_preset(
         row,
@@ -352,6 +375,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **(
+                {"video_checkpoint_binding": dict(row.metadata_json["video"]["binding"])}
+                if (row.metadata_json.get("video") or {}).get("binding")
+                else {}
+            ),
             **(
                 {"checkpoint_binding": dict(row.metadata_json["image"]["binding"])}
                 if (row.metadata_json.get("image") or {}).get("binding")
@@ -455,6 +483,15 @@ class ModelInstallExecutor:
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
                     **(
+                        {
+                            "checkpoint_profile": run.parameters["video_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("video_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
                         {"checkpoint_profile": run.parameters["checkpoint_binding"]["checkpoint_profile"]}
                         if run.parameters.get("checkpoint_binding")
                         else {}
@@ -463,6 +500,21 @@ class ModelInstallExecutor:
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("video_checkpoint_binding"):
+                from app.video_models import profile_for
+
+                binding = run.parameters["video_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected video checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
             if run.parameters.get("checkpoint_binding"):
                 from app.image_setup_client import ImageSetupClient
 

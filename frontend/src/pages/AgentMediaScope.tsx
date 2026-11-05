@@ -77,8 +77,27 @@ export default function AgentMediaScopeEditor({
     if (effects.data?.available)
       void cache.invalidateQueries({ queryKey: ["agent-tools"] });
   }, [effects.data?.available, cache]);
-  const selectedReadiness =
-    scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+  const videoModelId =
+    scope.kind === "video" ? scope.request.model_id : undefined;
+  const selectedVideo = useQuery({
+    queryKey: ["video-capabilities", videoModelId],
+    enabled: !!videoModelId,
+    queryFn: () =>
+      api<{ available: boolean; reason?: string }>(
+        `/video/models/${videoModelId}/capabilities`,
+      ),
+  });
+  const selectedReadiness = videoModelId
+    ? {
+        ready: selectedVideo.isPending
+          ? undefined
+          : selectedVideo.data?.available === true,
+        reason:
+          selectedVideo.error?.message ??
+          selectedVideo.data?.reason ??
+          "Checking selected video model…",
+      }
+    : scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
       ? {
           ready:
             speech.data?.engines?.fish_s2_pro?.available === true &&

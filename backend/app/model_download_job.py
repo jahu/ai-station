@@ -147,6 +147,10 @@ class DownloadExecutor:
                 },
             }
             session.commit()
+            if entry.capability == "video":
+                from app.hub_video_install import adopt as adopt_video
+
+                return adopt_video(session, run, entry, path, runner, hardware, check)
             if entry.capability == "image":
                 from app.hub_image_install import adopt
 

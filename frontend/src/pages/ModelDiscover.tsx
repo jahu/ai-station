@@ -68,11 +68,17 @@ type Report = {
     downloads: number | null;
   }[];
   candidate?: {
-    capability: "chat" | "image";
+    capability: "chat" | "image" | "video";
     setup_recipe?: {
       component_licenses: { name: string; url: string }[];
-      inputs: { role: string; filename: string; size_bytes: number }[];
+      inputs: {
+        role?: string;
+        kind?: string;
+        filename: string;
+        size_bytes: number;
+      }[];
     };
+    component_licenses?: { name: string; url: string }[];
     prepare_engine?: boolean;
   };
   files: ModelFile[];
@@ -434,11 +440,12 @@ export default function ModelDiscover() {
                 </div>
               ))}
               {report.kind !== "install_plan" &&
-                file.format === "gguf" &&
+                ["gguf", "safetensors"].includes(file.format) &&
                 file.sha256 && (
                   <>
                     {!file.assessment.profiles.some(
-                      (p) => p.capability === "image",
+                      (p) =>
+                        p.capability === "image" || p.capability === "video",
                     ) && (
                       <details className="hub-context-options">
                         <summary>Context options</summary>
@@ -508,8 +515,19 @@ export default function ModelDiscover() {
                 capability: report.candidate?.capability,
                 components: report.candidate?.prepare_engine
                   ? report.candidate.setup_recipe?.inputs
+                      .filter(
+                        (file) =>
+                          !!file.role ||
+                          file.kind === "python" ||
+                          file.kind === "sdk",
+                      )
+                      .map((file) => ({
+                        ...file,
+                        role: file.role ?? file.kind ?? file.filename,
+                      }))
                   : undefined,
                 component_licenses:
+                  report.candidate?.component_licenses ??
                   report.candidate?.setup_recipe?.component_licenses,
                 license: report.license ?? "Not declared",
                 license_url: report.license_url ?? report.source_url ?? "",

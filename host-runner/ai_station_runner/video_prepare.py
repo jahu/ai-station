@@ -114,6 +114,17 @@ def catalog():
 
     existing = capabilities()
     driver_ok = driver_supported(frozen["driver_minimum"])
+    managed = {"available": False}
+    try:
+        from ai_station_runner.video_checkpoints import managed_environment
+
+        selected = managed_environment(root)
+        managed = {
+            "available": bool(QUALIFIED and supported and fitting and ram >= 24576 and driver_ok),
+            "managed_runtime": video_environment.public_observation(selected["observation"]),
+        }
+    except (OSError, ValueError, KeyError):
+        pass
     notice = (
         "Managed video setup and inference are still being qualified"
         if not QUALIFIED
@@ -131,6 +142,7 @@ def catalog():
     )
     return {
         "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
+        "managed_video": managed,
         "recipe": frozen,
         "manifest_sha256": video_environment.fingerprint(frozen),
         "platform_supported": supported,

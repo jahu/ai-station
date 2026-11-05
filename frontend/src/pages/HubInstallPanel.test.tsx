@@ -195,3 +195,27 @@ it("does not install when physical memory fits but runtime prerequisites are una
       .disabled,
   ).toBe(true);
 });
+
+it("requires separate explicit video workload consent before installing", async () => {
+  const fetch = vi.fn(async (_path: string, _options?: RequestInit) => ({
+    ok: _path === "/api/model-hub/downloads" && _options?.method === "POST",
+    json: async () => ({ id: "video-setup" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const accepted = mount({ ...plan, capability: "video" });
+  const button = screen.getByRole("button", {
+    name: "Install model",
+  }) as HTMLButtonElement;
+  fireEvent.click(screen.getByRole("checkbox", { name: /model license/ }));
+  expect(button.disabled).toBe(true);
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /I accept this video profile/ }),
+  );
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  await waitFor(() => expect(accepted).toHaveBeenCalledWith("video-setup"));
+  expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toMatchObject({
+    license_accepted: true,
+    workload_accepted: true,
+  });
+});

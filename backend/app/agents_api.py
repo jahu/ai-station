@@ -121,7 +121,13 @@ def validate_target(body, session, agent=None, *, enabling=False):
         from app.agent_media import freeze_inputs, require_profile
 
         try:
-            require_profile(body.media)
+            if body.media.kind == "video" and body.media.request.model_id:
+                from app.video import memory_reservation
+                from app.video_models import profile_for
+
+                memory_reservation(body.media.request, profile_for(session, body.media.request.model_id))
+            else:
+                require_profile(body.media)
             freeze_inputs(session, body.media)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc

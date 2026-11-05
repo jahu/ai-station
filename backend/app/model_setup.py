@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_video":
+        from app.hub_video_candidates import recommendation as video_recommendation
+
+        return video_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_image":
         from app.hub_image_candidates import recommendation as image_recommendation
 
@@ -185,19 +189,21 @@ def view(session, task):
     saved = task.metadata_json["model_download"]
     run = session.get(Run, saved["run_id"])
     progress = dict(run.metadata_json.get("model_download", {}))
-    if saved["entry"].get("origin") == "hub_image" and run.status not in TERMINAL:
+    if saved["entry"].get("origin") in {"hub_image", "hub_video"} and run.status not in TERMINAL:
         engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         engine = session.get(Run, engine_id) if engine_id else None
         if engine is not None and engine.task_id == task.id and engine.status != "succeeded":
             native_progress = engine.metadata_json.get("runtime_preparation", {})
             recipe = saved["entry"]["setup_recipe"]
             progress.update(
-                phase="preparing_image_engine",
+                phase="preparing_video_engine"
+                if saved["entry"]["capability"] == "video"
+                else "preparing_image_engine",
                 engine_run_id=engine.id,
                 received_bytes=native_progress.get("received_bytes", 0),
                 expected_bytes=native_progress.get(
                     "expected_bytes",
-                    sum(v["size_bytes"] for v in recipe["inputs"]) + recipe["download_bytes"],
+                    sum(v["size_bytes"] for v in recipe["inputs"]) + recipe.get("download_bytes", 0),
                 ),
             )
     return {
@@ -210,7 +216,8 @@ def view(session, task):
         "progress": progress,
         "model_file_id": run.metadata_json.get("model_file_id"),
         "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
-        if run.metadata_json.get("model_file_id") and saved["entry"].get("capability") != "image"
+        if run.metadata_json.get("model_file_id")
+        and saved["entry"].get("capability") not in {"image", "video"}
         else None,
         "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
@@ -323,7 +330,7 @@ class Resume(BaseModel):
 
 def attempt(session, task, saved, *, previous=None):
     prerequisite = None
-    if saved["entry"].get("origin") == "hub_image" and saved["entry"].get("prepare_engine"):
+    if saved["entry"].get("origin") in {"hub_image", "hub_video"} and saved["entry"].get("prepare_engine"):
         from app.runtime_setup_api import attempt as prepare_runtime
 
         prepare_runtime(
@@ -460,7 +467,7 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
-    if saved["entry"].get("origin") == "hub_image":
+    if saved["entry"].get("origin") in {"hub_image", "hub_video"}:
         prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
         if prerequisite is not None and (
@@ -469,7 +476,8 @@ def resume(identity: UUID, body: Resume, session: DB):
             or prerequisite.metadata_json.get("cleanup_requires_inspection")
         ):
             raise HTTPException(
-                409, "Inspect or finish stopping the earlier image engine preparation before resuming"
+                409,
+                f"Inspect or finish stopping the earlier {saved['entry']['capability']} engine preparation before resuming",
             )
     task.metadata_json = {
         key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"

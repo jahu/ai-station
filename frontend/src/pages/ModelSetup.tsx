@@ -162,8 +162,9 @@ export function PreparationCard({
         ? "Stopped · downloaded bytes are retained"
         : value.run.status === "failed" || value.run.status === "interrupted"
           ? "Preparation needs attention"
-          : phase === "preparing_image_engine"
-            ? "Preparing image engine and companions"
+          : phase === "preparing_image_engine" ||
+              phase === "preparing_video_engine"
+            ? `Preparing ${phase === "preparing_video_engine" ? "video" : "image"} engine and companions`
             : phase === "verifying"
               ? "Checking the complete file"
               : phase === "inspecting"
@@ -238,6 +239,16 @@ export function PreparationCard({
             Resume preparation
           </Button>
         )}
+        {value.entry.capability === "video" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/video?model=${value.definition_id}`}
+            >
+              Open Video with this model →
+            </Link>
+          )}
         {value.entry.capability === "image" &&
           value.definition_id &&
           value.progress.ready_to_try && (

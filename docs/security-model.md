@@ -101,6 +101,19 @@ no tensor is deserialized, imported or loaded. This grants no video launch,
 arbitrary checkpoint role, runtime preparation or command capability. Existing
 LLM inspection and activation still require a GGUF source.
 
+Video source plans may inspect only bounded exact HTTP ranges of a pinned HF
+file over the existing public-DNS-pinned transport. A full response, changed
+range/size, invalid JSON/schema/layout or unsupported precision cannot authorize
+a weight transfer. The accepted header digest is checked again natively after
+download. Publisher cards cannot supply a runtime, command, destination or graph.
+The model Task's fixed video-setup prerequisite additionally requires explicit
+CPU-offload/workload consent and its exact owner/manifest/dependency contract.
+Video generation accepts only an immutable owned diffusion coordinate and fixed
+opaque engine. The normal native child rechecks full file identity before model
+loading; companions/SDK and process resource/deadline/ownership fences remain
+fixed. The selected model never inherits model-installation authority into an
+agent or orchestrator operation. No default/runtime is silently replaced.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates

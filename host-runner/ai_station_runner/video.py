@@ -1,6 +1,7 @@
 """Fixed offline Wan video profile; no graph, shell or ComfyUI server API."""
 
 import json
+import math
 import os
 from pathlib import Path
 from typing import Literal
@@ -14,9 +15,15 @@ from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_compose import MediaInput, verified_path
 from ai_station_runner.telemetry import collect
+from ai_station_runner.video_checkpoints import CheckpointSource, selected_environment
 from ai_station_runner.video_runtime_schema import ManagedRuntime
 from ai_station_runner.wan_guidance import apg_observation
 from ai_station_runner.wan_profiles import BOUNDED, MEMORY_MIB, validate_profile
+
+
+def fitting_gpu(device):
+    total = device.get("memory_total_mib")
+    return type(total) in {int, float} and math.isfinite(total) and total >= 12288
 
 
 class FileObservation(BaseModel):
@@ -29,6 +36,13 @@ class GuidanceObservation(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     size_bytes: int = Field(ge=1, le=65536)
     sha256: str = Field(pattern=r"^[0-9a-f]{64}$", min_length=64, max_length=64)
+
+
+class CheckpointSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    checkpoint: CheckpointSource
+    managed_runtime: ManagedRuntime
+    permissions: list[Literal["filesystem_read"]] = Field(max_length=1)
 
 
 class VideoRequest(BaseModel):
@@ -56,6 +70,7 @@ class VideoRequest(BaseModel):
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
     memory_profile: Literal["default", "bounded_11g"] = "default"
     managed_runtime: ManagedRuntime | None = None
+    checkpoint: CheckpointSource | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
@@ -74,6 +89,8 @@ class VideoRequest(BaseModel):
 
     @model_validator(mode="after")
     def area(self):
+        if self.checkpoint is not None and (self.managed_runtime is None or self.memory_profile != BOUNDED):
+            raise ValueError("An imported video checkpoint needs its fixed managed environment and workload")
         if self.managed_runtime is not None and self.deadline_at is None:
             raise ValueError("Managed video requires its absolute execution deadline")
         validate_profile(
@@ -128,20 +145,47 @@ def profile(observation=None):
     return paths
 
 
-def capabilities():
+def capabilities(checkpoint=None, runtime=None):
     try:
-        paths = profile()
         from ai_station_runner.video_environment import public_observation
         from ai_station_runner.video_prepare import driver_supported
         from ai_station_runner.video_selection import selection
 
-        chosen = selection(get_settings()) or {}
+        chosen = (
+            selected_environment(get_settings().host_data_dir(), checkpoint, runtime)
+            if checkpoint
+            else selection(get_settings()) or {}
+        )
+        paths = (
+            {
+                key: chosen[key]
+                for key in ("video_python", "comfy_dir", "wan_model", "wan_text_encoder", "wan_vae")
+            }
+            if checkpoint
+            else profile()
+        )
         managed = chosen.get("managed") is True
+        if checkpoint:
+            from ai_station_runner.video_prepare import QUALIFIED
+
+            if not QUALIFIED:
+                raise HTTPException(409, "This managed video engine is not qualified")
+            hardware = collect(get_settings().host_data_dir())
+            total_ram = (hardware.get("memory") or {}).get("total_mib")
+            if (
+                type(total_ram) not in {int, float}
+                or not math.isfinite(total_ram)
+                or total_ram < 24576
+                or not memory_profiles(explicit_managed=True)[0]["available"]
+            ):
+                raise HTTPException(
+                    409, "The selected video workload needs 24 GiB physical RAM and its user memory scope"
+                )
         eligible = (
             [
                 int(g["index"])
                 for g in collect(get_settings().host_data_dir()).get("gpus", [])
-                if (g.get("memory_total_mib") or 0) >= 12288
+                if fitting_gpu(g)
             ]
             if managed
             else []
@@ -183,18 +227,26 @@ def capabilities():
             "fps": 24,
             "memory_estimate_mib": memory_mib,
             "profile_observation": observation,
-            "memory_profiles": memory_profiles(),
+            "memory_profiles": memory_profiles(explicit_managed=bool(checkpoint)),
         }
-    except HTTPException as exc:
-        return {"available": False, "backend": "wan2.2-5b", "reason": exc.detail}
+    except (HTTPException, OSError, ValueError, KeyError) as exc:
+        return {
+            "available": False,
+            "backend": "wan2.2-5b",
+            "reason": str(exc.detail)
+            if isinstance(exc, HTTPException)
+            else "The selected video engine or checkpoint is unavailable or changed; inspect model setup",
+        }
 
 
-def memory_profiles():
+def memory_profiles(*, explicit_managed=False):
     from ai_station_runner.memory_scope import available
     from ai_station_runner.video_selection import selection
 
     enabled = (
-        get_settings().wan_bounded_profile or bool((selection(get_settings()) or {}).get("managed"))
+        explicit_managed
+        or get_settings().wan_bounded_profile
+        or bool((selection(get_settings()) or {}).get("managed"))
     ) and available()
     return [
         {
@@ -220,12 +272,30 @@ def start_video(manager, body):
         raise HTTPException(403, "Video read/write permissions are required")
     from ai_station_runner.video_selection import selection
 
+    if body.checkpoint:
+        from ai_station_runner.video_prepare import QUALIFIED
+
+        if not QUALIFIED:
+            raise HTTPException(409, "This managed video engine is not qualified")
     observation = body.managed_runtime.model_dump(mode="json") if body.managed_runtime else None
-    chosen = selection(get_settings(), observation) or {}
+    chosen = (
+        selected_environment(get_settings().host_data_dir(), body.checkpoint, observation)
+        if body.checkpoint
+        else selection(get_settings(), observation) or {}
+    )
     managed = chosen.get("managed") is True
     if managed and (observation is None or body.memory_profile != BOUNDED):
         raise HTTPException(409, "Managed video requires its frozen environment and bounded memory profile")
-    paths = profile(observation) if observation is not None else profile()
+    paths = (
+        {
+            key: chosen[key]
+            for key in ("video_python", "comfy_dir", "wan_model", "wan_text_encoder", "wan_vae")
+        }
+        if body.checkpoint
+        else profile(observation)
+        if observation is not None
+        else profile()
+    )
     if body.continuation_guidance != "standard":
         guidance = apg_observation(paths)
         if guidance is None:
@@ -236,7 +306,8 @@ def start_video(manager, body):
     if body.memory_profile == BOUNDED:
         from ai_station_runner.memory_scope import scope_prefix
 
-        if not memory_profiles()[0]["available"]:
+        profiles = memory_profiles(explicit_managed=True) if body.checkpoint else memory_profiles()
+        if not profiles[0]["available"]:
             raise HTTPException(409, "The bounded Wan memory profile is unavailable")
         try:
             prefix = scope_prefix(str(body.run_id), MEMORY_MIB)
@@ -283,9 +354,14 @@ def start_video(manager, body):
     if managed:
         from ai_station_runner.video_prepare import driver_supported
 
+        if body.checkpoint:
+            total_ram = (collect(root).get("memory") or {}).get("total_mib")
+
+            if type(total_ram) not in {int, float} or not math.isfinite(total_ram) or total_ram < 24576:
+                raise HTTPException(409, "The imported video workload needs at least 24 GiB physical RAM")
+
         if not driver_supported("580.126.20") or not any(
-            int(g["index"]) == body.gpu and (g.get("memory_total_mib") or 0) >= 12288
-            for g in collect(root).get("gpus", [])
+            int(g["index"]) == body.gpu and fitting_gpu(g) for g in collect(root).get("gpus", [])
         ):
             raise HTTPException(409, "The selected GPU or driver does not fit the managed video profile")
     run_id = str(body.run_id)

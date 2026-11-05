@@ -14,6 +14,7 @@ class VideoRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=2000)
     negative_prompt: str = Field(default="", max_length=2000)
     image_artifact_id: UUID | None = None
+    model_id: UUID | None = Field(default=None, exclude_if=lambda v: v is None)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
     frames: int = Field(default=49)

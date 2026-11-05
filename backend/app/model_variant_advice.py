@@ -38,6 +38,19 @@ BALANCED = {
 
 async def enrich_source(report, check):
     if (
+        report.get("pipeline_hint") in {"text-to-video", "image-to-video", "video-to-video"}
+        or report.get("pipeline_hint") == ""
+        and len(report["files"]) == 1
+    ) and any(f.get("format") == "safetensors" and f.get("identity_available") for f in report["files"]):
+        from app.hub_video_candidates import resolve_profile as video_profile
+        from app.runner_client import RunnerError, RunnerUnavailable
+
+        try:
+            report["video_profile"] = await video_profile(report, check)
+        except (ValueError, httpx.HTTPError, RunnerError, RunnerUnavailable) as exc:
+            report["requirements_error"] = str(exc)[:300]
+        return
+    if (
         "architecture_hint" in report
         and "base_models" in report
         and report.get("pipeline_hint") in {"text-to-image", "image-to-image"}
@@ -71,6 +84,16 @@ async def enrich_source(report, check):
 
 def assess_variant(file, report, hardware, storage, *, context_target=32768):
     existing = assess_file(file, hardware, storage)
+    if report.get("video_profile"):
+        from app.hub_video_candidates import candidate_from_profile as video_candidate
+
+        try:
+            return assess_file(
+                file, hardware, storage, candidates=(video_candidate(report, file["filename"]),)
+            )
+        except ValueError as exc:
+            existing["reason"] = str(exc)[:300]
+            return existing
     if report.get("image_profile"):
         from app.hub_image_candidates import candidate_from_profile as image_candidate
 
@@ -120,7 +143,7 @@ def rank_variants(report, *, context_target=32768):
         gpus = best["recommendation"]["gpus"] if best else []
         disk_fits = assessment["disk"]["status"] == "file_fits"
         usable = bool(best and disk_fits)
-        image = any(p.get("capability") == "image" for p in assessment["profiles"])
+        image = any(p.get("capability") in {"image", "video"} for p in assessment["profiles"])
         meets_context = bool(best and (image or context >= context_target))
         quant = best.get("quantization", "") if best else ""
         precision_known = quant in BALANCED and not quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))
@@ -140,7 +163,9 @@ def rank_variants(report, *, context_target=32768):
             "meets_context_target": None if image else bool(meets_context),
             "precision_tradeoff": bool(best and quant.startswith(("Q2", "Q3", "IQ2", "IQ3"))),
             "rank": 0,
-            "reason": f"Estimated images up to {best['recommendation']['maximum_side']} px per side on {len(gpus)} GPUs"
+            "reason": "Estimated 1280×704 video, one GPU and explicit CPU offload"
+            if best and best.get("capability") == "video"
+            else f"Estimated images up to {best['recommendation']['maximum_side']} px per side on {len(gpus)} GPUs"
             if image and best
             else f"Estimated {context:,}-token context on {len(gpus)} GPU(s)"
             if best

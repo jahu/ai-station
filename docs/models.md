@@ -150,6 +150,58 @@ a new video installation path or inference qualification. New source plans,
 companion preparation, explicit workload/offload consent and video/film/agent
 selection still need to be connected before a discovered checkpoint is usable.
 
+### Discovered video models (development branch)
+
+A specific SafeTensors file can now be planned from its actual immutable header,
+including publishers with no model card/base-model declaration. Two exact HTTP
+ranges retrieve only the length and bounded JSON header; ignored/changed ranges
+are rejected. Native slot matching checks the complete Wan 2.2 5B graph and F16
+storage before a weight transfer. The accepted plan freezes the header digest,
+full file identity and complete native engine/companion recipe. Native inspection
+rechecks the same header digest and graph after the verified download.
+
+The normal model Task may own a fixed video-engine prerequisite. Source and
+component licenses plus the workload require explicit acceptance. The current
+profile deliberately uses CPU offload, one 12-GiB GPU, at least 24-GiB physical
+RAM, a zero-swap 11-GiB process scope, 1280×704 output and at least 20 steps.
+Its existing bounded engine controls loading precision. This is not full GPU
+residency or multi-GPU sharding. Missing sensors and two smaller cards cannot
+satisfy that single-device requirement. The disk review includes missing runtime
+inputs and working reserve; the engine's starter weights remain a prerequisite.
+
+A registered video choice binds its owned checkpoint to the original opaque
+engine identity. Video, longer films and reviewed agent/conversation media
+settings share one selector. Every segment and Resume retain that source;
+renaming the definition does not change execution identity. Explicit selection
+can use its prepared engine while preserving existing configured/default video
+behavior. Native parent/child dispatch checks the source, graph, engine, resources,
+permissions and deadline; only the diffusion path changes. Owned process
+inspection/cancellation/recovery stay on the existing ProcessManager protocol.
+Re-check verifies the existing object and engine without another download.
+
+Unit/native process tests use tiny weights and a fake inference executable.
+A live public-HF range check verified an 83,424-byte header without model tensor
+payload. An isolated Docker/native qualification inspected a public mirror of
+the existing reference weights, prepared its fixed engine, registered the selected
+checkpoint and completed actual Linux RTX 3060 Generate: 17 frames at 1280×704,
+24 fps, 20 steps. All frames decoded and the output hash matched its artifact.
+The reference model/encoder/VAE were temporary verified cache copies, not a new
+trained model or fresh all-files download. The successful Run also retained its
+normal internal motion context. The first attempt found an offline-child HTTP
+import dependency, now corrected and regression-tested; no generation was claimed
+for that failed attempt. Owned jobs and the private Runner are stopped.
+
+Local checks include 461 broader Python regressions and a subsequent 154-test
+native/source recheck (overlapping sets), global Ruff/format, 89 frontend tests,
+frontend lint/typecheck/build/format, a final Docker build and desktop/mobile
+browser checks. The browser check caught and fixed a model-link bootstrap bug:
+opening an installed choice now starts a fresh workspace and preserves that model.
+Film/Resume, agent publication and native owned Stop use fake executors/process
+fixtures; they are not additional real GPU qualifications. No Windows GPU run
+was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sharded video files,
+other Wan architectures and other media families require their own supported
+slots and complete plans, not this F16 admission path.
+
 ## Installed files
 
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. Observed files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.

@@ -55,6 +55,10 @@ class HubCandidate(Candidate):
 
 
 def download_candidate(payload):
+    if payload.get("origin") == "hub_video":
+        from app.hub_video_candidates import HubVideoCandidate
+
+        return HubVideoCandidate.model_validate(payload)
     if payload.get("origin") == "hub_image":
         from app.hub_image_candidates import HubImageCandidate
 
@@ -225,6 +229,19 @@ def candidate_from_profile(observation, filename, profile, *, context_ceiling=32
 
 
 async def resolve_candidate(observation, filename, check, context_ceiling=131072):
+    selected_file = next((f for f in observation["files"] if f["filename"] == filename), None)
+    if selected_file and selected_file.get("format") == "safetensors":
+        from app.hub_video_candidates import candidate_from_profile as video_candidate
+        from app.hub_video_candidates import refresh_plan as refresh_video
+        from app.hub_video_candidates import resolve_profile as video_profile
+
+        saved = observation.get("video_profile")
+        profile = (
+            saved
+            if saved and saved.get("source_filename") == filename
+            else await video_profile(observation, check, filename)
+        )
+        return refresh_video(video_candidate({**observation, "video_profile": profile}, filename), check)
     if observation.get("image_profile"):
         from app.hub_image_candidates import candidate_from_profile as image_candidate
         from app.hub_image_candidates import refresh_plan

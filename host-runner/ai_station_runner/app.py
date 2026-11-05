@@ -89,7 +89,7 @@ from ai_station_runner.telemetry import collect
 from ai_station_runner.timeline_contract import TimelineRequest
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
-from ai_station_runner.video import VideoRequest, start_video
+from ai_station_runner.video import CheckpointSelection, VideoRequest, start_video
 from ai_station_runner.video import capabilities as video_capabilities
 from ai_station_runner.video_prepare import router as video_setup_router
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
@@ -1098,6 +1098,13 @@ def browser_report_endpoint(run_id: UUID):
 @app.get("/v1/video/capabilities")
 def video_available():
     return video_capabilities()
+
+
+@app.post("/v1/video/model-capabilities")
+def video_model_available(body: CheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Video model inspection requires filesystem read permission")
+    return video_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
 
 
 @app.post("/v1/runs/video")

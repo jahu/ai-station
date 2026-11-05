@@ -30,6 +30,7 @@ interface Preset {
 }
 interface Definition {
   image_backend?: "qwen" | "krea2";
+  video_backend?: "wan22";
   id: string;
   name: string;
   family: string;
@@ -193,11 +194,13 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
               {item.file?.filename ?? "Linked file missing"}
             </p>
             <small className="muted">
-              {item.image_backend
-                ? "Image model · configure in Images"
-                : item.compatibility?.operational
-                  ? "Managed llama.cpp after a successful install"
-                  : "Catalogued only · no managed adapter"}
+              {item.video_backend
+                ? "Video model · configure in Video"
+                : item.image_backend
+                  ? "Image model · configure in Images"
+                  : item.compatibility?.operational
+                    ? "Managed llama.cpp after a successful install"
+                    : "Catalogued only · no managed adapter"}
             </small>
           </Link>
         ))}
@@ -465,7 +468,7 @@ export function ModelDetail() {
             `/models/definitions/${definition.id}`,
             json("PATCH", {
               name: selectedName,
-              ...(!definition.image_backend
+              ...(!(definition.image_backend || definition.video_backend)
                 ? {
                     gpus: selectedGpus,
                     context_size: selectedContext,
@@ -587,9 +590,11 @@ export function ModelDetail() {
       </section>
       <section className="panel model-card">
         <h2>
-          {definition?.image_backend
-            ? "Image model"
-            : "Model definition and load preset"}
+          {definition?.video_backend
+            ? "Video model"
+            : definition?.image_backend
+              ? "Image model"
+              : "Model definition and load preset"}
         </h2>
         {definition ? (
           <p>
@@ -614,7 +619,7 @@ export function ModelDetail() {
         )}
         {definition?.compatibility && (
           <p>
-            {definition.image_backend
+            {definition.image_backend || definition.video_backend
               ? definition.compatibility.summary
               : definition.compatibility.operational
                 ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
@@ -639,7 +644,7 @@ export function ModelDetail() {
                   required
                 />
               </label>
-              {!definition?.image_backend && (
+              {!(definition?.image_backend || definition?.video_backend) && (
                 <>
                   <label>
                     Context size
@@ -688,7 +693,7 @@ export function ModelDetail() {
             <dl className="model-properties">
               <dt>Name</dt>
               <dd>{definition.name}</dd>
-              {!definition.image_backend && (
+              {!(definition.image_backend || definition.video_backend) && (
                 <>
                   <dt>Saved context</dt>
                   <dd>
@@ -706,6 +711,11 @@ export function ModelDetail() {
               )}
             </dl>
           ) : null}
+          {definition?.video_backend && (
+            <Link to={`/video?model=${definition.id}`}>
+              Choose this model in Video
+            </Link>
+          )}
           {definition?.image_backend && (
             <Link to={`/images?model=${definition.id}`}>
               Choose this model in Images
@@ -714,7 +724,7 @@ export function ModelDetail() {
           <div className="row">
             {canManage && (
               <Button type="submit" disabled={save.isPending}>
-                {definition?.image_backend
+                {definition?.image_backend || definition?.video_backend
                   ? "Save name"
                   : definition
                     ? "Save preset"
@@ -734,7 +744,7 @@ export function ModelDetail() {
               </Button>
             )}
             {definition?.status === "registered" &&
-              !definition.image_backend &&
+              !(definition.image_backend || definition.video_backend) &&
               definition.compatibility?.operational && (
                 <Button
                   type="button"

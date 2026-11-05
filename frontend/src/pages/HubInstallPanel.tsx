@@ -10,7 +10,7 @@ import { PreparationCard, type Preparation } from "./ModelSetup";
 
 export type InstallPlan = {
   manifest_sha256: string;
-  capability?: "chat" | "image";
+  capability?: "chat" | "image" | "video";
   components?: { role: string; filename: string; size_bytes: number }[];
   component_licenses?: { name: string; url: string }[];
   license: string;
@@ -45,6 +45,7 @@ export default function HubInstallPanel({
   onDownload: (id: string) => void;
 }) {
   const [accepted, setAccepted] = useState(false);
+  const [workloadAccepted, setWorkloadAccepted] = useState(false);
   const receipt = useRef<string | null>(null);
   const navigate = useNavigate();
   const download = useQuery({
@@ -73,6 +74,9 @@ export default function HubInstallPanel({
           plan_run_id: runId,
           manifest_sha256: plan.manifest_sha256,
           license_accepted: accepted,
+          ...(plan.capability === "video"
+            ? { workload_accepted: workloadAccepted }
+            : {}),
         }),
       );
     },
@@ -97,9 +101,11 @@ export default function HubInstallPanel({
         {downloadId ? "Model preparation" : "Ready to review and install"}
       </h2>
       <p className="muted">
-        {plan.capability === "image"
-          ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
-          : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
+        {plan.capability === "video"
+          ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
+          : plan.capability === "image"
+            ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
+            : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
       {!!plan.component_licenses?.length && (
         <details className="hub-context-options">
@@ -142,14 +148,35 @@ export default function HubInstallPanel({
                 model license ({plan.license})
               </a>{" "}
               and agree to download this model
-              {plan.capability === "image"
+              {["image", "video"].includes(plan.capability ?? "")
                 ? " and its required licensed components"
                 : ""}
               .
             </span>
           </label>
+          {plan.capability === "video" && (
+            <label className="hub-license">
+              <input
+                type="checkbox"
+                checked={workloadAccepted}
+                onChange={(event) => setWorkloadAccepted(event.target.checked)}
+              />
+              <span>
+                I accept this video profile: 1280 × 704, one 12 GiB GPU and at
+                least 24 GiB system RAM. It deliberately processes part of the
+                model in RAM (CPU offload), with an 11 GiB application memory
+                limit and no swap.
+              </span>
+            </label>
+          )}
           <Button
-            disabled={!canManage || !accepted || !allowed || install.isPending}
+            disabled={
+              !canManage ||
+              !accepted ||
+              (plan.capability === "video" && !workloadAccepted) ||
+              !allowed ||
+              install.isPending
+            }
             onClick={() => install.mutate()}
           >
             <Download size={16} />

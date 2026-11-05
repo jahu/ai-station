@@ -1,5 +1,6 @@
 """Bounded SafeTensors descriptors; no tensor payload, framework or model code."""
 
+import hashlib
 import json
 import math
 import os
@@ -113,5 +114,6 @@ def inspect_header(path, size_bytes, mtime):
         "tensor_count": len(tensors),
         "tensors": tensors,
         "header_bytes": 8 + length,
+        "header_sha256": hashlib.sha256(raw).hexdigest(),
         "tensor_storage_bytes": cursor,
     }

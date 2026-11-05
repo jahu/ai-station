@@ -236,7 +236,7 @@ function fixture(
   return { state, submissions, fetch };
 }
 
-function mount(capability: CreativeCapability = "images") {
+function mount(capability: CreativeCapability = "images", entry?: string) {
   activateStorageAccount("account-one");
   const cache = new QueryClient({
     defaultOptions: {
@@ -262,7 +262,8 @@ function mount(capability: CreativeCapability = "images") {
       <QueryClientProvider client={cache}>
         <MemoryRouter
           initialEntries={[
-            `${capability === "music" || capability === "speech" ? "/audio" : "/" + capability}?session=workspace-one${capability === "music" ? "&mode=music" : ""}`,
+            entry ??
+              `${capability === "music" || capability === "speech" ? "/audio" : "/" + capability}?session=workspace-one${capability === "music" ? "&mode=music" : ""}`,
           ]}
         >
           <Link to="/elsewhere">Leave workspace</Link>
@@ -655,4 +656,56 @@ it("restores generated voice and never attaches an old hidden recording to a var
     pace: "slow",
     gpu: "auto",
   });
+});
+
+it("opens an installed video model in a fresh workspace and preserves its selection", async () => {
+  const backend = fixture({ capability: "video", title: "Previous film" });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      const reply = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (path === "/api/creative/sessions" && options?.method === "POST") {
+        return reply({
+          ...backend.state,
+          id: "fresh-film",
+          title: "Untitled film",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/creative/sessions/fresh-film") {
+        return reply({
+          ...backend.state,
+          id: "fresh-film",
+          title: "Untitled film",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/video/models")
+        return reply({
+          items: [
+            { id: "installed-wan", name: "Installed Wan", available: true },
+          ],
+        });
+      return original(input, options);
+    }),
+  );
+  mount("video", "/video?model=installed-wan");
+  const choice = await screen.findByLabelText("Video model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-wan");
+  expect(
+    screen.getByRole("textbox", { name: "Workspace name" }),
+  ).toHaveProperty("value", "Untitled film");
+  expect(
+    backend.fetch.mock.calls.some(
+      ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+    ),
+  ).toBe(false);
 });

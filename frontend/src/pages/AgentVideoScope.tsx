@@ -11,6 +11,7 @@ import { useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import type { VideoMediaRequest } from "./agent-media";
 import VideoMemoryProfile from "../components/media/VideoMemoryProfile";
+import VideoModelChoice from "../components/media/VideoModelChoice";
 
 export default function AgentVideoScope({
   value,
@@ -59,6 +60,23 @@ export default function AgentVideoScope({
         length, shots and first frame stay fixed. Allow enough time in the
         agent's runtime budget for the chosen quality.
       </p>
+      <VideoModelChoice
+        value={value.model_id ?? ""}
+        disabled={disabled}
+        onChange={(id) =>
+          patch({
+            model_id: id || undefined,
+            ...(id
+              ? {
+                  width: 1280,
+                  height: 704,
+                  steps: Math.max(20, value.steps ?? 20),
+                  memory_profile: "bounded_11g" as const,
+                }
+              : {}),
+          })
+        }
+      />
       <div className="form-grid">
         <label>
           Film length (seconds)
@@ -136,6 +154,7 @@ export default function AgentVideoScope({
           Advanced video settings
         </summary>
         <VideoMemoryProfile
+          modelId={value.model_id}
           value={value.memory_profile ?? "default"}
           disabled={disabled}
           onChange={(profile) => {

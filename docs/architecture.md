@@ -29,6 +29,23 @@ without Torch or payload reads. The slot binds the complete existing native
 video recipe; legacy language-model admission stays GGUF-only. This primitive
 provides structural evidence, not new video installation or runtime selection.
 
+Owned-model filesystem checks are shared through a standard-library module.
+The Runner maps its errors to HTTP; the offline inference child imports the pure
+checks directly and never needs FastAPI/Uvicorn or the Runner's setup router.
+Engine qualification gates stay in native preparation and parent dispatch.
+
+The video discovery candidate matches one immutable SafeTensors header against
+that slot before weights transfer, then composes the existing downloader and
+optional owned video-engine prerequisite. License/workload consent includes the
+fixed CPU-offload profile. Shared video definitions freeze an owned diffusion
+object and opaque native environment; workspace, film segments and reviewed
+agent/conversation media settings reuse this binding. Opening a model from its
+installation starts a fresh creative workspace and preserves the explicit choice.
+Native execution changes
+only the diffusion source and retains existing process ownership/recovery.
+Qualification status is recorded in `docs/models.md`; other formats/families are
+not silently admitted by this graph.
+
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated
 fixed action. It prepares pinned toolkit inputs and preserves Docker settings,

@@ -573,7 +573,12 @@ class AgentMediaExecutor:
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             session.commit()
             verify_files(run)
-            profile = require_profile(definition.media)
+            if definition.media.kind == "video" and definition.media.request.model_id:
+                from app.video_models import profile_for
+
+                profile = profile_for(session, definition.media.request.model_id)
+            else:
+                profile = require_profile(definition.media)
             scope = definition.media
             if scope.description_source == "goal":
                 scope = asyncio.run(self.prepare(session, run, definition))
