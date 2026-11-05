@@ -1618,3 +1618,8 @@ profiles cannot earn a fit for the selected capability. A publisher search outag
 keeps the individually inspected starting point with a visible notice. Opening an
 installed model's publisher-update link still only prefills the source; it never
 launches inspection, download or replacement by itself.
+
+Recurring reference-image agents reuse the existing preparation and image Run
+lifecycle. The opt-in [scene-planning contract](plans/agent-image-scenes.md)
+separates identity from composition, bounds owner-scoped completed-shot context
+and keeps execution settings outside model authority.

@@ -6,6 +6,7 @@ import MediaResult from "../components/media/MediaResult";
 import MediaJobResult from "../components/media/MediaJobResult";
 
 import AgentDocumentSources from "./AgentDocumentSources";
+import "./AgentImageScenes.css";
 
 export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
@@ -22,9 +23,49 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
         .filter((item) => item?.tool === "read_documents")
         .map((item) => ({ result: item.result }))
     : [];
+  const scene = prepared?.parameters?.image_scene as
+    Record<string, unknown> | undefined;
+  const image = runs.find(
+    (row) => row.task_id === task && row.executor_type === "photo_pipe",
+  );
+  const sceneKeys = ["setting", "pose", "expression"] as const;
+  const hasScene =
+    !!scene &&
+    typeof scene === "object" &&
+    sceneKeys.every((key) => key in scene && typeof scene[key] === "string");
   return (
     <div className="agent-media-result">
       <AgentDocumentSources captures={documents} />
+      {hasScene && (
+        <section
+          className="agent-image-scene-summary"
+          aria-label="Image scene plan"
+        >
+          <h3>
+            {image?.status === "succeeded" ? "This shot" : "Planned shot"}
+          </h3>
+          <dl>
+            {sceneKeys.map((key) => (
+              <div key={key}>
+                <dt>
+                  {key === "setting"
+                    ? "Setting"
+                    : key === "pose"
+                      ? "Pose"
+                      : "Expression"}
+                </dt>
+                <dd>{String(scene[key])}</dd>
+              </div>
+            ))}
+          </dl>
+          {typeof image?.parameters?.prompt === "string" && (
+            <details>
+              <summary>Image prompt</summary>
+              <p>{image.parameters.prompt}</p>
+            </details>
+          )}
+        </section>
+      )}
       <AgentMediaOutput runs={runs} />
     </div>
   );

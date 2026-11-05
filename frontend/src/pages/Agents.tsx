@@ -37,6 +37,7 @@ import {
   agentMediaIssue,
   fixedAgentMedia,
   newAgentMedia,
+  syncImageBrief,
   type AgentMediaScope,
 } from "./agent-media";
 import AgentDataResult from "./AgentDataResult";
@@ -1005,6 +1006,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   const mediaScope = values.tools.includes("create_media")
     ? (values.media ?? newAgentMedia("image", values.goal))
     : null;
+  const imageInstructions =
+    mediaScope?.kind === "image" && mediaScope.description_source === "goal";
   const mediaIssue = values.tools.includes("create_media")
     ? agentMediaIssue(mediaScope, {
         allowMissingVoice: !agent.enabled,
@@ -1218,13 +1221,31 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           />
         )}
         <label className="agent-wide">
-          Goal
+          {imageInstructions ? "What should this agent create?" : "Goal"}
           <textarea
+            aria-label="Goal"
+            placeholder={
+              imageInstructions
+                ? "Create a new photo of the same person each time. Keep their face and hairstyle; vary the place, pose and expression…"
+                : undefined
+            }
             required
-            maxLength={isCoding(values.tools) ? 10000 : 16000}
+            maxLength={
+              isCoding(values.tools) || imageInstructions ? 10000 : 16000
+            }
             rows={3}
             value={values.goal}
-            onChange={(e) => update("goal", e.target.value)}
+            onChange={(e) =>
+              editValues((current) => ({
+                ...current,
+                goal: e.target.value,
+                media: syncImageBrief(
+                  current.media,
+                  current.goal,
+                  e.target.value,
+                ),
+              }))
+            }
           />
         </label>
         {values.tools.includes("create_media") && (
@@ -1270,15 +1291,38 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             />
           </div>
         )}
-        <label className="agent-wide">
-          System prompt
-          <textarea
-            maxLength={8000}
-            rows={3}
-            value={values.system_prompt}
-            onChange={(e) => update("system_prompt", e.target.value)}
-          />
-        </label>
+        {imageInstructions ? (
+          <details className="agent-wide agent-image-guidance">
+            <summary>
+              Advanced agent instructions
+              {values.system_prompt ? " · saved" : " (optional)"}
+            </summary>
+            <p className="muted">
+              Additional model guidance. The photo instruction and reviewed
+              media settings remain authoritative.
+            </p>
+            <label className="agent-wide">
+              System prompt
+              <textarea
+                maxLength={8000}
+                rows={3}
+                value={values.system_prompt}
+                onChange={(e) => update("system_prompt", e.target.value)}
+              />
+            </label>{" "}
+          </details>
+        ) : (
+          <label className="agent-wide">
+            System prompt
+            <textarea
+              maxLength={8000}
+              rows={3}
+              value={values.system_prompt}
+              onChange={(e) => update("system_prompt", e.target.value)}
+            />
+          </label>
+        )}
+
         <label>
           Trigger
           <select

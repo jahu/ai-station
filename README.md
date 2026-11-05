@@ -86,7 +86,7 @@ of public reports.
 | **Make and transform images** | Generate, Edit, Recompose and Upscale; ordered references, prompts, parameters and reusable results. |
 | **Create video and avatars** | Local video generation, multi-shot films, resumable segments and portraits animated against a recording or generated speech. |
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
-| **Put agents to work** | Natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
+| **Put agents to work** | [Recurring reference-photo scenes](docs/plans/agent-image-scenes.md), natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
 | **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
 | **Keep your creative work** | Your private media-first Library, searchable reusable inputs, film previews, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
