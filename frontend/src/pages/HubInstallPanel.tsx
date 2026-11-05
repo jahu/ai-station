@@ -116,18 +116,22 @@ export default function HubInstallPanel({
                     ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
                     : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
-      {!!plan.component_licenses?.length && (
+      {(!!plan.component_licenses?.length || !!plan.components?.length) && (
         <details className="hub-context-options">
-          <summary>Required engine, components and licenses</summary>
+          <summary>
+            {plan.component_licenses?.length
+              ? "Required engine, components and licenses"
+              : "Required model files"}
+          </summary>
           <ul>
             {plan.components?.map((file) => (
-              <li key={file.role}>
+              <li key={`${file.role}:${file.filename}`} className="model-path">
                 {file.filename} · {(file.size_bytes / 1024 ** 3).toFixed(2)} GiB
               </li>
             ))}
           </ul>
           <ul>
-            {plan.component_licenses.map((license) => (
+            {plan.component_licenses?.map((license) => (
               <li key={license.url}>
                 <a href={license.url} target="_blank" rel="noreferrer">
                   {license.name} ↗

@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_split":
+        from app.hub_split_candidates import recommendation as bundle_recommendation
+
+        return bundle_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_avatar":
         from app.hub_avatar_candidates import recommendation as avatar_recommendation
 

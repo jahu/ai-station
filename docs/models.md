@@ -548,3 +548,24 @@ Qualification covers this fixed import path. The reference weights were reused;
 it does not establish a new training's quality, full-minute timing, Windows GPU
 support or arbitrary PyTorch checkpoint compatibility. No private test media were
 published, and 0.1.2 packages remain unchanged.
+
+
+### Complete new split GGUFs — Linux source qualification (2026-11-05)
+
+Find new models accepts a complete supported publisher set even from its second
+file's link. All parts are pinned, streamed/hashed and natively inspected before
+one model is registered; raw physical file sizes remain distinct from total model
+size. Chat, agents, runtime reuse, handoff and Stop retain the complete binding.
+
+The public Qwen2.5 7B Q4_0 pair at revision
+`bb5d59e06d9551d752d08b292a50eb208b07ab1f` transferred 4,431,390,848 bytes from
+Hugging Face. Its first native check identified a 32K publisher/128K file context
+difference. After the policy correction, same-Task cached resume, native admission,
+a 32K/Q8 GPU Chat reply (`4`), a manual agent and confirmed owned Stop/resource
+release passed on one RTX 3060 12 GB. Actual public transfer is separate from the
+small controlled-source interrupted-range test and earlier native two-GPU/
+zero-tensor-first/Runner-restart checks. Native attention geometry stays exact;
+the file must cover the reviewed context and cannot silently raise its default.
+These are Linux integration results, not general model-quality/context accuracy
+benchmarks or physical Windows GPU qualification. Private data/media were not
+published and the running production data was not modified.

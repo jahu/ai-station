@@ -512,8 +512,65 @@ This qualifies the native bundle path for that fixture/image on Linux, not all
 model architectures or Windows GPU execution. No new publisher weights or media
 were downloaded/published in this qualification.
 
-Next: compose whole-part source download/Stop/Resume, shared registry binding and
-ordinary workspace/agent selection, then qualify that complete workflow. Source
-UI installation remains refused until those contracts pass; native structural
-success alone must not enable a source recommendation. Finish lifecycle, QA,
-documentation/site and packaged Linux/Windows release gates afterward.
+The following source-installation qualification completes whole-part transfer,
+registry binding and ordinary Chat/agent selection. Native structural success
+alone never enables a source recommendation; lifecycle, QA, documentation/site
+and packaged Linux/Windows release gates remain required.
+
+
+### Complete source installation — qualified Linux path, 2026-11-05
+
+The control plane freezes every part and its pinned common configuration while
+preserving the primary ModelFile's physical size. Plans, storage headroom,
+progress and resumable transfers account for the complete set. Registration
+requires matching native whole-set and attention/cache geometry. The shared model
+binding follows ordinary Chat, agent selection, runtime source/handoff and
+ownership facts; GPU and host-RAM reservations survive readiness and release only
+after confirmed Stop. The Models and discovery UI show complete size, part count
+and component details. Old fragment-only observations do not gain admission.
+
+The source-installation gate is now enabled after these distinct checks:
+
+- The controlled publisher/HTTP fixture streamed actual previously verified
+  Qwen2.5 0.5B weights through the real downloader. A deliberate second-part
+  interruption resumed from byte 1,048,576 without retransferring the first part.
+  Hash verification, native inspection, registration, ordinary GPU Chat and Stop
+  all passed in an isolated hardened control-plane container/native Runner. This
+  is controlled transport evidence, not a public Hugging Face multipart transfer.
+- A real public pinned second-file link from
+  `Qwen/Qwen2.5-7B-Instruct-GGUF`, revision
+  `bb5d59e06d9551d752d08b292a50eb208b07ab1f`, downloaded both Q4_0 files:
+  3,983,228,352 and 448,162,496 bytes (4,431,390,848 total). The initial native
+  inspection exposed a context-policy mismatch: the publisher config declares
+  32,768 while the GGUF declares 131,072 tokens. After fixing that policy, the
+  same Task resumed from its verified cached files, registered one model, returned
+  `4` in ordinary Chat and completed a manual agent on the same single runtime.
+  The default remained the reviewed 32K/Q8 preset on one RTX 3060 12 GB. Stop
+  removed that exact container and released every GPU/RAM reservation.
+- Attention architecture/layer/cache/state dimensions and source identities must
+  still agree exactly. A differing file context is accepted only if it covers
+  the reviewed limit (the fixed CPU profile reviews 4096). It is retained as
+  native evidence, logged and explained in model details; installation does not
+  silently enlarge the preset. A smaller-than-reviewed file limit still refuses
+  registration. Header context is an advertised limit, not model-quality proof.
+- Temporary-database/native-metadata tests also cover missing/incorrect parts,
+  whole-set hashing identity, sourcepart2 planning, failed-part resume, Stop before
+  registration, shared-runtime scalar timestamp precision, normal Chat dispatch,
+  retained RAM and confirmed resource release. Compiled desktop/mobile checks use
+  the retained actual source/plan/model snapshots; screenshots remain private.
+
+The public transfer, controlled interruption and actual GPU inference are separate
+claims. Production data and external services were untouched. These checks do not
+qualify Windows GPU hardware, every architecture or every advertised context.
+Finish complete lifecycle/ranking, operator QA/workbook, README/site, packaged
+Linux/Windows regression and owner-reviewed release promotion before closing the
+full discovery goal.
+
+
+Before release, finish logical identity and lifecycle across shared components.
+The current registry still has one definition per primary ModelFile and rejects
+conflicting complete sets rather than overwriting them. Distinct valid models
+that share the same first part must receive separate logical bindings/selections
+without copying the shared weights or rewriting an existing definition. Preserve
+legacy file-model references while adding that contract, its migration, source
+update/removal behavior and cross-account/runtime recovery tests.

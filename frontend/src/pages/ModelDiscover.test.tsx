@@ -599,3 +599,95 @@ it("keeps older split-file observations unavailable without confusing unknown to
     screen.queryByRole("button", { name: "Review installation" }),
   ).toBeNull();
 });
+
+it("reviews all parts together only when the server supplies a supported complete-model plan", async () => {
+  const identity = "b".repeat(64);
+  const names = [1, 2].map(
+    (index) => `Q4/Coder.Q4_K_M-0000${index}-of-00002.gguf`,
+  );
+  const state = {
+    ...report,
+    observation_sha256: "a".repeat(64),
+    model_bundles: [
+      {
+        id: identity,
+        kind: "gguf_split",
+        name: "Q4/Coder.Q4_K_M.gguf",
+        expected_parts: 2,
+        observed_parts: 2,
+        status: "complete_metadata",
+        total_size_bytes: 8 * 1024 ** 3,
+        missing_parts: [],
+        parts: names.map((filename, index) => ({
+          filename,
+          index: index + 1,
+          size_bytes: 4 * 1024 ** 3,
+        })),
+      },
+    ],
+    // A pasted second-file link still represents the whole model.
+    files: [
+      {
+        ...report.files[0],
+        filename: names[1],
+        bundle_id: identity,
+        sha256: "c".repeat(64),
+        assessment: {
+          reason: "Estimated whole-model fit on each GPU",
+          runtime_status: "supported_complete_bundle_plan",
+          hardware_status: "estimated_fit",
+          disk: {
+            status: "file_fits",
+            free_bytes: 100 * 1024 ** 3,
+            model_bundle_bytes: 8 * 1024 ** 3,
+          },
+          profiles: [
+            {
+              catalog_id: "whole",
+              name: "Complete Coder",
+              fit: "estimated_fit",
+              occupancy: "unknown",
+              recommendation: {
+                gpus: [7],
+                context_size: 32768,
+                reason: "Complete fit",
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "planned" }
+        : {
+            id: "saved",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: { source_inspection: state },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/models/discover?run=saved");
+  await screen.findByText("Complete Coder");
+  expect(
+    screen.getByText(/All parts will be downloaded and verified together/),
+  ).toBeTruthy();
+  expect(screen.getByText(/Model weights total 8\.00 GiB/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Review installation" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+    ).toBe(true),
+  );
+  const request = fetch.mock.calls.find(
+    ([, options]) => options?.method === "POST",
+  )!;
+  expect(JSON.parse(request[1]!.body as string)).toMatchObject({
+    filename: names[1],
+    inspection_run_id: "saved",
+  });
+});

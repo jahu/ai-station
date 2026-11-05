@@ -66,6 +66,16 @@ class DownloadExecutor:
             entry = download_candidate(run.parameters["entry"])
             if fingerprint(run.parameters["entry"]) != run.parameters["manifest_sha256"]:
                 raise ValueError("The reviewed model download manifest changed")
+            split = getattr(entry, "origin", None) == "hub_split"
+            if split:
+                from app.hub_split_candidates import INSTALLATION_QUALIFIED
+
+                if not INSTALLATION_QUALIFIED:
+                    raise ValueError("Complete GGUF source installation is still being qualified")
+            from app.gguf_bindings import candidate_size, transfer_files
+
+            download_specs = transfer_files(entry)
+            total_size = candidate_size(entry)
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             session.commit()
             runner = RunnerClient(timeout=30)
@@ -125,9 +135,12 @@ class DownloadExecutor:
             final = folder / entry.file.sha256
 
             def remaining():
-                if entry.capability == "embedding":
+                if entry.capability == "embedding" or split:
                     total = 0
-                    for spec in (entry.file, entry.tokenizer):
+                    specs = (
+                        (entry.file, entry.tokenizer) if entry.capability == "embedding" else download_specs
+                    )
+                    for spec in specs:
                         object_path, partial_path = folder / spec.sha256, folder / (spec.sha256 + ".part")
                         already = (
                             partial_path.stat().st_size
@@ -179,13 +192,57 @@ class DownloadExecutor:
                             )
                         )
                         if entry.capability == "embedding"
+                        else (lambda received, total: progress(received, total_size))
+                        if split
                         else progress,
                         source_recovered=recovered,
                     )
                 )
+                if split:
+                    received_before = entry.file.size_bytes
+                    for spec in download_specs[1:]:
+                        check()
+
+                        def part_progress(received, total, base=received_before):
+                            progress(base + received, total_size)
+
+                        def part_recovered(url, digest=spec.sha256):
+                            check()
+                            append_event(
+                                session,
+                                run.id,
+                                "model.download.source_refreshed",
+                                {"sha256": digest, "source_url": url},
+                            )
+                            session.commit()
+
+                        asyncio.run(
+                            obtain(
+                                root,
+                                spec,
+                                check=check,
+                                progress=part_progress,
+                                source_recovered=part_recovered,
+                            )
+                        )
+                        received_before += spec.size_bytes
             except DownloadBusy:
                 return self.defer(session, run, worker=worker, claim=claim)
             check()
+            bundle = None
+            if split:
+                from app.gguf_bindings import OwnedBundle
+
+                bundle = OwnedBundle(
+                    parts=[
+                        {
+                            "sha256": spec.sha256,
+                            "size_bytes": spec.size_bytes,
+                            "mtime": (folder / spec.sha256).stat().st_mtime,
+                        }
+                        for spec in download_specs
+                    ]
+                )
             if entry.capability == "embedding":
                 from app.hub_embedding_install import adopt
 
@@ -197,8 +254,8 @@ class DownloadExecutor:
                 **run.metadata_json,
                 "model_download": {
                     "phase": "inspecting",
-                    "received_bytes": entry.file.size_bytes,
-                    "expected_bytes": entry.file.size_bytes,
+                    "received_bytes": total_size,
+                    "expected_bytes": total_size,
                 },
             }
             session.commit()
@@ -240,6 +297,7 @@ class DownloadExecutor:
                     "mtime": observed.st_mtime,
                     "check_context": True,
                     "check_image": True,
+                    **({"model_bundle": bundle.model_dump(mode="json")} if bundle else {}),
                     **({"runtime_profile": entry.runtime_profile} if entry.runtime_profile else {}),
                     **(verification(native_preset) if is_native else {}),
                     **({"allow_unprepared_sdk": True} if is_native and environment_id is None else {}),
@@ -248,6 +306,25 @@ class DownloadExecutor:
             )
             check()
             profile = report.get("context_profile") or {}
+            bundle_metadata = {}
+            if bundle:
+                from app.gguf_bindings import checked_proof
+
+                proof = checked_proof(bundle, report.get("model_bundle"))
+                if proof.get("context_profile") != profile:
+                    raise ValueError("The complete bundle and primary context observations disagree")
+                bundle_metadata = {
+                    "model_bundle": bundle.model_dump(mode="json"),
+                    "bundle_proof": proof,
+                    "source_parts": [
+                        {
+                            "filename": part.filename,
+                            "sha256": part.file.sha256,
+                            "size_bytes": part.file.size_bytes,
+                        }
+                        for part in entry.parts
+                    ],
+                }
             per_token = (
                 entry.attention_layers
                 * entry.kv_heads
@@ -265,12 +342,33 @@ class DownloadExecutor:
                 and profile.get("source") == "gguf_header"
                 and profile.get("architecture") == entry.architecture
                 and profile.get("attention_layers") == entry.attention_layers
-                and profile.get("trained_context") == entry.trained_context
+                and type(profile.get("trained_context")) is int
+                and 512 <= profile["trained_context"] <= 16777216
                 and profile.get("q8_kv_bytes_per_token") == per_token
                 and profile.get("state_reserve_mib", 0) == entry.state_reserve_mib
             ):
                 raise ValueError(
                     "The downloaded model does not match its native source/architecture inspection"
+                )
+            reviewed_context = 4096 if entry.runtime_profile else entry.context_ceiling
+            if profile["trained_context"] < reviewed_context:
+                raise ValueError(
+                    f"The model file supports only {profile['trained_context']} tokens, below the reviewed {reviewed_context}-token limit; review a smaller context before using these cached files"
+                )
+            context_metadata = {}
+            if profile["trained_context"] != entry.trained_context:
+                context_metadata = {
+                    "context_notice": f"The model file declares {profile['trained_context']:,} context tokens; publisher configuration declares {entry.trained_context:,}. The initial preset stays within the reviewed {reviewed_context:,}-token limit."
+                }
+                append_event(
+                    session,
+                    run.id,
+                    "model.context.reviewed",
+                    {
+                        "file_context": profile["trained_context"],
+                        "publisher_context": entry.trained_context,
+                        "reviewed_limit": reviewed_context,
+                    },
                 )
             if entry.runtime_profile:
                 from app.cpu_models import estimate
@@ -286,6 +384,14 @@ class DownloadExecutor:
             if report.get("error") and runtime_present:
                 raise ValueError("Native model inspection did not succeed")
             preset = recommendation(entry, hardware)
+            if bundle:
+                from app.hub_split_candidates import recommendation as bundle_recommendation
+
+                preset = bundle_recommendation(entry, hardware, proof)
+                if not preset["fits"]:
+                    raise ValueError(
+                        "Verified complete tensor placement and useful context do not fit this hardware; downloaded files were preserved"
+                    )
             # Stop and registry/receipt publication use the same task fence.
             lock_task(session, run.task)
             check(commit=False)
@@ -301,9 +407,12 @@ class DownloadExecutor:
                     host_path=None,
                     relative_path=relative,
                     sha256=entry.file.sha256,
-                    filename=entry.filename,
+                    filename=(entry.filename.rsplit("-", 3)[0] + ".gguf") if split else entry.filename,
                     size_bytes=entry.file.size_bytes,
-                    mtime=report["mtime"],
+                    # Keep the exact accepted bundle coordinate. Native and
+                    # container filesystem views may legitimately differ within
+                    # the verifier's 1-ms observation tolerance.
+                    mtime=bundle.parts[0].mtime if bundle else report["mtime"],
                     format="gguf",
                     category="llm",
                     family=entry.architecture,
@@ -331,6 +440,10 @@ class DownloadExecutor:
                     raise ValueError(
                         "These model files already have a different runtime preset; use the existing model configuration"
                     )
+                if (definition.metadata_json or {}).get("model_bundle") != bundle_metadata.get(
+                    "model_bundle"
+                ):
+                    raise ValueError("The existing model has a different complete object binding")
             if definition is None:
                 definition = ModelDefinition(
                     file_id=file.id,
@@ -354,6 +467,8 @@ class DownloadExecutor:
                         "catalog_id": entry.id,
                         "catalog_manifest_sha256": run.parameters["manifest_sha256"],
                         "source_sha256": entry.file.sha256,
+                        **bundle_metadata,
+                        **context_metadata,
                     },
                 )
                 session.add(definition)
@@ -377,6 +492,8 @@ class DownloadExecutor:
                     runtime_present and preset["fits"] and definition.status == "registered"
                 ),
                 "preset": preset,
+                **({"model_size_bytes": total_size, **bundle_metadata} if bundle else {}),
+                **context_metadata,
             }
             with tempfile.NamedTemporaryFile("w", suffix=".json") as receipt:
                 json.dump(result, receipt)
@@ -395,8 +512,8 @@ class DownloadExecutor:
                 "model_file_id": file.id,
                 "model_download": {
                     "phase": "files_verified",
-                    "received_bytes": entry.file.size_bytes,
-                    "expected_bytes": entry.file.size_bytes,
+                    "received_bytes": total_size,
+                    "expected_bytes": total_size,
                     "ready_to_try": result["ready_to_try"],
                     "runtime_image_present": image_present,
                     "runtime_present": runtime_present,

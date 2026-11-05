@@ -62,11 +62,12 @@ Speech import passed an isolated Linux GPU
 installation and first-recording check; this is not Windows GPU qualification.
 Search results can also compare their top three models against this station's
 hardware before any weight download, with context and storage requirements shown.
-Split-file sources show the complete declared weight size and required parts;
-fragment installation stays unavailable until their complete installation path is ready.
-Native split-GGUF verification/loading passed a separate Linux check with complete
-two-/three-part fixtures and Runner recovery; connecting bundle installation and
-ordinary model selection remains in progress.
+Compatible split GGUFs install as **one complete model**, including when you paste
+a link to a later part. Hardware and storage estimates count all parts; incomplete
+sets stay blocked. A public two-part Qwen 7B passed real Linux download, verification,
+Chat and agent execution; its reviewed 32K preset stays unchanged when the file
+advertises a larger context. Native three-part/Runner recovery and interrupted
+transfer tests provide separate coverage.
 [Discovery and installation status](docs/plans/open-model-discovery.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local

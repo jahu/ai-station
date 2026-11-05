@@ -31,6 +31,7 @@ type ModelFile = {
   format: string;
   unsafe_serialization: boolean;
   assessment: {
+    runtime_status?: string;
     hardware_status: string;
     reason: string;
     profiles: Profile[];
@@ -89,6 +90,8 @@ type Report = {
     observation?: Report;
   }[];
   candidate?: {
+    origin?: string;
+    parts?: { filename: string; file: { size_bytes: number } }[];
     capability:
       "chat" | "image" | "video" | "speech" | "music" | "embedding" | "avatar";
     tokenizer?: { size_bytes: number };
@@ -108,6 +111,9 @@ type Report = {
 };
 const isSplitModel = (file: ModelFile) =>
   !!file.bundle_id || /\d{5}-of-\d{5}\.gguf$/i.test(file.filename);
+const supportsInstallation = (file: ModelFile) =>
+  !isSplitModel(file) ||
+  file.assessment.runtime_status === "supported_complete_bundle_plan";
 const terminal = ["succeeded", "failed", "canceled", "interrupted"];
 const bytes = (value: number | null) =>
   value === null ? "Size unknown" : `${(value / 1024 ** 3).toFixed(2)} GiB`;
@@ -228,11 +234,12 @@ export default function ModelDiscover() {
   const preferred =
     variants.find(
       (file) =>
-        !isSplitModel(file) && file.assessment.variant_advice?.recommended,
+        supportsInstallation(file) &&
+        file.assessment.variant_advice?.recommended,
     ) ??
     variants.find(
       (file) =>
-        !isSplitModel(file) &&
+        supportsInstallation(file) &&
         file.assessment.profiles.some(
           (profile) => profile.fit === "estimated_fit",
         ),
@@ -552,10 +559,10 @@ export default function ModelDiscover() {
                         ? bundleFor(file)!.total_size_bytes
                         : file.size_bytes,
                     )}
-                    {!isSplitModel(file) &&
+                    {supportsInstallation(file) &&
                     file.assessment.variant_advice?.recommended
                       ? " · Recommended for this station"
-                      : !isSplitModel(file) &&
+                      : supportsInstallation(file) &&
                           file.assessment.profiles.some(
                             (p) => p.fit === "estimated_fit",
                           )
@@ -578,7 +585,7 @@ export default function ModelDiscover() {
                   {selectedBundle?.name.split("/").pop() ?? file.filename}
                 </h3>
                 <span className="tiny-tag">
-                  {!isSplitModel(file) &&
+                  {supportsInstallation(file) &&
                   file.assessment.variant_advice?.recommended
                     ? "Recommended · "
                     : ""}
@@ -599,12 +606,15 @@ export default function ModelDiscover() {
                   className="hub-model-parts"
                   aria-label="Complete model parts"
                 >
-                  <p className="notice">
+                  <p
+                    className={supportsInstallation(file) ? "muted" : "notice"}
+                  >
                     {selectedBundle?.status === "complete_metadata"
                       ? `All ${selectedBundle.expected_parts} publisher files are listed. Model weights total ${bytes(selectedBundle.total_size_bytes)}; runtime and context need additional resources.`
                       : "The complete part set could not be confirmed. A single fragment does not establish model size or hardware fit."}{" "}
-                    Installation needs a compatible complete-bundle runtime;
-                    individual parts cannot be installed here yet.
+                    {supportsInstallation(file)
+                      ? "All parts will be downloaded and verified together as one model."
+                      : "Installation needs a compatible complete-bundle runtime; individual parts cannot be installed here yet."}
                   </p>
                   {selectedBundle && (
                     <details className="hub-context-options">
@@ -635,7 +645,7 @@ export default function ModelDiscover() {
                   )}
                 </section>
               )}
-              {!isSplitModel(file) &&
+              {supportsInstallation(file) &&
                 file.assessment.variant_advice &&
                 !!file.assessment.profiles.length && (
                   <div className="hub-fit-summary">
@@ -688,7 +698,7 @@ export default function ModelDiscover() {
                     : "Executable weight serialization is not admitted from unreviewed repositories."}
                 </p>
               )}
-              {(isSplitModel(file) ? [] : file.assessment.profiles).map(
+              {(supportsInstallation(file) ? file.assessment.profiles : []).map(
                 (profile) => (
                   <div className="hub-profile" key={profile.catalog_id}>
                     <ShieldCheck size={18} aria-hidden="true" />
@@ -716,7 +726,7 @@ export default function ModelDiscover() {
                 ),
               )}
               {report.kind !== "install_plan" &&
-                !isSplitModel(file) &&
+                supportsInstallation(file) &&
                 ["gguf", "safetensors", "onnx", "pth", "pt", "bin"].includes(
                   file.format,
                 ) &&
@@ -773,7 +783,7 @@ export default function ModelDiscover() {
                     </Button>
                   </>
                 )}
-              {!isSplitModel(file) &&
+              {supportsInstallation(file) &&
                 !!file.assessment.profiles.length &&
                 report.kind !== "install_plan" && (
                   <Link className="text-link" to="/setup/models">
@@ -798,34 +808,40 @@ export default function ModelDiscover() {
                 manifest_sha256: report.manifest_sha256,
                 capability: report.candidate?.capability,
                 components:
-                  report.candidate?.capability === "embedding" &&
-                  report.candidate.tokenizer
-                    ? [
-                        {
-                          role: "model",
-                          filename: selectedVariant?.filename ?? "Encoder",
-                          size_bytes: selectedVariant?.size_bytes ?? 0,
-                        },
-                        {
-                          role: "tokenizer",
-                          filename: "Fixed E5 tokenizer",
-                          size_bytes: report.candidate.tokenizer.size_bytes,
-                        },
-                      ]
-                    : report.candidate?.prepare_engine
-                      ? report.candidate.setup_recipe?.inputs
-                          .filter(
-                            (file) =>
-                              !!file.role ||
-                              file.kind === "model" ||
-                              file.kind === "python" ||
-                              file.kind === "sdk",
-                          )
-                          .map((file) => ({
-                            ...file,
-                            role: file.role ?? file.filename,
-                          }))
-                      : undefined,
+                  report.candidate?.origin === "hub_split"
+                    ? report.candidate.parts?.map((part) => ({
+                        role: "model part",
+                        filename: part.filename,
+                        size_bytes: part.file.size_bytes,
+                      }))
+                    : report.candidate?.capability === "embedding" &&
+                        report.candidate.tokenizer
+                      ? [
+                          {
+                            role: "model",
+                            filename: selectedVariant?.filename ?? "Encoder",
+                            size_bytes: selectedVariant?.size_bytes ?? 0,
+                          },
+                          {
+                            role: "tokenizer",
+                            filename: "Fixed E5 tokenizer",
+                            size_bytes: report.candidate.tokenizer.size_bytes,
+                          },
+                        ]
+                      : report.candidate?.prepare_engine
+                        ? report.candidate.setup_recipe?.inputs
+                            .filter(
+                              (file) =>
+                                !!file.role ||
+                                file.kind === "model" ||
+                                file.kind === "python" ||
+                                file.kind === "sdk",
+                            )
+                            .map((file) => ({
+                              ...file,
+                              role: file.role ?? file.filename,
+                            }))
+                        : undefined,
                 component_licenses:
                   report.candidate?.component_licenses ??
                   report.candidate?.setup_recipe?.component_licenses,

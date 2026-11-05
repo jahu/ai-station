@@ -214,6 +214,14 @@ def proven_context_size(session, model_file_id, gpus) -> int | None:
 
 
 def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILING) -> int:
+    from app.gguf_bindings import definition_proof, fitted_context
+
+    proof = definition_proof(session, model)
+    if proof:
+        fitted = fitted_context(proof, gpu_memory_totals(gpus), ceiling)
+        if fitted < CODING_CONTEXT_FLOOR:
+            raise HTTPException(422, "The complete bundle and useful context do not fit each selected GPU")
+        return fitted
     profile = next(
         (
             item.metadata_json["context_profile"]
@@ -252,6 +260,7 @@ def loadable_model(row):
         and row.format == "gguf"
         and row.availability == "present"
         and not re.search(r"(^|[-_.])mmproj([-_.]|$)", row.filename, re.IGNORECASE)
+        and not re.search(r"\d{5}-of-\d{5}\.gguf$", row.filename, re.IGNORECASE)
     )
 
 
@@ -280,6 +289,8 @@ def vision_projector(session, model, companions=None):
 
 @router.get("")
 def catalog(session: DB):
+    from app.gguf_bindings import size_of
+
     companions = list(
         session.scalars(
             select(ModelFile).where(
@@ -294,7 +305,7 @@ def catalog(session: DB):
             {
                 "id": row.id,
                 "name": label_of(row),
-                "size_bytes": row.size_bytes,
+                "size_bytes": size_of(session, row),
                 "model_key": "llamacpp:" + row.id,
                 "vision_available": vision_projector(session, row, companions) is not None,
             }
@@ -332,6 +343,18 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
     from app.cpu_models import fields as cpu_fields
 
     cpu = cpu_fields(body.model_dump())
+    source = source_of(model, session)
+    bundle_metadata = {}
+    if source.get("model_bundle"):
+        from app.gguf_bindings import definition_proof
+
+        proof = definition_proof(session, model)
+        needed = (proof["size_bytes"] * 115 + 100 * 1024**2 - 1) // (100 * 1024**2) + 1024
+        bundle_metadata = {"bundle_proof": proof, "bundle_ram_mib": needed}
+    if source.get("model_bundle") and (
+        cpu or body.projector_file_id or body.cache_type != "q8_0" or not body.gpus
+    ):
+        raise HTTPException(422, "This complete GGUF bundle requires its CUDA/Q8 preset without a projector")
     requested_context = body.context_size
     projector = None
     if body.projector_file_id is not None:
@@ -370,6 +393,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "requested_context_size": requested_context,
             "projector_file_id": str(body.projector_file_id) if body.projector_file_id else None,
             **cpu,
+            **bundle_metadata,
         },
     )
     task = task or create_task(
@@ -387,16 +411,21 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         execution_target="host",
         permissions=["manage_models", "filesystem_read"],
         retry_class="inspect",
-        requested_resources={"gpus": body.gpus, **({"ram_mib": body.ram_mib} if cpu else {})},
+        requested_resources={
+            "gpus": body.gpus,
+            **({"ram_mib": body.ram_mib} if cpu else {}),
+            **({"ram_mib": bundle_metadata["bundle_ram_mib"]} if bundle_metadata else {}),
+        },
         parameters={
             "instance_id": instance.id,
-            **source_of(model),
+            **source,
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
             "projector": projector,
             **cpu,
+            **bundle_metadata,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -570,7 +599,7 @@ def reserve(session, run, indexes, *, hardware=None):
     requested = {f"gpu:{g}" for g in selected}
     if (active_locks(session) - own) & requested:
         return False
-    if run.parameters.get("runtime_profile"):
+    if run.parameters.get("runtime_profile") or run.parameters.get("model_bundle"):
         from app.config import get_settings
         from app.resources import RESOURCE_WAIT_KEY, memory_observation, reserve_memory
         from app.task_control import lock_task
@@ -578,10 +607,14 @@ def reserve(session, run, indexes, *, hardware=None):
         free = ((hardware or {}).get("memory") or {}).get("available_mib")
         if type(free) not in {int, float} or not math.isfinite(free):
             free = None
-        needed = run.parameters["ram_mib"]
+        needed = (
+            run.parameters["ram_mib"]
+            if run.parameters.get("runtime_profile")
+            else run.parameters["bundle_ram_mib"]
+        )
         existing_ram = "ram:" + run.id in own
         if run.metadata_json.get("dispatch_attempted") and not existing_ram:
-            raise ValueError("The dispatched CPU runtime lost its RAM reservation; inspect it")
+            raise ValueError("The dispatched runtime lost its RAM reservation; inspect it")
         if not existing_ram and not reserve_memory(session, run, free, needed):
             wait = {"reason": "memory", **memory_observation(session, run, free, needed)}
             run.metadata_json = {**run.metadata_json, "resource_wait": wait}
@@ -692,6 +725,16 @@ class LlamaExecutor:
                 }
             )
         except (RunnerError, RunnerUnavailable):
+            if run.parameters.get("model_bundle"):
+                instance.status = "failed"
+                run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+                mark_failed(
+                    session,
+                    run,
+                    "BundleInspectionUnavailable",
+                    "Complete model inspection is required before loading this bundle",
+                )
+                return False
             append_event(session, run.id, "runtime.context_estimated", {"source": "size_fallback"})
             return
         if not report.get("present") or not report.get("matches_observation"):
@@ -700,6 +743,43 @@ class LlamaExecutor:
             mark_failed(session, run, "ModelChanged", "Model changed since discovery; scan it again")
             return False
         profile = report.get("context_profile")
+        if run.parameters.get("model_bundle"):
+            from app.gguf_bindings import OwnedBundle, checked_proof, fitted_context
+
+            try:
+                proof = checked_proof(
+                    OwnedBundle.model_validate(run.parameters["model_bundle"]), report.get("model_bundle")
+                )
+                if proof != run.parameters["bundle_proof"] or profile != proof["context_profile"]:
+                    raise ValueError("The complete model geometry differs from its installed proof")
+                totals = {g["index"]: g.get("memory_total_mib") for g in hardware.get("gpus", [])}
+                fitted = fitted_context(
+                    proof,
+                    [totals.get(g) for g in run.parameters["gpus"]],
+                    run.parameters.get("requested_context_size", run.parameters["context_size"]),
+                )
+                if fitted < CODING_CONTEXT_FLOOR:
+                    raise ValueError("Useful context no longer fits each selected GPU")
+            except ValueError as exc:
+                instance.status = "failed"
+                run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+                mark_failed(session, run, "BundleChanged", str(exc))
+                return False
+            run.parameters = {**run.parameters, "context_size": fitted}
+            instance.metadata_json = {
+                **instance.metadata_json,
+                "context_size": fitted,
+                "context_profile": profile,
+                "model_size_bytes": proof["size_bytes"],
+                "model_mtime": run.parameters["mtime"],
+            }
+            append_event(
+                session,
+                run.id,
+                "runtime.context_estimated",
+                {**profile, "context_size": fitted, "model_size_bytes": proof["size_bytes"]},
+            )
+            return
         if not profile:
             append_event(session, run.id, "runtime.context_estimated", {"source": "size_fallback"})
             return
@@ -802,6 +882,7 @@ class LlamaExecutor:
                 "model_path",
                 "app_owned",
                 "model_sha256",
+                "model_bundle",
                 "size_bytes",
                 "mtime",
                 "gpus",

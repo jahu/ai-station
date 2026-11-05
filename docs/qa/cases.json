@@ -1,5 +1,5 @@
 {
-  "version": 48,
+  "version": 49,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6208,6 +6208,100 @@
       "requirements": [
         "MVP-115",
         "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Publiczna sieć do metadanych/pobrania; bez płatnego API. Generacja tylko lokalnie.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-006",
+      "title": "Link do drugiej części modelu i ocena całego zestawu",
+      "steps": [
+        "Otwórz Models → Find new models. Wklej https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/blob/bb5d59e06d9551d752d08b292a50eb208b07ab1f/qwen2.5-7b-instruct-q4_0-00002-of-00002.gguf",
+        "Sprawdź listę wymaganych plików, całkowity rozmiar, zalecane GPU/kontekst i miejsce na dysku. Nie rozpoczynaj jeszcze instalacji."
+      ],
+      "expected": [
+        "Widać jeden model z obiema częściami i około 4,1 GiB wag, a nie tylko rozmiar drugiego pliku.",
+        "Ocena dotyczy całego zestawu i rzeczywistego sprzętu. Samo sprawdzenie metadanych nie pobiera wag ani nie ładuje GPU."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu.",
+        "MODEL-006. Wariant nie jest jeszcze pobrany; jeśli jest już w pamięci podręcznej, zanotuj to i nie usuwaj działających modeli tylko dla testu. Instaluj wyłącznie model, który mieści się według oceny stacji."
+      ],
+      "resources": "Około 4,1 GiB pobrania i dodatkowe miejsce na runtime/cache. Bez płatnego API.",
+      "minutes": 15,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-007",
+      "title": "Stop i wznowienie pobierania kompletnego nowego modelu",
+      "steps": [
+        "Przejrzyj źródło i licencję, rozpocznij instalację. Gdy widać postęp, wybierz Stop.",
+        "Odśwież stronę i wróć do tego przygotowania. Wybierz wznowienie, poczekaj na weryfikację wszystkich plików."
+      ],
+      "expected": [
+        "Stop zachowuje pobrane dane, a niekompletny zestaw nie jest gotowym modelem do rozmowy.",
+        "Wznowienie dotyczy tej samej receptury i historii zadania. Po zakończeniu jest jeden model; wszystkie części są zweryfikowane, a postęp/rozmiar odnoszą się do całego zestawu."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Publiczna sieć do metadanych/pobrania; bez płatnego API. Generacja tylko lokalnie.",
+      "minutes": 12,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-008",
+      "title": "Nowy model z części: Chat, agent, rozmiar i zwolnienie zasobów",
+      "steps": [
+        "Po MODEL-007 sprawdź model w Models: rozmiar całego modelu oraz listę części; szczegóły pierwszego pliku powinny zachować jego fizyczny rozmiar.",
+        "Wybierz nowy model w Chat i zapytaj „Ile to 2+2?”. Utwórz prostego ręcznego agenta z tym samym modelem, bez zewnętrznych narzędzi, i uruchom go.",
+        "Po zakończeniu odpowiedzi i agenta zatrzymaj ten zarządzany runtime."
+      ],
+      "expected": [
+        "Chat i agent faktycznie używają wybranego nowego modelu. Nie powstaje niepotrzebnie drugi runtime tego samego zestawu.",
+        "Widać historię, model i wyniki wykonania. Stop zwalnia rezerwacje GPU/RAM oraz zatrzymuje tylko własny runtime, zachowując pliki modelu."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Tylko metadane publiczne; nie pobieraj dużych wag do tego testu.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-009",
+      "title": "Zbyt duży model nie dostaje fałszywej rekomendacji",
+      "steps": [
+        "Wyszukaj lub wklej bartowski/Qwen2.5-72B-Instruct-GGUF. Przejrzyj wariant Q5_K_M i jego wymagane części, bez pobierania.",
+        "Porównaj ocenę z faktycznymi GPU, RAM i dyskiem. Na stacji 2×12 GiB GPU / 32 GiB RAM ten ponad 50-GiB zestaw nie powinien otrzymać pozytywnej oceny. Na mocniejszym sprzęcie oceń wynik zgodnie z rzeczywistą pojemnością."
+      ],
+      "expected": [
+        "Wymagania uwzględniają wszystkie części, kontekst i osobne pojemności GPU. Brak czujników oznacza niepewność, a nie zmyśloną pojemność.",
+        "Niepasujący model ma jasną przyczynę odmowy. Nie następuje ukryte przełączenie na chmurę/RAM ani transfer dużych plików."
       ]
     }
   ],

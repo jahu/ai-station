@@ -28,6 +28,29 @@ const plan: InstallPlan = {
   ],
 };
 
+it("lists every model part even when there are no additional engine licenses", () => {
+  mount({
+    ...plan,
+    capability: "chat",
+    components: [
+      {
+        role: "model part",
+        filename: "model-00001-of-00002.gguf",
+        size_bytes: 4 * 1024 ** 3,
+      },
+      {
+        role: "model part",
+        filename: "model-00002-of-00002.gguf",
+        size_bytes: 4 * 1024 ** 3,
+      },
+    ],
+  });
+  fireEvent.click(screen.getByText("Required model files"));
+  expect(screen.getByText(/model-00001-of-00002.gguf/)).toBeTruthy();
+  expect(screen.getByText(/model-00002-of-00002.gguf/)).toBeTruthy();
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+});
+
 it("requires explicit avatar workload consent and describes the correct GPU and RAM profile", async () => {
   const fetch = vi.fn(async () => ({
     ok: true,

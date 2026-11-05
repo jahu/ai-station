@@ -35,7 +35,7 @@ class HubCandidate(Candidate):
         if (
             len(self.file.urls) != 1
             or source_identity(self.file.urls[0]) != (self.repository, self.revision, self.filename)
-            or self.id != "hub-" + self.file.sha256[:24]
+            or self.id != self.expected_id()
             or self.key_length % 32
             or self.value_length % 32
             or self.state_reserve_mib != (512 if self.architecture == "qwen35" else 0)
@@ -53,8 +53,15 @@ class HubCandidate(Candidate):
             raise ValueError("Attention geometry exceeds the supported estimator")
         return self
 
+    def expected_id(self):
+        return "hub-" + self.file.sha256[:24]
+
 
 def download_candidate(payload):
+    if payload.get("origin") == "hub_split":
+        from app.hub_split_candidates import HubSplitCandidate
+
+        return HubSplitCandidate.model_validate(payload)
     if payload.get("origin") == "hub_avatar":
         from app.hub_avatar_candidates import HubAvatarCandidate
 
@@ -249,7 +256,18 @@ async def resolve_candidate(observation, filename, check, context_ceiling=131072
     from app.hub_model_parts import looks_split
 
     if selected_file and selected_file.get("format") == "gguf" and looks_split(filename):
-        raise ValueError("Split GGUFs need a complete compatible bundle plan")
+        from app.hub_split_candidates import INSTALLATION_QUALIFIED
+        from app.hub_split_candidates import candidate_from_profile as split_candidate
+
+        if not INSTALLATION_QUALIFIED:
+            raise ValueError("Split GGUFs need a complete compatible bundle plan")
+        profile = observation.get("language_profile")
+        if not profile:
+            raise ValueError(
+                "Split GGUFs need a complete compatible bundle plan and pinned language profile; inspect the source again"
+            )
+        check()
+        return split_candidate(observation, filename, profile, context_ceiling=context_ceiling)
     if selected_file and selected_file.get("format") in {"pth", "pt", "bin"}:
         from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
         from app.hub_avatar_candidates import refresh_plan
