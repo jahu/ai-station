@@ -8,7 +8,7 @@ from app.api import app
 from app.config import get_settings
 from app.db import session_factory
 from app.engine import tick
-from app.models import Agent, Notice, Run, RuntimeInstance, Worktree
+from app.models import Agent, ModelFile, Notice, Run, RuntimeInstance, Worktree
 from app.runner_client import RunnerClient
 from app.runs import request_cancel
 from app.state import ACTIVE
@@ -36,6 +36,18 @@ def data_environment(repository, owned_runner, monkeypatch):
             endpoint="llamacpp:" + instance_id,
             status="ready",
             metadata_json={"context_size": 131072, "model_file_id": model.removeprefix("llamacpp:")},
+        )
+        session.add(
+            ModelFile(
+                id=model.removeprefix("llamacpp:"),
+                host_path="/configured/data-model.gguf",
+                filename="data-model.gguf",
+                category="llm",
+                format="gguf",
+                availability="present",
+                size_bytes=123,
+                mtime=456,
+            )
         )
         session.add(runtime)
         session.commit()
