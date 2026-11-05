@@ -1,5 +1,9 @@
 # Operator QA catalog and workbook
 
+The next-release catalog v52 contains 277 active cases. MODEL-013 covers the
+capability-guided entry, popular/recent discovery and hardware assessment before
+weights transfer. New exports remain untested.
+
 Release 0.1.2 adds catalog v48 cases LIB-012–014 and RUN-006 for complete input search, larger cards, media-first browsing, real film stills and generation during history browsing. RUN-005 distinguishes inspection-only recovery from replay. New exports remain untested.
 
 Release 0.1.1 adds catalog v47 cases AGENT-017–020 for explicit cadence, inline activation/model changes, registry deletion and image/workflow layout. Existing answers remain unchanged; new exports start untested.

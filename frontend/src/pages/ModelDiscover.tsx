@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Search, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Search,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { api, type Run } from "../api";
 import { useAccount } from "../account-context";
 import { ErrorNotice, PageTitle } from "../components/common";
@@ -9,6 +15,17 @@ import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 import HubInstallPanel from "./HubInstallPanel";
 import "./ModelDiscover.css";
+
+const capabilities = [
+  ["chat", "Conversation"],
+  ["image", "Images"],
+  ["video", "Video"],
+  ["speech", "Voice"],
+  ["music", "Music"],
+  ["avatar", "Avatars"],
+  ["embedding", "Memory"],
+] as const;
+type Capability = (typeof capabilities)[number][0];
 
 type Profile = {
   catalog_id: string;
@@ -56,6 +73,9 @@ type ModelFile = {
   };
 };
 type Report = {
+  capability?: Capability;
+  order?: "popular" | "recent";
+  discovery_notice?: string | null;
   model_bundles?: {
     id: string;
     kind: "gguf_split";
@@ -92,6 +112,7 @@ type Report = {
     filename?: string;
     busy_now?: boolean;
     installed_object?: boolean;
+    starting_point?: boolean;
     observation?: Report;
   }[];
   candidate?: {
@@ -141,6 +162,9 @@ export default function ModelDiscover() {
     account.mode === "operator" || account.user?.is_admin === true;
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState(() => params.get("source") ?? "");
+  const [chosenCapability, setCapability] = useState<Capability | null>(null);
+  const [chosenOrder, setOrder] = useState<"popular" | "recent" | null>(null);
+  const autoRequested = useRef(false);
   const [selection, setSelection] = useState({ runId: "", filename: "" });
   const [contextChoice, setContextChoice] = useState<{
     runId: string;
@@ -167,11 +191,42 @@ export default function ModelDiscover() {
         post({
           client_request_id: randomId(),
           [source ? "source" : "query"]: value,
+          ...(!source ? { capability, order } : {}),
         }),
       );
     },
     onSuccess: (run) => setParams({ run: run.id }),
   });
+  const recommend = useMutation({
+    mutationFn: (target: Capability) =>
+      api<Run>(
+        "/model-hub/recommendations",
+        post({
+          client_request_id: randomId(),
+          capability: target,
+          order,
+          context_target: contextTarget,
+        }),
+      ),
+    onSuccess: (run) => setParams({ run: run.id }),
+  });
+  const requested = params.get("recommend");
+  const startRecommendation = recommend.mutate;
+  useEffect(() => {
+    if (
+      !canManage ||
+      !requested ||
+      params.get("source") ||
+      params.get("run") ||
+      autoRequested.current
+    )
+      return;
+    const selected = capabilities.find(([key]) => key === requested)?.[0];
+    if (selected) {
+      autoRequested.current = true;
+      startRecommendation(selected);
+    }
+  }, [canManage, requested, params, startRecommendation]);
   const stop = useMutation({
     mutationFn: () => api<Run>(`/runs/${runId}/cancel`, post({})),
     onSuccess: () => void inspection.refetch(),
@@ -212,11 +267,14 @@ export default function ModelDiscover() {
   const run = inspection.data;
   const busy =
     find.isPending ||
+    recommend.isPending ||
     compare.isPending ||
     plan.isPending ||
     (!!runId && inspection.isPending) ||
     (!!run && !terminal.includes(run.status));
   const rootReport = run?.metadata?.source_inspection as Report | undefined;
+  const capability = chosenCapability ?? rootReport?.capability ?? "chat";
+  const order = chosenOrder ?? rootReport?.order ?? "popular";
   const contextTarget =
     contextChoice?.runId === runId
       ? contextChoice.target
@@ -270,6 +328,90 @@ export default function ModelDiscover() {
         Search Hugging Face or paste a repository or file link. Review the
         source, supported runtime and fit for your station before downloading.
       </PageTitle>
+      {!params.get("source") &&
+        (!rootReport ||
+          ["search", "comparison"].includes(rootReport.kind ?? "")) && (
+          <section
+            className="panel hub-recommendations"
+            aria-label="Find models for this station"
+          >
+            <div>
+              <h2>Start with what you want to create</h2>
+              <p className="muted">
+                Compare up to three sources against your GPUs, memory and
+                storage. Pinned runtime starting points and publisher matches
+                are inspected before any download.
+              </p>
+            </div>
+            <div className="hub-discovery-controls">
+              <div className="hub-discovery-field">
+                <label htmlFor="model-discovery-capability">Use for</label>
+                <select
+                  id="model-discovery-capability"
+                  value={capability}
+                  disabled={!canManage || busy}
+                  onChange={(event) =>
+                    setCapability(event.target.value as Capability)
+                  }
+                >
+                  {capabilities.map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="hub-discovery-field">
+                <label htmlFor="model-discovery-order">Browse</label>
+                <select
+                  id="model-discovery-order"
+                  value={order}
+                  disabled={!canManage || busy}
+                  onChange={(event) =>
+                    setOrder(event.target.value as "popular" | "recent")
+                  }
+                >
+                  <option value="popular">Popular</option>
+                  <option value="recent">Recently updated</option>
+                </select>
+              </div>
+              <Button
+                disabled={!canManage || busy}
+                onClick={() => recommend.mutate(capability)}
+              >
+                <Sparkles size={16} />
+                {recommend.isPending ? "Starting…" : "Find for my station"}
+              </Button>
+            </div>
+            {capability === "chat" && rootReport?.kind !== "search" && (
+              <details className="hub-context-options">
+                <summary>Context options</summary>
+                <label htmlFor="model-guided-context">
+                  Conversation context target
+                </label>
+                <select
+                  id="model-guided-context"
+                  value={contextTarget}
+                  disabled={!canManage || busy}
+                  onChange={(event) =>
+                    setContextTarget(Number(event.target.value))
+                  }
+                >
+                  <option value={32768}>32K · Balanced conversation</option>
+                  <option value={131072}>128K · Longer tasks</option>
+                </select>
+                <p className="muted">
+                  The recommendation includes memory for this conversation
+                  context.
+                </p>
+              </details>
+            )}
+            <p className="muted">
+              Metadata only. You review files, hardware fit and licenses before
+              installing.
+            </p>
+          </section>
+        )}
       <form
         className="panel hub-search"
         onSubmit={(event) => {
@@ -313,6 +455,7 @@ export default function ModelDiscover() {
       <ErrorNotice
         error={
           find.error ??
+          recommend.error ??
           compare.error ??
           plan.error ??
           inspection.error ??
@@ -344,6 +487,9 @@ export default function ModelDiscover() {
           )}
         </div>
       )}
+      {rootReport?.discovery_notice && (
+        <p className="notice">{rootReport.discovery_notice}</p>
+      )}
       {!busy && trustedRun && report?.kind === "search" && (
         <section className="hub-results" aria-label="Model search results">
           <div className="hub-section-heading">
@@ -351,8 +497,10 @@ export default function ModelDiscover() {
             <span className="muted">Up to 12 publisher matches</span>
           </div>
           <p className="muted">
-            Ordered by downloads. Popularity does not establish compatibility or
-            hardware fit.
+            {report.order === "recent"
+              ? "Ordered by recent updates. Recency"
+              : "Ordered by downloads. Popularity"}{" "}
+            does not establish compatibility or hardware fit.
           </p>
           {!!report.items?.length && (
             <>
@@ -465,6 +613,12 @@ export default function ModelDiscover() {
                 {item.busy_now && (
                   <p className="muted">
                     Fits with resources free; GPU memory is currently in use.
+                  </p>
+                )}
+                {item.starting_point && (
+                  <p className="muted">
+                    Supported-runtime starting point · source and hardware still
+                    inspected
                   </p>
                 )}
                 {item.installed_object && (

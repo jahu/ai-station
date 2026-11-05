@@ -236,3 +236,29 @@ async def test_search_rejects_unbounded_or_invalid_repository_results(monkeypatc
     monkeypatch.setattr(hub, "metadata_json", metadata)
     with pytest.raises(ValueError):
         await hub.search_models("model", lambda: None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("order,sort", [("popular", "downloads"), ("recent", "lastModified")])
+async def test_search_order_uses_bounded_public_metadata_not_weight_urls(monkeypatch, order, sort):
+    from urllib.parse import parse_qs, urlparse
+
+    calls = []
+
+    async def metadata(url, check):
+        check()
+        calls.append(url)
+        return [{"id": "publisher/model", "downloads": 12}]
+
+    monkeypatch.setattr(hub, "metadata_json", metadata)
+    report = await hub.search_models("new model", lambda: None, order=order)
+    parsed = urlparse(calls[0])
+    assert parsed.hostname == "huggingface.co" and parsed.path == "/api/models"
+    assert parse_qs(parsed.query) == {
+        "search": ["new model"],
+        "sort": [sort],
+        "direction": ["-1"],
+        "limit": ["12"],
+    }
+    assert report["metadata_only"] and len(calls) == 1
+    assert report.get("order", "popular") == order

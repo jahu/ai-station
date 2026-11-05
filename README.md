@@ -49,8 +49,9 @@ with larger previews, browse media first and see actual film/avatar stills.
 Media jobs recover observation of an existing process after a lost worker without
 automatically starting generation again. [What changed](docs/releases/0.1.2.md).
 
-On `develop`, the next release adds **Models → Find new models**: search Hugging
-Face or paste a publisher link, review hardware fit and licenses, then install
+On `develop`, the next release adds **Models → Find new models**: choose what you
+want to create and compare a small set for your station, search Hugging Face, or
+paste a publisher link. Review hardware fit and licenses, then install
 compatible conversation models, Qwen Image 2.1 checkpoints, F16 Wan 2.2 5B
 video checkpoints, Chatterbox v3 T3 speech checkpoints, ACE-Step music checkpoints,
 compatible CPU memory encoders and Sonic avatar checkpoints. Reviewed choices work

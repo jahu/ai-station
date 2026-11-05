@@ -620,3 +620,15 @@ Metadata matching is advisory, not a fresh content proof: even an object whose
 stat fields were maliciously restored is rehashed by the downloader before native
 verification/use. Ranking never upgrades unsupported hardware/runtime because a
 file is cached. New plans recompute observations; saved hints grant no authority.
+
+
+Release-audit correction: entering Find new models from Models starts a private
+metadata-only recommendation Run, rather than leaving the first discovery page
+empty. The same worker combines a public search with the existing bounded
+three-source comparer and one hardware/storage observation. A capability selector
+covers Conversation, Images, Video, Voice, Music, Avatars and Memory; popular/recent
+search remains available alongside arbitrary publisher links. Pinned supported
+runtime starting points are labelled examples, never compatibility authority.
+Publisher matches and starting points both pass ordinary source/graph/hardware
+inspection. Direct publisher-update links still only prefill the input. No
+application-startup search, weight transfer or runtime activation is introduced.

@@ -18,12 +18,18 @@ MAX_FILES = 64
 MAX_OBSERVATION_BYTES = 512 * 1024
 
 
-def suitability(observation, installed, context_target):
+def suitability(observation, installed, context_target, capability=None):
     choices = []
     gated = bool(observation.get("gated"))
     for file in observation["files"]:
         assessment = file["assessment"]
-        supported = assessment["runtime_status"] not in {"runtime_unavailable", "needs_compatible_recipe"}
+        matches_capability = capability is None or any(
+            p.get("capability", "chat") == capability for p in assessment["profiles"]
+        )
+        supported = matches_capability and assessment["runtime_status"] not in {
+            "runtime_unavailable",
+            "needs_compatible_recipe",
+        }
         fit = (
             not gated
             and supported
@@ -70,6 +76,8 @@ def suitability(observation, installed, context_target):
             if status == "insufficient_storage"
             else "Application storage could not be confirmed."
             if assessment["disk"]["status"] == "unknown"
+            else f"No inspected runtime profile for the selected use: {capability}."
+            if not matches_capability
             else advice.get("reason")
             if fit
             else next((p["recommendation"]["reason"] for p in assessment["profiles"]), assessment["reason"])
@@ -107,14 +115,41 @@ def suitability(observation, installed, context_target):
 async def inspect(session, run, check, inspect_source, hardware, storage):
     request = run.parameters["comparison"]
     search = search_observation(session, request["search_run_id"], request["observation_sha256"])
+    return await compare_sources(
+        session,
+        run,
+        check,
+        inspect_source,
+        hardware,
+        storage,
+        search,
+        request["context_target"],
+        search_run_id=request["search_run_id"],
+        capability=search.get("capability"),
+    )
+
+
+async def compare_sources(
+    session,
+    run,
+    check,
+    inspect_source,
+    hardware,
+    storage,
+    search,
+    context,
+    *,
+    search_run_id=None,
+    capability=None,
+    allow_file_sources=False,
+):
     rows = search.get("items", [])[:LIMIT]
-    context = request["context_target"]
     session.commit()
     results = []
     for index, row in enumerate(rows):
         check()
         source = parse_source(row["source_url"])
-        if source.repository != row["repository"] or source.filename:
+        if source.repository != row["repository"] or (source.filename and not allow_file_sources):
             raise ValueError("The saved search does not contain a matching repository")
         append_event(
             session,
@@ -154,7 +189,7 @@ async def inspect(session, run, check, inspect_source, hardware, storage):
             if len(json.dumps(observation).encode()) > MAX_OBSERVATION_BYTES:
                 raise ValueError("Source metadata exceeds comparison limits; inspect it separately")
             observation["observation_sha256"] = fingerprint(observation)
-            score, summary = suitability(observation, installed, context)
+            score, summary = suitability(observation, installed, context, capability)
             result.update(**summary, observation=observation, compatibility="inspected")
         except (ValueError, httpx.HTTPError, RunnerError, RunnerUnavailable, TimeoutError) as exc:
             check()  # Claim loss, Stop and revoked authority never become a source warning.
@@ -168,12 +203,14 @@ async def inspect(session, run, check, inspect_source, hardware, storage):
     return {
         "kind": "comparison",
         "query": search["query"],
+        **({"order": search["order"]} if search.get("order") else {}),
         "items": [item for _, item in results],
         "files": [],
         "context_target": context,
         "metadata_only": True,
         "hardware_observed": not hardware.get("storage_unavailable", False),
-        "search_run_id": request["search_run_id"],
+        **({"search_run_id": search_run_id} if search_run_id else {}),
+        **({"capability": capability} if capability else {}),
         "limit": LIMIT,
         "note": "Ranked by supported workload fit, context, existing objects and estimated transfer cost. Not a quality or speed benchmark.",
     }

@@ -772,3 +772,146 @@ it("explains cached weights without treating an unknown runtime as compatible", 
   expect(screen.getByText(/No validated workload profile/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Install model" })).toBeNull();
 });
+
+it("opens a single metadata recommendation run from the model-library entry", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "guided" }
+        : {
+            id: "guided",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: {
+              source_inspection: {
+                kind: "comparison",
+                capability: "chat",
+                order: "popular",
+                files: [],
+                items: [],
+              },
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/models/discover?recommend=chat");
+  await screen.findByRole("heading", { name: "Models for your station" });
+  const posts = fetch.mock.calls.filter(
+    ([, options]) => options?.method === "POST",
+  );
+  expect(posts).toHaveLength(1);
+  expect(posts[0][0]).toBe("/api/model-hub/recommendations");
+  expect(JSON.parse(String(posts[0][1]?.body))).toMatchObject({
+    capability: "chat",
+    order: "popular",
+    context_target: 32768,
+  });
+  expect(screen.getByText(/No weights were downloaded/)).toBeTruthy();
+});
+
+it("lets people choose a capability and recent sources without silently installing anything", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "guided" }
+        : {
+            id: "guided",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: {
+              source_inspection: {
+                kind: "comparison",
+                capability: "speech",
+                order: "recent",
+                files: [],
+                discovery_notice:
+                  "Publisher search is unavailable; a starting point is shown.",
+                items: [
+                  {
+                    repository: "publisher/voice",
+                    starting_point: true,
+                    suitability: "unknown",
+                    summary: "Memory could not be confirmed",
+                  },
+                ],
+              },
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Use for"), {
+    target: { value: "speech" },
+  });
+  fireEvent.change(screen.getByLabelText("Browse"), {
+    target: { value: "recent" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Find for my station" }));
+  await screen.findByText("Memory could not be confirmed");
+  expect(screen.getByText(/Publisher search is unavailable/)).toBeTruthy();
+  expect(screen.getByText(/Supported-runtime starting point/)).toBeTruthy();
+  expect((screen.getByLabelText("Use for") as HTMLSelectElement).value).toBe(
+    "speech",
+  );
+  expect((screen.getByLabelText("Browse") as HTMLSelectElement).value).toBe(
+    "recent",
+  );
+  const posts = fetch.mock.calls.filter(
+    ([, options]) => options?.method === "POST",
+  );
+  expect(posts).toHaveLength(1);
+  expect(posts[0][0]).toBe("/api/model-hub/recommendations");
+  expect(JSON.parse(String(posts[0][1]?.body))).toMatchObject({
+    capability: "speech",
+    order: "recent",
+  });
+});
+
+it("keeps capability and recent order on an ordinary publisher search", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "search" }
+        : {
+            id: "search",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: {
+              source_inspection: {
+                kind: "search",
+                query: "Wan",
+                capability: "video",
+                order: "recent",
+                files: [],
+                items: [],
+              },
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.change(screen.getByLabelText("Use for"), {
+    target: { value: "video" },
+  });
+  fireEvent.change(screen.getByLabelText("Browse"), {
+    target: { value: "recent" },
+  });
+  fireEvent.change(screen.getByLabelText("Model name or Hugging Face link"), {
+    target: { value: "Wan" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Search" }));
+  await screen.findByText(/Ordered by recent updates/);
+  const posts = fetch.mock.calls.filter(
+    ([, options]) => options?.method === "POST",
+  );
+  expect(posts).toHaveLength(1);
+  expect(JSON.parse(String(posts[0][1]?.body))).toMatchObject({
+    query: "Wan",
+    capability: "video",
+    order: "recent",
+  });
+});

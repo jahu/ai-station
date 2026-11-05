@@ -18,6 +18,7 @@ from app.db import session_scope, utcnow
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.hub_sources import inspect_source, parse_source, search_models, search_query
+from app.model_discovery import Capability
 from app.model_hardware import assess_file
 from app.model_setup import administrator, fingerprint, storage_info
 from app.models import Run, Task
@@ -54,6 +55,8 @@ class SearchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     client_request_id: UUID
     query: str = Field(min_length=2, max_length=100)
+    capability: Capability | None = None
+    order: Literal["popular", "recent"] = "popular"
 
     @field_validator("query")
     @classmethod
@@ -63,7 +66,32 @@ class SearchRequest(BaseModel):
 
 @router.post("/searches", status_code=202)
 def search(body: SearchRequest, session: DB):
-    return enqueue_inspection(session, body.client_request_id, {"query": body.query})
+    return enqueue_inspection(
+        session,
+        body.client_request_id,
+        {
+            "query": body.query,
+            **({"capability": body.capability} if body.capability else {}),
+            **({"order": body.order} if body.order != "popular" else {}),
+        },
+    )
+
+
+class RecommendationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    client_request_id: UUID
+    capability: Capability = "chat"
+    order: Literal["popular", "recent"] = "popular"
+    context_target: Literal[32768, 131072] = 32768
+
+
+@router.post("/recommendations", status_code=202)
+def recommendations(body: RecommendationRequest, session: DB):
+    return enqueue_inspection(
+        session,
+        body.client_request_id,
+        {"recommendation": body.model_dump(mode="json", exclude={"client_request_id"})},
+    )
 
 
 class CompareRequest(BaseModel):
@@ -191,7 +219,7 @@ class ModelHubExecutor:
 
             comparison_hardware = {"storage_unavailable": True}
             comparison_storage = None
-            if "comparison" in run.parameters:
+            if "comparison" in run.parameters or "recommendation" in run.parameters:
                 try:
                     comparison_hardware = RunnerClient(timeout=8).hardware()
                 except (RunnerError, RunnerUnavailable):
@@ -202,6 +230,19 @@ class ModelHubExecutor:
             async def inspect():
                 async with asyncio.timeout(90):
                     from app.hub_sources import HubSource
+
+                    if "recommendation" in run.parameters:
+                        from app.model_discovery import recommend
+
+                        return await recommend(
+                            session,
+                            run,
+                            check,
+                            search_models,
+                            inspect_source,
+                            comparison_hardware,
+                            comparison_storage,
+                        )
 
                     if "comparison" in run.parameters:
                         from app.hub_comparisons import inspect as inspect_comparison
@@ -253,7 +294,14 @@ class ModelHubExecutor:
                         )
                         await enrich_source(report, check)
                         return report
-                    return await search_models(run.parameters["query"], check)
+                    report = (
+                        await search_models(run.parameters["query"], check, order="recent")
+                        if run.parameters.get("order") == "recent"
+                        else await search_models(run.parameters["query"], check)
+                    )
+                    if run.parameters.get("capability"):
+                        report["capability"] = run.parameters["capability"]
+                    return report
 
             report = asyncio.run(inspect())
             check()
