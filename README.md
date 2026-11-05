@@ -62,6 +62,8 @@ Speech import passed an isolated Linux GPU
 installation and first-recording check; this is not Windows GPU qualification.
 Search results can also compare their top three models against this station's
 hardware before any weight download, with context and storage requirements shown.
+Recommendations account for the actual GPU split: a larger card cannot silently
+cover an overloaded smaller card. RAM and free disk space are checked separately.
 Compatible split GGUFs install as **one complete model**, including when you paste
 a link to a later part. Hardware and storage estimates count all parts; incomplete
 sets stay blocked. A public two-part Qwen 7B passed real Linux download, verification,

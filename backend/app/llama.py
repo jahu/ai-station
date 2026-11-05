@@ -91,7 +91,9 @@ def q8_kv_bytes_per_token(size_bytes: int) -> int:
 
 def kv_budget_mib(gpu_memory_mib, size_bytes, state_reserve_mib=0):
     return (
-        _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
+        # Native CUDA launches use equal layer shares (--tensor-split 1,1,...).
+        # Extra memory on a larger device cannot cover a smaller device's share.
+        _VRAM_USABLE_FRACTION * min(float(value) for value in gpu_memory_mib) * len(gpu_memory_mib)
         - size_bytes / (1024 * 1024)
         - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpu_memory_mib)
         - state_reserve_mib

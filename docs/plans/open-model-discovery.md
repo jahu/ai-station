@@ -62,6 +62,12 @@ Use live native telemetry, installed runtime/platform capability and free space
 on the actual application backing volume. Never assume a GPU count or pool two
 GPUs unless the chosen adapter supports that exact sharding strategy.
 
+For the existing equal-layer CUDA launch (`--tensor-split 1,1,...`), the
+single-file estimate limits every share to the smallest selected device after
+headroom. A 16-GiB + 8-GiB pair is not interchangeable with 12-GiB + 12-GiB.
+Duplicate device observations cannot create artificial capacity. Complete GGUF
+bundles additionally use their native largest-layer/shared-tensor proof.
+
 - LLM: weight/quantization, architecture-specific KV cache, context, graph/state
   reserve and per-device headroom. Recommend a fitted context and variant; a model
   that barely loads at 4K is not a recommendation for a 100K task. Reuse existing

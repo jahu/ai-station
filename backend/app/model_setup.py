@@ -132,11 +132,19 @@ def recommendation(entry, hardware):
         for g in (hardware.get("gpus") or [])
         if isinstance(g, dict)
         and type(g.get("index")) is int
+        and g["index"] >= 0
         and type(g.get("memory_total_mib")) in {int, float}
         and math.isfinite(g["memory_total_mib"])
         and 0 < g["memory_total_mib"] < 1048576
     ]
     devices.sort(key=lambda g: (-g["memory_total_mib"], g["index"]))
+    if len(devices) > 16 or len({g["index"] for g in devices}) != len(devices):
+        return {
+            "fits": False,
+            "reason": "Inspect distinct GPU devices before estimating model fit",
+            "gpus": [],
+            "context_size": None,
+        }
     memory = (hardware.get("memory") or {}).get("total_mib")
     if type(memory) not in {int, float} or not math.isfinite(memory):
         return {
