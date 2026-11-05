@@ -60,6 +60,26 @@ aspect keys also fail. This is bounded planning validation, not semantic image
 similarity detection. Cancellation, deadlines, file checks, leases and publication
 validation retain their existing contracts.
 
+### Duplicate-plan recovery
+
+The 2026-11-05 failed preparation returned exactly the last completed description
+and change map twice, including after correction. Full historical prompts had been
+supplied in the requested output shape; correction then echoed the rejected JSON as an
+assistant message. The initial instructions did not explicitly require a different
+concrete direction from every completed plan. This left a strong copying anchor
+and an ineffective generic correction request.
+
+Keep complete history in Run parameters for audit and duplicate validation, but
+give the model only bounded earlier change maps and their Run IDs as exclusions.
+State novelty explicitly within the user's brief. On a duplicate, retain the
+original reviewed request and append structured feedback identifying the rejected
+changes and asking for a new concrete direction plus a consistent final prompt.
+Do not echo the rejected prompt as another assistant example. There are still
+only two attempts, within the existing deadline/cancellation contract. A second
+duplicate fails before generation; repeated images are not accepted as a fallback.
+Tests replay the duplicate → fresh-plan sequence, verify correction context and
+the complete audit snapshot, and retain duplicate → duplicate refusal coverage.
+
 ## Validation and further diagnosis
 
 Use temporary databases, the fake local provider/photo executor, and neutral

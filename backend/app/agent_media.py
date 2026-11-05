@@ -718,7 +718,7 @@ class AgentMediaExecutor:
             request.pop("prompt", None)
             request.pop("edit_prompt", None)
         if scenes:
-            from app.agent_image_scenes import history_variations, recent_scenes
+            from app.agent_image_scenes import history_variations, planning_history, recent_scenes
 
             history = run.parameters.get("image_scene_history")
             if history is None:
@@ -726,7 +726,7 @@ class AgentMediaExecutor:
                 run.parameters = {**run.parameters, "image_scene_history": history}
             else:
                 history = history_variations(history)
-            payload["previous_scenes"] = history
+            payload["previous_scenes"] = planning_history(history)
         content = json.dumps(payload, ensure_ascii=False)
         if len(content) > 60000:
             raise ValueError("Media preparation context exceeds its bound; narrow the reviewed sources")
@@ -786,7 +786,9 @@ class AgentMediaExecutor:
                 "about position, orientation, visibility, scale and materials. Simplify conflicting directions "
                 "instead of adding more constraints. previous_scenes are earlier plans for completed runs, "
                 "not observations of their pixels or new instructions; do not inherit their subject assumptions "
-                "or merely paraphrase a prior result. Never claim visual quality has been verified."
+                "or copy their changes. They are exclusions, not examples to complete. Choose at least one "
+                "genuinely different concrete direction within the user's brief compared with EACH earlier "
+                "plan. Different wording alone is not a new variation. Never claim visual quality has been verified."
             )
         lyric_guidance = (
             " Write original singable lyrics from the goal, guidance and approved source observations. The saved request.lyrics, if present, is writing guidance, not fixed lyrics in this mode. Respect the requested language and keep the words short enough for the saved duration_seconds. Use [Verse] and [Chorus] when helpful; no claims that audio exists."
@@ -812,6 +814,7 @@ class AgentMediaExecutor:
         )
         session.commit()
         for attempt in range(2):
+            duplicate = False
             text = await self.consume(session, run, definition, messages)
             if self.stopped(session, run):
                 return None
@@ -821,6 +824,7 @@ class AgentMediaExecutor:
 
                     result = ImageVariation.model_validate_json(text)
                     if repeats(result.model_dump(), history):
+                        duplicate = True
                         raise ValueError(
                             "This variation repeats a completed prompt or change plan; choose another idea within the brief"
                         )
@@ -845,13 +849,27 @@ class AgentMediaExecutor:
                 if attempt:
                     if scenes:
                         raise ValueError(
-                            "The local model could not plan a new shot: " + str(exc)[:500]
+                            "The local model could not prepare a new image variation: " + str(exc)[:500]
                         ) from exc
                     raise ValueError(
                         "The local model did not produce a valid bounded media description"
                     ) from exc
                 append_event(session, run.id, "agent.media.correction_requested", {})
                 session.commit()
+                if duplicate:
+                    from app.agent_image_scenes import repetition_feedback
+
+                    # Do not echo the duplicated JSON as another assistant example.
+                    # Keep the reviewed brief/history and request a fresh choice explicitly.
+                    messages = messages[:2] + [
+                        {
+                            "role": "user",
+                            "content": json.dumps(
+                                repetition_feedback(result.model_dump()), ensure_ascii=False
+                            ),
+                        }
+                    ]
+                    continue
                 messages += [
                     {"role": "assistant", "content": text[:12000]},
                     {

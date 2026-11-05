@@ -31,9 +31,11 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
     implemented_media, bridge, monkeypatch
 ):
     calls = []
+    requests = []
     answers = iter([A, A, B, B, B])
 
     async def describe(self, **kwargs):
+        requests.append(kwargs["messages"])
         payload = json.loads(kwargs["messages"][1]["content"])
         calls.append(payload)
         assert (
@@ -96,8 +98,21 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
                 )
             )
             assert len(failed) == 1 and failed[0].status == "failed"
+            assert "new image variation" in failed[0].error_message
+            prepared = db.scalar(
+                select(Run).where(Run.task_id == roots[1]["task_id"], Run.executor_type == "agent_media")
+            )
+            assert prepared.parameters["image_scene_history"][0]["description"] == A["description"]
         assert calls[0]["previous_scenes"] == []
         assert calls[1]["previous_scenes"][0]["run_id"] == images[0].id
+        assert calls[1]["previous_scenes"][0]["changes"] == A["changes"]
+        assert "description" not in calls[1]["previous_scenes"][0]
+        assert "preserve" not in calls[1]["previous_scenes"][0]
+        assert [item["role"] for item in requests[2]] == ["system", "user", "user"]
+        feedback = json.loads(requests[2][-1]["content"])
+        assert feedback["rejected_changes"] == A["changes"]
+        assert "at least one genuinely different" in feedback["requirement"]
+        assert A["description"] not in json.dumps(requests[2])
         assert len(calls[-1]["previous_scenes"]) == 2
         assert calls[0]["additional_visual_guidance"] == ""
 
