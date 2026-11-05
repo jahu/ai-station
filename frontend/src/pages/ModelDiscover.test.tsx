@@ -463,3 +463,139 @@ it("explains short context and low precision instead of presenting them as a rec
   expect(screen.getByText(/does not meet the 32,768-token/)).toBeTruthy();
   expect(screen.getByText(/larger precision tradeoff/)).toBeTruthy();
 });
+
+it.each([true, false])(
+  "reviews a whole split model without offering a fragment installation, complete=%s",
+  async (complete) => {
+    const identity = "b".repeat(64);
+    const names = [1, 2].map((i) => `Q4/Coder.Q4_K_M-0000${i}-of-00002.gguf`);
+    const assessment = {
+      reason: "This split model needs a complete compatible bundle plan.",
+      hardware_status: "unknown",
+      runtime_status: "needs_complete_bundle_runtime",
+      profiles: [],
+      disk: {
+        status: complete ? "insufficient" : "unknown",
+        free_bytes: 10 * 1024 ** 3,
+        model_bundle_bytes: complete ? 16 * 1024 ** 3 : null,
+      },
+    };
+    const state = {
+      ...report,
+      observation_sha256: "a".repeat(64),
+      model_bundles: [
+        {
+          id: identity,
+          kind: "gguf_split",
+          name: "Q4/Coder.Q4_K_M.gguf",
+          expected_parts: 2,
+          observed_parts: complete ? 2 : 1,
+          status: complete ? "complete_metadata" : "missing_parts",
+          total_size_bytes: complete ? 16 * 1024 ** 3 : null,
+          missing_parts: complete ? [] : [2],
+          parts: names.slice(0, complete ? 2 : 1).map((filename, index) => ({
+            filename,
+            index: index + 1,
+            size_bytes: 8 * 1024 ** 3,
+          })),
+        },
+      ],
+      files: names.slice(0, complete ? 2 : 1).map((filename) => ({
+        ...report.files[0],
+        filename,
+        bundle_id: identity,
+        sha256: "c".repeat(64),
+        assessment,
+      })),
+    };
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "saved",
+        executor_type: "model_hub_inspect",
+        status: "succeeded",
+        metadata: { source_inspection: state },
+      }),
+    }));
+    vi.stubGlobal("fetch", fetch);
+    mount("/models/discover?run=saved");
+    await screen.findByRole("heading", { name: "Coder.Q4_K_M.gguf" });
+    expect(
+      screen.queryByRole("button", { name: "Review installation" }),
+    ).toBeNull();
+    expect(screen.queryByLabelText("Choose a variant")).toBeNull();
+    fireEvent.click(
+      screen.getByText(`Required model files (${complete ? 2 : 1}/2)`),
+    );
+    expect(
+      screen.getByText(new RegExp(names[0].replaceAll(".", "\\."))),
+    ).toBeTruthy();
+    if (complete) {
+      expect(screen.getByText(/Model weights total 16\.00 GiB/)).toBeTruthy();
+      expect(screen.getByText(/Not enough disk space/)).toBeTruthy();
+    } else {
+      expect(screen.getByText(/Missing parts: 2/)).toBeTruthy();
+      expect(screen.getByText(/Complete model size is unknown/)).toBeTruthy();
+    }
+    expect(
+      fetch.mock.calls.every(
+        (args) => !(args as unknown as [string, RequestInit?])[1]?.method,
+      ),
+    ).toBe(true);
+  },
+);
+
+it("keeps older split-file observations unavailable without confusing unknown total size with free disk", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "legacy",
+        executor_type: "model_hub_inspect",
+        status: "succeeded",
+        metadata: {
+          source_inspection: {
+            ...report,
+            observation_sha256: "a".repeat(64),
+            files: [
+              {
+                ...report.files[0],
+                filename: "Old-00001-of-00002.gguf",
+                sha256: "b".repeat(64),
+                assessment: {
+                  ...report.files[0].assessment,
+                  disk: { status: "unknown", free_bytes: 1000 * 1024 ** 3 },
+                  variant_advice: {
+                    recommended: true,
+                    reason: "Old cached recommendation",
+                  },
+                  profiles: [
+                    {
+                      catalog_id: "old",
+                      name: "Old single-file fit",
+                      fit: "estimated_fit",
+                      occupancy: "unknown",
+                      recommendation: {
+                        gpus: [7],
+                        context_size: 32768,
+                        reason: "Old cached fit",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      }),
+    })),
+  );
+  mount("/models/discover?run=legacy");
+  await screen.findByText(/Complete model size is unknown/);
+  expect(screen.queryByText("Old single-file fit")).toBeNull();
+  expect(screen.queryByText(/^Recommended ·/)).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Review installation" }),
+  ).toBeNull();
+});

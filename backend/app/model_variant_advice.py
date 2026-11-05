@@ -102,7 +102,11 @@ async def enrich_source(report, check):
 
 
 def assess_variant(file, report, hardware, storage, *, context_target=32768):
-    existing = assess_file(file, hardware, storage)
+    from app.hub_model_parts import for_file, looks_split
+
+    existing = assess_file(file, hardware, storage, bundle=for_file(report, file))
+    if file.get("bundle_id") or looks_split(file.get("filename", "")):
+        return existing
     if report.get("avatar_profile") and file.get("format") in {"pth", "pt", "bin"}:
         from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
 

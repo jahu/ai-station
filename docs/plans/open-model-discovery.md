@@ -413,3 +413,63 @@ The data-format work follows the official
 [PyTorch archive contract](https://docs.pytorch.org/docs/stable/notes/serialization.html#serialized-file-format-for-torch-save)
 and Python's [non-executing pickle inspection tools](https://docs.python.org/3/library/pickletools.html).
 Those references describe formats; they do not grant arbitrary model code authority.
+
+### Next: complete split-GGUF hardware advice and execution
+
+Single-file language candidates already reject projector files and conventional
+`00001-of-00002.gguf` fragments. Keep that refusal until the entire runtime path
+accepts a complete bundle. Current source inspection filters a pasted file link
+before retaining its siblings, so it cannot yet explain the complete split model's
+size. An individual fragment's bytes must never become the whole-model estimate.
+
+1. Extend the immutable publisher observation with a bounded declared part set.
+   Resolve sibling names/hashes/sizes from that same pinned revision even when
+   the user pasted one part's link. Separate directories and quantization groups;
+   reject duplicates, mismatched numbering/counts and incomplete/unknown identities.
+   Report the complete declared byte total only when every required part is known.
+   Filename grouping is publisher metadata, not verified GGUF tensor admission.
+2. Show one model/bundle review with its required parts, full disk requirement and
+   clear missing/unsupported state. Preserve existing single-file behavior and
+   keep fragment installation unavailable until bundle execution is qualified.
+   Hardware advice must include all weights, context/KV geometry, runtime,
+   companions and installed-storage reserve; no arbitrary pooling of GPU memory.
+3. Add a typed native bundle coordinate and bounded cross-part GGUF inspection:
+   consistent split metadata, complete tensor inventory/layout, exact file
+   observations and content hashes. Reuse the existing llama.cpp resource fitter.
+   Native launch mounts only those verified objects under fixed server-generated
+   part names; publisher filenames must not become Docker mount options or shell
+   arguments. Freeze the aggregate identity in ownership/recovery receipts while
+   legacy single-file payloads retain their current serialization.
+4. Compose all-part download/adoption inside the ordinary model Task, with one
+   owner, license review, Stop fence and registry publication only after complete
+   native admission. Context changes, Chat, agents, inspection, cancellation and
+   recovery must retain the same complete bundle instead of reopening a first
+   shard against a moving/default directory.
+5. Test complete/missing/mixed parts, a pasted non-first part, insufficient total
+   disk/VRAM/RAM, unsupported runtime, cancellation and changed observations before
+   registration. Qualify an actual small complete split fixture using a pinned
+   trusted splitter over a private copy of known reference weights; keep original
+   model files untouched. A format conversion can qualify the loading route, not
+   a different training's quality. Follow with the release QA/package matrix.
+
+Delivery can separate complete metadata/hardware explanation from native bundle
+activation, but an unfinished group must stay explicitly unavailable. Do not
+claim split-model installation from an inspection or a small fragment alone.
+
+#### Split-model metadata stage
+
+The source/UI stage now retains complete declared groups from the same revision,
+including a pasted second-part link. A shared bounded manifest records required
+files and identities; separate directories/quantizations do not merge. Missing,
+conflicting, duplicate-object or unverifiable sets retain unknown total size.
+The source review presents one bundle and its full weight-storage requirement,
+with optional part details. Older fragment observations keep their installation
+refusal. Context/native residency and complete-bundle execution remain unqualified;
+metadata completeness must not become a GPU-fit or installation recommendation.
+
+On 2026-11-05, a public pinned Qwen2.5-72B GGUF source returned a two-part set
+of 50.71 GiB even when inspected through its second file's link. Only bounded
+publisher metadata was read. Fake API tests cover durable observation publication,
+aggregate disk refusal, private report artifacts and rejection of a fragment plan
+without creating model records. This is source/hardware explanation, not a split
+model download or inference qualification; steps 3–5 above remain required.

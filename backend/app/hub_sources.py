@@ -7,6 +7,8 @@ from urllib.parse import quote, unquote, urlencode, urlsplit
 
 from pydantic import BaseModel, ConfigDict
 
+from app.hub_model_parts import annotate as annotate_parts
+from app.hub_model_parts import coordinate as part_coordinate
 from app.model_download_files import _wait, response
 
 PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\Z")
@@ -118,6 +120,7 @@ async def inspect_source(source: HubSource, check):
     ):
         raise ValueError("Publisher did not return a matching public immutable model revision")
     files, seen = [], set()
+    selected_part = part_coordinate(source.filename) if source.filename else None
     for row in raw["siblings"]:
         if not isinstance(row, dict):
             raise ValueError("Invalid publisher file metadata")
@@ -131,7 +134,9 @@ async def inspect_source(source: HubSource, check):
             raise ValueError("Ambiguous publisher file metadata")
         seen.add(filename)
         if source.filename and filename != source.filename:
-            continue
+            other_part = part_coordinate(filename)
+            if selected_part is None or other_part is None or other_part[0] != selected_part[0]:
+                continue
         lower = filename.lower()
         if not lower.endswith((".gguf", ".safetensors", ".bin", ".pt", ".pth", ".onnx")):
             continue
@@ -159,6 +164,11 @@ async def inspect_source(source: HubSource, check):
         )
     if source.filename and source.filename not in seen:
         raise ValueError("The selected file is absent from this immutable revision")
+    bundles = annotate_parts(files)
+    if source.filename:
+        files = [file for file in files if file["filename"] == source.filename]
+        selected_bundles = {file.get("bundle_id") for file in files}
+        bundles = [bundle for bundle in bundles if bundle["id"] in selected_bundles]
     card = raw.get("cardData") if isinstance(raw.get("cardData"), dict) else {}
     license_name = card.get("license")
     bases = card.get("base_model", [])
@@ -185,6 +195,7 @@ async def inspect_source(source: HubSource, check):
         "architecture_hint": str(gguf.get("architecture") or "")[:80],
         "base_models": list(dict.fromkeys(base_models)),
         "files": files,
+        **({"model_bundles": bundles} if bundles else {}),
         "metadata_only": True,
     }
 
