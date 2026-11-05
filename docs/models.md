@@ -398,7 +398,7 @@ A definition is created by an explicit UI/API action from a file observed as `pr
 
 ## Explicit installation
 
-`POST /api/models/definitions/{id}/install` enqueues a Task/Run (`models.install`) with `filesystem_read` and `manage_models`. The worker calls the typed Host Runner `/v1/models/verify` endpoint. Callers cannot supply roots, commands, pull flags or output paths. The runner stats the snapshotted path inside configured model roots, rejects symlinks and non-regular files, and does not open model contents.
+`POST /api/models/definitions/{id}/install` enqueues a Task/Run (`models.install`) with `filesystem_read` and `manage_models`. The worker calls the typed Host Runner `/v1/models/verify` endpoint. Callers cannot supply roots, commands, pull flags or output paths. The runner checks the snapshotted path inside configured roots or the owned object store and rejects symlinks and non-regular files. When the reviewed recipe requires it, the runner reads bounded model metadata and verifies complete component bindings; it never executes publisher code.
 
 For GGUF language models it also inspects the administrator-configured llama.cpp image ID. Missing images fail closed. The runner never runs `docker pull`, never copies GGUFs and never starts a runtime. A JSON report becomes a normal artifact. Cancellation, errors and a changed size/mtime leave the definition unregistered (`unverified` or `failed`) and do not rewrite discovery observations. Retry is a new Run.
 
