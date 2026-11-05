@@ -91,6 +91,23 @@ def repeats(scene, history):
     )
 
 
+def planning_history(history):
+    """Supply exclusion directions, not complete prompts that invite copying."""
+    return [{"run_id": row["run_id"], "changes": row["changes"]} for row in history]
+
+
+def repetition_feedback(scene):
+    return {
+        "reason": "The proposed variation repeats a completed result and was rejected.",
+        "rejected_changes": scene["changes"],
+        "requirement": (
+            "Choose at least one genuinely different concrete direction allowed by the original brief. "
+            "Keep its requested invariants. Rewrite the complete description to agree with the new changes; "
+            "do not reuse the rejected prompt or only change wording, aspect names or field order."
+        ),
+    }
+
+
 def reference_identity(run):
     return [(item.get("id"), item.get("sha256")) for item in run.parameters.get("media_inputs", [])]
 
