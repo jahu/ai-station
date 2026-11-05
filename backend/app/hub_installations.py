@@ -75,14 +75,14 @@ def install(body: InstallRequest, session: DB):
         raise HTTPException(409, "Review a complete model installation plan first")
     candidate = download_candidate(report["candidate"])
     snapshot = candidate.model_dump(mode="json")
-    if candidate.capability in {"image", "video", "speech"} and not candidate.preparation_available:
+    if candidate.capability in {"image", "video", "speech", "music"} and not candidate.preparation_available:
         raise HTTPException(
             409,
             candidate.preparation_notice
             or "Prepare the supported media runtime prerequisites before installing this checkpoint",
         )
-    if candidate.capability == "video" and not body.workload_accepted:
-        raise HTTPException(422, "Review and accept the fixed video workload and explicit CPU offload")
+    if candidate.capability in {"video", "music"} and not body.workload_accepted:
+        raise HTTPException(422, "Review and accept the fixed media workload and explicit CPU offload")
     if fingerprint(snapshot) != body.manifest_sha256 or report.get("manifest_sha256") != body.manifest_sha256:
         raise HTTPException(409, "The model manifest changed; review its source, hardware and license again")
     prior = session.get(Task, str(body.client_request_id))
@@ -100,7 +100,10 @@ def install(body: InstallRequest, session: DB):
         or report["files"][0].get("assessment", {}).get("hardware_status") != "estimated_fit"
     ):
         raise HTTPException(
-            409, "This plan has no fitted execution profile; review the model or hardware first"
+            409,
+            "This plan has no fitted CPU profile; review the model or hardware first"
+            if candidate.capability == "embedding"
+            else "This plan has no fitted GPU profile; review the model or hardware first",
         )
     if report["files"][0]["assessment"]["disk"]["status"] != "file_fits":
         raise HTTPException(409, "Confirm sufficient application storage in a new hardware plan")
@@ -109,7 +112,7 @@ def install(body: InstallRequest, session: DB):
         "manifest_sha256": body.manifest_sha256,
         "entry": snapshot,
         "license_accepted": True,
-        **({"workload_accepted": True} if candidate.capability == "video" else {}),
+        **({"workload_accepted": True} if candidate.capability in {"video", "music"} else {}),
         "download_only": False,
         "attempt": 1,
         "receipts": {},

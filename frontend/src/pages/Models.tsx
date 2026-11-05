@@ -32,6 +32,7 @@ interface Definition {
   image_backend?: "qwen" | "krea2";
   video_backend?: "wan22";
   speech_backend?: "chatterbox";
+  music_backend?: "ace-step-1.5";
   embedding_backend?: "e5_cpu";
   id: string;
   name: string;
@@ -196,17 +197,19 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
               {item.file?.filename ?? "Linked file missing"}
             </p>
             <small className="muted">
-              {item.embedding_backend
-                ? "Memory encoder · configure in Memory"
-                : item.speech_backend
-                  ? "Speech model · configure in Audio"
-                  : item.video_backend
-                    ? "Video model · configure in Video"
-                    : item.image_backend
-                      ? "Image model · configure in Images"
-                      : item.compatibility?.operational
-                        ? "Managed llama.cpp after a successful install"
-                        : "Catalogued only · no managed adapter"}
+              {item.music_backend
+                ? "Music model · configure in Music"
+                : item.embedding_backend
+                  ? "Memory encoder · configure in Memory"
+                  : item.speech_backend
+                    ? "Speech model · configure in Audio"
+                    : item.video_backend
+                      ? "Video model · configure in Video"
+                      : item.image_backend
+                        ? "Image model · configure in Images"
+                        : item.compatibility?.operational
+                          ? "Managed llama.cpp after a successful install"
+                          : "Catalogued only · no managed adapter"}
             </small>
           </Link>
         ))}
@@ -478,6 +481,7 @@ export function ModelDetail() {
                 definition.image_backend ||
                 definition.video_backend ||
                 definition.speech_backend ||
+                definition.music_backend ||
                 definition.embedding_backend
               )
                 ? {
@@ -601,15 +605,17 @@ export function ModelDetail() {
       </section>
       <section className="panel model-card">
         <h2>
-          {definition?.embedding_backend
-            ? "Memory encoder"
-            : definition?.speech_backend
-              ? "Speech model"
-              : definition?.video_backend
-                ? "Video model"
-                : definition?.image_backend
-                  ? "Image model"
-                  : "Model definition and load preset"}
+          {definition?.music_backend
+            ? "Music model"
+            : definition?.embedding_backend
+              ? "Memory encoder"
+              : definition?.speech_backend
+                ? "Speech model"
+                : definition?.video_backend
+                  ? "Video model"
+                  : definition?.image_backend
+                    ? "Image model"
+                    : "Model definition and load preset"}
         </h2>
         {definition ? (
           <p>
@@ -637,6 +643,7 @@ export function ModelDetail() {
             {definition.image_backend ||
             definition.video_backend ||
             definition.speech_backend ||
+            definition.music_backend ||
             definition.embedding_backend
               ? definition.compatibility.summary
               : definition.compatibility.operational
@@ -666,6 +673,7 @@ export function ModelDetail() {
                 definition?.image_backend ||
                 definition?.video_backend ||
                 definition?.speech_backend ||
+                definition?.music_backend ||
                 definition?.embedding_backend
               ) && (
                 <>
@@ -720,6 +728,7 @@ export function ModelDetail() {
                 definition.image_backend ||
                 definition.video_backend ||
                 definition.speech_backend ||
+                definition.music_backend ||
                 definition.embedding_backend
               ) && (
                 <>
@@ -744,6 +753,11 @@ export function ModelDetail() {
               Choose this encoder in Memory
             </Link>
           )}
+          {definition?.music_backend && (
+            <Link to={`/audio?mode=music&model=${definition.id}`}>
+              Create with this model in Music
+            </Link>
+          )}
           {definition?.speech_backend && (
             <Link to={`/audio?model=${definition.id}`}>
               Choose this model in Audio
@@ -765,6 +779,7 @@ export function ModelDetail() {
                 {definition?.image_backend ||
                 definition?.video_backend ||
                 definition?.speech_backend ||
+                definition?.music_backend ||
                 definition?.embedding_backend
                   ? "Save name"
                   : definition
@@ -789,6 +804,7 @@ export function ModelDetail() {
                 definition.image_backend ||
                 definition.video_backend ||
                 definition.speech_backend ||
+                definition.music_backend ||
                 definition.embedding_backend
               ) &&
               definition.compatibility?.operational && (

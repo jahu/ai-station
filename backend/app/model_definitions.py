@@ -190,6 +190,15 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "operational": row.status == "registered",
             "summary": "Choose this encoder explicitly in Memory. It uses CPU and its fixed tokenizer; it does not replace a chat model.",
         }
+    music = (row.metadata_json or {}).get("music")
+    music_backend = row.category == "audio" and isinstance(music, dict) and bool(music.get("binding"))
+    if music_backend:
+        spec = {
+            "runtime": "ACE-Step 1.5 Turbo",
+            "adapter": "native-music",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Music. Its fixed workload uses explicit CPU offload.",
+        }
     speech_backend = row.category == "audio" and isinstance(speech, dict) and bool(speech.get("binding"))
     if speech_backend:
         spec = {
@@ -202,6 +211,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
         **({"speech_backend": "chatterbox"} if speech_backend else {}),
+        **({"music_backend": "ace-step-1.5"} if music_backend else {}),
         **({"embedding_backend": "e5_cpu"} if embedding else {}),
         **(
             {"video_backend": "wan22"}
@@ -333,6 +343,7 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         (row.metadata_json.get("embedding") or {}).get("binding")
         or (row.metadata_json.get("video") or {}).get("binding")
         or (row.metadata_json.get("speech") or {}).get("binding")
+        or (row.metadata_json.get("music") or {}).get("binding")
     ):
         if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
             raise HTTPException(
@@ -408,6 +419,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **(
+                {"music_checkpoint_binding": dict(row.metadata_json["music"]["binding"])}
+                if (row.metadata_json.get("music") or {}).get("binding")
+                else {}
+            ),
             **(
                 {"speech_checkpoint_binding": dict(row.metadata_json["speech"]["binding"])}
                 if (row.metadata_json.get("speech") or {}).get("binding")
@@ -540,6 +556,15 @@ class ModelInstallExecutor:
                     ),
                     **(
                         {
+                            "checkpoint_profile": run.parameters["music_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("music_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {
                             "checkpoint_profile": run.parameters["speech_checkpoint_binding"][
                                 "checkpoint_profile"
                             ]
@@ -551,6 +576,21 @@ class ModelInstallExecutor:
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("music_checkpoint_binding"):
+                from app.music_models import profile_for
+
+                binding = run.parameters["music_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected music checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
             if run.parameters.get("speech_checkpoint_binding"):
                 from app.audio_models import profile_for
 

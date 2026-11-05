@@ -5,9 +5,13 @@ from app.runner_client import RunnerError, RunnerUnavailable
 
 
 def adapters():
-    from app import hub_speech_candidates, hub_video_candidates
+    from app import hub_music_candidates, hub_speech_candidates, hub_video_candidates
 
-    return (("video_profile", hub_video_candidates), ("speech_profile", hub_speech_candidates))
+    return (
+        ("video_profile", hub_video_candidates),
+        ("speech_profile", hub_speech_candidates),
+        ("music_profile", hub_music_candidates),
+    )
 
 
 async def resolve_profile(observation, check, filename=None):

@@ -12,10 +12,11 @@ def catalog(session, *, identifier=None):
     from app.agent_media import SPEECH_AGENTS_ENABLED
     from app.audio_models import frozen_model as speech_model
     from app.image_models import choice
+    from app.music_models import frozen_model as music_model
     from app.video_models import frozen_model
 
     result = []
-    for kind, category in (("image", "image"), ("video", "video"), ("speech", "audio")):
+    for kind, category in (("image", "image"), ("video", "video"), ("speech", "audio"), ("music", "audio")):
         if kind == "speech" and not SPEECH_AGENTS_ENABLED:
             continue
         query = select(ModelDefinition).where(
@@ -31,6 +32,14 @@ def catalog(session, *, identifier=None):
                     if not selected["available"] or "t2i" not in selected["modes"]:
                         continue
                     item = {"backend": selected["backend"], "mode": "t2i"}
+                elif kind == "music":
+                    music_model(session, row.id)
+                    item = {
+                        "cpu_offload": True,
+                        "minimum_vram_mib": 12288,
+                        "minimum_physical_ram_mib": 24576,
+                        "maximum_seconds": 600,
+                    }
                 elif kind == "speech":
                     speech_model(session, row.id)
                     item = {
@@ -59,7 +68,11 @@ def catalog(session, *, identifier=None):
 
 
 def validate_selection(session, media, offered):
-    if media is None or media.kind not in {"image", "video", "speech"} or media.request.model_id is None:
+    if (
+        media is None
+        or media.kind not in {"image", "video", "speech", "music"}
+        or media.request.model_id is None
+    ):
         return
     identifier = str(media.request.model_id)
     matches = [item for item in offered if item["kind"] == media.kind and item["model_id"] == identifier]

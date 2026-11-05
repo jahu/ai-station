@@ -39,7 +39,11 @@ def assess_file(file, hardware, storage, *, candidates=None):
         from app.hub_embedding_candidates import assessment
 
         return assessment(embedding[0], hardware, storage)
-    images = [v for v in matches if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech"}]
+    images = [
+        v
+        for v in matches
+        if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech", "hub_music"}
+    ]
     if images:
         entry = images[0]
         prerequisites = entry.prerequisite_budget_bytes
@@ -112,7 +116,9 @@ def assess_file(file, hardware, storage, *, candidates=None):
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
-                "provenance": "pinned_speech_recipe_and_checkpoint_header"
+                "provenance": "pinned_music_recipe_and_checkpoint_header"
+                if getattr(entry, "origin", None) == "hub_music"
+                else "pinned_speech_recipe_and_checkpoint_header"
                 if getattr(entry, "origin", None) == "hub_speech"
                 else "pinned_video_recipe_and_checkpoint_header"
                 if getattr(entry, "origin", None) == "hub_video"
@@ -138,7 +144,7 @@ def assess_file(file, hardware, storage, *, candidates=None):
         else "supported_architecture_plan"
         if plans
         and any(
-            getattr(entry, "origin", None) in {"hub", "hub_image", "hub_video", "hub_speech"}
+            getattr(entry, "origin", None) in {"hub", "hub_image", "hub_video", "hub_speech", "hub_music"}
             for entry in matches
         )
         else "reviewed_profile"
@@ -162,6 +168,10 @@ def assess_file(file, hardware, storage, *, candidates=None):
         if plans
         else "No validated workload profile for this object yet. File size alone cannot establish VRAM fit.",
         "automatic_ram_offload": False,
-        **({"requires_cpu_offload_consent": True} if images and images[0].capability == "video" else {}),
+        **(
+            {"requires_cpu_offload_consent": True}
+            if images and images[0].capability in {"video", "music"}
+            else {}
+        ),
         "automatic_cloud_fallback": False,
     }

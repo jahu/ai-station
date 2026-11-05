@@ -59,6 +59,10 @@ def download_candidate(payload):
         from app.hub_embedding_candidates import HubEmbeddingCandidate
 
         return HubEmbeddingCandidate.model_validate(payload)
+    if payload.get("origin") == "hub_music":
+        from app.hub_music_candidates import HubMusicCandidate
+
+        return HubMusicCandidate.model_validate(payload)
     if payload.get("origin") == "hub_speech":
         from app.hub_speech_candidates import HubSpeechCandidate
 

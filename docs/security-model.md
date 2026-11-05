@@ -1746,3 +1746,14 @@ layout must match; the slot binds the exact trusted SDK and companion manifest.
 Its catalog descriptor cannot bypass the existing per-device GPU and physical
 RAM gate. New source installation and private Run model views remain separately
 required contracts.
+
+The discovered-music candidate allows a model Task to own `music_setup` only with
+matching administrator ownership, licensed immutable model/engine manifests,
+explicit offload-workload consent and its exact dependency. Hardware is rechecked
+before prerequisite transfers. Shared definitions contain only opaque engine and
+verified checkpoint identities, never another account's preparation coordinates.
+Parent dispatch validates the frozen binding; the offline child rehashes weights,
+retains the exact SDK/configuration/companions and uses an independent deadline
+inside the owned memory scope. The per-Run view can replace only diffusion, never
+publisher Python. Repeat-start/inspection preserves the original request and
+engine, and cannot launch another process against a later current default.

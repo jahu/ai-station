@@ -10,7 +10,7 @@ import { PreparationCard, type Preparation } from "./ModelSetup";
 
 export type InstallPlan = {
   manifest_sha256: string;
-  capability?: "chat" | "image" | "video" | "speech" | "embedding";
+  capability?: "chat" | "image" | "video" | "speech" | "music" | "embedding";
   components?: { role: string; filename: string; size_bytes: number }[];
   component_licenses?: { name: string; url: string }[];
   license: string;
@@ -74,7 +74,7 @@ export default function HubInstallPanel({
           plan_run_id: runId,
           manifest_sha256: plan.manifest_sha256,
           license_accepted: accepted,
-          ...(plan.capability === "video"
+          ...(["video", "music"].includes(plan.capability ?? "")
             ? { workload_accepted: workloadAccepted }
             : {}),
         }),
@@ -103,13 +103,15 @@ export default function HubInstallPanel({
       <p className="muted">
         {plan.capability === "embedding"
           ? "AI Station downloads the encoder and its fixed tokenizer, checks the complete graph and probes it on CPU. Use for memory is a separate choice; installation keeps your current encoder."
-          : plan.capability === "speech"
-            ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
-            : plan.capability === "video"
-              ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
-              : plan.capability === "image"
-                ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
-                : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
+          : plan.capability === "music"
+            ? "AI Station prepares the fixed music engine and all companions, then verifies your checkpoint before adding it to Music and compatible assistant tools."
+            : plan.capability === "speech"
+              ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
+              : ["video", "music"].includes(plan.capability ?? "")
+                ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
+                : plan.capability === "image"
+                  ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
+                  : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
       {!!plan.component_licenses?.length && (
         <details className="hub-context-options">
@@ -152,7 +154,7 @@ export default function HubInstallPanel({
                 model license ({plan.license})
               </a>{" "}
               and agree to download this model
-              {["image", "video", "speech", "embedding"].includes(
+              {["image", "video", "speech", "music", "embedding"].includes(
                 plan.capability ?? "",
               )
                 ? " and its required licensed components"
@@ -160,7 +162,7 @@ export default function HubInstallPanel({
               .
             </span>
           </label>
-          {plan.capability === "video" && (
+          {["video", "music"].includes(plan.capability ?? "") && (
             <label className="hub-license">
               <input
                 type="checkbox"
@@ -168,10 +170,16 @@ export default function HubInstallPanel({
                 onChange={(event) => setWorkloadAccepted(event.target.checked)}
               />
               <span>
-                I accept this video profile: 1280 × 704, one 12 GiB GPU and at
-                least 24 GiB system RAM. It deliberately processes part of the
-                model in RAM (CPU offload), with an 11 GiB application memory
-                limit and no swap.
+                {plan.capability === "music" ? (
+                  "I accept this music profile: 10–600 seconds, one 12 GiB GPU and at least 24 GiB system RAM. It uses explicit CPU offload with a 12 GiB short-clip or 18 GiB long-clip application memory limit, and no swap."
+                ) : (
+                  <>
+                    I accept this video profile: 1280 × 704, one 12 GiB GPU and
+                    at least 24 GiB system RAM. It deliberately processes part
+                    of the model in RAM (CPU offload), with an 11 GiB
+                    application memory limit and no swap.
+                  </>
+                )}
               </span>
             </label>
           )}
@@ -179,7 +187,8 @@ export default function HubInstallPanel({
             disabled={
               !canManage ||
               !accepted ||
-              (plan.capability === "video" && !workloadAccepted) ||
+              (["video", "music"].includes(plan.capability ?? "") &&
+                !workloadAccepted) ||
               !allowed ||
               install.isPending
             }

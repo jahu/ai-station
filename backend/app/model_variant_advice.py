@@ -170,7 +170,8 @@ def rank_variants(report, *, context_target=32768):
         disk_fits = assessment["disk"]["status"] == "file_fits"
         usable = bool(best and disk_fits)
         image = any(
-            p.get("capability") in {"image", "video", "speech", "embedding"} for p in assessment["profiles"]
+            p.get("capability") in {"image", "video", "speech", "music", "embedding"}
+            for p in assessment["profiles"]
         )
         meets_context = bool(best and (image or context >= context_target))
         quant = best.get("quantization", "") if best else ""
@@ -193,6 +194,8 @@ def rank_variants(report, *, context_target=32768):
             "rank": 0,
             "reason": "CPU memory encoder · 384 dimensions · GPUs stay free"
             if best and best.get("capability") == "embedding"
+            else "Estimated music, one 12-GiB GPU, 24-GiB RAM and explicit CPU offload"
+            if best and best.get("capability") == "music"
             else "Estimated Polish speech, one 6-GiB GPU and fixed F32 profile"
             if best and best.get("capability") == "speech"
             else "Estimated 1280×704 video, one GPU and explicit CPU offload"

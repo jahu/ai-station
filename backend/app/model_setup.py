@@ -62,6 +62,10 @@ def recommendation(entry, hardware):
         from app.hub_embedding_candidates import recommendation as embedding_recommendation
 
         return embedding_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_music":
+        from app.hub_music_candidates import recommendation as music_recommendation
+
+        return music_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_speech":
         from app.hub_speech_candidates import recommendation as speech_recommendation
 
@@ -198,7 +202,7 @@ def view(session, task):
     run = session.get(Run, saved["run_id"])
     progress = dict(run.metadata_json.get("model_download", {}))
     if (
-        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"}
+        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"}
         and run.status not in TERMINAL
     ):
         engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
@@ -226,7 +230,7 @@ def view(session, task):
         "model_file_id": run.metadata_json.get("model_file_id"),
         "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
         if run.metadata_json.get("model_file_id")
-        and saved["entry"].get("capability") not in {"image", "video", "speech", "embedding"}
+        and saved["entry"].get("capability") not in {"image", "video", "speech", "music", "embedding"}
         else None,
         "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
@@ -339,9 +343,9 @@ class Resume(BaseModel):
 
 def attempt(session, task, saved, *, previous=None):
     prerequisite = None
-    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"} and saved["entry"].get(
-        "prepare_engine"
-    ):
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"} and saved[
+        "entry"
+    ].get("prepare_engine"):
         from app.runtime_setup_api import attempt as prepare_runtime
 
         prepare_runtime(
@@ -478,7 +482,7 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
-    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech"}:
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"}:
         prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
         if prerequisite is not None and (

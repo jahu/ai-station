@@ -13,11 +13,16 @@ def owns_preparation(run):
     if (
         task.intent != INTENT
         or ((saved.get("entry") or {}).get("origin"), run.executor_type)
-        not in {("hub_image", "image_setup"), ("hub_video", "video_setup"), ("hub_speech", "speech_setup")}
+        not in {
+            ("hub_image", "image_setup"),
+            ("hub_video", "video_setup"),
+            ("hub_speech", "speech_setup"),
+            ("hub_music", "music_setup"),
+        }
         or task.owner_id != run.owner_id
         or saved.get("license_accepted") is not True
         or (
-            (saved.get("entry") or {}).get("origin") == "hub_video"
+            (saved.get("entry") or {}).get("origin") in {"hub_video", "hub_music"}
             and saved.get("workload_accepted") is not True
         )
         or fingerprint(saved.get("entry")) != saved.get("manifest_sha256")

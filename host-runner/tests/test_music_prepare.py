@@ -14,6 +14,11 @@ from pydantic import ValidationError
 
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
+    from ai_station_runner import music_runtime
+
+    # This lifecycle fixture supplies only readiness journals, not a real SDK.
+    # Environment/source/object validation is covered by music_environment tests.
+    monkeypatch.setattr(music_runtime, "resolve", lambda root, observation: {"observation": observation})
     settings = SimpleNamespace(host_data_dir=lambda: tmp_path)
     monkeypatch.setattr(runtime_install, "get_settings", lambda: settings)
     monkeypatch.setattr(music_prepare, "get_settings", lambda: settings)

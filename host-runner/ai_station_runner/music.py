@@ -2,6 +2,7 @@
 
 import fcntl
 import json
+import math
 import os
 import subprocess
 from functools import lru_cache
@@ -13,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_valid
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.music_protocol import MANIFEST_SHA256, model_manifest, no_symlink, verify_source
+from ai_station_runner.music_runtime_schema import CheckpointSource, ManagedRuntime
 from ai_station_runner.processes import ProcessNotOwned
 from ai_station_runner.security import ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
@@ -33,6 +35,8 @@ class MusicRequest(BaseModel):
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
     runtime_manifest_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
+    checkpoint: CheckpointSource | None = Field(default=None, exclude_if=lambda v: v is None)
+    managed_runtime: ManagedRuntime | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
@@ -43,6 +47,12 @@ class MusicRequest(BaseModel):
 
     @model_validator(mode="after")
     def lyrics_match_mode(self):
+        if (self.checkpoint is None) != (self.managed_runtime is None):
+            raise ValueError("A selected music checkpoint needs its exact managed engine")
+        if self.checkpoint and (
+            self.deadline_at is None or self.runtime_manifest_sha256 != self.managed_runtime.manifest_sha256
+        ):
+            raise ValueError("Selected music requires its frozen manifest and absolute deadline")
         if self.instrumental and self.lyrics:
             raise ValueError("Choose instrumental or supplied lyrics")
         if not self.instrumental and not self.lyrics:
@@ -59,11 +69,11 @@ def directory(run_id):
     return path
 
 
-def configured():
+def configured(chosen=None):
     from ai_station_runner.music_selection import selection
 
     settings = get_settings()
-    chosen = selection(settings) or {}
+    chosen = selection(settings) or {} if chosen is None else chosen
     if not all(chosen.get(key) for key in ("python", "source", "models")):
         raise ValueError("Configure a separate offline ACE-Step Python, source and checkpoint first")
     python, source, model = (chosen[key].absolute() for key in ("python", "source", "models"))
@@ -105,17 +115,34 @@ def runtime_ready(python, source, modified):
         return False
 
 
-def capabilities():
+def selected_source(settings, checkpoint, runtime):
+    from ai_station_runner.memory_scope import available
+    from ai_station_runner.music_checkpoints import selected_environment
+    from ai_station_runner.music_prepare import QUALIFIED
+
+    if not QUALIFIED or not available():
+        raise ValueError("The managed music engine and user memory scope must be available")
+    ram = (collect(settings.host_data_dir()).get("memory") or {}).get("total_mib")
+    if type(ram) not in {int, float} or not math.isfinite(ram) or ram < 24576:
+        raise ValueError("The selected music workload needs at least 24 GiB physical RAM")
+    return selected_environment(settings.host_data_dir(), checkpoint, runtime)
+
+
+def capabilities(checkpoint=None, runtime=None):
     try:
-        python, source, model = configured()
+        from ai_station_runner.music_selection import selection
+
+        chosen = (
+            selected_source(get_settings(), checkpoint, runtime)
+            if checkpoint
+            else selection(get_settings()) or {}
+        )
+        python, source, model = configured(chosen) if checkpoint else configured()
         if not runtime_ready(python, source, python.stat().st_mtime_ns):
             raise ValueError("Offline music runtime dependencies are unavailable")
         hardware = collect(get_settings().host_data_dir())
         if not hardware.get("gpus"):
             raise ValueError("Local music requires an available GPU")
-        from ai_station_runner.music_selection import selection
-
-        chosen = selection(get_settings()) or {}
         eligible = [
             int(g["index"]) for g in hardware.get("gpus", []) if (g.get("memory_total_mib") or 0) >= 12288
         ]
@@ -123,6 +150,7 @@ def capabilities():
             raise ValueError("The managed music profile requires an NVIDIA GPU with 12 GiB VRAM")
         return {
             "available": True,
+            **({"managed_runtime": runtime} if checkpoint else {}),
             "configuration_source": "managed" if chosen.get("managed") else "configured",
             **(
                 {
@@ -177,7 +205,11 @@ def start(manager, body):
         from ai_station_runner import music_environment
         from ai_station_runner.music_selection import selection
 
-        chosen = selection(get_settings()) or {}
+        chosen = (
+            selected_source(get_settings(), body.checkpoint, body.managed_runtime.model_dump(mode="json"))
+            if body.checkpoint
+            else selection(get_settings()) or {}
+        )
         managed = chosen.get("managed") is True
         if managed:
             if body.runtime_manifest_sha256 != chosen["observation"]["manifest_sha256"]:
@@ -186,6 +218,8 @@ def start(manager, body):
             snapshot = root / "environment.json"
             if snapshot.exists():
                 frozen = music_environment.read_json(snapshot)
+                if body.checkpoint and frozen != chosen["observation"]:
+                    raise ValueError("The selected music engine differs from its original Run snapshot")
                 chosen = music_environment.resolve(get_settings().host_data_dir(), frozen)
                 python, source, model = (chosen[key] for key in ("python", "source", "models"))
             else:

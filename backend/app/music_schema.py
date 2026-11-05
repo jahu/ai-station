@@ -1,5 +1,7 @@
 """Pure offline music settings; no API, registry or executor imports."""
 
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -10,6 +12,7 @@ class MusicOptions(BaseModel):
     duration_seconds: int = Field(default=30, ge=10, le=600, strict=True)
     seed: int | None = Field(default=None, ge=0, le=2**31 - 1, strict=True)
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
+    model_id: UUID | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class MusicSettings(MusicOptions):

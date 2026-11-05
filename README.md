@@ -307,6 +307,11 @@ instrumental or use your own lyrics in Music. This profile uses CPU offload;
 existing configured ACE-Step environments keep priority.
 [Music setup and measured qualification](docs/plans/managed-music-setup.md).
 
+Development builds also support explicit installation and selection of
+compatible ACE-Step music checkpoints from publisher links, with complete
+hardware/component review and preserved engine bindings.
+[Music model imports](docs/models.md#discovered-music-bundles-under-qualification).
+
 **Set up video** prepares Wan 2.2 5B on supported Linux NVIDIA workstations
 with at least 12 GiB VRAM, 24 GiB system RAM and a compatible driver. Review
 sources, component licenses and storage, then install with saved progress and

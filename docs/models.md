@@ -421,8 +421,8 @@ Torch, tensor payload reads or GPU allocation.
 The preparation catalog exposes that finite descriptor alongside its existing
 hardware requirements: one supported 12-GiB GPU, 24-GiB system RAM and explicit
 CPU offload. Two smaller devices are not pooled. A descriptor match is structural
-evidence only: new music source planning, bundle installation, selection and
-actual inference qualification remain the next steps in the
+evidence only: the discovered bundle path below adds source planning, installation, selection
+and measured inference qualification through the
 [discovery plan](plans/open-model-discovery.md#next-ace-step-music-checkpoint-bundles).
 
 Read-only inspection and a complete SHA-256 check matched the existing reference
@@ -432,3 +432,50 @@ generated for this slot qualification. Normal synthetic tests cover graph/type/
 layout drift, companion closure, private owned-path and permission enforcement,
 legacy GGUF rejection, and per-device GPU/RAM gates. Evidence remains private
 under `data/acceptance/model-discovery-20261104/`.
+
+## Discovered music bundles (under qualification)
+
+The development candidate connects the ACE-Step slot to ordinary source inspection,
+installation plans, verified downloads and the existing music-engine preparation.
+The plan includes all required components and requires separate acceptance of the
+fixed music workload and CPU offload. It checks one 12-GiB GPU, 24-GiB physical RAM
+and complete application storage before transferring engine inputs or weights.
+Unknown capacity and two smaller cards cannot satisfy that single-device profile.
+
+A shared music definition freezes the owned BF16 checkpoint and an opaque prepared
+engine identity. Music, reviewed agents and conversation music settings can choose
+it explicitly, including when the configured default is unavailable. Every Run
+keeps that checkpoint, GPU eligibility, memory budget and an absolute deadline.
+Only the diffusion link changes in its private model view; the complete original
+engine, SDK, tokenizer/embedding model, VAE and trusted Python companions are
+verified and retained. Older bindings survive a later engine adoption. Normal
+owned-process inspection/recovery never starts again against a changed default.
+
+Model details offer name changes and native graph/readiness re-checks, without
+LLM context or cache controls. Installation alone does not replace an explicitly
+configured music integration. The model is ready to try after structural and
+engine admission; that does not prove the quality of arbitrary new trained weights.
+
+Focused fake API/native tests exercise the complete selected-model route,
+permissions/privacy, hardware changes, consent, Stop before publication, exact
+prerequisite ownership and direct/agent/conversation execution. Frontend checks
+cover separate workload consent, explicit selection and a fresh saved workspace.
+An explicitly opted-in isolated Docker/native check completed a real pinned HF
+source → plan → complete 92-input engine preparation → cached selected weights →
+GPU music Run. The resulting 10-second 48-kHz PCM WAV passed full decode, audible
+sample/RMS, size and SHA-256 checks. All owned preparation/generation processes
+and the private Runner/container stopped. The test staged 47 verified reference/
+cache inputs, downloaded the remaining dependencies and used existing official
+reference weights, not a newly trained checkpoint. It took 397.54 seconds through
+installation and 445.28 seconds overall on this workstation; those figures include
+setup and are not a generation benchmark. The helper selected GPU 0 after it was
+observed idle; it did not stop or evict another runtime.
+
+Local regression passed 318 cases across 19 backend/native suites. A later wording
+correction passed all 18 import cases and global Ruff/format; actual numeric RAM
+admission remains 24 GiB. Sixty-four frontend tests, lint/type/build/format and
+compiled desktop/mobile/keyboard installation/consent/fresh-workspace checks
+passed. Browser checks replay saved real API projections, separately from the GPU
+qualification. These checks cover this fixed import path; other export graphs
+need their own profiles. This development candidate is not
+in published 0.1.2 packages.

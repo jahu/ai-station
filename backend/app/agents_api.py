@@ -130,6 +130,10 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 from app.audio_models import profile_for
 
                 profile_for(session, body.media.request.model_id)
+            elif body.media.kind == "music" and body.media.request.model_id:
+                from app.music_models import profile_for
+
+                profile_for(session, body.media.request.model_id)
             else:
                 require_profile(body.media)
             freeze_inputs(session, body.media)

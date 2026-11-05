@@ -1514,3 +1514,13 @@ metadata validation and freezes the existing runtime, SDK and all 15 companions,
 including trusted model Python. It does not activate a new music model or admit
 publisher code. Source planning, installation and selected inference remain
 separate stages. [Music slot](models.md#native-music-checkpoint-slot).
+
+The discovered-music candidate composes the normal model downloader with the
+existing `music_setup` prerequisite under one licensed Task. Native music engine
+identities are opaque and independent of the configured default. A shared model
+binding freezes the owned diffusion checkpoint and that engine; ordinary Music,
+agent and conversation Runs snapshot both. The offline child verifies the original
+complete engine/companions and selected weights, then substitutes only diffusion
+in its private view. Explicit per-device GPU/RAM/offload admission, absolute
+execution deadlines and owned-process inspection remain in the existing lifecycle.
+[Candidate contract and qualification](models.md#discovered-music-bundles-under-qualification).

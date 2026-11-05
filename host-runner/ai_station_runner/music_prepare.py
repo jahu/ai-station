@@ -101,7 +101,19 @@ def catalog():
         if free < required
         else None
     )
+    managed = {"available": False}
+    try:
+        from ai_station_runner.music_runtime import active, public_observation
+
+        selected = active(root)
+        managed = {
+            "available": bool(QUALIFIED and supported and fitting and ram >= 24576),
+            "managed_runtime": public_observation(selected["observation"]),
+        }
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     return {
+        "managed_music": managed,
         "recipe": frozen,
         "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
         "manifest_sha256": music_environment.fingerprint(frozen),
@@ -149,8 +161,14 @@ def save(identity, value):
 
 
 def controller():
+    from ai_station_runner.music_runtime import before_adoption
+
     return OwnedEnvironmentPreparation(
-        sys.modules[__name__], music_environment, "music", "music-environments"
+        sys.modules[__name__],
+        music_environment,
+        "music",
+        "music-environments",
+        before_adoption=before_adoption,
     )
 
 
