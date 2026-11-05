@@ -28,16 +28,9 @@ class PlanRequest(BaseModel):
 
 
 def source_observation(session, identity, expected):
-    run = session.get(Run, str(identity))
-    if run is None or run.executor_type != "model_hub_inspect" or run.status != "succeeded":
-        raise HTTPException(404, "Completed model-source inspection not found")
-    report = run.metadata_json.get("source_inspection")
-    if not isinstance(report, dict) or report.get("kind") in {"search", "install_plan"}:
-        raise HTTPException(409, "Choose a completed repository or file inspection")
-    actual = fingerprint({k: v for k, v in report.items() if k != "observation_sha256"})
-    if expected != report.get("observation_sha256") or actual != expected:
-        raise HTTPException(409, "The source observation changed; inspect and review it again")
-    return report
+    from app.hub_observations import source
+
+    return source(session, identity, expected)
 
 
 @router.post("/plans", status_code=202)

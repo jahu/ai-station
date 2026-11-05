@@ -5,7 +5,7 @@ import json
 import tempfile
 from datetime import timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -66,6 +66,33 @@ def search(body: SearchRequest, session: DB):
     return enqueue_inspection(session, body.client_request_id, {"query": body.query})
 
 
+class CompareRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    client_request_id: UUID
+    search_run_id: UUID
+    observation_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    context_target: Literal[32768, 131072] = 32768
+
+
+@router.post("/comparisons", status_code=202)
+def compare(body: CompareRequest, session: DB):
+    from app.hub_observations import search
+
+    administrator(session)
+    search(session, body.search_run_id, body.observation_sha256)
+    return enqueue_inspection(
+        session,
+        body.client_request_id,
+        {
+            "comparison": {
+                "search_run_id": str(body.search_run_id),
+                "observation_sha256": body.observation_sha256,
+                "context_target": body.context_target,
+            }
+        },
+    )
+
+
 def enqueue_inspection(session, client_request_id, request):
     administrator(session)
     task = session.get(Task, str(client_request_id))
@@ -80,6 +107,8 @@ def enqueue_inspection(session, client_request_id, request):
         id=str(client_request_id),
         title="Inspect model source"
         if "source" in request
+        else "Compare model hardware fit"
+        if "comparison" in request
         else "Plan model installation"
         if "planning" in request
         else "Find new models",
@@ -160,9 +189,26 @@ class ModelHubExecutor:
             )
             session.commit()
 
+            comparison_hardware = {"storage_unavailable": True}
+            comparison_storage = None
+            if "comparison" in run.parameters:
+                try:
+                    comparison_hardware = RunnerClient(timeout=8).hardware()
+                except (RunnerError, RunnerUnavailable):
+                    pass
+                check()
+                comparison_storage = storage_info(comparison_hardware)
+
             async def inspect():
                 async with asyncio.timeout(90):
                     from app.hub_sources import HubSource
+
+                    if "comparison" in run.parameters:
+                        from app.hub_comparisons import inspect as inspect_comparison
+
+                        return await inspect_comparison(
+                            session, run, check, inspect_source, comparison_hardware, comparison_storage
+                        )
 
                     if "planning" in run.parameters:
                         from app.hub_candidates import resolve_candidate
@@ -189,6 +235,7 @@ class ModelHubExecutor:
                             "candidate": candidate.model_dump(mode="json"),
                             "manifest_sha256": fingerprint(candidate.model_dump(mode="json")),
                             "source_inspection_run_id": plan["inspection_run_id"],
+                            "source_inspection_repository": observation["repository"],
                             "files": [file],
                             "metadata_only": True,
                             "context_target": plan.get("context_target", 131072),
@@ -206,13 +253,13 @@ class ModelHubExecutor:
             report = asyncio.run(inspect())
             check()
             hardware = {"storage_unavailable": True}
-            if report.get("kind") != "search":
+            if report.get("kind") not in {"search", "comparison"}:
                 try:
                     hardware = RunnerClient(timeout=8).hardware()
                 except (RunnerError, RunnerUnavailable):
                     pass
             check()
-            storage = storage_info(hardware) if report.get("kind") != "search" else None
+            storage = storage_info(hardware) if report.get("kind") not in {"search", "comparison"} else None
             for index, file in enumerate(report["files"]):
                 if index % 16 == 0:
                     check()
@@ -227,13 +274,15 @@ class ModelHubExecutor:
                     from app.model_variant_advice import assess_variant
 
                     file["assessment"] = assess_variant(file, report, hardware, storage)
-            if report.get("kind") != "search":
+            if report.get("kind") not in {"search", "comparison"}:
                 from app.model_variant_advice import rank_variants
 
                 rank_variants(report, context_target=report.get("context_target", 32768))
             report.update(
                 observed_at=utcnow().isoformat(),
-                hardware_observed=not hardware.get("storage_unavailable", False),
+                hardware_observed=report.get("hardware_observed", False)
+                if report.get("kind") == "comparison"
+                else not hardware.get("storage_unavailable", False),
                 no_weights_downloaded=True,
             )
             report["observation_sha256"] = fingerprint(report)
@@ -281,7 +330,9 @@ class ModelHubExecutor:
                 "inspection_artifact_id": artifact.id,
             }
             run.summary = (
-                f"Inspected {report['repository']}: {len(report['files'])} weight files; no weights downloaded."
+                f"Compared {len(report['items'])} repositories against this station; no weights downloaded."
+                if report.get("kind") == "comparison"
+                else f"Inspected {report['repository']}: {len(report['files'])} weight files; no weights downloaded."
                 if "repository" in report
                 else f"Found {len(report['items'])} model repositories; review compatibility before installing."
             )

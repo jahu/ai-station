@@ -51,6 +51,126 @@ const report = {
     },
   ],
 };
+
+it("compares a saved search and reviews its immutable variants without another inspection", async () => {
+  const search = {
+    kind: "search",
+    query: "small models",
+    observation_sha256: "a".repeat(64),
+    files: [],
+    items: [
+      {
+        repository: report.repository,
+        pipeline_hint: "text-generation",
+        downloads: 10,
+      },
+    ],
+  };
+  const nested = {
+    ...report,
+    observation_sha256: "b".repeat(64),
+    files: [{ ...report.files[0], sha256: "c".repeat(64) }],
+  };
+  const comparison = {
+    kind: "comparison",
+    search_run_id: "search",
+    context_target: 131072,
+    files: [],
+    observed_at: report.observed_at,
+    items: [
+      {
+        repository: report.repository,
+        suitability: "unsupported",
+        summary: "Needs its own runtime profile",
+        observation: nested,
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "comparison" }
+        : {
+            id: path.endsWith("/search") ? "search" : "comparison",
+            executor_type: "model_hub_inspect",
+            status: "succeeded",
+            metadata: {
+              source_inspection: path.endsWith("/search") ? search : comparison,
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/models/discover?run=search");
+  await screen.findByRole("button", { name: "Compare top 3 for my hardware" });
+  fireEvent.change(screen.getByLabelText("Conversation context target"), {
+    target: { value: "131072" },
+  });
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Compare top 3 for my hardware",
+    }),
+  );
+  await screen.findByRole("heading", { name: "Models for your station" });
+  expect(screen.getByText("Needs a compatible runtime")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Review variants/ }));
+  await screen.findByRole("heading", { name: "image.gguf" });
+  expect(
+    (screen.getByLabelText("Context for installation") as HTMLSelectElement)
+      .value,
+  ).toBe("131072");
+  fireEvent.click(
+    screen.getByRole("button", { name: /Back to compared models/ }),
+  );
+  await screen.findByRole("heading", { name: "Models for your station" });
+  const posts = fetch.mock.calls.filter(
+    ([, options]) => options?.method === "POST",
+  );
+  expect(posts).toHaveLength(1);
+  expect(posts[0][0]).toBe("/api/model-hub/comparisons");
+  expect(JSON.parse(String(posts[0][1]?.body))).toMatchObject({
+    search_run_id: "search",
+    observation_sha256: search.observation_sha256,
+    context_target: 131072,
+  });
+  expect(fetch.mock.calls.some(([path]) => path.endsWith("/inspections"))).toBe(
+    false,
+  );
+});
+
+it("keeps an inaccessible comparison source visible with a separate inspection action", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "comparison",
+        executor_type: "model_hub_inspect",
+        status: "succeeded",
+        metadata: {
+          source_inspection: {
+            kind: "comparison",
+            files: [],
+            items: [
+              {
+                repository: "publisher/gated",
+                suitability: "unavailable",
+                summary: "Publisher access required",
+              },
+            ],
+          },
+        },
+      }),
+    })),
+  );
+  mount("/models/discover?run=comparison");
+  await screen.findByText("Source unavailable");
+  expect(screen.getByText("Publisher access required")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Review variants/ })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: /Inspect separately/ }),
+  ).toBeTruthy();
+});
 it("pastes a link, enqueues only metadata inspection and keeps unsupported GPU fit honest", async () => {
   const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
     ok: true,

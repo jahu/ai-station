@@ -58,6 +58,8 @@ assistant/agent settings, with hardware and workload requirements shown before
 download. These additions are not in the 0.1.2 installers; other media-model
 families are still being integrated. Speech import passed an isolated Linux GPU
 installation and first-recording check; this is not Windows GPU qualification.
+Search results can also compare their top three models against this station's
+hardware before any weight download, with context and storage requirements shown.
 [Discovery and installation status](docs/plans/open-model-discovery.md).
 
 Release 0.1 prioritizes reliable setup on Linux and Windows, your first local

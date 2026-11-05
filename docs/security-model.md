@@ -1719,3 +1719,12 @@ cannot ignore a supplied Chatterbox model ID. Agent/conversation publication
 reuses its observed model profile, avoiding Runner RPC under a publication lock.
 Inspection recovery resumes the owned process rather than consulting a different
 current model or repeating its start. Existing configured defaults are preserved.
+
+Search comparisons use the same private administrator-owned inspection Runs and
+bounded public metadata transport. They assess at most three sources without
+weights or runtime execution. Planning first verifies the unchanged comparison
+envelope, then the selected nested source hash; arbitrary or foreign observations
+cannot be supplied as replacements. Source failures and gated access remain
+unavailable rather than recommendations. Names remain untrusted text, and native
+hardware observations are never uploaded to publishers. Installation retains its
+separate source/license/hardware consent and native verification gates.

@@ -67,6 +67,37 @@ installation/consent/progress/refresh checks replay the exact saved projections
 without repeating the download or inference. Private evidence:
 `data/acceptance/model-discovery-20261104/`.
 
+## Comparing search results against this station
+
+**Compare top 3 for my hardware** starts one ordinary private inspection Run from
+a completed search. It reads bounded public metadata/configurations for at most
+three repositories, assesses their variants against one native hardware/storage
+observation and ranks supported workload/context fit ahead of popularity. Existing
+registered owned objects are reuse hints, checked again during installation.
+Gated access, unavailable sources, unsupported runtimes, unknown resources,
+insufficient storage and a shorter fitted context stay distinct; none earns the
+estimated-fit badge. Busy GPU memory is separate from physical capacity.
+
+Each source keeps its immutable revision, configuration and hashed observation.
+Review variants opens that saved observation; the existing installation planner
+can reuse its hash within the unchanged private comparison. Both the comparison
+envelope and chosen source must pass integrity checks. No weights are transferred,
+runtime started or personal defaults changed. Model quality and speed are not
+inferred from popularity or memory fit.
+
+Normal fake API/worker tests cover ranking, partial access failure, unknown
+hardware/storage, Stop, account privacy and nested-source tampering. A real public
+metadata check compared three Qwen2.5 0.5B GGUF repositories on the workstation,
+selected fitted Q6_K variants at 32K and built a plan from the same frozen source;
+it downloaded no weights and ran no inference. This used an isolated API test
+client/worker plus a private native Runner, not a deployed consumer installation.
+Compiled desktop/mobile/keyboard browser checks replay those actual projections,
+including review/back navigation and refresh without duplicate mutations. Evidence
+is private under `data/acceptance/model-discovery-20261104/`.
+
+This bounded explicit comparison is an increment toward general cross-capability
+discovery, not a universal catalog or an exhaustive evaluation of model quality.
+
 ## Native media checkpoint admission
 
 The existing typed model verifier has an optional `checkpoint_profile` for a

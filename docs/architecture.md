@@ -1489,3 +1489,11 @@ before changing the active pointer, so later activation preserves existing
 bindings. The catalog reports managed-engine readiness separately from an
 externally configured speech default. New model installation/dispatch still
 requires the reviewed source/graph/workload contract above.
+
+Hardware comparison reuses the private model-inspection executor: a saved search
+selects at most three bounded public source inspections under one Run and hardware
+observation. Its structured result retains independently hashed immutable source
+observations. Existing planning may select only one of those verified nested
+observations; it does not resolve a moving publisher branch again. Partial source
+unavailability stays explicit, while Stop, claim and administrator fences cover
+the entire inspection. Comparison grants no installation or inference authority.
