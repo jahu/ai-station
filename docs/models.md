@@ -202,6 +202,29 @@ was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sha
 other Wan architectures and other media families require their own supported
 slots and complete plans, not this F16 admission path.
 
+### Speech checkpoint admission (structural only)
+
+The native preparation catalog declares `chatterbox-v3-t3-v1`, a single
+multilingual v3 T3 SafeTensors slot. It checks the complete 292-tensor F32 graph,
+names/shapes and indexed payload layout using bounded header reads. The slot
+binds the complete existing speech runtime manifest, both SDK sources and five
+fixed model companions; it cannot replace a tokenizer, voice encoder, decoder or
+conditionals. A typed owned-object check requires `filesystem_read` and
+`manage_models`, an unchanged observation and immutable storage. GGUF-only LLM
+admission is unchanged; a matching header reports `runtime_qualified=false`.
+
+The authoritative publisher header was read with two immutable HTTP ranges
+(32,936 bytes, no tensor payload). The native parser accepted a descriptor fixture
+made from that header with a sparse synthetic payload. This verifies metadata
+agreement only: no full speech weights were downloaded, hashed or loaded for this
+increment and no new speech generation succeeded by implication. Tiny fixtures
+cover wrong graph/precision/layout, ownership, permissions and fixed-recipe drift;
+inspection also runs with Torch/Chatterbox/FastAPI imports blocked. New speech
+source plans, installation, runtime bindings, selectors and actual first-result
+qualification remain required before newly discovered checkpoints are usable.
+Other speech versions, precisions and Fish bundles need their own compatible
+profiles. Existing configured/managed speech behavior is unchanged.
+
 ### Registered choices in agent drafts
 
 Local agent-definition preparation receives a bounded shared-registry catalog

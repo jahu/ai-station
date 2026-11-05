@@ -46,6 +46,13 @@ only the diffusion source and retains existing process ownership/recovery.
 Qualification status is recorded in `docs/models.md`; other formats/families are
 not silently admitted by this graph.
 
+The speech preparation catalog also declares a structural Chatterbox multilingual
+v3 T3 slot. It reuses the bounded SafeTensors reader and the same typed owned-model
+verification operation, with a distinct finite profile. The slot fixes the F32
+graph and complete existing runtime/tokenizer/voice-encoder/decoder/conditional
+recipe. This is metadata inspection only; new speech installation, binding and
+selection remain separate admission stages, not inherited from a matching header.
+
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated
 fixed action. It prepares pinned toolkit inputs and preserves Docker settings,

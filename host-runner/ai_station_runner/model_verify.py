@@ -29,9 +29,9 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
-    checkpoint_profile: Literal["qwen-image21-diffusion-v1", "wan22-5b-diffusion-v1"] | None = Field(
-        default=None, exclude_if=lambda v: v is None
-    )
+    checkpoint_profile: (
+        Literal["qwen-image21-diffusion-v1", "wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1"] | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
     runtime_profile: (
         Literal[
             "llamacpp-cpu-linux-amd64-v1",
@@ -104,7 +104,11 @@ def verify_model(body: VerifyModel) -> dict:
     if body.app_owned:
         from ai_station_runner.owned_models import owned_model, owned_safetensors
 
-        resolve = owned_safetensors if body.checkpoint_profile == "wan22-5b-diffusion-v1" else owned_model
+        resolve = (
+            owned_safetensors
+            if body.checkpoint_profile in {"wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1"}
+            else owned_model
+        )
         path = resolve(body.host_path, body.model_sha256)
     else:
         roots = _split(settings.model_roots)
@@ -146,6 +150,8 @@ def verify_model(body: VerifyModel) -> dict:
             raise HTTPException(409, "Checkpoint changed since its verified observation")
         if body.checkpoint_profile == "wan22-5b-diffusion-v1":
             from ai_station_runner.video_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "chatterbox-v3-t3-v1":
+            from ai_station_runner.speech_checkpoints import inspect_checkpoint
         else:
             from ai_station_runner.media_checkpoints import inspect_checkpoint
 
@@ -154,7 +160,13 @@ def verify_model(body: VerifyModel) -> dict:
                 path, stat.st_size, stat.st_mtime, body.checkpoint_profile
             )
         except (OSError, ValueError) as exc:
-            family = "video" if body.checkpoint_profile == "wan22-5b-diffusion-v1" else "image"
+            family = (
+                "video"
+                if body.checkpoint_profile == "wan22-5b-diffusion-v1"
+                else "speech"
+                if body.checkpoint_profile == "chatterbox-v3-t3-v1"
+                else "image"
+            )
             raise HTTPException(422, f"Incompatible {family} checkpoint: {exc}") from exc
     if body.check_context and matches:
         try:

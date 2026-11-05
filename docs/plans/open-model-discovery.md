@@ -191,3 +191,15 @@ a disabled definition. Names are untrusted reference data; no paths, model setup
 permissions or download URLs enter this catalog. Runtime and hardware validation
 still happen at reviewed activation/execution. This does not complete automatic
 selection in every direct-chat media path or add the remaining media families.
+
+
+Speech checkpoint increment: add a bounded F32 Chatterbox multilingual v3 T3
+SafeTensors slot, derived from the immutable publisher header, bound to the
+complete existing speech recipe and its exact tokenizer/voice encoder/decoder/
+conditional companions. Only an immutable owned object with model/read permission
+may request this structural inspection. The slot grants no arbitrary model role,
+Python/pickle loading, runtime installation or generation. Connect reviewed source
+plans, complete preparation, runtime binding/selectors and first-result execution
+in the following increment; until then new speech checkpoints remain unavailable
+for operational use. Other Chatterbox versions/precisions and Fish bundles need
+separate compatible slots; never infer compatibility from a model name.

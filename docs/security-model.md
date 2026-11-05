@@ -114,6 +114,16 @@ loading; companions/SDK and process resource/deadline/ownership fences remain
 fixed. The selected model never inherits model-installation authority into an
 agent or orchestrator operation. No default/runtime is silently replaced.
 
+The Chatterbox T3 structural slot adds only a finite SafeTensors profile to the
+existing model/read-permission operation. It accepts an immutable application
+object and unchanged observation, checks complete indexed tensor storage and the
+fixed F32 graph, and binds the exact existing speech SDK/companion recipe. It
+cannot select a host path, substitute a tokenizer/voice encoder/decoder, load
+pickle or publisher code, or grant runtime installation/generation authority.
+Legacy language-model verification remains GGUF-only. Inspection needs no Torch,
+Chatterbox or HTTP stack imports; operational speech use requires its independent
+reviewed preparation, hardware, ownership/cancellation and first-result gates.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates
