@@ -473,3 +473,12 @@ publisher metadata was read. Fake API tests cover durable observation publicatio
 aggregate disk refusal, private report artifacts and rejection of a fragment plan
 without creating model records. This is source/hardware explanation, not a split
 model download or inference qualification; steps 3–5 above remain required.
+
+Native format references for the next step: the upstream splitter stores full
+model metadata in the first part, writes `split.no` and `split.count` as unsigned
+16-bit values, and `split.tensors.count` as signed 32-bit. It can intentionally
+create a first part without tensors. Later parts must therefore not be required
+to repeat the first part's architecture/context fields.
+[Splitter implementation](https://github.com/ggml-org/llama.cpp/blob/master/tools/gguf-split/gguf-split.cpp),
+[metadata key definitions](https://github.com/ggml-org/llama.cpp/blob/master/src/llama-arch.cpp).
+These document the format; qualification must still use a pinned trusted SDK.
