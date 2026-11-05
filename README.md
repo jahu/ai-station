@@ -52,12 +52,12 @@ automatically starting generation again. [What changed](docs/releases/0.1.2.md).
 On `develop`, the next release adds **Models → Find new models**: search Hugging
 Face or paste a publisher link, review hardware fit and licenses, then install
 compatible conversation models, Qwen Image 2.1 checkpoints, F16 Wan 2.2 5B
-video checkpoints, Chatterbox v3 T3 speech checkpoints, ACE-Step music checkpoints
-and compatible CPU memory encoders. Reviewed choices work
-in their workspaces and compatible
-assistant/agent settings, with hardware and workload requirements shown before
+video checkpoints, Chatterbox v3 T3 speech checkpoints, ACE-Step music checkpoints,
+compatible CPU memory encoders and Sonic avatar checkpoints. Reviewed choices work
+in their workspaces and compatible assistant/agent settings, with hardware and workload requirements shown before
 download. These additions are not in the 0.1.2 installers; other media-model
-families are still being integrated; Sonic avatar imports are under qualification.
+families need a matching supported runtime. Sonic avatar import passed its complete
+Linux installation and selected-model recording check.
 Speech import passed an isolated Linux GPU
 installation and first-recording check; this is not Windows GPU qualification.
 Search results can also compare their top three models against this station's

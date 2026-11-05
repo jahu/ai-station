@@ -1786,8 +1786,9 @@ Native selected-checkpoint requests freeze the source in a version-2 owned
 receipt; older requests retain their exact version-1 form. Full content and graph
 admission precede framework imports. Only the adapted UNet state changes, while
 SDK/companions, scopes, deadlines, GPU ownership and replay remain fixed.
-The inference route is unavailable to normal dispatch pending qualification;
-the explicit internal real-GPU engineering entry retains its existing opt-in.
+The selected route passed its complete Linux qualification; its native gate can
+still withdraw normal dispatch independently of publisher metadata. The explicit
+internal real-GPU engineering entry retains its existing opt-in.
 
 An installed avatar choice grants no installation or arbitrary-code permission to
 conversation/agent execution. The normal avatar Run carries only the exact

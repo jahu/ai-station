@@ -468,7 +468,7 @@ metadata fingerprints matched the native reference. No tensor payload, model
 code, runtime or GPU was loaded. Normal tests reject ignored ranges, executable
 or malformed metadata, overlapping entries, nonimmutable URLs and cancellation.
 Remote evidence deliberately leaves native layout and inference unqualified;
-connecting it to the full avatar installation journey remains the next step.
+the complete avatar installation and selected-weight path is qualified below.
 
 ## Discovered music bundles (under qualification)
 
@@ -516,3 +516,35 @@ passed. Browser checks replay saved real API projections, separately from the GP
 qualification. These checks cover this fixed import path; other export graphs
 need their own profiles. This development candidate is not
 in published 0.1.2 packages.
+
+
+## Discovered avatar bundles (Linux qualified)
+
+Models → Find new models accepts the fixed Sonic adapted-UNet tensor-data graph,
+checks bounded publisher metadata before transfer, and composes the existing
+model downloader with its complete managed engine. Explicit consent covers all
+component licenses, CPU offload, one or two GPUs with at least 12 GiB each,
+24 GiB physical RAM and full storage requirements. This does not pool unrelated
+GPU memory or admit arbitrary executable weight archives.
+
+An installed avatar definition works in Avatars, explicit conversation tools and
+reviewed agents. The selected checkpoint/engine stays with its Task through speech
+preparation and resume. Model rechecking is read-only and does not redownload or
+replace defaults. Initial background hashing reports checking and defers the same
+installation; unavailable engines still refuse registration and execution.
+
+On 2026-11-05 the pinned official LeonJoe13/Sonic reference passed actual source
+inspection, complete cached-input preparation, registration and ordinary selected
+GPU execution. The two-second PCM recording produced all 50 frames at 512×768,
+25 fps, with complete audio and matching checkpoint identity. Native processes
+and private test services were confirmed stopped. On one RTX 3060 12 GiB with
+32 GiB host RAM, the Run took 11m49s including native verification/generation;
+fit is not a promise of fast rendering. Existing two-device guidance is preserved
+and unit-tested; this selected-source smoke used one device. Desktop/mobile
+compiled UI checks separately replayed saved real projections for source review,
+license/offload consent, model choice, refresh and keyboard submission.
+
+Qualification covers this fixed import path. The reference weights were reused;
+it does not establish a new training's quality, full-minute timing, Windows GPU
+support or arbitrary PyTorch checkpoint compatibility. No private test media were
+published, and 0.1.2 packages remain unchanged.

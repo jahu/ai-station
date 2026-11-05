@@ -143,11 +143,24 @@ def test_selected_weights_preserve_the_existing_two_gpu_guidance_path(selected):
     assert body.native_request()["device_count"] == 2
 
 
-def test_normal_dispatch_keeps_unqualified_adapter_unavailable(selected):
+def test_normal_dispatch_keeps_unqualified_adapter_unavailable(selected, monkeypatch):
+    monkeypatch.setattr(slots, "INFERENCE_QUALIFIED", False)
     body, manager, arguments, _, _ = selected
     with pytest.raises(ValueError, match="still being qualified"):
         sonic_jobs._start_owned(manager, body, **arguments)
     assert not manager.calls and not (manager.data_dir / "runs").exists()
+
+
+def test_qualified_normal_dispatch_uses_the_frozen_source_without_an_engineering_opt_in(
+    selected, monkeypatch
+):
+    body, manager, arguments, _, _ = selected
+    monkeypatch.setattr(slots, "INFERENCE_QUALIFIED", True)
+    monkeypatch.delenv("AI_STATION_REAL_GPU_TESTS", raising=False)
+    sonic_jobs._start_owned(manager, body, **arguments)
+    assert len(manager.calls) == 1
+    frozen = json.loads((manager.calls[0]["cwd"] / "request.json").read_text())
+    assert frozen["version"] == 2 and frozen["checkpoint"] == body.checkpoint
 
 
 def test_opted_in_launch_freezes_source_and_replay_never_reloads_a_changed_default(selected, monkeypatch):

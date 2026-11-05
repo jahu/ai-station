@@ -11,9 +11,9 @@ from ai_station_runner.torch_state_zip import inspect_archive
 PROFILE = "sonic-whole-unet-v1"
 RUNTIME = "sonic-whole-linux-x86-64-python310-v1"
 FILENAME = "Sonic/unet.pth"
-# The new selected-weight route remains unavailable to normal dispatch until
-# its complete native inference and ownership qualification has passed.
-INFERENCE_QUALIFIED = False
+# Qualified on Linux through the complete source/install/ordinary-Run route.
+# Keep withdrawals separate from publisher metadata and the fixed graph slot.
+INFERENCE_QUALIFIED = True
 
 
 def fingerprint(value):
