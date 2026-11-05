@@ -2,6 +2,7 @@
 
 import math
 
+from app.hub_model_parts import looks_split
 from app.model_setup import recommendation
 from app.setup_models import CANDIDATES
 
@@ -10,7 +11,7 @@ def number(value):
     return value if type(value) in {int, float} and math.isfinite(value) and value >= 0 else None
 
 
-def assess_file(file, hardware, storage, *, candidates=None):
+def assess_file(file, hardware, storage, *, candidates=None, bundle=None):
     """Only exact recipes or pinned supported configurations supply an estimate.
 
     Unknown checkpoint formats/architectures have unknown residency, KV geometry
@@ -27,6 +28,31 @@ def assess_file(file, hardware, storage, *, candidates=None):
         if free < size + headroom
         else "file_fits"
     )
+    if bundle is not None or looks_split(file.get("filename", "")):
+        total = (
+            bundle.get("total_size_bytes") if bundle and bundle.get("status") == "complete_metadata" else None
+        )
+        return {
+            "disk": {
+                "status": "unknown"
+                if total is None or free is None or headroom is None
+                else "file_fits"
+                if free >= total + headroom
+                else "insufficient",
+                "file_bytes": size,
+                "model_bundle_bytes": total,
+                "free_bytes": free,
+                "headroom_bytes": headroom,
+                "complete_install_budget_known": False,
+                "note": "All declared model parts are required. Runtime, context and staging requirements remain separate.",
+            },
+            "runtime_status": "needs_complete_bundle_runtime",
+            "hardware_status": "unknown",
+            "profiles": [],
+            "reason": "This split model needs a complete compatible bundle plan. A fragment cannot be installed or used as the whole model.",
+            "automatic_ram_offload": False,
+            "automatic_cloud_fallback": False,
+        }
     matches = [
         entry
         for entry in (CANDIDATES if candidates is None else candidates)

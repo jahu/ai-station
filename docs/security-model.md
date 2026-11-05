@@ -1798,3 +1798,10 @@ physical RAM, each allocated GPU and the existing owned process/deadline contrac
 Pending engine hashes can defer publication; unavailable or changed engines still
 refuse it. Successful cache verification does not rewrite an immutable object's
 permissions/ctime merely to return it, preserving the readiness identity.
+
+Declared split-model groups are metadata only. Grouping separates directory and
+variant prefixes, validates contiguous numbering, unique object identities and a
+bounded part count; incomplete/conflicting sets cannot claim a complete byte total.
+The inspection never follows publisher commands or fetches weight payloads. Group
+manifests are included in the ordinary private observation fingerprint, and an
+individual fragment still cannot obtain a model installation plan or native launch.

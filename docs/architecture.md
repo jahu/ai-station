@@ -1545,3 +1545,11 @@ selection; whole-recording plans retain it through speech preparation and resume
 Per-device VRAM, physical RAM, fixed CPU offload and complete disk requirements
 are reviewed before transfer. A metadata match alone still grants no readiness;
 selected inference remains subject to its separate native qualification gate.
+
+Split-GGUF source inspection retains a bounded declared part manifest from the
+same immutable publisher revision, including siblings of a pasted non-first file.
+Files reference one shared manifest rather than duplicating its members. Source
+advice uses the complete declared weights for disk lower bounds, while unknown
+or incomplete sets retain unknown requirements. Filename grouping grants neither
+native graph verification nor installation: existing fragment refusal stays in
+place until typed complete-bundle execution is qualified.

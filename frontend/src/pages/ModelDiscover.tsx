@@ -24,6 +24,7 @@ type Profile = {
   };
 };
 type ModelFile = {
+  bundle_id?: string;
   filename: string;
   size_bytes: number | null;
   sha256: string | null;
@@ -37,6 +38,7 @@ type ModelFile = {
       status: string;
       free_bytes: number | null;
       install_bytes_upper_bound?: number;
+      model_bundle_bytes?: number | null;
     };
     variant_advice?: {
       recommended: boolean;
@@ -48,6 +50,17 @@ type ModelFile = {
   };
 };
 type Report = {
+  model_bundles?: {
+    id: string;
+    kind: "gguf_split";
+    name: string;
+    expected_parts: number;
+    observed_parts: number;
+    status: string;
+    total_size_bytes: number | null;
+    parts: { filename: string; size_bytes: number | null; index: number }[];
+    missing_parts: number[];
+  }[];
   kind?: "search" | "install_plan" | "comparison";
   observation_sha256?: string;
   manifest_sha256?: string;
@@ -93,6 +106,8 @@ type Report = {
   };
   files: ModelFile[];
 };
+const isSplitModel = (file: ModelFile) =>
+  !!file.bundle_id || /\d{5}-of-\d{5}\.gguf$/i.test(file.filename);
 const terminal = ["succeeded", "failed", "canceled", "interrupted"];
 const bytes = (value: number | null) =>
   value === null ? "Size unknown" : `${(value / 1024 ** 3).toFixed(2)} GiB`;
@@ -201,19 +216,35 @@ export default function ModelDiscover() {
           ?.observation
       : undefined) ?? rootReport;
   const trustedRun = run?.executor_type === "model_hub_inspect";
-  const variants = report?.files ?? [];
+  const seenBundles = new Set<string>();
+  const variants = (report?.files ?? []).filter((file) => {
+    if (!file.bundle_id) return true;
+    if (seenBundles.has(file.bundle_id)) return false;
+    seenBundles.add(file.bundle_id);
+    return true;
+  });
+  const bundleFor = (file: ModelFile) =>
+    report?.model_bundles?.find((bundle) => bundle.id === file.bundle_id);
   const preferred =
-    variants.find((file) => file.assessment.variant_advice?.recommended) ??
-    variants.find((file) =>
-      file.assessment.profiles.some(
-        (profile) => profile.fit === "estimated_fit",
-      ),
+    variants.find(
+      (file) =>
+        !isSplitModel(file) && file.assessment.variant_advice?.recommended,
+    ) ??
+    variants.find(
+      (file) =>
+        !isSplitModel(file) &&
+        file.assessment.profiles.some(
+          (profile) => profile.fit === "estimated_fit",
+        ),
     ) ??
     variants[0];
   const selectedVariant =
     (selection.runId === runId
       ? variants.find((file) => file.filename === selection.filename)
       : undefined) ?? preferred;
+  const selectedBundle = selectedVariant
+    ? bundleFor(selectedVariant)
+    : undefined;
   return (
     <div className="model-discover">
       <Link className="text-link" to="/models">
@@ -515,10 +546,17 @@ export default function ModelDiscover() {
               >
                 {variants.map((file) => (
                   <option key={file.filename} value={file.filename}>
-                    {file.filename} · {bytes(file.size_bytes)}
-                    {file.assessment.variant_advice?.recommended
+                    {bundleFor(file)?.name ?? file.filename} ·{" "}
+                    {bytes(
+                      bundleFor(file)
+                        ? bundleFor(file)!.total_size_bytes
+                        : file.size_bytes,
+                    )}
+                    {!isSplitModel(file) &&
+                    file.assessment.variant_advice?.recommended
                       ? " · Recommended for this station"
-                      : file.assessment.profiles.some(
+                      : !isSplitModel(file) &&
+                          file.assessment.profiles.some(
                             (p) => p.fit === "estimated_fit",
                           )
                         ? " · Estimated fit"
@@ -536,16 +574,69 @@ export default function ModelDiscover() {
           {(selectedVariant ? [selectedVariant] : []).map((file) => (
             <article className="panel hub-variant" key={file.filename}>
               <div className="hub-section-heading">
-                <h3>{file.filename}</h3>
+                <h3>
+                  {selectedBundle?.name.split("/").pop() ?? file.filename}
+                </h3>
                 <span className="tiny-tag">
-                  {file.assessment.variant_advice?.recommended
+                  {!isSplitModel(file) &&
+                  file.assessment.variant_advice?.recommended
                     ? "Recommended · "
                     : ""}
-                  {file.format} · {bytes(file.size_bytes)}
+                  {selectedBundle
+                    ? `${selectedBundle.expected_parts} required files`
+                    : file.format}{" "}
+                  ·{" "}
+                  {bytes(
+                    selectedBundle
+                      ? selectedBundle.total_size_bytes
+                      : file.size_bytes,
+                  )}
                 </span>
               </div>
               <p>{file.assessment.reason}</p>
-              {file.assessment.variant_advice &&
+              {isSplitModel(file) && (
+                <section
+                  className="hub-model-parts"
+                  aria-label="Complete model parts"
+                >
+                  <p className="notice">
+                    {selectedBundle?.status === "complete_metadata"
+                      ? `All ${selectedBundle.expected_parts} publisher files are listed. Model weights total ${bytes(selectedBundle.total_size_bytes)}; runtime and context need additional resources.`
+                      : "The complete part set could not be confirmed. A single fragment does not establish model size or hardware fit."}{" "}
+                    Installation needs a compatible complete-bundle runtime;
+                    individual parts cannot be installed here yet.
+                  </p>
+                  {selectedBundle && (
+                    <details className="hub-context-options">
+                      <summary>
+                        Required model files ({selectedBundle.observed_parts}/
+                        {selectedBundle.expected_parts})
+                      </summary>
+                      <ul>
+                        {selectedBundle.parts.map((part) => (
+                          <li key={part.filename}>
+                            {part.filename} · {bytes(part.size_bytes)}
+                          </li>
+                        ))}
+                      </ul>
+                      {!!selectedBundle.missing_parts.length && (
+                        <p className="muted">
+                          Missing parts:{" "}
+                          {selectedBundle.missing_parts.join(", ")}
+                        </p>
+                      )}
+                      {selectedBundle.status !== "complete_metadata" && (
+                        <p className="muted">
+                          Publisher part information needs attention:{" "}
+                          {selectedBundle.status.replaceAll("_", " ")}.
+                        </p>
+                      )}
+                    </details>
+                  )}
+                </section>
+              )}
+              {!isSplitModel(file) &&
+                file.assessment.variant_advice &&
                 !!file.assessment.profiles.length && (
                   <div className="hub-fit-summary">
                     <strong>{file.assessment.variant_advice.reason}</strong>
@@ -578,10 +669,15 @@ export default function ModelDiscover() {
                 {file.assessment.disk.status === "insufficient"
                   ? "Not enough disk space, including safety headroom."
                   : file.assessment.disk.status === "unknown"
-                    ? "Free application storage could not be confirmed."
+                    ? isSplitModel(file) &&
+                      file.assessment.disk.model_bundle_bytes == null
+                      ? "Complete model size is unknown; storage fit cannot be established."
+                      : "Free application storage could not be confirmed."
                     : file.assessment.disk.install_bytes_upper_bound != null
                       ? "The reviewed installation reserve fits on disk, including the required engine and companions."
-                      : "The file fits on disk; runtime and companions may require more space."}
+                      : file.assessment.disk.model_bundle_bytes != null
+                        ? "All declared model parts fit on disk; runtime, context and staging still need a validated plan."
+                        : "The file fits on disk; runtime and companions may require more space."}
               </p>
               {file.unsafe_serialization && (
                 <p className="muted">
@@ -592,31 +688,35 @@ export default function ModelDiscover() {
                     : "Executable weight serialization is not admitted from unreviewed repositories."}
                 </p>
               )}
-              {file.assessment.profiles.map((profile) => (
-                <div className="hub-profile" key={profile.catalog_id}>
-                  <ShieldCheck size={18} aria-hidden="true" />
-                  <div>
-                    <strong>{profile.name}</strong>
-                    <p>{profile.recommendation.reason}</p>
-                    {profile.recommendation.context_size && (
-                      <p className="muted">
-                        {profile.recommendation.gpus.length
-                          ? `GPU ${profile.recommendation.gpus.join(" + ")}`
-                          : "Explicit CPU profile"}{" "}
-                        · {profile.recommendation.context_size.toLocaleString()}{" "}
-                        context · estimate, not a local qualification
-                      </p>
-                    )}
-                    {profile.occupancy === "in_use" && (
-                      <p className="muted">
-                        GPU memory is currently in use; capacity is estimated
-                        with those resources free.
-                      </p>
-                    )}
+              {(isSplitModel(file) ? [] : file.assessment.profiles).map(
+                (profile) => (
+                  <div className="hub-profile" key={profile.catalog_id}>
+                    <ShieldCheck size={18} aria-hidden="true" />
+                    <div>
+                      <strong>{profile.name}</strong>
+                      <p>{profile.recommendation.reason}</p>
+                      {profile.recommendation.context_size && (
+                        <p className="muted">
+                          {profile.recommendation.gpus.length
+                            ? `GPU ${profile.recommendation.gpus.join(" + ")}`
+                            : "Explicit CPU profile"}{" "}
+                          ·{" "}
+                          {profile.recommendation.context_size.toLocaleString()}{" "}
+                          context · estimate, not a local qualification
+                        </p>
+                      )}
+                      {profile.occupancy === "in_use" && (
+                        <p className="muted">
+                          GPU memory is currently in use; capacity is estimated
+                          with those resources free.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
               {report.kind !== "install_plan" &&
+                !isSplitModel(file) &&
                 ["gguf", "safetensors", "onnx", "pth", "pt", "bin"].includes(
                   file.format,
                 ) &&
@@ -673,7 +773,8 @@ export default function ModelDiscover() {
                     </Button>
                   </>
                 )}
-              {!!file.assessment.profiles.length &&
+              {!isSplitModel(file) &&
+                !!file.assessment.profiles.length &&
                 report.kind !== "install_plan" && (
                   <Link className="text-link" to="/setup/models">
                     Review matching guided setup options →

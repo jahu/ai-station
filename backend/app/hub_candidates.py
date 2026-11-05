@@ -246,6 +246,10 @@ def candidate_from_profile(observation, filename, profile, *, context_ceiling=32
 
 async def resolve_candidate(observation, filename, check, context_ceiling=131072):
     selected_file = next((f for f in observation["files"] if f["filename"] == filename), None)
+    from app.hub_model_parts import looks_split
+
+    if selected_file and selected_file.get("format") == "gguf" and looks_split(filename):
+        raise ValueError("Split GGUFs need a complete compatible bundle plan")
     if selected_file and selected_file.get("format") in {"pth", "pt", "bin"}:
         from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
         from app.hub_avatar_candidates import refresh_plan

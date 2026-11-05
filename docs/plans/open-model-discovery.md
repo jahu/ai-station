@@ -455,3 +455,21 @@ size. An individual fragment's bytes must never become the whole-model estimate.
 Delivery can separate complete metadata/hardware explanation from native bundle
 activation, but an unfinished group must stay explicitly unavailable. Do not
 claim split-model installation from an inspection or a small fragment alone.
+
+#### Split-model metadata stage
+
+The source/UI stage now retains complete declared groups from the same revision,
+including a pasted second-part link. A shared bounded manifest records required
+files and identities; separate directories/quantizations do not merge. Missing,
+conflicting, duplicate-object or unverifiable sets retain unknown total size.
+The source review presents one bundle and its full weight-storage requirement,
+with optional part details. Older fragment observations keep their installation
+refusal. Context/native residency and complete-bundle execution remain unqualified;
+metadata completeness must not become a GPU-fit or installation recommendation.
+
+On 2026-11-05, a public pinned Qwen2.5-72B GGUF source returned a two-part set
+of 50.71 GiB even when inspected through its second file's link. Only bounded
+publisher metadata was read. Fake API tests cover durable observation publication,
+aggregate disk refusal, private report artifacts and rejection of a fragment plan
+without creating model records. This is source/hardware explanation, not a split
+model download or inference qualification; steps 3–5 above remain required.
