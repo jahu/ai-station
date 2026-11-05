@@ -17,6 +17,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ai_station_runner import __version__, managed_image_job
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.audio import capabilities as speech_capabilities
+from ai_station_runner.avatar_model_selection import ModelSelection as AvatarModelSelection
 from ai_station_runner.avatar_prepare import router as avatar_setup_router
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.browser_runs import BrowserRequest
@@ -898,6 +899,13 @@ def whole_avatar_capabilities():
     from ai_station_runner.sonic_runtime import capabilities
 
     return capabilities()
+
+
+@app.post("/v1/avatar/model-capabilities")
+def selected_avatar_capabilities(body: AvatarModelSelection):
+    from ai_station_runner.avatar_model_selection import capabilities
+
+    return capabilities(body)
 
 
 @app.post("/v1/runs/whole-avatar")

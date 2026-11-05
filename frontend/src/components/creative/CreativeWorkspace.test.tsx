@@ -766,3 +766,61 @@ it("opens an installed music model in a fresh workspace and preserves its select
     ),
   ).toBe(false);
 });
+
+it("opens an installed avatar model in a fresh workspace and preserves its selection", async () => {
+  const backend = fixture({ capability: "avatars", title: "Previous avatar" });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      const reply = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (path === "/api/creative/sessions" && options?.method === "POST") {
+        return reply({
+          ...backend.state,
+          id: "fresh-avatar",
+          title: "Untitled avatar",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/creative/sessions/fresh-avatar") {
+        return reply({
+          ...backend.state,
+          id: "fresh-avatar",
+          title: "Untitled avatar",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/avatars/models")
+        return reply({
+          items: [
+            {
+              id: "installed-sonic",
+              name: "Installed Sonic",
+              available: true,
+            },
+          ],
+        });
+      if (path === "/api/avatars/models/installed-sonic/capabilities")
+        return reply({ available: true, backend: "sonic", readiness: "ready" });
+      return original(input, options);
+    }),
+  );
+  mount("avatars", "/avatars?model=installed-sonic");
+  const choice = await screen.findByLabelText("Avatar model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-sonic");
+  expect(
+    screen.getByRole("textbox", { name: "Workspace name" }),
+  ).toHaveProperty("value", "Untitled avatar");
+  expect(
+    backend.fetch.mock.calls.some(
+      ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+    ),
+  ).toBe(false);
+});

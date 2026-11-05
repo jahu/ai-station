@@ -53,14 +53,26 @@ def source(monkeypatch, responses):
     return offsets
 
 
-def test_hash_verified_immutable_file_is_published_once_and_reused_without_network(tmp_path, monkeypatch):
+@pytest.mark.parametrize("mode", [0o400, 0o444])
+def test_hash_verified_immutable_file_is_published_once_and_reused_without_network(
+    tmp_path, monkeypatch, mode
+):
     offsets = source(monkeypatch, [answer()])
     progress = []
     result = obtain(tmp_path, progress=lambda current, total: progress.append((current, total)))
     assert result.read_bytes() == CONTENT and result.name == spec().sha256
     assert result.stat().st_mode & 0o222 == 0
     assert progress[-1] == (8, 8)
+    result.chmod(mode)
+    before = result.stat()
     assert obtain(tmp_path) == result
+    after = result.stat()
+    assert (before.st_ino, before.st_mtime_ns, before.st_ctime_ns, before.st_mode) == (
+        after.st_ino,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+        after.st_mode,
+    )
     assert offsets == [(URL, 0)]
     assert not result.with_suffix(".part").exists()
 

@@ -24,8 +24,13 @@ export default function AgentAvatarSetup({
   actionLabel?: string;
   tabIndex?: number;
 }) {
-  const capability = useAvatarCapabilities(value?.kind === "avatar");
-  const whole = useWholeAvatarCapabilities(value?.kind === "avatar");
+  const capability = useAvatarCapabilities(
+    value?.kind === "avatar" && !value.request.model_id,
+  );
+  const whole = useWholeAvatarCapabilities(
+    value?.kind === "avatar",
+    value?.kind === "avatar" ? (value.request.model_id ?? "") : "",
+  );
   if (
     value?.kind !== "avatar" ||
     (!capability.data?.available && !whole.data?.available)

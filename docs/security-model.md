@@ -1788,3 +1788,12 @@ admission precede framework imports. Only the adapted UNet state changes, while
 SDK/companions, scopes, deadlines, GPU ownership and replay remain fixed.
 The inference route is unavailable to normal dispatch pending qualification;
 the explicit internal real-GPU engineering entry retains its existing opt-in.
+
+An installed avatar choice grants no installation or arbitrary-code permission to
+conversation/agent execution. The normal avatar Run carries only the exact
+checkpoint observation and reviewed engine identity, with filesystem-read and
+workspace-write permissions. Native dispatch checks complete content/graph,
+physical RAM, each allocated GPU and the existing owned process/deadline contract.
+Pending engine hashes can defer publication; unavailable or changed engines still
+refuse it. Successful cache verification does not rewrite an immutable object's
+permissions/ctime merely to return it, preserving the readiness identity.

@@ -187,7 +187,19 @@ def recommendation(entry, hardware):
     }
 
 
-def refresh_plan(entry, check):
+class AvatarReadinessPending(Exception):
+    """A complete engine is still being hashed; never register or redownload it."""
+
+
+def require_ready(report):
+    managed = report.get("managed_avatar") or {}
+    if managed.get("prepared") is True and managed.get("readiness") == "checking":
+        raise AvatarReadinessPending()
+    if managed.get("available") is not True:
+        raise ValueError("The reviewed avatar engine and companions are not ready; inspect preparation")
+
+
+def refresh_plan(entry, check, *, require_engine=False):
     check()
     report = AvatarSetupClient(timeout=20).runtime_setup_catalog()
     check()
@@ -195,4 +207,6 @@ def refresh_plan(entry, check):
         "checkpoint_slots", []
     ):
         raise ValueError("The supported avatar recipe changed; inspect its source again")
+    if require_engine:
+        require_ready(report)
     return HubAvatarCandidate.model_validate({**entry.model_dump(mode="json"), **readiness(report)})

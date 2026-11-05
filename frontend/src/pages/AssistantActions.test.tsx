@@ -23,6 +23,65 @@ function chooseAction(key: string) {
   });
 }
 
+it("selects an installed avatar model in conversation tools and clears it when the action changes", async () => {
+  const id = "installed-sonic";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => ({
+      ok: true,
+      json: async () =>
+        String(input).endsWith("/avatars/models")
+          ? { items: [{ id, name: "Portrait model", available: true }] }
+          : String(input).includes("/avatars/models/")
+            ? { available: true, backend: "sonic", readiness: "ready" }
+            : String(input).includes("/artifacts/")
+              ? {
+                  id: String(input).endsWith("voice") ? "voice" : "portrait",
+                  type: String(input).endsWith("voice") ? "audio" : "image",
+                  mime_type: String(input).endsWith("voice")
+                    ? "audio/wav"
+                    : "image/png",
+                  original_filename: "Input",
+                }
+              : [],
+    })),
+  );
+  let current: AssistantOptions;
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      action: "avatar.animate",
+      image_artifact_ids: ["portrait"],
+      audio_artifact_id: "voice",
+    });
+    current = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <Composer />
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("option", { name: "Portrait model" });
+  fireEvent.change(screen.getByLabelText("Avatar model"), {
+    target: { value: id },
+  });
+  expect(current!.avatar_model_id).toBe(id);
+  chooseAction("chat");
+  expect(current!.avatar_model_id).toBeUndefined();
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

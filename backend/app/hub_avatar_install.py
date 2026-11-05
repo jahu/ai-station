@@ -11,7 +11,7 @@ from app.artifacts import register_file
 from app.avatar_setup_client import AvatarSetupClient
 from app.db import utcnow
 from app.events import append_event
-from app.hub_avatar_candidates import recommendation
+from app.hub_avatar_candidates import recommendation, require_ready
 from app.models import ModelDefinition, ModelFile, User
 from app.runs import transition
 from app.state import RunStatus
@@ -59,6 +59,7 @@ def adopt(session, run, entry, path, runner, hardware, check):
         raise ValueError("The downloaded avatar graph differs from its reviewed native checkpoint slot")
     catalog = AvatarSetupClient(timeout=20).runtime_setup_catalog()
     check()
+    require_ready(catalog)
     managed = catalog.get("managed_avatar") or {}
     if (
         catalog.get("manifest_sha256") != entry.setup_manifest_sha256

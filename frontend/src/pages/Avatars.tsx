@@ -20,6 +20,7 @@ import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
+import AvatarModelChoice from "../components/media/AvatarModelChoice";
 import MediaResult from "../components/media/MediaResult";
 import {
   PromptTranslationControl,
@@ -87,6 +88,9 @@ function AvatarForm({
     : saved.generation_profile;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
+  const [modelId, setModelId] = useState(
+    String(search.get("model") ?? saved.modelId ?? saved.model_id ?? ""),
+  );
   const [image, setImage] = useState(
     String(saved.image ?? saved.image_artifact_id ?? initialImage ?? ""),
   );
@@ -117,21 +121,24 @@ function AvatarForm({
   const [size, setSize] = useState(Number(saved.size ?? 384));
   const [frames, setFrames] = useState(Number(saved.frames ?? 81));
   const [fullRecording, setFullRecording] = useState(
-    saved.fullRecording !== undefined
-      ? Boolean(saved.fullRecording)
-      : saved._creative_request_kind
-        ? saved._creative_request_kind === "job"
-        : true,
+    modelId
+      ? true
+      : saved.fullRecording !== undefined
+        ? Boolean(saved.fullRecording)
+        : saved._creative_request_kind
+          ? saved._creative_request_kind === "job"
+          : true,
   );
   const [steps, setSteps] = useState(Number(saved.steps ?? 8));
   const [seed, setSeed] = useState(Number(saved.seed ?? 43));
   const [gpu, setGpu] = useState(String(saved.gpu ?? "auto"));
-  const capability = useAvatarCapabilities();
-  const whole = useWholeAvatarCapabilities();
+  const capability = useAvatarCapabilities(!modelId);
+  const whole = useWholeAvatarCapabilities(true, modelId);
   const savedLegacy = hasSavedSettings && !savedGeneration;
   const wholeRecording =
     fullRecording &&
-    (!!savedGeneration ||
+    (!!modelId ||
+      !!savedGeneration ||
       (!savedLegacy &&
         (whole.isPending ||
           whole.isError ||
@@ -171,6 +178,7 @@ function AvatarForm({
       seed,
       gpu,
       chosenProfile: capability.data ? memoryProfile : chosenProfile,
+      modelId,
     },
   });
   const hardware = useHardware();
@@ -185,7 +193,10 @@ function AvatarForm({
       if (fullRecording) {
         const body = {
           ...(wholeRecording
-            ? { generation_profile: WHOLE_AVATAR_PROFILE }
+            ? {
+                generation_profile: WHOLE_AVATAR_PROFILE,
+                ...(modelId ? { model_id: modelId } : {}),
+              }
             : {
                 ...profileParameters,
                 prompt,
@@ -305,6 +316,23 @@ function AvatarForm({
             <span>01 / Portrait & voice</span>
           </div>
           <fieldset disabled={busy || uploading}>
+            <AvatarModelChoice
+              value={modelId}
+              disabled={busy || uploading}
+              onChange={(value) => {
+                setModelId(value);
+                if (value) setFullRecording(true);
+                if (search.has("model"))
+                  setSearch(
+                    (current) => {
+                      const next = new URLSearchParams(current);
+                      next.delete("model");
+                      return next;
+                    },
+                    { replace: true },
+                  );
+              }}
+            />
             <fieldset className="avatar-voice-mode video-source-mode">
               <legend>Speech source</legend>
               <label>
@@ -419,7 +447,7 @@ function AvatarForm({
                   <input
                     type="checkbox"
                     checked={fullRecording}
-                    disabled={busy || uploading}
+                    disabled={busy || uploading || !!modelId}
                     onChange={(event) => setFullRecording(event.target.checked)}
                   />
                   Full recording (up to 60 seconds)

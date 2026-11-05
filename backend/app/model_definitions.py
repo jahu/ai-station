@@ -190,6 +190,15 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "operational": row.status == "registered",
             "summary": "Choose this encoder explicitly in Memory. It uses CPU and its fixed tokenizer; it does not replace a chat model.",
         }
+    avatar = (row.metadata_json or {}).get("avatar")
+    avatar_backend = row.category == "video" and isinstance(avatar, dict) and bool(avatar.get("binding"))
+    if avatar_backend:
+        spec = {
+            "runtime": "Sonic · whole-recording avatars",
+            "adapter": "native-avatar",
+            "operational": row.status == "registered",
+            "summary": "Choose this installed model in Avatars. Its complete local engine and CPU-offload profile remain fixed.",
+        }
     music = (row.metadata_json or {}).get("music")
     music_backend = row.category == "audio" and isinstance(music, dict) and bool(music.get("binding"))
     if music_backend:
@@ -212,6 +221,7 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
         **({"speech_backend": "chatterbox"} if speech_backend else {}),
         **({"music_backend": "ace-step-1.5"} if music_backend else {}),
+        **({"avatar_backend": "sonic"} if avatar_backend else {}),
         **({"embedding_backend": "e5_cpu"} if embedding else {}),
         **(
             {"video_backend": "wan22"}
@@ -344,6 +354,7 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         or (row.metadata_json.get("video") or {}).get("binding")
         or (row.metadata_json.get("speech") or {}).get("binding")
         or (row.metadata_json.get("music") or {}).get("binding")
+        or (row.metadata_json.get("avatar") or {}).get("binding")
     ):
         if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
             raise HTTPException(
@@ -419,6 +430,11 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             "file_id": file.id,
             **verify_source(source_of(file)),
             "check_image": check_image,
+            **(
+                {"avatar_checkpoint_binding": dict(row.metadata_json["avatar"]["binding"])}
+                if (row.metadata_json.get("avatar") or {}).get("binding")
+                else {}
+            ),
             **(
                 {"music_checkpoint_binding": dict(row.metadata_json["music"]["binding"])}
                 if (row.metadata_json.get("music") or {}).get("binding")
@@ -542,6 +558,15 @@ class ModelInstallExecutor:
                     "check_image": bool(run.parameters.get("check_image")),
                     **(
                         {
+                            "checkpoint_profile": run.parameters["avatar_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("avatar_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {
                             "checkpoint_profile": run.parameters["video_checkpoint_binding"][
                                 "checkpoint_profile"
                             ]
@@ -576,6 +601,23 @@ class ModelInstallExecutor:
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("avatar_checkpoint_binding"):
+                from app.avatar_models import profile_for
+
+                binding = run.parameters["avatar_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("module_metadata_sha256") != binding["module_metadata_sha256"]
+                    or proof.get("source") != "pytorch_zip_tensor_data"
+                    or proof.get("storage_layout_verified") is not True
+                ):
+                    report["error"] = "The selected avatar checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
             if run.parameters.get("music_checkpoint_binding"):
                 from app.music_models import profile_for
 

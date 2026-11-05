@@ -121,7 +121,11 @@ def validate_target(body, session, agent=None, *, enabling=False):
         from app.agent_media import freeze_inputs, require_profile
 
         try:
-            if body.media.kind == "video" and body.media.request.model_id:
+            if body.media.kind == "avatar" and body.media.request.model_id:
+                from app.agent_media import selected_avatar_profile
+
+                selected_avatar_profile(session, body.media.request)
+            elif body.media.kind == "video" and body.media.request.model_id:
                 from app.video import memory_reservation
                 from app.video_models import profile_for
 

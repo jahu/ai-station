@@ -198,3 +198,11 @@ inspected input/document snapshots, ordered artifact parents and actual current
 user/orchestrator IDs. The same snapshot binds the normal agent_draft child and
 definition artifact. It is controller-owned, absent for legacy requests and does
 not alter existing receipt payloads or definition schemas.
+
+Discovered avatar definitions use the shared `ModelFile`/`ModelDefinition` records
+and video category with an explicit `avatar` capability. Their avatar binding
+contains the fixed graph/module metadata, immutable owned checkpoint observation,
+complete runtime manifest and opaque environment identity. Ordinary avatar plans,
+speech handoffs and agent roots freeze this binding in existing JSON parameters;
+renaming a definition or changing a later default cannot retarget an existing Run.
+Legacy requests omit the optional model coordinate, preserving saved receipts.

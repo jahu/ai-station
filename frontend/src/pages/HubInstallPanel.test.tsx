@@ -27,6 +27,37 @@ const plan: InstallPlan = {
     },
   ],
 };
+
+it("requires explicit avatar workload consent and describes the correct GPU and RAM profile", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "avatar-preparation" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount({ ...plan, capability: "avatar" });
+  const button = screen.getByRole("button", {
+    name: "Install model",
+  }) as HTMLButtonElement;
+  const checks = screen.getAllByRole("checkbox");
+  expect(checks).toHaveLength(2);
+  fireEvent.click(checks[0]);
+  expect(button.disabled).toBe(true);
+  expect(
+    screen.getByText(/one or two compatible GPUs of at least 12 GiB each/),
+  ).toBeTruthy();
+  fireEvent.click(checks[1]);
+  fireEvent.click(button);
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  const request = (
+    fetch.mock.calls as unknown as [string, RequestInit][]
+  )[0][1];
+  expect(JSON.parse(String(request.body))).toEqual(
+    expect.objectContaining({
+      workload_accepted: true,
+      license_accepted: true,
+    }),
+  );
+});
 function mount(currentPlan = plan, downloadId = "", onDownload = vi.fn()) {
   render(
     <QueryClientProvider
@@ -47,6 +78,38 @@ function mount(currentPlan = plan, downloadId = "", onDownload = vi.fn()) {
   );
   return onDownload;
 }
+it("opens the installed avatar choice directly without treating it as a conversation model", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "avatar-preparation",
+        manifest_sha256: plan.manifest_sha256,
+        entry: {
+          name: "Installed Sonic",
+          capability: "avatar",
+          quantization: "F32",
+          file: { size_bytes: 1024 },
+        },
+        definition_id: "selected-avatar",
+        attempt: 1,
+        run: { id: "avatar-install-run", status: "succeeded" },
+        model_key: null,
+        resume_allowed: false,
+        progress: { ready_to_try: true },
+      }),
+    })),
+  );
+  mount({ ...plan, capability: "avatar" }, "avatar-preparation");
+  const open = await screen.findByRole("link", {
+    name: "Open Avatars with this model →",
+  });
+  expect(open.getAttribute("href")).toBe("/avatars?model=selected-avatar");
+  expect(
+    screen.queryByRole("button", { name: "Open Chat with this model" }),
+  ).toBeNull();
+});
 it("requires explicit license acceptance and sends only the saved plan identity", async () => {
   const fetch = vi.fn(async (_path: string, _options?: RequestInit) => ({
     ok: _path === "/api/model-hub/downloads" && _options?.method === "POST",

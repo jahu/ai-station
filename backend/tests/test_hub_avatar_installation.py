@@ -68,7 +68,8 @@ def bridge(monkeypatch):
             "installation_available": True,
             "managed_avatar": {
                 "prepared": state["ready"],
-                "available": state["ready"],
+                "available": state["ready"] and not state.get("checking"),
+                "readiness": "checking" if state.get("checking") else "ready",
                 "managed_runtime": runtime,
             },
             "recommendation": {"fits": state["fits"]},
@@ -110,10 +111,10 @@ def bridge(monkeypatch):
 
     async def obtain(root, spec, *, check, progress, source_recovered=lambda value: None):
         check()
-        state["downloads"].append(spec)
         path = root / "models/store" / spec.sha256
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
+            state["downloads"].append(spec)
             path.write_bytes(content)
             path.chmod(0o400)
         progress(len(content), len(content))
@@ -196,6 +197,38 @@ def test_closed_source_plan_native_admission_and_shared_binding(bridge):
         assert binding["managed_runtime"] == bridge["runtime"]
         assert binding["checkpoint_profile"] == "sonic-whole-unet-v1" and binding["module_metadata_sha256"]
         assert "operation_id" not in str(binding) and "runtime/avatar-environments/" not in str(binding)
+
+
+@pytest.mark.parametrize("during_adoption", [False, True])
+def test_engine_hashing_defers_same_installation_without_failure_or_duplicate_transfer(
+    bridge, during_adoption
+):
+    from app.resources import RESOURCE_WAIT_KEY
+
+    with TestClient(app) as api:
+        queued = install(api, plan(api)).json()
+        if during_adoption:
+            bridge["after_verify"] = lambda: bridge.update(checking=True)
+        else:
+            bridge["checking"] = True
+        work()
+        waiting = api.get("/api/setup/downloads/" + queued["id"]).json()
+        assert waiting["run"]["status"] == "queued", waiting
+        assert waiting["progress"]["phase"] == "checking_avatar_engine"
+        assert len(bridge["downloads"]) == int(during_adoption)
+        bridge["checking"] = False
+        bridge.pop("after_verify", None)
+        with control_session_factory()() as db:
+            run = db.get(Run, queued["run"]["id"])
+            run.task.metadata_json = {
+                k: v for k, v in run.task.metadata_json.items() if k != RESOURCE_WAIT_KEY
+            }
+            db.commit()
+        work()
+        completed = api.get("/api/setup/downloads/" + queued["id"]).json()
+        assert completed["run"]["status"] == "succeeded", completed
+        assert completed["run"]["id"] == queued["run"]["id"]
+        assert len(bridge["downloads"]) == 1
 
 
 @pytest.mark.parametrize("field", ["license_accepted", "workload_accepted"])

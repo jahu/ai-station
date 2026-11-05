@@ -164,17 +164,21 @@ export function PreparationCard({
           ? "Preparation needs attention"
           : phase === "preparing_image_engine" ||
               phase === "preparing_video_engine" ||
-              phase === "preparing_speech_engine"
+              phase === "preparing_speech_engine" ||
+              phase === "preparing_music_engine" ||
+              phase === "preparing_avatar_engine"
             ? `Preparing ${phase.split("_")[1]} engine and companions`
-            : phase === "verifying"
-              ? "Checking the complete file"
-              : phase === "inspecting"
-                ? "Checking the model and runtime"
-                : phase === "waiting_for_existing_transfer"
-                  ? "Waiting for another transfer"
-                  : value.run.status === "queued"
-                    ? "Queued"
-                    : "Downloading model";
+            : phase === "checking_avatar_engine"
+              ? "Checking installed avatar files"
+              : phase === "verifying"
+                ? "Checking the complete file"
+                : phase === "inspecting"
+                  ? "Checking the model and runtime"
+                  : phase === "waiting_for_existing_transfer"
+                    ? "Waiting for another transfer"
+                    : value.run.status === "queued"
+                      ? "Queued"
+                      : "Downloading model";
   return (
     <article
       className="panel setup-download"
@@ -268,6 +272,16 @@ export function PreparationCard({
               to={`/audio?model=${value.definition_id}`}
             >
               Open Audio with this model →
+            </Link>
+          )}
+        {value.entry.capability === "avatar" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/avatars?model=${value.definition_id}`}
+            >
+              Open Avatars with this model →
             </Link>
           )}
         {value.entry.capability === "video" &&
