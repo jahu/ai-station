@@ -693,10 +693,14 @@ class MemoryEmbedExecutor:
             result = asyncio.run(self._run(session, run))
             if result is None:
                 session.refresh(run)
+                if (run.worker_id, run.claimed_at) != run._embedding_claim:
+                    return "done"
                 if run.status == "cancel_requested":
                     transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
                 return "done"
             session.refresh(run)
+            if (run.worker_id, run.claimed_at) != run._embedding_claim:
+                return "done"
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
                 return "done"
@@ -724,6 +728,8 @@ class MemoryEmbedExecutor:
         except Exception as exc:
             session.rollback()
             session.refresh(run)
+            if (run.worker_id, run.claimed_at) != run._embedding_claim:
+                return "done"
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             elif run.status not in {"canceled", "interrupted", "failed", "succeeded"}:

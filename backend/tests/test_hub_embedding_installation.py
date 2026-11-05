@@ -263,7 +263,8 @@ def test_changed_hardware_blocks_encoder_and_tokenizer_transfer_before_dispatch(
     assert encoder["downloads"] == [] and encoder["opens"] == []
 
 
-def test_replaced_worker_cannot_publish_a_completed_memory_health_check(encoder):
+@pytest.mark.parametrize("probe_error", [False, True])
+def test_replaced_worker_cannot_publish_a_completed_memory_health_check(encoder, probe_error):
     with TestClient(app) as api:
         value = installed(api)
         setup = api.get("/api/memory/embeddings/setup").json()
@@ -278,6 +279,8 @@ def test_replaced_worker_cannot_publish_a_completed_memory_health_check(encoder)
                 run = db.get(Run, identity)
                 run.worker_id = "replacement-worker"
                 db.commit()
+            if probe_error:
+                raise ValueError("The old worker's probe failed after replacement")
 
         encoder["after_probe"] = replace
         work()

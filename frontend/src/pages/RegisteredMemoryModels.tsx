@@ -54,7 +54,7 @@ export default function RegisteredMemoryModels({
   if (!models.length) return null;
   return (
     <div className="memory-semantic-setup">
-      <label>
+      <label className="memory-model-choice">
         Memory model
         <select
           aria-label="Memory model"

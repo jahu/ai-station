@@ -1728,3 +1728,13 @@ cannot be supplied as replacements. Source failures and gated access remain
 unavailable rather than recommendations. Names remain untrusted text, and native
 hardware observations are never uploaded to publishers. Installation retains its
 separate source/license/hardware consent and native verification gates.
+
+Memory encoder imports do not execute repository Python or remote model code.
+The exact E5 ONNX graph is inspected in an owned, offline, deadline/address-space
+bounded CPU child before ONNX Runtime starts. External tensor files, custom
+operators/functions and nested graphs are rejected. Both encoder and fixed
+tokenizer must remain canonical, immutable, owned objects and pass content hashes.
+Private Run configuration permits only those identities and an absolute deadline.
+CPU Stop signals only the owned group; completion/error publication checks the
+original worker claim. An explicit administrator settings revision changes the
+station's encoder, while memory content, indexing and activity stay account scoped.

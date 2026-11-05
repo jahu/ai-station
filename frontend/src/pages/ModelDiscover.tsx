@@ -616,38 +616,39 @@ export default function ModelDiscover() {
                 ["gguf", "safetensors", "onnx"].includes(file.format) &&
                 file.sha256 && (
                   <>
-                    {!file.assessment.profiles.some(
-                      (p) =>
-                        p.capability === "image" ||
-                        p.capability === "video" ||
-                        p.capability === "speech" ||
-                        p.capability === "embedding",
-                    ) && (
-                      <details className="hub-context-options">
-                        <summary>Context options</summary>
-                        <label htmlFor="model-hub-context">
-                          Context for installation
-                        </label>
-                        <select
-                          id="model-hub-context"
-                          value={contextTarget}
-                          onChange={(event) =>
-                            setContextTarget(Number(event.target.value))
-                          }
-                        >
-                          <option value={32768}>
-                            32K · Balanced conversation
-                          </option>
-                          <option value={131072}>128K · Longer tasks</option>
-                        </select>
-                        <p className="muted">
-                          Variant recommendations use a 32K target. The
-                          installation review checks your chosen target against
-                          GPU memory and the model’s trained limit, and shows
-                          the context that fits.
-                        </p>
-                      </details>
-                    )}
+                    {file.format === "gguf" &&
+                      !file.assessment.profiles.some(
+                        (p) =>
+                          p.capability === "image" ||
+                          p.capability === "video" ||
+                          p.capability === "speech" ||
+                          p.capability === "embedding",
+                      ) && (
+                        <details className="hub-context-options">
+                          <summary>Context options</summary>
+                          <label htmlFor="model-hub-context">
+                            Context for installation
+                          </label>
+                          <select
+                            id="model-hub-context"
+                            value={contextTarget}
+                            onChange={(event) =>
+                              setContextTarget(Number(event.target.value))
+                            }
+                          >
+                            <option value={32768}>
+                              32K · Balanced conversation
+                            </option>
+                            <option value={131072}>128K · Longer tasks</option>
+                          </select>
+                          <p className="muted">
+                            Variant recommendations use a 32K target. The
+                            installation review checks your chosen target
+                            against GPU memory and the model’s trained limit,
+                            and shows the context that fits.
+                          </p>
+                        </details>
+                      )}
                     <Button
                       variant="secondary"
                       disabled={
