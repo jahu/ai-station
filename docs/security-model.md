@@ -101,7 +101,6 @@ no tensor is deserialized, imported or loaded. This grants no video launch,
 arbitrary checkpoint role, runtime preparation or command capability. Existing
 LLM inspection and activation still require a GGUF source.
 
-
 Video source plans may inspect only bounded exact HTTP ranges of a pinned HF
 file over the existing public-DNS-pinned transport. A full response, changed
 range/size, invalid JSON/schema/layout or unsupported precision cannot authorize

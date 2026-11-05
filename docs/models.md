@@ -150,7 +150,6 @@ a new video installation path or inference qualification. New source plans,
 companion preparation, explicit workload/offload consent and video/film/agent
 selection still need to be connected before a discovered checkpoint is usable.
 
-
 ### Discovered video models (candidate under qualification)
 
 A specific SafeTensors file can now be planned from its actual immutable header,
