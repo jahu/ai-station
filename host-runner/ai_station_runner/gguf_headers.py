@@ -9,7 +9,18 @@ HEADER_BUDGET = 32 * 1024 * 1024
 _FORMATS = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i", 6: "f", 7: "?", 10: "Q", 11: "q", 12: "d"}
 
 
-def inspect_header(path: Path, size_bytes: int, mtime: float, *, keep_field, tensors=False):
+def inspect_header(
+    path: Path,
+    size_bytes: int,
+    mtime: float,
+    *,
+    keep_field,
+    tensors=False,
+    allow_empty=False,
+    field_kinds=False,
+    tensor_limit=100000,
+    header_limit=HEADER_BUDGET,
+):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(fd, "rb") as handle:
         observed = os.fstat(handle.fileno())
@@ -19,7 +30,7 @@ def inspect_header(path: Path, size_bytes: int, mtime: float, *, keep_field, ten
             or abs(observed.st_mtime - mtime) > 0.001
         ):
             raise ValueError("Model changed since discovery")
-        budget = min(HEADER_BUDGET, observed.st_size)
+        budget = min(HEADER_BUDGET, header_limit, observed.st_size)
 
         def read(count):
             if count < 0 or handle.tell() + count > budget:
@@ -69,6 +80,7 @@ def inspect_header(path: Path, size_bytes: int, mtime: float, *, keep_field, ten
         if count > 4096:
             raise ValueError("GGUF metadata entry budget exceeded")
         fields = {}
+        kinds = {}
         for _ in range(count):
             key = value(8, True)
             kind = integer("I")
@@ -78,9 +90,10 @@ def inspect_header(path: Path, size_bytes: int, mtime: float, *, keep_field, ten
                 if key in fields:
                     raise ValueError("Duplicate GGUF context metadata")
                 fields[key] = result
+                kinds[key] = kind
         descriptors = []
         if tensors:
-            if not 1 <= tensor_count <= 100000:
+            if not (0 if allow_empty else 1) <= tensor_count <= min(tensor_limit, 100000):
                 raise ValueError("GGUF tensor descriptor budget exceeded")
             names = set()
             for _ in range(tensor_count):
@@ -101,9 +114,12 @@ def inspect_header(path: Path, size_bytes: int, mtime: float, *, keep_field, ten
         after = os.fstat(handle.fileno())
         if after.st_size != observed.st_size or after.st_mtime_ns != observed.st_mtime_ns:
             raise ValueError("Model changed during inspection")
-    return {
+    result = {
         "fields": fields,
         "tensor_count": tensor_count,
         "tensors": descriptors,
         "header_bytes": header_bytes,
     }
+    if field_kinds:
+        result["field_kinds"] = kinds
+    return result
