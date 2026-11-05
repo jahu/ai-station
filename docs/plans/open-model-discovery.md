@@ -306,3 +306,25 @@ chat GPU runtime. Before admitting a new encoder:
    explicit selection → actual nonzero vectors and Polish semantic retrieval.
    Fake tests cover source/hash/tokenizer/graph drift, settings races and account
    boundaries; browser checks cover install/selection and indexing progress.
+
+### Next: ACE-Step music checkpoint bundles
+
+1. Establish one metadata-only native slot for the complete existing ACE-Step
+   1.5 Turbo diffusion graph, using the bounded SafeTensors reader. Freeze its
+   exact graph/storage precision, existing runtime recipe, SDK, configuration,
+   tokenizer/embedding model, VAE and pinned model Python companions. Model
+   publisher Python is never new execution authority. Matching a header alone
+   does not install or qualify a music model.
+2. Extend existing discovery/download Tasks with that finite slot and complete
+   companion/engine consent and storage estimate. Recheck the real music workload:
+   one supported 12-GiB GPU, at least 24-GiB RAM and its explicit CPU-offload
+   policy. Two cards do not make a single-device memory requirement disappear.
+3. Bind a verified owned checkpoint to an opaque prepared music engine, replacing
+   only the diffusion object in a private Run view. Keep the existing source/code
+   hashes, deadlines, memory scopes, owned process Stop and inspection recovery.
+   A generic model filename or a new repository's Python must not bypass them.
+4. Expose installed choices in Music and reviewed conversation/agent settings,
+   preserving explicit existing defaults. Qualify download/adoption/selection,
+   source/hash/graph drift, permissions and cancellation with fake executors, then
+   an isolated actual GPU music result. Update qualification evidence honestly;
+   a metadata slot is only the first implementation step.

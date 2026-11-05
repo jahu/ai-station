@@ -1507,3 +1507,10 @@ ordinary account-private health/index/search Runs. CPU reservations also observe
 the worker's cgroup limit. Installation never replaces current semantic settings;
 FTS and existing CPU/endpoint configurations remain available. See
 [encoder bundles and qualification](models.md#discovered-memory-encoder-bundles-candidate-under-qualification).
+
+The native music preparation catalog now declares a finite ACE-Step 1.5 Turbo
+BF16 diffusion slot. Its typed owned-model inspection reuses bounded SafeTensors
+metadata validation and freezes the existing runtime, SDK and all 15 companions,
+including trusted model Python. It does not activate a new music model or admit
+publisher code. Source planning, installation and selected inference remain
+separate stages. [Music slot](models.md#native-music-checkpoint-slot).
