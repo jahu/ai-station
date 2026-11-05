@@ -10,6 +10,7 @@ import { Music2, Settings2, Sparkles } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import MusicModelChoice from "../components/media/MusicModelChoice";
 import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
@@ -71,9 +72,13 @@ function MusicForm({ initialRun }: { initialRun?: Run }) {
   const [gpu, setGpu] = useState(
     String(parameters.gpu ?? initialRun?.requested_gpu ?? "auto"),
   );
+  const [modelId, setModelId] = useState(
+    String(search.get("model") ?? parameters.model_id ?? ""),
+  );
   useCreativeDraft({
     formState: {
       caption,
+      ...(modelId ? { model_id: modelId } : {}),
       translation,
       lyrics,
       instrumental,
@@ -85,8 +90,13 @@ function MusicForm({ initialRun }: { initialRun?: Run }) {
   const receipt = useRef<{ payload: string; id: string } | null>(null);
   const hardware = useHardware();
   const profile = useQuery({
-    queryKey: ["music-capabilities"],
-    queryFn: () => api<MusicCapabilities>("/audio/music/capabilities"),
+    queryKey: ["music-capabilities", modelId],
+    queryFn: () =>
+      api<MusicCapabilities>(
+        modelId
+          ? `/audio/music/models/${modelId}/capabilities`
+          : "/audio/music/capabilities",
+      ),
     staleTime: 30000,
   });
   const runId = search.get("run") ?? "";
@@ -94,6 +104,7 @@ function MusicForm({ initialRun }: { initialRun?: Run }) {
   const generate = useMutation({
     mutationFn: async () => {
       const payload = JSON.stringify({
+        ...(modelId ? { model_id: modelId } : {}),
         caption: caption.trim(),
         lyrics: instrumental ? "" : lyrics.trim(),
         instrumental,
@@ -198,6 +209,11 @@ function MusicForm({ initialRun }: { initialRun?: Run }) {
             </p>
           )}
           <fieldset disabled={busy}>
+            <MusicModelChoice
+              value={modelId}
+              onChange={setModelId}
+              disabled={busy}
+            />
             <label className="media-text-label">
               <span>
                 Describe your music <small>{caption.length} / 512</small>

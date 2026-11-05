@@ -58,6 +58,34 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_split":
+        from app.hub_split_candidates import recommendation as bundle_recommendation
+
+        return bundle_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_avatar":
+        from app.hub_avatar_candidates import recommendation as avatar_recommendation
+
+        return avatar_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_embedding":
+        from app.hub_embedding_candidates import recommendation as embedding_recommendation
+
+        return embedding_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_music":
+        from app.hub_music_candidates import recommendation as music_recommendation
+
+        return music_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_speech":
+        from app.hub_speech_candidates import recommendation as speech_recommendation
+
+        return speech_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_video":
+        from app.hub_video_candidates import recommendation as video_recommendation
+
+        return video_recommendation(entry, hardware)
+    if getattr(entry, "origin", None) == "hub_image":
+        from app.hub_image_candidates import recommendation as image_recommendation
+
+        return image_recommendation(entry, hardware)
     from app.llama import fit_coding_context, kv_budget_mib
     from app.native_models import host_profile, native
 
@@ -104,11 +132,19 @@ def recommendation(entry, hardware):
         for g in (hardware.get("gpus") or [])
         if isinstance(g, dict)
         and type(g.get("index")) is int
+        and g["index"] >= 0
         and type(g.get("memory_total_mib")) in {int, float}
         and math.isfinite(g["memory_total_mib"])
         and 0 < g["memory_total_mib"] < 1048576
     ]
     devices.sort(key=lambda g: (-g["memory_total_mib"], g["index"]))
+    if len(devices) > 16 or len({g["index"] for g in devices}) != len(devices):
+        return {
+            "fits": False,
+            "reason": "Inspect distinct GPU devices before estimating model fit",
+            "gpus": [],
+            "context_size": None,
+        }
     memory = (hardware.get("memory") or {}).get("total_mib")
     if type(memory) not in {int, float} or not math.isfinite(memory):
         return {
@@ -163,7 +199,9 @@ def recommendation(entry, hardware):
             best = result
         # Preserve legacy presets; long-context profiles may need a GPU pair
         # even when the weights alone fit one device with a very short cache.
-        if entry.context_ceiling <= 32768 or context >= entry.context_ceiling:
+        if context >= entry.context_ceiling or (
+            entry.context_ceiling <= 32768 and getattr(entry, "origin", None) != "hub"
+        ):
             return result
     if best is not None:
         return best
@@ -178,6 +216,25 @@ def recommendation(entry, hardware):
 def view(session, task):
     saved = task.metadata_json["model_download"]
     run = session.get(Run, saved["run_id"])
+    progress = dict(run.metadata_json.get("model_download", {}))
+    if (
+        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}
+        and run.status not in TERMINAL
+    ):
+        engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
+        engine = session.get(Run, engine_id) if engine_id else None
+        if engine is not None and engine.task_id == task.id and engine.status != "succeeded":
+            native_progress = engine.metadata_json.get("runtime_preparation", {})
+            recipe = saved["entry"]["setup_recipe"]
+            progress.update(
+                phase=f"preparing_{saved['entry']['capability']}_engine",
+                engine_run_id=engine.id,
+                received_bytes=native_progress.get("received_bytes", 0),
+                expected_bytes=native_progress.get(
+                    "expected_bytes",
+                    sum(v["size_bytes"] for v in recipe["inputs"]) + recipe.get("download_bytes", 0),
+                ),
+            )
     return {
         "id": task.id,
         "catalog_id": saved["catalog_id"],
@@ -185,11 +242,13 @@ def view(session, task):
         "entry": saved["entry"],
         "attempt": saved["attempt"],
         "run": run_dict(run),
-        "progress": run.metadata_json.get("model_download", {}),
+        "progress": progress,
         "model_file_id": run.metadata_json.get("model_file_id"),
-        "model_key": "llamacpp:" + run.metadata_json["model_file_id"]
+        "model_key": run.metadata_json.get("model_key") or "llamacpp:" + run.metadata_json["model_file_id"]
         if run.metadata_json.get("model_file_id")
+        and saved["entry"].get("capability") not in {"image", "video", "speech", "music", "embedding"}
         else None,
+        "definition_id": run.metadata_json.get("definition_id"),
         "resume_allowed": run.status in {"failed", "interrupted", "canceled"},
     }
 
@@ -231,7 +290,11 @@ def catalog(session: DB):
         )
         preset = recommendation(item, hardware)
         definition = (
-            session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == installed.id))
+            session.scalar(
+                select(ModelDefinition).where(
+                    ModelDefinition.file_id == installed.id, ModelDefinition.binding_key.is_(None)
+                )
+            )
             if installed
             else None
         )
@@ -299,6 +362,27 @@ class Resume(BaseModel):
 
 
 def attempt(session, task, saved, *, previous=None):
+    prerequisite = None
+    if saved["entry"].get("origin") in {
+        "hub_image",
+        "hub_video",
+        "hub_speech",
+        "hub_music",
+        "hub_avatar",
+    } and saved["entry"].get("prepare_engine"):
+        from app.runtime_setup_api import attempt as prepare_runtime
+
+        prepare_runtime(
+            session,
+            task,
+            {
+                "recipe": saved["entry"]["setup_recipe"],
+                "manifest_sha256": saved["entry"]["setup_manifest_sha256"],
+                "license_accepted": True,
+                "attempt": saved["attempt"],
+            },
+        )
+        prerequisite = session.get(Run, task.metadata_json["runtime_preparation"]["run_id"])
     run = create_run(
         session,
         task,
@@ -314,11 +398,15 @@ def attempt(session, task, saved, *, previous=None):
             "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         permissions=PERMISSIONS,
-        requested_resources={"ram_mib": 256},
+        requested_resources={"ram_mib": 2048 if saved["entry"].get("capability") == "embedding" else 256},
         retry_class="inspect",
         parent_run_id=previous.id if previous else None,
     )
     task.metadata_json = {**task.metadata_json, "model_download": {**saved, "run_id": run.id}}
+    if prerequisite is not None:
+        from app.dependencies import depend_on
+
+        depend_on(session, run, prerequisite)
     return run
 
 
@@ -418,6 +506,18 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}:
+        prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
+        prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
+        if prerequisite is not None and (
+            prerequisite.task_id != task.id
+            or prerequisite.status not in TERMINAL
+            or prerequisite.metadata_json.get("cleanup_requires_inspection")
+        ):
+            raise HTTPException(
+                409,
+                f"Inspect or finish stopping the earlier {saved['entry']['capability']} engine preparation before resuming",
+            )
     task.metadata_json = {
         key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"
     }

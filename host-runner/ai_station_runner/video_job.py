@@ -27,7 +27,17 @@ def main(config_path):
         signal.setitimer(signal.ITIMER_REAL, remaining)
         from ai_station_runner import video_environment
 
-        frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
+        if request.get("checkpoint"):
+            from ai_station_runner.video_checkpoints import CheckpointSource, selected_environment
+
+            frozen = selected_environment(
+                config["root"],
+                CheckpointSource.model_validate(request["checkpoint"]),
+                request["managed_runtime"],
+                verify_weights=True,
+            )
+        else:
+            frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
         if Path(sys.base_prefix).resolve() != frozen["environment"] / "python" or any(
             Path(paths[key]).resolve() != frozen[key].resolve()
             for key in ("video_python", "comfy_dir", *video_environment.ROLES)

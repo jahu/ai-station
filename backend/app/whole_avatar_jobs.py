@@ -214,7 +214,10 @@ def publish(
         )
         deadline = execution_deadline_at or (utcnow() + timedelta(seconds=whole.MAX_SECONDS)).isoformat()
     budget = execution_budget(deadline)
-    profile = whole.capabilities() if observed_profile is None else observed_profile
+    from app.avatar_models import profile_for_request
+
+    frozen_model = prior.get("avatar_model") if handoff else (appearance_snapshot or {}).get("avatar_model")
+    profile = profile_for_request(session, body, observed_profile, frozen=frozen_model)
     recipe = whole.verify_recipe(profile, selected if selected is not None else profile.get("recipe"))
     inputs, observation = inspect_sources(
         session, body.image_artifact_id, body.audio_artifact_id, reference=body.speech_text is not None
@@ -238,6 +241,7 @@ def publish(
         "mode": "whole_recording",
         "request": request,
         "whole_recipe": recipe,
+        **({"avatar_model": profile["avatar_model"]} if profile.get("avatar_model") else {}),
         **budget,
         "initial_sources": prior.get("initial_sources", inputs),
         "whole_run_id": None,
@@ -280,6 +284,7 @@ def publish(
             parent_run_id=parent_run_id,
             recipe=recipe,
             observed_profile=profile,
+            model=plan.get("avatar_model"),
             execution_deadline_at=deadline,
         )
         generation.operation_key = f"media:{revision}:whole:attempt:1"
@@ -300,7 +305,9 @@ def resume(session, task, body, *, receipts, key):
     from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 
     plan = task.metadata_json["media_plan"]
-    profile = whole.capabilities()
+    from app.avatar_models import profile_for_snapshot
+
+    profile = profile_for_snapshot(plan["avatar_model"]) if plan.get("avatar_model") else whole.capabilities()
     whole.verify_recipe(profile, plan["whole_recipe"])
     selected = [session.get(Run, identifier) for identifier in stage_ids(plan)]
     for run in selected:

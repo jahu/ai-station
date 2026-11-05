@@ -160,16 +160,6 @@ function ImageForm({
     queryKey: ["image-models"],
     queryFn: () => api<ImageModelCatalog>("/images/models"),
   });
-  const capabilities = useQuery({
-    queryKey: ["image-capabilities"],
-    queryFn: () =>
-      api<{
-        available: boolean;
-        status?: string;
-        notice?: string;
-        backends?: string[];
-      }>("/images/capabilities"),
-  });
   const [translation, setTranslation] = useState<TranslationOptions>(
     (restored.translation as TranslationOptions | undefined) ?? {
       mode: "inherit",
@@ -235,6 +225,23 @@ function ImageForm({
     staleTime: 30000,
   });
   const selectedModel = automatic ? recommendation.data?.choice : explicitModel;
+  const capabilities = useQuery({
+    queryKey: [
+      "image-capabilities",
+      selectedModel?.managed_checkpoint
+        ? selectedModel.definition_id
+        : "default",
+    ],
+    queryFn: () =>
+      api<{
+        available: boolean;
+        status?: string;
+        notice?: string;
+        backends?: string[];
+      }>(
+        `/images/capabilities${selectedModel?.managed_checkpoint ? `?model_id=${selectedModel.definition_id}` : ""}`,
+      ),
+  });
   const backend = selectedModel?.backend ?? "qwen";
   const krea = backend === "krea2";
   const kreaControls = krea && !automatic;

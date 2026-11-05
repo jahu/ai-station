@@ -30,7 +30,7 @@ from app.media_translation_text import (
     digest,
     encode_fields,
 )
-from app.models import Artifact, ModelDefinition, ModelFile, Run, RunDependency, RuntimeInstance
+from app.models import Artifact, Run, RunDependency, RuntimeInstance
 from app.paths import safe_join
 from app.permissions import require
 from app.personal_settings import preference_row
@@ -62,11 +62,9 @@ def validate_model(session, model):
         raise HTTPException(409, "Choose a local translator in Settings → Generation")
     if model.startswith("llamacpp:"):
         from app.llama import loadable_model
+        from app.model_selection import resolve
 
-        try:
-            row = session.get(ModelFile, str(UUID(model.removeprefix("llamacpp:"))))
-        except ValueError as exc:
-            raise HTTPException(422, "Choose a present local language-model GGUF") from exc
+        row, _ = resolve(session, model)
         if not loadable_model(row):
             raise HTTPException(409, "The selected translator GGUF is unavailable")
     else:
@@ -75,15 +73,10 @@ def validate_model(session, model):
 
 def translator_label(session, model):
     if model.startswith("llamacpp:"):
-        file_id = model.removeprefix("llamacpp:")
-        name = session.scalar(
-            select(ModelDefinition.name)
-            .where(ModelDefinition.file_id == file_id, ModelDefinition.category == "llm")
-            .order_by(ModelDefinition.id)
-            .limit(1)
-        )
-        file = session.get(ModelFile, file_id)
-        return name or (file.filename if file else model)
+        from app.model_selection import resolve
+
+        file, definition = resolve(session, model)
+        return definition.name if definition else file.filename if file else model
     return model
 
 
@@ -621,11 +614,15 @@ def translator_snapshot(session, run):
         return {**snapshot, "kind": "local-server", "weights_revision": None}
     instance_id = run.parameters["endpoint"].removeprefix("llamacpp:")
     instance = session.get(RuntimeInstance, instance_id)
+    from app.model_selection import matches, resolve
+
+    file, definition = resolve(session, run.parameters["model"])
     if (
-        not instance
+        file is None
+        or not instance
         or instance.status != "ready"
         or instance.ownership != "managed"
-        or instance.metadata_json.get("model_file_id") != run.parameters["model"].removeprefix("llamacpp:")
+        or not matches(instance.metadata_json, file, definition)
     ):
         raise ValueError("The selected translator runtime is not ready or changed identity")
     load = session.get(Run, instance.metadata_json.get("load_run_id"))
@@ -637,7 +634,14 @@ def translator_snapshot(session, run):
         "instance_id": instance.id,
         "load_run_id": load.id,
         "source": {
-            key: load.parameters.get(key) for key in ["model_path", "size_bytes", "mtime", "projector"]
+            key: load.parameters.get(key)
+            for key in [
+                "model_path",
+                "size_bytes",
+                "mtime",
+                "projector",
+                *(["model_bundle"] if load.parameters.get("model_bundle") else []),
+            ]
         },
         "runtime": {
             key: instance.metadata_json.get(key)

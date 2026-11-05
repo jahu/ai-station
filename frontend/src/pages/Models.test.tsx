@@ -8,6 +8,112 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it("shows the complete model size and part count while retaining the primary file observation", async () => {
+  const model = {
+    id: "complete",
+    filename: "Coder.Q4_K_M.gguf",
+    host_path: null,
+    relative_path: "models/store/" + "a".repeat(64),
+    root_label: "AI Station storage",
+    category: "llm",
+    format: "gguf",
+    size_bytes: 4 * 1024 ** 3,
+    family: "qwen3",
+    quantization: "Q4_K_M",
+    capabilities: ["chat"],
+    availability: "present",
+    discovered_at: "2026-01-01T00:00:00Z",
+    gguf_bundle: {
+      status: "verified",
+      size_bytes: 8 * 1024 ** 3,
+      part_count: 2,
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.includes("/models?")
+          ? { items: [model], total: 1 }
+          : { items: [], total: 0 },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Models />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("heading", { name: "Coder.Q4_K_M.gguf" });
+  expect(screen.getByText("8.00 GiB")).toBeTruthy();
+  expect(screen.getByText("Complete model · 2 parts")).toBeTruthy();
+  expect(screen.queryByText("4.00 GiB")).toBeNull();
+});
+
+it("opens an installed avatar model in Avatars and hides language-model controls", async () => {
+  const definition = {
+    id: "avatar-definition",
+    name: "Portrait model",
+    status: "registered",
+    avatar_backend: "sonic",
+    last_verify_run_id: null,
+    preset: { gpus: [], context_size: 4096, cache_type: "q8_0" },
+    compatibility: {
+      operational: true,
+      adapter: "native-avatar",
+      summary: "Use this model in Avatars",
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "avatar-file",
+        filename: "portrait-model.pth",
+        host_path: null,
+        relative_path: "models/store/" + "a".repeat(64),
+        root_label: "AI Station storage",
+        category: "video",
+        format: "pth",
+        size_bytes: 1024,
+        family: "sonic_whole_unet",
+        quantization: "F32",
+        capabilities: ["avatar"],
+        availability: "present",
+        discovered_at: "2026-01-01T00:00:00Z",
+        definitions: [definition],
+      }),
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/models/avatar-file"]}>
+        <Routes>
+          <Route path="/models/:id" element={<ModelDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const link = await screen.findByRole("link", {
+    name: "Choose this model in Avatars",
+  });
+  expect(link.getAttribute("href")).toBe("/avatars?model=avatar-definition");
+  expect(screen.getByRole("heading", { name: "Avatar model" })).toBeTruthy();
+  expect(screen.queryByLabelText(/Context/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /Load.*llama/i })).toBeNull();
+});
 it("saves a definition and installs it only after an explicit action", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
     ok: true,
@@ -338,3 +444,101 @@ it.each(["ready", "loading"])(
     ).toEqual(["/api/llama/current/health"]);
   },
 );
+
+it("keeps sibling model configurations independent when they share a physical file", async () => {
+  const definitions = ["first", "second"].map((id, index) => ({
+    id,
+    name: `Variant ${index + 1}`,
+    status: "registered",
+    category: "llm",
+    model_key: `llamacpp:${index ? id : "shared-file"}`,
+    publisher_source: {
+      repository: `publisher/${id}`,
+      revision: "a".repeat(40),
+      filename: "model.gguf",
+      license: "apache-2.0",
+      pinned_url: `https://huggingface.co/publisher/${id}/blob/${"a".repeat(40)}/model.gguf`,
+      review_url: `https://huggingface.co/publisher/${id}/blob/main/model.gguf`,
+    },
+    preset: {
+      gpus: [7],
+      context_size: index ? 16384 : 8192,
+      cache_type: "q8_0",
+    },
+    gguf_bundle: {
+      status: "verified",
+      size_bytes: 3 * 1024 ** 3,
+      part_count: 2,
+      parts: [],
+    },
+    compatibility: { operational: true, summary: "Supported model" },
+  }));
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () => {
+      if (options?.method === "POST") return { id: "selected-load" };
+      if (url === "/api/llama") return { models: [], instances: [] };
+      return {
+        id: "shared-file",
+        filename: "shared.gguf",
+        relative_path: "models/store/abc",
+        category: "llm",
+        format: "gguf",
+        availability: "present",
+        size_bytes: 1024,
+        definitions,
+        capabilities: ["chat"],
+      };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/models/shared-file"]}>
+        <Routes>
+          <Route path="/models/:id" element={<ModelDetail />} />
+          <Route path="/runs/:id" element={<h1>Selected model startup</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const selector = await screen.findByLabelText("Model configuration");
+  expect(
+    (screen.getByLabelText("Context size") as HTMLInputElement).value,
+  ).toBe("8192");
+  fireEvent.change(screen.getByLabelText("Display name"), {
+    target: { value: "Unsaved edit" },
+  });
+  fireEvent.change(selector, { target: { value: "second" } });
+  expect(
+    (screen.getByLabelText("Display name") as HTMLInputElement).value,
+  ).toBe("Variant 2");
+  expect(
+    screen
+      .getByRole("link", { name: "Review publisher updates" })
+      .getAttribute("href"),
+  ).toBe(
+    "/models/discover?source=" +
+      encodeURIComponent(
+        "https://huggingface.co/publisher/second/blob/main/model.gguf",
+      ),
+  );
+  expect(
+    (screen.getByLabelText("Context size") as HTMLInputElement).value,
+  ).toBe("16384");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Load with saved preset" }),
+  );
+  await screen.findByRole("heading", { name: "Selected model startup" });
+  expect(
+    fetch.mock.calls.some(
+      ([url, options]) =>
+        url === "/api/models/definitions/second/load" &&
+        options?.method === "POST",
+    ),
+  ).toBe(true);
+});

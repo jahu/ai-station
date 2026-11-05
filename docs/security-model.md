@@ -50,6 +50,80 @@ is no unauthenticated TCP, public bind, shell or Docker authority. Credential
 files stay outside artifacts and server keys stay native. Consumer admission
 remains gated until real transport, lifetime/recovery and installation checks pass.
 
+Open model [discovery](plans/open-model-discovery.md) accepts HF repository/file
+links and bounded searches only through explicit administrator-owned inspection
+Runs. HTTP handlers enqueue; workers reuse public-DNS-pinned HTTPS transport.
+Publisher metadata cannot supply code, SDK commands, filesystem destinations,
+credentials or replacement hashes. Search popularity and filename extensions are
+not runtime admission. Inspections are private; no local paths, prompts, serials
+or private media are sent to publishers. This metadata operation does not grant
+installation permission to agents or automatically download/activate models.
+New GGUF installation requires an owner-scoped completed plan and explicit license
+consent. Only the server resolves its fixed-HF sources/hashes; a client selects
+the plan and its fingerprint. Existing owned streaming, native architecture/cache
+inspection, resource admission and registry fences remain authoritative. Runtime
+preparation and arbitrary publisher code are outside this permission.
+
+The optional native `checkpoint_profile` inspection coordinate is a fixed image
+slot, not an arbitrary graph/schema selector. It requires `filesystem_read` and
+`manage_models`, an immutable `models/store/<sha256>` object, exact file observation
+and no language-runtime/image-activation options. The bounded metadata reader
+rejects changed/symlink sources, duplicate/oversized descriptors, incompatible
+names/dimensions, unsupported storage types, bad alignment, truncated extents and
+overlapping payloads. It reads no tensor payload and launches no process. A
+publisher architecture tag cannot override the fixed graph signature. Its reference
+SHA256/size and engine image are bound to the existing native recipe. Inspection
+does not by itself grant download, registration, GPU execution or companion substitution.
+
+An accepted image model plan may enqueue the fixed image-engine setup as an
+owned prerequisite, with the same Task-wide Stop fence. Native preparation
+validation requires the licensed model snapshot/fingerprint, matching parent
+Run/owner, exact fixed recipe and persisted dependency; other Task intents and
+executors retain their original restrictions. Unknown or unavailable runtime
+prerequisites block installation before transfer. A new plan rechecks readiness
+without changing its immutable publisher configuration or engine identities.
+
+An imported image definition binds the verified store object and graph signature
+to the fixed engine manifest. The ordinary managed generation request can select
+only that typed diffusion object; all other mounts, image, command and CUDA
+placement remain controlled. Dispatch checks graph/layout, source observation,
+resolution, two distinct physical GPUs and per-component VRAM/RAM budgets.
+Native ownership, deadlines, cancellation, inspection and recovery use the existing
+image journal. Legacy request serialization excludes the new optional coordinate.
+Shared model readiness never exposes another account's source/preparation Runs.
+
+
+The fixed Wan checkpoint inspection uses the same private model store namespace
+and permissions, with a distinct SafeTensors coordinate. The bounded JSON reader
+rejects duplicate keys, invalid shapes/types, payload gaps/overlap and unindexed
+bytes. Only the recipe-bound graph and F16 storage are admitted structurally;
+no tensor is deserialized, imported or loaded. This grants no video launch,
+arbitrary checkpoint role, runtime preparation or command capability. Existing
+LLM inspection and activation still require a GGUF source.
+
+Video source plans may inspect only bounded exact HTTP ranges of a pinned HF
+file over the existing public-DNS-pinned transport. A full response, changed
+range/size, invalid JSON/schema/layout or unsupported precision cannot authorize
+a weight transfer. The accepted header digest is checked again natively after
+download. Publisher cards cannot supply a runtime, command, destination or graph.
+The model Task's fixed video-setup prerequisite additionally requires explicit
+CPU-offload/workload consent and its exact owner/manifest/dependency contract.
+Video generation accepts only an immutable owned diffusion coordinate and fixed
+opaque engine. The normal native child rechecks full file identity before model
+loading; companions/SDK and process resource/deadline/ownership fences remain
+fixed. The selected model never inherits model-installation authority into an
+agent or orchestrator operation. No default/runtime is silently replaced.
+
+The Chatterbox T3 structural slot adds only a finite SafeTensors profile to the
+existing model/read-permission operation. It accepts an immutable application
+object and unchanged observation, checks complete indexed tensor storage and the
+fixed F32 graph, and binds the exact existing speech SDK/companion recipe. It
+cannot select a host path, substitute a tokenizer/voice encoder/decoder, load
+pickle or publisher code, or grant runtime installation/generation authority.
+Legacy language-model verification remains GGUF-only. Inspection needs no Torch,
+Chatterbox or HTTP stack imports; operational speech use requires its independent
+reviewed preparation, hardware, ownership/cancellation and first-result gates.
+
 The Windows GPU activation candidate is confined to the application-owned WSL
 image and its explicit preserving installer update. Its root-only fixed helper
 installs verified offline toolkit packages, retains runc as default and validates
@@ -1628,3 +1702,155 @@ reports contain no account records or credentials. Pending publication blocks
 normal startup, survives process exit and resumes only the original operation.
 Safe pre-publication abort retains the original data and copies; unexpected
 post-publication writes require inspection rather than automatic rollback.
+
+The speech import candidate extends the normal model Task with only an exact
+`hub_speech` → `speech_setup` prerequisite under the existing owner, license,
+manifest and RunDependency checks. Model publication rechecks administrator/Stop
+state and immutable file identity after native verification. New audio definitions
+contain an opaque prepared engine, never another account's preparation Run ID.
+An accepted discovery plan also rechecks its GPU/RAM capacity before transferring
+the prerequisite engine or companions; changed hardware cannot defer that check
+until after a large prerequisite download. Storage remains checked during transfer.
+Generation grants no model-install permission: only a fixed owned T3 coordinate
+and engine can enter the native audio operation. Parent resource/reference checks
+and child full-content verification precede loading; a private Run config may
+create only the closed model view, with an independent absolute deadline. Fish
+cannot ignore a supplied Chatterbox model ID. Agent/conversation publication
+reuses its observed model profile, avoiding Runner RPC under a publication lock.
+Inspection recovery resumes the owned process rather than consulting a different
+current model or repeating its start. Existing configured defaults are preserved.
+
+Search comparisons use the same private administrator-owned inspection Runs and
+bounded public metadata transport. They assess at most three sources without
+weights or runtime execution. Planning first verifies the unchanged comparison
+envelope, then the selected nested source hash; arbitrary or foreign observations
+cannot be supplied as replacements. Source failures and gated access remain
+unavailable rather than recommendations. Names remain untrusted text, and native
+hardware observations are never uploaded to publishers. Installation retains its
+separate source/license/hardware consent and native verification gates.
+
+Memory encoder imports do not execute repository Python or remote model code.
+The exact E5 ONNX graph is inspected in an owned, offline, deadline/address-space
+bounded CPU child before ONNX Runtime starts. External tensor files, custom
+operators/functions and nested graphs are rejected. Both encoder and fixed
+tokenizer must remain canonical, immutable, owned objects and pass content hashes.
+Private Run configuration permits only those identities and an absolute deadline.
+CPU Stop signals only the owned group; completion/error publication checks the
+original worker claim. An explicit administrator settings revision changes the
+station's encoder, while memory content, indexing and activity stay account scoped.
+
+The ACE-Step music checkpoint inspection adds only a finite metadata profile to
+the existing owned-model verifier. It grants no download, arbitrary path, code or
+runtime execution authority. Tensor names, dimensions, BF16 storage and complete
+layout must match; the slot binds the exact trusted SDK and companion manifest.
+Its catalog descriptor cannot bypass the existing per-device GPU and physical
+RAM gate. New source installation and private Run model views remain separately
+required contracts.
+
+The discovered-music candidate allows a model Task to own `music_setup` only with
+matching administrator ownership, licensed immutable model/engine manifests,
+explicit offload-workload consent and its exact dependency. Hardware is rechecked
+before prerequisite transfers. Shared definitions contain only opaque engine and
+verified checkpoint identities, never another account's preparation coordinates.
+Parent dispatch validates the frozen binding; the offline child rehashes weights,
+retains the exact SDK/configuration/companions and uses an independent deadline
+inside the owned memory scope. The per-Run view can replace only diffusion, never
+publisher Python. Repeat-start/inspection preserves the original request and
+engine, and cannot launch another process against a later current default.
+
+Sonic checkpoint inspection uses a closed data decoder rather than an unpickler.
+Known GLOBAL/REDUCE/BUILD tokens are interpreted as bounded symbolic tensor or
+module-version data; no referenced function/class is imported or called. Unknown
+instructions, hooks, storage aliases, arbitrary strides, compressed/code entries,
+overlapping extents and excessive metadata are refused. A finite native profile
+also requires the exact Sonic graph, precision and trusted companion manifest.
+This adds no generic PyTorch loader or execution permission. The separate offline
+tensor mapper verifies immutable owned-file identity and full SHA-256 before
+mapping CPU storage privately; it does not yet replace the avatar inference path.
+
+Remote tensor metadata inspection first validates the finite archive directory,
+then permits only disjoint metadata-entry extents. At most eight exact HTTP
+ranges and roughly four MiB are accepted. Ignored ranges, compression, invalid
+directories, code entries, changed lengths and reads into unobserved storage fail
+closed. Transport reuses public-DNS pinning and redirect validation. The sparse
+reader has no network capability; the Docker image shares only the pure parsers,
+without the native Runner API or Torch. A remote graph match does not establish
+native storage-layout validity or grant installation/execution authority.
+
+The working avatar import candidate admits only that closed graph into normal
+model Tasks. Its optional setup Run must match the owner, immutable complete
+recipe, license/workload consent and parent dependency. Hardware is checked
+again before engine and selected-weight transfers. Shared bindings accept only
+profile/manifest/opaque-environment coordinates, refusing private setup IDs.
+Native selected-checkpoint requests freeze the source in a version-2 owned
+receipt; older requests retain their exact version-1 form. Full content and graph
+admission precede framework imports. Only the adapted UNet state changes, while
+SDK/companions, scopes, deadlines, GPU ownership and replay remain fixed.
+The selected route passed its complete Linux qualification; its native gate can
+still withdraw normal dispatch independently of publisher metadata. The explicit
+internal real-GPU engineering entry retains its existing opt-in.
+
+An installed avatar choice grants no installation or arbitrary-code permission to
+conversation/agent execution. The normal avatar Run carries only the exact
+checkpoint observation and reviewed engine identity, with filesystem-read and
+workspace-write permissions. Native dispatch checks complete content/graph,
+physical RAM, each allocated GPU and the existing owned process/deadline contract.
+Pending engine hashes can defer publication; unavailable or changed engines still
+refuse it. Successful cache verification does not rewrite an immutable object's
+permissions/ctime merely to return it, preserving the readiness identity.
+
+Declared split-model groups are metadata only. Grouping separates directory and
+variant prefixes, validates contiguous numbering, unique object identities and a
+bounded part count; incomplete/conflicting sets cannot claim a complete byte total.
+The inspection never follows publisher commands or fetches weight payloads. Group
+manifests are included in the ordinary private observation fingerprint, and an
+individual fragment still cannot obtain a model installation plan or native launch.
+
+
+Split GGUF verification accepts 2–64 distinct immutable owned SHA references,
+never publisher paths or Docker options. It bounds aggregate bytes, header reads
+and tensor descriptors, checks all files before/after inspection, and refuses
+renamed fragments through single-file loading. Bundle execution requires its
+qualified immutable llama.cpp image, selected real GPUs, a trained Q8 context
+and independently sufficient free VRAM/RAM. No CPU/cloud fallback is introduced.
+All object mounts are read-only; the complete saved model/runtime mount set must
+match before inspection or any owned signal. Stop/recovery use that container
+binding without reopening files that may have disappeared. Structural agreement
+alone does not grant model-specific inference qualification or source installation.
+
+
+The complete GGUF source installer freezes one revision's complete ordered
+SHA/size/URL set and pinned language configuration. It reuses existing download
+ownership, account authority, Stop, resume, storage headroom and registry fences.
+No model is published from an individual part; native whole-set evidence must
+match before registration and again before dispatch. Only shared owned model
+coordinates cross private runtime ownership boundaries, with no initiating prompt
+or conversation. Its Linux source activation follows complete public-transfer/native/Chat/agent
+qualification. Differing context claims never bypass attention/cache checks or
+silently enlarge the reviewed preset. A file limit below that review is refused.
+
+
+Complete models sharing a primary object retain separate immutable bindings.
+A typed optional logical definition must belong to the stated physical file and
+its ordered-content key must match the whole set. Load intents and shared runtime
+facts check that logical ID as well as the complete source; a sibling runtime is
+never evidence for this selection. No additional Runner authority is introduced.
+Removal preserves a tombstone and refuses an active/uncertain matching runtime;
+foreign private Runs remain private. Migration downgrade refuses additional
+bindings rather than discard references. Explicit restore verifies the original
+source without overwriting another model or deleting shared objects.
+
+
+Shared model provenance exposes only validated public publisher coordinates,
+license name and canonical URLs matching the observed object. It never projects
+raw download recipes, private Run IDs, arbitrary source URLs or credentials.
+Opening update review requires an explicit inspection action and retains the
+existing administrator, metadata-only and immutable-plan consent boundaries.
+
+
+Model cache hints open only the configured application root/models/store directory
+chain with no-follow directory descriptors and inspect bounded SHA object names
+without opening payloads. Only matching prior verified registry observations on
+owned, single-link, read-only regular files reduce disk estimates. The downloader
+still rehashes every reused object and native dispatch verifies its binding; the
+advice does not assert that matching size/time proves current content integrity.

@@ -69,15 +69,19 @@ type Catalog = {
     headroom_bytes: number;
   } | null;
 };
-type Preparation = {
+export type Preparation = {
   id: string;
-  entry: Entry;
+  entry: Pick<Entry, "name" | "file" | "quantization"> & {
+    capability?: string;
+  };
+  definition_id?: string | null;
   attempt: number;
   run: Run;
   model_key: string | null;
   resume_allowed: boolean;
   progress: {
     phase?: string;
+    engine_run_id?: string;
     received_bytes?: number;
     expected_bytes?: number;
     ready_to_try?: boolean;
@@ -112,7 +116,7 @@ function PreparedModel({
     </Button>
   );
 }
-function PreparationCard({
+export function PreparationCard({
   value,
   canPrepare,
   refresh,
@@ -158,15 +162,23 @@ function PreparationCard({
         ? "Stopped · downloaded bytes are retained"
         : value.run.status === "failed" || value.run.status === "interrupted"
           ? "Preparation needs attention"
-          : phase === "verifying"
-            ? "Checking the complete file"
-            : phase === "inspecting"
-              ? "Checking the model and runtime"
-              : phase === "waiting_for_existing_transfer"
-                ? "Waiting for another transfer"
-                : value.run.status === "queued"
-                  ? "Queued"
-                  : "Downloading model";
+          : phase === "preparing_image_engine" ||
+              phase === "preparing_video_engine" ||
+              phase === "preparing_speech_engine" ||
+              phase === "preparing_music_engine" ||
+              phase === "preparing_avatar_engine"
+            ? `Preparing ${phase.split("_")[1]} engine and companions`
+            : phase === "checking_avatar_engine"
+              ? "Checking installed avatar files"
+              : phase === "verifying"
+                ? "Checking the complete file"
+                : phase === "inspecting"
+                  ? "Checking the model and runtime"
+                  : phase === "waiting_for_existing_transfer"
+                    ? "Waiting for another transfer"
+                    : value.run.status === "queued"
+                      ? "Queued"
+                      : "Downloading model";
   return (
     <article
       className="panel setup-download"
@@ -232,12 +244,80 @@ function PreparationCard({
             Resume preparation
           </Button>
         )}
+        {value.entry.capability === "embedding" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/memory?embedding_model=${value.definition_id}`}
+            >
+              Choose this encoder in Memory →
+            </Link>
+          )}
+        {value.entry.capability === "music" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/audio?mode=music&model=${value.definition_id}`}
+            >
+              Create with this music model →
+            </Link>
+          )}
+        {value.entry.capability === "speech" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/audio?model=${value.definition_id}`}
+            >
+              Open Audio with this model →
+            </Link>
+          )}
+        {value.entry.capability === "avatar" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/avatars?model=${value.definition_id}`}
+            >
+              Open Avatars with this model →
+            </Link>
+          )}
+        {value.entry.capability === "video" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/video?model=${value.definition_id}`}
+            >
+              Open Video with this model →
+            </Link>
+          )}
+        {value.entry.capability === "image" &&
+          value.definition_id &&
+          value.progress.ready_to_try && (
+            <Link
+              className="text-link"
+              to={`/images?model=${value.definition_id}`}
+            >
+              Open Images with this model →
+            </Link>
+          )}
         {value.model_key && value.progress.ready_to_try && (
           <PreparedModel
             model={value.model_key}
             onOpen={onOpen}
             opening={opening}
           />
+        )}
+        {value.progress.engine_run_id && (
+          <Link
+            className="text-link"
+            to={`/runs/${value.progress.engine_run_id}`}
+          >
+            Engine setup & logs
+          </Link>
         )}
         <Link className="text-link" to={`/runs/${value.run.id}`}>
           Details & logs

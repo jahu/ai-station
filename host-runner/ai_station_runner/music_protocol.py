@@ -102,7 +102,7 @@ def verify_source(source_root):
     return root
 
 
-def checkpoint_view(model_root, source_root, destination, *, immutable_root=None):
+def checkpoint_view(model_root, source_root, destination, *, immutable_root=None, selected_checkpoint=None):
     """Create an owned per-Run view; upstream code sync never touches weights."""
     import shutil
 
@@ -118,7 +118,11 @@ def checkpoint_view(model_root, source_root, destination, *, immutable_root=None
             # authoritative. Its initializer would otherwise rewrite model code.
             shutil.copyfile(source / "models/turbo" / target.name, target)
         else:
-            target.symlink_to(model_file(model_root, item, immutable_root=immutable_root))
+            target.symlink_to(
+                selected_checkpoint
+                if selected_checkpoint is not None and item["path"] == "acestep-v15-turbo/model.safetensors"
+                else model_file(model_root, item, immutable_root=immutable_root)
+            )
     return destination
 
 

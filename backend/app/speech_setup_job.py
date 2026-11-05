@@ -105,6 +105,9 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
             runner = self.runner()
             hardware = runner.hardware()
             alive()
+            from app.hub_image_preparation import recheck_hardware
+
+            recheck_hardware(run, hardware)
             storage = DownloadStorage(
                 folder, hardware, runner, remaining, headroom_bytes=self.storage_headroom_bytes
             )

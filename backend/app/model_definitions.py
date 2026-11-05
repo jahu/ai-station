@@ -49,7 +49,7 @@ COMPATIBILITY = (
         "runtime": "stable-diffusion.cpp",
         "adapter": "none",
         "operational": False,
-        "summary": "Image GGUFs are observed only. No managed image-GGUF runtime is enabled.",
+        "summary": "Observed image GGUFs need a complete supported recipe. Discover can import compatible Qwen Image 2.1 checkpoints with a verified managed runtime binding.",
     },
     {
         "format": "gguf",
@@ -160,6 +160,31 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
     from app.data_access import accessible_run_id
 
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
+    from app.model_provenance import publisher_source
+
+    provenance = publisher_source(row, file)
+    bundle_summary = None
+    if (row.metadata_json or {}).get("model_bundle"):
+        from app.gguf_bindings import OwnedBundle, checked_proof
+
+        try:
+            bundle = OwnedBundle.model_validate(row.metadata_json["model_bundle"])
+            checked_proof(bundle, row.metadata_json.get("bundle_proof"))
+            names = row.metadata_json.get("source_parts", [])
+            bundle_summary = {
+                "status": "verified",
+                "size_bytes": bundle.size_bytes,
+                "part_count": len(bundle.parts),
+                "parts": [
+                    {
+                        **part.model_dump(),
+                        "filename": names[index].get("filename", "") if index < len(names) else "",
+                    }
+                    for index, part in enumerate(bundle.parts)
+                ],
+            }
+        except ValueError:
+            bundle_summary = {"status": "inspection_required"}
     image = (row.metadata_json or {}).get("image")
     image_backend = image.get("backend") if isinstance(image, dict) and row.category == "image" else None
     if spec and image_backend in {"qwen", "krea2"}:
@@ -170,8 +195,64 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
             "operational": row.status == "registered",
             "summary": "Select this installed image checkpoint and operation settings in Images. Models load only when its Run executes.",
         }
+        if image.get("binding"):
+            spec.update(runtime="stable-diffusion.cpp", adapter="managed-container")
+    video = (row.metadata_json or {}).get("video")
+    if row.category == "video" and isinstance(video, dict) and video.get("binding"):
+        spec = {
+            **(spec or {}),
+            "runtime": "Wan · headless ComfyUI",
+            "adapter": "managed-native",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Video. Its fixed workload uses explicit CPU offload.",
+        }
+    speech = (row.metadata_json or {}).get("speech")
+    embedding = row.category == "other" and bool((row.metadata_json.get("embedding") or {}).get("binding"))
+    if embedding:
+        spec = {
+            "runtime": "ONNX · CPU encoder",
+            "adapter": "control-plane-cpu",
+            "operational": row.status == "registered",
+            "summary": "Choose this encoder explicitly in Memory. It uses CPU and its fixed tokenizer; it does not replace a chat model.",
+        }
+    avatar = (row.metadata_json or {}).get("avatar")
+    avatar_backend = row.category == "video" and isinstance(avatar, dict) and bool(avatar.get("binding"))
+    if avatar_backend:
+        spec = {
+            "runtime": "Sonic · whole-recording avatars",
+            "adapter": "native-avatar",
+            "operational": row.status == "registered",
+            "summary": "Choose this installed model in Avatars. Its complete local engine and CPU-offload profile remain fixed.",
+        }
+    music = (row.metadata_json or {}).get("music")
+    music_backend = row.category == "audio" and isinstance(music, dict) and bool(music.get("binding"))
+    if music_backend:
+        spec = {
+            "runtime": "ACE-Step 1.5 Turbo",
+            "adapter": "native-music",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Music. Its fixed workload uses explicit CPU offload.",
+        }
+    speech_backend = row.category == "audio" and isinstance(speech, dict) and bool(speech.get("binding"))
+    if speech_backend:
+        spec = {
+            **(spec or {}),
+            "runtime": "Chatterbox multilingual v3",
+            "adapter": "managed-native",
+            "operational": row.status == "registered",
+            "summary": "Select this installed checkpoint in Audio. It retains its fixed local engine and voice-reference requirements.",
+        }
     return {
         **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
+        **({"speech_backend": "chatterbox"} if speech_backend else {}),
+        **({"music_backend": "ace-step-1.5"} if music_backend else {}),
+        **({"avatar_backend": "sonic"} if avatar_backend else {}),
+        **({"embedding_backend": "e5_cpu"} if embedding else {}),
+        **(
+            {"video_backend": "wan22"}
+            if row.category == "video" and isinstance(video, dict) and video.get("binding")
+            else {}
+        ),
         "id": row.id,
         "name": row.name,
         "family": row.family,
@@ -182,7 +263,17 @@ def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict
         "last_verify_run_id": accessible_run_id(row, row.last_verify_run_id),
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
+        "model_key": "llamacpp:" + (row.id if row.binding_key else row.file_id)
+        if row.file_id and row.category == "llm"
+        else None,
+        **({"publisher_source": provenance} if provenance else {}),
         "preset": preset_of(row),
+        **({"gguf_bundle": bundle_summary} if bundle_summary else {}),
+        **(
+            {"context_notice": row.metadata_json["context_notice"]}
+            if (row.metadata_json or {}).get("context_notice")
+            else {}
+        ),
         "compatibility": spec,
         "file": (
             None
@@ -223,6 +314,12 @@ def store_preset(row: ModelDefinition, *, gpus, context_size, cache_type):
         gpus or context_size != 4096 or cache_type != "q8_0"
     ):
         raise HTTPException(422, "This managed CPU profile keeps its reviewed 4096-token Q8 preset")
+    if (row.metadata_json or {}).get("model_bundle") and (
+        not gpus or cache_type != "q8_0" or context_size < 4096
+    ):
+        raise HTTPException(
+            422, "Complete GGUF models require CUDA GPUs, Q8 cache and at least 4096 context tokens"
+        )
     if len(set(gpus)) != len(gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     row.metadata_json = {
@@ -293,6 +390,21 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
         raise HTTPException(409, "Cancel or finish the installation Run before editing this definition")
     if body.name is not None:
         row.name = body.name
+    if (
+        (row.metadata_json.get("embedding") or {}).get("binding")
+        or (row.metadata_json.get("video") or {}).get("binding")
+        or (row.metadata_json.get("speech") or {}).get("binding")
+        or (row.metadata_json.get("music") or {}).get("binding")
+        or (row.metadata_json.get("avatar") or {}).get("binding")
+    ):
+        if any(value is not None for value in (body.gpus, body.context_size, body.cache_type)):
+            raise HTTPException(
+                422,
+                "Change media operation settings in its workspace; this model retains its reviewed runtime binding",
+            )
+        row.updated_at = utcnow()
+        session.commit()
+        return definition_dict(row, file)
     preset = preset_of(row)
     store_preset(
         row,
@@ -307,10 +419,24 @@ def edit(definition_id: UUID, body: DefinitionPatch, session: DB):
 
 @router.delete("/definitions/{definition_id}", status_code=204)
 def remove(definition_id: UUID, session: DB):
-    row, _file = get_definition(session, definition_id)
+    row, file = get_definition(session, definition_id)
     if active_install(session, row.id):
         raise HTTPException(409, "Cancel the installation Run before removing this definition")
-    session.delete(row)
+    if (row.metadata_json or {}).get("model_bundle"):
+        from app.llama import instances
+        from app.model_selection import matches
+
+        if file is not None and any(
+            matches(item.metadata_json, file, row) and item.status not in {"stopped", "failed"}
+            for item in instances(session)
+        ):
+            raise HTTPException(409, "Stop this model runtime before removing its configuration")
+        # Keep its immutable identity: deleting a default binding would let a
+        # later sibling silently capture old conversation/agent file references.
+        row.status = "removed"
+        row.updated_at = utcnow()
+    else:
+        session.delete(row)
     session.commit()
 
 
@@ -328,10 +454,17 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
     from app.native_models import native
 
     check_image = needs_llama_image(file) and not native(row.metadata_json)
+    embedding_model = {}
+    if (row.metadata_json.get("embedding") or {}).get("binding"):
+        from app.registered_embeddings import frozen
+
+        embedding_model = {"embedding_model": frozen(session, row.id)}
     task = create_task(
         session,
         title="Install " + row.name,
-        prompt="Verify a local model file and its prepared native llama.cpp engine"
+        prompt="Verify the owned encoder/tokenizer graph and a nonzero CPU probe"
+        if embedding_model
+        else "Verify a local model file and its prepared native llama.cpp engine"
         if native(row.metadata_json)
         else "Verify a local model file and any already-installed llama.cpp image",
         capability="models.install",
@@ -342,14 +475,41 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         run_type="runtime",
         capability="models.install",
         executor_type="model_install",
-        execution_target="host",
+        execution_target="container" if embedding_model else "host",
+        requested_resources={"cpu_threads": 2, "ram_mib": 2048} if embedding_model else {},
         permissions=["filesystem_read", "manage_models"],
         retry_class="safe",
         parameters={
+            **embedding_model,
             "definition_id": row.id,
             "file_id": file.id,
-            **verify_source(source_of(file)),
+            **verify_source(source_of(file, session, row.id if row.binding_key else None)),
             "check_image": check_image,
+            **(
+                {"avatar_checkpoint_binding": dict(row.metadata_json["avatar"]["binding"])}
+                if (row.metadata_json.get("avatar") or {}).get("binding")
+                else {}
+            ),
+            **(
+                {"music_checkpoint_binding": dict(row.metadata_json["music"]["binding"])}
+                if (row.metadata_json.get("music") or {}).get("binding")
+                else {}
+            ),
+            **(
+                {"speech_checkpoint_binding": dict(row.metadata_json["speech"]["binding"])}
+                if (row.metadata_json.get("speech") or {}).get("binding")
+                else {}
+            ),
+            **(
+                {"video_checkpoint_binding": dict(row.metadata_json["video"]["binding"])}
+                if (row.metadata_json.get("video") or {}).get("binding")
+                else {}
+            ),
+            **(
+                {"checkpoint_binding": dict(row.metadata_json["image"]["binding"])}
+                if (row.metadata_json.get("image") or {}).get("binding")
+                else {}
+            ),
             **({"context_size": preset_of(row)["context_size"]} if native(row.metadata_json) else {}),
             **{
                 k: row.metadata_json[k]
@@ -378,6 +538,7 @@ def load_definition(definition_id: UUID, body: EmptyBody, session: DB):
     run = enqueue_load(
         LoadModel(
             model_file_id=file.id,
+            model_definition_id=row.id if row.binding_key else None,
             **{
                 k: preset[k]
                 for k in ("runtime_profile", "ram_mib", "environment_id")
@@ -411,6 +572,10 @@ class ModelInstallExecutor:
         if row is None or file is None:
             mark_failed(session, run, "DefinitionMissing", "The model definition or file disappeared")
             return "done"
+        if run.parameters.get("embedding_model"):
+            from app.embedding_recheck import execute
+
+            return execute(session, run, row)
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         transition(
             session, run, RunStatus.RUNNING, event_type="executor.started", payload={"mode": "metadata_only"}
@@ -447,10 +612,145 @@ class ModelInstallExecutor:
                     "size_bytes": run.parameters["size_bytes"],
                     "mtime": run.parameters["mtime"],
                     "check_image": bool(run.parameters.get("check_image")),
+                    **(
+                        {"model_bundle": run.parameters["model_bundle"], "check_context": True}
+                        if run.parameters.get("model_bundle")
+                        else {}
+                    ),
+                    **(
+                        {
+                            "checkpoint_profile": run.parameters["avatar_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("avatar_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {
+                            "checkpoint_profile": run.parameters["video_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("video_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {"checkpoint_profile": run.parameters["checkpoint_binding"]["checkpoint_profile"]}
+                        if run.parameters.get("checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {
+                            "checkpoint_profile": run.parameters["music_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("music_checkpoint_binding")
+                        else {}
+                    ),
+                    **(
+                        {
+                            "checkpoint_profile": run.parameters["speech_checkpoint_binding"][
+                                "checkpoint_profile"
+                            ]
+                        }
+                        if run.parameters.get("speech_checkpoint_binding")
+                        else {}
+                    ),
                     **(verification(run.parameters) if run.parameters.get("runtime_profile") else {}),
                     "permissions": run.effective_permissions,
                 }
             )
+            if run.parameters.get("model_bundle"):
+                from app.gguf_bindings import OwnedBundle, checked_proof
+
+                try:
+                    proof = checked_proof(
+                        OwnedBundle.model_validate(run.parameters["model_bundle"]), report.get("model_bundle")
+                    )
+                    if proof != row.metadata_json.get("bundle_proof"):
+                        raise ValueError("The complete model geometry changed since installation")
+                except ValueError as exc:
+                    report["error"] = str(exc)
+            if run.parameters.get("avatar_checkpoint_binding"):
+                from app.avatar_models import profile_for
+
+                binding = run.parameters["avatar_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("module_metadata_sha256") != binding["module_metadata_sha256"]
+                    or proof.get("source") != "pytorch_zip_tensor_data"
+                    or proof.get("storage_layout_verified") is not True
+                ):
+                    report["error"] = "The selected avatar checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
+            if run.parameters.get("music_checkpoint_binding"):
+                from app.music_models import profile_for
+
+                binding = run.parameters["music_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected music checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
+            if run.parameters.get("speech_checkpoint_binding"):
+                from app.audio_models import profile_for
+
+                binding = run.parameters["speech_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected speech checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
+            if run.parameters.get("video_checkpoint_binding"):
+                from app.video_models import profile_for
+
+                binding = run.parameters["video_checkpoint_binding"]
+                proof = report.get("checkpoint_profile") or {}
+                if (
+                    proof.get("schema_sha256") != binding["schema_sha256"]
+                    or proof.get("source") != "safetensors_descriptors"
+                ):
+                    report["error"] = "The selected video checkpoint graph could not be verified"
+                else:
+                    try:
+                        profile_for(session, row.id, recheck=True)
+                    except HTTPException as exc:
+                        report["error"] = str(exc.detail)
+            if run.parameters.get("checkpoint_binding"):
+                from app.image_setup_client import ImageSetupClient
+
+                binding = run.parameters["checkpoint_binding"]
+                engine = ImageSetupClient(timeout=20).runtime_setup_catalog()
+                proof = report.get("checkpoint_profile") or {}
+                if not (
+                    proof.get("schema_sha256") == binding["schema_sha256"]
+                    and proof.get("runtime_profile") == binding["runtime_profile"]
+                    and proof.get("source") == "gguf_tensor_descriptors"
+                    and (engine.get("managed_images") or {}).get("available")
+                    and engine["recipe"]["model_manifest_sha256"] == binding["manifest_sha256"]
+                ):
+                    report["error"] = (
+                        "The selected image graph, engine or required companions could not be verified"
+                    )
         except RunnerError as exc:
             if exc.status_code < 500:
                 row.status = "failed"

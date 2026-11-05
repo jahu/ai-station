@@ -521,13 +521,23 @@ class ModelFile(Base):
 
 class ModelDefinition(Base):
     __tablename__ = "model_definitions"
-    __table_args__ = (Index("uq_model_definitions_file_id", "file_id", unique=True),)
+    __table_args__ = (
+        Index(
+            "uq_model_definitions_file_default",
+            "file_id",
+            unique=True,
+            sqlite_where=text("binding_key IS NULL"),
+            postgresql_where=text("binding_key IS NULL"),
+        ),
+        Index("uq_model_definitions_binding_key", "binding_key", unique=True),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(200))
     family: Mapped[str] = mapped_column(String(80), default="")
     category: Mapped[str] = mapped_column(String(40), default="llm")
     file_id: Mapped[str | None] = mapped_column(ForeignKey("model_files.id"), nullable=True)
+    binding_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     capabilities: Mapped[list] = mapped_column(JSON, default=list)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     status: Mapped[str] = mapped_column(String(20), default="unverified", index=True)

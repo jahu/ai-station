@@ -17,6 +17,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ai_station_runner import __version__, managed_image_job
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.audio import capabilities as speech_capabilities
+from ai_station_runner.avatar_model_selection import ModelSelection as AvatarModelSelection
 from ai_station_runner.avatar_prepare import router as avatar_setup_router
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.browser_runs import BrowserRequest
@@ -61,6 +62,7 @@ from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
 from ai_station_runner.music_prepare import router as music_setup_router
+from ai_station_runner.music_runtime_schema import CheckpointSelection as MusicCheckpointSelection
 from ai_station_runner.native_llama_prepare import router as native_llama_setup_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -83,13 +85,14 @@ from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.sonic_jobs import WholeAvatarRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.speech_prepare import router as speech_setup_router
+from ai_station_runner.speech_runtime_schema import CheckpointSelection as SpeechCheckpointSelection
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
 from ai_station_runner.timeline_contract import TimelineRequest
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
-from ai_station_runner.video import VideoRequest, start_video
+from ai_station_runner.video import CheckpointSelection, VideoRequest, start_video
 from ai_station_runner.video import capabilities as video_capabilities
 from ai_station_runner.video_prepare import router as video_setup_router
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
@@ -857,6 +860,13 @@ def local_music_capabilities():
     return music_capabilities()
 
 
+@app.post("/v1/music/model-capabilities")
+def music_model_available(body: MusicCheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Music model inspection requires filesystem read permission")
+    return music_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
+
+
 @app.post("/v1/runs/music")
 def music_run(body: MusicRequest):
     try:
@@ -889,6 +899,13 @@ def whole_avatar_capabilities():
     from ai_station_runner.sonic_runtime import capabilities
 
     return capabilities()
+
+
+@app.post("/v1/avatar/model-capabilities")
+def selected_avatar_capabilities(body: AvatarModelSelection):
+    from ai_station_runner.avatar_model_selection import capabilities
+
+    return capabilities(body)
 
 
 @app.post("/v1/runs/whole-avatar")
@@ -1098,6 +1115,25 @@ def browser_report_endpoint(run_id: UUID):
 @app.get("/v1/video/capabilities")
 def video_available():
     return video_capabilities()
+
+
+@app.post("/v1/audio/model-capabilities")
+def speech_model_available(body: SpeechCheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Speech model inspection requires filesystem read permission")
+    try:
+        return speech_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
+    except (OSError, ValueError, KeyError) as exc:
+        raise HTTPException(
+            409, "The selected speech engine or checkpoint is unavailable or changed"
+        ) from exc
+
+
+@app.post("/v1/video/model-capabilities")
+def video_model_available(body: CheckpointSelection):
+    if set(body.permissions) != {"filesystem_read"}:
+        raise HTTPException(403, "Video model inspection requires filesystem read permission")
+    return video_capabilities(body.checkpoint, body.managed_runtime.model_dump(mode="json"))
 
 
 @app.post("/v1/runs/video")

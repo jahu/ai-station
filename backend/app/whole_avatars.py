@@ -175,13 +175,23 @@ def verify_snapshots(session, snapshots):
 
 
 def create_whole_run(
-    session, body, *, task, parent_run_id=None, recipe=None, observed_profile=None, execution_deadline_at=None
+    session,
+    body,
+    *,
+    task,
+    parent_run_id=None,
+    recipe=None,
+    observed_profile=None,
+    execution_deadline_at=None,
+    model=None,
 ):
     from app.media_jobs import execution_budget
 
     if body.generation_profile != PROFILE:
         raise ValueError("Whole-recording execution requires its explicitly selected quality profile")
-    profile = capabilities() if observed_profile is None else observed_profile
+    from app.avatar_models import profile_for_request
+
+    profile = profile_for_request(session, body, observed_profile, frozen=model)
     selected = verify_recipe(profile, recipe if recipe is not None else profile.get("recipe"))
     managed = {}
     if selected.get("environment_id"):
@@ -213,6 +223,7 @@ def create_whole_run(
         parent_run_id=parent_run_id,
         parameters={
             **managed,
+            **({"avatar_model": profile["avatar_model"]} if profile.get("avatar_model") else {}),
             "generation_profile": PROFILE,
             "whole_recipe": selected,
             "whole_inputs": inputs,
@@ -323,6 +334,12 @@ class WholeAvatarExecutor(HostMediaExecutor):
         return None  # Wait for actual free VRAM; never stop an external runtime.
 
     def validate_inputs(self, session, run):
+        if run.parameters.get("avatar_model"):
+            from app.avatar_models import same_model, validate_snapshot
+
+            model = validate_snapshot(run.parameters["avatar_model"])
+            if not same_model(model, (run.task.metadata_json.get("media_plan") or {}).get("avatar_model")):
+                raise ValueError("The avatar Run changed its frozen model")
         sources = run.parameters["whole_inputs"]
         if not isinstance(sources, list) or len(sources) != 2:
             raise ValueError("Missing frozen whole-recording inputs")
@@ -343,6 +360,11 @@ class WholeAvatarExecutor(HostMediaExecutor):
             {
                 "run_id": run.id,
                 "recipe": frozen_recipe(run.parameters["whole_recipe"]),
+                **(
+                    {"checkpoint": run.parameters["avatar_model"]["checkpoint"]}
+                    if run.parameters.get("avatar_model")
+                    else {}
+                ),
                 "portrait": {key: sources[0][key] for key in ("relative_path", "size_bytes", "sha256")},
                 "audio": {key: sources[1][key] for key in ("relative_path", "size_bytes", "sha256")},
                 "observed_input": run.parameters["observed_input"],
@@ -357,6 +379,7 @@ class WholeAvatarExecutor(HostMediaExecutor):
         report = artifact.metadata_json["avatar_verification"]
         if (
             report["recipe"] != run.parameters["whole_recipe"]
+            or report.get("checkpoint") != (run.parameters.get("avatar_model") or {}).get("checkpoint")
             or report["observed_input"] != run.parameters["observed_input"]
             or any(type(value) is not int for value in report["observed_input"].values())
             or report["input_sha256"]
@@ -404,11 +427,16 @@ class WholeAvatarExecutor(HostMediaExecutor):
             "input_sha256",
             "video_sha256",
         }
+        selected = type(report) is dict and "checkpoint" in report
+        if selected:
+            fields.add("checkpoint")
         if (
             type(report) is not dict
             or set(report) != fields
             or type(report["version"]) is not int
-            or report["version"] != 1
+            or report["version"] != (2 if selected else 1)
+            or selected
+            and type(report["checkpoint"]) is not dict
             or report["verified"] is not True
             or report["run_id"] != path.stem
             or report["backend"] != "sonic"

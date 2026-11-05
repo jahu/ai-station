@@ -128,7 +128,9 @@ def owned_load(runtime, monkeypatch):
     from ai_station_runner import llama_runtime
 
     root, original, state = runtime
-    data = b"GGUFneutral-model"
+    from test_gguf_context import fields, header
+
+    data = bytes(header(fields()))
     sha = hashlib.sha256(data).hexdigest()
     path = root / "models/store" / sha
     path.parent.mkdir(parents=True)

@@ -51,7 +51,7 @@ def fake_movie(path, body, root):
         for packet in sound.encode():
             movie.mux(packet)
     report = {
-        "version": 1,
+        "version": 2 if "checkpoint" in body else 1,
         "verified": True,
         "run_id": body["run_id"],
         "backend": "sonic",
@@ -59,6 +59,7 @@ def fake_movie(path, body, root):
         "observed_input": observed,
         "input_sha256": {key: body[key]["sha256"] for key in ("portrait", "audio")},
         "video_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        **({"checkpoint": body["checkpoint"]} if "checkpoint" in body else {}),
     }
     path.with_suffix(".json").write_text(json.dumps(report))
 

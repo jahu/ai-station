@@ -40,6 +40,7 @@ import { Button } from "./components/ui/button";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
 import ModelSetup from "./pages/ModelSetup";
+import ModelDiscover from "./pages/ModelDiscover";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
 import CodingSession from "./pages/CodingSessions";
@@ -421,6 +422,7 @@ export default function App() {
             <Route path="/settings/:section" element={<Settings />} />
             <Route path="/setup/models" element={<ModelSetup />} />
             <Route path="/models" element={<Models />} />
+            <Route path="/models/discover" element={<ModelDiscover />} />
             <Route path="/models/:id" element={<ModelDetail />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/agents/:id" element={<AgentDetail />} />

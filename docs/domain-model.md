@@ -95,8 +95,8 @@ Scoped (`conversation`, `agent`, `project`, `global`) and typed (`fact`, `decisi
 
 These are different records.
 
-- A **model file** is a discovered file in a configured root.
-- A **model definition** is a user-curated logical model (family, capabilities, load preset) that points at one observed file. Discovery never creates it. Explicit installation verifies the local file and, for llama.cpp, an already-installed image; it does not download weights.
+- A **model file** is a physical file observed in a configured root or verified in the application-owned object store. A complete logical model can require several such objects.
+- A **model definition** is a reviewed logical model (family, capabilities, load preset) linked to a primary observed file and, for complete models, an immutable component binding. Additional complete GGUF sets may share the same physical primary file and keep distinct selection UUIDs/content keys. Metadata discovery alone creates no executable definition. Reviewed source installation downloads and verifies the complete plan; re-checking an existing definition verifies its retained files and runtime without downloading replacement weights. Removing a complete definition retains an identity tombstone and its files for explicit restoration.
 - A **runtime** is an engine (llama.cpp, photo_pipe, stable-diffusion.cpp).
 - A **runtime instance** is a process or endpoint, marked `external` or `managed`.
 
@@ -198,3 +198,11 @@ inspected input/document snapshots, ordered artifact parents and actual current
 user/orchestrator IDs. The same snapshot binds the normal agent_draft child and
 definition artifact. It is controller-owned, absent for legacy requests and does
 not alter existing receipt payloads or definition schemas.
+
+Discovered avatar definitions use the shared `ModelFile`/`ModelDefinition` records
+and video category with an explicit `avatar` capability. Their avatar binding
+contains the fixed graph/module metadata, immutable owned checkpoint observation,
+complete runtime manifest and opaque environment identity. Ordinary avatar plans,
+speech handoffs and agent roots freeze this binding in existing JSON parameters;
+renaming a definition or changing a later default cannot retarget an existing Run.
+Legacy requests omit the optional model coordinate, preserving saved receipts.

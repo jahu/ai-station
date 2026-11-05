@@ -6,9 +6,16 @@ import { api, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import "./MemorySemantic.css";
+import RegisteredMemoryModels, {
+  type MemoryModelChoice,
+} from "./RegisteredMemoryModels";
 
 type Hit = { id: string; content: string; scope: string; score: number };
 type Setup = {
+  model_id?: string;
+  can_prepare?: boolean;
+  registered_models?: MemoryModelChoice[];
+  selected_model?: MemoryModelChoice | null;
   configured: boolean;
   backend?: string;
   revision?: number;
@@ -119,8 +126,12 @@ export default function MemorySemantic({
         (b.created_at ?? "").localeCompare(a.created_at ?? ""),
       )[0];
   const local = current?.local_model;
-  const localMode = current?.backend === "local_cpu";
-  const ready = !!current?.configured && (!localMode || local?.installed);
+  const registeredMode = current?.backend === "registered_cpu";
+  const localMode = current?.backend === "local_cpu" || registeredMode;
+  const ready =
+    !!current?.configured &&
+    (!localMode ||
+      (registeredMode ? current?.selected_model?.available : local?.installed));
   const missing = Math.max(
     0,
     (current?.memory_count ?? 0) - (current?.indexed_count ?? 0),
@@ -154,6 +165,15 @@ export default function MemorySemantic({
           {localMode || !current?.configured ? "LOCAL · CPU" : "LOCAL ENDPOINT"}
         </span>
       </div>
+      {!!current?.registered_models?.length && (
+        <RegisteredMemoryModels
+          models={current.registered_models}
+          currentId={registeredMode ? current.model_id : undefined}
+          revision={current.revision ?? 0}
+          canSelect={current.can_prepare === true}
+          busy={busy}
+        />
+      )}
       {!ready && (
         <div className="memory-semantic-setup">
           <strong>
@@ -211,7 +231,12 @@ export default function MemorySemantic({
           <div className="memory-semantic-state">
             <div>
               <strong>
-                {localMode ? (local?.name ?? current?.model) : current?.model}
+                {registeredMode
+                  ? (current?.selected_model?.name ??
+                    "Selected encoder unavailable")
+                  : localMode
+                    ? (local?.name ?? current?.model)
+                    : current?.model}
               </strong>
               <span className="muted">
                 {current?.indexed_count} / {current?.memory_count} memories

@@ -1,3 +1,4 @@
+import MusicModelChoice from "../components/media/MusicModelChoice";
 import { useRef } from "react";
 import { Settings2 } from "lucide-react";
 import { useHardware } from "../api";
@@ -48,6 +49,12 @@ export default function MusicScope({
   }
   return (
     <section aria-label="Music settings">
+      <MusicModelChoice
+        value={value.model_id ?? ""}
+        onChange={(model_id) =>
+          onChange({ ...value, model_id: model_id || undefined })
+        }
+      />
       <p className="muted">
         Describe the style, instruments and mood in your message.{" "}
         {descriptionLength ?? 0} / {descriptionLimit} characters.

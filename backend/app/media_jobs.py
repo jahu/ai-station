@@ -86,6 +86,10 @@ def publish_video(
         return job_view(session, prior)
     # Avoid Runner HTTP inside the caller's locked agent publication.
     observed_profile = capabilities() if observed_profile is None else observed_profile
+    if body.model_id:
+        from app.video_models import profile_for
+
+        observed_profile = profile_for(session, body.model_id, observed_profile)
     if task is None:
         task = Task(
             id=str(body.client_request_id),
@@ -235,6 +239,7 @@ def publish_video(
             **budget,
             **({"agent_media_parent_run_id": parent_run_id} if budget else {}),
             "version": 1,
+            **({"video_model": managed["video_model"]} if managed.get("video_model") else {}),
             **({"managed_runtime": managed["managed_runtime"]} if managed else {}),
             "profile_observation": observed_profile.get("profile_observation"),
             "revision": 1,
@@ -421,9 +426,12 @@ def scene_progress(plan, stages):
 
 @router.post("/video", status_code=202)
 def generate(body: LongVideoRequest, session: DB):
-    if not capabilities().get("available"):
+    from app.video_models import profile_for
+
+    profile = profile_for(session, body.model_id) if body.model_id else capabilities()
+    if not profile.get("available"):
         raise HTTPException(409, "Configure the existing local Wan runtime")
-    result = publish_video(session, body)
+    result = publish_video(session, body, observed_profile=profile)
     session.commit()
     return result
 
@@ -627,6 +635,12 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
 
         verify_recipe(avatar_capabilities(), frozen_recipe(plan))
     profile = capabilities() if plan["kind"] == "video" else {}
+    if plan["kind"] == "video" and plan.get("request", {}).get("model_id"):
+        from app.video_models import profile_for, same_model
+
+        profile = profile_for(session, plan["request"]["model_id"], profile)
+        if not same_model(profile.get("video_model"), plan.get("video_model")):
+            raise HTTPException(409, "The selected video model changed; start a new media job")
     if plan["kind"] == "avatar":
         from app.avatars import memory_reservation as avatar_memory
 

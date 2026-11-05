@@ -608,3 +608,89 @@ def test_guard_code_is_packaged_outside_shared_application_storage(setup):
     guard = next(m for m in mounts if m["Target"] == "/station/deadline.sh")
     assert guard["ReadOnly"] and guard["Source"] == str(job.GUARD_PATH)
     assert not job.GUARD_PATH.is_relative_to(root)
+
+
+@pytest.fixture
+def checkpoint_request(setup, monkeypatch):
+    import struct
+
+    from ai_station_runner import media_checkpoints as slots
+
+    root, frozen, state, original = setup
+    content = b"GGUF" + struct.pack("<IQQ", 3, 1, 0)
+    name = b"weight"
+    content += struct.pack("<Q", len(name)) + name + struct.pack("<IQIQ", 1, 32, 30, 0)
+    content += bytes((-len(content)) % 32) + bytes(64)
+    sha = hashlib.sha256(content).hexdigest()
+    path = root / "models/store" / sha
+    path.write_bytes(content)
+    path.chmod(0o444)
+    schema = job.fingerprint({"weight": [32]})
+    slot = {
+        "tensor_count": 1,
+        "schema_sha256": schema,
+        "allowed_ggml_types": [30],
+        "runtime_profile": job.PROFILE,
+        "role": "diffusion",
+        "reference": {"size_bytes": len(content)},
+    }
+    monkeypatch.setattr(slots, "recipe", lambda profile: slot)
+    hardware = {
+        "memory": {"total_mib": 32768},
+        "gpus": [
+            {"index": 7, "uuid": "GPU-qa-seven", "memory_total_mib": 12288},
+            {"index": 19, "uuid": "GPU-qa-nineteen", "memory_total_mib": 12288},
+        ],
+    }
+    monkeypatch.setattr(job, "collect", lambda _: hardware)
+    body = job.Start.model_validate(
+        {
+            **original.model_dump(mode="json"),
+            "gpus": [7, 19],
+            "diffusion": {
+                "profile": slots.PROFILE,
+                "relative_path": "models/store/" + sha,
+                "sha256": sha,
+                "size_bytes": len(content),
+                "mtime": path.stat().st_mtime,
+                "schema_sha256": schema,
+            },
+        }
+    )
+    return body, path, hardware
+
+
+def test_selected_checkpoint_changes_only_its_read_only_diffusion_mount_and_can_stop(
+    setup, checkpoint_request
+):
+    _, frozen, state, _ = setup
+    body, path, _ = checkpoint_request
+    assert job.start(body)["alive"]
+    record = job.read(body.run_id)
+    models = {
+        v["Target"]: v for v in record["create"]["HostConfig"]["Mounts"] if v["Target"].startswith("/models/")
+    }
+    assert models["/models/diffusion.gguf"]["Source"] == str(path)
+    assert len(models) == 5 and all(v["ReadOnly"] for v in models.values())
+    assert job.start(body)["alive"] and state["create_count"] == state["start_count"] == 1
+    stopped = job.cancel(body.run_id, permissions=sorted(job.PERMISSIONS))
+    assert not stopped["alive"] and state["stop_count"] == 1
+
+
+def test_checkpoint_gpu_budget_and_fixed_graph_are_rechecked_before_dispatch(setup, checkpoint_request):
+    _, _, state, _ = setup
+    body, path, hardware = checkpoint_request
+    hardware["gpus"][0]["memory_total_mib"] = 8192
+    with pytest.raises(HTTPException, match="component budget"):
+        job.start(body)
+    assert state["create_count"] == state["start_count"] == 0
+
+
+def test_checkpoint_namespace_and_bounded_workload_cannot_be_overridden(checkpoint_request):
+    body, _, _ = checkpoint_request
+    request = body.model_dump(mode="json")
+    for update in ({"relative_path": "/etc/passwd"}, {"profile": "other-engine"}, {"command": "anything"}):
+        with pytest.raises(ValidationError):
+            job.Start.model_validate({**request, "diffusion": {**request["diffusion"], **update}})
+    with pytest.raises(ValidationError):
+        job.Start.model_validate({**request, "command": {**request["command"], "width": 2048}})

@@ -187,6 +187,7 @@ def preset(instance):
     meta = instance.metadata_json
     return LoadModel(
         model_file_id=meta["model_file_id"],
+        model_definition_id=meta.get("model_definition_id"),
         **fields(meta),
         gpus=meta["gpus"],
         context_size=meta["context_size"],
@@ -196,11 +197,15 @@ def preset(instance):
 
 
 def can_yield(session, consumer, requester, instance):
+    from app import model_selection as selections
+
+    model, definition = selections.resolve(session, selected_model(consumer))
     if (
-        consumer.id == requester.id
+        model is None
+        or not selections.matches(instance.metadata_json, model, definition)
+        or consumer.id == requester.id
         or consumer.status != "queued"
         or consumer.metadata_json.get("dispatch_attempted")
-        or selected_model(consumer) != "llamacpp:" + instance.metadata_json.get("model_file_id", "")
         or consumer.parameters.get("endpoint") != instance.endpoint
         or not waits_for(session, consumer.id, requester.id)
     ):
@@ -329,7 +334,7 @@ class LlamaResumeConsumerExecutor:
         observation = p["model_observation"]
         from app.model_sources import source_of
 
-        coordinate = source_of(model)
+        coordinate = source_of(model, session, p["preset"].get("model_definition_id"))
         if coordinate != {key: observation.get(key) for key in coordinate} or bool(
             observation.get("app_owned")
         ) != bool(model.relative_path):
@@ -338,6 +343,7 @@ class LlamaResumeConsumerExecutor:
             item
             for item in instances(session)
             if item.metadata_json.get("model_file_id") == model.id
+            and item.metadata_json.get("model_definition_id") == p["preset"].get("model_definition_id")
             and item.status not in {"stopped", "failed"}
         ]
         if any(

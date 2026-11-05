@@ -32,6 +32,7 @@ import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
 import TimelineEditor from "./TimelineEditor";
+import VideoModelChoice from "../components/media/VideoModelChoice";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
 import VideoMemoryProfile, {
   type VideoProfile,
@@ -213,10 +214,20 @@ function SceneForm({
   );
   const [seed, setSeed] = useState(Number(saved.seed ?? 43));
   const [gpu, setGpu] = useState(String(saved.gpu ?? "auto"));
+  const [modelId, setModelId] = useState(
+    String(search.get("model") ?? saved.model_id ?? ""),
+  );
   const [uploading, setUploading] = useState(false);
   const capability = useQuery({
-    queryKey: ["video-capabilities"],
-    queryFn: () => api<VideoCapabilities>("/video/capabilities"),
+    queryKey: modelId
+      ? ["video-capabilities", modelId]
+      : ["video-capabilities"],
+    queryFn: () =>
+      api<VideoCapabilities>(
+        modelId
+          ? `/video/models/${modelId}/capabilities`
+          : "/video/capabilities",
+      ),
   });
   const managed = capability.data?.configuration_source === "managed";
   const resolution = managed ? "1280x704" : resolutionChoice;
@@ -245,6 +256,7 @@ function SceneForm({
       scenePlanning,
       scenes,
       steps,
+      model_id: modelId || undefined,
       profileChoice: capability.data ? memoryProfile : profileChoice,
       seed,
       gpu,
@@ -259,6 +271,7 @@ function SceneForm({
     mutationFn: async () => {
       const [width, height] = resolution.split("x").map(Number);
       const values = {
+        ...(modelId ? { model_id: modelId } : {}),
         ...(memoryProfile !== "default"
           ? { memory_profile: memoryProfile }
           : {}),
@@ -377,6 +390,11 @@ function SceneForm({
             ? " Installed landscape profile · 11 GiB RAM. Clips and longer films use the same saved workspace."
             : " Reduced-RAM landscape profile selected. Change it in Advanced settings.")}
       </PageTitle>
+      {capability.error && (
+        <div className="notice" role="alert">
+          {capability.error.message}
+        </div>
+      )}
       {capability.data?.available === false && (
         <div className="notice" role="status">
           <strong>Set up local video to create your first film.</strong>
@@ -409,6 +427,11 @@ function SceneForm({
             <h2>Create video</h2>
             <span>01 / Scene & motion</span>
           </div>
+          <VideoModelChoice
+            value={modelId}
+            onChange={setModelId}
+            disabled={generate.isPending}
+          />
           <fieldset disabled={busy || uploading}>
             <fieldset className="video-source-mode">
               <legend>Starting point</legend>
@@ -572,6 +595,7 @@ function SceneForm({
                 Advanced settings<span>Steps, seed & GPU</span>
               </summary>
               <VideoMemoryProfile
+                modelId={modelId}
                 value={memoryProfile}
                 recommended={profileChoice === null}
                 onChange={(profile) => {

@@ -1,3 +1,5 @@
+import { useSpeechModels } from "../components/media/speech-models";
+import AvatarModelChoice from "../components/media/AvatarModelChoice";
 import type { AnalysisAgentSource } from "./AnalysisAgentDialog";
 import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
@@ -109,6 +111,8 @@ export type AssistantOptions = {
   stop: StopScope | null;
   upscale_result?: boolean;
   speech_text?: string | null;
+  speech_model_id?: string | null;
+  avatar_model_id?: string | null;
   media?: {
     duration_seconds: number;
     composition_mode: "continuous" | "shots";
@@ -941,7 +945,7 @@ function ImageReferenceStrip({
 
 export default function AssistantActions({
   value,
-  onChange,
+  onChange: applyChange,
   busy,
   onUploading,
   sources = [],
@@ -956,6 +960,30 @@ export default function AssistantActions({
   allowWork?: boolean;
   description?: string;
 }) {
+  function onChange(next: AssistantOptions) {
+    if (
+      next.avatar_model_id &&
+      (next.action !== "avatar.animate" ||
+        !next.audio_artifact_id ||
+        next.image_artifact_ids.length !== 1)
+    ) {
+      next = { ...next };
+      delete next.avatar_model_id;
+    }
+    if (
+      next.speech_model_id &&
+      (next.action !== "audio.speech" ||
+        !next.audio_artifact_id ||
+        next.image_artifact_ids.length)
+    ) {
+      const normalized = { ...next };
+      delete normalized.speech_model_id;
+      applyChange(normalized);
+    } else applyChange(next);
+  }
+  const speechModels = useSpeechModels(
+    value.action === "audio.speech" && !!value.audio_artifact_id,
+  );
   const [mediaLanguageOpen, setMediaLanguageOpen] = useState(false);
   const repositories = useQuery({
     queryKey: ["connectors"],
@@ -1442,6 +1470,17 @@ export default function AssistantActions({
             onChange={resetAction}
           />
         </div>
+        {value.action === "avatar.animate" &&
+          value.image_artifact_ids.length === 1 &&
+          value.audio_artifact_id && (
+            <AvatarModelChoice
+              value={value.avatar_model_id ?? ""}
+              disabled={busy}
+              onChange={(model) =>
+                onChange({ ...value, avatar_model_id: model || undefined })
+              }
+            />
+          )}
         {value.action === "data.analyze" && (
           <ConversationDataControls
             value={value.data}
@@ -1488,6 +1527,44 @@ export default function AssistantActions({
             )}
           </details>
         )}
+        {value.audio_artifact_id &&
+          !value.image_artifact_ids.length &&
+          value.action === "audio.speech" && (
+            <label>
+              Speech model
+              <select
+                aria-label="Speech model"
+                value={value.speech_model_id ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    speech_model_id: event.target.value || undefined,
+                  })
+                }
+              >
+                <option value="">Default local voice model</option>
+                {value.speech_model_id &&
+                  !speechModels.data?.items?.some(
+                    (model) => model.id === value.speech_model_id,
+                  ) && (
+                    <option value={value.speech_model_id} disabled>
+                      Saved local model · unavailable
+                    </option>
+                  )}
+                {(speechModels.data?.items ?? []).map((model) => (
+                  <option
+                    key={model.id}
+                    value={model.id}
+                    disabled={!model.available}
+                  >
+                    {model.name}
+                    {model.available ? "" : " · unavailable"}
+                  </option>
+                ))}
+              </select>
+              <ErrorNotice error={speechModels.error} />
+            </label>
+          )}
         {value.audio_artifact_id &&
           value.image_artifact_ids.length === 1 &&
           ["auto", "avatar.animate"].includes(value.action) && (

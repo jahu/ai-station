@@ -2,8 +2,9 @@
 
 from sqlalchemy import select
 
+from app import model_selection as selections
 from app.llama import fit_coding_context, loadable_model
-from app.models import ModelFile, Run, RunEvent, RuntimeInstance
+from app.models import Run, RunEvent, RuntimeInstance
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
 
@@ -78,16 +79,14 @@ def select_coding_model(session):
             load_observations[loader_id] = facts["ready_observation"]
     loaded_at = {rid: values[0] for rid, values in loads.items()}
     candidates = []
-    for model in session.scalars(
-        select(ModelFile).where(
-            ModelFile.category == "llm", ModelFile.availability == "present", ModelFile.format == "gguf"
-        )
-    ):
+    for model, definition in selections.choices(session):
         if not loadable_model(model):
             continue
 
         def matches_file(instance):
-            if instance.runtime_key != "llama.cpp":
+            if instance.runtime_key != "llama.cpp" or not selections.matches(
+                instance.metadata_json, model, definition
+            ):
                 return False
             meta = instance.metadata_json
             if meta.get("model_size_bytes") == model.size_bytes and meta.get("model_mtime") == model.mtime:
@@ -106,11 +105,11 @@ def select_coding_model(session):
             )
 
         observations = [
-            i for i in history if i.metadata_json.get("model_file_id") == model.id and matches_file(i)
+            i for i in history if selections.matches(i.metadata_json, model, definition) and matches_file(i)
         ]
         if any(i.status == "unknown" for i in observations):
             continue
-        prior = [i for i in history if i.metadata_json.get("model_file_id") == model.id]
+        prior = [i for i in history if selections.matches(i.metadata_json, model, definition)]
         prior.sort(
             key=lambda i: (
                 loaded_at.get(i.metadata_json.get("load_run_id"), i.updated_at),
@@ -149,13 +148,20 @@ def select_coding_model(session):
             for i in matching
             if i.metadata_json.get("context_fit") == "too_large"
         ]
-        context = fit_coding_context(
-            gpus=gpus,
-            size_bytes=model.size_bytes,
-            gpu_memory_mib=[memory[index] for index in gpus],
-            proven_success=proven,
-            failed_sizes=failed,
-            context_profile=profile,
+        from app.gguf_bindings import definition_proof, fitted_context
+
+        bundle_proof = definition_proof(session, model, selections.definition_id(definition))
+        context = (
+            fitted_context(bundle_proof, [memory[index] for index in gpus], 131072)
+            if bundle_proof
+            else fit_coding_context(
+                gpus=gpus,
+                size_bytes=model.size_bytes,
+                gpu_memory_mib=[memory[index] for index in gpus],
+                proven_success=proven,
+                failed_sizes=failed,
+                context_profile=profile,
+            )
         )
         if context < MINIMUM_CONTEXT:
             continue
@@ -172,7 +178,7 @@ def select_coding_model(session):
                 context,
                 model.id,
                 {
-                    "model": "llamacpp:" + model.id,
+                    "model": "llamacpp:" + selections.selection_id(model, definition),
                     "name": model.filename,
                     "context_size": context,
                     "context_verified": verified,

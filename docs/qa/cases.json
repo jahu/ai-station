@@ -1,5 +1,5 @@
 {
-  "version": 48,
+  "version": 53,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6209,9 +6209,199 @@
         "MVP-115",
         "trwałe Run/Events/Artifacts"
       ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Publiczna sieć do metadanych/pobrania; bez płatnego API. Generacja tylko lokalnie.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-006",
+      "title": "Link do drugiej części modelu i ocena całego zestawu",
+      "steps": [
+        "Otwórz Models → Find new models. Wklej https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/blob/bb5d59e06d9551d752d08b292a50eb208b07ab1f/qwen2.5-7b-instruct-q4_0-00002-of-00002.gguf",
+        "Sprawdź listę wymaganych plików, całkowity rozmiar, zalecane GPU/kontekst i miejsce na dysku. Nie rozpoczynaj jeszcze instalacji."
+      ],
+      "expected": [
+        "Widać jeden model z obiema częściami i około 4,1 GiB wag, a nie tylko rozmiar drugiego pliku.",
+        "Ocena dotyczy całego zestawu i rzeczywistego sprzętu. Samo sprawdzenie metadanych nie pobiera wag ani nie ładuje GPU."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu.",
+        "MODEL-006. Wariant nie jest jeszcze pobrany; jeśli jest już w pamięci podręcznej, zanotuj to i nie usuwaj działających modeli tylko dla testu. Instaluj wyłącznie model, który mieści się według oceny stacji."
+      ],
+      "resources": "Około 4,1 GiB pobrania i dodatkowe miejsce na runtime/cache. Bez płatnego API.",
+      "minutes": 15,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-007",
+      "title": "Stop i wznowienie pobierania kompletnego nowego modelu",
+      "steps": [
+        "Przejrzyj źródło i licencję, rozpocznij instalację. Gdy widać postęp, wybierz Stop.",
+        "Odśwież stronę i wróć do tego przygotowania. Wybierz wznowienie, poczekaj na weryfikację wszystkich plików."
+      ],
+      "expected": [
+        "Stop zachowuje pobrane dane, a niekompletny zestaw nie jest gotowym modelem do rozmowy.",
+        "Wznowienie dotyczy tej samej receptury i historii zadania. Po zakończeniu jest jeden model; wszystkie części są zweryfikowane, a postęp/rozmiar odnoszą się do całego zestawu."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Publiczna sieć do metadanych/pobrania; bez płatnego API. Generacja tylko lokalnie.",
+      "minutes": 12,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-008",
+      "title": "Nowy model z części: Chat, agent, rozmiar i zwolnienie zasobów",
+      "steps": [
+        "Po MODEL-007 sprawdź model w Models: rozmiar całego modelu oraz listę części; szczegóły pierwszego pliku powinny zachować jego fizyczny rozmiar.",
+        "Wybierz nowy model w Chat i zapytaj „Ile to 2+2?”. Utwórz prostego ręcznego agenta z tym samym modelem, bez zewnętrznych narzędzi, i uruchom go.",
+        "Po zakończeniu odpowiedzi i agenta zatrzymaj ten zarządzany runtime."
+      ],
+      "expected": [
+        "Chat i agent faktycznie używają wybranego nowego modelu. Nie powstaje niepotrzebnie drugi runtime tego samego zestawu.",
+        "Widać historię, model i wyniki wykonania. Stop zwalnia rezerwacje GPU/RAM oraz zatrzymuje tylko własny runtime, zachowując pliki modelu."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Działający Host Runner i przygotowane lokalne AI. Nie zmieniaj sterowników ani innych usług do testu."
+      ],
+      "resources": "Tylko metadane publiczne; nie pobieraj dużych wag do tego testu.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-009",
+      "title": "Zbyt duży model nie dostaje fałszywej rekomendacji",
+      "steps": [
+        "Wyszukaj lub wklej bartowski/Qwen2.5-72B-Instruct-GGUF. Przejrzyj wariant Q5_K_M i jego wymagane części, bez pobierania.",
+        "Porównaj ocenę z faktycznymi GPU, RAM i dyskiem. Na stacji 2×12 GiB GPU / 32 GiB RAM ten ponad 50-GiB zestaw nie powinien otrzymać pozytywnej oceny. Na mocniejszym sprzęcie oceń wynik zgodnie z rzeczywistą pojemnością."
+      ],
+      "expected": [
+        "Wymagania uwzględniają wszystkie części, kontekst i osobne pojemności GPU. Brak czujników oznacza niepewność, a nie zmyśloną pojemność.",
+        "Niepasujący model ma jasną przyczynę odmowy. Nie następuje ukryte przełączenie na chmurę/RAM ani transfer dużych plików."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany kompletny model GGUF i zachowana rozmowa z jego jawnym wyborem. Zatrzymaj jego runtime w Models przed usunięciem konfiguracji."
+      ],
+      "resources": "Istniejący zgodny model GGUF z kilkoma częściami; bez ponownego pobierania dużych wag.",
+      "minutes": 8,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-010",
+      "title": "Usunięcie i przywrócenie kompletnego modelu bez zmiany dawnych wyborów",
+      "steps": [
+        "W Models otwórz model i zapisz jego nazwę oraz części. Wybierz Remove definition.",
+        "Sprawdź, że model znika z wyboru w nowej rozmowie. Dawna rozmowa nie może bez Twojej decyzji przełączyć się na inny model. Wagi pozostają na dysku.",
+        "Otwórz zachowaną konfigurację w Models i wybierz Restore model configuration. Poczekaj na zakończenie weryfikacji, następnie wybierz dawny model w rozmowie i wyślij wiadomość."
+      ],
+      "expected": [
+        "Usunięcie działającego lub niepewnego runtime jest blokowane z jasną prośbą o jego zatrzymanie. Usunięcie konfiguracji nie kasuje plików ani historii.",
+        "Przywrócenie weryfikuje wszystkie pierwotne części i zachowuje ten sam wybór modelu. Inne modele i ich konfiguracje pozostają bez zmian."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany model z discovery albo zgodny model z katalogu startowego, z widocznym pochodzeniem Hugging Face."
+      ],
+      "resources": "Tylko publiczne metadane; bez pobierania wag do tego testu.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-011",
+      "title": "Pochodzenie modelu i jawny przegląd nowej wersji",
+      "steps": [
+        "Otwórz szczegóły modelu i zanotuj Publisher source, rewizję oraz licencję. Sprawdź View installed revision.",
+        "Kliknij Review publisher updates. Potwierdź, że link jest wpisany w discovery i nie ruszyła jeszcze żadna inspekcja ani instalacja.",
+        "Kliknij Check model, przejrzyj otrzymaną rewizję i dopasowanie do sprzętu. Wróć do modelu i dawnej rozmowy bez klikania Install."
+      ],
+      "expected": [
+        "Link do zainstalowanej rewizji jest przypięty do konkretnego commita. Widok nie ujawnia prywatnych Runów ani kluczy.",
+        "Sprawdzenie nowszej rewizji jest osobnym zadaniem metadanych. Nie zastępuje działającego modelu ani Twoich domyślnych wyborów."
+      ]
+    },
+    {
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto administratora. Zainstalowany zgodny model z discovery; pozostaw jego pliki bez zmian."
+      ],
+      "resources": "Tylko publiczne metadane; bez pobierania wag do tego testu.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "id": "MODEL-012",
+      "title": "Wykorzystanie pobranych wag w nowym planie",
+      "steps": [
+        "Sprawdź ponownie jego link w discovery i przejrzyj plan tej samej wersji.",
+        "Porównaj pełny rozmiar modelu z Model weights already present oraz szacowanym pobraniem. Dla kompletu GGUF sprawdź wszystkie części.",
+        "Potwierdź, że ocena kontekstu/GPU i wymagania runtime nadal są pokazane osobno. Nie usuwaj plików ani nie zmieniaj sterowników do testu."
+      ],
+      "expected": [
+        "Obecne, uprzednio zweryfikowane obiekty zmniejszają dodatkowe pobranie i rezerwę dyskową. Runtime i pliki pomocnicze zachowują własny budżet.",
+        "Widok wyjaśnia, że hashe są sprawdzane ponownie podczas instalacji. Sam cache nie oznacza zgodności modelu ani gotowości runtime."
+      ]
+    },
+    {
+      "id": "MODEL-013",
+      "area": "Modele i runtime",
+      "priority": "P1",
+      "title": "Wybór zastosowania i rekomendacje dopasowane do stacji",
+      "prerequisites": [
+        "Konto administratora i dostęp do publicznego Hugging Face."
+      ],
+      "resources": "Publiczne metadane; bez pobierania wag i bez generowania w tym teście.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/open-model-discovery.md",
+        "Task → Run → Events → Artifacts"
+      ],
+      "steps": [
+        "W Models kliknij Find new models. Poczekaj na porównanie maksymalnie trzech źródeł dla rozmów. Otwórz Context options i porównaj ponownie dla 128K, jeśli chcesz dłuższy kontekst.",
+        "W Use for wybierz Images albo Voice, w Browse wybierz Recently updated i kliknij Find for my station. Sprawdź nazwy, oznaczenie punktu startowego i ocenę sprzętu.",
+        "Otwórz Review variants dla zgodnego modelu. Przejrzyj pamięć GPU/RAM, dysk, licencję i wymagane pliki. Nie uruchamiaj instalacji. Odśwież ekran i wróć do zapisanej inspekcji."
+      ],
+      "expected": [
+        "Wyniki dotyczą wybranego zastosowania. Popularność, nowość i punkt startowy nie zastępują inspekcji ani oceny sprzętu. Nieznane zasoby i niezgodne runtime nie dostają oceny pasuje.",
+        "Powstaje zwykłe prywatne zadanie metadanych z historią i Stop. Wagi nie są pobierane, żaden model nie jest ładowany i domyślne wybory nie zmieniają się. Odświeżenie zapisanej inspekcji jej nie powiela."
+      ]
     }
   ],
-  "scope_notice": "Wydanie 0.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows 0.1 jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
+  "scope_notice": "Wydanie 0.2: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
   "deferred_cases": [
     {
       "id": "SETUP-155",

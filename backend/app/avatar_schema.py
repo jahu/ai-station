@@ -17,6 +17,8 @@ class AvatarMemorySettings(BaseModel):
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
+        if values.get("model_id") is None:
+            values.pop("model_id", None)
         if self.translation is None:
             values.pop("translation", None)
         if self.memory_profile == "default":
@@ -48,9 +50,12 @@ class FullAvatarSettings(AvatarMemorySettings):
     seed: StrictInt = Field(default=43, ge=0, le=2147483647)
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
     generation_profile: Literal["sonic_whole_768_v1"] | None = None
+    model_id: UUID | None = None
 
     @model_validator(mode="after")
     def whole_profile_controls(self):
+        if self.model_id is not None:
+            self.generation_profile = "sonic_whole_768_v1"
         if self.generation_profile is not None and self.translation is not None:
             raise ValueError("The fixed whole-recording recipe has no descriptive prompt to prepare")
         if self.generation_profile is not None and (

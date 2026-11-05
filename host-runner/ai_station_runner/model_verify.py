@@ -13,6 +13,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from ai_station_runner.config import _split, get_settings
+from ai_station_runner.gguf_bundle import ModelBundle, inspect_bundle
 from ai_station_runner.gguf_context import inspect_context
 from ai_station_runner.security import PathBoundaryError, ensure_within
 
@@ -29,6 +30,17 @@ class VerifyModel(BaseModel):
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
     check_context: StrictBool = False
+    model_bundle: ModelBundle | None = Field(default=None, exclude_if=lambda v: v is None)
+    checkpoint_profile: (
+        Literal[
+            "qwen-image21-diffusion-v1",
+            "wan22-5b-diffusion-v1",
+            "chatterbox-v3-t3-v1",
+            "ace-step15-turbo-diffusion-v1",
+            "sonic-whole-unet-v1",
+        ]
+        | None
+    ) = Field(default=None, exclude_if=lambda v: v is None)
     runtime_profile: (
         Literal[
             "llamacpp-cpu-linux-amd64-v1",
@@ -51,6 +63,21 @@ class VerifyModel(BaseModel):
         from ai_station_runner.owned_models import validate_reference
 
         validate_reference(self.host_path, self.model_sha256, self.app_owned)
+        if self.model_bundle:
+            if (
+                not self.app_owned
+                or not self.check_context
+                or self.checkpoint_profile
+                or self.runtime_profile
+            ):
+                raise ValueError("Bundle inspection requires owned GGUF context and no other profile")
+            self.model_bundle.check_primary(self.host_path, self.model_sha256, self.size_bytes, self.mtime)
+        if self.checkpoint_profile and (
+            not self.app_owned or self.check_context or self.check_image or self.runtime_profile
+        ):
+            raise ValueError(
+                "Checkpoint slot inspection requires an owned object and no language-runtime options"
+            )
         if self.runtime_profile and self.runtime_profile.startswith("llamacpp-native-darwin-"):
             if (
                 not self.app_owned
@@ -93,9 +120,17 @@ def verify_model(body: VerifyModel) -> dict:
         raise HTTPException(503, "This model inspection profile requires a Linux Host Runner")
     settings = get_settings()
     if body.app_owned:
-        from ai_station_runner.owned_models import owned_model
+        from ai_station_runner.owned_models import owned_model, owned_safetensors, owned_tensor_zip
 
-        path = owned_model(body.host_path, body.model_sha256)
+        resolve = (
+            owned_tensor_zip
+            if body.checkpoint_profile == "sonic-whole-unet-v1"
+            else owned_safetensors
+            if body.checkpoint_profile
+            in {"wan22-5b-diffusion-v1", "chatterbox-v3-t3-v1", "ace-step15-turbo-diffusion-v1"}
+            else owned_model
+        )
+        path = resolve(body.host_path, body.model_sha256)
     else:
         roots = _split(settings.model_roots)
         if not roots:
@@ -131,10 +166,47 @@ def verify_model(body: VerifyModel) -> dict:
             sha256=body.model_sha256,
             checksum_source="verified_download",
         )
+    if body.checkpoint_profile:
+        if not matches:
+            raise HTTPException(409, "Checkpoint changed since its verified observation")
+        if body.checkpoint_profile == "wan22-5b-diffusion-v1":
+            from ai_station_runner.video_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "chatterbox-v3-t3-v1":
+            from ai_station_runner.speech_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "ace-step15-turbo-diffusion-v1":
+            from ai_station_runner.music_checkpoints import inspect_checkpoint
+        elif body.checkpoint_profile == "sonic-whole-unet-v1":
+            from ai_station_runner.avatar_checkpoints import inspect_checkpoint
+        else:
+            from ai_station_runner.media_checkpoints import inspect_checkpoint
+
+        try:
+            result["checkpoint_profile"] = inspect_checkpoint(
+                path, stat.st_size, stat.st_mtime, body.checkpoint_profile
+            )
+        except (OSError, ValueError) as exc:
+            family = (
+                "video"
+                if body.checkpoint_profile == "wan22-5b-diffusion-v1"
+                else "speech"
+                if body.checkpoint_profile == "chatterbox-v3-t3-v1"
+                else "music"
+                if body.checkpoint_profile == "ace-step15-turbo-diffusion-v1"
+                else "avatar"
+                if body.checkpoint_profile == "sonic-whole-unet-v1"
+                else "image"
+            )
+            raise HTTPException(422, f"Incompatible {family} checkpoint: {exc}") from exc
     if body.check_context and matches:
         try:
-            result["context_profile"] = inspect_context(path, stat.st_size, stat.st_mtime)
-        except (OSError, ValueError):
+            if body.model_bundle:
+                result["model_bundle"] = inspect_bundle(settings.host_data_dir(), body.model_bundle)
+                result["context_profile"] = result["model_bundle"]["context_profile"]
+            else:
+                result["context_profile"] = inspect_context(path, stat.st_size, stat.st_mtime)
+        except (OSError, ValueError) as exc:
+            if body.model_bundle:
+                raise HTTPException(422, f"Incompatible GGUF bundle: {exc}") from exc
             result["context_profile"] = None
             result["context_notice"] = "Header estimate unavailable; use conservative fallback"
             if body.app_owned:
@@ -160,6 +232,12 @@ def verify_model(body: VerifyModel) -> dict:
             "ram_mib": budget,
             "context_size": cpu.DEFAULT_CONTEXT,
         }
+    elif body.model_bundle:
+        from ai_station_runner.runtime_setup import REFERENCE, RuntimeSelection, inspect_image
+
+        pinned = inspect_image(RuntimeSelection(profile="llamacpp-cuda-linux-amd64-v1"))
+        image_name = REFERENCE
+        image_id = pinned["image"].get("id") if pinned["image"]["present"] else None
     else:
         image_name, image_id = image_observation(app_owned=body.app_owned)
     present = bool(image_id) and bool(_IMAGE_ID.fullmatch(image_id or ""))

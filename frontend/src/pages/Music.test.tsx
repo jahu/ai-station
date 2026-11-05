@@ -30,13 +30,17 @@ function mount(entry = "/audio?mode=music") {
   );
 }
 
-function responses(available = true) {
+function responses(
+  available = true,
+  models: { id: string; name: string; available: boolean }[] = [],
+) {
   let stopped = false;
   return vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () => {
       if (path.endsWith("/capabilities"))
         return { available, max_seconds: 600 };
+      if (path === "/api/audio/music/models") return { items: models };
       if (path.endsWith("/hardware"))
         return { gpus: [{ index: 7, name: "Test GPU" }] };
       if (path.endsWith("/cancel")) stopped = true;
@@ -238,4 +242,42 @@ it("restores music mode from a saved Run without asking the speech form for a vo
     screen.getByRole("button", { name: "Music", pressed: true }),
   ).toBeTruthy();
   expect(screen.queryByLabelText("Upload speech")).toBeNull();
+});
+
+it("opens an installed music model and submits it while the default engine is unavailable", async () => {
+  const fallback = responses(false, [
+    { id: "installed-ace", name: "Installed ACE-Step", available: true },
+  ]);
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/audio/music/models/installed-ace/capabilities")
+      return {
+        ok: true,
+        json: async () => ({ available: true, max_seconds: 600 }),
+      };
+    return fallback(path, options);
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount("/audio?mode=music&model=installed-ace");
+  expect(
+    ((await screen.findByLabelText("Music model")) as HTMLSelectElement).value,
+  ).toBe("installed-ace");
+  fireEvent.change(screen.getByLabelText("Describe your music"), {
+    target: { value: "Calm piano" },
+  });
+  const submit = screen.getByRole("button", { name: "Generate music" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(submit);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        ([path, options]) =>
+          path === "/api/audio/music/runs" && options?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+  const call = fetch.mock.calls.find(
+    ([path, options]) =>
+      path === "/api/audio/music/runs" && options?.method === "POST",
+  )!;
+  expect(JSON.parse(String(call[1]!.body)).model_id).toBe("installed-ace");
 });

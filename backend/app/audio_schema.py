@@ -16,6 +16,7 @@ class SpeechDelivery(BaseModel):
 class SpeechRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     text: str = Field(min_length=1, max_length=1000)
+    model_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
     reference_artifact_id: UUID | None
     voice_source: Literal["reference", "model"] = "reference"
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
@@ -34,6 +35,8 @@ class SpeechRequest(BaseModel):
 
     @model_validator(mode="after")
     def supported_delivery(self):
+        if self.model_id is not None and self.engine is not None:
+            raise ValueError("An installed Chatterbox model cannot be used with the Fish engine")
         if self.voice_source == "model" and (
             self.engine != "fish_s2_pro" or self.reference_artifact_id is not None
         ):

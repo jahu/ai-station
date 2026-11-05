@@ -98,6 +98,7 @@ function fixture(
           status,
           headers: { "Content-Type": "application/json" },
         });
+      if (path === "/api/audio/models") return reply({ items: [] });
       if (path === "/api/images/models")
         return reply({
           items: [
@@ -236,7 +237,7 @@ function fixture(
   return { state, submissions, fetch };
 }
 
-function mount(capability: CreativeCapability = "images") {
+function mount(capability: CreativeCapability = "images", entry?: string) {
   activateStorageAccount("account-one");
   const cache = new QueryClient({
     defaultOptions: {
@@ -262,10 +263,12 @@ function mount(capability: CreativeCapability = "images") {
       <QueryClientProvider client={cache}>
         <MemoryRouter
           initialEntries={[
-            `${capability === "music" || capability === "speech" ? "/audio" : "/" + capability}?session=workspace-one${capability === "music" ? "&mode=music" : ""}`,
+            entry ??
+              `${capability === "music" || capability === "speech" ? "/audio" : "/" + capability}?session=workspace-one${capability === "music" ? "&mode=music" : ""}`,
           ]}
         >
           <Link to="/elsewhere">Leave workspace</Link>
+          <Link to="/avatars?model=installed-sonic">Open installed avatar</Link>
           <Routes>
             <Route
               path="/images"
@@ -656,3 +659,193 @@ it("restores generated voice and never attaches an old hidden recording to a var
     gpu: "auto",
   });
 });
+
+it("opens an installed video model in a fresh workspace and preserves its selection", async () => {
+  const backend = fixture({ capability: "video", title: "Previous film" });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      const reply = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (path === "/api/creative/sessions" && options?.method === "POST") {
+        return reply({
+          ...backend.state,
+          id: "fresh-film",
+          title: "Untitled film",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/creative/sessions/fresh-film") {
+        return reply({
+          ...backend.state,
+          id: "fresh-film",
+          title: "Untitled film",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/video/models")
+        return reply({
+          items: [
+            { id: "installed-wan", name: "Installed Wan", available: true },
+          ],
+        });
+      return original(input, options);
+    }),
+  );
+  mount("video", "/video?model=installed-wan");
+  const choice = await screen.findByLabelText("Video model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-wan");
+  expect(
+    screen.getByRole("textbox", { name: "Workspace name" }),
+  ).toHaveProperty("value", "Untitled film");
+  expect(
+    backend.fetch.mock.calls.some(
+      ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+    ),
+  ).toBe(false);
+});
+
+it("opens an installed music model in a fresh workspace and preserves its selection", async () => {
+  const backend = fixture({ capability: "music", title: "Previous track" });
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      const reply = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (path === "/api/creative/sessions" && options?.method === "POST") {
+        return reply({
+          ...backend.state,
+          id: "fresh-track",
+          title: "Untitled track",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/creative/sessions/fresh-track") {
+        return reply({
+          ...backend.state,
+          id: "fresh-track",
+          title: "Untitled track",
+          turns: [],
+          draft: {},
+        });
+      }
+      if (path === "/api/audio/music/models")
+        return reply({
+          items: [
+            {
+              id: "installed-ace",
+              name: "Installed ACE-Step",
+              available: true,
+            },
+          ],
+        });
+      return original(input, options);
+    }),
+  );
+  mount("music", "/audio?mode=music&model=installed-ace");
+  const choice = await screen.findByLabelText("Music model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-ace");
+  expect(
+    screen.getByRole("textbox", { name: "Workspace name" }),
+  ).toHaveProperty("value", "Untitled track");
+  expect(
+    backend.fetch.mock.calls.some(
+      ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+    ),
+  ).toBe(false);
+});
+
+it.each([false, true])(
+  "opens an installed avatar model in a fresh workspace, same-page navigation=%s",
+  async (reopen) => {
+    const backend = fixture({
+      capability: "avatars",
+      title: "Previous avatar",
+    });
+    const original = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+        const path = String(input);
+        const reply = (body: unknown) =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        if (path === "/api/creative/sessions" && options?.method === "POST") {
+          return reply({
+            ...backend.state,
+            id: "fresh-avatar",
+            title: "Untitled avatar",
+            turns: [],
+            draft: {},
+          });
+        }
+        if (path === "/api/creative/sessions/fresh-avatar") {
+          return reply({
+            ...backend.state,
+            id: "fresh-avatar",
+            title: "Untitled avatar",
+            turns: [],
+            draft: {},
+          });
+        }
+        if (path === "/api/avatars/models")
+          return reply({
+            items: [
+              {
+                id: "installed-sonic",
+                name: "Installed Sonic",
+                available: true,
+              },
+            ],
+          });
+        if (path === "/api/avatars/models/installed-sonic/capabilities")
+          return reply({
+            available: true,
+            backend: "sonic",
+            readiness: "ready",
+          });
+        return original(input, options);
+      }),
+    );
+    mount(
+      "avatars",
+      reopen
+        ? "/avatars?session=workspace-one"
+        : "/avatars?model=installed-sonic",
+    );
+    if (reopen) {
+      const name = await screen.findByRole("textbox", {
+        name: "Workspace name",
+      });
+      expect(name).toHaveProperty("value", "Previous avatar");
+      fireEvent.click(
+        screen.getByRole("link", { name: "Open installed avatar" }),
+      );
+    }
+    const choice = await screen.findByLabelText("Avatar model");
+    expect((choice as HTMLSelectElement).value).toBe("installed-sonic");
+    expect(
+      screen.getByRole("textbox", { name: "Workspace name" }),
+    ).toHaveProperty("value", "Untitled avatar");
+    expect(
+      backend.fetch.mock.calls.some(
+        ([path]) => String(path) === "/api/creative/sessions/workspace-one",
+      ),
+    ).toBe(reopen);
+  },
+);

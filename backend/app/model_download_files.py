@@ -1,7 +1,8 @@
 """Pinned app-owned model files: resumable HTTPS, verified bytes, atomic publication.
 
-Only reviewed catalog recipes may construct FileSpec. This is not a caller-URL
-API or a runtime installer; no downloaded code is imported or executed.
+Reviewed catalog recipes and server-resolved compatible model plans construct
+FileSpec. Download endpoints never accept a caller URL/hash override. This is not
+a runtime installer; no downloaded code is imported or executed.
 """
 
 import asyncio
@@ -116,7 +117,7 @@ async def _wait(check, awaitable, seconds):
 
 
 @asynccontextmanager
-async def response(url, offset, check):
+async def response(url, offset, check, *, end=None):
     """Revalidate and pin public DNS at every redirect; never follow implicitly."""
     for _ in range(7):
         check()
@@ -126,7 +127,16 @@ async def response(url, offset, check):
         addresses = await _wait(check, public_addresses(parsed.hostname), 20)
         target, headers, extensions = pinned_request(url, addresses[0])
         headers = {**headers, "Accept-Encoding": "identity"}
-        if offset:
+        if end is not None:
+            if (
+                type(end) is not int
+                or type(offset) is not int
+                or not 0 <= offset <= end
+                or end - offset >= 32 * 1024**2
+            ):
+                raise ValueError("Invalid bounded model metadata range")
+            headers["Range"] = f"bytes={offset}-{end}"
+        elif offset:
             headers["Range"] = f"bytes={offset}-"
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(30, connect=10), trust_env=False, follow_redirects=False
@@ -235,7 +245,10 @@ async def obtain(
                 if (a.st_dev, a.st_ino) == (b.st_dev, b.st_ino) and a.st_nlink == 2:
                     partial.unlink()
             verify(final, spec, check)
-            os.chmod(final, 0o444, follow_symlinks=False)
+            # Reusing immutable content must not change ctime and invalidate
+            # native readiness observations of the same companion/model file.
+            if stat.S_IMODE(final.stat(follow_symlinks=False).st_mode) not in {0o400, 0o444}:
+                os.chmod(final, 0o444, follow_symlinks=False)
             return final
         last_error = None
         urls = list(spec.urls)

@@ -238,6 +238,8 @@ class AssistantInputs(BaseModel):
     web_search: SearchOptions = Field(default_factory=SearchOptions)
     upscale_result: StrictBool = False
     speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
+    speech_model_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
+    avatar_model_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Plan(BaseModel):
@@ -581,6 +583,20 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         raise HTTPException(
             422, "Coding uses selected repository files. Remove media and text attachments before sending."
         )
+    if body.avatar_model_id:
+        if body.action != "avatar.animate" or not body.audio_artifact_id or len(body.image_artifact_ids) != 1:
+            raise HTTPException(
+                422, "Select Avatar with one portrait and a recording to choose an installed avatar model"
+            )
+        from app.avatar_models import frozen_model
+
+        frozen_model(session, body.avatar_model_id)
+    if body.speech_model_id:
+        if body.action != "audio.speech" or not body.audio_artifact_id or body.image_artifact_ids:
+            raise HTTPException(422, "Select Speech and a voice recording to use an installed speech model")
+        from app.audio_models import frozen_model
+
+        frozen_model(session, body.speech_model_id)
     if body.audio_artifact_id:
         audio = session.get(Artifact, str(body.audio_artifact_id))
         from app.recordings import FORMATS
@@ -1113,6 +1129,7 @@ class AssistantExecutor:
             plan = constrain_plan(plan, run.parameters)
         music_profile = None
         if plan and plan.action == "audio.music":
+            from app.conversation_music import settings as selected_music_settings
             from app.music import capabilities as music_capabilities
 
             authorized = explicit_plan(run.parameters)
@@ -1122,7 +1139,13 @@ class AssistantExecutor:
                     reason="Choose Generate music or directly request a new track. Prior context cannot authorize a new music job.",
                 )
             else:
-                music_profile = music_capabilities()
+                selected_model = selected_music_settings(run.parameters).model_id
+                if selected_model:
+                    from app.music_models import profile_for
+
+                    music_profile = profile_for(session, selected_model)
+                else:
+                    music_profile = music_capabilities()
                 if not music_profile.get("available"):
                     plan = Plan(
                         action="clarify",
@@ -1170,6 +1193,33 @@ class AssistantExecutor:
                             action="clarify",
                             reason="The CPU film editor is unavailable or checking its setup. Open Video → Edit a film, then try again.",
                         )
+        selected_speech_profile = None
+        if plan and plan.action == "audio.speech" and run.parameters.get("speech_model_id"):
+            from app.audio_models import profile_for
+
+            try:
+                selected_speech_profile = profile_for(session, run.parameters["speech_model_id"])
+            except HTTPException as exc:
+                plan = Plan(action="clarify", reason=str(exc.detail))
+        selected_avatar_profile = None
+        legacy_avatar_profile = None
+        if plan and plan.action == "avatar.animate":
+            from app.avatars import capabilities as legacy_avatar_capabilities
+            from app.whole_avatars import capabilities as whole_capabilities
+
+            try:
+                if run.parameters.get("avatar_model_id"):
+                    from app.avatar_models import profile_for
+
+                    selected_avatar_profile = profile_for(session, run.parameters["avatar_model_id"])
+                else:
+                    selected_avatar_profile = whole_capabilities()
+                    if not selected_avatar_profile.get("available") and selected_avatar_profile.get(
+                        "readiness"
+                    ) not in {"checking", "unavailable"}:
+                        legacy_avatar_profile = legacy_avatar_capabilities()
+            except HTTPException as exc:
+                plan = Plan(action="clarify", reason=str(exc.detail))
         video_profile = None
         if plan and plan.action in {"video.generate", "image.generate_video"}:
             from app.video import capabilities
@@ -1307,23 +1357,30 @@ class AssistantExecutor:
                     run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                     message.content = "Reading the selected repository's open issues and pull requests. Its snapshot will appear here; no changes are made on GitHub."
         elif plan.action == "avatar.animate":
-            from app.avatars import capabilities as avatar_capabilities
             from app.media_jobs import FullAvatarRequest, publish_avatar
             from app.whole_avatars import PROFILE as whole_profile
-            from app.whole_avatars import capabilities as whole_capabilities
 
             if len(images) != 1 or not params.get("audio_artifact_id"):
                 message.content = "Attach exactly one portrait and one speech WAV to animate an avatar."
             else:
                 try:
-                    whole = whole_capabilities()
+                    whole = selected_avatar_profile or {}
                     if whole.get("available"):
                         avatar_profile = "default"
-                        quality = {"generation_profile": whole_profile}
+                        quality = {
+                            "generation_profile": whole_profile,
+                            **(
+                                {"model_id": params["avatar_model_id"]}
+                                if params.get("avatar_model_id")
+                                else {}
+                            ),
+                        }
                     elif whole.get("readiness") in {"checking", "unavailable"}:
                         raise HTTPException(409, whole.get("reason") or "Inspect the local avatar setup")
                     else:
-                        avatar_profile = avatar_capabilities().get("recommended_memory_profile", "default")
+                        avatar_profile = (legacy_avatar_profile or {}).get(
+                            "recommended_memory_profile", "default"
+                        )
                         quality = {"memory_profile": avatar_profile}
                     request = FullAvatarRequest(
                         client_request_id=UUID(run.id),
@@ -1333,7 +1390,13 @@ class AssistantExecutor:
                         speech_text=params.get("speech_text") or avatar_speech_text(params["content"]),
                         **quality,
                     )
-                    publish_avatar(session, request, task=run.task, parent_run_id=run.id)
+                    publish_avatar(
+                        session,
+                        request,
+                        task=run.task,
+                        parent_run_id=run.id,
+                        observed_profile=whole if whole.get("available") else legacy_avatar_profile,
+                    )
                 except (ValidationError, HTTPException) as exc:
                     message.content = (
                         exc.detail
@@ -1519,14 +1582,22 @@ class AssistantExecutor:
 
             try:
                 request = SpeechRequest(
-                    text=params["content"], reference_artifact_id=params.get("audio_artifact_id")
+                    text=params["content"],
+                    reference_artifact_id=params.get("audio_artifact_id"),
+                    model_id=params.get("speech_model_id"),
                 )
             except ValidationError:
                 message.content = (
                     "Attach a WAV voice reference and send the text to speak, up to 1000 characters."
                 )
             else:
-                child = create_audio_run(session, request, task=run.task, parent_run_id=run.id)
+                child = create_audio_run(
+                    session,
+                    request,
+                    task=run.task,
+                    parent_run_id=run.id,
+                    observed_profile=selected_speech_profile,
+                )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
         elif plan.action == "page.describe":
             from app.chat_page_design import enqueue_design

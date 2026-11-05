@@ -53,6 +53,7 @@ from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.media_translation import MediaTranslationExecutor, TranslationApplyExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_download_job import DownloadExecutor
+from app.model_hub import ModelHubExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.music import MusicExecutor
@@ -327,6 +328,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    ModelHubExecutor.name: ModelHubExecutor(),
     "speech_setup": SpeechSetupExecutor(),
     "image_setup": ImageSetupExecutor(),
     "music_setup": MusicSetupExecutor(),

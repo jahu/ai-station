@@ -1928,7 +1928,42 @@ section:has(> .memory-grid) > .dashboard-note {
 .model-compatibility p {
   color: #adb6c0;
 }
+.model-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+.model-card > *,
+.model-definition-form > * {
+  min-width: 0;
+}
+.model-card .row {
+  flex-wrap: wrap;
+}
+.model-bundle-summary {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff03;
+  font-size: 12px;
+}
+.model-bundle-summary p {
+  margin: 0;
+}
+.model-configuration {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 16px;
+}
+.model-configuration select {
+  margin: 0;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+}
 .model-definition-form {
+  grid-template-columns: minmax(0, 1fr);
   display: grid;
   gap: 16px;
 }
@@ -1940,6 +1975,9 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .model-definition-form input:not([type="checkbox"]),
 .model-definition-form select {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;

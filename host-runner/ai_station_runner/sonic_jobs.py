@@ -5,6 +5,7 @@ qualification is a separate opt-in entry through this same launch contract.
 """
 
 import json
+import math
 import os
 from pathlib import Path
 from uuid import UUID
@@ -27,6 +28,7 @@ class WholeAvatarRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     run_id: UUID
     recipe: dict[str, str]
+    checkpoint: dict | None = Field(default=None, exclude_if=lambda value: value is None)
     portrait: MediaInput
     audio: MediaInput
     observed_input: dict[str, StrictInt]
@@ -47,17 +49,21 @@ class WholeAvatarRequest(BaseModel):
 
     def native_request(self):
         values = self.model_dump(mode="json", exclude={"gpus"})
-        return {"version": 1, **values, "device_count": len(self.gpus)}
+        return {"version": 2 if self.checkpoint is not None else 1, **values, "device_count": len(self.gpus)}
 
 
 def start_qualification(manager, body, *, python, runtime, models, hardware):
     """Configuration paths are trusted internal arguments, never API fields."""
     if os.environ.get("AI_STATION_REAL_GPU_TESTS") != "1":
         raise ValueError("Whole-recording qualification requires an explicit real-GPU opt-in")
-    return _start_owned(manager, body, python=python, runtime=runtime, models=models, hardware=hardware)
+    return _start_owned(
+        manager, body, python=python, runtime=runtime, models=models, hardware=hardware, qualifying=True
+    )
 
 
-def _start_owned(manager, body, *, python, runtime, models, hardware, verify_installation=True):
+def _start_owned(
+    manager, body, *, python, runtime, models, hardware, verify_installation=True, qualifying=False
+):
     """Only qualification or the configured typed native adapter may call this."""
     checked_request(body.native_request(), check_deadline=False)
     python = Path(python).expanduser().absolute()  # Preserve the venv executable symlink.
@@ -112,6 +118,16 @@ def _start_owned(manager, body, *, python, runtime, models, hardware, verify_ins
     else:
         raise ValueError("Inspect existing owned process before creating whole-recording work")
     checked_request(body.native_request())
+    if body.checkpoint is not None:
+        from ai_station_runner import avatar_checkpoints
+        from ai_station_runner.avatar_checkpoints import selected_environment
+
+        if not avatar_checkpoints.INFERENCE_QUALIFIED and not qualifying:
+            raise ValueError("Selected avatar checkpoint inference is still being qualified")
+        selected_environment(root, body.checkpoint, body.recipe["environment_id"])
+        ram = (hardware.get("memory") or {}).get("total_mib")
+        if type(ram) not in {int, float} or not math.isfinite(ram) or ram < 24576:
+            raise ValueError("The selected avatar profile requires at least 24 GiB physical RAM")
     # Hash before creating any work or starting an owned process. Native entry
     # independently rechecks source, weights, input bytes and frozen dimensions.
     if verify_installation and installation_observation(runtime, models) != body.recipe["observation"]:

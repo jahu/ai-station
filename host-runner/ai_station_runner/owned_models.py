@@ -1,9 +1,6 @@
 """Read-only inspection of a fixed app-owned verified-model namespace."""
 
-import os
 import re
-import stat
-from pathlib import Path
 
 from fastapi import HTTPException
 
@@ -16,32 +13,26 @@ def owned_model(relative, digest):
     return verify_owned_model(get_settings().host_data_dir(), relative, digest)
 
 
-def verify_owned_model(root, relative, digest):
+def owned_safetensors(relative, digest):
+    return verify_owned_model(
+        get_settings().host_data_dir(), relative, digest, checkpoint_format="safetensors"
+    )
+
+
+def owned_tensor_zip(relative, digest):
+    return verify_owned_model(
+        get_settings().host_data_dir(), relative, digest, checkpoint_format="pytorch_zip_tensor_data"
+    )
+
+
+def verify_owned_model(root, relative, digest, *, checkpoint_format="gguf"):
     """The same immutable-model boundary for an explicitly owned native data root."""
-    if not isinstance(digest, str) or not SHA.fullmatch(digest) or relative != "models/store/" + digest:
-        raise HTTPException(422, "Choose a verified app-owned model reference")
-    root = Path(root).resolve()
-    path = root
-    for part in Path(relative).parts:
-        path = path / part
-        if path.is_symlink():
-            raise HTTPException(422, "App-owned models cannot cross symlinks")
+    from ai_station_runner.owned_model_files import verify_owned_model as inspect_file
+
     try:
-        info = path.stat(follow_symlinks=False)
-        if (
-            not stat.S_ISREG(info.st_mode)
-            or info.st_nlink != 1
-            or info.st_uid != os.geteuid()
-            or info.st_mode & 0o222
-        ):
-            raise ValueError("The model is not an immutable owned regular file")
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, "rb") as source:
-            if source.read(4) != b"GGUF":
-                raise ValueError("The model does not have a GGUF header")
+        return inspect_file(root, relative, digest, checkpoint_format=checkpoint_format)
     except (OSError, ValueError) as exc:
-        raise HTTPException(422, "The verified app-owned GGUF is unavailable or changed") from exc
-    return path
+        raise HTTPException(422, str(exc)) from exc
 
 
 def validate_reference(path, digest, app_owned):

@@ -1,6 +1,11 @@
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { Box, RefreshCw } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { useAccount } from "../account-context";
@@ -29,7 +34,28 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  publisher_source?: {
+    repository: string;
+    revision: string;
+    filename: string;
+    license: string;
+    pinned_url: string;
+    review_url: string;
+  };
+  model_key?: string;
+  context_notice?: string;
+  gguf_bundle?: {
+    status: string;
+    size_bytes?: number;
+    part_count?: number;
+    parts?: { filename: string; size_bytes: number; sha256: string }[];
+  };
   image_backend?: "qwen" | "krea2";
+  video_backend?: "wan22";
+  speech_backend?: "chatterbox";
+  music_backend?: "ace-step-1.5";
+  avatar_backend?: "sonic";
+  embedding_backend?: "e5_cpu";
   id: string;
   name: string;
   family: string;
@@ -52,6 +78,7 @@ interface Definition {
   } | null;
 }
 interface ModelFile {
+  gguf_bundle?: Definition["gguf_bundle"];
   id: string;
   filename: string;
   host_path: string | null;
@@ -125,9 +152,16 @@ function ModelFileCards({ models }: { models: ModelFile[] }) {
             <div className="row">
               <Box size={20} aria-hidden="true" />
               <span className="tiny-tag">{model.format}</span>
-              <span className="muted">{size(model.size_bytes)}</span>
+              <span className="muted">
+                {size(model.gguf_bundle?.size_bytes ?? model.size_bytes)}
+              </span>
             </div>
             <h2>{model.filename}</h2>
+            {model.gguf_bundle?.part_count && (
+              <p className="muted">
+                Complete model · {model.gguf_bundle!.part_count} parts
+              </p>
+            )}
             <div className="row model-tags">
               <span>{model.category}</span>
               {model.quantization && <span>{model.quantization}</span>}
@@ -179,7 +213,11 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
         {definitions.map((item, i) => (
           <Link
             className="panel model-card"
-            to={item.file_id ? `/models/${item.file_id}` : "/models"}
+            to={
+              item.file_id
+                ? `/models/${item.file_id}?definition=${item.id}`
+                : "/models"
+            }
             key={item.id}
             aria-label={`Inspect ${item.name} ${item.id.slice(0, 8)}`}
             {...itemProps(i, item.id)}
@@ -193,11 +231,21 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
               {item.file?.filename ?? "Linked file missing"}
             </p>
             <small className="muted">
-              {item.image_backend
-                ? "Image model · configure in Images"
-                : item.compatibility?.operational
-                  ? "Managed llama.cpp after a successful install"
-                  : "Catalogued only · no managed adapter"}
+              {item.avatar_backend
+                ? "Avatar model · configure in Avatars"
+                : item.music_backend
+                  ? "Music model · configure in Music"
+                  : item.embedding_backend
+                    ? "Memory encoder · configure in Memory"
+                    : item.speech_backend
+                      ? "Speech model · configure in Audio"
+                      : item.video_backend
+                        ? "Video model · configure in Video"
+                        : item.image_backend
+                          ? "Image model · configure in Images"
+                          : item.compatibility?.operational
+                            ? "Managed llama.cpp after a successful install"
+                            : "Catalogued only · no managed adapter"}
             </small>
           </Link>
         ))}
@@ -270,6 +318,14 @@ export function Models() {
         into AI Station storage.
       </PageTitle>
       <p className="muted">
+        {canManage && (
+          <>
+            <Link className="text-link" to="/models/discover?recommend=chat">
+              Find new models →
+            </Link>
+            {" · "}
+          </>
+        )}
         <Link className="text-link" to="/setup/models">
           Set up a local model →
         </Link>{" "}
@@ -404,6 +460,7 @@ export function ModelDetail() {
     account.mode === "operator" || account.user?.is_admin === true;
   const { id } = useParams();
   const navigate = useNavigate();
+  const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
   const hardware = useHardware();
   const model = useQuery({
@@ -419,6 +476,7 @@ export function ModelDetail() {
           status: string;
           metadata: {
             model_file_id?: string;
+            model_definition_id?: string;
             health_run_id?: string;
             health?: { status?: string; alive?: boolean; n_ctx?: number };
           };
@@ -426,10 +484,21 @@ export function ModelDetail() {
       }>("/llama"),
     refetchInterval: 5000,
   });
-  const definition = model.data?.definitions?.[0];
+  const definition =
+    model.data?.definitions?.find(
+      (item) => item.id === search.get("definition"),
+    ) ??
+    model.data?.definitions?.find((item) => item.status !== "removed") ??
+    model.data?.definitions?.[0];
+  const logicalId =
+    definition?.model_key && definition.model_key !== `llamacpp:${id}`
+      ? definition.id
+      : undefined;
   const matchingInstances =
     runtimes.data?.instances?.filter(
-      (item) => item.metadata.model_file_id === id,
+      (item) =>
+        item.metadata.model_file_id === id &&
+        item.metadata.model_definition_id === logicalId,
     ) ?? [];
   const instance =
     matchingInstances.find(
@@ -457,7 +526,14 @@ export function ModelDetail() {
             `/models/definitions/${definition.id}`,
             json("PATCH", {
               name: selectedName,
-              ...(!definition.image_backend
+              ...(!(
+                definition.image_backend ||
+                definition.video_backend ||
+                definition.speech_backend ||
+                definition.music_backend ||
+                definition.avatar_backend ||
+                definition.embedding_backend
+              )
                 ? {
                     gpus: selectedGpus,
                     context_size: selectedContext,
@@ -494,7 +570,11 @@ export function ModelDetail() {
   const remove = useMutation({
     mutationFn: (definitionId: string) =>
       api(`/models/definitions/${definitionId}`, { method: "DELETE" }),
-    onSuccess: () => void cache.invalidateQueries({ queryKey: ["model", id] }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["model", id] });
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+      void cache.invalidateQueries({ queryKey: ["chat-model-catalog"] });
+    },
   });
   const health = useMutation({
     mutationFn: (instanceId: string) =>
@@ -515,6 +595,10 @@ export function ModelDetail() {
   if (model.isPending) return <Loading />;
   if (model.error) return <ErrorNotice error={model.error} />;
   const row = model.data!;
+  const completeBundle =
+    definition?.gguf_bundle?.status === "verified"
+      ? definition.gguf_bundle
+      : undefined;
   return (
     <>
       <PageTitle
@@ -522,8 +606,9 @@ export function ModelDetail() {
         title={row.filename}
         action={<Link to="/models">All models</Link>}
       >
-        This file stays in its existing host location. AI Station stores
-        metadata only and never downloads replacement weights.
+        {row.relative_path
+          ? "AI Station manages these verified model files in application storage."
+          : "This file stays in its existing host location. AI Station stores metadata only and never downloads replacement weights."}
       </PageTitle>
       <ErrorNotice
         error={
@@ -536,7 +621,85 @@ export function ModelDetail() {
           null
         }
       />
+      {!!row.definitions && row.definitions.length > 1 && (
+        <label className="model-configuration">
+          Model configuration
+          <select
+            value={definition?.id ?? ""}
+            onChange={(event) => {
+              const next = new URLSearchParams(search);
+              next.set("definition", event.target.value);
+              setSearch(next);
+              setName(null);
+              setContext(null);
+              setCacheType(null);
+              setGpus(null);
+            }}
+          >
+            {row.definitions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+                {item.status === "removed" ? " (removed)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <section className="panel model-card">
+        {definition?.publisher_source && (
+          <div className="model-bundle-summary">
+            <strong>Publisher source</strong>
+            <p className="model-path">
+              {definition.publisher_source.repository} ·{" "}
+              {definition.publisher_source.filename}
+            </p>
+            <p>
+              License: {definition.publisher_source.license} · Revision{" "}
+              {definition.publisher_source.revision.slice(0, 12)}
+            </p>
+            <div className="row">
+              <a
+                href={definition.publisher_source.pinned_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View installed revision ↗
+              </a>
+              {canManage && (
+                <Link
+                  to={`/models/discover?source=${encodeURIComponent(definition.publisher_source.review_url)}`}
+                >
+                  Review publisher updates
+                </Link>
+              )}
+            </div>
+            <p className="muted">
+              Checking a newer revision does not replace this model or change
+              your defaults. Review its files, hardware fit and license before
+              installing.
+            </p>
+          </div>
+        )}
+        {completeBundle && (
+          <div className="model-bundle-summary">
+            <strong>Complete model</strong>
+            <p>
+              {size(completeBundle.size_bytes!)} across{" "}
+              {completeBundle.part_count} verified parts. The file observation
+              below describes the primary part.
+            </p>
+            <details>
+              <summary>Model parts</summary>
+              <ul>
+                {completeBundle.parts?.map((part) => (
+                  <li key={part.sha256} className="model-path">
+                    {part.filename} · {size(part.size_bytes)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        )}
         <h2>File observation</h2>
         <dl className="model-properties">
           <dt>Host path</dt>
@@ -579,9 +742,19 @@ export function ModelDetail() {
       </section>
       <section className="panel model-card">
         <h2>
-          {definition?.image_backend
-            ? "Image model"
-            : "Model definition and load preset"}
+          {definition?.avatar_backend
+            ? "Avatar model"
+            : definition?.music_backend
+              ? "Music model"
+              : definition?.embedding_backend
+                ? "Memory encoder"
+                : definition?.speech_backend
+                  ? "Speech model"
+                  : definition?.video_backend
+                    ? "Video model"
+                    : definition?.image_backend
+                      ? "Image model"
+                      : "Model definition and load preset"}
         </h2>
         {definition ? (
           <p>
@@ -606,12 +779,27 @@ export function ModelDetail() {
         )}
         {definition?.compatibility && (
           <p>
-            {definition.image_backend
+            {definition.image_backend ||
+            definition.video_backend ||
+            definition.speech_backend ||
+            definition.music_backend ||
+            definition.avatar_backend ||
+            definition.embedding_backend
               ? definition.compatibility.summary
               : definition.compatibility.operational
                 ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
                 : definition.compatibility.summary}
           </p>
+        )}
+        {definition?.status === "removed" && (
+          <p className="notice">
+            Removed from model selection. Files and history are preserved.
+            Restore this configuration to verify its original weights and use it
+            again.
+          </p>
+        )}
+        {definition?.context_notice && (
+          <p className="muted">{definition.context_notice}</p>
         )}
         <form
           className="model-definition-form"
@@ -631,13 +819,20 @@ export function ModelDetail() {
                   required
                 />
               </label>
-              {!definition?.image_backend && (
+              {!(
+                definition?.image_backend ||
+                definition?.video_backend ||
+                definition?.speech_backend ||
+                definition?.music_backend ||
+                definition?.avatar_backend ||
+                definition?.embedding_backend
+              ) && (
                 <>
                   <label>
                     Context size
                     <input
                       type="number"
-                      min={512}
+                      min={definition?.gguf_bundle ? 4096 : 512}
                       max={262144}
                       step={256}
                       value={selectedContext}
@@ -654,7 +849,9 @@ export function ModelDetail() {
                         setCacheType(event.target.value as "f16" | "q8_0")
                       }
                     >
-                      <option value="f16">f16</option>
+                      <option value="f16" disabled={!!definition?.gguf_bundle}>
+                        f16
+                      </option>
                       <option value="q8_0">q8_0</option>
                     </select>
                   </label>
@@ -668,8 +865,9 @@ export function ModelDetail() {
                       />
                     ) : (
                       <p className="muted">
-                        No GPUs reported. An empty preset loads on CPU after
-                        installation.
+                        {definition?.gguf_bundle
+                          ? "No GPUs reported. This complete model requires CUDA; inspect System diagnostics before loading."
+                          : "No GPUs reported. An empty preset loads on CPU after installation."}
                       </p>
                     )}
                   </fieldset>
@@ -680,7 +878,14 @@ export function ModelDetail() {
             <dl className="model-properties">
               <dt>Name</dt>
               <dd>{definition.name}</dd>
-              {!definition.image_backend && (
+              {!(
+                definition.image_backend ||
+                definition.video_backend ||
+                definition.speech_backend ||
+                definition.music_backend ||
+                definition.avatar_backend ||
+                definition.embedding_backend
+              ) && (
                 <>
                   <dt>Saved context</dt>
                   <dd>
@@ -698,6 +903,31 @@ export function ModelDetail() {
               )}
             </dl>
           ) : null}
+          {definition?.embedding_backend && (
+            <Link to={`/memory?embedding_model=${definition.id}`}>
+              Choose this encoder in Memory
+            </Link>
+          )}
+          {definition?.avatar_backend && (
+            <Link to={`/avatars?model=${definition.id}`}>
+              Choose this model in Avatars
+            </Link>
+          )}
+          {definition?.music_backend && (
+            <Link to={`/audio?mode=music&model=${definition.id}`}>
+              Create with this model in Music
+            </Link>
+          )}
+          {definition?.speech_backend && (
+            <Link to={`/audio?model=${definition.id}`}>
+              Choose this model in Audio
+            </Link>
+          )}
+          {definition?.video_backend && (
+            <Link to={`/video?model=${definition.id}`}>
+              Choose this model in Video
+            </Link>
+          )}
           {definition?.image_backend && (
             <Link to={`/images?model=${definition.id}`}>
               Choose this model in Images
@@ -706,7 +936,12 @@ export function ModelDetail() {
           <div className="row">
             {canManage && (
               <Button type="submit" disabled={save.isPending}>
-                {definition?.image_backend
+                {definition?.image_backend ||
+                definition?.video_backend ||
+                definition?.speech_backend ||
+                definition?.music_backend ||
+                definition?.avatar_backend ||
+                definition?.embedding_backend
                   ? "Save name"
                   : definition
                     ? "Save preset"
@@ -722,11 +957,20 @@ export function ModelDetail() {
               >
                 {definition.status === "registered"
                   ? "Re-check installation"
-                  : "Install locally"}
+                  : definition.status === "removed"
+                    ? "Restore model configuration"
+                    : "Install locally"}
               </Button>
             )}
             {definition?.status === "registered" &&
-              !definition.image_backend &&
+              !(
+                definition.image_backend ||
+                definition.video_backend ||
+                definition.speech_backend ||
+                definition.music_backend ||
+                definition.avatar_backend ||
+                definition.embedding_backend
+              ) &&
               definition.compatibility?.operational && (
                 <Button
                   type="button"

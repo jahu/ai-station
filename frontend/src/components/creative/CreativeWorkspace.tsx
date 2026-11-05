@@ -188,11 +188,14 @@ function Workspace({
     },
   });
   const bootstrap = useRef(false);
+  const previousSelection = useRef(id);
   useEffect(() => {
+    if (previousSelection.current && !id) bootstrap.current = false;
+    previousSelection.current = id;
     if (id || !sessions.isSuccess || archived || bootstrap.current) return;
     bootstrap.current = true;
     const previous = sessions.data.pages.flat()[0];
-    const hasSource = ["input", "image", "audio"].some((key) =>
+    const hasSource = ["input", "image", "audio", "model"].some((key) =>
       search.has(key),
     );
     if (previous && !hasSource)

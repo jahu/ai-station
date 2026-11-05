@@ -14,43 +14,59 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-function mount(entry = "/video", available = true) {
+function mount(
+  entry = "/video",
+  available = true,
+  models: { id: string; name: string; available: boolean }[] = [],
+) {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
-      path.endsWith("/capabilities")
-        ? { available, reason: "Configure installed models" }
-        : path.endsWith("/hardware")
-          ? { gpus: [] }
-          : path.includes("/artifacts/")
-            ? {
-                id: "source",
-                type: "image",
-                mime_type: "image/png",
-                original_filename: "scene.png",
-              }
-            : path.includes("/media/jobs")
-              ? {
-                  task_id: "video-job",
-                  revision: 1,
-                  kind: "video",
-                  mode: "continuous",
-                  status: "queued",
-                  active_run_ids: [],
-                  duration_seconds: 10,
-                  completed_segments: 0,
-                  total_segments: 3,
-                  final_artifact_id: null,
-                }
-              : path.includes("/runs")
+      path.endsWith("/video/models")
+        ? { items: models }
+        : path.endsWith("/capabilities")
+          ? {
+              available,
+              reason: "Configure installed models",
+              ...(path.includes("/video/models/")
                 ? {
-                    id: "video-run",
-                    status: "queued",
-                    parameters: options?.body
-                      ? JSON.parse(String(options.body))
-                      : {},
+                    configuration_source: "managed",
+                    recommended_memory_profile: "bounded_11g",
+                    memory_profiles: [{ id: "bounded_11g", available: true }],
                   }
-                : [],
+                : {}),
+            }
+          : path.endsWith("/hardware")
+            ? { gpus: [] }
+            : path.includes("/artifacts/")
+              ? {
+                  id: "source",
+                  type: "image",
+                  mime_type: "image/png",
+                  original_filename: "scene.png",
+                }
+              : path.includes("/media/jobs")
+                ? {
+                    task_id: "video-job",
+                    revision: 1,
+                    kind: "video",
+                    mode: "continuous",
+                    status: "queued",
+                    active_run_ids: [],
+                    duration_seconds: 10,
+                    completed_segments: 0,
+                    total_segments: 3,
+                    final_artifact_id: null,
+                  }
+                : path.includes("/runs")
+                  ? {
+                      id: "video-run",
+                      status: "queued",
+                      parameters: options?.body
+                        ? JSON.parse(String(options.body))
+                        : {},
+                    }
+                  : [],
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -260,5 +276,45 @@ it("offers a new ten-second continuous film without requiring a restored job", a
       composition_mode: "continuous",
       prompt: "A quiet lake",
     });
+  });
+});
+
+it("preselects an installed video model and freezes it in a longer film request", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  const fetch = mount(`/video?model=${id}`, true, [
+    { id, name: "New Wan checkpoint", available: true },
+  ]);
+  const select = await screen.findByLabelText("Video model");
+  expect((select as HTMLSelectElement).value).toBe(id);
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "A river at sunset" },
+  });
+  fireEvent.change(screen.getByLabelText("Duration"), {
+    target: { value: "10s" },
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Generate video",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([path]) => path === "/api/media/jobs/video"),
+    ).toBe(true),
+  );
+  const call = fetch.mock.calls.find(
+    ([path]) => path === "/api/media/jobs/video",
+  )!;
+  expect(JSON.parse(String(call[1]?.body))).toMatchObject({
+    model_id: id,
+    memory_profile: "bounded_11g",
+    width: 1280,
+    height: 704,
+    duration_seconds: 10,
   });
 });

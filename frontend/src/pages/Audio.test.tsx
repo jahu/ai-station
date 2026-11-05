@@ -414,3 +414,59 @@ it("generates an expressive voice without uploading a recording and keeps record
     pace: "natural",
   });
 });
+
+it("uses an installed speech model from its preparation link despite unavailable default speech", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path === "/api/audio/models"
+        ? { items: [{ id, name: "Installed studio voice", available: true }] }
+        : path.includes(`/audio/models/${id}/capabilities`)
+          ? { available: true, configuration_source: "managed" }
+          : path.endsWith("/capabilities")
+            ? { available: false }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.includes("/runs")
+                ? { id: "selected-speech", status: "queued" }
+                : {
+                    id: "voice",
+                    original_filename: "voice.wav",
+                    type: "audio",
+                    mime_type: "audio/wav",
+                  },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(`/audio?model=${id}&input=voice`);
+  await screen.findByRole("option", { name: "Installed studio voice" });
+  expect(
+    (screen.getByLabelText("Speech model") as HTMLSelectElement).value,
+  ).toBe(`installed:${id}`);
+  fireEvent.change(screen.getByLabelText("Text to speak"), {
+    target: { value: "Dzień dobry" },
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Generate speech",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/audio/runs",
+      expect.objectContaining({
+        body: JSON.stringify({
+          text: "Dzień dobry",
+          gpu: "auto",
+          reference_artifact_id: "voice",
+          model_id: id,
+        }),
+      }),
+    ),
+  );
+});

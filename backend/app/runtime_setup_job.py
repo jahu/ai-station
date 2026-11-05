@@ -29,10 +29,21 @@ class LostClaim(Exception):
 def validate_operation(run, *, executor_type="runtime_setup"):
     saved = run.task.metadata_json.get("runtime_preparation") or {}
     parameters = run.parameters
+    allowed_task = run.task.intent == INTENT
+    if not allowed_task and run.executor_type in {
+        "image_setup",
+        "video_setup",
+        "speech_setup",
+        "music_setup",
+        "avatar_setup",
+    }:
+        from app.hub_image_preparation import owns_preparation
+
+        allowed_task = owns_preparation(run)
     if (
         run.executor_type != executor_type
         or run.task.owner_id != run.owner_id
-        or run.task.intent != INTENT
+        or not allowed_task
         or saved.get("license_accepted") is not True
         or saved.get("recipe") != parameters.get("recipe")
         or fingerprint(parameters.get("recipe")) != parameters.get("manifest_sha256")

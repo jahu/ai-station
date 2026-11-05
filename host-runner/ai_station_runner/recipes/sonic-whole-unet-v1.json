@@ -1,0 +1,89 @@
+{
+  "profile": "sonic-whole-unet-v1",
+  "runtime_profile": "sonic-whole-linux-x86-64-python310-v1",
+  "role": "sonic_adapted_unet",
+  "filename": "Sonic/unet.pth",
+  "format": "pytorch_zip_tensor_data",
+  "runtime_manifest_sha256": "cbf4a29ce4fa9a5179b64ebf6189f809bd1d17a8daab7b334d0518907f51499b",
+  "runtime_sdk_sha256": {
+    "Sonic": "97263334cde2d0d17f4d43001c3a795a4ea841891ff402594feadeb14891f7f6"
+  },
+  "reference": {
+    "sha256": "2fb0b0b8fe07232f9c4e8af4ce64fc3b33593bf6dfd7c840b60585dc6017128b",
+    "size_bytes": 6303636358
+  },
+  "tensor_count": 1492,
+  "schema_sha256": "96f0c890a313e2463249a134daddd231665cd912b0616327fc6436422dfbc3d0",
+  "module_metadata_sha256": "388a034e7d504f268434001ddb1e41ae723f267dc4be0748bc0970dee506ba0c",
+  "allowed_dtypes": [
+    "F32"
+  ],
+  "fixed_companions": [
+    {
+      "filename": "RIFE/flownet.pkl",
+      "sha256": "fe854fc8996547c953f732aaa3b78cae76cc0a12833ae856ea0749c4c570d7d8",
+      "size_bytes": 12186817
+    },
+    {
+      "filename": "Sonic/audio2bucket.pth",
+      "sha256": "4af942fded37b70d0a0a7993b8c0f46b5b1e104bcf7b6316f7b509900db69d26",
+      "size_bytes": 87050998
+    },
+    {
+      "filename": "Sonic/audio2token.pth",
+      "sha256": "68cf305813bf5e4682c4f6a80955233cfad6a5e194fd4a6963f27e4e8ee490d8",
+      "size_bytes": 217206084
+    },
+    {
+      "filename": "yoloface_v5m.pt",
+      "sha256": "5ef5928d2ee1350ea7050ad7524b26a2b55e5c69fee49cd499667bde6a215b17",
+      "size_bytes": 84574759
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/image_encoder/config.json",
+      "sha256": "65da4496f116d2b297fe864e0f31242fbc57e26a5d95b93310f2034e1e90d0ec",
+      "size_bytes": 685
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/image_encoder/model.fp16.safetensors",
+      "sha256": "ae616c24393dd1854372b0639e5541666f7521cbe219669255e865cb7f89466a",
+      "size_bytes": 1264217240
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/scheduler/scheduler_config.json",
+      "sha256": "59aa43afc33395efd40fe94c7369c0477b81698f4b65b63e3ae06f26269876d5",
+      "size_bytes": 533
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/unet/config.json",
+      "sha256": "9c44e614afa89887aeeeae3113ba73a53fabacbc545ae1237c44c99d0e80fb54",
+      "size_bytes": 984
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/vae/config.json",
+      "sha256": "8f34272db69f7e2c615da6142ca3f9fdcd7b682bcfd903ceb15035fea79a8303",
+      "size_bytes": 607
+    },
+    {
+      "filename": "stable-video-diffusion-img2vid-xt/vae/diffusion_pytorch_model.fp16.safetensors",
+      "sha256": "af602cd0eb4ad6086ec94fbf1438dfb1be5ec9ac03fd0215640854e90d6463a3",
+      "size_bytes": 195531910
+    },
+    {
+      "filename": "whisper-tiny/config.json",
+      "sha256": "ffdccec4f3211f4c63310f2b7098f309fe70f3952cedc5e4d11e43f5b2379b98",
+      "size_bytes": 1983
+    },
+    {
+      "filename": "whisper-tiny/model.safetensors",
+      "sha256": "7ebd0e69e78190ffe1438491fa05cc1f5c1aa3a4c4db3bc1723adbb551ea2395",
+      "size_bytes": 151061672
+    },
+    {
+      "filename": "whisper-tiny/preprocessor_config.json",
+      "sha256": "9b5cd03a36fbb8a627c64d98a5b5b126ead95a77720723944487311f0110b666",
+      "size_bytes": 184990
+    }
+  ],
+  "notice": "Structural metadata only. Requires the fixed Sonic adapted UNet graph, closed tensor-data ZIP format and complete trusted runtime/companions. Generic PyTorch files and publisher model code are unsupported; this does not install or qualify inference."
+}

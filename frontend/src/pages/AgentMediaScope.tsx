@@ -16,6 +16,7 @@ import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
 import { api, useHardware } from "../api";
 import SpeechEngineFields from "../components/media/SpeechEngineFields";
+import { useSpeechModels } from "../components/media/speech-models";
 import type { SpeechCapabilities } from "../components/media/speech-delivery";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
@@ -52,9 +53,19 @@ export default function AgentMediaScopeEditor({
   const hardware = useHardware();
   const wholeAvatar = useWholeAvatarCapabilities();
   const scope = value ?? newAgentMedia("image", goal);
+  const speechModelId =
+    scope.kind === "speech" ? scope.request.model_id : undefined;
+  const speechModels = useSpeechModels(scope.kind === "speech");
   const speech = useQuery({
-    queryKey: ["speech-capabilities"],
-    queryFn: () => api<SpeechCapabilities>("/audio/capabilities"),
+    queryKey: speechModelId
+      ? ["speech-capabilities", speechModelId]
+      : ["speech-capabilities"],
+    queryFn: () =>
+      api<SpeechCapabilities>(
+        speechModelId
+          ? `/audio/models/${speechModelId}/capabilities`
+          : "/audio/capabilities",
+      ),
     enabled: scope.kind === "speech",
     staleTime: 30000,
     refetchInterval: (query) =>
@@ -77,29 +88,77 @@ export default function AgentMediaScopeEditor({
     if (effects.data?.available)
       void cache.invalidateQueries({ queryKey: ["agent-tools"] });
   }, [effects.data?.available, cache]);
-  const selectedReadiness =
-    scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+  const videoModelId =
+    scope.kind === "video" ? scope.request.model_id : undefined;
+  const selectedVideo = useQuery({
+    queryKey: ["video-capabilities", videoModelId],
+    enabled: !!videoModelId,
+    queryFn: () =>
+      api<{ available: boolean; reason?: string }>(
+        `/video/models/${videoModelId}/capabilities`,
+      ),
+  });
+  const musicModelId =
+    scope.kind === "music" ? scope.request.model_id : undefined;
+  const selectedMusic = useQuery({
+    queryKey: ["music-capabilities", musicModelId],
+    enabled: !!musicModelId,
+    queryFn: () =>
+      api<{ available: boolean; reason?: string }>(
+        `/audio/music/models/${musicModelId}/capabilities`,
+      ),
+  });
+  const selectedReadiness = musicModelId
+    ? {
+        ready: selectedMusic.isPending
+          ? undefined
+          : selectedMusic.data?.available === true,
+        reason:
+          selectedMusic.error?.message ??
+          selectedMusic.data?.reason ??
+          "Checking selected music model…",
+      }
+    : videoModelId
       ? {
-          ready:
-            speech.data?.engines?.fish_s2_pro?.available === true &&
-            (scope.request.voice_source !== "model" ||
-              speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
-                "model",
-              ) === true),
+          ready: selectedVideo.isPending
+            ? undefined
+            : selectedVideo.data?.available === true,
           reason:
-            scope.request.voice_source === "model" &&
-            speech.data &&
-            !speech.data.engines?.fish_s2_pro?.voice_sources?.includes("model")
-              ? "Update AI Station or choose a voice recording."
-              : (speech.data?.engines?.fish_s2_pro?.reason ??
-                "Checking expressive speech setup…"),
+            selectedVideo.error?.message ??
+            selectedVideo.data?.reason ??
+            "Checking selected video model…",
         }
-      : scope.kind === "effects"
+      : speechModelId
         ? {
-            ready: effects.data?.available === true,
-            reason: effects.data?.reason ?? "Checking sound effects setup…",
+            ready: speech.isPending
+              ? undefined
+              : speech.data?.available === true,
+            reason: speech.error?.message ?? "Checking selected speech model…",
           }
-        : readiness?.[scope.kind];
+        : scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+          ? {
+              ready:
+                speech.data?.engines?.fish_s2_pro?.available === true &&
+                (scope.request.voice_source !== "model" ||
+                  speech.data?.engines?.fish_s2_pro?.voice_sources?.includes(
+                    "model",
+                  ) === true),
+              reason:
+                scope.request.voice_source === "model" &&
+                speech.data &&
+                !speech.data.engines?.fish_s2_pro?.voice_sources?.includes(
+                  "model",
+                )
+                  ? "Update AI Station or choose a voice recording."
+                  : (speech.data?.engines?.fish_s2_pro?.reason ??
+                    "Checking expressive speech setup…"),
+            }
+          : scope.kind === "effects"
+            ? {
+                ready: effects.data?.available === true,
+                reason: effects.data?.reason ?? "Checking sound effects setup…",
+              }
+            : readiness?.[scope.kind];
   const recordedWhole =
     scope.kind === "avatar" &&
     !!scope.request.generation_profile &&
@@ -432,6 +491,21 @@ export default function AgentMediaScopeEditor({
         {scope.kind === "speech" && (
           <>
             <SpeechEngineFields
+              modelId={scope.request.model_id}
+              models={speechModels.data?.items}
+              onModel={(id) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    model_id: id,
+                    engine: undefined,
+                    direction: undefined,
+                    pace: undefined,
+                    voice_source: undefined,
+                  },
+                })
+              }
               engine={scope.request.engine ?? ""}
               direction={scope.request.direction ?? "natural"}
               pace={scope.request.pace ?? "natural"}
@@ -453,6 +527,7 @@ export default function AgentMediaScopeEditor({
               onEngine={(engine) => {
                 const request = { ...scope.request };
                 delete request.engine;
+                delete request.model_id;
                 delete request.direction;
                 delete request.pace;
                 delete request.delivery;

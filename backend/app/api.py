@@ -17,12 +17,15 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app import __version__
 from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
 from app.artifact_purge import router as artifact_purge_router
 from app.audio import router as audio_router
+from app.audio_models import router as audio_models_router
+from app.avatar_models import router as avatar_models_router
 from app.avatars import router as avatar_router
 from app.browser import router as browser_router
 from app.bundle_setup import router as bundle_setup_router
@@ -42,6 +45,7 @@ from app.effects import router as effects_router
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
+from app.hub_installations import router as hub_installations_router
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
 from app.library import router as library_router
@@ -53,10 +57,12 @@ from app.media_jobs import router as media_jobs_router
 from app.media_translation import router as generation_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
+from app.model_hub import router as model_hub_router
 from app.model_registry import router as model_router
 from app.model_setup import router as model_setup_router
 from app.models import Run, Setting, WorkerRow
 from app.music import router as music_router
+from app.music_models import router as music_models_router
 from app.nodes import router as nodes_router
 from app.notices import router as notice_router
 from app.operator_auth import refresh_operator_cookie, refuse_non_loopback_bind, require_operator_session
@@ -83,6 +89,7 @@ from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router
 from app.transcription import router as transcription_router
 from app.video import router as video_router
+from app.video_models import router as video_models_router
 
 DB = Annotated[Session, Depends(session_scope)]
 
@@ -104,7 +111,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title="AI Station", version="0.1.2", lifespan=lifespan)
+app = FastAPI(title="AI Station", version=__version__, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -226,7 +233,7 @@ def health(response: Response):
     with get_engine().connect() as connection:
         connection.execute(text("SELECT 1"))
     response.headers["Cache-Control"] = "no-store"
-    result = {"status": "ok", "version": "0.1.2"}
+    result = {"status": "ok", "version": __version__}
     if instance_id := get_settings().desktop_instance_id:
         result["desktop_instance_id"] = instance_id
     return result
@@ -462,13 +469,17 @@ app.include_router(connector_router)
 app.include_router(email_router)
 app.include_router(market_feed_router)
 app.include_router(audio_router)
+app.include_router(audio_models_router)
 app.include_router(music_router)
+app.include_router(music_models_router)
 app.include_router(effects_router)
 app.include_router(timeline_router)
 app.include_router(waveform_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
+app.include_router(avatar_models_router)
 app.include_router(video_router)
+app.include_router(video_models_router)
 app.include_router(media_jobs_router)
 app.include_router(commit_router)
 app.include_router(codex_router)
@@ -487,6 +498,8 @@ app.include_router(private_ui_router)
 app.include_router(operator_auth_router)
 app.include_router(nodes_router)
 app.include_router(model_definition_router)
+app.include_router(model_hub_router)
+app.include_router(hub_installations_router)
 app.include_router(model_router)
 app.include_router(model_setup_router)
 app.include_router(bundle_setup_router)

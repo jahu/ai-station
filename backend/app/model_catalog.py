@@ -137,12 +137,12 @@ def build_catalog(session, *, discover_provider=None):
             )
             if not re.search(r"(^|[-_.])mmproj([-_.]|$)", row.filename, re.IGNORECASE)
         ]
-        selected_ids = [model["id"] for model in [*owned["models"], *missing]]
+        selected_ids = [model.get("file_id", model["id"]) for model in [*owned["models"], *missing]]
         file_metadata = {
             row.id: row for row in session.scalars(select(ModelFile).where(ModelFile.id.in_(selected_ids)))
         }
         definitions = {
-            row.file_id: row
+            row.id: row
             for row in session.scalars(
                 select(ModelDefinition).where(ModelDefinition.file_id.in_(selected_ids))
             )
@@ -154,7 +154,9 @@ def build_catalog(session, *, discover_provider=None):
             matches = [
                 instance
                 for instance in owned["instances"]
-                if instance["metadata"].get("model_file_id") == model["id"]
+                if instance["metadata"].get("model_file_id") == model.get("file_id", model["id"])
+                and instance["metadata"].get("model_definition_id")
+                == (model["id"] if model.get("file_id", model["id"]) != model["id"] else None)
             ]
             instance = next(
                 (i for i in matches if i["status"] not in {"stopped", "failed"}),
@@ -182,10 +184,12 @@ def build_catalog(session, *, discover_provider=None):
                 else ""
             )
             reason = model.get("missing_reason") or reason
-            definition = definitions.get(model["id"])
+            definition = definitions.get(model.get("definition_id")) or next(
+                (d for d in definitions.values() if d.file_id == model["id"] and d.binding_key is None), None
+            )
             metadata = instance["metadata"] if instance else {}
             context = metadata.get("n_ctx_train")
-            file = file_metadata.get(model["id"])
+            file = file_metadata.get(model.get("file_id", model["id"]))
             entries.append(
                 CatalogModel(
                     model_ref=model["model_key"],
@@ -217,7 +221,7 @@ def build_catalog(session, *, discover_provider=None):
                     },
                     config_version=iso(provider.updated_at),
                     endpoint_host="",
-                    file_size_bytes=file.size_bytes if file else None,
+                    file_size_bytes=model.get("size_bytes", file.size_bytes if file else None),
                     quantization=file.quantization if file else "",
                 ).model_dump()
             )

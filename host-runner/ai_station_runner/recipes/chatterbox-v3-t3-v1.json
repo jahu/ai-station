@@ -1,0 +1,49 @@
+{
+  "profile": "chatterbox-v3-t3-v1",
+  "runtime_profile": "chatterbox-v3-linux-x86-64-python312-v1",
+  "role": "chatterbox_t3",
+  "filename": "t3_mtl23ls_v3.safetensors",
+  "format": "safetensors",
+  "runtime_manifest_sha256": "8fcef12be91f5e12429493479f79bbe8c8e9fefb077e2c1a393a5e68ee06c987",
+  "runtime_sdk_sha256": {
+    "chatterbox": "003f8c85dcfeb2d91b3a6f97f43b74703d15131e987dfabb7f3d9aee7c0da2cf",
+    "perth": "00e89ff833f7efc1a0ae0ca3c5420ae108b9adbed9c0fb7b03750b854d30f149"
+  },
+  "reference": {
+    "sha256": "5abca8321ede76f8e61f1cc0d19aea6c946b28871017ce8726f8a69203f05953",
+    "size_bytes": 2143989928
+  },
+  "tensor_count": 292,
+  "schema_sha256": "02486d28153364c4f49db153a141c2ac546c6f75655dabdc40c65a8e34ce87a0",
+  "allowed_dtypes": [
+    "F32"
+  ],
+  "fixed_companions": [
+    {
+      "filename": "ve.pt",
+      "sha256": "4b16d836bc598509860f6fa068165a8bb5e9ac84f05582dfcf278a5a372879f1",
+      "size_bytes": 5698626
+    },
+    {
+      "filename": "s3gen.pt",
+      "sha256": "9b9ff07e60b20c136e2b1b3d7563a24604e8d2c4c267888d1ee929dd0151d2a3",
+      "size_bytes": 1057165844
+    },
+    {
+      "filename": "grapheme_mtl_merged_expanded_v1.json",
+      "sha256": "69632f47220a788a52ce2661d096453c5655e9bf25289d89a8d832c46ee07dbf",
+      "size_bytes": 69989
+    },
+    {
+      "filename": "conds.pt",
+      "sha256": "6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e",
+      "size_bytes": 107374
+    },
+    {
+      "filename": "Cangjie5_TC.json",
+      "sha256": "7073fd9de919443ae88e0bd2449917a65fe54898a4413ed1edcc4b67f28bce8c",
+      "size_bytes": 1920163
+    }
+  ],
+  "notice": "Structural T3 graph/layout inspection only. The exact tokenizer, voice encoder, decoder, conditionals, complete SDK/environment, hardware and first-result qualification remain independently required."
+}

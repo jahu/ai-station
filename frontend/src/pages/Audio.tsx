@@ -21,6 +21,7 @@ import SoundEffects from "./SoundEffects";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import SpeechDeliveryControls from "../components/media/SpeechDeliveryControls";
 import SpeechEngineFields from "../components/media/SpeechEngineFields";
+import { useSpeechModels } from "../components/media/speech-models";
 import {
   defaultSpeechDelivery,
   type SpeechDelivery,
@@ -161,6 +162,10 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   );
   const [pace, setPace] = useState(String(restored.pace ?? "natural"));
   const fish = engine === "fish_s2_pro";
+  const [modelId, setModelId] = useState(
+    String(search.get("model") ?? restored.model_id ?? ""),
+  );
+  const speechModels = useSpeechModels();
   const [voiceSource, setVoiceSource] = useState<"reference" | "model">(
     restored.voice_source === "model"
       ? "model"
@@ -175,8 +180,16 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
     (restored.delivery as SpeechDelivery | undefined) ?? defaultSpeechDelivery,
   );
   const capabilities = useQuery({
-    queryKey: ["speech-capabilities"],
-    queryFn: () => api<SpeechCapabilities>("/audio/capabilities"),
+    queryKey:
+      modelId && !fish
+        ? ["speech-capabilities", modelId]
+        : ["speech-capabilities"],
+    queryFn: () =>
+      api<SpeechCapabilities>(
+        modelId && !fish
+          ? `/audio/models/${modelId}/capabilities`
+          : "/audio/capabilities",
+      ),
     staleTime: 30000,
     refetchInterval: (query) =>
       query.state.data?.engines?.fish_s2_pro?.readiness === "checking"
@@ -196,6 +209,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
       reference,
       text,
       gpu,
+      ...(!fish && modelId ? { model_id: modelId } : {}),
       ...(fish
         ? { engine, direction, pace, voice_source: voiceSource }
         : shapeDelivery
@@ -223,6 +237,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         text,
         gpu,
         reference_artifact_id: modelVoice ? null : reference,
+        ...(!fish && modelId ? { model_id: modelId } : {}),
         ...(fish
           ? {
               engine,
@@ -285,6 +300,22 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
           </div>
           <fieldset disabled={uploading || busy}>
             <SpeechEngineFields
+              modelId={modelId}
+              models={speechModels.data?.items}
+              onModel={(id) => {
+                setModelId(id);
+                setEngine("");
+                setVoiceSource("reference");
+                setSearch(
+                  (current) => {
+                    const next = new URLSearchParams(current);
+                    next.delete("model");
+                    next.delete("engine");
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }}
               engine={engine}
               direction={direction}
               pace={pace}
@@ -303,15 +334,17 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 )
                   setReference("");
                 setEngine(next);
+                setModelId("");
                 if (next === "fish_s2_pro")
                   setVoiceSource(
                     reference || !modelVoiceReady ? "reference" : "model",
                   );
-                if (search.has("engine")) {
+                if (search.has("engine") || search.has("model")) {
                   setSearch(
                     (current) => {
                       const updated = new URLSearchParams(current);
                       updated.delete("engine");
+                      updated.delete("model");
                       return updated;
                     },
                     { replace: true },
@@ -321,6 +354,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
               onDirection={setDirection}
               onPace={setPace}
             />
+            <ErrorNotice error={capabilities.error ?? speechModels.error} />
             {!fish && capabilities.data?.available === false && (
               <div className="notice" role="status">
                 <strong>Set up local speech to get started.</strong>
@@ -409,7 +443,9 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 !text.trim() ||
                 uploading ||
                 busy ||
-                (!fish && capabilities.data?.available === false) ||
+                (!fish &&
+                  (capabilities.data?.available === false ||
+                    (!!modelId && !capabilities.data?.available))) ||
                 (fish ? !fishReady : shapeDelivery && !supportsDelivery)
               }
             >

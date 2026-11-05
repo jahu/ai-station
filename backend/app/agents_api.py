@@ -121,7 +121,25 @@ def validate_target(body, session, agent=None, *, enabling=False):
         from app.agent_media import freeze_inputs, require_profile
 
         try:
-            require_profile(body.media)
+            if body.media.kind == "avatar" and body.media.request.model_id:
+                from app.agent_media import selected_avatar_profile
+
+                selected_avatar_profile(session, body.media.request)
+            elif body.media.kind == "video" and body.media.request.model_id:
+                from app.video import memory_reservation
+                from app.video_models import profile_for
+
+                memory_reservation(body.media.request, profile_for(session, body.media.request.model_id))
+            elif body.media.kind == "speech" and body.media.request.model_id:
+                from app.audio_models import profile_for
+
+                profile_for(session, body.media.request.model_id)
+            elif body.media.kind == "music" and body.media.request.model_id:
+                from app.music_models import profile_for
+
+                profile_for(session, body.media.request.model_id)
+            else:
+                require_profile(body.media)
             freeze_inputs(session, body.media)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc

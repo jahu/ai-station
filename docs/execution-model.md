@@ -478,3 +478,13 @@ prefix sizes or supply both a one-frame prefix and a raw checkpoint. Old plans
 and their retries/resumes keep cached-latent/seventeen-frame behavior. The plan,
 Run parameters and native report expose the actual choice. Unknown internal
 strategies fail before native dispatch. See [qualification and scope](plans/wan-continuation-quality.md).
+
+Selected avatar execution reuses whole-recording avatar plans and the existing
+Host Runner process manager. Workspace, explicitly selected conversation tools
+and reviewed agents resolve one installed definition; publication freezes its
+checkpoint and complete engine, while resume/retry retain that original binding.
+Native selected-capability queries inspect files and hardware without loading a
+model. Initial background hashing reports `checking`; preparation defers the same
+Run and retains its Task-wide Stop fence instead of treating that state as a
+failed installation. Verified cache reuse preserves file identity, including ctime,
+so that polling cannot invalidate the native readiness observation it awaits.

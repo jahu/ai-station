@@ -21,7 +21,9 @@ def runtime(tmp_path, monkeypatch):
     clear_settings_cache()
     (root / "models").mkdir()
     model = root / "models/model.gguf"
-    model.write_bytes(b"GGUFtest")
+    from test_gguf_context import fields, header
+
+    model.write_bytes(header(fields()))
     body = llama.Load(
         instance_id=uuid4(),
         run_id=uuid4(),
@@ -52,6 +54,16 @@ def runtime(tmp_path, monkeypatch):
                 "Id": "b" * 64,
                 "Config": {"Labels": labels},
                 "State": {"Status": "created", "Running": False},
+                "Mounts": [
+                    {
+                        "Type": "bind",
+                        "Source": fields["src"],
+                        "Destination": fields["dst"],
+                        "RW": "readonly" not in spec.split(","),
+                    }
+                    for spec in [args[i + 1] for i, value in enumerate(args) if value == "--mount"]
+                    for fields in [dict(field.split("=", 1) for field in spec.split(",") if "=" in field)]
+                ],
             }
             if "--memory" in args:
                 budget = int(args[args.index("--memory") + 1].removesuffix("m")) * 1024**2
@@ -461,3 +473,154 @@ def test_cpu_policy_change_requires_inspection_before_any_owned_signal(cpu_runti
     with pytest.raises(HTTPException, match="CPU container"):
         llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))
     assert not any(v[0] in {"stop", "rm"} for v in state["calls"][before:])
+
+
+@pytest.fixture
+def bundle_runtime(runtime, monkeypatch):
+    from ai_station_runner import runtime_setup
+    from test_gguf_bundle import sample
+
+    root, body, state = runtime
+    coordinate = sample(root)
+    first = coordinate.parts[0]
+    body = llama.Load.model_validate(
+        {
+            **body.model_dump(),
+            "model_path": first.relative_path,
+            "model_sha256": first.sha256,
+            "size_bytes": first.size_bytes,
+            "mtime": first.mtime,
+            "app_owned": True,
+            "cache_type": "q8_0",
+            "model_bundle": coordinate,
+        }
+    )
+    monkeypatch.setattr(llama, "BUNDLE_LOAD_QUALIFIED", True)
+    monkeypatch.setattr(llama, "BUNDLE_IMAGE_ID", "sha256:" + "a" * 64)
+    monkeypatch.setattr(
+        runtime_setup, "inspect_image", lambda _: {"image": {"id": "sha256:" + "a" * 64, "present": True}}
+    )
+    monkeypatch.setattr(
+        llama,
+        "collect",
+        lambda _: {
+            "gpus": [
+                {"index": g, "uuid": f"GPU-{g}", "memory_total_mib": 12288, "memory_used_mib": 0}
+                for g in [2, 7]
+            ],
+            "memory": {"available_mib": 32768},
+        },
+    )
+    return root, body, state
+
+
+def test_complete_bundle_load_replay_recovery_and_stop_without_source(bundle_runtime):
+    root, body, state = bundle_runtime
+    assert llama.load(body)["alive"]
+    assert llama.load(body)["alive"]
+    record = llama.manifest(body.instance_id)
+    assert record["model_bundle"]["size_bytes"] == body.model_bundle.size_bytes
+    creates = [args for args in state["calls"] if args[0] == "create"]
+    assert len(creates) == 1
+    argv = creates[0]
+    assert argv[argv.index("--model") + 1] == "/models/model-00001-of-00002.gguf"
+    for part, target in zip(body.model_bundle.parts, llama.destinations(2)):
+        assert f"type=bind,src={root / part.relative_path},dst={target},readonly" in argv
+    # Inspect and owned Stop use the saved container binding, even when the
+    # original source was lost; no model parser/path resolution runs here.
+    (root / body.model_bundle.parts[1].relative_path).unlink()
+    assert llama.inspect(body.instance_id)["alive"]
+    assert llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))["status"] == "stopped"
+
+
+@pytest.mark.parametrize("change", ["rw", "destination", "source", "extra", "missing"])
+def test_bundle_mount_tampering_refuses_inspect_and_signals(bundle_runtime, change):
+    _, body, state = bundle_runtime
+    llama.load(body)
+    mounts = state["item"]["Mounts"]
+    model = next(m for m in mounts if m["Destination"].startswith("/models/"))
+    if change == "rw":
+        model["RW"] = True
+    elif change == "destination":
+        model["Destination"] = "/models/other.gguf"
+    elif change == "source":
+        model["Source"] = "/other/model.gguf"
+    elif change == "extra":
+        mounts.append({"Type": "bind", "Source": "/other", "Destination": "/models/extra", "RW": False})
+    else:
+        mounts.remove(model)
+    before = len(state["calls"])
+    with pytest.raises(HTTPException, match="mount policy"):
+        llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))
+    assert not any(call[0] in {"stop", "rm"} for call in state["calls"][before:])
+
+
+def test_missing_bundle_part_never_creates_container_and_cancel_still_wins(bundle_runtime):
+    root, body, state = bundle_runtime
+    (root / body.model_bundle.parts[1].relative_path).unlink()
+    with pytest.raises(HTTPException, match="GGUF bundle"):
+        llama.load(body)
+    assert not state["calls"]
+    llama.stop(body.instance_id, llama.Stop(permissions=["manage_models"]))
+    with pytest.raises(HTTPException, match="immutable"):
+        llama.load(body)
+
+
+@pytest.mark.parametrize(
+    "hardware",
+    [
+        {"memory": {"available_mib": 100}, "gpus": []},
+        {
+            "memory": {"available_mib": 32768},
+            "gpus": [{"index": 2, "uuid": "GPU-2"}, {"index": 7, "uuid": "GPU-7"}],
+        },
+        {
+            "memory": {"available_mib": 32768},
+            "gpus": [
+                {"index": 2, "uuid": "GPU-2", "memory_total_mib": 24576, "memory_used_mib": 0},
+                {"index": 7, "uuid": "GPU-7", "memory_total_mib": 512, "memory_used_mib": 0},
+            ],
+        },
+    ],
+)
+def test_bundle_hardware_checks_ram_and_each_device_not_pooled(bundle_runtime, monkeypatch, hardware):
+    _, body, state = bundle_runtime
+    monkeypatch.setattr(llama, "collect", lambda _: hardware)
+    with pytest.raises(HTTPException, match="422"):
+        llama.load(body)
+    assert not any(call[0] == "create" for call in state["calls"])
+
+
+def test_bundle_qualification_and_primary_coordinate_are_not_client_overrides(bundle_runtime, monkeypatch):
+    from pydantic import ValidationError
+
+    _, body, state = bundle_runtime
+    monkeypatch.setattr(llama, "BUNDLE_LOAD_QUALIFIED", False)
+    with pytest.raises(HTTPException, match="being qualified"):
+        llama.load(body)
+    assert not state["calls"]
+    for update in [
+        {"size_bytes": body.model_bundle.size_bytes},
+        {"app_owned": False},
+        {"gpus": [], "cache_type": "f16"},
+        {"projector": {"path": "/projector", "size_bytes": 1, "mtime": 1}},
+    ]:
+        with pytest.raises(ValidationError):
+            llama.Load.model_validate({**body.model_dump(), **update})
+
+
+def test_renamed_first_or_later_fragment_cannot_use_single_file_load(bundle_runtime):
+    _, body, state = bundle_runtime
+    for part in body.model_bundle.parts:
+        single = body.model_copy(
+            update={
+                "model_bundle": None,
+                "model_path": part.relative_path,
+                "model_sha256": part.sha256,
+                "size_bytes": part.size_bytes,
+                "mtime": part.mtime,
+            }
+        )
+        with pytest.raises(HTTPException, match="complete bundle"):
+            llama.load(single)
+    assert not state["calls"]

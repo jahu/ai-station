@@ -1,3 +1,70 @@
+The next-release [open model discovery contract](plans/open-model-discovery.md)
+extends existing model setup rather than adding an execution system. A source
+observation may retain one pinned supported language configuration for all file
+variants. Local hardware advice and later context-specific plans reuse that
+snapshot; they do not download weights or query a moving base once accepted.
+Public source inspections/searches are private administrator-owned Tasks/Runs, with bounded HF
+metadata, immutable source observations and hardware assessments. They download
+no weights and cannot activate a runtime. New single-file GGUF plans freeze a
+supported architecture's publisher configuration and file identities; the existing
+download/adoption lifecycle rechecks native geometry before registering them for
+Chat. Native model inspection also accepts one fixed image-checkpoint profile
+for already verified app-owned GGUFs. The shared bounded GGUF reader checks the
+complete tensor-name/dimension signature and storage layout against the exact
+qualified runtime/reference recipe, without reading tensor payloads or loading a
+GPU. This structural evidence is not runtime readiness or inference qualification.
+Qwen Image 2.1 source plans now compose the existing model downloader with an
+optional fixed image-engine prerequisite in the same Task. The native preparation
+contract accepts that Task only through its exact licensed model manifest and
+RunDependency. Shared image definitions freeze a verified owned checkpoint and
+engine/companion binding; the managed image executor replaces only its diffusion
+mount. Ordinary workspace and assistant/agent selection reuses those definitions.
+Other media checkpoint families and complete cross-capability discovery remain
+required delivery steps.
+
+The finite Sonic avatar slot inspects the actual adapted `Sonic/unet.pth`, not
+an unused base SVD weight. A bounded, non-executing decoder recognizes only its
+closed tensor-data ZIP format and complete graph/module-version signatures.
+It binds the existing SDK and all thirteen other model inputs. The native
+catalog retains per-device VRAM, physical RAM, driver and complete disk checks;
+matching descriptors do not install weights or grant inference readiness.
+Publisher inspection shares only the two pure metadata-parser modules with the
+control-plane image, without shipping the native Runner API or inference stack.
+It fetches a bounded tail/directory and at most six metadata entries through the
+existing pinned public HTTPS transport. Sparse reads cannot enter tensor storage;
+full native local-layout/content checks remain required after actual installation.
+
+
+The same typed metadata-only verifier now accepts a fixed Wan 2.2 5B diffusion
+slot. Its bounded SafeTensors reader validates complete graph and byte layout,
+without Torch or payload reads. The slot binds the complete existing native
+video recipe; legacy language-model admission stays GGUF-only. This primitive
+provides structural evidence, not new video installation or runtime selection.
+
+Owned-model filesystem checks are shared through a standard-library module.
+The Runner maps its errors to HTTP; the offline inference child imports the pure
+checks directly and never needs FastAPI/Uvicorn or the Runner's setup router.
+Engine qualification gates stay in native preparation and parent dispatch.
+
+The video discovery candidate matches one immutable SafeTensors header against
+that slot before weights transfer, then composes the existing downloader and
+optional owned video-engine prerequisite. License/workload consent includes the
+fixed CPU-offload profile. Shared video definitions freeze an owned diffusion
+object and opaque native environment; workspace, film segments and reviewed
+agent/conversation media settings reuse this binding. Opening a model from its
+installation starts a fresh creative workspace and preserves the explicit choice.
+Native execution changes
+only the diffusion source and retains existing process ownership/recovery.
+Qualification status is recorded in `docs/models.md`; other formats/families are
+not silently admitted by this graph.
+
+The speech preparation catalog also declares a structural Chatterbox multilingual
+v3 T3 slot. It reuses the bounded SafeTensors reader and the same typed owned-model
+verification operation, with a distinct finite profile. The slot fixes the F32
+graph and complete existing runtime/tokenizer/voice-encoder/decoder/conditional
+recipe. This is metadata inspection only; new speech installation, binding and
+selection remain separate admission stages, not inherited from a matching header.
+
 The optional [native Linux graphics setup](plans/linux-gpu-onboarding.md)
 candidate extends the trusted desktop installer with a separate OS-authenticated
 fixed action. It prepares pinned toolkit inputs and preserves Docker settings,
@@ -1424,3 +1491,130 @@ Registry deletion uses account-scoped, versioned tombstones for Agents and Proje
 New agent drafts preserve controller-parsed explicit user schedules over model defaults across ordinary, selected-source and repeat-analysis paths. Compact conversation cards activate the saved revision through the existing permission/readiness-checked API; draft creation remains disabled. See [conversation activation](plans/agent-chat-activation.md).
 
 Image-agent proposals default to Qwen unless the user names another supported engine. Agent model selectors share backend-specific option cleanup; the typed image API keeps rejecting incompatible settings. Vertical agent media results use static positioning while Images keeps its sticky preview. See [agent image models](plans/agent-image-models.md).
+
+Prepared speech engines expose a separate opaque identity for explicit model
+bindings. A private index resolves that identity to the exact prepared Python,
+ready receipt and fixed model view; the public value contains no preparation
+Run/account coordinate. Read-only fallback admits an older active engine without
+rewriting its metadata. Explicit adoption remembers the previous and new engines
+before changing the active pointer, so later activation preserves existing
+bindings. The catalog reports managed-engine readiness separately from an
+externally configured speech default. New model installation/dispatch still
+requires the reviewed source/graph/workload contract above.
+
+Hardware comparison reuses the private model-inspection executor: a saved search
+selects at most three bounded public source inspections under one Run and hardware
+observation. Its structured result retains independently hashed immutable source
+observations. Existing planning may select only one of those verified nested
+observations; it does not resolve a moving publisher branch again. Partial source
+unavailability stays explicit, while Stop, claim and administrator fences cover
+the entire inspection. Comparison grants no installation or inference authority.
+
+Discovered memory encoders reuse the bounded worker-side CPU service. A finite
+E5 ONNX profile freezes the whole encoder, fixed tokenizer and export graph;
+source/configuration estimates precede the existing download Run. An offline,
+owned 2-GiB child verifies the complete graph and a normalized probe before shared
+registry publication. Explicit administrator selection freezes that bundle in
+ordinary account-private health/index/search Runs. CPU reservations also observe
+the worker's cgroup limit. Installation never replaces current semantic settings;
+FTS and existing CPU/endpoint configurations remain available. See
+[encoder bundles and qualification](models.md#discovered-memory-encoder-bundles-candidate-under-qualification).
+
+The native music preparation catalog now declares a finite ACE-Step 1.5 Turbo
+BF16 diffusion slot. Its typed owned-model inspection reuses bounded SafeTensors
+metadata validation and freezes the existing runtime, SDK and all 15 companions,
+including trusted model Python. It does not activate a new music model or admit
+publisher code. Source planning, installation and selected inference remain
+separate stages. [Music slot](models.md#native-music-checkpoint-slot).
+
+The discovered-music candidate composes the normal model downloader with the
+existing `music_setup` prerequisite under one licensed Task. Native music engine
+identities are opaque and independent of the configured default. A shared model
+binding freezes the owned diffusion checkpoint and that engine; ordinary Music,
+agent and conversation Runs snapshot both. The offline child verifies the original
+complete engine/companions and selected weights, then substitutes only diffusion
+in its private view. Explicit per-device GPU/RAM/offload admission, absolute
+execution deadlines and owned-process inspection remain in the existing lifecycle.
+[Candidate contract and qualification](models.md#discovered-music-bundles-under-qualification).
+
+The avatar installation candidate connects source inspection and complete engine
+preparation to shared avatar definitions. A typed read-only native capability
+query resolves a selected checkpoint and opaque engine, independently of current
+defaults. Avatars, reviewed agents and explicit conversation tools share that
+selection; whole-recording plans retain it through speech preparation and resume.
+Per-device VRAM, physical RAM, fixed CPU offload and complete disk requirements
+are reviewed before transfer. A metadata match alone still grants no readiness;
+selected inference remains subject to its separate native qualification gate.
+
+Split-GGUF source inspection retains a bounded declared part manifest from the
+same immutable publisher revision, including siblings of a pasted non-first file.
+Files reference one shared manifest rather than duplicating its members. Source
+advice uses the complete declared weights for disk lower bounds, while unknown
+or incomplete sets retain unknown requirements. Filename grouping grants neither
+native graph verification nor installation: existing fragment refusal stays in
+place for incomplete or unsupported sets. Complete compatible installation is
+described below.
+
+
+Native split-GGUF admission now has a closed owned-object coordinate. The bounded
+reader verifies every part's wire types/order/count, complete unique tensor
+inventory, storage extents and first-part context. A Linux llama.cpp load binds
+each immutable store object read-only under server-generated part names; request
+replay freezes the whole set and inspection/Stop check its complete mount policy.
+Per-device admission uses complete weight size, equal-layer rounding, shared
+weights, Q8 context/state and runtime headroom, with a separate available-RAM
+check. The native path is qualified against one pinned CUDA image; the complete
+source installation and ordinary Chat qualification are described below.
+
+
+The complete-source installation path extends the existing download
+executor and model definitions. A closed publisher set becomes an owned binding
+only after every object and the native whole-model proof pass. The physical
+primary ModelFile size is preserved; complete size and immutable component
+observations belong to the binding. Runtime source/handoff facts include all
+parts without exposing private initiating Runs. A numeric SQL read preserves the
+new bundle coordinate's exact timestamp double; legacy single-file source
+serialization is retained. The source-installation gate is enabled after real public multipart download and
+ordinary Linux GPU Chat/agent qualification. The native file context may exceed
+the publisher config without changing the reviewed default; attention geometry
+and sufficient native context remain required.
+
+
+Single-file llama.cpp context/discovery estimates follow the native equal-layer
+CUDA split: each selected device must hold an equal share, so usable aggregate
+capacity is capped by the smallest selected device times the device count. Extra
+VRAM on a larger device is not pooled into another device's allocation. Curated
+equal-capacity presets and explicit CPU profiles are unchanged; native inspection
+and actual runtime readiness remain separate from this pre-download estimate.
+
+
+Additional complete GGUF definitions may share one physical ModelFile. Migration
+0044 preserves a unique default definition per file and adds a unique optional
+ordered-content binding key for additional sets. Legacy file UUID references are
+unchanged; additional definitions use their own UUID in the existing llama.cpp
+selection namespace. The optional logical ID is control-plane metadata only; the
+Runner still receives its closed complete owned-object coordinate. Runtime reuse,
+context history, reasoning and deferred resumes distinguish sibling selections.
+Removed bundle definitions retain their identity and source binding; only an
+explicit verified restoration re-enables that choice. No weights are deleted.
+
+
+Publisher origin is a closed shared metadata projection of the verified source
+snapshot and physical primary identity. Known curated legacy files require an
+exact current catalog SHA/size match; unknown origins are not inferred from
+private download Runs. Generated publisher URLs use validated HF coordinates,
+never caller-provided raw recipe URLs. Update review pre-fills the existing
+metadata-only discovery flow, with no background download or model replacement.
+
+### Guided discovery entry
+
+The model discovery entry queues one ordinary administrator-owned metadata Run,
+not an installation. A capability and popular/recent preference select a pinned
+runtime starting point plus at most two other public repository matches. The
+existing bounded comparer inspects all three sources, freezes their observations
+and applies actual hardware, disk and optional conversation-context budgets.
+Starting points convey navigation rather than compatibility authority; unrelated
+profiles cannot earn a fit for the selected capability. A publisher search outage
+keeps the individually inspected starting point with a visible notice. Opening an
+installed model's publisher-update link still only prefills the source; it never
+launches inspection, download or replacement by itself.

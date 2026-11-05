@@ -23,6 +23,65 @@ function chooseAction(key: string) {
   });
 }
 
+it("selects an installed avatar model in conversation tools and clears it when the action changes", async () => {
+  const id = "installed-sonic";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => ({
+      ok: true,
+      json: async () =>
+        String(input).endsWith("/avatars/models")
+          ? { items: [{ id, name: "Portrait model", available: true }] }
+          : String(input).includes("/avatars/models/")
+            ? { available: true, backend: "sonic", readiness: "ready" }
+            : String(input).includes("/artifacts/")
+              ? {
+                  id: String(input).endsWith("voice") ? "voice" : "portrait",
+                  type: String(input).endsWith("voice") ? "audio" : "image",
+                  mime_type: String(input).endsWith("voice")
+                    ? "audio/wav"
+                    : "image/png",
+                  original_filename: "Input",
+                }
+              : [],
+    })),
+  );
+  let current: AssistantOptions;
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      action: "avatar.animate",
+      image_artifact_ids: ["portrait"],
+      audio_artifact_id: "voice",
+    });
+    current = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <Composer />
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("option", { name: "Portrait model" });
+  fireEvent.change(screen.getByLabelText("Avatar model"), {
+    target: { value: id },
+  });
+  expect(current!.avatar_model_id).toBe(id);
+  chooseAction("chat");
+  expect(current!.avatar_model_id).toBeUndefined();
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -1982,4 +2041,58 @@ it("clears old scene timings when a new film changes back to a short preview", (
   expect(saved.media).toBeNull();
   expect(saved.effects?.cues).toEqual([]);
   expect(saved.effects?.prompt).toBe("Rain");
+});
+
+it("selects an installed conversation speech model and clears it when changing action", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/audio/models"
+          ? { items: [{ id, name: "Studio voice", available: true }] }
+          : path.includes("/artifacts/")
+            ? {
+                id: "voice",
+                type: "audio",
+                mime_type: "audio/wav",
+                original_filename: "voice.wav",
+              }
+            : [],
+    })),
+  );
+  let current: AssistantOptions;
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      action: "audio.speech",
+      audio_artifact_id: "voice",
+    });
+    current = value;
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <Composer />
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("option", { name: "Studio voice" });
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: id },
+  });
+  expect(current!.speech_model_id).toBe(id);
+  chooseAction("audio.transcribe");
+  expect(current!.speech_model_id).toBeUndefined();
 });

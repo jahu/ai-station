@@ -4,6 +4,7 @@ import hashlib
 import json
 import secrets
 import wave
+from datetime import timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -14,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db import session_scope
+from app.db import session_scope, utcnow
 from app.host_media_executor import HostMediaExecutor
 from app.media_translation_text import TranslationOptions
 from app.models import Run, Task
@@ -87,7 +88,13 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
     prior = existing(session, body, task)
     if prior is not None:
         return prior
-    ready = capabilities() if observed_profile is None else observed_profile
+    from app.music_models import profile_for
+
+    ready = (
+        profile_for(session, body.model_id, observed_profile)
+        if body.model_id
+        else (capabilities() if observed_profile is None else observed_profile)
+    )
     if not ready.get("available") or ready.get("profile_sha256") != PROFILE_SHA256:
         raise HTTPException(409, ready.get("reason", "The approved local music preset is unavailable"))
     managed = ready.get("configuration_source") == "managed"
@@ -134,6 +141,15 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
+            **(
+                {
+                    "execution_deadline_at": (utcnow() + timedelta(hours=1)).isoformat(),
+                    "model_id": str(body.model_id),
+                    "music_model": ready["music_model"],
+                }
+                if body.model_id
+                else {}
+            ),
             **({"managed_music_gpu_indices": eligible} if managed else {}),
             **(
                 {"runtime_manifest_sha256": ready["runtime_manifest_sha256"]}
@@ -202,6 +218,12 @@ class MusicExecutor(HostMediaExecutor):
         from app.media_translation import validate_media_translation
 
         validate_media_translation(session, run)
+        if run.parameters.get("music_model"):
+            from app.music_models import frozen_model, same_model
+
+            current = frozen_model(session, run.parameters["music_model"]["definition_id"])
+            if not same_model(current, run.parameters["music_model"]):
+                raise ValueError("The selected music model changed after submission")
 
     def _start(self, runner, run, allocated, output):
         return runner.request(
@@ -215,6 +237,14 @@ class MusicExecutor(HostMediaExecutor):
                 },
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {
+                        "checkpoint": run.parameters["music_model"]["checkpoint"],
+                        "managed_runtime": run.parameters["music_model"]["binding"]["managed_runtime"],
+                    }
+                    if run.parameters.get("music_model")
+                    else {}
+                ),
                 **(
                     {"runtime_manifest_sha256": run.parameters["runtime_manifest_sha256"]}
                     if run.parameters.get("runtime_manifest_sha256")
@@ -237,4 +267,5 @@ class MusicExecutor(HostMediaExecutor):
             "prompt": run.parameters["caption"],
             "lyrics": run.parameters["lyrics"],
             "instrumental": run.parameters["instrumental"],
+            **({"model_id": run.parameters["model_id"]} if run.parameters.get("model_id") else {}),
         }

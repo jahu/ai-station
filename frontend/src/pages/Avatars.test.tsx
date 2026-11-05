@@ -88,6 +88,101 @@ function wholeRuntime(checking = false, echoAvailable = true) {
   return writes;
 }
 
+it("uses an installed avatar model from its link without depending on the default engine", async () => {
+  const writes = wholeRuntime();
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      if (path === "/api/avatars/models")
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "installed-sonic",
+                name: "My portrait model",
+                available: true,
+              },
+            ],
+          }),
+        );
+      if (path === "/api/avatars/models/installed-sonic/capabilities")
+        return new Response(
+          JSON.stringify({
+            available: true,
+            backend: "sonic",
+            readiness: "ready",
+          }),
+        );
+      if (
+        path === "/api/avatars/capabilities" ||
+        path === "/api/avatars/whole-capabilities"
+      )
+        throw new Error("Selected models must use their own engine probe");
+      return original(input, options);
+    }),
+  );
+  mount("/avatars?model=installed-sonic&image=portrait&audio=speech");
+  const choice = await screen.findByLabelText("Avatar model");
+  expect((choice as HTMLSelectElement).value).toBe("installed-sonic");
+  const button = screen.getByRole("button", { name: "Generate avatar video" });
+  await vi.waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(button);
+  await vi.waitFor(() => expect(writes.length).toBe(1));
+  expect(writes[0]).toEqual(
+    expect.objectContaining({
+      model_id: "installed-sonic",
+      generation_profile: "sonic_whole_768_v1",
+    }),
+  );
+  expect(writes[0]).not.toHaveProperty("size");
+  expect(writes[0]).not.toHaveProperty("steps");
+});
+
+it("retains a selected model while its installed files are checking and blocks generation", async () => {
+  const writes = wholeRuntime();
+  const original = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
+      const path = String(input);
+      if (path === "/api/avatars/models")
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "saved-sonic",
+                name: "Saved portrait model",
+                available: true,
+              },
+            ],
+          }),
+        );
+      if (path === "/api/avatars/models/saved-sonic/capabilities")
+        return new Response(
+          JSON.stringify({
+            available: false,
+            backend: "sonic",
+            readiness: "checking",
+          }),
+        );
+      return original(input, options);
+    }),
+  );
+  mount("/avatars?model=saved-sonic&image=portrait&audio=speech");
+  await screen.findByRole("option", { name: "Saved portrait model" });
+  expect(
+    (screen.getByLabelText("Avatar model") as HTMLSelectElement).value,
+  ).toBe("saved-sonic");
+  expect(
+    screen
+      .getByRole("button", { name: "Generate avatar video" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(writes).toEqual([]);
+});
+
 it("defaults new full recordings to stable detail and sends only applicable controls", async () => {
   const writes = wholeRuntime();
   mount("/avatars?image=portrait&audio=speech");

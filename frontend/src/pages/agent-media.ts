@@ -27,6 +27,7 @@ export type ImageMediaRequest = {
   upscale_result?: boolean;
 };
 export type VideoMediaRequest = {
+  model_id?: string;
   memory_profile?: "default" | "bounded_11g";
   prompt: string;
   negative_prompt?: string;
@@ -42,6 +43,7 @@ export type VideoMediaRequest = {
   gpu?: string;
 };
 export type AvatarMediaRequest = {
+  model_id?: string | null;
   generation_profile?: AvatarGenerationProfile;
   memory_profile?: "default" | "bounded_11g";
   image_artifact_id: string | null;
@@ -83,6 +85,7 @@ export type AgentMediaScope =
       kind: "speech";
       description_source: "fixed" | "goal";
       request: {
+        model_id?: string;
         text: string;
         engine?: "fish_s2_pro";
         direction?:

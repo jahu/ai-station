@@ -12,6 +12,7 @@ export type ImageSettings = {
   grounding_px: number;
 };
 export type ImageModel = {
+  managed_checkpoint?: boolean;
   id: string;
   definition_id: string | null;
   name: string;

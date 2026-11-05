@@ -10,7 +10,9 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ai_station_runner import avatar_environment, nvidia, runtime_install
+from ai_station_runner import avatar_checkpoints, avatar_environment, nvidia, runtime_install
+from ai_station_runner.avatar_checkpoints import PROFILE as CHECKPOINT_PROFILE
+from ai_station_runner.avatar_checkpoints import recipe as checkpoint_recipe
 from ai_station_runner.config import get_settings
 from ai_station_runner.environment_prepare import OwnedEnvironmentPreparation
 from ai_station_runner.memory_scope import available
@@ -111,6 +113,28 @@ def catalog():
 
     existing = capabilities()
     driver_ok = driver_supported(frozen["driver_minimum"])
+    managed = {"available": False, "prepared": False}
+    try:
+        from ai_station_runner.sonic_runtime import capabilities as selected_capabilities
+
+        observed = avatar_environment.read_json(root / "runtime/avatar-environments/active.json")
+        identity = avatar_environment.environment_id(observed)
+        avatar_environment.resolve_id(root, identity)
+        ready = selected_capabilities(identity)
+        managed = {
+            "prepared": True,
+            "available": bool(
+                ready.get("available") is True and supported and fitting and ram >= 24576 and driver_ok
+            ),
+            "readiness": ready.get("readiness"),
+            "managed_runtime": {
+                "profile": frozen["profile"],
+                "manifest_sha256": avatar_environment.fingerprint(frozen),
+                "environment_id": identity,
+            },
+        }
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     notice = (
         "Managed avatar setup and inference are still being qualified"
         if not QUALIFIED
@@ -127,7 +151,10 @@ def catalog():
         else None
     )
     return {
+        "managed_avatar": managed,
+        "checkpoint_inference_available": avatar_checkpoints.INFERENCE_QUALIFIED,
         "recipe": frozen,
+        "checkpoint_slots": [checkpoint_recipe(CHECKPOINT_PROFILE)],
         "manifest_sha256": avatar_environment.fingerprint(frozen),
         "platform_supported": supported,
         "installation_available": notice is None,

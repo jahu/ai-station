@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.1.2` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.2.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -38,20 +38,31 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
-> **Early access:** 0.1 brings desktop installers and guided model setup for
+> **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.1.2.md).
+> [Exact qualification and known issues](docs/releases/0.2.0.md).
 
-**New in 0.1.2:** find older references across your whole Library, choose them
-with larger previews, browse media first and see actual film/avatar stills.
-Media jobs recover observation of an existing process after a lost worker without
-automatically starting generation again. [What changed](docs/releases/0.1.2.md).
+**New in 0.2: find your next local model.** Open **Models → Find new models**,
+choose what you want to create, or paste a Hugging Face link. Browse popular or
+recently updated sources for conversation, images, video, voice, music, avatars
+and memory — then review and install a compatible choice.
 
-Release 0.1 prioritizes reliable setup on Linux and Windows, your first local
+**Check the fit before downloading.** AI Station considers each GPU separately,
+conversation context, RAM, disk and the complete model's companion files. It
+explains unknown requirements and unsupported families instead of guessing.
+Models sharing weights keep independent configurations; reusable owned files
+reduce repeated downloads and are verified again during installation.
+
+Your models become available in their workspaces and compatible assistant/agent
+settings. Publisher update review is explicit: a new revision never replaces your
+choice silently. [Supported families and actual tests](docs/models.md) ·
+[Discovery design and installation lifecycle](docs/plans/open-model-discovery.md).
+
+Release 0.2 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.1 release notes and qualification status](docs/releases/0.1.2.md).
+[0.2 release notes and qualification status](docs/releases/0.2.0.md).
 
 ## Help make it simple
 
@@ -187,8 +198,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.1.2-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.1.2-linux-amd64.deb`.
+- **Windows 11 x64:** `AI-Station-0.2.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.2.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -196,13 +207,13 @@ Python and the app are bundled; the installer guides required OS permissions.
 Windows uses its own WSL2 environment and may require an OS restart.
 Model downloads and larger media need additional disk space and suitable hardware.
 
-**Windows installer notice:** 0.1 is **not digitally signed**. Windows may show
+**Windows installer notice:** the installer is **not digitally signed**. Windows may show
 an unknown-publisher/SmartScreen warning; Smart App Control or managed-device
 policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.1.2.md).
+[Installation, updates and known issues](docs/releases/0.2.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -236,10 +247,11 @@ feature branches and PRs into `develop`.
 <details>
 <summary><strong>Explore 0.1 features and guided model setup</strong></summary>
 
-**0.1.2** follows the [release plan](docs/plans/next-release-0.1.md):
+**0.2** adds [open model discovery](docs/plans/open-model-discovery.md) to the
+existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.1.2.md).
+post-release QA are listed in the [release notes](docs/releases/0.2.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -282,12 +294,22 @@ your GPUs stay free and memory content remains private. Existing embedding
 endpoints remain selected unless you explicitly replace them.
 [Memory setup](docs/plans/memory-embeddings-readiness.md).
 
+Development builds can also inspect and install compatible E5 F32 encoder bundles
+from a Hugging Face link. Hardware and complete storage estimates come first;
+choosing **Use for memory** explicitly switches the CPU encoder and rebuilds your
+private index. [Supported imports](docs/models.md#discovered-memory-encoder-bundles-candidate-under-qualification).
+
 **Set up music** prepares ACE-Step 1.5 Turbo on supported Linux NVIDIA
 workstations with at least 12 GiB VRAM and 24 GiB system RAM. Review sources and
 component licenses, install with saved progress and Stop/Resume, then create an
 instrumental or use your own lyrics in Music. This profile uses CPU offload;
 existing configured ACE-Step environments keep priority.
 [Music setup and measured qualification](docs/plans/managed-music-setup.md).
+
+Development builds also support explicit installation and selection of
+compatible ACE-Step music checkpoints from publisher links, with complete
+hardware/component review and preserved engine bindings.
+[Music model imports](docs/models.md#discovered-music-bundles-under-qualification).
 
 **Set up video** prepares Wan 2.2 5B on supported Linux NVIDIA workstations
 with at least 12 GiB VRAM, 24 GiB system RAM and a compatible driver. Review
@@ -334,7 +356,7 @@ combined fresh Linux GPU qualification remain unverified; CPU first use and
 existing Linux GPU profiles have separate actual evidence.
 [Desktop packaging and status](docs/plans/desktop-installation.md).
 
-**Known issue — macOS:** the native installer is **not supported in release 0.1**.
+**Known issue — macOS:** the native installer is **not supported in release 0.2**.
 Full installed startup remains unreliable; the latest attempt timed out waiting
 for Docker Desktop's local engine before account/model setup. Passing native
 component tests does not establish a working Mac installation. Mac work is
@@ -483,7 +505,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.1.2.md#validation) ·
+[Release verification](docs/releases/0.2.0.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)

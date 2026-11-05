@@ -1,4 +1,5 @@
 export type MusicScopeOptions = {
+  model_id?: string | null;
   duration_seconds?: number | null;
   instrumental?: boolean;
   lyrics?: string;
