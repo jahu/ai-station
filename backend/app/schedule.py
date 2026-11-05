@@ -44,6 +44,7 @@ def launch_agent(
     before_publish=None,
     avatar_appearance_recipe=...,
     avatar_whole_recipe=...,
+    avatar_model=...,
 ) -> str:
     if agent.deleted_at is not None:
         raise ValueError("Agent was deleted")
@@ -119,11 +120,15 @@ def launch_agent(
         media_inputs = freeze_media_inputs(session, definition.media)
         if definition.media.kind == "avatar":
             if definition.media.request.generation_profile:
-                from app.whole_avatars import capabilities as whole_capabilities
+                from app.avatar_models import profile_for_request
                 from app.whole_avatars import frozen_recipe as frozen_whole
                 from app.whole_avatars import verify_recipe as verify_whole
 
-                profile = whole_capabilities()
+                profile = profile_for_request(
+                    session,
+                    definition.media.request,
+                    frozen=avatar_model if avatar_model is not ... else None,
+                )
                 recipe = (
                     verify_whole(profile, profile.get("recipe"))
                     if avatar_whole_recipe is ...
@@ -131,6 +136,8 @@ def launch_agent(
                 )
                 verify_whole(profile, recipe)
                 avatar_appearance = {"avatar_whole_recipe": recipe}
+                if profile.get("avatar_model"):
+                    avatar_appearance["avatar_model"] = profile["avatar_model"]
             else:
                 from app.avatar_appearance import frozen_recipe, select_recipe
                 from app.avatars import capabilities as avatar_capabilities
@@ -330,6 +337,7 @@ def retry_workflow(session: Session, source: Run) -> str:
         definition=definition,
         avatar_appearance_recipe=source.parameters.get("avatar_appearance_recipe"),
         avatar_whole_recipe=source.parameters.get("avatar_whole_recipe"),
+        avatar_model=source.parameters.get("avatar_model"),
     )
     retry = session.get(Run, run_id)
     retry.metadata_json = {**retry.metadata_json, "retry_of": source.id}

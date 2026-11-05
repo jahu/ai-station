@@ -32,6 +32,17 @@ from app.task_control import lock_task
 SPEECH_AGENTS_ENABLED = True
 
 
+def selected_avatar_profile(session, request, *, frozen=None):
+    from app.avatar_models import profile_for_request
+
+    profile = profile_for_request(session, request, frozen=frozen)
+    if request.speech_text is not None:
+        speech = RunnerClient().request("GET", "/v1/audio/capabilities")
+        if not speech.get("available") or "pl" not in speech.get("languages", []):
+            raise ValueError("Prepare local Polish speech before generating words for this avatar")
+    return profile
+
+
 def require_profile(scope):
     if scope.kind == "speech" and not SPEECH_AGENTS_ENABLED:
         raise ValueError("Speech agent execution is not available yet; use the existing Audio workspace")
@@ -470,7 +481,14 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             execution_deadline_at=run.parameters["execution_deadline_at"],
             observed_profile=profile,
             _prepare_translation=False,
-            appearance_snapshot={"whole_recipe": root.parameters.get("avatar_whole_recipe")}
+            appearance_snapshot={
+                "whole_recipe": root.parameters.get("avatar_whole_recipe"),
+                **(
+                    {"avatar_model": root.parameters["avatar_model"]}
+                    if root.parameters.get("avatar_model")
+                    else {}
+                ),
+            }
             if prepared_scope.request.generation_profile
             else {"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
         )
@@ -574,7 +592,14 @@ class AgentMediaExecutor:
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             session.commit()
             verify_files(run)
-            if definition.media.kind == "video" and definition.media.request.model_id:
+            if definition.media.kind == "avatar" and definition.media.request.model_id:
+                root = session.get(Run, run.parent_run_id)
+                if not root.parameters.get("avatar_model"):
+                    raise ValueError("The reviewed workflow is missing its frozen avatar model")
+                profile = selected_avatar_profile(
+                    session, definition.media.request, frozen=root.parameters.get("avatar_model")
+                )
+            elif definition.media.kind == "video" and definition.media.request.model_id:
                 from app.video_models import profile_for
 
                 profile = profile_for(session, definition.media.request.model_id)

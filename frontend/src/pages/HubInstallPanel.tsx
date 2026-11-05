@@ -10,7 +10,8 @@ import { PreparationCard, type Preparation } from "./ModelSetup";
 
 export type InstallPlan = {
   manifest_sha256: string;
-  capability?: "chat" | "image" | "video" | "speech" | "music" | "embedding";
+  capability?:
+    "chat" | "image" | "video" | "speech" | "music" | "embedding" | "avatar";
   components?: { role: string; filename: string; size_bytes: number }[];
   component_licenses?: { name: string; url: string }[];
   license: string;
@@ -74,7 +75,7 @@ export default function HubInstallPanel({
           plan_run_id: runId,
           manifest_sha256: plan.manifest_sha256,
           license_accepted: accepted,
-          ...(["video", "music"].includes(plan.capability ?? "")
+          ...(["video", "music", "avatar"].includes(plan.capability ?? "")
             ? { workload_accepted: workloadAccepted }
             : {}),
         }),
@@ -101,17 +102,19 @@ export default function HubInstallPanel({
         {downloadId ? "Model preparation" : "Ready to review and install"}
       </h2>
       <p className="muted">
-        {plan.capability === "embedding"
-          ? "AI Station downloads the encoder and its fixed tokenizer, checks the complete graph and probes it on CPU. Use for memory is a separate choice; installation keeps your current encoder."
-          : plan.capability === "music"
-            ? "AI Station prepares the fixed music engine and all companions, then verifies your checkpoint before adding it to Music and compatible assistant tools."
-            : plan.capability === "speech"
-              ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
-              : ["video", "music"].includes(plan.capability ?? "")
-                ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
-                : plan.capability === "image"
-                  ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
-                  : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
+        {plan.capability === "avatar"
+          ? "AI Station prepares the local avatar engine and its required components, then checks your model before adding it to Avatars and compatible assistant tools."
+          : plan.capability === "embedding"
+            ? "AI Station downloads the encoder and its fixed tokenizer, checks the complete graph and probes it on CPU. Use for memory is a separate choice; installation keeps your current encoder."
+            : plan.capability === "music"
+              ? "AI Station prepares the fixed music engine and all companions, then verifies your checkpoint before adding it to Music and compatible assistant tools."
+              : plan.capability === "speech"
+                ? "AI Station prepares the fixed local speech engine and companions, then verifies your checkpoint before adding it to Audio and compatible assistant tools."
+                : ["video", "music", "avatar"].includes(plan.capability ?? "")
+                  ? "AI Station prepares the fixed local video engine and companions, then verifies your checkpoint before adding it to Video and compatible assistant tools."
+                  : plan.capability === "image"
+                    ? "AI Station prepares the required image engine and companions, then verifies your checkpoint before adding it to Images and compatible assistant tools."
+                    : "AI Station checks the download and fits the model to your GPUs before adding it to Chat. Open a conversation when preparation is complete."}
       </p>
       {!!plan.component_licenses?.length && (
         <details className="hub-context-options">
@@ -154,15 +157,20 @@ export default function HubInstallPanel({
                 model license ({plan.license})
               </a>{" "}
               and agree to download this model
-              {["image", "video", "speech", "music", "embedding"].includes(
-                plan.capability ?? "",
-              )
+              {[
+                "image",
+                "video",
+                "speech",
+                "music",
+                "embedding",
+                "avatar",
+              ].includes(plan.capability ?? "")
                 ? " and its required licensed components"
                 : ""}
               .
             </span>
           </label>
-          {["video", "music"].includes(plan.capability ?? "") && (
+          {["video", "music", "avatar"].includes(plan.capability ?? "") && (
             <label className="hub-license">
               <input
                 type="checkbox"
@@ -170,7 +178,9 @@ export default function HubInstallPanel({
                 onChange={(event) => setWorkloadAccepted(event.target.checked)}
               />
               <span>
-                {plan.capability === "music" ? (
+                {plan.capability === "avatar" ? (
+                  "I accept this avatar profile: the complete recording, up to 60 seconds, with one or two compatible GPUs of at least 12 GiB each and at least 24 GiB system RAM. It uses CPU offload with an 18 GiB application memory limit and no swap."
+                ) : plan.capability === "music" ? (
                   "I accept this music profile: 10–600 seconds, one 12 GiB GPU and at least 24 GiB system RAM. It uses explicit CPU offload with a 12 GiB short-clip or 18 GiB long-clip application memory limit, and no swap."
                 ) : (
                   <>
@@ -187,7 +197,7 @@ export default function HubInstallPanel({
             disabled={
               !canManage ||
               !accepted ||
-              (["video", "music"].includes(plan.capability ?? "") &&
+              (["video", "music", "avatar"].includes(plan.capability ?? "") &&
                 !workloadAccepted) ||
               !allowed ||
               install.isPending

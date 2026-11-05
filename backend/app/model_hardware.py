@@ -42,7 +42,7 @@ def assess_file(file, hardware, storage, *, candidates=None):
     images = [
         v
         for v in matches
-        if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech", "hub_music"}
+        if getattr(v, "origin", None) in {"hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}
     ]
     if images:
         entry = images[0]
@@ -116,7 +116,9 @@ def assess_file(file, hardware, storage, *, candidates=None):
                 "occupancy": occupancy,
                 "recommendation": planned,
                 "locally_qualified": False,
-                "provenance": "pinned_music_recipe_and_checkpoint_header"
+                "provenance": "pinned_avatar_recipe_and_tensor_metadata"
+                if getattr(entry, "origin", None) == "hub_avatar"
+                else "pinned_music_recipe_and_checkpoint_header"
                 if getattr(entry, "origin", None) == "hub_music"
                 else "pinned_speech_recipe_and_checkpoint_header"
                 if getattr(entry, "origin", None) == "hub_speech"
@@ -144,7 +146,8 @@ def assess_file(file, hardware, storage, *, candidates=None):
         else "supported_architecture_plan"
         if plans
         and any(
-            getattr(entry, "origin", None) in {"hub", "hub_image", "hub_video", "hub_speech", "hub_music"}
+            getattr(entry, "origin", None)
+            in {"hub", "hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}
             for entry in matches
         )
         else "reviewed_profile"
@@ -170,7 +173,7 @@ def assess_file(file, hardware, storage, *, candidates=None):
         "automatic_ram_offload": False,
         **(
             {"requires_cpu_offload_consent": True}
-            if images and images[0].capability in {"video", "music"}
+            if images and images[0].capability in {"video", "music", "avatar"}
             else {}
         ),
         "automatic_cloud_fallback": False,

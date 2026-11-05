@@ -1536,3 +1536,12 @@ complete engine/companions and selected weights, then substitutes only diffusion
 in its private view. Explicit per-device GPU/RAM/offload admission, absolute
 execution deadlines and owned-process inspection remain in the existing lifecycle.
 [Candidate contract and qualification](models.md#discovered-music-bundles-under-qualification).
+
+The avatar installation candidate connects source inspection and complete engine
+preparation to shared avatar definitions. A typed read-only native capability
+query resolves a selected checkpoint and opaque engine, independently of current
+defaults. Avatars, reviewed agents and explicit conversation tools share that
+selection; whole-recording plans retain it through speech preparation and resume.
+Per-device VRAM, physical RAM, fixed CPU offload and complete disk requirements
+are reviewed before transfer. A metadata match alone still grants no readiness;
+selected inference remains subject to its separate native qualification gate.

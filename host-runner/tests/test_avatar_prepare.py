@@ -201,7 +201,10 @@ def test_partial_explicit_configuration_never_silently_uses_managed_fallback(tmp
 
     monkeypatch.setattr(avatar_environment, "resolve", forbidden)
     monkeypatch.setattr(avatar_environment, "resolve_id", forbidden)
-    selected = avatar_selection.selection(settings, {"environment_id": "a" * 64})
+    # Default selection keeps configured paths, including partial settings.
+    # An actual explicit opaque identity is a separate user choice, covered by
+    # selected-checkpoint tests; an options dictionary is not such an identity.
+    selected = avatar_selection.selection(settings)
     assert selected["managed"] is False and selected[field] == tmp_path / "external"
     assert all(selected[key] is None for key in avatar_selection.FIELDS if key != field)
 

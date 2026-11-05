@@ -15,13 +15,17 @@ type WholeCapabilities = {
   eligible_gpu_indices?: number[];
 };
 
-export function useWholeAvatarCapabilities(enabled = true) {
+export function useWholeAvatarCapabilities(enabled = true, modelId = "") {
   return useQuery({
-    queryKey: ["whole-avatar-capabilities"],
+    queryKey: modelId
+      ? ["whole-avatar-capabilities", modelId]
+      : ["whole-avatar-capabilities"],
     enabled,
     queryFn: async (): Promise<WholeCapabilities> => {
       const result = await api<WholeCapabilities | undefined>(
-        "/avatars/whole-capabilities",
+        modelId
+          ? `/avatars/models/${encodeURIComponent(modelId)}/capabilities`
+          : "/avatars/whole-capabilities",
       );
       // Older native installations retain their explicit Echo availability.
       return result?.backend === "sonic"

@@ -185,6 +185,49 @@ it("keeps active definitions read-only", async () => {
   expect(apply).not.toHaveBeenCalled();
 });
 
+it("keeps the chosen installed model when applying a longer agent deadline without probing legacy defaults", async () => {
+  const urls: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      urls.push(url);
+      return {
+        ok: true,
+        json: async () => ({
+          available: true,
+          backend: "sonic",
+          readiness: "ready",
+        }),
+      };
+    }),
+  );
+  const apply = vi.fn();
+  const selected = {
+    ...avatar,
+    request: {
+      ...avatar.request,
+      model_id: "installed-avatar",
+      generation_profile: "sonic_whole_768_v1" as const,
+    },
+  };
+  mount(
+    <AgentAvatarSetup value={selected} maximumRuntime={600} onApply={apply} />,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use suggested setup" }),
+  );
+  expect(apply.mock.calls[0][0]).toMatchObject({
+    maximum_runtime: 14400,
+    media: {
+      request: {
+        model_id: "installed-avatar",
+        generation_profile: "sonic_whole_768_v1",
+      },
+    },
+  });
+  expect(urls).toEqual(["/api/avatars/models/installed-avatar/capabilities"]);
+});
+
 it("retains an unavailable saved profile and offers recovery to Standard", async () => {
   vi.stubGlobal(
     "fetch",

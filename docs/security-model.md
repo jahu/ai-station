@@ -1776,3 +1776,25 @@ closed. Transport reuses public-DNS pinning and redirect validation. The sparse
 reader has no network capability; the Docker image shares only the pure parsers,
 without the native Runner API or Torch. A remote graph match does not establish
 native storage-layout validity or grant installation/execution authority.
+
+The working avatar import candidate admits only that closed graph into normal
+model Tasks. Its optional setup Run must match the owner, immutable complete
+recipe, license/workload consent and parent dependency. Hardware is checked
+again before engine and selected-weight transfers. Shared bindings accept only
+profile/manifest/opaque-environment coordinates, refusing private setup IDs.
+Native selected-checkpoint requests freeze the source in a version-2 owned
+receipt; older requests retain their exact version-1 form. Full content and graph
+admission precede framework imports. Only the adapted UNet state changes, while
+SDK/companions, scopes, deadlines, GPU ownership and replay remain fixed.
+The selected route passed its complete Linux qualification; its native gate can
+still withdraw normal dispatch independently of publisher metadata. The explicit
+internal real-GPU engineering entry retains its existing opt-in.
+
+An installed avatar choice grants no installation or arbitrary-code permission to
+conversation/agent execution. The normal avatar Run carries only the exact
+checkpoint observation and reviewed engine identity, with filesystem-read and
+workspace-write permissions. Native dispatch checks complete content/graph,
+physical RAM, each allocated GPU and the existing owned process/deadline contract.
+Pending engine hashes can defer publication; unavailable or changed engines still
+refuse it. Successful cache verification does not rewrite an immutable object's
+permissions/ctime merely to return it, preserving the readiness identity.

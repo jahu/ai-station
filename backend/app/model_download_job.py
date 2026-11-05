@@ -82,6 +82,17 @@ class DownloadExecutor:
                 "context_size": 4096,
                 "environment_id": environment_id,
             }
+            if getattr(entry, "origin", None) == "hub_avatar":
+                from app.hub_avatar_candidates import AvatarReadinessPending, refresh_plan
+
+                try:
+                    current = refresh_plan(entry, check, require_engine=True)
+                except AvatarReadinessPending:
+                    return self.defer(
+                        session, run, worker=worker, claim=claim, phase="checking_avatar_engine"
+                    )
+                if not current.preparation_available or not recommendation(current, hardware)["fits"]:
+                    raise ValueError("The avatar runtime or hardware changed before transferring weights")
             planned = recommendation(entry, hardware)
             if not planned["fits"] and not run.parameters.get("download_only", False):
                 raise ValueError(
@@ -191,6 +202,16 @@ class DownloadExecutor:
                 },
             }
             session.commit()
+            if entry.capability == "avatar":
+                from app.hub_avatar_candidates import AvatarReadinessPending
+                from app.hub_avatar_install import adopt as adopt_avatar
+
+                try:
+                    return adopt_avatar(session, run, entry, path, runner, hardware, check)
+                except AvatarReadinessPending:
+                    return self.defer(
+                        session, run, worker=worker, claim=claim, phase="checking_avatar_engine"
+                    )
             if entry.capability == "music":
                 from app.hub_music_install import adopt as adopt_music
 
@@ -417,7 +438,7 @@ class DownloadExecutor:
                 release_run_locks(session, run.id)
 
     @staticmethod
-    def defer(session, run, memory=None, *, worker, claim):
+    def defer(session, run, memory=None, *, worker, claim, phase="waiting_for_existing_transfer"):
         lock_task(session, run.task)
         session.refresh(run)
         if run.worker_id != worker or run.claimed_at != claim:
@@ -436,7 +457,7 @@ class DownloadExecutor:
         else:
             run.metadata_json = {
                 **run.metadata_json,
-                "model_download": {"phase": "waiting_for_existing_transfer"},
+                "model_download": {"phase": phase},
             }
         transition(
             session,

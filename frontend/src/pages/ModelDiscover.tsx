@@ -76,7 +76,8 @@ type Report = {
     observation?: Report;
   }[];
   candidate?: {
-    capability: "chat" | "image" | "video" | "speech" | "music" | "embedding";
+    capability:
+      "chat" | "image" | "video" | "speech" | "music" | "embedding" | "avatar";
     tokenizer?: { size_bytes: number };
     setup_recipe?: {
       component_licenses: { name: string; url: string }[];
@@ -584,8 +585,11 @@ export default function ModelDiscover() {
               </p>
               {file.unsafe_serialization && (
                 <p className="muted">
-                  Executable weight serialization is not admitted from
-                  unreviewed repositories.
+                  {file.assessment.profiles.some(
+                    (profile) => profile.capability === "avatar",
+                  )
+                    ? "This avatar uses a checked tensor-data format. Repository code is not run."
+                    : "Executable weight serialization is not admitted from unreviewed repositories."}
                 </p>
               )}
               {file.assessment.profiles.map((profile) => (
@@ -613,7 +617,9 @@ export default function ModelDiscover() {
                 </div>
               ))}
               {report.kind !== "install_plan" &&
-                ["gguf", "safetensors", "onnx"].includes(file.format) &&
+                ["gguf", "safetensors", "onnx", "pth", "pt", "bin"].includes(
+                  file.format,
+                ) &&
                 file.sha256 && (
                   <>
                     {file.format === "gguf" &&

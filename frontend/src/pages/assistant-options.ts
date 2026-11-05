@@ -30,7 +30,8 @@ export function acceptsLocalAttachments(options: AssistantOptions) {
     !options.media &&
     !options.upscale_result &&
     !options.speech_text &&
-    !options.speech_model_id
+    !options.speech_model_id &&
+    !options.avatar_model_id
   );
 }
 

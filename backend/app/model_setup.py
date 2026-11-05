@@ -58,6 +58,10 @@ def storage_info(hardware=None):
 
 
 def recommendation(entry, hardware):
+    if getattr(entry, "origin", None) == "hub_avatar":
+        from app.hub_avatar_candidates import recommendation as avatar_recommendation
+
+        return avatar_recommendation(entry, hardware)
     if getattr(entry, "origin", None) == "hub_embedding":
         from app.hub_embedding_candidates import recommendation as embedding_recommendation
 
@@ -202,7 +206,7 @@ def view(session, task):
     run = session.get(Run, saved["run_id"])
     progress = dict(run.metadata_json.get("model_download", {}))
     if (
-        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"}
+        saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}
         and run.status not in TERMINAL
     ):
         engine_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
@@ -343,9 +347,13 @@ class Resume(BaseModel):
 
 def attempt(session, task, saved, *, previous=None):
     prerequisite = None
-    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"} and saved[
-        "entry"
-    ].get("prepare_engine"):
+    if saved["entry"].get("origin") in {
+        "hub_image",
+        "hub_video",
+        "hub_speech",
+        "hub_music",
+        "hub_avatar",
+    } and saved["entry"].get("prepare_engine"):
         from app.runtime_setup_api import attempt as prepare_runtime
 
         prepare_runtime(
@@ -482,7 +490,7 @@ def resume(identity: UUID, body: Resume, session: DB):
         raise HTTPException(409, "Inspect the current model preparation before resuming")
     if saved["attempt"] >= 100:
         raise HTTPException(409, "This preparation has reached its retry bound; start a new reviewed request")
-    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music"}:
+    if saved["entry"].get("origin") in {"hub_image", "hub_video", "hub_speech", "hub_music", "hub_avatar"}:
         prerequisite_id = (task.metadata_json.get("runtime_preparation") or {}).get("run_id")
         prerequisite = session.get(Run, prerequisite_id) if prerequisite_id else None
         if prerequisite is not None and (

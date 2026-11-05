@@ -43,6 +43,7 @@ export type VideoMediaRequest = {
   gpu?: string;
 };
 export type AvatarMediaRequest = {
+  model_id?: string | null;
   generation_profile?: AvatarGenerationProfile;
   memory_profile?: "default" | "bounded_11g";
   image_artifact_id: string | null;

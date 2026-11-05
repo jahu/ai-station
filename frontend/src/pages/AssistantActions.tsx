@@ -1,4 +1,5 @@
 import { useSpeechModels } from "../components/media/speech-models";
+import AvatarModelChoice from "../components/media/AvatarModelChoice";
 import type { AnalysisAgentSource } from "./AnalysisAgentDialog";
 import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
@@ -111,6 +112,7 @@ export type AssistantOptions = {
   upscale_result?: boolean;
   speech_text?: string | null;
   speech_model_id?: string | null;
+  avatar_model_id?: string | null;
   media?: {
     duration_seconds: number;
     composition_mode: "continuous" | "shots";
@@ -960,6 +962,15 @@ export default function AssistantActions({
 }) {
   function onChange(next: AssistantOptions) {
     if (
+      next.avatar_model_id &&
+      (next.action !== "avatar.animate" ||
+        !next.audio_artifact_id ||
+        next.image_artifact_ids.length !== 1)
+    ) {
+      next = { ...next };
+      delete next.avatar_model_id;
+    }
+    if (
       next.speech_model_id &&
       (next.action !== "audio.speech" ||
         !next.audio_artifact_id ||
@@ -1459,6 +1470,17 @@ export default function AssistantActions({
             onChange={resetAction}
           />
         </div>
+        {value.action === "avatar.animate" &&
+          value.image_artifact_ids.length === 1 &&
+          value.audio_artifact_id && (
+            <AvatarModelChoice
+              value={value.avatar_model_id ?? ""}
+              disabled={busy}
+              onChange={(model) =>
+                onChange({ ...value, avatar_model_id: model || undefined })
+              }
+            />
+          )}
         {value.action === "data.analyze" && (
           <ConversationDataControls
             value={value.data}

@@ -335,19 +335,45 @@ profiles. This does not complete the cross-capability discovery release.
    an isolated actual GPU music result. Update qualification evidence honestly;
    a metadata slot is only the first implementation step.
 
-### Next: avatar checkpoint bundles
+### Sonic avatar checkpoint bundles
 
 The native structural slot and closed data reader are implemented on the
 development branch. The real pinned reference passed read-only layout inspection
 and all-tensor CPU equivalence against the trusted legacy load, without GPU
 initialization. Normal tests exercise malformed/executable metadata, owned paths,
-graph/companion drift and per-device GPU/RAM/driver/disk gates. This is step 2
-admission evidence, not completed source installation or avatar inference.
+graph/companion drift and per-device GPU/RAM/driver/disk gates. These structural checks are the initial admission stage; complete source
+installation and selected inference are qualified below.
 Publisher inspection also passed on the immutable official file using six
 metadata-only ranges (480,930 bytes), with the same graph/version/header
 fingerprints. It uses the existing public pinned HTTPS transport and cannot read
 tensor storage or claim native layout validity. Source-plan/installation wiring
-and selected-model inference remain required before this is an operational import.
+and selected-model inference are connected and qualified below.
+
+The Linux import now connects closed tensor source inspection, complete hardware,
+license/offload review, ordinary downloads/preparation and shared model definitions.
+Avatars, reviewed agents and explicit conversation tools can choose the installed
+model. Plans retain that exact source and engine across speech handoff, retries
+and resume; model renames/default changes cannot retarget an existing operation.
+Version-2 native receipts carry the selected checkpoint; legacy receipts remain
+unchanged. Initial engine hashes defer the same Run without duplicate transfer,
+and verified cache reuse preserves native file identity.
+
+Qualification completed on 2026-11-05 using the pinned official reference source,
+92 complete engine inputs and an ordinary selected-model avatar Run on one
+12-GiB RTX 3060. Its full two-second recording produced 50 frames at 512×768/25fps
+with verified audio and exact checkpoint identity. Source/registration, Stop and
+native cleanup were inspected. The Run took 11m49s including native verification
+and generation; this one-card profile fits but is expensive. The existing two-GPU
+guidance remains supported and unit-tested; this new selected-source smoke used
+one card. Compiled source/review/consent/selection/refresh/keyboard checks passed
+at desktop and phone widths. These browser checks replay real API projections
+with controlled responses, separately from actual GPU qualification.
+
+This proves the import route for the fixed Sonic graph and its data-only format,
+not arbitrary PyTorch files, a newly trained model's face quality, all recording
+lengths or Windows GPU behavior. The development feature is not in published
+0.1.2 installers. Further families, complete shard admission, lifecycle/QA and
+release packaging remain part of the open discovery goal.
 
 1. Inspect the actual Sonic loading path before choosing a replaceable role.
    Current inference builds the adapted UNet from SVD configuration but loads

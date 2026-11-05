@@ -11,7 +11,28 @@ from ai_station_runner.sonic_frames import capture_inputs
 from ai_station_runner.sonic_guidance import install_guidance
 
 
-def generate(runtime, models, portrait, audio, timing, width, height, seed, device_count, progress=None):
+def generate(
+    runtime,
+    models,
+    portrait,
+    audio,
+    timing,
+    width,
+    height,
+    seed,
+    device_count,
+    progress=None,
+    checkpoint=None,
+    data_root=None,
+):
+    weights = None
+    if checkpoint is not None:
+        from ai_station_runner.avatar_checkpoints import load_selected
+
+        # Full selected-file hash and graph admission precede Torch and all
+        # upstream imports. Only this frame retains the mapped state, so it can
+        # be released normally after strict assignment and F16 conversion.
+        weights = load_selected(data_root, checkpoint)
     import torch
     from accelerate import init_empty_weights
     from diffusers import AutoencoderKLTemporalDecoder, EulerDiscreteScheduler
@@ -80,7 +101,8 @@ def generate(runtime, models, portrait, audio, timing, width, height, seed, devi
     with init_empty_weights():
         unet = UNetSpatioTemporalConditionModel.from_config(str(svd / "unet/config.json"))
         add_ip_adapters(unet, [32], [1.0])
-    weights = torch.load(models / "Sonic/unet.pth", map_location="cpu", mmap=True, weights_only=True)
+    if weights is None:
+        weights = torch.load(models / "Sonic/unet.pth", map_location="cpu", mmap=True, weights_only=True)
     unet.load_state_dict(weights, strict=True, assign=True)
     del weights
     if any(value.is_meta for value in unet.state_dict().values()):

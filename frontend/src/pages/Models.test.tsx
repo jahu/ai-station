@@ -8,6 +8,64 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it("opens an installed avatar model in Avatars and hides language-model controls", async () => {
+  const definition = {
+    id: "avatar-definition",
+    name: "Portrait model",
+    status: "registered",
+    avatar_backend: "sonic",
+    last_verify_run_id: null,
+    preset: { gpus: [], context_size: 4096, cache_type: "q8_0" },
+    compatibility: {
+      operational: true,
+      adapter: "native-avatar",
+      summary: "Use this model in Avatars",
+    },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        id: "avatar-file",
+        filename: "portrait-model.pth",
+        host_path: null,
+        relative_path: "models/store/" + "a".repeat(64),
+        root_label: "AI Station storage",
+        category: "video",
+        format: "pth",
+        size_bytes: 1024,
+        family: "sonic_whole_unet",
+        quantization: "F32",
+        capabilities: ["avatar"],
+        availability: "present",
+        discovered_at: "2026-01-01T00:00:00Z",
+        definitions: [definition],
+      }),
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/models/avatar-file"]}>
+        <Routes>
+          <Route path="/models/:id" element={<ModelDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const link = await screen.findByRole("link", {
+    name: "Choose this model in Avatars",
+  });
+  expect(link.getAttribute("href")).toBe("/avatars?model=avatar-definition");
+  expect(screen.getByRole("heading", { name: "Avatar model" })).toBeTruthy();
+  expect(screen.queryByLabelText(/Context/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /Load.*llama/i })).toBeNull();
+});
 it("saves a definition and installs it only after an explicit action", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
     ok: true,

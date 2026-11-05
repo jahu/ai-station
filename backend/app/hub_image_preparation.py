@@ -18,11 +18,12 @@ def owns_preparation(run):
             ("hub_video", "video_setup"),
             ("hub_speech", "speech_setup"),
             ("hub_music", "music_setup"),
+            ("hub_avatar", "avatar_setup"),
         }
         or task.owner_id != run.owner_id
         or saved.get("license_accepted") is not True
         or (
-            (saved.get("entry") or {}).get("origin") in {"hub_video", "hub_music"}
+            (saved.get("entry") or {}).get("origin") in {"hub_video", "hub_music", "hub_avatar"}
             and saved.get("workload_accepted") is not True
         )
         or fingerprint(saved.get("entry")) != saved.get("manifest_sha256")
@@ -51,5 +52,11 @@ def recheck_hardware(run, hardware):
         from app.model_setup import recommendation
 
         entry = download_candidate(run.task.metadata_json["model_download"]["entry"])
+        if entry.origin == "hub_avatar":
+            from app.hub_avatar_candidates import refresh_plan
+
+            entry = refresh_plan(entry, lambda: None)
+            if not entry.preparation_available:
+                raise ValueError("The avatar runtime profile changed before transferring engine inputs")
         if not recommendation(entry, hardware)["fits"]:
             raise ValueError("The model hardware profile changed; review it before downloading engine inputs")

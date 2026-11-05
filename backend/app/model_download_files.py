@@ -245,7 +245,10 @@ async def obtain(
                 if (a.st_dev, a.st_ino) == (b.st_dev, b.st_ino) and a.st_nlink == 2:
                     partial.unlink()
             verify(final, spec, check)
-            os.chmod(final, 0o444, follow_symlinks=False)
+            # Reusing immutable content must not change ctime and invalidate
+            # native readiness observations of the same companion/model file.
+            if stat.S_IMODE(final.stat(follow_symlinks=False).st_mode) not in {0o400, 0o444}:
+                os.chmod(final, 0o444, follow_symlinks=False)
             return final
         last_error = None
         urls = list(spec.urls)

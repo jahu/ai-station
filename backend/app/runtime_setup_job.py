@@ -35,6 +35,7 @@ def validate_operation(run, *, executor_type="runtime_setup"):
         "video_setup",
         "speech_setup",
         "music_setup",
+        "avatar_setup",
     }:
         from app.hub_image_preparation import owns_preparation
 

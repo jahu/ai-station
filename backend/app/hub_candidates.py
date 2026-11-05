@@ -55,6 +55,10 @@ class HubCandidate(Candidate):
 
 
 def download_candidate(payload):
+    if payload.get("origin") == "hub_avatar":
+        from app.hub_avatar_candidates import HubAvatarCandidate
+
+        return HubAvatarCandidate.model_validate(payload)
     if payload.get("origin") == "hub_embedding":
         from app.hub_embedding_candidates import HubEmbeddingCandidate
 
@@ -242,6 +246,13 @@ def candidate_from_profile(observation, filename, profile, *, context_ceiling=32
 
 async def resolve_candidate(observation, filename, check, context_ceiling=131072):
     selected_file = next((f for f in observation["files"] if f["filename"] == filename), None)
+    if selected_file and selected_file.get("format") in {"pth", "pt", "bin"}:
+        from app.hub_avatar_candidates import candidate_from_profile as avatar_candidate
+        from app.hub_avatar_candidates import refresh_plan
+        from app.hub_avatar_candidates import resolve_profile as avatar_profile
+
+        profile = observation.get("avatar_profile") or await avatar_profile(observation, check, filename)
+        return refresh_plan(avatar_candidate({**observation, "avatar_profile": profile}, filename), check)
     if selected_file and selected_file.get("format") == "onnx":
         from app.hub_embedding_candidates import candidate_from_profile as embedding_candidate
         from app.hub_embedding_candidates import resolve_profile as embedding_profile

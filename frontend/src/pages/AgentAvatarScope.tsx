@@ -1,6 +1,7 @@
 import { Settings2 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import AvatarMemoryProfile from "../components/media/AvatarMemoryProfile";
+import AvatarModelChoice from "../components/media/AvatarModelChoice";
 import { useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import type { AvatarMediaRequest } from "./agent-media";
@@ -21,13 +22,26 @@ export default function AgentAvatarScope({
   onBusy: (busy: boolean) => void;
 }) {
   const hardware = useHardware();
-  const whole = useWholeAvatarCapabilities();
+  const whole = useWholeAvatarCapabilities(true, value.model_id ?? "");
   const stable = !!value.generation_profile;
   const generated = value.speech_text !== null;
   const patch = (change: Partial<AvatarMediaRequest>) =>
     onChange({ ...value, ...change });
   return (
     <div className="agent-avatar-settings">
+      <AvatarModelChoice
+        value={value.model_id ?? ""}
+        disabled={disabled}
+        onChange={(model) => {
+          if (model)
+            onChange(stableAvatarRequest({ ...value, model_id: model }));
+          else {
+            const request = { ...value };
+            delete request.model_id;
+            onChange(request);
+          }
+        }}
+      />
       {(whole.data?.available ||
         stable ||
         whole.data?.readiness === "checking") && (
@@ -43,6 +57,7 @@ export default function AgentAvatarScope({
               else {
                 const request = { ...value };
                 delete request.generation_profile;
+                delete request.model_id;
                 onChange(request);
               }
             }}

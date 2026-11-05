@@ -24,6 +24,7 @@ from app.approvals import resolve_run_approval, run_public
 from app.artifact_purge import router as artifact_purge_router
 from app.audio import router as audio_router
 from app.audio_models import router as audio_models_router
+from app.avatar_models import router as avatar_models_router
 from app.avatars import router as avatar_router
 from app.browser import router as browser_router
 from app.bundle_setup import router as bundle_setup_router
@@ -475,6 +476,7 @@ app.include_router(timeline_router)
 app.include_router(waveform_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
+app.include_router(avatar_models_router)
 app.include_router(video_router)
 app.include_router(video_models_router)
 app.include_router(media_jobs_router)
