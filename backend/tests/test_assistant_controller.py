@@ -558,6 +558,20 @@ def test_provided_image_cannot_be_replaced_with_unrelated_generation(model, brid
             assert len(photos) == 1 and photos[0].parameters["mode"] == "recompose"
 
 
+def test_malformed_completion_is_corrected_with_its_rejected_object_without_replaying_media(model, bridge):
+    bad = {"kind": "finish", "reason": "Done", "tool": "chat.reply", "outcomes": [1], "response": "Ready"}
+    model["decisions"] = [tool("image.generate", instruction="A cabinet", images=[]), bad, finish(1)]
+    with TestClient(app) as api:
+        result = submit(api, "Create a cabinet picture")
+        drain()
+        assert len(root_state(result)["controller_steps"]) == 1
+        correction = model["calls"][-1]["messages"]
+        assert correction[-2]["role"] == "assistant" and json.loads(correction[-2]["content"]) == bad
+        assert "rejected before dispatch" in correction[-1]["content"]
+        with session_factory()() as db:
+            assert len(list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))) == 1
+
+
 def test_react_page_read_preserves_source_data_without_system_privilege(page_tools, model):
     from test_chat_pages import TEXT_PROMPT
 

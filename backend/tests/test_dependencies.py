@@ -103,3 +103,26 @@ def test_observation_edges_do_not_weaken_existing_dependencies_and_waiting_cance
     session.flush()
     request_cancel(session, root)
     assert root.status == "canceled"
+
+
+def test_downgrade_refuses_a_queued_controller_before_it_publishes_dependencies(session):
+    from alembic import command
+    from app.db import alembic_config, get_engine
+
+    task = create_task(
+        session, title="Pending conversation", prompt="A request", capability="assistant.orchestrate"
+    )
+    root = create_run(
+        session,
+        task,
+        run_type="assistant",
+        capability="assistant.orchestrate",
+        executor_type="assistant_controller",
+    )
+    session.commit()
+    with get_engine().begin() as connection:
+        config = alembic_config()
+        config.attributes["connection"] = connection
+        with pytest.raises(RuntimeError, match="durable controller state"):
+            command.downgrade(config, "0044")
+    assert session.get(Run, root.id).status == "queued"

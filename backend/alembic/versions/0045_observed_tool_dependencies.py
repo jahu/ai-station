@@ -20,6 +20,11 @@ def downgrade():
     bind = op.get_bind()
     if bind.scalar(
         sa.text("SELECT count(*) FROM run_dependencies WHERE require_success = false")
-    ) or bind.scalar(sa.text("SELECT count(*) FROM runs WHERE status = 'waiting_for_tool'")):
+    ) or bind.scalar(
+        sa.text(
+            "SELECT count(*) FROM runs WHERE status = 'waiting_for_tool' OR executor_type IN "
+            "('assistant_controller', 'assistant_decision', 'assistant_tool_setup', 'assistant_web', 'assistant_artifact')"
+        )
+    ):
         raise RuntimeError("Restore a reviewed backup rather than discard durable controller state")
     op.drop_column("run_dependencies", "require_success")
