@@ -192,7 +192,12 @@ def test_dynamic_research_image_image_agent_chain_binds_actual_results(
             "description": "Two sequential image results",
             "reference_mode": "sequential",
         },
-        {"kind": "agent_draft", "count": 1, "description": "A reviewed recurring agent draft"},
+        {
+            "kind": "agent_draft",
+            "count": 1,
+            "description": "A reviewed recurring agent draft",
+            "agent_media_kind": "avatar",
+        },
     ]
     model["proposal"] = {
         "name": "Daily world news avatar",
@@ -559,7 +564,14 @@ def test_provided_image_cannot_be_replaced_with_unrelated_generation(model, brid
 
 
 def test_malformed_completion_is_corrected_with_its_rejected_object_without_replaying_media(model, bridge):
-    bad = {"kind": "finish", "reason": "Done", "tool": "chat.reply", "outcomes": [1], "response": "Ready"}
+    bad = {
+        "kind": "finish",
+        "reason": "Done",
+        "tool": "chat.reply",
+        "arguments": {"unrecognized": True},
+        "outcomes": [1],
+        "response": "Ready",
+    }
     model["decisions"] = [tool("image.generate", instruction="A cabinet", images=[]), bad, finish(1)]
     with TestClient(app) as api:
         result = submit(api, "Create a cabinet picture")
@@ -570,6 +582,69 @@ def test_malformed_completion_is_corrected_with_its_rejected_object_without_repl
         assert "rejected before dispatch" in correction[-1]["content"]
         with session_factory()() as db:
             assert len(list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))) == 1
+
+
+def test_completion_uses_real_evidence_and_ignores_non_authoritative_outcome_annotations(model, bridge):
+    model["decisions"] = [
+        tool("image.generate", instruction="A cabinet", images=[]),
+        {**finish(999), "tool": "chat.reply", "outcomes": [999]},
+    ]
+    with TestClient(app) as api:
+        result = submit(api, "Create a cabinet picture")
+        drain()
+        state = root_state(result)
+        assert [step["tool"] for step in state["controller_steps"]] == ["image.generate"]
+        with session_factory()() as db:
+            decided = db.get(Run, state["decision_run_id"]).metadata_json["decision"]
+            assert decided["tool"] is None and decided["outcomes"] == [] and decided["evidence"] == [1]
+
+
+def test_agent_draft_cannot_change_the_independently_requested_future_media_kind(model):
+    model["outcomes"] = [
+        {
+            "kind": "agent_draft",
+            "count": 1,
+            "description": "A daily avatar agent",
+            "agent_media_kind": "avatar",
+        }
+    ]
+    model["proposal"] = {
+        "name": "Wrong modality",
+        "goal": "Create pictures",
+        "tools": ["create_media"],
+        "media": {
+            "kind": "image",
+            "description_source": "goal",
+            "request": {"mode": "t2i", "backend": "qwen", "prompt": "A cabinet"},
+        },
+    }
+    model["decisions"] = [
+        tool("agent.create", instruction="Prepare a daily avatar agent"),
+        {
+            "kind": "clarify",
+            "reason": "No valid draft",
+            "response": "I could not prepare the requested avatar agent.",
+        },
+    ]
+    with TestClient(app) as api:
+        result = submit(api, "Prepare an agent making an avatar every 24 hours")
+        drain()
+        state = root_state(result)
+        assert (
+            state["controller_outcome"] == "clarify"
+            and state["controller_steps"][0]["observation"]["status"] == "failed"
+        )
+        factory = next(
+            call for call in model["calls"] if call["messages"][0]["content"].startswith("Prepare a useful")
+        )
+        prompt = json.loads(factory["messages"][1]["content"])
+        assert prompt["available_media_outputs"] == ["avatar"]
+        assert "AgentImageScope" not in prompt["proposal_schema"]["$defs"]
+        assert prompt["proposal_schema"]["properties"]["tools"]["items"]["enum"] == list(
+            prompt["operational_local_tools"]
+        )
+        with session_factory()() as db:
+            assert not list(db.scalars(select(Agent)))
 
 
 def test_react_page_read_preserves_source_data_without_system_privilege(page_tools, model):

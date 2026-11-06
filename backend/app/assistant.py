@@ -1731,6 +1731,11 @@ class AssistantExecutor:
                     snapshot,
                     parent=run,
                     schedule_timezone=params.get("schedule_timezone") or "UTC",
+                    **(
+                        {"media_kind": params["controller_agent_media_kind"]}
+                        if params.get("controller_agent_media_kind")
+                        else {}
+                    ),
                 )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 if params.get("selected_data_agent"):

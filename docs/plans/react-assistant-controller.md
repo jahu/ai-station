@@ -183,6 +183,19 @@ provenance. A research → image → changed-image → daily world-news-avatar d
 covered with fake executors. Enabling that agent still requires selecting and
 reviewing its portrait/voice/settings; the controller never invents those inputs.
 
+Intent can also freeze the future agent's media kind. Its factory receives the
+matching existing media schema and operational-tool enum, with unreachable schema
+definitions removed to conserve local-model context. Full domain validation still
+rejects a different output kind, invented references or activation. A failed avatar
+draft cannot become an image agent merely to make a retry succeed. Different agent
+outputs can be separate ordered goals. This is typed goal preservation, not subject
+or language matching.
+
+After intent inference, repeated model outcome annotations have no authority.
+Completion evidence is derived from actual successful observations; redundant
+model labels do not create calls or replace the frozen goals. Completion still
+requires every goal, and ambiguous nonempty tool arguments refuse correction.
+
 The frontend keeps normal streaming answers uncluttered. Tool work appears as an
 ordered activity timeline with reasons, real status, sources, existing media/file
 result controls, draft review and Inspect links. SSE follows the final reply Run
@@ -193,12 +206,31 @@ to success-required. Downgrade refuses live controller state. Deployment therefo
 requires a consistent DB backup and migration-aware rollback; an old image cannot
 simply be started against revision 0045.
 
-Qualification is in progress. Eight neutral first-decision cases passed on the
-actual locally managed Qwen3.5-9B Q6_K, 32768-token context on two GPUs: informal
-Polish/English/Spanish transforms, actual inspection, discussion, prompt writing
-and a compound research request. This proves those intent choices, not real image
-inference or complete real-chain delivery. New fake integration/security tests,
-frontend checks and broad regression checks precede deployment. A pre-existing
-data-generation failure discovered by those checks is corrected by keeping the
-agent definition distinct from the selected model definition; the 100k-context
-admission requirement remains unchanged.
+## Qualification record — 2026-11-06
+
+- The real locally managed Qwen3.5-9B Q6_K passed eleven neutral first-decision
+  examples, including informal Polish/English/Spanish transformations, inspection,
+  discussion, prompt-writing, greetings/fiction and a compound request. Providing
+  references never turns an ordinary text request into an image-production goal.
+  A localized placement change can validly use Edit; substantial scene changes use
+  Recompose. Prompt writing can inspect its supplied image without creating one.
+- A complete real-LLM research → image → generated-image reuse → daily world-news
+  avatar-agent draft chain passed. Decisions and the ordinary agent factory used
+  that actual model on one RTX 3060, 16384-token context, Q8 KV cache. Web/media
+  outputs were synthetic; this **does not qualify real image inference**. The
+  future agent retained avatar output and remained disabled for review.
+- Compiled UI with real API/worker graph and fake model/media passed at 1440px and
+  390px: ordered inline results, single response, no mode switch, root Stop, no
+  horizontal overflow or browser errors. Frontend: 180 files / 1153 tests passed;
+  formatting, lint, TypeScript and production build passed (existing warnings).
+- An isolated Docker API migrated a consistent copy of the workstation DB to
+  0045, preserving all 38 preexisting relational tables and integrity/foreign keys.
+  That container had no network or Runner access. Production/development/LAN
+  Compose validation and the application image build passed.
+- Broad backend/Runner regression and reviewed-head checks precede merge and
+  deployment; final deployment/hardware evidence is retained privately to avoid
+  publishing account data or user media. No native Runner changes are required.
+
+A pre-existing data-generation failure found by regression checks was fixed by
+keeping the agent definition distinct from the selected model definition. The
+100k-context data/coding admission requirement remains unchanged.

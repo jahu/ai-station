@@ -303,9 +303,13 @@ def enqueue(body: DraftRequest, session: DB):
     return run_dict(run)
 
 
-def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None, schedule_timezone="UTC"):
+def enqueue_for_task(
+    session, task, instruction, model, snapshot, *, parent=None, schedule_timezone="UTC", media_kind=None
+):
     if snapshot.get("location") != "local" or snapshot.get("provider") != BUILTIN_KEY:
         raise ValueError("Choose the local provider for AI-assisted agent preparation")
+    if media_kind is not None and media_kind not in available_media_outputs():
+        raise ValueError("The requested agent media output is unavailable")
     if parent is not None:
         require(parent.effective_permissions, "manage_agents")
         if (
@@ -335,6 +339,7 @@ def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None
             "model": model,
             "instruction": instruction,
             "schedule_timezone": schedule_timezone,
+            **({"media_kind": media_kind} if media_kind else {}),
             **(
                 {"selected_data_agent": parent.parameters["selected_data_agent"]}
                 if parent and parent.parameters.get("selected_data_agent")
@@ -526,6 +531,9 @@ class AgentDraftExecutor:
         return "done"
 
     async def prepare(self, session, run):
+        from app.agent_draft_schema import proposal_schema
+
+        media_kind = run.parameters.get("media_kind")
         selected = None
         if run.parameters.get("selected_data_agent"):
             from app.selected_data_agent import SelectedProposal
@@ -545,11 +553,20 @@ class AgentDraftExecutor:
             from app.agent_media_choices import catalog
 
             media_choices = catalog(session)
+            tools = available_tools(run.parameters["instruction"])
+            if media_kind:
+                if media_kind not in available_media_outputs():
+                    raise ValueError("The requested agent media output is unavailable")
+                tools = {
+                    key: value
+                    for key, value in tools.items()
+                    if key in {"create_media", "web_search", "http_fetch", "browser"}
+                }
             prompt = {
                 "instruction": run.parameters["instruction"],
                 "current_user_urls": prompt_public_urls(run.parameters["instruction"]),
-                "operational_local_tools": available_tools(run.parameters["instruction"]),
-                "available_media_outputs": available_media_outputs(),
+                "operational_local_tools": tools,
+                "available_media_outputs": [media_kind] if media_kind else available_media_outputs(),
                 "registered_media_models": media_choices,
                 "fixed_market_scope": draft_agent(run.parameters["instruction"]).market,
                 "file_creation": bool(
@@ -557,7 +574,7 @@ class AgentDraftExecutor:
                 ),
                 "current_time_utc": utcnow().isoformat(),
                 "schedule_timezone": run.parameters.get("schedule_timezone", "UTC"),
-                "proposal_schema": Proposal.model_json_schema(),
+                "proposal_schema": proposal_schema(Proposal, tools, media_kind),
             }
         instructions = INSTRUCTIONS + (
             " Registered_media_models lists optional installed image/video/speech choices, not live runtime health. "
@@ -569,6 +586,10 @@ class AgentDraftExecutor:
             "native hardware/readiness checks remain required before execution. For installed speech model IDs, "
             "leave engine null for Chatterbox and reference_artifact_id null for operator voice selection later."
         )
+        if media_kind:
+            if source or selected:
+                raise ValueError("A source-bound data agent cannot change into a media agent")
+            instructions += f" The independently requested future output is media.kind={media_kind}. Preserve this modality; include media and only its supplied schema. Other media-kind instructions do not apply. Keep all input references null for review."
         if source:
             prompt = {
                 "instruction": run.parameters["instruction"],
@@ -643,6 +664,8 @@ class AgentDraftExecutor:
                         from app.agent_media_choices import validate_selection
 
                         proposal = Proposal.model_validate_json(text)
+                        if media_kind and (proposal.media is None or proposal.media.kind != media_kind):
+                            raise ValueError("Preserve the requested agent media kind: " + media_kind)
                         selected_media = validate_selection(session, proposal.media, media_choices)
                         settings = definition(
                             proposal,

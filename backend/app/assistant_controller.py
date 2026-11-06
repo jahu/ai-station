@@ -584,6 +584,7 @@ def verify_wrapper(session, run):
             "avatar_model_id",
             "controller_reply_context",
             "controller_data_agent_source",
+            "controller_agent_media_kind",
         ):
             if run.parameters.get(field) != expected.get(field):
                 raise ValueError("Controller tool scope changed before execution")
@@ -705,6 +706,11 @@ class AssistantToolSetupExecutor:
             **child.parameters,
             "controller_parent_id": root.id,
             "execution_deadline_at": root.parameters["execution_deadline_at"],
+            **(
+                {"controller_agent_media_kind": params["controller_agent_media_kind"]}
+                if params.get("controller_agent_media_kind")
+                else {}
+            ),
             **(
                 {"controller_project_name": params["controller_project_name"]}
                 if params.get("controller_project_name")

@@ -482,6 +482,20 @@ def wrapper_parameters(session, root, name, raw):
         if source is None:
             raise ValueError("Choose a supplied verified analysis alias")
         params["controller_data_agent_source"] = source
+    if name == "agent.create":
+        from app.assistant_controller import missing_outcomes
+
+        pending = missing_outcomes(
+            [
+                step["observation"]
+                for step in root.metadata_json.get("controller_steps", [])
+                if step.get("observation")
+            ],
+            root.metadata_json.get("controller_outcomes", []),
+        )
+        kind = next((item.get("agent_media_kind") for item in pending if item["kind"] == "agent_draft"), None)
+        if kind:
+            params["controller_agent_media_kind"] = kind
     if name == "data.create":
         from app.conversation_data_schema import DataScope
 
