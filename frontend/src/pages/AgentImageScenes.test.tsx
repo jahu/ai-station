@@ -247,7 +247,9 @@ it("retains the reviewed framing of an existing variation agent until it is chan
     </Frame>,
   );
   const scope = saved();
-  expect(scope.kind === "image" && scope.request.reference_layout).toBe("aligned");
+  expect(scope.kind === "image" && scope.request.reference_layout).toBe(
+    "aligned",
+  );
   expect(
     (
       screen.getByRole("combobox", {
