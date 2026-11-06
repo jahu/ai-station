@@ -209,3 +209,15 @@ Krea model when switching to reference variations. Existing reviewed agents keep
 their saved layout until explicitly edited; no migration silently rewrites them.
 The final deployed chain and UI qualification are recorded after local checks and
 review. No subject-specific routing or person-only variation instruction is added.
+
+### Mandatory model-specific composition decision
+
+The first full deployed default-model chain exposed a gap that the smaller
+component probe missed: the 9B model selected the right editor but omitted the
+optional layout, falling back to aligned. That QA chain was stopped through its
+normal owned cancellation path; it is not counted as a passed qualification.
+New Krea2 reference actions must therefore explicitly select aligned or beside
+before dispatch. Missing selection is a correctable planning error, never an
+unrequested render. The model makes the semantic choice; no keyword matcher picks
+it. Result-bound recurring drafts may still inherit the actual result's reviewed
+profile. Historical queued policies and other image backends retain their contract.
