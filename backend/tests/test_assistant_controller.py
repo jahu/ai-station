@@ -856,3 +856,50 @@ def test_changed_published_tool_request_is_rejected_before_any_capability_dispat
 
 # Preserve regression coverage for queued/history JSON-controller Runs.
 pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")
+
+
+def test_failed_legacy_image_arguments_cannot_repeat_after_optional_controls_are_added(model, bridge):
+    model["outcomes"][0].update(reference_mode="provided", source_inputs=["input:image:1"])
+    repeated = tool("image.recompose", instruction="fail", images=["input:image:1"])
+    model["decisions"] = [
+        repeated,
+        repeated,
+        {
+            "kind": "clarify",
+            "reason": "The renderer failed",
+            "response": "The image renderer failed; please choose another approach.",
+        },
+    ]
+    with TestClient(app) as api:
+        result = submit(api, "Change this reference image", image_artifact_ids=[upload(api)["id"]])
+        for index in range(30):
+            with session_factory()() as db:
+                tick(db, "legacy-image-failure-" + str(index))
+                root = db.get(Run, result["run"]["id"])
+                steps = root.metadata_json.get("controller_steps", [])
+                if not steps or steps[0].get("observation", {}).get("status") != "failed":
+                    continue
+                steps = json.loads(json.dumps(steps))
+                for key in ("reference_layout", "reference_strength"):
+                    steps[0]["arguments"].pop(key, None)
+                root.metadata_json = {**root.metadata_json, "controller_steps": steps}
+                for decision in db.scalars(
+                    select(Run).where(
+                        Run.parent_run_id == root.id,
+                        Run.executor_type == "assistant_decision",
+                        Run.status == "queued",
+                    )
+                ):
+                    context = json.loads(json.dumps(decision.parameters["decision_context"]))
+                    for observed in context["observations"]:
+                        for key in ("reference_layout", "reference_strength"):
+                            observed["arguments"].pop(key, None)
+                    decision.parameters = {**decision.parameters, "decision_context": context}
+                db.commit()
+                break
+        else:
+            raise AssertionError("The failed image was not observed")
+        drain()
+        assert len(root_state(result)["controller_steps"]) == 1
+        with session_factory()() as db:
+            assert len(list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))) == 1

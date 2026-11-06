@@ -41,8 +41,8 @@ function Frame({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
-function Editor() {
-  const [scope, setScope] = useState(initial);
+function Editor({ start = initial }: { start?: AgentMediaScope }) {
+  const [scope, setScope] = useState(start);
   return (
     <>
       <AgentMediaScopeEditor
@@ -177,4 +177,82 @@ it("shows the planned shot and actual image prompt beside an agent result", () =
   expect(
     screen.getByText("Create a wardrobe product image in a hallway"),
   ).toBeTruthy();
+});
+
+it("keeps the selected Krea editor when switching to variations and exposes composition freedom", () => {
+  const modelId = "d70bd340-87c7-4c55-8d32-cbf5d54b5001";
+  const start: AgentMediaScope = {
+    ...initial,
+    request: {
+      ...initial.request,
+      backend: "krea2",
+      model_id: modelId,
+      reference_layout: "aligned",
+      steps: 8,
+      cfg: 1,
+    },
+  };
+  render(
+    <Frame>
+      <Editor start={start} />
+    </Frame>,
+  );
+  expect(
+    (
+      screen.getByRole("combobox", {
+        name: "Agent reference composition",
+      }) as HTMLSelectElement
+    ).value,
+  ).toBe("aligned");
+  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  expect(saved().request).toMatchObject({
+    mode: "recompose",
+    backend: "krea2",
+    model_id: modelId,
+    reference_layout: "beside",
+    input_artifact_ids: [""],
+  });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Agent reference composition" }),
+    { target: { value: "aligned" } },
+  );
+  expect(saved().request).toMatchObject({
+    model_id: modelId,
+    reference_layout: "aligned",
+  });
+  expect(
+    vi
+      .mocked(fetch)
+      .mock.calls.some(([path]) => String(path).includes("/images/runs")),
+  ).toBe(false);
+});
+
+it("retains the reviewed framing of an existing variation agent until it is changed", () => {
+  const start: AgentMediaScope = {
+    kind: "image",
+    description_source: "goal",
+    vary_scenes: true,
+    request: {
+      mode: "recompose",
+      backend: "krea2",
+      model_id: "d70bd340-87c7-4c55-8d32-cbf5d54b5001",
+      reference_layout: "aligned",
+      prompt: brief,
+      input_artifact_ids: [""],
+    },
+  };
+  render(
+    <Frame>
+      <Editor start={start} />
+    </Frame>,
+  );
+  const scope = saved();
+  expect(scope.kind === "image" && scope.request.reference_layout).toBe("aligned");
+  expect(
+    (
+      screen.getByRole("combobox", {
+        name: "Agent reference composition",
+      }) as HTMLSelectElement
+    ).value,
+  ).toBe("aligned");
 });

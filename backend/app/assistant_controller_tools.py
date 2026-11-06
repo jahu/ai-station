@@ -1,7 +1,7 @@
 """Closed, typed station tools and owned result bindings for the conversation controller."""
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
@@ -26,6 +26,11 @@ class ImageOperation(Images):
     image_model: Alias | None = Field(
         default=None,
         description="An exact installed image_models alias. Honor the user's named model. Omit to use the configured default for this operation; a recurring draft from a newly produced result retains that compatible result model unless explicitly overridden.",
+    )
+
+    reference_layout: Literal["aligned", "beside"] | None = Field(
+        default=None,
+        description="Krea2 reference operations only: aligned retains reference composition; beside allows a new viewpoint, pose or composition while reusing reference features. Omit when not applicable.",
     )
 
 
@@ -60,7 +65,7 @@ class AgentDraft(MediaAgentDraft):
 
     @model_validator(mode="after")
     def one_source_family(self):
-        if self.analysis and (self.images or self.image_model):
+        if self.analysis and (self.images or self.image_model or self.reference_layout is not None):
             raise ValueError("Choose a completed analysis or recurring image references, not both")
         return self
 

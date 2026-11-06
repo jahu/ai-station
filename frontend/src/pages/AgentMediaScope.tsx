@@ -196,6 +196,8 @@ export default function AgentMediaScopeEditor({
   }
   function changeImageMode(mode: ImageMediaRequest["mode"]) {
     if (!image) return;
+    const keepKrea =
+      image.backend === "krea2" && !!image.model_id && mode !== "upscale";
     onChange({
       kind: "image",
       description_source:
@@ -207,7 +209,25 @@ export default function AgentMediaScopeEditor({
       ...(mode === "recompose" ? { vary_scenes: true } : {}),
       request: {
         mode,
-        backend: "qwen",
+        backend: keepKrea ? "krea2" : "qwen",
+        ...(keepKrea
+          ? {
+              model_id: image.model_id,
+              steps: image.steps ?? 8,
+              cfg: image.cfg ?? 1,
+              seed: image.seed ?? 42,
+            }
+          : {}),
+        ...(keepKrea && mode !== "t2i"
+          ? {
+              reference_layout:
+                mode === "recompose"
+                  ? ("beside" as const)
+                  : ("aligned" as const),
+              reference_strength: mode === "recompose" ? 2 : 4,
+              grounding_px: image.grounding_px ?? 768,
+            }
+          : {}),
         ...(mode === "recompose"
           ? { prompt_style: "instruction" as const }
           : {}),
@@ -390,6 +410,29 @@ export default function AgentMediaScopeEditor({
                   idea.
                 </small>
               </span>
+            </label>
+          )}
+        {image?.backend === "krea2" &&
+          (image.mode === "img2img" || image.mode === "recompose") && (
+            <label>
+              Reference composition
+              <select
+                aria-label="Agent reference composition"
+                value={image.reference_layout ?? "aligned"}
+                onChange={(event) =>
+                  updateImage({
+                    reference_layout: event.target.value as
+                      "aligned" | "beside",
+                  })
+                }
+              >
+                <option value="aligned">Keep reference framing</option>
+                <option value="beside">Allow new viewpoints</option>
+              </select>
+              <small>
+                Allow new viewpoints for changes to camera angle or composition.
+                Your brief decides which features stay consistent.
+              </small>
             </label>
           )}
         {image?.mode !== "upscale" && !recordedWhole && (
