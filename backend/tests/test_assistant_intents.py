@@ -61,3 +61,24 @@ def test_only_current_owned_reference_aliases_can_enter_future_scope():
     }
     with pytest.raises(ValueError, match="supplied image aliases"):
         validate_plan(json.dumps(value), {"inputs_and_results": []})
+
+
+def test_planning_keeps_the_current_request_after_history_and_marks_reference_data():
+    from app.assistant_intents import planning_messages
+
+    context = {
+        "instruction": "Prepare only a recurring agent instead",
+        "recent_context": [
+            {"role": "user", "content": "Make an image"},
+            {"role": "assistant", "content": "Which setting?"},
+        ],
+        "inputs_and_results": [{"alias": "previous:image:1", "type": "image"}],
+    }
+    messages = planning_messages(context)
+    assert messages[-3:-1] == context["recent_context"]
+    current = json.loads(messages[-1]["content"])
+    assert current["instruction"] == context["instruction"]
+    reference = json.loads(messages[1]["content"])
+    assert "instruction" not in reference and "recent_context" not in reference
+    assert reference["available_inputs"][0]["alias"] == "previous:image:1"
+    assert "Read-only" in reference["context_role"]

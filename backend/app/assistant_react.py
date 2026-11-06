@@ -145,20 +145,16 @@ async def take_action(context, invoke, correction=None):
         for key, value in context.items()
         if key not in {"tools", "argument_types", "decision_schema", "recent_context", "observations"}
     }
+    if correction:
+        state["validation_feedback"] = correction[:2000]
+    # Keep the actual instruction last, after the reference metadata.
+    state["instruction"] = state.pop("instruction")
     history.append(
         ChatMessage(
             role="user",
             content="CURRENT REQUEST AND AVAILABLE STATE:\n" + json.dumps(state, ensure_ascii=False),
         )
     )
-    if correction:
-        history.append(
-            ChatMessage(
-                role="user",
-                content="Your previous proposed action was rejected before dispatch. Correct it without changing the goal: "
-                + correction[:2000],
-            )
-        )
     output = await agent.take_step(ctx, history, tools, memory)
     if output.retry_messages:
         raise ValueError(

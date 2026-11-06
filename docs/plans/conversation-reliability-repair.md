@@ -130,3 +130,30 @@ Runner now share the complete journal transaction lock, including initialization
 The repair does not add a cross-process ownership contract or alter signaling.
 A forced-overlap regression and process/deadline/native-runtime tests qualify it;
 final Runner-wide checks must pass before deployment.
+
+## Deployed qualification and current-turn follow-up
+
+PR #679 delivered the real ReAct adapter and source-bound drafts to develop.
+The reviewed image and frozen native Runner were deployed with an offline SQLite
+backup, unchanged records and preserved local/LAN/authentication settings.
+A real neutral Qwen 9B conversation produced exactly one Qwen Recompose and a
+disabled agent with interval900, bound to that actual output and its 30-step/CFG6
+profile. Execution success is separate from visual acceptance: the result changed
+the object's color but failed the requested new setting. A controlled same-source,
+same-profile English-instruction comparison is pending; quality is not yet qualified.
+
+A different three-turn test retained the original artifact through clarification
+and an intervening text answer, but the final agent-only request was incorrectly
+interpreted as also requiring an immediate image. That QA root was stopped, and
+its unrelated initial chain was allowed to finish. The definition itself retained
+the correct original reference and 1800-second cadence.
+
+The planner had serialized the current instruction before older dialogue inside
+one JSON message. The follow-up candidate sends read-only metadata first, actual
+historical user/assistant messages in order, and the current request last. Validation
+feedback stays before the current request; ReAct feedback is metadata rather than
+a replacement user command. Earlier requests resolve references but are not an
+outstanding work queue. There is no language/keyword matcher or subject-specific
+branch. The same managed 9B, with the actual failed history, passed replacement,
+continuation, ordinary explanation and modify-then-automate contrasts. Full local
+checks and deployed multi-turn qualification remain required for this follow-up.

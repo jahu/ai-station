@@ -105,3 +105,25 @@ def test_framework_bounds_observation_excerpts_without_changing_canonical_result
     assert bounded["instruction"] == source["instruction"]
     assert bounded["observations"][0]["arguments"] == {"sources": ["web:1"]}
     assert len(source["observations"][0]["tool_data_excerpt"]) == 20000
+
+
+def test_rejected_action_feedback_cannot_replace_the_current_request():
+    import json
+
+    async def infer(messages):
+        current = messages[-1]["content"]
+        assert current.startswith("CURRENT REQUEST AND AVAILABLE STATE:")
+        state = json.loads(current.split("\n", 1)[1])
+        assert state["instruction"] == "Explain shelves"
+        assert state["validation_feedback"] == "Choose an available tool"
+        assert list(state)[-1] == "instruction"
+        return 'Thought: Answer the current question.\nAction: chat_reply\nAction Input: {"instruction":"Explain shelves"}'
+
+    value = asyncio.run(
+        take_action(
+            {"instruction": "Explain shelves", "tools": {"chat.reply": {}}, "observations": []},
+            infer,
+            "Choose an available tool",
+        )
+    )
+    assert value["tool"] == "chat.reply"
