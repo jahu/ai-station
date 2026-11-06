@@ -18,10 +18,22 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
+from weakref import WeakValueDictionary
 
 from ai_station_runner.security import resolve_child
 
 MAX_PROCESS_DEADLINE_SECONDS = 4 * 60 * 60
+
+# Replacement runtime owners can coexist with an earlier owner's reaper thread
+# inside the one Runner process. Their read/modify/write transactions must share
+# a lock, not just atomic rename: separate locks also permit lost journal updates.
+_JOURNAL_LOCKS = WeakValueDictionary()
+_JOURNAL_LOCKS_GUARD = threading.Lock()
+
+
+def _journal_lock(path):
+    with _JOURNAL_LOCKS_GUARD:
+        return _JOURNAL_LOCKS.setdefault(path, threading.RLock())
 
 
 class ProcessNotOwned(KeyError):
@@ -102,12 +114,13 @@ class ProcessManager:
         self.data_dir = data_dir.resolve()
         self.grace_seconds = grace_seconds
         self.path = resolve_child(self.data_dir, "runtime/processes.json")
-        self._lock = threading.RLock()
+        self._lock = _journal_lock(self.path)
         self._live: dict[str, subprocess.Popen] = {}
         self._deadline_timers: dict[str, threading.Timer] = {}
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        if not self.path.exists():
-            self._dump({})
+        with self._lock:
+            if not self.path.exists():
+                self._dump({})
         # Budgets survive a native service restart. Ownership is checked again
         # when the timer fires; a stale/reused PID never authorizes a signal.
         with self._lock:

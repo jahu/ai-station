@@ -122,3 +122,11 @@ old protocol rather than translating fake responses into the new protocol.
 
 Full suite, deployed real workflows, neutral visual comparison and the remaining
 acceptance gates above are still required. The goal remains active.
+
+Validation exposed an existing replacement-owner process journal race: managers
+for the same canonical registry had separate thread locks and competed for one
+atomic-rename temporary file, also risking lost updates. Managers in the single
+Runner now share the complete journal transaction lock, including initialization.
+The repair does not add a cross-process ownership contract or alter signaling.
+A forced-overlap regression and process/deadline/native-runtime tests qualify it;
+final Runner-wide checks must pass before deployment.
