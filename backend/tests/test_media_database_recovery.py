@@ -289,3 +289,159 @@ def test_inspection_handoff_keeps_result_in_original_account(session, monkeypatc
     for account, count in ((owner, 1), (other_owner, 0)):
         with ScopedSession(bind=get_engine(), scope=DataScope(account), expire_on_commit=False) as private:
             assert len(list(private.scalars(select(Artifact).where(Artifact.run_id == identity)))) == count
+
+
+def test_cpu_memory_wait_is_deferred_without_repeated_preparation_or_blocking_stop(session):
+    from app.runs import claim_next
+
+    media = Media("image")
+    media.hardware = lambda: {"memory": {"available_mib": 100}}
+    run = enqueue(session, media)
+    run.requested_resources = {"ram_mib": 2000}
+    session.commit()
+    assert tick(session, "waiting-memory", executors={media.name: media}) == run.id
+    session.refresh(run)
+    assert run.status == "queued" and run.metadata_json["resource_wait"]["reason"] == "memory"
+    assert run.metadata_json["resource_wait_until"] > utcnow().isoformat()
+    assert media.starts == 0
+    for n in range(3):
+        assert claim_next(session, "other-slot-" + str(n)) is None
+        session.commit()
+    independent = create_run(session, run.task, run_type="test", capability="test", executor_type="fake")
+    session.commit()
+    assert claim_next(session, "independent-slot").id == independent.id
+    session.commit()
+    request_cancel(session, run)
+    session.commit()
+    assert run.status == "canceled" and media.starts == 0
+
+
+def test_real_sqlite_busy_during_admission_preserves_claim_and_recovers_without_duplicate_dispatch(
+    session, monkeypatch
+):
+    from app.db import get_engine, sqlite_busy
+    from sqlalchemy import event
+    from sqlalchemy.exc import OperationalError
+
+    media = Media("image")
+    run = enqueue(session, media)
+    run_id = run.id
+    run.requested_resources = {"ram_mib": 1}
+    session.commit()
+    engine = get_engine()
+    ready, release = threading.Event(), threading.Event()
+    errors, threads = [], []
+
+    def writer():
+        try:
+            with sqlite3.connect(engine.url.database, timeout=1) as other:
+                other.execute("BEGIN IMMEDIATE")
+                ready.set()
+                assert release.wait(3)
+                other.commit()
+        except BaseException as exc:
+            errors.append(exc)
+            ready.set()
+
+    def hardware():
+        if not threads:
+            thread = threading.Thread(target=writer)
+            threads.append(thread)
+            thread.start()
+            assert ready.wait(2), "Admission I/O must not retain a write transaction"
+        return {"memory": {"available_mib": 8000}}
+
+    def unlock_on_busy(context):
+        if sqlite_busy(context.sqlalchemy_exception):
+            release.set()
+            threads[0].join(timeout=2)
+
+    session.connection().exec_driver_sql("PRAGMA busy_timeout=10")
+    session.commit()
+    media.hardware = hardware
+    event.listen(engine, "handle_error", unlock_on_busy)
+    try:
+        with pytest.raises(OperationalError) as caught:
+            tick(session, "busy-owner", executors={media.name: media})
+        assert sqlite_busy(caught.value)
+        session.rollback()
+        session.refresh(run)
+        assert run.status == "preparing" and run.error_type == ""
+        assert run.metadata_json["media_admission_pending"] is True
+        assert not run.metadata_json.get("dispatch_attempted") and media.starts == 0
+        assert not [e for e in list_events(session, run_id) if e.event_type == "run.failed"]
+        run.lease_expires_at = utcnow() - timedelta(seconds=1)
+        session.commit()
+        assert recover_stale(session, runner=media) == [run_id]
+        session.commit()
+        assert run.status == "queued"
+        assert tick(session, "new-owner", executors={media.name: media}) == run_id
+        session.refresh(run)
+        assert run.status == "succeeded" and media.starts == 1
+        assert "media_admission_pending" not in run.metadata_json
+    finally:
+        release.set()
+        for thread in threads:
+            thread.join(timeout=2)
+        event.remove(engine, "handle_error", unlock_on_busy)
+    assert not errors
+
+
+@pytest.mark.parametrize("proof", ["legacy", "dispatched", "canceled"])
+def test_admission_recovery_requires_new_proof_and_never_ignores_dispatch_or_stop(session, proof):
+    from app.runner_client import RunnerError
+    from app.runs import claim_next
+
+    media = Media("image")
+    run = enqueue(session, media)
+    assert claim_next(session, "lost-owner").id == run.id
+    transition(session, run, "preparing", event_type="executor.preparing")
+    if proof != "legacy":
+        run.metadata_json = {"media_admission_pending": True}
+    if proof == "dispatched":
+        run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
+    if proof == "canceled":
+        request_cancel(session, run)
+    run.lease_expires_at = utcnow() - timedelta(seconds=1)
+    session.commit()
+
+    class Missing:
+        def inspect_process(self, *_):
+            raise RunnerError(404, "No owned process")
+
+    assert recover_stale(session, runner=Missing()) == [run.id]
+    session.commit()
+    assert run.status == ("canceled" if proof == "canceled" else "interrupted")
+    assert media.starts == 0
+
+
+def test_new_dispatch_receipt_during_admission_recovery_is_not_requeued(session, monkeypatch):
+    from app.db import session_factory
+    from app.runs import claim_next
+
+    media = Media("image")
+    run = enqueue(session, media)
+    run_id = run.id
+    claim_next(session, "original-owner")
+    transition(session, run, "preparing", event_type="executor.preparing")
+    run.metadata_json = {"media_admission_pending": True}
+    run.lease_expires_at = utcnow() - timedelta(seconds=1)
+    session.commit()
+    refresh = session.refresh
+    checks = []
+
+    def race(row, *args, **kwargs):
+        if row is run:
+            checks.append(True)
+            if len(checks) == 2:
+                with session_factory()() as sender:
+                    accepted = sender.get(Run, run_id)
+                    accepted.metadata_json = {"dispatch_attempted": True}
+                    sender.commit()
+        return refresh(row, *args, **kwargs)
+
+    monkeypatch.setattr(session, "refresh", race)
+    assert recover_stale(session, runner=media) == []
+    session.commit()
+    assert run.status == "preparing" and run.metadata_json == {"dispatch_attempted": True}
+    assert media.starts == 0 and media.inspections == 0

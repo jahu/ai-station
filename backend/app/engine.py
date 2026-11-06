@@ -7,7 +7,7 @@ import socket
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db import utcnow
+from app.db import sqlite_busy, utcnow
 from app.dependencies import failed_prerequisites
 from app.events import append_event
 from app.executor import Executor
@@ -217,6 +217,10 @@ def _execute_claimed(session, run, worker_id, executors):
                 raise
     except Exception as exc:
         session.rollback()
+        if sqlite_busy(exc):
+            # The Run may already own native/provider side effects. Preserve its
+            # durable claim for inspection/recovery, never fail or replay it here.
+            raise
         # An executor may commit before losing its claim. A rollback without
         # an active transaction does not expire that stale ORM instance.
         failed = session.get(type(run), run.id, populate_existing=True)

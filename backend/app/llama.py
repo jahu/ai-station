@@ -609,6 +609,14 @@ def reserve(session, run, indexes, *, hardware=None):
     }
     requested = {f"gpu:{g}" for g in selected}
     if (active_locks(session) - own) & requested:
+        run.metadata_json = {
+            **run.metadata_json,
+            "resource_wait": {
+                "reason": "gpu",
+                "checked_at": utcnow().isoformat(),
+                "requested_gpu_indices": selected,
+            },
+        }
         return False
     if run.parameters.get("runtime_profile") or run.parameters.get("model_bundle"):
         from app.config import get_settings
@@ -855,6 +863,9 @@ class LlamaExecutor:
                     transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
                     return "done"
             elif not reserve(session, run, indexes, hardware=hardware):
+                from app.resources import defer_resource_run
+
+                session.flush()  # Retain admission observations before the cancellation refresh.
                 session.refresh(run)
                 if run.status == "cancel_requested" and not run.metadata_json.get("dispatch_attempted"):
                     instance.status = "stopped"
@@ -866,14 +877,20 @@ class LlamaExecutor:
                 run.queued_at = utcnow()
                 run.finished_at = None
                 run.lease_expires_at = None
-                evict_idle_models(session, run, indexes, desired=set(run.parameters["gpus"]))
+                run.worker_id = None
+                evicted = evict_idle_models(session, run, indexes, desired=set(run.parameters["gpus"]))
+                task_wait = run.task.metadata_json.get("resource_wait_until")
+                if not evicted and not (isinstance(task_wait, str) and task_wait > utcnow().isoformat()):
+                    defer_resource_run(run)
                 session.commit()
                 return "requeued"
-            if "resource_wait" in run.metadata_json:
-                run.metadata_json = {
-                    key: value for key, value in run.metadata_json.items() if key != "resource_wait"
-                }
         session.refresh(run)
+        if "resource_wait" in run.metadata_json or "resource_wait_until" in run.metadata_json:
+            run.metadata_json = {
+                key: value
+                for key, value in run.metadata_json.items()
+                if key not in {"resource_wait", "resource_wait_until"}
+            }
         if run.status != "cancel_requested":
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
@@ -1257,7 +1274,8 @@ def evict_idle_models(session, run, indexes, *, desired=None):
     from app.runtime_coordination import foreign_runtime_work
 
     if not eviction_needed(session, run):
-        return
+        return False
+    evicted = False
     if desired is None:
         desired = set(indexes) if run.requested_gpu == "auto" else {int(run.requested_gpu)}
     consumers = list(session.scalars(select(Run).where(Run.status.not_in(TERMINAL))))
@@ -1291,5 +1309,7 @@ def evict_idle_models(session, run, indexes, *, desired=None):
             "runtime.eviction_requested",
             {"instance_id": instance.id, "stop_run_id": stop_run.id},
         )
+        evicted = True
         if run.requested_gpu == "auto":
             break
+    return evicted

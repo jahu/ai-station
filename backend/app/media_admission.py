@@ -27,6 +27,9 @@ def shot_task(session, run):
 
 
 def defer_media_task(session, run):
+    from app.resources import defer_resource_run
+
+    defer_resource_run(run)
     task = shot_task(session, run)
     if task is None:
         return True
