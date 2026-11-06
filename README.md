@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.2.1` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.3.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -38,7 +38,7 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
-On `develop`, the conversation now uses a ReAct orchestrator: it chooses an
+The conversation uses a ReAct orchestrator: it chooses an
 available tool, observes its actual result and can pass that result to the next
 tool. Reference images survive follow-up questions, and an image result can become
 the input of a recurring-agent draft for your review.
@@ -50,9 +50,15 @@ Recompose directly beside the image operation.
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.2.1.md).
+> [Exact qualification and known issues](docs/releases/0.3.0.md).
 
-**New in 0.2.1: model downloads, easier to find.** Open **Models → Add model**,
+**New in 0.3.0: connected conversations and better image agents.** Ask for a
+sequence of actions: the assistant uses each tool’s actual result in the next
+step. Follow-up messages retain image references; recurring drafts can use a
+newly generated result. Image agents offer model selection for Generate, Edit
+and Recompose, with clearer control over composition.
+
+**Model downloads, easier to find.** Open **Models → Add model**,
 use hardware recommendations, search by name or paste a Hugging Face link.
 **Quick setup** now shows only the category you choose, with clear navigation
 on desktop and phone. Browse popular or
@@ -72,7 +78,7 @@ choice silently. [Supported families and actual tests](docs/models.md) ·
 
 Release 0.2 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.2.1 release notes and qualification status](docs/releases/0.2.1.md).
+[0.3.0 release notes and qualification status](docs/releases/0.3.0.md).
 
 ## Help make it simple
 
@@ -216,8 +222,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.2.1-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.2.1-linux-amd64.deb`.
+- **Windows 11 x64:** `AI-Station-0.3.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.3.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -231,7 +237,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.2.1.md).
+[Installation, updates and known issues](docs/releases/0.3.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -269,7 +275,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.2.1.md).
+post-release QA are listed in the [release notes](docs/releases/0.3.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -523,7 +529,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.2.1.md#validation) ·
+[Release verification](docs/releases/0.3.0.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
