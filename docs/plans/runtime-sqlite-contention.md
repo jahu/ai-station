@@ -51,3 +51,20 @@ ambiguous native work retains the existing inspection policy. This is not a
 general retry of provider/native side effects. A newly published owned stop
 prerequisite supplies readiness, so it does not add a redundant timer after
 that stop finishes. Existing Task-level admission waits remain compatible.
+
+## Local qualification — 2026-11-06
+
+The reviewed runtime passed coverage of **8,860 unique Python tests**, with 19
+explicit opt-in integration skips. This combines the distributed regression,
+its recorded remaining cases, and 102 archive cases run sequentially because
+their generated ZIP timestamps can change collection identities. No failing
+case was waived. Corrected desktop interrupt fixtures passed their complete
+54-case family; native storage fixtures passed 23 cases using one stable native
+disk observation. These test-only corrections leave application/Runner code
+unchanged. Ruff lint/format and the exact application Docker build also passed.
+
+The admission/recovery contract passed real concurrent SQLite-writer tests,
+including exactly-once fake native dispatch and a recovery/dispatch race.
+Film admission retains its existing Task gate and immediate wakeup; ordinary
+media and model loads use their individual backoff. Real neutral deployment
+qualification remains the final gate; these tests are not a hardware smoke test.
