@@ -497,3 +497,13 @@ marked `require_success=false`; existing edges still propagate failure. The root
 rechecks dynamically published descendants before each inference round. Decisions
 are separate Runs so GPU eviction/reload and external-provider recovery retain
 their existing ownership contracts. Migration 0045 preserves old-edge semantics.
+
+Resource admission retries use a durable per-Run eligibility time, including
+CPU-only RAM waits, rather than immediately cycling through claim/preparation.
+Actual owned-stop dependencies keep their existing readiness gate. Transient
+SQLite BUSY/LOCKED at the executor boundary retains the durable claim for
+recovery; it does not imply a workload failure or permission to replay a provider.
+New media admission receipts permit requeue only before any native dispatch,
+with unchanged expired ownership proof; later/legacy work remains inspection-only.
+See [the contention repair](plans/runtime-sqlite-contention.md) for evidence and
+qualification status.
