@@ -19,12 +19,14 @@ def capture(session, root, args, entries):
     outcome = next((item for item in pending if item["kind"] == "agent_draft"), None)
     raw = outcome.get("automation") if outcome else None
     if raw is None:
-        if args.images or args.interval_seconds is not None:
+        if args.images or args.interval_seconds is not None or args.reference_layout is not None:
             raise ValueError(
                 "Recurring references/cadence require the independently planned automation scope"
             )
         return None
     plan = AutomationIntent.model_validate(raw)
+    if plan.media_kind != "image" and (args.image_model or args.reference_layout is not None):
+        raise ValueError("Image reference controls require a planned image agent")
     if args.interval_seconds is not None and (
         plan.schedule.trigger != "interval" or args.interval_seconds != plan.schedule.interval_seconds
     ):
@@ -74,7 +76,14 @@ def capture(session, root, args, entries):
         raise ValueError("Recurring image references must not be duplicated")
     ids = [item["snapshot"]["id"] for item in refs]
     profile = (
-        request_profile(session, root, args, "recompose" if refs else "t2i", ids)
+        request_profile(
+            session,
+            root,
+            args,
+            "recompose" if refs else "t2i",
+            ids,
+            inherit_source=plan.image_source == "latest_result",
+        )
         if plan.media_kind == "image"
         else {}
     )

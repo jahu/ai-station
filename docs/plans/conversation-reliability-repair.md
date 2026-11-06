@@ -157,3 +157,55 @@ outstanding work queue. There is no language/keyword matcher or subject-specific
 branch. The same managed 9B, with the actual failed history, passed replacement,
 continuation, ordinary explanation and modify-then-automate contrasts. Full local
 checks and deployed multi-turn qualification remain required for this follow-up.
+
+## Reference content versus the operation's model
+
+The controlled neutral Qwen reference-edit comparisons retained the old setting
+with Polish instructions, equivalent English instructions, lower CFG and a full
+structured target-scene instruction. These tests do not establish a prompt-language
+root cause, and no language rewrite or sampling hotfix is being shipped from them.
+The configured alternative editor changed both requested properties, retained the
+reference object's shape/hardware and produced a clean new setting on the same
+workstation. This is evidence for that neutral case, not a general model benchmark.
+
+New conversation transformations must respect the configured model for their
+operation unless the user explicitly chooses another model. An image reference
+selects content; it must not silently select its historical generator. Compatible
+source settings may be reused when that model is actually selected. A recurring
+definition bound to a newly produced result retains that result's compatible model
+and settings, unless explicitly overridden, to reproduce the reviewed workflow.
+A separate policy coordinate preserves historical queued requests and receipts.
+No model weights, external runtime or original photo script is changed.
+
+## Qualified continuity and reference composition (2026-11-06)
+
+PR #680 deployed chronological dialogue with the current request last. Real
+managed Qwen 9B and RVN 27B each passed a three-turn neutral conversation:
+clarification about an attached cabinet, an intervening text answer, then a
+30-minute recurring-image draft using that earlier attachment. Neither inserted
+an unwanted immediate render. The definitions stayed disabled for review.
+Two complete manual executions of another neutral image agent passed, including
+planning, rendering, source lineage and variation history; no database lock
+occurred. Qualification polls the complete descendant graph, because workflow
+root completion records dispatch rather than completion of all media children.
+
+Those actual images exposed a separate reference-composition constraint. With
+Krea2's aligned layout, the setting changed but the requested camera angle stayed
+close to the reference. A controlled comparison retained the same source, prompt,
+seed, model, steps, CFG and guidance, changing only layout to beside. The result
+showed the requested elevated viewpoint and new setting with cleaner surfaces.
+This is a neutral hardware-tested example, not a guarantee for every model/brief.
+
+The controller therefore gains one bounded, model-specific tool argument:
+reference_layout. It can choose beside for a changed viewpoint/composition, or
+aligned for anchored edits. Unsupported models/modes reject that argument. It
+cannot invent sampling or reference-strength overrides through this extension.
+Result-bound recurring definitions preserve the actual result profile. Historical
+queued requests retain their original model-selection policy, and historical tool
+receipts are normalized before duplicate-call detection.
+
+The agent editor exposes the same composition choice and retains the installed
+Krea model when switching to reference variations. Existing reviewed agents keep
+their saved layout until explicitly edited; no migration silently rewrites them.
+The final deployed chain and UI qualification are recorded after local checks and
+review. No subject-specific routing or person-only variation instruction is added.

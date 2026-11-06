@@ -96,13 +96,20 @@ def source_profile(session, artifact_ids):
     }
 
 
-def request_profile(session, root, args, mode, artifact_ids):
+def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=False):
     catalog = root.parameters.get("controller_image_catalog")
+    controls = {
+        key: getattr(args, key, None) for key in ("reference_layout",) if getattr(args, key, None) is not None
+    }
     if not catalog:
+        if controls:
+            raise ValueError("Reference controls require a current frozen image model catalog")
         return {}
     inherited = source_profile(session, artifact_ids)
     selected = getattr(args, "image_model", None)
-    if selected is None:
+    if selected is None and (
+        inherit_source or root.parameters.get("controller_image_policy") != "configured-default-v2"
+    ):
         proposed = inherited.get("model_id") or inherited.get("backend")
         if proposed and proposed not in catalog["models"]:
             raise ValueError(
@@ -113,6 +120,8 @@ def request_profile(session, root, args, mode, artifact_ids):
             if proposed in catalog["models"] and mode in catalog["models"][proposed]["modes"]
             else catalog["defaults"]["choices"][mode]
         )
+    if selected is None:
+        selected = catalog["defaults"]["choices"][mode]
     item = catalog["models"].get(selected)
     if item is None or mode not in item["modes"]:
         raise ValueError("Choose an available compatible image_model alias from image_models")
@@ -140,4 +149,8 @@ def request_profile(session, root, args, mode, artifact_ids):
         and inherited.get("model_id") == values.get("model_id")
     ):
         values.update({key: value for key, value in inherited.items() if key in PROFILE_FIELDS})
+    if controls:
+        if item["backend"] != "krea2" or mode not in {"img2img", "recompose"}:
+            raise ValueError("Reference controls apply only to Krea2 Edit or Recompose")
+        values.update(controls)
     return values

@@ -354,13 +354,19 @@ class AssistantDecisionExecutor:
                     raise ValueError("Select an available tool")
                 arguments = TOOLS[value.tool].arguments.model_validate(value.arguments).model_dump()
                 for observed in context["observations"]:
-                    if (
-                        observed["tool"] == value.tool
-                        and observed.get("arguments") == arguments
-                        and (
-                            observed["status"] != "succeeded"
-                            or value.tool in {"web.search", "web.read", "artifact.read", "image.describe"}
+                    if observed["tool"] != value.tool:
+                        continue
+                    try:
+                        prior_arguments = (
+                            TOOLS[value.tool]
+                            .arguments.model_validate(observed.get("arguments", {}))
+                            .model_dump()
                         )
+                    except ValueError:
+                        prior_arguments = observed.get("arguments")
+                    if prior_arguments == arguments and (
+                        observed["status"] != "succeeded"
+                        or value.tool in {"web.search", "web.read", "artifact.read", "image.describe"}
                     ):
                         raise ValueError(
                             f"This exact call already {observed['status']} as step {observed['index']}. "

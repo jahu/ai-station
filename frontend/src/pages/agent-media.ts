@@ -6,7 +6,7 @@ import {
 
 export type ImageMediaRequest = {
   mode: "t2i" | "img2img" | "recompose" | "upscale";
-  backend?: "qwen" | "juggernaut";
+  backend?: "qwen" | "juggernaut" | "krea2";
   prompt?: string;
   edit_prompt?: string;
   prompt_style?: "pipeline" | "prompt" | "instruction";

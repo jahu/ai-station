@@ -105,3 +105,83 @@ def test_deleted_definition_is_a_correctable_model_choice(session):
     session.flush()
     with pytest.raises(ValueError, match="unavailable"):
         request_profile(session, root, SimpleNamespace(image_model=selected), "recompose", [])
+
+
+def test_new_transform_uses_configured_editor_instead_of_reference_generator(session):
+    image = source(session)
+    model, _ = registered(session)
+    change_default(DefaultsWrite(revision=0, mode="recompose", choice=model.id), session)
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": inventory(session),
+            "controller_image_policy": "configured-default-v2",
+        }
+    )
+    values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    assert values["backend"] == "krea2" and values["model_id"] == model.id
+    explicit = request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", [image.id])
+    assert explicit["backend"] == "qwen" and explicit["steps"] == 30 and explicit["cfg"] == 6
+    recurring = request_profile(
+        session, root, SimpleNamespace(image_model=None), "recompose", [image.id], inherit_source=True
+    )
+    assert recurring["backend"] == "qwen" and recurring["steps"] == 30
+
+
+def test_reference_layout_is_explicit_bounded_and_not_confused_with_quality(session):
+    from app.assistant_controller_tools import ImageOperation
+
+    model, _ = registered(session)
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": inventory(session),
+            "controller_image_policy": "configured-default-v2",
+        }
+    )
+    args = ImageOperation(
+        instruction="Show the object from a higher viewpoint",
+        image_model=model.id,
+        reference_layout="beside",
+    )
+    values = request_profile(session, root, args, "recompose", [])
+    assert values["reference_layout"] == "beside"
+    args.image_model = "qwen"
+    with pytest.raises(ValueError, match="only to Krea2"):
+        request_profile(session, root, args, "recompose", [])
+    for layout in ("unknown", "../escape"):
+        with pytest.raises(ValueError):
+            ImageOperation(instruction="A new view", reference_layout=layout)
+
+
+def test_recurring_definition_retains_selected_reference_controls(session):
+    from uuid import uuid4
+
+    from app.assistant_agent_media import image_definition
+
+    model, _ = registered(session)
+    image_id = str(uuid4())
+    settings = image_definition(
+        {
+            "plan": {
+                "goal": "Different views of the reference object",
+                "media_kind": "image",
+                "image_source": "supplied",
+                "source_images": ["input:image:1"],
+                "vary_results": True,
+                "schedule": {"trigger": "interval", "interval_seconds": 900},
+            },
+            "images": [{"snapshot": {"id": image_id}}],
+            "profile": {
+                "backend": "krea2",
+                "model_id": model.id,
+                "reference_layout": "beside",
+                "reference_strength": 2,
+                "steps": 8,
+                "cfg": 1,
+            },
+        },
+        "test-model",
+    )
+    assert not settings.enabled and settings.interval_seconds == 900
+    assert settings.media.request.reference_layout == "beside"
+    assert settings.media.request.reference_strength == 2
+    assert [str(value) for value in settings.media.request.input_artifact_ids] == [image_id]
