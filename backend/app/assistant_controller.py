@@ -282,6 +282,7 @@ def enqueue(session, conversation, body, *, commit=True):
         parameters={
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
+            "controller_image_policy": "configured-default-v2",
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},
             "controller_provider": snapshot,
@@ -444,6 +445,11 @@ def decision_context(session, root):
         "inputs_and_results": entries,
         "reference_context": reference_context(entries),
         "image_models": root.parameters.get("controller_image_catalog", {}),
+        "image_model_policy": (
+            "Honor an explicit image_model; otherwise use the configured per-operation default. Reference images select content, not the generator. A recurring draft bound to a newly produced result retains its compatible result model."
+            if root.parameters.get("controller_image_policy") == "configured-default-v2"
+            else "Legacy scope: retain a compatible source profile or the frozen configured default unless explicitly overridden."
+        ),
         "sources": sources(root),
         "selected_web_query": (root.parameters.get("web_search") or {}).get("query", ""),
         "observations": observations,

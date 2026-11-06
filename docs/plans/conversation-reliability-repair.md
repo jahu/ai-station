@@ -157,3 +157,22 @@ outstanding work queue. There is no language/keyword matcher or subject-specific
 branch. The same managed 9B, with the actual failed history, passed replacement,
 continuation, ordinary explanation and modify-then-automate contrasts. Full local
 checks and deployed multi-turn qualification remain required for this follow-up.
+
+## Reference content versus the operation's model
+
+The controlled neutral Qwen reference-edit comparisons retained the old setting
+with Polish instructions, equivalent English instructions, lower CFG and a full
+structured target-scene instruction. These tests do not establish a prompt-language
+root cause, and no language rewrite or sampling hotfix is being shipped from them.
+The configured alternative editor changed both requested properties, retained the
+reference object's shape/hardware and produced a clean new setting on the same
+workstation. This is evidence for that neutral case, not a general model benchmark.
+
+New conversation transformations must respect the configured model for their
+operation unless the user explicitly chooses another model. An image reference
+selects content; it must not silently select its historical generator. Compatible
+source settings may be reused when that model is actually selected. A recurring
+definition bound to a newly produced result retains that result's compatible model
+and settings, unless explicitly overridden, to reproduce the reviewed workflow.
+A separate policy coordinate preserves historical queued requests and receipts.
+No model weights, external runtime or original photo script is changed.

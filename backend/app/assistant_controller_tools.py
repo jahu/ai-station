@@ -25,7 +25,7 @@ class Images(Instruction):
 class ImageOperation(Images):
     image_model: Alias | None = Field(
         default=None,
-        description="An exact installed image_models alias. Honor the user's named model; omit to preserve the source profile or configured default.",
+        description="An exact installed image_models alias. Honor the user's named model. Omit to use the configured default for this operation; a recurring draft from a newly produced result retains that compatible result model unless explicitly overridden.",
     )
 
 

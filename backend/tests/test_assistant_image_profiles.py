@@ -105,3 +105,23 @@ def test_deleted_definition_is_a_correctable_model_choice(session):
     session.flush()
     with pytest.raises(ValueError, match="unavailable"):
         request_profile(session, root, SimpleNamespace(image_model=selected), "recompose", [])
+
+
+def test_new_transform_uses_configured_editor_instead_of_reference_generator(session):
+    image = source(session)
+    model, _ = registered(session)
+    change_default(DefaultsWrite(revision=0, mode="recompose", choice=model.id), session)
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": inventory(session),
+            "controller_image_policy": "configured-default-v2",
+        }
+    )
+    values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    assert values["backend"] == "krea2" and values["model_id"] == model.id
+    explicit = request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", [image.id])
+    assert explicit["backend"] == "qwen" and explicit["steps"] == 30 and explicit["cfg"] == 6
+    recurring = request_profile(
+        session, root, SimpleNamespace(image_model=None), "recompose", [image.id], inherit_source=True
+    )
+    assert recurring["backend"] == "qwen" and recurring["steps"] == 30

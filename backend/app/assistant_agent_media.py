@@ -74,7 +74,14 @@ def capture(session, root, args, entries):
         raise ValueError("Recurring image references must not be duplicated")
     ids = [item["snapshot"]["id"] for item in refs]
     profile = (
-        request_profile(session, root, args, "recompose" if refs else "t2i", ids)
+        request_profile(
+            session,
+            root,
+            args,
+            "recompose" if refs else "t2i",
+            ids,
+            inherit_source=plan.image_source == "latest_result",
+        )
         if plan.media_kind == "image"
         else {}
     )
