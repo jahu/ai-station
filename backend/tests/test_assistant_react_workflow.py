@@ -41,6 +41,8 @@ def react_model(monkeypatch):
             assert not params.get("json_output"), "ReAct is a text tool protocol, not a JSON completion"
             assert state["actions"], "Unexpected extra framework round"
             yield state["actions"].pop(0)
+        elif "proposal_schema" in json.dumps(params["messages"]) and state.get("proposal"):
+            yield json.dumps(state["proposal"])
         else:
             yield "The cabinet has four shelves."
 
@@ -300,3 +302,103 @@ def test_future_agent_cannot_publish_from_changed_or_tampered_sources(react_mode
             assert not list(db.scalars(select(Agent)))
             draft = db.scalar(select(Run).where(Run.executor_type == "agent_draft"))
             assert draft.status == "failed", draft.error_message
+
+
+def test_raw_react_can_chain_web_two_images_and_a_different_future_media_agent(
+    react_model, bridge, implemented_media, monkeypatch
+):
+    from app import web_search
+    from app.config import clear_settings_cache
+
+    monkeypatch.setenv("AI_STATION_WEB_SEARCH_URL", "http://127.0.0.1:9")
+    clear_settings_cache()
+
+    async def search(query):
+        return {
+            "query": query,
+            "provider": "fake",
+            "sources": [
+                {
+                    "title": "Cabinet design",
+                    "url": "https://example.com/design",
+                    "snippet": "Oak finish and brass hardware",
+                }
+            ],
+            "partial": False,
+        }
+
+    monkeypatch.setattr(web_search, "search", search)
+    react_model["immediate"] = [
+        {
+            "kind": "image",
+            "count": 2,
+            "description": "Two related cabinet images",
+            "reference_mode": "sequential",
+        }
+    ]
+    react_model["automations"] = [
+        {
+            "goal": "Create an avatar with the latest world news",
+            "media_kind": "avatar",
+            "public_query": "latest world news",
+            "schedule": {"trigger": "interval", "interval_seconds": 86400},
+        }
+    ]
+    react_model["proposal"] = {
+        "name": "Daily world news avatar",
+        "goal": "Create an avatar with the latest world news",
+        "tools": ["web_search", "create_media"],
+        "search_query": "latest world news",
+        "trigger": "interval",
+        "interval_seconds": 86400,
+        "media": {
+            "kind": "avatar",
+            "description_source": "goal",
+            "request": {"speech_text": "Summarize today's verified world news"},
+        },
+    }
+    react_model["actions"] = [
+        action("web_search", query="Oak cabinet design"),
+        action(
+            "image_generate",
+            instruction="A neutral oak cabinet with brass hardware based on the researched design",
+        ),
+        action(
+            "image_recompose",
+            instruction="Place the same oak cabinet in a blue studio",
+            images=["step:2:image:1"],
+        ),
+        action(
+            "agent_create",
+            instruction="Prepare an agent that creates an avatar with the latest world news every 24 hours",
+            interval_seconds=86400,
+        ),
+        "Thought: Summarize actual work.\nAnswer: Both images and the disabled daily avatar agent are ready for review.",
+    ]
+    with TestClient(app) as api:
+        result = submit(
+            api,
+            "Research cabinet design online, create an image from it, create another image using that result, then create an agent that makes a world news avatar every 24 hours",
+            web_search={"enabled": True},
+        )
+        drain()
+        state = root_state(result)
+        assert state["controller_outcome"] == "finish", state
+        assert [step["tool"] for step in state["controller_steps"]] == [
+            "web.search",
+            "image.generate",
+            "image.recompose",
+            "agent.create",
+        ]
+        with session_factory()() as db:
+            photos = list(
+                db.scalars(select(Run).where(Run.executor_type == "photo_pipe").order_by(Run.created_at))
+            )
+            assert len(photos) == 2 and all(row.status == "succeeded" for row in photos)
+            first = db.scalar(
+                select(Artifact.id).where(Artifact.run_id == photos[0].id, Artifact.artifact_type == "image")
+            )
+            assert photos[1].parameters["parent_artifact_ids"] == [first]
+            agent = db.scalar(select(Agent))
+            assert agent and not agent.enabled and agent.interval_seconds == 86400
+            assert agent.media["kind"] == "avatar" and "web_search" in agent.tools
