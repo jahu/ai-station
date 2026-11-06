@@ -303,3 +303,7 @@ def test_unified_turn_receipt_remains_idempotent_after_a_skipped_search(monkeypa
         messages = client.get("/api/chat/conversations/" + receipt["conversation_id"]).json()["messages"]
         assert [m["content"] for m in messages] == ["Say hello", "Hello."]
         assert client.post("/api/chat/turns", json={**body, "content": "different"}).status_code == 409
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

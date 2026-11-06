@@ -268,3 +268,7 @@ def test_assistant_direct_reply_retains_qualified_reasoning(model, monkeypatch):
                 )
             )
             assert message.content == "391"
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

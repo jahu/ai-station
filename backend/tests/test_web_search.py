@@ -833,3 +833,7 @@ def test_query_context_is_bounded_and_omits_partial_and_private_attachment_bodie
     assert len(snapshot) == 6 and all(len(item["content"]) <= 1200 for item in snapshot)
     assert snapshot[-1]["content"] == "actual question"
     assert "PARTIAL_SECRET" not in str(snapshot) and "FILE_SECRET" not in str(snapshot)
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

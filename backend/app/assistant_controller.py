@@ -28,6 +28,7 @@ from app.state import TERMINAL, RunStatus
 from app.task_control import lock_task
 
 VERSION = "react-v1"
+PROTOCOL = "llamaindex-react-v1"
 MAX_STEPS = 16
 
 
@@ -93,10 +94,12 @@ def automatic(body):
 
 
 def enqueue(session, conversation, body, *, commit=True):
-    from app.assistant import planner_context
     from app.chat_attachments import link_attachments, message_content, save_attachments
 
     snapshot = snapshot_provider(session, conversation)
+    from app.assistant_image_profiles import inventory
+
+    image_catalog = inventory(session)
     user = Message(
         conversation_id=conversation.id,
         role="user",
@@ -144,6 +147,8 @@ def enqueue(session, conversation, body, *, commit=True):
         inputs.append(
             {
                 "alias": f"input:{artifact.artifact_type}:{counts[artifact.artifact_type]}",
+                "origin": "current_attachment",
+                "source_message_id": user.id,
                 "snapshot": {
                     "id": artifact.id,
                     "sha256": artifact.sha256,
@@ -188,7 +193,12 @@ def enqueue(session, conversation, body, *, commit=True):
                 for item in step.get("artifacts", [])
             )
         previous_sources.extend(
-            {**item, "origin": item.get("origin", "previous_attachment")}
+            {
+                **item,
+                "origin": "previous_attachment"
+                if item.get("origin") in {None, "current_attachment"}
+                else item["origin"],
+            }
             for item in recent.parameters.get("controller_inputs", [])
         )
         seen = {item["snapshot"]["id"] for item in inputs}
@@ -201,7 +211,10 @@ def enqueue(session, conversation, body, *, commit=True):
                 or row.id in seen
                 or row.owner_id != conversation.owner_id
                 or row.trashed_at is not None
-                or row.sha256 != item["snapshot"]["sha256"]
+                or any(
+                    getattr(row, key) != item["snapshot"].get(key)
+                    for key in ("relative_path", "size_bytes", "sha256")
+                )
                 or (snapshot["location"] != "local" and row.artifact_type not in {"image", "audio", "video"})
             ):
                 continue
@@ -211,9 +224,37 @@ def enqueue(session, conversation, body, *, commit=True):
                 {
                     "alias": f"previous:{row.artifact_type}:{prior_counts[row.artifact_type]}",
                     "snapshot": item["snapshot"],
-                    **{key: item[key] for key in ("origin", "source_tool", "source_step") if key in item},
+                    **{
+                        key: item[key]
+                        for key in ("origin", "source_tool", "source_step", "source_message_id")
+                        if key in item
+                    },
                 }
             )
+    from app.conversation_assets import prior_context
+
+    prior = prior_context(
+        session,
+        conversation,
+        user,
+        excluded={item["snapshot"]["id"] for item in inputs},
+        limit=max(0, 32 - len(inputs)),
+    )
+    prior_counts = {}
+    for item in inputs:
+        if item["alias"].startswith("previous:"):
+            kind = session.get(Artifact, item["snapshot"]["id"]).artifact_type
+            prior_counts[kind] = max(prior_counts.get(kind, 0), int(item["alias"].rsplit(":", 1)[1]))
+        if "source_message_id" not in item and item["snapshot"]["id"] in prior["sources"]:
+            item["source_message_id"] = prior["sources"][item["snapshot"]["id"]]
+    for item in prior["inputs"]:
+        artifact = session.get(Artifact, item["snapshot"]["id"])
+        if snapshot["location"] != "local" and artifact.artifact_type not in {"image", "audio", "video"}:
+            continue
+        prior_counts[artifact.artifact_type] = prior_counts.get(artifact.artifact_type, 0) + 1
+        inputs.append(
+            {**item, "alias": f"previous:{artifact.artifact_type}:{prior_counts[artifact.artifact_type]}"}
+        )
     user.metadata_json = {
         **user.metadata_json,
         "images": [
@@ -240,12 +281,14 @@ def enqueue(session, conversation, body, *, commit=True):
         retry_class="safe",
         parameters={
             "controller_version": VERSION,
+            "controller_protocol": PROTOCOL,
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},
             "controller_provider": snapshot,
             "controller_inputs": inputs,
-            "planner_context": planner_context(session, conversation, user),
+            "planner_context": prior["history"],
             "recent_work": recent_work,
+            "controller_image_catalog": image_catalog,
             "reference_text": user.content[len(body.content) :][:24000],
             "web_search": body.web_search.model_dump(),
             **{name: request.get(name) for name in ("coding", "data", "effects")},
@@ -358,6 +401,8 @@ def analysis_catalog(session, root):
 
 
 def decision_context(session, root):
+    from app.conversation_assets import reference_context
+
     observations = []
     for step in root.metadata_json.get("controller_steps", []):
         observed = step.get("observation")
@@ -382,6 +427,7 @@ def decision_context(session, root):
     schemas = {
         TOOLS[name].arguments.__name__: TOOLS[name].arguments.model_json_schema() for name in available
     }
+    entries = public_catalog(catalog(session, root))
     return {
         "instruction": root.parameters["content"],
         "current_time": utcnow().isoformat(),
@@ -395,7 +441,9 @@ def decision_context(session, root):
         "reference_text": root.parameters.get("reference_text", ""),
         "tools": available,
         "argument_types": schemas,
-        "inputs_and_results": public_catalog(catalog(session, root)),
+        "inputs_and_results": entries,
+        "reference_context": reference_context(entries),
+        "image_models": root.parameters.get("controller_image_catalog", {}),
         "sources": sources(root),
         "selected_web_query": (root.parameters.get("web_search") or {}).get("query", ""),
         "observations": observations,
@@ -423,6 +471,7 @@ def decision_run(session, root):
             "model": root.parameters["controller_request"]["model"],
             "execution_deadline_at": root.parameters["execution_deadline_at"],
             "decision_context": decision_context(session, root),
+            "controller_protocol": root.parameters.get("controller_protocol"),
         },
         permissions=chat_permissions(snapshot),
         retry_class="safe" if snapshot.get("location") == "local" else "inspect",
@@ -585,6 +634,8 @@ def verify_wrapper(session, run):
             "controller_reply_context",
             "controller_data_agent_source",
             "controller_agent_media_kind",
+            "controller_agent_scope",
+            "controller_image_request",
         ):
             if run.parameters.get(field) != expected.get(field):
                 raise ValueError("Controller tool scope changed before execution")
@@ -706,6 +757,11 @@ class AssistantToolSetupExecutor:
             **child.parameters,
             "controller_parent_id": root.id,
             "execution_deadline_at": root.parameters["execution_deadline_at"],
+            **{
+                key: params[key]
+                for key in ("controller_agent_scope", "controller_image_request")
+                if key in params
+            },
             **(
                 {"controller_agent_media_kind": params["controller_agent_media_kind"]}
                 if params.get("controller_agent_media_kind")

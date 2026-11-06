@@ -304,7 +304,16 @@ def enqueue(body: DraftRequest, session: DB):
 
 
 def enqueue_for_task(
-    session, task, instruction, model, snapshot, *, parent=None, schedule_timezone="UTC", media_kind=None
+    session,
+    task,
+    instruction,
+    model,
+    snapshot,
+    *,
+    parent=None,
+    schedule_timezone="UTC",
+    media_kind=None,
+    media_scope=None,
 ):
     if snapshot.get("location") != "local" or snapshot.get("provider") != BUILTIN_KEY:
         raise ValueError("Choose the local provider for AI-assisted agent preparation")
@@ -340,6 +349,7 @@ def enqueue_for_task(
             "instruction": instruction,
             "schedule_timezone": schedule_timezone,
             **({"media_kind": media_kind} if media_kind else {}),
+            **({"media_agent_scope": media_scope} if media_scope is not None else {}),
             **(
                 {"selected_data_agent": parent.parameters["selected_data_agent"]}
                 if parent and parent.parameters.get("selected_data_agent")
@@ -355,14 +365,16 @@ def enqueue_for_task(
             "manage_agents",
             *(
                 ["filesystem_read"]
-                if parent and parent.parameters.get("selected_data_agent", {}).get("artifact_ids")
+                if (parent and parent.parameters.get("selected_data_agent", {}).get("artifact_ids"))
+                or (media_scope and media_scope.get("images"))
                 else []
             ),
         ],
         retry_class="safe",
         parent_run_id=parent.id if parent else None,
     )
-    prepare_consumer(session, run)
+    if not media_scope or media_scope["plan"].get("media_kind") != "image":
+        prepare_consumer(session, run)
     return run
 
 
@@ -425,6 +437,9 @@ class AgentDraftExecutor:
                 return "done"
             require(run.effective_permissions, "manage_agents")
             # stopped() does not commit a live Run: keep Task Stop serialized with publication.
+            from app.assistant_agent_media import verified as verify_media_scope
+
+            media_source = verify_media_scope(session, run)
             selected = None
             if run.parameters.get("selected_data_agent"):
                 from app.selected_data_agent import verified as verify_selected
@@ -452,6 +467,7 @@ class AgentDraftExecutor:
                 "source_run_id": run.id,
                 "model": run.parameters["model"],
                 **({"data_agent_source": source} if source else {}),
+                **({"media_agent_source": media_source} if media_source else {}),
                 **(
                     {"selected_data_agent": selected, "selected_data_family": selected_family}
                     if selected
@@ -477,6 +493,8 @@ class AgentDraftExecutor:
                     if source
                     else selected["artifact_ids"]
                     if selected
+                    else [item["snapshot"]["id"] for item in media_source["images"]]
+                    if media_source
                     else [],
                     metadata={"agent_id": agent.id, "source": "local_agent_factory"},
                 )
@@ -532,6 +550,21 @@ class AgentDraftExecutor:
 
     async def prepare(self, session, run):
         from app.agent_draft_schema import proposal_schema
+        from app.assistant_agent_media import (
+            apply_cadence,
+            check_files,
+            image_definition,
+        )
+        from app.assistant_agent_media import (
+            verified as verify_media_scope,
+        )
+
+        media_source = verify_media_scope(session, run)
+        if media_source and media_source["plan"].get("media_kind") == "image":
+            session.commit()
+            check_files(media_source)
+            verify_media_scope(session, run)
+            return image_definition(media_source, run.parameters["model"])
 
         media_kind = run.parameters.get("media_kind")
         selected = None
@@ -674,7 +707,7 @@ class AgentDraftExecutor:
                             schedule_timezone=run.parameters.get("schedule_timezone", "UTC"),
                             registered_media_choice=selected_media,
                         )
-                    return settings
+                    return apply_cadence(settings, media_source)
                 except (ValueError, ValidationError) as exc:
                     if attempt:
                         raise ValueError(

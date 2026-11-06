@@ -521,3 +521,7 @@ def test_repeat_analysis_after_project_selection_was_cleared(data_environment, m
     drain()
     with session_factory()() as db:
         assert db.scalar(select(Agent)) is not None
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

@@ -389,3 +389,7 @@ def test_default_web_work_receipt_replays_one_disabled_draft_without_search(mode
                 )
             )
             assert len(events) == 1
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

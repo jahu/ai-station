@@ -30,7 +30,7 @@ def finish(*evidence):
 
 
 @pytest.fixture
-def model(monkeypatch):
+def model(monkeypatch, legacy_controller_protocol):
     state = {
         "decisions": [],
         "intent_calls": [],
@@ -852,3 +852,7 @@ def test_changed_published_tool_request_is_rejected_before_any_capability_dispat
             db.refresh(setup)
             assert setup.status == "failed" and "changed after publication" in setup.error_message
             assert not db.scalar(select(Run).where(Run.executor_type == "photo_pipe"))
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

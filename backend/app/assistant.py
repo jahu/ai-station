@@ -1687,6 +1687,7 @@ class AssistantExecutor:
                         "height": 704,
                     }
                 request = ImageRequest(
+                    **params.get("controller_image_request", {}),
                     translation=params.get("media_translation"),
                     mode=mode,
                     prompt_style="prompt"
@@ -1734,6 +1735,11 @@ class AssistantExecutor:
                     **(
                         {"media_kind": params["controller_agent_media_kind"]}
                         if params.get("controller_agent_media_kind")
+                        else {}
+                    ),
+                    **(
+                        {"media_scope": params["controller_agent_scope"]}
+                        if params.get("controller_agent_scope")
                         else {}
                     ),
                 )

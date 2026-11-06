@@ -21,7 +21,7 @@ SCRIPT = "import os, json, csv\n# synthetic bounded data script\n"
 
 
 @pytest.fixture
-def data_environment(repository, owned_runner, monkeypatch):
+def data_environment(repository, owned_runner, monkeypatch, legacy_controller_protocol):
     from app import agents_api, data_agents, llama, schedule
     from app.local_provider import LocalChatProvider
 
@@ -484,3 +484,7 @@ def test_generation_receives_exact_container_input_map_and_failed_attempt_contex
     assert retry["repair"]["previous_script"] == original_code
     assert "Synthetic program failure" in retry["repair"]["error"]
     assert "previous script FAILED" in repaired["messages"][0]["content"]
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

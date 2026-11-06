@@ -243,3 +243,27 @@ def test_unreaped_child_keeps_completion_pending(tmp_path, monkeypatch):
         time.sleep(0.01)
     else:
         raise AssertionError("Exit status was never collected")
+
+
+def test_replacement_managers_serialize_complete_journal_updates(tmp_path):
+    import concurrent.futures
+    import time
+
+    first = ProcessManager(tmp_path)
+    second = ProcessManager(tmp_path)
+    assert first._lock is second._lock
+
+    def update(manager, key):
+        with manager._lock:
+            records = manager._load()
+            time.sleep(0.01)  # Force overlapping transactions without a shared lock.
+            records[key] = {"proof": key}
+            manager._dump(records)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(update, first, "first"), pool.submit(update, second, "second")]
+        for future in futures:
+            future.result()
+    assert first._load() == {"first": {"proof": "first"}, "second": {"proof": "second"}}
+    other = ProcessManager(tmp_path / "other")
+    assert other._lock is not first._lock

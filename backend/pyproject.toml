@@ -20,6 +20,7 @@ dependencies = [
   "onnx==1.23.2",
   "tokenizers==0.23.3",
   "pyotp==2.9.0",
+  "llama-index-core==0.14.25",
 ]
 
 [project.optional-dependencies]
