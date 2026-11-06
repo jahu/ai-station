@@ -41,11 +41,34 @@ function responses(artifacts: object[] = []) {
     vi.fn(async (path: string) => ({
       ok: true,
       json: async () =>
-        path.includes("/hardware")
-          ? { gpus: [{ index: 7, name: "Fixture GPU" }] }
-          : path.endsWith("/lineage")
-            ? { id: "track", sources: [], derived: [] }
-            : artifacts,
+        path.endsWith("/images/models")
+          ? {
+              items: [
+                {
+                  id: "qwen",
+                  definition_id: null,
+                  name: "Qwen",
+                  backend: "qwen",
+                  available: true,
+                  modes: ["t2i", "img2img", "recompose"],
+                  maximum_references: 8,
+                },
+                {
+                  id: "juggernaut",
+                  definition_id: null,
+                  name: "Juggernaut XL",
+                  backend: "juggernaut",
+                  available: true,
+                  modes: ["t2i"],
+                  maximum_references: 0,
+                },
+              ],
+            }
+          : path.includes("/hardware")
+            ? { gpus: [{ index: 7, name: "Fixture GPU" }] }
+            : path.endsWith("/lineage")
+              ? { id: "track", sources: [], derived: [] }
+              : artifacts,
     })),
   );
 }
@@ -1068,7 +1091,7 @@ it("reviews a generated Fish voice without a recording and requires a source aga
   expect(saved.request).not.toHaveProperty("voice_source");
 });
 
-it("shows the stored Juggernaut negative prompt and clears incompatible options when changing to Qwen", () => {
+it("shows the stored Juggernaut negative prompt and clears incompatible options when changing to Qwen", async () => {
   responses();
   let saved: AgentMediaScope;
   function Editor() {
@@ -1110,6 +1133,12 @@ it("shows the stored Juggernaut negative prompt and clears incompatible options 
     target: { value: "" },
   });
   expect(saved!.kind === "image" && saved!.request.negative).toBeNull();
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("Agent image model") as HTMLSelectElement)
+        .disabled,
+    ).toBe(false),
+  );
   fireEvent.change(screen.getByLabelText("Agent image model"), {
     target: { value: "qwen" },
   });
