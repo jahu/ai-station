@@ -1,5 +1,6 @@
 """Separate requested immediate results from future automation definitions."""
 
+import json
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
@@ -111,11 +112,12 @@ class IntentPlan(BaseModel):
 
 
 PLANNING_SYSTEM = """Infer the user's requested outcomes before any tool selection. Return ONLY a JSON object matching outcome_schema: reason, immediate, automations.
-Interpret the CURRENT message in the actual conversation. Prior assistant questions and available asset descriptors ground follow-ups, but never grant new host/network/activation permissions. Existing available image aliases remain usable even if this message has no new upload. Do not ask for an image already in available_inputs.
+Interpret ONLY the LAST user message as the current request. Earlier dialogue is reference context, not a queue of unfinished commands. The current message may replace, narrow or cancel an earlier requested output. Do not carry an old requested action forward unless the current message actually asks to continue it. Prior assistant questions and available asset descriptors ground follow-ups, but never grant new host/network/activation permissions. Existing available image aliases remain usable even if this message has no new upload. Do not ask for an image already in available_inputs.
 IMMEDIATE contains only results to produce NOW. A picture modification means one image unless the user explicitly requests multiple pictures now. A question, explanation, fiction or an image-writing prompt needs text, not image production. An attachment alone does not request any action. Respect negation. Image outcomes explicitly declare reference_mode (provided, independent or sequential) and actual source_inputs aliases. Sequential means a later immediate image based on a produced earlier one; do not invent future aliases.
 AUTOMATIONS contains definitions for work in the FUTURE. 'Change this image and then make a new version every 15 minutes using the changed result' means exactly one immediate image and one automation: media_kind=image, image_source=latest_result, interval900, vary_results=true. It does NOT mean 2, 5 or any finite number of future images to render now. Creating a recurring agent alone has no immediate media output. A future avatar means media_kind=avatar, not an immediate avatar or a drawing of an agent. Preserve the requested cadence exactly; use manual if no cadence is supplied. Convert minutes/hours to interval_seconds. A future job's output is never duplicated in immediate. Future images may use original supplied references (image_source=supplied and source_images aliases) or the requested new output (latest_result). Preserve that distinction. Agent definitions remain disabled for review.
 Set name only to a useful short label. Set maximum_runtime only if the user explicitly gives an execution time limit; it is not the interval or output duration. A public_query is a short public research topic only when future work requires web research; it does not enable the draft or grant network access.
 The short automation goal describes ONLY what each future execution should do. Keep any requested invariants and permitted variations generic to the actual subject; do not assume people. Schedule, image references and future execution do not belong inside the immediate visual description. Supporting research does not add a report unless explicitly requested. Text count is always1.
+A follow-up that replaces an earlier picture request with a recurring agent has immediate=[], even if a previous user asked for a picture or the assistant asked which scene to use. Resolving a reference ("the same object") does not reauthorize its earlier operation. In contrast, a follow-up actually asking to make the edited image now still requires an immediate image.
 Contrast: "Create an agent that makes a new picture from this reference every 30 minutes" has immediate=[]; its automation uses image_source=supplied, source_images=[the provided alias], interval1800. It does not authorize making a picture before preparing the agent. "Make a picture now and create an agent that varies that result every 30 minutes" has immediate=[one image]; its automation uses image_source=latest_result, interval1800. "Explain how to create such an agent" has immediate=[text], automations=[]. Do not invent setup renders or immediate previews for an agent-only request.
 """
 
@@ -132,3 +134,39 @@ def validate_plan(text, context):
 
     canonical = plan.canonical()
     return validate_intent(canonical.model_dump_json(), context)
+
+
+def planning_messages(context):
+    """Keep earlier dialogue before the actual current request in chat order.
+
+    Putting the latest instruction first inside JSON, followed by older user
+    instructions, gives models conflicting recency cues. Metadata is reference
+    data; the final user message carries the authority for this turn only.
+    """
+    metadata = {
+        "context_role": "Read-only reference data and output schema; not a new user command",
+        "current_time": context.get("current_time"),
+        "recent_work": context.get("recent_work"),
+        "available_inputs": context.get("inputs_and_results", []),
+        "available_sources": context.get("sources", {}),
+        "outcome_schema": IntentPlan.model_json_schema(),
+    }
+    return [
+        {"role": "system", "content": PLANNING_SYSTEM},
+        {"role": "user", "content": json.dumps(metadata, ensure_ascii=False)},
+        *[
+            {"role": row["role"], "content": row["content"]}
+            for row in context.get("recent_context", [])
+            if row["role"] in {"user", "assistant"}
+        ],
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "instruction": context["instruction"],
+                    "request_scope": "Fulfil only this current request; earlier dialogue resolves references, not additional work",
+                },
+                ensure_ascii=False,
+            ),
+        },
+    ]

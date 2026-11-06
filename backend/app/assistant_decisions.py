@@ -297,7 +297,7 @@ class AssistantDecisionExecutor:
     def execute(self, session, run):
         from app.assistant_controller import missing_outcomes, sources
         from app.assistant_controller_tools import TOOLS, catalog, wrapper_parameters
-        from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, validate_plan
+        from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, planning_messages, validate_plan
         from app.models import Run
 
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
@@ -456,6 +456,8 @@ class AssistantDecisionExecutor:
                         ),
                     },
                 ]
+                if react:
+                    intent_messages = planning_messages(context)
                 for attempt in range(2):
                     text = asyncio.run(infer(session, run, intent_messages))
                     try:
@@ -466,13 +468,16 @@ class AssistantDecisionExecutor:
                             raise ProviderError(
                                 "Could not determine the requested outcomes; no tool was executed"
                             ) from exc
-                        intent_messages = intent_messages[:2] + [
-                            {
-                                "role": "user",
-                                "content": "Return a corrected outcome object matching outcome_schema. Validation: "
-                                + str(exc)[:1000],
-                            }
-                        ]
+                        correction = {
+                            "role": "user",
+                            "content": "Return a corrected outcome object matching outcome_schema. Validation: "
+                            + str(exc)[:1000],
+                        }
+                        intent_messages = (
+                            [*intent_messages[:-1], correction, intent_messages[-1]]
+                            if react
+                            else [*intent_messages[:2], correction]
+                        )
                 asyncio.run(database_step(session, run, claim, deadline, lambda: save_intent(intent)))
             else:
 
