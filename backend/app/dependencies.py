@@ -7,9 +7,11 @@ from app.models import Run, RunDependency
 from app.state import TERMINAL
 
 
-def depend_on(session, run, prerequisite):
-    if run.status != "queued":
-        raise ValueError("Only queued Runs can acquire prerequisites")
+def depend_on(session, run, prerequisite, *, require_success=True):
+    if run.status not in {"queued", "waiting_for_tool"}:
+        raise ValueError("Only queued or waiting-for-tool Runs can acquire prerequisites")
+    if type(require_success) is not bool:
+        raise ValueError("Dependency success policy must be a boolean")
     frontier, visited = {prerequisite.id}, set()
     while frontier:
         if run.id in frontier:
@@ -25,9 +27,19 @@ def depend_on(session, run, prerequisite):
             )
             - visited
         )
-    if session.get(RunDependency, (run.id, prerequisite.id)) is None:
-        session.add(RunDependency(run_id=run.id, prerequisite_id=prerequisite.id))
-        append_event(session, run.id, "run.dependency_added", {"prerequisite_id": prerequisite.id})
+    existing = session.get(RunDependency, (run.id, prerequisite.id))
+    if existing is not None and existing.require_success != require_success:
+        raise ValueError("An existing dependency policy cannot be changed")
+    if existing is None:
+        session.add(
+            RunDependency(run_id=run.id, prerequisite_id=prerequisite.id, require_success=require_success)
+        )
+        append_event(
+            session,
+            run.id,
+            "run.dependency_added",
+            {"prerequisite_id": prerequisite.id, "require_success": require_success},
+        )
         session.flush()
 
 
@@ -36,7 +48,12 @@ def failed_prerequisites(session, run):
         session.scalars(
             select(Run.id)
             .join(RunDependency, RunDependency.prerequisite_id == Run.id)
-            .where(RunDependency.run_id == run.id, Run.status.in_(TERMINAL), Run.status != "succeeded")
+            .where(
+                RunDependency.run_id == run.id,
+                RunDependency.require_success.is_(True),
+                Run.status.in_(TERMINAL),
+                Run.status != "succeeded",
+            )
         )
     )
 

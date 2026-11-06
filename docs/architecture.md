@@ -1618,3 +1618,34 @@ profiles cannot earn a fit for the selected capability. A publisher search outag
 keeps the individually inspected starting point with a visible notice. Opening an
 installed model's publisher-update link still only prefills the source; it never
 launches inspection, download or replacement by itself.
+
+Recurring reference-image agents reuse the existing preparation and image Run
+lifecycle. The opt-in [generic variation contract](plans/agent-image-scenes.md)
+plans only changes appropriate to the user brief, without assuming a human subject,
+bounds owner-scoped completed-run context and keeps execution settings outside
+model authority.
+
+Agent media streaming retains one provider request across transient SQLite
+contention: only rolled-back observations/event writes retry, bounded by the
+existing deadline and durable claim/cancellation checks. The generic image-plan
+compiler includes all declared invariants and changes in the single image prompt;
+it does not assume a subject or add model-specific sampling changes.
+
+
+The [durable conversation controller](plans/react-assistant-controller.md) candidate
+replaces automatic keyword routing with selected-model infer → tool → observe
+rounds. Each decision and capability is a normal Run; observing dependencies free
+the worker while waiting, and scoped capability Tasks preserve their own metadata.
+Frozen outcome kinds/counts and owned result aliases constrain subsequent actions.
+This adds no framework, native authority or Chat/Work mode switch. Qualification
+and deployment status are recorded in that plan.
+
+The conversation reliability candidate replaces new-turn JSON tool selection with
+LlamaIndex Core's actual ReActAgent single-step parser/formatter. The existing
+Run engine alone validates, dispatches, observes and recovers work; framework
+functions cannot execute. A separate protocol coordinate preserves queued legacy
+Runs. Immediate results and future automation definitions are independently typed;
+source-bound image drafts retain actual result hashes, compatible model settings
+and exact cadence, and remain disabled for review. Bounded owned conversation
+attachments and visible dialogue survive clarification and intervening text turns.
+[Repair plan and qualification gates](plans/conversation-reliability-repair.md).

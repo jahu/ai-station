@@ -525,12 +525,12 @@ class DataGenerateExecutor:
             )
             from app.model_selection import matches, resolve
 
-            file, definition = resolve(session, model)
+            file, model_definition = resolve(session, model)
             if (
                 file is None
                 or instance is None
                 or instance.endpoint != f"llamacpp:{instance.id}"
-                or not matches(instance.metadata_json, file, definition)
+                or not matches(instance.metadata_json, file, model_definition)
                 or int(instance.metadata_json.get("context_size", 0)) < 100352
             ):
                 raise ValueError("The selected model needs 100k+ actual context before code generation")

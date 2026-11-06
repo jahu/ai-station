@@ -363,7 +363,7 @@ def planner_context(session, conversation, user):
     return list(reversed(context))
 
 
-def enqueue_assistant(session, conversation, user, body, *, commit=True):
+def enqueue_assistant(session, conversation, user, body, *, commit=True, parent_run_id=None):
     from app.chat_policy import agent_draft_requested, policy_mode
 
     unified = getattr(body, "execution_mode", None) == "assistant"
@@ -696,6 +696,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         capability="assistant.orchestrate",
         executor_type="orchestrator",
         execution_target="container",
+        parent_run_id=parent_run_id,
         retry_class="inspect",
         parameters={
             **body.model_dump(mode="json", exclude={"attachments"}),
@@ -1107,6 +1108,9 @@ class AssistantExecutor:
     name = "orchestrator"
 
     def execute(self, session, run):
+        from app.assistant_controller import verify_wrapper
+
+        verify_wrapper(session, run)
         session.refresh(run)
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
@@ -1331,7 +1335,9 @@ class AssistantExecutor:
         elif plan.action == "project.create":
             from app.project_setup import ProjectName, enqueue_project
 
-            name = requested_project_name(params["content"], params["action"])
+            name = params.get("controller_project_name") or requested_project_name(
+                params["content"], params["action"]
+            )
             if name is None:
                 message.content = "Choose Create project and enter its name, for example Weather Station."
             else:
@@ -1645,7 +1651,14 @@ class AssistantExecutor:
             user = session.get(Message, params["user_message_id"])
             # Planner annotations are not model conversation context.
             message.metadata_json = {**message.metadata_json, "partial": True, "routing_only": True}
-            child = enqueue(session, conversation, user=user, parent_run_id=run.id, commit=False)
+            child = enqueue(
+                session,
+                conversation,
+                user=user,
+                parent_run_id=run.id,
+                commit=False,
+                controller_context=params.get("controller_reply_context"),
+            )
             run.metadata_json = {**run.metadata_json, "child_run_id": child["id"]}
             if plan.action in {"image.generate", "image.generate_video"}:
                 from app.image_research import prepare_brief
@@ -1674,6 +1687,7 @@ class AssistantExecutor:
                         "height": 704,
                     }
                 request = ImageRequest(
+                    **params.get("controller_image_request", {}),
                     translation=params.get("media_translation"),
                     mode=mode,
                     prompt_style="prompt"
@@ -1718,6 +1732,16 @@ class AssistantExecutor:
                     snapshot,
                     parent=run,
                     schedule_timezone=params.get("schedule_timezone") or "UTC",
+                    **(
+                        {"media_kind": params["controller_agent_media_kind"]}
+                        if params.get("controller_agent_media_kind")
+                        else {}
+                    ),
+                    **(
+                        {"media_scope": params["controller_agent_scope"]}
+                        if params.get("controller_agent_scope")
+                        else {}
+                    ),
                 )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 if params.get("selected_data_agent"):
@@ -1752,6 +1776,14 @@ class AssistantExecutor:
             self.load_runtime(session, run, message)
         elif plan.action == "runtime.stop":
             self.stop_runtime(session, run, message)
+        if params.get("controller_parent_id"):
+            for child in session.scalars(
+                select(Run).where(Run.parent_run_id == run.id, Run.status.not_in(TERMINAL))
+            ):
+                child.parameters = {
+                    **child.parameters,
+                    "execution_deadline_at": params["execution_deadline_at"],
+                }
         run.summary = message.content[:1000]
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload=run.metadata_json)
         session.commit()
@@ -1996,8 +2028,29 @@ class AssistantExecutor:
 
 def task_results(session, message, run):
     """Read-only projection, including coding/validation descendants and images."""
-    if not run or not message.metadata_json.get("orchestration"):
+    if not run:
         return {}
+    tag = run.parameters.get("controller_tool_context") or {}
+    reply_root = (
+        tag.get("root_id") if run.executor_type == "chat" and tag.get("tool") == "chat.reply" else None
+    )
+    if not message.metadata_json.get("orchestration") and not reply_root:
+        return {}
+    from app.assistant_controller import controller_results
+
+    controller_id = message.metadata_json.get("controller_root_id") or reply_root
+    if controller_id:
+        controller = session.get(Run, controller_id)
+        if (
+            controller is None
+            or controller.executor_type != "assistant_controller"
+            or controller.owner_id != run.owner_id
+            or controller.conversation_id != message.conversation_id
+        ):
+            return {}
+        return controller_results(session, controller)
+    if run.executor_type == "assistant_controller":
+        return controller_results(session, run)
     steps = list(
         session.scalars(
             select(Run)

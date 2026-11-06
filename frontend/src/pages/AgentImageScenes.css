@@ -1,0 +1,130 @@
+.agent-image-purpose {
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 18px;
+  gap: 16px;
+}
+.agent-image-purpose > div {
+  flex: 1;
+  min-width: 220px;
+}
+.agent-image-purpose p {
+  margin: 8px 0 0;
+  line-height: 1.65;
+}
+.agent-image-purpose .button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.agent-media-scope .agent-image-variety {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #536747;
+  border-radius: 10px;
+  background: #1c251b;
+}
+.agent-image-variety input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.agent-image-variety strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.agent-image-variety small {
+  display: block;
+  color: #b7c3b1;
+  margin-top: 7px;
+  line-height: 1.6;
+  font-size: 12px;
+}
+.agent-image-guidance {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.agent-image-guidance summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #c7d0d3;
+}
+.agent-image-guidance > p {
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.agent-image-guidance > label {
+  display: grid;
+  gap: 8px;
+}
+.agent-image-guidance textarea {
+  width: 100%;
+  min-width: 0;
+}
+.agent-image-scene-summary {
+  padding: 20px;
+  background: #181e19;
+  border: 1px solid #384533;
+  border-radius: 10px;
+  margin: 16px 0;
+}
+.agent-image-scene-summary h3 {
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+.agent-image-scene-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+.agent-image-scene-summary dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.agent-image-scene-summary dd {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.agent-image-scene-summary details {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.agent-image-scene-summary summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.agent-image-scene-summary details p {
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .agent-image-purpose .button {
+    width: 100%;
+  }
+  .agent-image-scene-summary dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .agent-image-purpose > div {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}
+.agent-media-scope .agent-image-variety {
+  flex-direction: row;
+}
+.agent-media-scope summary > svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 7px;
+}

@@ -1854,3 +1854,23 @@ without opening payloads. Only matching prior verified registry observations on
 owned, single-link, read-only regular files reduce disk estimates. The downloader
 still rehashes every reused object and native dispatch verifies its binding; the
 advice does not assert that matching size/time proves current content integrity.
+
+
+The [conversation controller](plans/react-assistant-controller.md) candidate treats
+model decisions as typed proposals. Closed tools, selected network/project/data
+scopes, frozen owned aliases and declared outcome affordances bound dispatch.
+Retrieved pages and tool output never grant permissions or become system
+instructions. New agents remain disabled drafts; activation and protected Git/host
+operations retain existing explicit review. Stop follows server-owned Run parentage
+across capability Tasks, never a model-supplied list of IDs.
+
+The ReAct adapter has no execution authority: its FunctionTools describe typed
+operations but their implementations always refuse execution. Only the existing
+claim-fenced worker can publish a validated action and owned child Run. Canonical
+observations rehydrate ephemeral framework state; scratchpad reasoning is not
+published. No framework embeddings, model downloader, cloud provider or persisted
+Context pickle is selected. Future image-agent references are server-bound to
+owned unchanged artifacts from the originating conversation, with hashes checked
+before definition publication; the exact requested cadence is frozen separately.
+Image model identities/presets are rechecked rather than silently substituted.
+Drafts retain the existing review/enable and per-tool permission boundaries.

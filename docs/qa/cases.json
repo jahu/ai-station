@@ -1,5 +1,5 @@
 {
-  "version": 54,
+  "version": 55,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -43,7 +43,8 @@
     "docs/plans/agent-image-models.md",
     "docs/releases/0.1.2.md",
     "docs/library.md",
-    "docs/plans/media-lease-recovery.md"
+    "docs/plans/media-lease-recovery.md",
+    "docs/plans/conversation-reliability-repair.md"
   ],
   "cases": [
     {
@@ -6424,6 +6425,102 @@
       ],
       "resources": "Bez uruchamiania inferencji ani pobierania modeli. Komputer i telefon z dostępem do stacji.",
       "minutes": 5
+    },
+    {
+      "id": "CHAT-103",
+      "area": "Rozmowa",
+      "title": "Załącznik po doprecyzowaniu i pytaniu pośrednim",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe, zainstalowany lokalny LLM oraz neutralny obraz przedmiotu; używaj wyłącznie danych QA."
+      ],
+      "steps": [
+        "Dołącz neutralny obraz szafki i poproś o ustalenie z Tobą nowego otoczenia przed generowaniem.",
+        "Zadaj krótkie pytanie tekstowe, potem wskaż otoczenie i poproś o zmianę wcześniejszego obrazu."
+      ],
+      "expected": [
+        "Wcześniejszy obraz nadal jest dostępny; nie trzeba go przesyłać ponownie.",
+        "Powstaje tylko zamówiony wynik; wcześniejsze polecenia nie stają się ponownie kolejką zadań."
+      ],
+      "resources": "Lokalny LLM i jeden render na GPU.",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/conversation-reliability-repair.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "CHAT-104",
+      "area": "Rozmowa",
+      "title": "Łańcuch zmiany obrazu i agenta korzystającego z wyniku",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe, zainstalowany lokalny LLM oraz neutralny obraz przedmiotu; używaj wyłącznie danych QA."
+      ],
+      "steps": [
+        "Poproś o nowe ujęcie neutralnego przedmiotu, a następnie o agenta tworzącego kolejne wersje co 15 minut na podstawie nowego wyniku.",
+        "Otwórz historię narzędzi i definicję powstałego agenta. Nie włączaj harmonogramu."
+      ],
+      "expected": [
+        "Narzędzia pracują kolejno na rzeczywistych wynikach. Powstaje jeden obraz oraz jeden wyłączony projekt agenta.",
+        "Agent wskazuje nowy wynik, zachowuje wybrany model i interwał 900 sekund; nie podstawia pierwotnego załącznika."
+      ],
+      "resources": "Lokalny LLM i jeden render na GPU; agent pozostaje wyłączony.",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/conversation-reliability-repair.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "AGENT-021",
+      "area": "Agenci",
+      "title": "Wybór modelu istniejącego agenta Edit/Recompose",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe, zainstalowany lokalny LLM oraz neutralny obraz przedmiotu; używaj wyłącznie danych QA."
+      ],
+      "steps": [
+        "Otwórz wyłączonego agenta obrazowego; sprawdź Image model obok Image operation.",
+        "W Edit i Recompose wybierz kompatybilny model, zapisz definicję i odśwież stronę.",
+        "Jeżeli dostępne są Qwen i Krea, sprawdź oba kierunki przełączenia; przy trzech referencjach sprawdź blokadę modelu obsługującego najwyżej dwie."
+      ],
+      "expected": [
+        "Zapisany model jest widoczny po odświeżeniu; prompt i referencje pozostają niezmienione.",
+        "Parametry odpowiadają nowemu modelowi; kontrolki niezgodne z nim są usunięte. Niedostępne wybory są opisane.",
+        "Samo otwieranie i zapisywanie ustawień nie pobiera wag ani nie tworzy Run."
+      ],
+      "resources": "Bez inferencji i pobierania modeli.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/conversation-reliability-repair.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "AGENT-022",
+      "area": "Agenci",
+      "title": "Generyczne warianty przedmiotu i kompozycja referencji",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe, zainstalowany lokalny LLM oraz neutralny obraz przedmiotu; używaj wyłącznie danych QA."
+      ],
+      "steps": [
+        "Użyj neutralnej szafki lub innego przedmiotu. W Recompose włącz różne warianty i opisz cechy do zachowania oraz zmiany kamery, otoczenia i światła.",
+        "Dla Krea wybierz Allow new viewpoints. Wykonaj dwa ręczne uruchomienia, czekając na zakończenie wszystkich potomnych Run.",
+        "Porównaj obrazy, zaplanowane ujęcia i źródło; na końcu pozostaw agenta wyłączonego."
+      ],
+      "expected": [
+        "Planowanie nie zakłada obecności osoby i nie wymusza pozy lub mimiki dla przedmiotu.",
+        "Wyniki różnią się zgodnie z zadaniem; cechy referencji pozostają rozpoznawalne. Jakość obrazu oceń osobno od statusu Run.",
+        "Historia uwzględnia poprzedni wynik; brak błędu Database is locked."
+      ],
+      "resources": "Lokalny LLM i dwa rendery na GPU.",
+      "minutes": 20,
+      "requirements": [
+        "docs/plans/conversation-reliability-repair.md",
+        "Task → Run → Events → Artifacts"
+      ]
     }
   ],
   "scope_notice": "Wydanie 0.2: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",

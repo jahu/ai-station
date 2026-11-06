@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.2.1` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.3.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -38,13 +38,27 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
+The conversation uses a ReAct orchestrator: it chooses an
+available tool, observes its actual result and can pass that result to the next
+tool. Reference images survive follow-up questions, and an image result can become
+the input of a recurring-agent draft for your review.
+Existing image agents expose compatible installed models for Generate, Edit and
+Recompose directly beside the image operation.
+[Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
+
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.2.1.md).
+> [Exact qualification and known issues](docs/releases/0.3.0.md).
 
-**New in 0.2.1: model downloads, easier to find.** Open **Models → Add model**,
+**New in 0.3.0: connected conversations and better image agents.** Ask for a
+sequence of actions: the assistant uses each tool’s actual result in the next
+step. Follow-up messages retain image references; recurring drafts can use a
+newly generated result. Image agents offer model selection for Generate, Edit
+and Recompose, with clearer control over composition.
+
+**Model downloads, easier to find.** Open **Models → Add model**,
 use hardware recommendations, search by name or paste a Hugging Face link.
 **Quick setup** now shows only the category you choose, with clear navigation
 on desktop and phone. Browse popular or
@@ -62,9 +76,9 @@ settings. Publisher update review is explicit: a new revision never replaces you
 choice silently. [Supported families and actual tests](docs/models.md) ·
 [Discovery design and installation lifecycle](docs/plans/open-model-discovery.md).
 
-Release 0.2 retains reliable setup on Linux and Windows, your first local
+Release 0.3 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.2.1 release notes and qualification status](docs/releases/0.2.1.md).
+[0.3.0 release notes and qualification status](docs/releases/0.3.0.md).
 
 ## Help make it simple
 
@@ -86,7 +100,7 @@ of public reports.
 | **Make and transform images** | Generate, Edit, Recompose and Upscale; ordered references, prompts, parameters and reusable results. |
 | **Create video and avatars** | Local video generation, multi-shot films, resumable segments and portraits animated against a recording or generated speech. |
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
-| **Put agents to work** | Natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
+| **Put agents to work** | [Recurring image variations](docs/plans/agent-image-scenes.md), natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
 | **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
 | **Keep your creative work** | Your private media-first Library, searchable reusable inputs, film previews, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
@@ -120,6 +134,14 @@ unchanged.
 *Screenshots show the actual application with a separate demonstration dataset.
 Example conversation and agent text is seeded for privacy; the selected images
 and landscape film come from recorded local generation. [Media provenance](docs/media/README.md).*
+
+Automatic multi-tool conversations are being qualified for the next development build: describe a
+complete outcome, and the assistant can research, create an image, transform the
+result and prepare a recurring agent draft in the same conversation. Each step
+retains its real status, sources, artifacts and Stop control; agents still require
+review before activation. The current repair adds a LlamaIndex ReAct loop, persistent
+conversation references and exact result/cadence bindings for recurring image
+agents. [Implementation and verification status](docs/plans/conversation-reliability-repair.md).
 
 ## 🔓 Local by choice. Yours to control.
 
@@ -200,8 +222,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.2.1-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.2.1-linux-amd64.deb`.
+- **Windows 11 x64:** `AI-Station-0.3.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.3.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -215,7 +237,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.2.1.md).
+[Installation, updates and known issues](docs/releases/0.3.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -253,7 +275,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.2.1.md).
+post-release QA are listed in the [release notes](docs/releases/0.3.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -507,7 +529,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.2.1.md#validation) ·
+[Release verification](docs/releases/0.3.0.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)

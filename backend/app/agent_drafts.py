@@ -303,9 +303,22 @@ def enqueue(body: DraftRequest, session: DB):
     return run_dict(run)
 
 
-def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None, schedule_timezone="UTC"):
+def enqueue_for_task(
+    session,
+    task,
+    instruction,
+    model,
+    snapshot,
+    *,
+    parent=None,
+    schedule_timezone="UTC",
+    media_kind=None,
+    media_scope=None,
+):
     if snapshot.get("location") != "local" or snapshot.get("provider") != BUILTIN_KEY:
         raise ValueError("Choose the local provider for AI-assisted agent preparation")
+    if media_kind is not None and media_kind not in available_media_outputs():
+        raise ValueError("The requested agent media output is unavailable")
     if parent is not None:
         require(parent.effective_permissions, "manage_agents")
         if (
@@ -335,6 +348,8 @@ def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None
             "model": model,
             "instruction": instruction,
             "schedule_timezone": schedule_timezone,
+            **({"media_kind": media_kind} if media_kind else {}),
+            **({"media_agent_scope": media_scope} if media_scope is not None else {}),
             **(
                 {"selected_data_agent": parent.parameters["selected_data_agent"]}
                 if parent and parent.parameters.get("selected_data_agent")
@@ -350,14 +365,16 @@ def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None
             "manage_agents",
             *(
                 ["filesystem_read"]
-                if parent and parent.parameters.get("selected_data_agent", {}).get("artifact_ids")
+                if (parent and parent.parameters.get("selected_data_agent", {}).get("artifact_ids"))
+                or (media_scope and media_scope.get("images"))
                 else []
             ),
         ],
         retry_class="safe",
         parent_run_id=parent.id if parent else None,
     )
-    prepare_consumer(session, run)
+    if not media_scope or media_scope["plan"].get("media_kind") != "image":
+        prepare_consumer(session, run)
     return run
 
 
@@ -382,6 +399,7 @@ def stop(run_id: UUID, session: DB):
 
 
 INSTRUCTIONS = """Prepare a useful AI Station agent definition for user review. Output exactly one JSON object matching the proposal_schema. No Markdown or tool calls.
+Respect schema nesting: media contains kind, description_source and request. description_source belongs directly in media, never inside media.request. The request contains only the selected media kind's workload fields.
 maximum_runtime is an execution allowance, not the output's duration or the schedule interval. Supply a numeric maximum_runtime only when the current user explicitly requests an execution time limit, converting it to seconds; otherwise set it null. The controller suggests enough time in the disabled definition for operator review. Keep requested media duration and schedule separate and unchanged.
 Only propose tools in the operational_local_tools catalog. Tools perform no work now: the user separately reviews and enables the disabled definition. Do not claim a tool has run, an email was sent, a file was read or a website built.
 Public search is free and requires no financial-data account. A search query is a short proposal for user review, not the full private instruction. http_fetch/browser URLs must be copied from supplied current_user_urls; never invent a URL, account or credential. Use web_search for research without a supplied URL. Always supply its useful public search_query. If current_user_urls is empty, http_fetch and browser are unavailable; do not select them. A browser step reads JavaScript; http_fetch reads ordinary text.
@@ -419,6 +437,9 @@ class AgentDraftExecutor:
                 return "done"
             require(run.effective_permissions, "manage_agents")
             # stopped() does not commit a live Run: keep Task Stop serialized with publication.
+            from app.assistant_agent_media import verified as verify_media_scope
+
+            media_source = verify_media_scope(session, run)
             selected = None
             if run.parameters.get("selected_data_agent"):
                 from app.selected_data_agent import verified as verify_selected
@@ -446,6 +467,7 @@ class AgentDraftExecutor:
                 "source_run_id": run.id,
                 "model": run.parameters["model"],
                 **({"data_agent_source": source} if source else {}),
+                **({"media_agent_source": media_source} if media_source else {}),
                 **(
                     {"selected_data_agent": selected, "selected_data_family": selected_family}
                     if selected
@@ -471,6 +493,8 @@ class AgentDraftExecutor:
                     if source
                     else selected["artifact_ids"]
                     if selected
+                    else [item["snapshot"]["id"] for item in media_source["images"]]
+                    if media_source
                     else [],
                     metadata={"agent_id": agent.id, "source": "local_agent_factory"},
                 )
@@ -525,6 +549,24 @@ class AgentDraftExecutor:
         return "done"
 
     async def prepare(self, session, run):
+        from app.agent_draft_schema import proposal_schema
+        from app.assistant_agent_media import (
+            apply_cadence,
+            check_files,
+            image_definition,
+        )
+        from app.assistant_agent_media import (
+            verified as verify_media_scope,
+        )
+
+        media_source = verify_media_scope(session, run)
+        if media_source and media_source["plan"].get("media_kind") == "image":
+            session.commit()
+            check_files(media_source)
+            verify_media_scope(session, run)
+            return image_definition(media_source, run.parameters["model"])
+
+        media_kind = run.parameters.get("media_kind")
         selected = None
         if run.parameters.get("selected_data_agent"):
             from app.selected_data_agent import SelectedProposal
@@ -544,11 +586,20 @@ class AgentDraftExecutor:
             from app.agent_media_choices import catalog
 
             media_choices = catalog(session)
+            tools = available_tools(run.parameters["instruction"])
+            if media_kind:
+                if media_kind not in available_media_outputs():
+                    raise ValueError("The requested agent media output is unavailable")
+                tools = {
+                    key: value
+                    for key, value in tools.items()
+                    if key in {"create_media", "web_search", "http_fetch", "browser"}
+                }
             prompt = {
                 "instruction": run.parameters["instruction"],
                 "current_user_urls": prompt_public_urls(run.parameters["instruction"]),
-                "operational_local_tools": available_tools(run.parameters["instruction"]),
-                "available_media_outputs": available_media_outputs(),
+                "operational_local_tools": tools,
+                "available_media_outputs": [media_kind] if media_kind else available_media_outputs(),
                 "registered_media_models": media_choices,
                 "fixed_market_scope": draft_agent(run.parameters["instruction"]).market,
                 "file_creation": bool(
@@ -556,7 +607,7 @@ class AgentDraftExecutor:
                 ),
                 "current_time_utc": utcnow().isoformat(),
                 "schedule_timezone": run.parameters.get("schedule_timezone", "UTC"),
-                "proposal_schema": Proposal.model_json_schema(),
+                "proposal_schema": proposal_schema(Proposal, tools, media_kind),
             }
         instructions = INSTRUCTIONS + (
             " Registered_media_models lists optional installed image/video/speech choices, not live runtime health. "
@@ -568,6 +619,10 @@ class AgentDraftExecutor:
             "native hardware/readiness checks remain required before execution. For installed speech model IDs, "
             "leave engine null for Chatterbox and reference_artifact_id null for operator voice selection later."
         )
+        if media_kind:
+            if source or selected:
+                raise ValueError("A source-bound data agent cannot change into a media agent")
+            instructions += f" The independently requested future output is media.kind={media_kind}. Preserve this modality; include media and only its supplied schema. Other media-kind instructions do not apply. Keep all input references null for review."
         if source:
             prompt = {
                 "instruction": run.parameters["instruction"],
@@ -642,6 +697,8 @@ class AgentDraftExecutor:
                         from app.agent_media_choices import validate_selection
 
                         proposal = Proposal.model_validate_json(text)
+                        if media_kind and (proposal.media is None or proposal.media.kind != media_kind):
+                            raise ValueError("Preserve the requested agent media kind: " + media_kind)
                         selected_media = validate_selection(session, proposal.media, media_choices)
                         settings = definition(
                             proposal,
@@ -650,7 +707,7 @@ class AgentDraftExecutor:
                             schedule_timezone=run.parameters.get("schedule_timezone", "UTC"),
                             registered_media_choice=selected_media,
                         )
-                    return settings
+                    return apply_cadence(settings, media_source)
                 except (ValueError, ValidationError) as exc:
                     if attempt:
                         raise ValueError(

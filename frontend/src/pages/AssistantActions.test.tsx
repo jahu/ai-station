@@ -2096,3 +2096,60 @@ it("selects an installed conversation speech model and clears it when changing a
   chooseAction("audio.transcribe");
   expect(current!.speech_model_id).toBeUndefined();
 });
+
+it("keeps ordinary controller replies free of tool panels", () => {
+  mountResults({
+    controller_steps: [
+      {
+        index: 1,
+        tool: "chat.reply",
+        reason: "Answer",
+        status: "succeeded",
+        run_id: "reply",
+        sources: [],
+        result: {},
+      },
+    ],
+  });
+  expect(screen.queryByRole("region", { name: "Task activity" })).toBeNull();
+});
+
+it("shows ordered observed tool results and inspection links in one activity panel", () => {
+  mountResults({
+    controller_steps: [
+      {
+        index: 1,
+        tool: "web.search",
+        reason: "Research the requested design",
+        status: "succeeded",
+        run_id: "search",
+        sources: [
+          { url: "https://example.com/design", title: "Design source" },
+        ],
+        result: {},
+      },
+      {
+        index: 2,
+        tool: "image.recompose",
+        reason: "Use the previous result in a new composition",
+        status: "running",
+        run_id: "image",
+        sources: [],
+        result: {},
+      },
+    ],
+  });
+  const panel = screen.getByRole("region", { name: "Task activity" });
+  expect(within(panel).getByText("Web · Search")).toBeTruthy();
+  expect(within(panel).getByText("Image · Recompose")).toBeTruthy();
+  expect(
+    within(panel)
+      .getByRole("link", { name: "Design source" })
+      .getAttribute("href"),
+  ).toBe("https://example.com/design");
+  expect(
+    within(panel)
+      .getAllByRole("link", { name: "Inspect" })
+      .map((link) => link.getAttribute("href")),
+  ).toEqual(["/runs/search", "/runs/image"]);
+});

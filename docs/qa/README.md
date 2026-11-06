@@ -1,5 +1,9 @@
 # Operator QA catalog and workbook
 
+Catalog v55 adds CHAT-103/104 and AGENT-021/022 for multi-turn image continuity,
+result-bound ReAct chains, existing-agent model selection and generic variations.
+All 282 active cases start untested in new release exports.
+
 Catalog v54 updates model-navigation labels for 0.2.1 and adds MODEL-014 for
 visible primary actions, category setup, browser history, mobile tabs and
 administrator gates. All 278 active cases start untested; previous exports

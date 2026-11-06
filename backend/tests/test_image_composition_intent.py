@@ -1,4 +1,7 @@
-"""Reference composition dispatches PhotoPipe and waits for busy owned GPUs."""
+"""Legacy API composition keeps its existing PhotoPipe/GPU wait contract.
+
+Unified semantic dispatch and alias order are covered in test_assistant_controller.
+"""
 
 import pytest
 from app.api import app
@@ -61,7 +64,7 @@ def test_ordered_photo_composition_waits_without_stopping_active_model(managed, 
                 transition(session, busy, status, event_type="test." + status)
             busy_id = busy.id
             session.commit()
-        cid = conversation(client, "assistant")
+        cid = conversation(client, "work")
         ids = [image(client), image(client)]
         response = client.post(
             f"/api/chat/conversations/{cid}/messages",

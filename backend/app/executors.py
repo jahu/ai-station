@@ -18,6 +18,13 @@ from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
 from app.artifact_purge import ArtifactPurgeExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
+from app.assistant_controller import (
+    AssistantArtifactExecutor,
+    AssistantControllerExecutor,
+    AssistantToolSetupExecutor,
+    AssistantWebExecutor,
+)
+from app.assistant_decisions import AssistantDecisionExecutor
 from app.audio import AudioExecutor
 from app.avatar_setup_job import AvatarSetupExecutor
 from app.avatars import AvatarExecutor
@@ -328,6 +335,11 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "assistant_controller": AssistantControllerExecutor(),
+    "assistant_decision": AssistantDecisionExecutor(),
+    "assistant_web": AssistantWebExecutor(),
+    "assistant_tool_setup": AssistantToolSetupExecutor(),
+    "assistant_artifact": AssistantArtifactExecutor(),
     ModelHubExecutor.name: ModelHubExecutor(),
     "speech_setup": SpeechSetupExecutor(),
     "image_setup": ImageSetupExecutor(),

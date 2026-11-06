@@ -108,10 +108,20 @@ def source_reference(session, user, root, *, use_result_file=False):
             .limit(2)
         )
     )
+    controller_source = False
+    if root.parameters.get("controller_parent_id"):
+        from app.assistant_controller import verify_wrapper
+
+        verify_wrapper(session, root)
+        controller_source = (root.parameters.get("controller_tool_context") or {}).get("tool") in {
+            "data.analyze",
+            "data.create",
+        }
     if (
         len(messages) != 1
         or not messages[0].metadata_json.get("orchestration")
-        or any(messages[0].metadata_json.get(key) for key in ("partial", "superseded", "routing_only"))
+        or any(messages[0].metadata_json.get(key) for key in ("partial", "superseded"))
+        or (messages[0].metadata_json.get("routing_only") and not controller_source)
     ):
         raise ValueError("The source analysis is not a visible completed conversation result")
     workflow = session.get(Run, root.metadata_json.get("data_workflow_run_id", ""))

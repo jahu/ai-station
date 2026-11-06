@@ -3,7 +3,6 @@ from uuid import uuid4
 
 import pytest
 from app.api import app
-from app.assistant import AssistantExecutor, Plan
 from app.db import session_factory
 from app.engine import tick
 from app.local_provider import LocalChatProvider
@@ -16,12 +15,41 @@ from test_chat_reasoning import qualify
 
 @pytest.fixture
 def fake(monkeypatch):
-    state = {"calls": [], "output": "A saved reply"}
+    state = {
+        "calls": [],
+        "intent_calls": [],
+        "output": "A saved reply",
+        "decision": {
+            "kind": "tool",
+            "reason": "Answer the question",
+            "tool": "chat.reply",
+            "arguments": {"instruction": "Answer the original question"},
+            "outcomes": [{"kind": "text", "description": "An answer", "count": 1}],
+        },
+    }
     monkeypatch.setattr(LocalChatProvider, "models", lambda _: ["test-model"])
 
     async def stream(self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            state["intent_calls"].append(params)
+            yield json.dumps({"reason": "Interpret the request", "outcomes": state["decision"]["outcomes"]})
+            return
         state["calls"].append(params)
-        yield state["output"]
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            context = json.loads(params["messages"][1]["content"])
+            if context["observations"] and state["decision"]["tool"] == "agent.create":
+                yield json.dumps(
+                    {
+                        "kind": "finish",
+                        "reason": "Draft ready",
+                        "response": "Review the disabled draft",
+                        "evidence": [1],
+                    }
+                )
+            else:
+                yield json.dumps(state["decision"])
+        else:
+            yield state["output"]
 
     monkeypatch.setattr(LocalChatProvider, "stream", stream)
     return state
@@ -48,6 +76,13 @@ def work():
         return tick(db, "unified-assistant-test")
 
 
+def finish_work():
+    for _ in range(30):
+        if work() is None:
+            return
+    raise AssertionError("Controller did not drain")
+
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -68,17 +103,17 @@ def work():
         "Create agent instructions",
     ],
 )
-def test_ordinary_question_is_one_direct_completion_without_planner_or_authority(fake, text):
+def test_ordinary_question_uses_semantic_controller_without_write_authority(fake, text):
     with TestClient(app) as client:
         result = submit(client, text)
-        assert result["run"]["executor_type"] == "chat"
+        assert result["run"]["executor_type"] == "assistant_controller"
         assert result["run"]["effective_permissions"] == []
-        work()
-        assert len(fake["calls"]) == 1
+        finish_work()
+        assert len(fake["calls"]) == 2
         detail = client.get("/api/chat/conversations/" + result["conversation_id"]).json()
         assert detail["messages"][-1]["content"] == "A saved reply"
         with session_factory()() as db:
-            assert len(list(db.scalars(select(Run)))) == 1
+            assert not any(row.executor_type == "photo_pipe" for row in db.scalars(select(Run)))
             assert list(db.scalars(select(Agent))) == []
 
 
@@ -91,13 +126,14 @@ def test_saved_legacy_conversation_accepts_a_new_assistant_task_without_rewritin
             "/api/chat/conversations/" + old["id"] + "/messages",
             json={
                 "content": "Generate an image of a red bicycle",
+                "action": "image.generate",
                 "execution_mode": "assistant",
                 "web_search": {"enabled": False},
             },
         )
         assert response.status_code == 202, response.text
         identifier = response.json()["id"]
-        work()
+        finish_work()
         with session_factory()() as db:
             root = db.get(Run, identifier)
             assert root.status == "succeeded" and root.metadata_json["plan"]["action"] == "image.generate"
@@ -112,6 +148,14 @@ def test_saved_legacy_conversation_accepts_a_new_assistant_task_without_rewritin
 
 
 def test_agent_request_creates_a_disabled_draft_without_a_mode_switch(fake):
+    fake["decision"] = {
+        "kind": "tool",
+        "reason": "Prepare a disabled draft",
+        "tool": "agent.create",
+        "arguments": {"instruction": "Create an agent that summarizes workstation telemetry every morning"},
+        "outcomes": [{"kind": "agent_draft", "count": 1, "description": "A disabled recurring agent"}],
+    }
+
     fake["output"] = json.dumps(
         {
             "name": "GPU observer",
@@ -123,10 +167,10 @@ def test_agent_request_creates_a_disabled_draft_without_a_mode_switch(fake):
     )
     with TestClient(app) as client:
         result = submit(client, "Create an agent that summarizes workstation telemetry every morning")
-        assert result["run"]["executor_type"] == "orchestrator"
-        assert "manage_agents" in result["run"]["effective_permissions"]
+        assert result["run"]["executor_type"] == "assistant_controller"
+        assert "manage_agents" not in result["run"]["effective_permissions"]
         for _ in range(4):
-            if work() is None:
+            if finish_work() is None:
                 break
         with session_factory()() as db:
             assert all(item.status == "succeeded" for item in db.scalars(select(Run))), [
@@ -135,22 +179,17 @@ def test_agent_request_creates_a_disabled_draft_without_a_mode_switch(fake):
             agents = list(db.scalars(select(Agent)))
             assert len(agents) == 1 and not agents[0].enabled
             assert all(item.status == "succeeded" for item in db.scalars(select(Run)))
-        assert len(fake["calls"]) == 1, "Only the draft model runs; no extra classification inference"
+        assert len(fake["calls"]) == 3, "Two decisions and one actual draft inference"
 
 
-def test_planner_cannot_grant_agent_authority_from_an_unrelated_task(fake, monkeypatch):
-    async def plan(*_):
-        return Plan(action="agent.create", reason="Model suggestion")
-
-    monkeypatch.setattr(AssistantExecutor, "plan", plan)
+def test_planner_cannot_grant_agent_authority_from_an_unrelated_task(fake):
+    fake["decision"].update(tool="agent.create", arguments={"instruction": "Unrequested agent"})
     with TestClient(app) as client:
-        result = submit(client, "Build a workflow to sort files")
-        assert result["run"]["executor_type"] == "orchestrator"
-        assert "manage_agents" not in result["run"]["effective_permissions"]
-        work()
+        result = submit(client, "Explain how tools work")
+        finish_work()
         with session_factory()() as db:
             actual = db.get(Run, result["run"]["id"])
-            assert actual.status == "succeeded" and actual.metadata_json["plan"]["action"] == "clarify"
+            assert actual.status == "succeeded" and actual.metadata_json["controller_outcome"] == "clarify"
             assert not list(db.scalars(select(Agent)))
 
 
@@ -171,14 +210,40 @@ def test_explicit_legacy_chat_restriction_is_preserved(fake):
 def test_media_language_override_does_not_translate_ordinary_answers(fake, mode):
     with TestClient(app) as client:
         result = submit(client, "Wyjaśnij mechanikę kwantową", media_translation={"mode": mode})
-        assert result["run"]["executor_type"] == "chat"
-        work()
+        assert result["run"]["executor_type"] == "assistant_controller"
+        finish_work()
         with session_factory()() as db:
-            assert len(list(db.scalars(select(Run)))) == 1
-        assert len(fake["calls"]) == 1
+            assert not any(row.executor_type == "photo_pipe" for row in db.scalars(select(Run)))
+        assert len(fake["calls"]) == 2
 
 
-def test_assistant_direct_reply_retains_qualified_reasoning(model):
+def test_assistant_direct_reply_retains_qualified_reasoning(model, monkeypatch):
+    original_stream = LocalChatProvider.stream
+
+    async def stream(self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Calculate",
+                    "outcomes": [{"kind": "text", "count": 1, "description": "The calculation"}],
+                }
+            )
+            return
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            yield json.dumps(
+                {
+                    "kind": "tool",
+                    "reason": "Answer",
+                    "tool": "chat.reply",
+                    "arguments": {"instruction": "Calculate 17 * 23"},
+                    "outcomes": [{"kind": "text", "count": 1, "description": "The calculation"}],
+                }
+            )
+        else:
+            async for item in original_stream(self, **params):
+                yield item
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
     with TestClient(app) as client:
         qualify(client, model)
         result = submit(
@@ -187,13 +252,23 @@ def test_assistant_direct_reply_retains_qualified_reasoning(model):
             selection={"execution_mode": "assistant", "model": model["model"]},
             reasoning={"enabled": True, "budget": 256},
         )
-        assert result["run"]["executor_type"] == "chat"
-        assert result["run"]["parameters"]["reasoning"]["enabled"]
-        work()
+        assert result["run"]["executor_type"] == "assistant_controller"
+        assert result["run"]["parameters"]["controller_request"]["reasoning"]["enabled"]
+        finish_work()
         with session_factory()() as db:
             actual = db.get(Run, result["run"]["id"])
             assert actual.status == "succeeded"
             message = db.scalar(
-                select(Message).where(Message.run_id == actual.id, Message.role == "assistant")
+                select(Message)
+                .join(Run, Message.run_id == Run.id)
+                .where(
+                    Run.executor_type == "chat",
+                    Run.conversation_id == actual.conversation_id,
+                    Message.role == "assistant",
+                )
             )
             assert message.content == "391"
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

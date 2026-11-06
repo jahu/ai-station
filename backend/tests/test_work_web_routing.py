@@ -11,6 +11,7 @@ from app.local_provider import LocalChatProvider
 from app.models import Agent, Run
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from test_assistant_controller import drain, finish, tool
 
 
 @pytest.fixture
@@ -18,8 +19,32 @@ def model(monkeypatch):
     calls = []
 
     async def stream(_self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Interpret the current request",
+                    "outcomes": [
+                        {"kind": "agent_draft", "count": 1, "description": "A disabled recurring agent"}
+                    ],
+                }
+            )
+            return
         calls.append(params)
-        if params["messages"][0]["content"].startswith("Route the user's request"):
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            context = json.loads(params["messages"][1]["content"])
+            value = (
+                finish(1)
+                if context["observations"]
+                else {
+                    **tool("agent.create", instruction=context["instruction"]),
+                    "outcomes": [
+                        {"kind": "agent_draft", "count": 1, "description": "A disabled workstation agent"}
+                    ],
+                }
+            )
+            value.pop("outcomes", None)  # Intent is independently frozen before tool selection.
+            yield json.dumps(value)
+        elif params["messages"][0]["content"].startswith("Route the user's request"):
             yield json.dumps({"action": "agent.create", "reason": "Prepare a disabled agent for review."})
         else:
             yield json.dumps(
@@ -70,6 +95,15 @@ def test_default_web_does_not_block_a_reviewable_agent_draft(model, content, mod
         )
         assert sent.status_code == 202, sent.text
         root = sent.json()
+        if mode == "assistant":
+            drain()
+            with session_factory()() as session:
+                agents = list(session.scalars(select(Agent)))
+                assert len(agents) == 1 and not agents[0].enabled
+                assert agents[0].tools == ["system_snapshot"]
+                assert all(row.status == "succeeded" for row in session.scalars(select(Run)))
+            assert len(model) == 3
+            return
         if mode == "assistant":
             assert root["parameters"]["web_search"]["enabled"] is False
             assert "network_read" not in root["effective_permissions"]
@@ -355,3 +389,7 @@ def test_default_web_work_receipt_replays_one_disabled_draft_without_search(mode
                 )
             )
             assert len(events) == 1
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

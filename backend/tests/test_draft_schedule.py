@@ -14,6 +14,7 @@ from app.draft_schedule import schedule_values
         ("Co 90 minut przygotuj raport", "interval", "", 5400),
         ("Every 45 minutes prepare a report", "interval", "", 2700),
         ("Co rano o 08:30 przygotuj raport", "cron", "30 8 * * *", None),
+        ("Codziennie o08:00 przygotuj raport", "cron", "0 8 * * *", None),
     ],
 )
 def test_explicit_cadence_overrides_manual_or_conflicting_model(instruction, trigger, cron, seconds):

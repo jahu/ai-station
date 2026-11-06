@@ -134,6 +134,7 @@ export interface GenerationProgress {
 }
 export interface Run {
   id: string;
+  stream_run_id?: string;
   project_id: string | null;
   agent_id?: string | null;
   task_id: string;

@@ -1,5 +1,6 @@
 import AgentImageModel from "./AgentImageModel";
-import { useEffect, useState } from "react";
+import "./AgentImageScenes.css";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Image,
@@ -193,6 +194,57 @@ export default function AgentMediaScopeEditor({
     if (scope.kind === "image")
       onChange({ ...scope, request: { ...scope.request, ...patch } });
   }
+  function changeImageMode(mode: ImageMediaRequest["mode"]) {
+    if (!image) return;
+    const keepModel = !!image.model_id && mode !== "upscale";
+    const keepKrea = image.backend === "krea2" && keepModel;
+    onChange({
+      kind: "image",
+      description_source:
+        mode === "upscale"
+          ? "fixed"
+          : mode === "recompose"
+            ? "goal"
+            : scope.description_source,
+      ...(mode === "recompose" ? { vary_scenes: true } : {}),
+      request: {
+        mode,
+        backend: keepModel ? image.backend : "qwen",
+        ...(keepModel ? { model_id: image.model_id } : {}),
+        ...(keepKrea
+          ? {
+              steps: image.steps ?? 8,
+              cfg: image.cfg ?? 1,
+              seed: image.seed ?? 42,
+            }
+          : {}),
+        ...(keepKrea && mode !== "t2i"
+          ? {
+              reference_layout:
+                mode === "recompose"
+                  ? ("beside" as const)
+                  : ("aligned" as const),
+              reference_strength: mode === "recompose" ? 2 : 4,
+              grounding_px: image.grounding_px ?? 768,
+            }
+          : {}),
+        ...(mode === "recompose"
+          ? { prompt_style: "instruction" as const }
+          : {}),
+        prompt: caption || goal,
+        edit_prompt: caption || goal,
+        input_artifact_ids:
+          mode === "t2i"
+            ? []
+            : image.input_artifact_ids?.slice(0, mode === "recompose" ? 8 : 1)
+                  .length
+              ? image.input_artifact_ids.slice(0, mode === "recompose" ? 8 : 1)
+              : [""],
+        gpu: image.gpu ?? "auto",
+      },
+    });
+  }
+  const imageGoal = !!image && scope.description_source === "goal";
   return (
     <section className="agent-media-scope" aria-label="Media output settings">
       <div className="media-composer-heading">
@@ -298,45 +350,104 @@ export default function AgentMediaScopeEditor({
             <select
               aria-label="Agent image operation"
               value={image.mode}
-              onChange={(event) => {
-                const mode = event.target.value as ImageMediaRequest["mode"];
-                onChange({
-                  kind: "image",
-                  description_source:
-                    mode === "upscale" ? "fixed" : scope.description_source,
-                  request: {
-                    mode,
-                    backend: "qwen",
-                    prompt: caption || goal,
-                    edit_prompt: caption || goal,
-                    input_artifact_ids:
-                      mode === "t2i"
-                        ? []
-                        : image.input_artifact_ids?.slice(
-                              0,
-                              mode === "recompose" ? 8 : 1,
-                            ).length
-                          ? image.input_artifact_ids.slice(
-                              0,
-                              mode === "recompose" ? 8 : 1,
-                            )
-                          : [""],
-                    gpu: image.gpu ?? "auto",
-                  },
-                });
-              }}
+              onChange={(event) =>
+                changeImageMode(event.target.value as ImageMediaRequest["mode"])
+              }
             >
-              <option value="t2i">Generate</option>
-              <option value="img2img">Edit an image</option>
-              <option value="recompose">Recompose from references</option>
+              <option value="t2i">Create from text</option>
+              <option value="img2img">
+                Small changes to the reference image
+              </option>
+              <option value="recompose">New variations from references</option>
               <option value="upscale">Upscale 4×</option>
             </select>
           </label>
         )}
+        {image && image.mode !== "upscale" && (
+          <AgentImageModel
+            request={image}
+            disabled={disabled || uploading}
+            onChange={(request) =>
+              onChange({ ...scope, kind: "image", request })
+            }
+          />
+        )}
+        {image?.mode === "img2img" && (
+          <div className="agent-image-purpose notice">
+            <div>
+              <strong>Want a new composition or setting?</strong>
+              <p>
+                Small edits stay close to the reference. Variations follow your
+                brief to decide which features stay consistent and which may
+                change.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => changeImageMode("recompose")}
+            >
+              Use variations
+            </Button>
+          </div>
+        )}
+        {image?.mode === "recompose" &&
+          scope.kind === "image" &&
+          scope.description_source === "goal" && (
+            <label className="agent-image-variety">
+              <input
+                type="checkbox"
+                checked={scope.vary_scenes === true}
+                onChange={(event) =>
+                  onChange({
+                    ...scope,
+                    vary_scenes: event.target.checked,
+                    request: {
+                      ...image,
+                      ...(event.target.checked
+                        ? { prompt_style: "instruction" as const }
+                        : {}),
+                    },
+                  })
+                }
+              />
+              <span>
+                <strong>Vary results between runs</strong>
+                <small>
+                  Plan changes appropriate to your subject and instruction. Use
+                  the last three completed runs to avoid repeating the same
+                  idea.
+                </small>
+              </span>
+            </label>
+          )}
+        {image?.backend === "krea2" &&
+          (image.mode === "img2img" || image.mode === "recompose") && (
+            <label>
+              Reference composition
+              <select
+                aria-label="Agent reference composition"
+                value={image.reference_layout ?? "aligned"}
+                onChange={(event) =>
+                  updateImage({
+                    reference_layout: event.target.value as
+                      "aligned" | "beside",
+                  })
+                }
+              >
+                <option value="aligned">Keep reference framing</option>
+                <option value="beside">Allow new viewpoints</option>
+              </select>
+              <small>
+                Allow new viewpoints for changes to camera angle or composition.
+                Your brief decides which features stay consistent.
+              </small>
+            </label>
+          )}
         {image?.mode !== "upscale" && !recordedWhole && (
           <>
             <label>
-              Description policy
+              {image ? "On each run" : "Description policy"}
               <select
                 aria-label="Media description policy"
                 value={scope.description_source}
@@ -344,6 +455,9 @@ export default function AgentMediaScopeEditor({
                   onChange({
                     ...scope,
                     description_source: event.target.value as "fixed" | "goal",
+                    ...(scope.kind === "image" && event.target.value === "fixed"
+                      ? { vary_scenes: false }
+                      : {}),
                     ...(scope.kind === "music" && event.target.value === "fixed"
                       ? { lyrics_source: "fixed" as const }
                       : {}),
@@ -351,63 +465,67 @@ export default function AgentMediaScopeEditor({
                 }
               >
                 <option value="goal">
-                  Let Local AI prepare it from the goal and sources
+                  {image
+                    ? "Prepare an image from my instruction"
+                    : "Let Local AI prepare it from the goal and sources"}
                 </option>
                 <option value="fixed">
-                  Use this exact description every time
+                  {image
+                    ? "Use an exact image prompt"
+                    : "Use this exact description every time"}
                 </option>
               </select>
             </label>
             <p className="muted">
               {scope.description_source === "goal"
-                ? "Your selected local model writes the description. The references and settings below stay fixed."
+                ? image
+                  ? "Your main instruction above drives each image. The local model prepares the image prompt; references and generation settings stay as reviewed."
+                  : "Your selected local model writes the description. The references and settings below stay fixed."
                 : "Runs directly with the media engine. No language model is needed."}
             </p>
-            <label>
-              {scope.kind === "speech" ||
-              (scope.kind === "avatar" && scope.request.speech_text !== null)
-                ? "Spoken text or writing instructions"
-                : scope.kind === "avatar"
-                  ? "Motion direction"
-                  : "Creative direction"}
-              <textarea
-                aria-label="Media creative direction"
-                rows={4}
-                required
-                maxLength={
-                  scope.kind === "avatar"
-                    ? scope.request.speech_text !== null
-                      ? 1000
-                      : 2000
-                    : scope.kind === "music"
-                      ? 512
-                      : scope.kind === "speech"
+            <ImageGuidance
+              advanced={imageGoal}
+              saved={caption !== goal && !!caption}
+            >
+              <label>
+                {scope.kind === "speech" ||
+                (scope.kind === "avatar" && scope.request.speech_text !== null)
+                  ? "Spoken text or writing instructions"
+                  : scope.kind === "avatar"
+                    ? "Motion direction"
+                    : imageGoal
+                      ? "Optional visual details"
+                      : "Creative direction"}
+                <textarea
+                  aria-label="Media creative direction"
+                  rows={4}
+                  required={!imageGoal}
+                  maxLength={
+                    scope.kind === "avatar"
+                      ? scope.request.speech_text !== null
                         ? 1000
-                        : scope.kind === "video" || scope.kind === "effects"
-                          ? 2000
-                          : 10000
-                }
-                value={caption}
-                onChange={(event) =>
-                  scope.kind === "avatar"
-                    ? onChange({
-                        ...scope,
-                        request: {
-                          ...scope.request,
-                          ...(scope.request.speech_text !== null
-                            ? { speech_text: event.target.value }
-                            : { prompt: event.target.value }),
-                        },
-                      })
-                    : scope.kind === "effects"
+                        : 2000
+                      : scope.kind === "music"
+                        ? 512
+                        : scope.kind === "speech"
+                          ? 1000
+                          : scope.kind === "video" || scope.kind === "effects"
+                            ? 2000
+                            : 10000
+                  }
+                  value={imageGoal && caption === goal ? "" : caption}
+                  onChange={(event) =>
+                    scope.kind === "avatar"
                       ? onChange({
                           ...scope,
                           request: {
                             ...scope.request,
-                            prompt: event.target.value,
+                            ...(scope.request.speech_text !== null
+                              ? { speech_text: event.target.value }
+                              : { prompt: event.target.value }),
                           },
                         })
-                      : scope.kind === "video"
+                      : scope.kind === "effects"
                         ? onChange({
                             ...scope,
                             request: {
@@ -415,35 +533,54 @@ export default function AgentMediaScopeEditor({
                               prompt: event.target.value,
                             },
                           })
-                        : scope.kind === "speech"
+                        : scope.kind === "video"
                           ? onChange({
                               ...scope,
                               request: {
                                 ...scope.request,
-                                text: event.target.value,
+                                prompt: event.target.value,
                               },
                             })
-                          : scope.kind === "music"
+                          : scope.kind === "speech"
                             ? onChange({
                                 ...scope,
                                 request: {
                                   ...scope.request,
-                                  caption: event.target.value,
+                                  text: event.target.value,
                                 },
                               })
-                            : updateImage(
-                                image?.mode === "img2img"
-                                  ? { edit_prompt: event.target.value }
-                                  : { prompt: event.target.value },
-                              )
-                }
-                placeholder={
-                  scope.kind === "speech"
-                    ? "Write the exact Polish text, or describe the short briefing your agent should write…"
-                    : "Describe the mood, subject and style your agent should create…"
-                }
-              />
-            </label>
+                            : scope.kind === "music"
+                              ? onChange({
+                                  ...scope,
+                                  request: {
+                                    ...scope.request,
+                                    caption: event.target.value,
+                                  },
+                                })
+                              : updateImage(
+                                  image?.mode === "img2img"
+                                    ? {
+                                        edit_prompt:
+                                          imageGoal && !event.target.value
+                                            ? goal
+                                            : event.target.value,
+                                      }
+                                    : {
+                                        prompt:
+                                          imageGoal && !event.target.value
+                                            ? goal
+                                            : event.target.value,
+                                      },
+                                )
+                  }
+                  placeholder={
+                    scope.kind === "speech"
+                      ? "Write the exact Polish text, or describe the short briefing your agent should write…"
+                      : "Describe the mood, subject and style your agent should create…"
+                  }
+                />
+              </label>{" "}
+            </ImageGuidance>
           </>
         )}
         {scope.kind === "avatar" && (
@@ -656,18 +793,9 @@ export default function AgentMediaScopeEditor({
                 {image.mode === "img2img"
                   ? "Preserves the original image as much as possible."
                   : image.mode === "recompose"
-                    ? "Preserves identity while allowing clothing, pose and composition to change."
+                    ? "Uses the references according to your brief: keep requested features and vary only the relevant aspects."
                     : "Makes the reviewed image four times larger. Research tools are available with Generate, Edit and Recompose."}
               </p>
-            )}
-            {image.mode === "t2i" && (
-              <AgentImageModel
-                request={image}
-                disabled={disabled || uploading}
-                onChange={(request) =>
-                  onChange({ ...scope, kind: "image", request })
-                }
-              />
             )}
             {image.mode !== "t2i" && (
               <div className="agent-media-references">
@@ -854,5 +982,30 @@ export default function AgentMediaScopeEditor({
         </p>
       )}
     </section>
+  );
+}
+
+function ImageGuidance({
+  advanced,
+  saved,
+  children,
+}: {
+  advanced: boolean;
+  saved: boolean;
+  children: ReactNode;
+}) {
+  return advanced ? (
+    <details className="agent-image-guidance">
+      <summary>
+        Additional visual details{saved ? " · saved" : " (optional)"}
+      </summary>
+      <p className="muted">
+        Optional style constraints. Your main instruction takes priority. Leave
+        empty to use that instruction alone.
+      </p>
+      {children}
+    </details>
+  ) : (
+    <>{children}</>
   );
 }

@@ -224,6 +224,17 @@ def verified(session, draft):
         raise ValueError("Agent draft lost its completed-analysis source")
     parent = session.get(Run, draft.parent_run_id)
     current = session.get(Message, parent.parameters.get("user_message_id")) if parent else None
+    controller_authority = False
+    if parent is not None and parent.parameters.get("controller_parent_id"):
+        from app.assistant_controller import verify_wrapper
+
+        verify_wrapper(session, parent)
+        controller = session.get(Run, parent.parameters["controller_parent_id"])
+        controller_authority = (parent.parameters.get("controller_tool_context") or {}).get(
+            "tool"
+        ) == "agent.create" and any(
+            item["kind"] == "agent_draft" for item in controller.metadata_json.get("controller_outcomes", [])
+        )
     if (
         parent is None
         or parent.executor_type != "orchestrator"
@@ -245,7 +256,7 @@ def verified(session, draft):
         or current.metadata_json.get("data_agent_source") != source
         or current.metadata_json.get("user_text", current.content).strip()
         != parent.parameters["content"].strip()
-        or not requested(parent.parameters["content"])
+        or (not controller_authority and not requested(parent.parameters["content"]))
     ):
         raise ValueError("Agent draft changed its originating analysis request")
     root = session.get(Run, source.get("source_run_id"))
