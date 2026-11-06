@@ -76,7 +76,7 @@ settings. Publisher update review is explicit: a new revision never replaces you
 choice silently. [Supported families and actual tests](docs/models.md) ·
 [Discovery design and installation lifecycle](docs/plans/open-model-discovery.md).
 
-Release 0.2 retains reliable setup on Linux and Windows, your first local
+Release 0.3 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
 [0.3.0 release notes and qualification status](docs/releases/0.3.0.md).
 
