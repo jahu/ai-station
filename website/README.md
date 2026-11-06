@@ -1,5 +1,9 @@
 # Project landing page
 
+Release 0.3 adds durable ReAct conversation chains, retained references and
+compatible model selection for existing image agents. No new private media is
+published.
+
 Release 0.2 adds capability-guided public model discovery and hardware advice
 before weights transfer. Publisher links, complete model components, reviewed
 installation and explicit update review reuse the application model lifecycle.
