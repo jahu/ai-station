@@ -65,6 +65,7 @@ class HostMediaExecutor:
             return self._resume(session, run)
         if self._cancel_before_dispatch(session, run):
             return "done"
+        run.metadata_json = {**run.metadata_json, "media_admission_pending": True}
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         session.commit()
         runner = self.runner(run)
@@ -130,11 +131,18 @@ class HostMediaExecutor:
             if run.status == "queued" and run.requested_gpu != "none":
                 from app.llama import evict_idle_models
 
-                evict_idle_models(session, run, indexes)
+                if evict_idle_models(session, run, indexes):
+                    # The new stop dependency gates admission until real progress;
+                    # do not add a redundant timer after the GPU is released.
+                    run.metadata_json = {
+                        key: value for key, value in run.metadata_json.items() if key != RESOURCE_WAIT_KEY
+                    }
             return "requeued" if run.status == "queued" else "done"
-        if "resource_wait" in run.metadata_json:
+        if "resource_wait" in run.metadata_json or RESOURCE_WAIT_KEY in run.metadata_json:
             run.metadata_json = {
-                key: value for key, value in run.metadata_json.items() if key != "resource_wait"
+                key: value
+                for key, value in run.metadata_json.items()
+                if key not in {"resource_wait", RESOURCE_WAIT_KEY}
             }
         from app.vision_inputs import verify_media_inputs
 
@@ -145,7 +153,10 @@ class HostMediaExecutor:
         begin_timing(session, run, hardware)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.
-        run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
+        run.metadata_json = {
+            **{key: value for key, value in run.metadata_json.items() if key != "media_admission_pending"},
+            "dispatch_attempted": True,
+        }
         session.commit()
         try:
             started = self._start(runner, run, allocated, output)

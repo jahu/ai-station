@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
@@ -21,7 +23,16 @@ class ResourceUnknown(Exception):
 RESOURCE_WAIT_KEY = "resource_wait_until"
 
 
+def defer_resource_run(run):
+    """Back off this admission attempt without delaying other Task children."""
+    from app.config import get_settings
+
+    until = utcnow() + timedelta(seconds=max(2, get_settings().heartbeat_seconds * 2))
+    run.metadata_json = {**run.metadata_json, RESOURCE_WAIT_KEY: until.isoformat()}
+
+
 def resource_ready_condition(now):
+    run_wait = Run.metadata_json[RESOURCE_WAIT_KEY].as_string()
     waiting = (
         select(Task.id)
         .where(Task.id == Run.task_id, Task.metadata_json[RESOURCE_WAIT_KEY].as_string() > now.isoformat())
@@ -29,6 +40,7 @@ def resource_ready_condition(now):
         .exists()
     )
     return and_(
+        or_(run_wait.is_(None), run_wait <= now.isoformat()),
         or_(
             and_(
                 or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", ""))),

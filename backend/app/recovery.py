@@ -79,6 +79,49 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
+        from app.host_media_executor import RESUMABLE_MEDIA
+
+        if (
+            run.executor_type in RESUMABLE_MEDIA
+            and run.status in {"claimed", "preparing", "cancel_requested"}
+            and run.metadata_json.get("media_admission_pending") is True
+            and not run.metadata_json.get("dispatch_attempted")
+            and run.started_at is None
+            and not run.pid
+            and not run.process_group_id
+        ):
+            # This new receipt is committed before admission I/O and removed in
+            # the same transaction that marks a native dispatch. Older/uncertain
+            # Runs do not acquire this proof merely because their PID is absent.
+            session.refresh(run)
+            if (
+                run.status not in {"claimed", "preparing", "cancel_requested"}
+                or run.lease_expires_at is None
+                or run.lease_expires_at >= now
+                or run.metadata_json.get("media_admission_pending") is not True
+                or run.metadata_json.get("dispatch_attempted")
+                or run.started_at is not None
+                or run.pid
+                or run.process_group_id
+            ):
+                continue
+            release_run_locks(session, run.id)
+            if run.status == RunStatus.CANCEL_REQUESTED.value:
+                transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+            else:
+                transition(session, run, RunStatus.INTERRUPTED, event_type="executor.admission_yielded")
+                run.finished_at = None
+                run.worker_id = None
+                run.lease_expires_at = None
+                transition(
+                    session,
+                    run,
+                    RunStatus.QUEUED,
+                    event_type="run.requeued",
+                    payload={"admission_only": True},
+                )
+            touched.append(run.id)
+            continue
         if run.executor_type in {
             "llama_load",
             "llama_stop",
@@ -156,8 +199,6 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             append_event(session, run.id, "recovery.runner_unavailable", {})
             touched.append(run.id)
             continue
-        from app.host_media_executor import RESUMABLE_MEDIA
-
         if (
             run.executor_type in RESUMABLE_MEDIA
             and run.metadata_json.get("dispatch_attempted")

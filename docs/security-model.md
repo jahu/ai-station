@@ -1874,3 +1874,10 @@ owned unchanged artifacts from the originating conversation, with hashes checked
 before definition publication; the exact requested cadence is frozen separately.
 Image model identities/presets are rechecked rather than silently substituted.
 Drafts retain the existing review/enable and per-tool permission boundaries.
+
+SQLite contention does not grant an execution retry. A new media admission marker
+is committed before admission I/O and removed atomically with dispatch intent.
+Recovery rechecks that proof, phase, PID absence and lease under the transaction
+before requeue; dispatch uncertainty preserves native inspection. Existing owner,
+permission and Stop checks still apply. Resource-wait metadata exposes no foreign
+Run IDs and cannot authorize eviction of active/external workloads.

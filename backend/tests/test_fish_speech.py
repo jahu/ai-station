@@ -481,7 +481,21 @@ def test_changed_reference_or_transcript_cannot_reach_native_speech(fish_bridge,
 
 
 @pytest.mark.parametrize("generated", [False, True])
-def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge, generated):
+def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge, generated, monkeypatch):
+    from datetime import datetime, timedelta
+
+    def advance_wait(identity):
+        with session_factory()() as db:
+            row = db.get(Run, identity)
+            deadlines = [
+                datetime.fromisoformat(value)
+                for metadata in (row.metadata_json, row.task.metadata_json)
+                if (value := metadata.get("resource_wait_until"))
+            ]
+            assert deadlines
+            deadline = max(deadlines) + timedelta(microseconds=1)
+        monkeypatch.setattr("app.runs.utcnow", lambda: deadline)
+
     with TestClient(app) as client:
         run, _ = enqueue(client, **({"voice_source": "model"} if generated else {}))
         if not generated:
@@ -492,10 +506,12 @@ def test_low_vram_or_ram_waits_without_starting_a_process(fish_bridge, generated
         assert not fish_bridge["starts"]
         fish_bridge["hardware"]["gpus"][0]["memory_used_mib"] = 100
         fish_bridge["hardware"]["memory"]["available_mib"] = 16000
+        advance_wait(run["id"])
         work()
         assert client.get("/api/runs/" + run["id"]).json()["status"] == "queued"
         assert not fish_bridge["starts"]
         fish_bridge["hardware"]["memory"]["available_mib"] = 30000
+        advance_wait(run["id"])
         work()
         assert client.get("/api/runs/" + run["id"]).json()["status"] == "succeeded"
 

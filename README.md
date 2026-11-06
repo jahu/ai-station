@@ -45,6 +45,8 @@ the input of a recurring-agent draft for your review.
 Existing image agents expose compatible installed models for Generate, Edit and
 Recompose directly beside the image operation.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
+The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
+tracks per-Run admission backoff and durable recovery after transient SQLite contention.
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
