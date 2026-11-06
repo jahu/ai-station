@@ -38,6 +38,12 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
+On `develop`, the conversation now uses a ReAct orchestrator: it chooses an
+available tool, observes its actual result and can pass that result to the next
+tool. Reference images survive follow-up questions, and an image result can become
+the input of a recurring-agent draft for your review.
+[Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
+
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
