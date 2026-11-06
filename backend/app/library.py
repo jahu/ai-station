@@ -15,7 +15,7 @@ from app.models import Artifact
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/artifacts")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 DERIVED_LIMIT = 50
 
 

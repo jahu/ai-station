@@ -29,7 +29,7 @@ from app.serialize import runtime_dict
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/llama")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 CODING_CONTEXT_CEILING = 131072

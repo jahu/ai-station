@@ -21,7 +21,7 @@ from app.runs import create_run, create_task, run_dict
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/audio")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 MAX_BYTES = 20 * 1024 * 1024
 
 

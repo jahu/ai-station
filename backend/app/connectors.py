@@ -37,7 +37,7 @@ from app.serialize import iso
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/connectors", tags=["connectors"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 _KEY = re.compile(r"^[a-z][a-z0-9-]{1,78}$")
 HTTP_CAPABILITIES = ["http.get"]
 KINDS = (

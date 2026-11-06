@@ -1881,3 +1881,8 @@ Recovery rechecks that proof, phase, PID absence and lease under the transaction
 before requeue; dispatch uncertainty preserves native inspection. Existing owner,
 permission and Stop checks still apply. Resource-wait metadata exposes no foreign
 Run IDs and cannot authorize eviction of active/external workloads.
+
+An authorized HTTP response does not retain database authority during transport.
+Function-scoped request and inspection sessions close before body delivery;
+authorization and serialization still occur within their original owner scope.
+SSE continues revalidating the actual device for each separately read batch.

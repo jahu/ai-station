@@ -25,7 +25,7 @@ from app.serialize import runtime_dict
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/runtimes", tags=["runtimes"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 FAMILIES = {
     "llama.cpp": "llama.cpp",
     "ollama": "Ollama",

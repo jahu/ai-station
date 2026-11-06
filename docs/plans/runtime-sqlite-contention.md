@@ -68,3 +68,21 @@ including exactly-once fake native dispatch and a recovery/dispatch race.
 Film admission retains its existing Task gate and immediate wakeup; ordinary
 media and model loads use their individual backoff. Real neutral deployment
 qualification remains the final gate; these tests are not a hardware smoke test.
+
+## HTTP response lifetime follow-up
+
+Live qualification confirmed that the same single model-load Run waited for
+occupied GPUs and completed the neutral conversation after the existing image
+completed. No user prompt or media was replayed. It also caught a separate long
+writer reservation held by the API process, causing readiness and unrelated
+requests to time out. Restarting only the owned API released that reservation;
+workers and native images were retained and completed normally.
+
+A slow-body ASGI regression reproduces a request retaining BEGIN IMMEDIATE
+through response delivery. HTTP Session dependencies now use FastAPI function
+scope, including account coordination and explicit administrator inspection.
+The session closes after response preparation, before transport. The normal
+owner checks and streamed per-batch authorization remain unchanged. Worker
+sessions, atomic claims, SQLite settings and native execution are untouched.
+Three actual endpoint backpressure cases and the account/API contract subset
+passed (40 tests). Complete regression and deployed qualification are pending.

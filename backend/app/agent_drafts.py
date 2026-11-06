@@ -39,7 +39,7 @@ from app.state import TERMINAL, RunStatus
 from app.task_control import cancel_task, lock_task
 
 router = APIRouter(prefix="/api/agent-drafts", tags=["agents"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 EXCLUDED_TOOLS = {"coding_cursor", "coding_codex", "market_watch"}
 
 

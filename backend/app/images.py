@@ -28,7 +28,7 @@ from app.runs import create_run, create_task, run_dict
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 MAX_UPLOAD = 20 * 1024 * 1024
 MAX_PIXELS = 64 * 1024 * 1024
 FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP": (".webp", "image/webp")}

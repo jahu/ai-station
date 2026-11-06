@@ -40,7 +40,7 @@ class LocalCodingTask(CodingTask):
 
 
 @router.get("/auto-model")
-def auto_model(session: Annotated[Session, Depends(session_scope)]):
+def auto_model(session: Annotated[Session, Depends(session_scope, scope="function")]):
     from app.coding_model_routing import select_coding_model
 
     try:
@@ -50,7 +50,9 @@ def auto_model(session: Annotated[Session, Depends(session_scope)]):
 
 
 @router.post("/local", status_code=202)
-def create_local_task(body: LocalCodingTask, session: Annotated[Session, Depends(session_scope)]):
+def create_local_task(
+    body: LocalCodingTask, session: Annotated[Session, Depends(session_scope, scope="function")]
+):
     try:
         run = enqueue_coding_task(session, body, provider="local")
     except ProviderError as exc:
@@ -60,7 +62,7 @@ def create_local_task(body: LocalCodingTask, session: Annotated[Session, Depends
 
 
 @router.post("/runs/{source_id}/repair", status_code=202)
-def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(session_scope)]):
+def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(session_scope, scope="function")]):
     run = enqueue_local_repair(session, source_id)
     run.parameters = {key: value for key, value in run.parameters.items() if key != "agent_coding_deadline"}
     session.commit()

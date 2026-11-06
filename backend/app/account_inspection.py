@@ -66,7 +66,7 @@ def inspection(user_id: UUID, actor: Actor, auth: DB):
         yield session
 
 
-Data = Annotated[ScopedSession, Depends(inspection)]
+Data = Annotated[ScopedSession, Depends(inspection, scope="function")]
 
 
 def record_dict(category, row):

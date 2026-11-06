@@ -28,7 +28,7 @@ from app.serialize import iso
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/library")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 ACTION = "artifact.delete_permanently"
 
 

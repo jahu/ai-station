@@ -12,7 +12,7 @@ from app.models import ModelDefinition, ModelFile
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 
 router = APIRouter(prefix="/api/audio/music/models", tags=["music"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def frozen_model(session, identity, *, recheck=False):

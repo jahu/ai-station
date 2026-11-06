@@ -28,7 +28,7 @@ from app.serialize import artifact_dict
 from app.state import RunStatus
 
 router = APIRouter(prefix="/api/data", tags=["data"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class DataRequest(BaseModel):

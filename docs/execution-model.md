@@ -507,3 +507,10 @@ New media admission receipts permit requeue only before any native dispatch,
 with unchanged expired ownership proof; later/legacy work remains inspection-only.
 See [the contention repair](plans/runtime-sqlite-contention.md) for evidence and
 qualification status.
+
+HTTP database dependencies use FastAPI's function scope: the session closes after
+response preparation, before response-body delivery. A slow or disconnected
+consumer must not retain SQLite's writer reservation. This applies to private,
+account-coordination and administrator-inspection sessions. SSE still performs
+its own short, authorized batch reads; native file responses retain their
+explicit release before delivery. Worker/session lifetimes are unchanged.

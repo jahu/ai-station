@@ -27,7 +27,7 @@ from app.runs import create_run, create_task, run_dict
 from app.timeline_schema import Fields, Manifest, inspect_manifest
 
 router = APIRouter(prefix="/api/timelines", tags=["media editing"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 RAM_MIB = 4096
 
 

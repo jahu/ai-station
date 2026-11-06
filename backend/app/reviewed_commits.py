@@ -92,7 +92,11 @@ def enqueue_reviewed_commit(session, source, body: ReviewedCommit):
 
 
 @router.post("/runs/{source_id}/commit", status_code=202)
-def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, Depends(session_scope)]):
+def enqueue(
+    source_id: UUID,
+    body: ReviewedCommit,
+    session: Annotated[Session, Depends(session_scope, scope="function")],
+):
     source = session.get(Run, str(source_id))
     if source is None:
         raise HTTPException(404, "Coding Run not found")

@@ -14,7 +14,7 @@ from app.models import ModelDefinition, ModelFile
 from app.personal_settings import preference_row
 
 router = APIRouter(prefix="/images", tags=["images"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 KEY = "image_model_defaults"
 MODES = ("t2i", "img2img", "recompose", "upscale")
 LEGACY = {
