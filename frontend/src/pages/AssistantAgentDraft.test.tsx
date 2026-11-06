@@ -77,6 +77,13 @@ const draft = {
 };
 
 function stationCatalog(path: string) {
+  if (String(path).endsWith("/images/models"))
+    return {
+      items: [
+        { id: "qwen", definition_id: null, name: "Qwen Image", backend: "qwen", available: true, modes: ["t2i", "img2img", "recompose"], maximum_references: 8 },
+        { id: "juggernaut", definition_id: null, name: "Juggernaut XL", backend: "juggernaut", available: true, modes: ["t2i"], maximum_references: 0 },
+      ],
+    };
   if (String(path).endsWith("/llama")) return { models: [], instances: [] };
   if (String(path).endsWith("/hardware")) return { gpus: [] };
   if (String(path).endsWith("/chat/provider")) {
@@ -2663,6 +2670,7 @@ it("saves the image model directly in a compact draft without enabling or genera
     true,
   );
   const model = await screen.findByLabelText("Agent image model");
+  await waitFor(() => expect((model as HTMLSelectElement).disabled).toBe(false));
   fireEvent.change(model, { target: { value: "qwen" } });
   await waitFor(() =>
     expect(fetch.mock.calls.some((call) => call[1]?.method === "PUT")).toBe(
