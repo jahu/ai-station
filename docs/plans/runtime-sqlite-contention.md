@@ -36,8 +36,9 @@ exception creates no failure or duplicate native dispatch. Retain claim-loss,
 permission, cancellation, deadline and recovery regression coverage. Qualify
 ordinary model/media admission together before reviewed develop merge.
 
-Deploy only after active user Runs drain, with an offline verified backup and
-unchanged data/transport. Do not automatically retry the user's failed prompt.
+For worker/executor changes, deploy after active user Runs drain, with an offline
+verified backup and unchanged data/transport. A compatible HTTP-only rollout is
+qualified separately below. Do not automatically retry the user's failed prompt.
 Use neutral disposable QA through normal APIs to verify resource waiting and
 continuation. Publication of a patch release is separate from this repair.
 
@@ -85,4 +86,30 @@ The session closes after response preparation, before transport. The normal
 owner checks and streamed per-batch authorization remain unchanged. Worker
 sessions, atomic claims, SQLite settings and native execution are untouched.
 Three actual endpoint backpressure cases and the account/API contract subset
-passed (40 tests). Complete regression and deployed qualification are pending.
+passed (40 tests). The final full regression passed **8,863 Python tests**, with
+19 explicit opt-in skips, including 102 freshly repeated sequential archive cases.
+Ruff lint/format and the exact application image build passed.
+
+## Deployed qualification — 2026-11-06
+
+Both repairs are reviewed and merged into `develop` (PRs #687 and #688). The
+resource/worker repair was applied after active work drained, with an offline
+verified backup. Actual existing image work and a new neutral local conversation
+completed successfully; the same single model-load Run waited for GPU ownership
+to release. Only status/resource metadata was observed; private image content
+and failed user prompts were neither inspected nor replayed.
+
+The HTTP-only repair was applied to the API with a consistent SQLite online
+backup, preserving active work. Complete AST comparison established that all
+56 changed application files differ only in function-scoped HTTP dependencies;
+the already-qualified worker/scheduler execution logic is unchanged. Those
+containers and the native Runner were retained, and scheduling resumed. No
+schema, model, driver or transport change was required. Local/LAN delivery,
+account protection, schema 0045, integrity and foreign keys passed verification.
+
+The exact deployed image then passed all three blocked-body ASGI cases plus an
+ordinary fake-executor API lifecycle, using a disposable database in owned cache
+storage. That storage was removed afterward; no production account or file was
+used in that test. This qualifies response backpressure inside the actual image,
+not a physical slow-network experiment. The live GPU-wait conversation above
+is separate real-hardware evidence. Historical failed Runs remain inspectable.
