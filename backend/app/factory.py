@@ -90,7 +90,7 @@ def _has(lowered: str, phrases: tuple[str, ...]) -> bool:
 
 
 def _clock(lowered: str) -> tuple[int, int] | None:
-    match = re.search(r"\b(?:at|o)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", lowered)
+    match = re.search(r"\b(?:at|o)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", lowered)
     if not match:
         return None
     if (

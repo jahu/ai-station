@@ -89,6 +89,12 @@ class ChatExecutor:
         if message is None:
             raise ValueError("Chat run has no response message")
         params = run.parameters
+        if (params.get("controller_tool_context") or {}).get("tool") not in {None, "chat.reply"}:
+            message.metadata_json = {
+                **message.metadata_json,
+                "controller_internal": True,
+                "routing_only": True,
+            }
         if not params.get("provider"):
             raise ProviderError("Unsupported chat provider")
         require_external_permission(run)

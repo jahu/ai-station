@@ -24,9 +24,7 @@ def inspected(client):
 
 def start(client, state, mode="chat"):
     aid = inspected(client)
-    response = client.post(
-        "/api/chat/conversations", json={"model": "external-not-used", "execution_mode": mode}
-    )
+    response = client.post("/api/chat/conversations", json={"model": state["model"], "execution_mode": mode})
     assert response.status_code == 201, response.text
     cid = response.json()["id"]
     response = client.post(
@@ -49,7 +47,7 @@ def test_one_turn_data_creates_private_workspace_executes_and_returns_a_result_w
     with TestClient(app) as client:
         cid, parent = start(client, state, mode)
         with session_factory()() as session:
-            for _ in range(20):
+            for _ in range(60):
                 if tick(session, "chat-data") is None:
                     break
             else:
@@ -70,7 +68,7 @@ def test_one_turn_data_creates_private_workspace_executes_and_returns_a_result_w
 
 def drain():
     with session_factory()() as session:
-        for _ in range(24):
+        for _ in range(100):
             if tick(session, "conversation-data-check") is None:
                 return
     raise AssertionError("Data queue did not drain")

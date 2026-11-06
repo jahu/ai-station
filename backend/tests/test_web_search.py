@@ -13,6 +13,7 @@ from app.models import Run
 from app.providers import ProviderError
 from app.runs import request_cancel
 from fastapi.testclient import TestClient
+from test_assistant_controller import drain, tool
 
 RESULT = {
     "query": "llama.cpp GPUs",
@@ -40,6 +41,26 @@ def inference(monkeypatch):
     seen = []
 
     async def stream(self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Research",
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A sourced answer"}],
+                }
+            )
+            return
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            context = json.loads(params["messages"][1]["content"])
+            value = (
+                tool("chat.reply", instruction="Answer from the actual observations")
+                if context["observations"] or not context["selected_web_query"]
+                else tool("web.search", query=context["selected_web_query"])
+            )
+            if not context["outcomes"]:
+                value["outcomes"] = [{"kind": "text", "count": 1, "description": "A grounded answer"}]
+            value.pop("outcomes", None)  # Intent is independently frozen before tool selection.
+            yield json.dumps(value)
+            return
         if params.get("json_output"):
             question = params["messages"][-1]["content"]
             if question.startswith('{"recent_text":'):
@@ -83,6 +104,33 @@ def test_search_is_opt_in_audited_and_persisted(mode, monkeypatch, inference):
         }
         queued = client.post(route + "/messages", json=body)
         assert queued.status_code == 202, queued.text
+        if mode == "assistant":
+            drain()
+            detail = client.get(route).json()
+            assert detail["messages"][-1]["run_status"] == "succeeded", detail
+            activity = detail["messages"][-1]["controller_steps"]
+            assert (
+                activity[0]["tool"] == "web.search"
+                and activity[0]["sources"][0]["url"] == RESULT["sources"][0]["url"]
+            )
+            run_id = activity[0]["run_id"]
+            run = client.get("/api/runs/" + run_id).json()
+            assert run["effective_permissions"] == ["network_read"]
+            events = client.get("/api/runs/" + run_id + "/events").json()
+            assert any(event["event_type"] == "tool.completed" for event in events)
+            assert queries == ["llama.cpp GPUs"]
+            assert "My private instructions" not in queries[0]
+            reset_engine()
+            assert client.get(route).json()["messages"][-1]["controller_steps"][0]["sources"]
+            assert (
+                client.post(
+                    route + "/messages", json={"content": "Explain again", "web_search": {"enabled": False}}
+                ).status_code
+                == 202
+            )
+            drain()
+            assert queries == ["llama.cpp GPUs"]
+            return
         step()
         if mode == "orchestrator":
             step()
@@ -610,7 +658,28 @@ def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mod
         return {**RESULT, "query": query}
 
     async def stream(self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Research",
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A researched answer"}],
+                }
+            )
+            return
         calls.append(params)
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            context = json.loads(params["messages"][1]["content"])
+            value = (
+                tool("chat.reply", instruction="Explain the actual verified sources")
+                if context["observations"]
+                else {
+                    **tool("web.search", query=resolved),
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A researched answer"}],
+                }
+            )
+            value.pop("outcomes", None)  # Intent is independently frozen before tool selection.
+            yield json.dumps(value)
+            return
         if params["messages"][0]["content"].startswith("Route the user's request"):
             yield '{"action":"chat","reason":"Research the follow-up question."}'
         elif params.get("json_output"):
@@ -650,6 +719,19 @@ def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mod
             session.commit()
         queued = client.post(route + "/messages", json={"content": question, "web_search": {"enabled": True}})
         assert queued.status_code == 202, queued.text
+        if mode == "assistant":
+            drain()
+            detail = client.get(route).json()
+            assert detail["messages"][-1]["run_status"] == "succeeded", detail
+            assert queries == [resolved]
+            first = json.loads(calls[0]["messages"][1]["content"])
+            assert "Mitte" in json.dumps(first["recent_context"])
+            assert "SECRET_SPREADSHEET" not in json.dumps(first)
+            assert (
+                detail["messages"][-1]["controller_steps"][0]["sources"][0]["url"]
+                != "https://downdetector.pl/"
+            )
+            return
         step()
         if mode == "orchestrator":
             step()

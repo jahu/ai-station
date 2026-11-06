@@ -17,7 +17,7 @@ from test_stopped_media_retry import stopped_media
 from test_vision import vision_runtime as vision_runtime  # noqa: F401
 
 
-@pytest.mark.parametrize("mode", ["assistant", "chat", "work"])
+@pytest.mark.parametrize("mode", ["orchestrator", "chat", "work"])
 def test_question_after_stopped_retry_uses_exact_pixels_without_web_or_regeneration(
     fake, vision_runtime, monkeypatch, mode
 ):

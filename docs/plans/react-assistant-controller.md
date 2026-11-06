@@ -68,7 +68,8 @@ runtime control, external sharing and agent activation keep existing explicit
 scope/approval requirements. Internet tools require the selected network scope.
 
 The model references inputs/results by server-issued aliases. Resolve only the
-current turn's frozen attachments and this controller's verified owned outputs.
+current turn's frozen attachments, the preceding owned turn's verified outputs,
+and this controller's verified outputs.
 Preserve reference order. Do not accept model-generated paths, artifact IDs,
 credentials, commands or arbitrary foreign-conversation resources. Revalidate
 owner, artifact state/hash and tool-specific limits before dispatch.
@@ -122,3 +123,82 @@ network/Runner I/O or waiting. Stop reaches current and pending descendants.
 Completion requires these gates, not just a corrected keyword match or a classifier
 that still cannot execute a chain. Deployment and real checks must be reported
 separately from unit/fake integration evidence.
+
+
+## Implementation contract — 2026-11-06
+
+The candidate branch introduces `assistant_controller`, short `assistant_decision`
+Runs and closed `assistant_tool_setup`, `assistant_web`, `assistant_artifact`
+executors. Ordinary unified automatic turns go through the selected provider;
+explicit actions, exact reviewed agent controls and existing project-bound
+continuations retain their established contracts. No Chat/Work selector returns.
+
+An independent intent inference sees the current request, bounded conversation
+context and input descriptors **before** the tool catalog. Its validated result
+freezes requested outcome kinds, counts and image-reference requirements. Tool
+selection then sees only compatible affordances. Later model output cannot shrink
+the requested outcomes. An inspection never satisfies an image outcome; two
+requested images require two producing steps. Write tools must be compatible with
+those declared outcomes. Final prose is not proof of execution. The controller
+checks actual terminal descendants and published artifact types before allowing
+completion. A tool budget exhaustion is a failed partial result with preserved
+artifacts, not successful completion of the user's goal.
+
+Image goals can be independent, reuse supplied references, or reuse the preceding
+generated result. Ordered goals may have different reference policies; the
+controller consumes their counts without treating one image as two fulfilled
+deliverables. A later sequential goal always binds the actual preceding published
+image, never a hypothetical model-generated future ID. Unknown supplied resource
+aliases refuse execution. Required supplied web sources must be read before image
+creation. These are typed provenance constraints, not rules about people, poses or
+particular prompt wording. The same reference can represent furniture or any other
+subject. Search/read calls already observed with identical arguments cannot loop;
+their results must be consumed or a different next action selected.
+
+A station tool receives its own Task through existing capability preparation.
+This preserves project/data-specific Task metadata. Parent Run provenance binds
+it to the controller, and Task Stop follows only that owned graph. Waiting releases
+the worker and database; the next decision independently prepares the selected LLM,
+so media may evict it and subsequent reasoning can reload it. External provider
+requests require inspection after a lost worker; the DB-only root is safely
+recoverable. Reopening sessions between every integration-test tick verifies that
+rounds depend on persisted state rather than process memory.
+
+Tool aliases expose names/types, not paths or invented UUIDs. Ordered image/audio
+references resolve to owner-checked frozen artifacts. Read tools accept only
+server-issued public-source aliases or bounded app-owned UTF-8/JSON/PDF artifacts;
+optional JSON sections are plain top-level keys. Native paths, shells, arbitrary
+URLs, model downloads, activation and protected publication are not controller
+arguments. Domain parsing only inventories user-supplied resources; it does not
+classify the user's intent. Observations/excerpts remain untrusted reference data,
+including in the final reply's user-level context, never system instructions.
+Observations expose canonical capability results: a completed composed film takes
+precedence over its internal segments. Completed scoped data analysis can be used
+as an explicit source-bound agent-draft tool input; original file hashes, owner,
+conversation and review provenance remain verified.
+
+Agent creation prepares a disabled definition. The conversation activity card
+uses the actual factory response's source message, preserving review/activation
+provenance. A research → image → changed-image → daily world-news-avatar draft is
+covered with fake executors. Enabling that agent still requires selecting and
+reviewing its portrait/voice/settings; the controller never invents those inputs.
+
+The frontend keeps normal streaming answers uncluttered. Tool work appears as an
+ordered activity timeline with reasons, real status, sources, existing media/file
+result controls, draft review and Inspect links. SSE follows the final reply Run
+while Stop continues to target the complete controller Task.
+
+Alembic `0045` adds failure-observing dependency policy, defaulting existing edges
+to success-required. Downgrade refuses live controller state. Deployment therefore
+requires a consistent DB backup and migration-aware rollback; an old image cannot
+simply be started against revision 0045.
+
+Qualification is in progress. Eight neutral first-decision cases passed on the
+actual locally managed Qwen3.5-9B Q6_K, 32768-token context on two GPUs: informal
+Polish/English/Spanish transforms, actual inspection, discussion, prompt writing
+and a compound research request. This proves those intent choices, not real image
+inference or complete real-chain delivery. New fake integration/security tests,
+frontend checks and broad regression checks precede deployment. A pre-existing
+data-generation failure discovered by those checks is corrected by keeping the
+agent definition distinct from the selected model definition; the 100k-context
+admission requirement remains unchanged.

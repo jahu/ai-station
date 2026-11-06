@@ -206,3 +206,11 @@ complete runtime manifest and opaque environment identity. Ordinary avatar plans
 speech handoffs and agent roots freeze this binding in existing JSON parameters;
 renaming a definition or changing a later default cannot retarget an existing Run.
 Legacy requests omit the optional model coordinate, preserving saved receipts.
+
+
+Conversation-controller Runs may enter `waiting_for_tool`, remaining active while
+releasing worker identity/lease. RunDependency adds `require_success` (default true):
+explicit observing edges unblock on any terminal result rather than suppressing
+failures from the controller's evidence. Existing success-required dependencies
+keep their behavior. Controller outcomes, steps and owned aliases remain persisted
+Run metadata; capability-specific Tasks retain their established domain records.

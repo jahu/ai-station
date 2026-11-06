@@ -180,6 +180,7 @@ export default function Dashboard() {
     "running",
     "cancel_requested",
     "waiting_for_approval",
+    "waiting_for_tool",
   ].reduce((n, key) => n + (counts[key] ?? 0), 0);
   return (
     <>

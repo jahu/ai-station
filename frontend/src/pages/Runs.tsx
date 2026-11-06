@@ -256,6 +256,7 @@ export function Runs() {
               "preparing",
               "running",
               "waiting_for_approval",
+              "waiting_for_tool",
               "succeeded",
               "failed",
               "cancel_requested",

@@ -32,8 +32,37 @@ def test_completed_analysis_can_become_a_disabled_repeat_agent_with_its_original
     calls = []
 
     async def draft(self, **kwargs):
+        if kwargs["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Interpret the current request",
+                    "outcomes": [
+                        {"kind": "agent_draft", "count": 1, "description": "A disabled recurring agent"}
+                    ],
+                }
+            )
+            return
         calls.append(kwargs)
-        yield json.dumps({"name": "Daily sales", "trigger": "interval", "interval_seconds": 300})
+        if kwargs["messages"][0]["content"].startswith("You operate AI Station"):
+            from test_assistant_controller import finish, tool
+
+            context = json.loads(kwargs["messages"][1]["content"])
+            value = (
+                finish(1)
+                if context["observations"]
+                else {
+                    **tool(
+                        "agent.create", instruction=text, analysis=context["analysis_results"][0]["alias"]
+                    ),
+                    "outcomes": [
+                        {"kind": "agent_draft", "count": 1, "description": "A source-bound recurring agent"}
+                    ],
+                }
+            )
+            value.pop("outcomes", None)  # Intent is independently frozen before tool selection.
+            yield json.dumps(value)
+        else:
+            yield json.dumps({"name": "Daily sales", "trigger": "interval", "interval_seconds": 300})
 
     monkeypatch.setattr(LocalChatProvider, "stream", draft)
     response = api.post(
@@ -56,12 +85,20 @@ def test_completed_analysis_can_become_a_disabled_repeat_agent_with_its_original
         assert agent.tools == ["python_data"] and agent.model == data_environment["model"]
         assert agent.goal == "Calculate the total in the selected file."
         assert agent.data["input_artifact_ids"] == original["parameters"]["data"]["input_artifact_ids"]
-        assert agent.project_id is None and agent.interval_seconds == 300
+        assert agent.project_id is None
+        assert (agent.trigger == "interval" and agent.interval_seconds == 300) or (
+            agent.trigger == "cron" and agent.cron_expr == "*/5 * * * *"
+        )
         prepared = s.scalar(select(Run).where(Run.executor_type == "agent_draft"))
         assert prepared.status == "succeeded", prepared.error_message
-        assert prepared.parameters["data_agent_source"]["source_run_id"] == original["id"]
+        source_id = prepared.parameters["data_agent_source"]["source_run_id"]
+        source = s.get(Run, source_id)
+        if mode == "assistant":
+            assert source.parameters["controller_parent_id"] == original["id"]
+        else:
+            assert source_id == original["id"]
         assert prepared.effective_permissions == ["manage_agents"]
-    assert len(calls) == 1
+    assert len(calls) == (3 if mode == "assistant" else 1)
 
 
 @pytest.mark.parametrize(

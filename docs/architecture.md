@@ -1630,3 +1630,12 @@ contention: only rolled-back observations/event writes retry, bounded by the
 existing deadline and durable claim/cancellation checks. The generic image-plan
 compiler includes all declared invariants and changes in the single image prompt;
 it does not assume a subject or add model-specific sampling changes.
+
+
+The [durable conversation controller](plans/react-assistant-controller.md) candidate
+replaces automatic keyword routing with selected-model infer → tool → observe
+rounds. Each decision and capability is a normal Run; observing dependencies free
+the worker while waiting, and scoped capability Tasks preserve their own metadata.
+Frozen outcome kinds/counts and owned result aliases constrain subsequent actions.
+This adds no framework, native authority or Chat/Work mode switch. Qualification
+and deployment status are recorded in that plan.

@@ -285,6 +285,8 @@ def test_unavailable_browser_is_reported_before_a_task_is_enqueued(data_environm
     from fastapi.testclient import TestClient
     from sqlalchemy import func, select
 
+    with session_factory()() as db:
+        before = db.scalar(select(func.count()).select_from(Run))
     monkeypatch.setattr("app.browser.available", lambda: {"available": False})
     with TestClient(app) as api:
         conv = api.post("/api/chat/conversations", json={"model": "unused", "execution_mode": "chat"}).json()
@@ -297,7 +299,7 @@ def test_unavailable_browser_is_reported_before_a_task_is_enqueued(data_environm
         )
         assert response.status_code == 503 and "Browser" in response.json()["detail"]
         with session_factory()() as db:
-            assert db.scalar(select(func.count()).select_from(Run)) == 0
+            assert db.scalar(select(func.count()).select_from(Run)) == before
 
 
 def test_stop_during_render_cancels_owned_source_before_any_artifact_or_code(

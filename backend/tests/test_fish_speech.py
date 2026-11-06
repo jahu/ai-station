@@ -578,16 +578,16 @@ def test_lost_dispatch_reply_keeps_both_gpu_leases_and_recovers_by_inspection(
             recover_stale(db)
             db.commit()
             db.refresh(actual)
-            assert actual.status == "preparing" and len(active_locks(db)) == 2
+            assert actual.status == "queued" and actual.metadata_json["media_inspection_resume"]
+            assert len(active_locks(db)) == 2
             assert len(fish_bridge["starts"]) == 1
             request_cancel(db, actual)
-            actual.lease_expires_at = utcnow() - timedelta(seconds=60)
             db.commit()
         fish_bridge["manager"].cancel(run["id"])
+        work()
         with control_session_factory()() as db:
-            recover_stale(db)
-            db.commit()
             assert db.get(Run, run["id"]).status == "canceled" and not active_locks(db)
+            assert len(fish_bridge["starts"]) == 1
         assert len(fish_bridge["starts"]) == 1
 
 

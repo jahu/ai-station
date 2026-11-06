@@ -25,8 +25,9 @@ def worker_loop(identity: str) -> None:
     factory = control_session_factory()
     while True:
         session = factory()
+        worked = False
         try:
-            tick(session, identity)
+            worked = tick(session, identity) is not None
         except Exception as exc:
             session.rollback()
             if not sqlite_busy(exc):
@@ -36,7 +37,8 @@ def worker_loop(identity: str) -> None:
             logging.warning("SQLite busy; worker slot will inspect durable state on its next tick")
         finally:
             session.close()
-        time.sleep(settings.heartbeat_seconds)
+        if not worked:
+            time.sleep(settings.heartbeat_seconds)
 
 
 def main() -> None:

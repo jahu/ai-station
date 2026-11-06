@@ -679,6 +679,7 @@ main {
 .badge-queued,
 .badge-cancel_requested,
 .badge-waiting_for_approval,
+.badge-waiting_for_tool,
 .badge-interrupted {
   color: #e2c386;
   background: #373022;

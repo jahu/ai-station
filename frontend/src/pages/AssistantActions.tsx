@@ -53,6 +53,8 @@ import LibraryActions from "./LibraryActions";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { NewProjectBuild } from "./NewProjectBuild";
+import { AssistantAgentDraft } from "./AssistantAgentDraft";
+import "./ControllerActivity.css";
 import { newProjectScope, type NewProjectScope } from "./new-project-scope";
 import { GgufChoiceList } from "./GgufChoiceList";
 import { RuntimeChoiceList } from "./RuntimeChoiceList";
@@ -130,6 +132,16 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  controller_steps?: {
+    index: number;
+    tool: string;
+    reason: string;
+    status: string;
+    run_id: string;
+    result: ActionResult;
+    sources: { url: string; title: string }[];
+    agent_draft?: { agent_id: string; source_message_id: string };
+  }[];
   sound_edits?: { session_id: string; run_id: string }[];
   sound_runs?: Run[];
   media_runs?: Run[];
@@ -416,8 +428,12 @@ export function AssistantResults({
   onProject,
   onData,
   onRepeatAnalysis,
+  conversationContext,
+  active = true,
 }: {
   result: ActionResult;
+  conversationContext?: { conversationId: string; settingsVersion: number };
+  active?: boolean;
   onRepeatAnalysis?: (source: AnalysisAgentSource) => void;
   executionNote?: string;
   onData?: (scope: ConversationDataScope) => void;
@@ -431,6 +447,85 @@ export function AssistantResults({
     updated_at: string;
   }) => void;
 }) {
+  if (result.controller_steps) {
+    const steps = result.controller_steps.filter(
+      (step) => step.tool !== "chat.reply",
+    );
+    if (!steps.length) return null;
+    return (
+      <section className="controller-activity" aria-label="Task activity">
+        <div className="controller-activity-heading">
+          <span>Task activity</span>
+          <span>
+            {steps.length} {steps.length === 1 ? "step" : "steps"}
+          </span>
+        </div>
+        <ol>
+          {steps.map((step) => (
+            <li key={step.run_id}>
+              <div className="controller-step-heading">
+                <span className="controller-step-number">{step.index}</span>
+                <strong>
+                  {step.tool
+                    .split(".")
+                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(" · ")}
+                </strong>
+                <Badge status={step.status} />
+                <Link to={`/runs/${step.run_id}`} tabIndex={active ? 0 : -1}>
+                  Inspect
+                </Link>
+              </div>
+              <p className="controller-step-reason">{step.reason}</p>
+              {step.sources.length > 0 && (
+                <ul className="controller-step-sources">
+                  {step.sources.map((source) => (
+                    <li key={source.url}>
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        tabIndex={active ? 0 : -1}
+                      >
+                        {source.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <AssistantResults
+                result={step.result}
+                inputs={inputs}
+                busy={busy}
+                onUse={onUse}
+                onQueued={onQueued}
+                onProject={onProject}
+                onData={onData}
+                onRepeatAnalysis={onRepeatAnalysis}
+                active={active}
+              />
+              {step.agent_draft && (
+                <AssistantAgentDraft
+                  agentId={step.agent_draft.agent_id}
+                  compact
+                  tabIndex={active ? 0 : -1}
+                  conversationContext={
+                    conversationContext
+                      ? {
+                          ...conversationContext,
+                          sourceMessageId: step.agent_draft.source_message_id,
+                          busy: !!busy,
+                        }
+                      : undefined
+                  }
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  }
   const hasFilmSound = result.steps?.some((step) =>
     ["audio.effects", "audio.effects.prepare"].includes(step.capability),
   );

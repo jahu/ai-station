@@ -75,6 +75,11 @@ def create_run(
             409, "This Task was stopped. Continue it with a new prompt before creating more work"
         )
     now = utcnow()
+    if parent_run_id:
+        parent = session.get(Run, parent_run_id)
+        tag = parent.parameters.get("controller_tool_context") if parent is not None else None
+        if tag:
+            parameters = {**(parameters or {}), "controller_tool_context": tag}
     run = Run(
         task_id=task.id,
         operation_key=operation_key,
@@ -219,6 +224,15 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 
 def request_cancel(session: Session, run: Run) -> Run:
+    if (
+        run.executor_type == "assistant_controller"
+        and run.status not in TERMINAL
+        and not run.task.metadata_json.get("stop_requested_at")
+    ):
+        from app.task_control import cancel_task
+
+        cancel_task(session, run.task)
+        return run
     if run.executor_type == "media_translate":
         from app.media_translation import cancel_translation_startup
 
