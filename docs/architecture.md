@@ -1639,3 +1639,13 @@ the worker while waiting, and scoped capability Tasks preserve their own metadat
 Frozen outcome kinds/counts and owned result aliases constrain subsequent actions.
 This adds no framework, native authority or Chat/Work mode switch. Qualification
 and deployment status are recorded in that plan.
+
+The conversation reliability candidate replaces new-turn JSON tool selection with
+LlamaIndex Core's actual ReActAgent single-step parser/formatter. The existing
+Run engine alone validates, dispatches, observes and recovers work; framework
+functions cannot execute. A separate protocol coordinate preserves queued legacy
+Runs. Immediate results and future automation definitions are independently typed;
+source-bound image drafts retain actual result hashes, compatible model settings
+and exact cadence, and remain disabled for review. Bounded owned conversation
+attachments and visible dialogue survive clarification and intervening text turns.
+[Repair plan and qualification gates](plans/conversation-reliability-repair.md).

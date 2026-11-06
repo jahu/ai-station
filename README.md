@@ -125,7 +125,9 @@ Automatic multi-tool conversations are being qualified for the next development 
 complete outcome, and the assistant can research, create an image, transform the
 result and prepare a recurring agent draft in the same conversation. Each step
 retains its real status, sources, artifacts and Stop control; agents still require
-review before activation. [Implementation and verification status](docs/plans/react-assistant-controller.md).
+review before activation. The current repair adds a LlamaIndex ReAct loop, persistent
+conversation references and exact result/cadence bindings for recurring image
+agents. [Implementation and verification status](docs/plans/conversation-reliability-repair.md).
 
 ## 🔓 Local by choice. Yours to control.
 

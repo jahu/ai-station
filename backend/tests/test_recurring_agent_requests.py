@@ -153,3 +153,7 @@ def test_recurring_topics_and_explicit_conversation_override_keep_reply_policy(m
         with session_factory()() as db:
             assert not list(db.scalars(select(Agent)))
             assert not any(r.executor_type == "agent_draft" for r in db.scalars(select(Run)))
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

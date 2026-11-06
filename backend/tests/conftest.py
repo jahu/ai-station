@@ -101,3 +101,13 @@ def legacy_schema(tmp_path):
             original.backup(destination)
 
     return prepare
+
+
+@pytest.fixture
+def legacy_controller_protocol(monkeypatch):
+    """Exercise persisted pre-LlamaIndex decisions with their original wire protocol.
+
+    New protocol qualification has its own raw ReAct fixtures and end-to-end tests.
+    This fixture never alters provider behavior or parses a new-protocol response.
+    """
+    monkeypatch.setattr("app.assistant_controller.PROTOCOL", None)

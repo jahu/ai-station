@@ -37,7 +37,7 @@ Direction = Annotated[str, Field(min_length=3, max_length=240)]
 class ImageVariation(Description):
     """One final image instruction and only the changes appropriate to its brief."""
 
-    description: str = Field(min_length=1, max_length=1800)
+    description: str = Field(default="", max_length=1800)
     preserve: list[Direction] = Field(default_factory=list, max_length=6)
     changes: dict[Aspect, Direction] = Field(min_length=1, max_length=4)
 
@@ -53,7 +53,7 @@ class ImageVariation(Description):
     def image_prompt(self):
         # Compile every reviewed plan field, rather than trusting prose to repeat
         # the requested changes. No subject, medium or concrete variation is added.
-        parts = [self.description]
+        parts = [self.description] if self.description else []
         if self.preserve:
             parts.append("Keep these reference features: " + "; ".join(self.preserve) + ".")
         parts.append(

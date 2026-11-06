@@ -36,6 +36,7 @@ class Outcome(BaseModel):
     reference_mode: Literal["independent", "provided", "sequential"] = "independent"
     source_inputs: list[str] = Field(default_factory=list, max_length=8)
     agent_media_kind: Literal["image", "video", "avatar", "music", "effects", "speech"] | None = None
+    automation: dict | None = None
 
     @model_validator(mode="after")
     def one_conversation_answer(self):
@@ -214,7 +215,7 @@ async def database_step(session, run, claim, deadline, action):
             await asyncio.sleep(0.05)
 
 
-async def infer(session, run, messages):
+async def infer(session, run, messages, *, json_output=True):
     from copy import deepcopy
 
     from app.models import RuntimeInstance
@@ -230,7 +231,7 @@ async def infer(session, run, messages):
     )
     context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
     output_tokens = min(2048, max(512, context_size // 4))
-    context = json.loads(messages[1]["content"])
+    context = json.loads(messages[1]["content"]) if json_output else {}
     # Keep the original goal, declared outcomes, status and aliases intact.
     # Older large excerpts stay inspectable in their Runs; they need not be
     # recopied verbatim on every round. This is a bound, not a token guarantee.
@@ -244,13 +245,14 @@ async def infer(session, run, messages):
             summaries=[text[:200] for text in observed.get("summaries", [])[-1:]],
             context_excerpt_truncated=True,
         )
-    messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+    if json_output:
+        messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
     stream = completion_stream(
         session,
         {
             **run.parameters,
             "messages": messages,
-            "json_output": True,
+            "json_output": json_output,
             "require_complete": True,
             "temperature": 0.2,
             "max_tokens": output_tokens,
@@ -272,6 +274,12 @@ async def infer(session, run, messages):
                     return text
                 finally:
                     pending = None
+                from app.chat_reasoning import CompletionFinished
+
+                if isinstance(token, CompletionFinished):
+                    if token.reason != "stop":
+                        raise ProviderError("Controller completion did not finish normally")
+                    continue
                 if not isinstance(token, str) or len(text) + len(token) > 16000:
                     raise ProviderError("Controller decision exceeds its output contract")
                 text += token
@@ -289,6 +297,7 @@ class AssistantDecisionExecutor:
     def execute(self, session, run):
         from app.assistant_controller import missing_outcomes, sources
         from app.assistant_controller_tools import TOOLS, catalog, wrapper_parameters
+        from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, validate_plan
         from app.models import Run
 
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
@@ -425,11 +434,12 @@ class AssistantDecisionExecutor:
             append_event(session, run.id, "assistant.intent.inferred", intent.model_dump())
 
         session.commit()
+        react = run.parameters.get("controller_protocol") == "llamaindex-react-v1"
         try:
             context = run.parameters["decision_context"]
             if not context.get("outcomes"):
                 intent_messages = [
-                    {"role": "system", "content": INTENT_SYSTEM},
+                    {"role": "system", "content": PLANNING_SYSTEM if react else INTENT_SYSTEM},
                     {
                         "role": "user",
                         "content": json.dumps(
@@ -440,7 +450,7 @@ class AssistantDecisionExecutor:
                                 "recent_work": context.get("recent_work"),
                                 "available_inputs": context.get("inputs_and_results", []),
                                 "available_sources": context.get("sources", {}),
-                                "outcome_schema": Intent.model_json_schema(),
+                                "outcome_schema": (IntentPlan if react else Intent).model_json_schema(),
                             },
                             ensure_ascii=False,
                         ),
@@ -449,7 +459,7 @@ class AssistantDecisionExecutor:
                 for attempt in range(2):
                     text = asyncio.run(infer(session, run, intent_messages))
                     try:
-                        intent = validate_intent(text, context)
+                        intent = (validate_plan if react else validate_intent)(text, context)
                         break
                     except ValueError as exc:
                         if attempt:
@@ -482,12 +492,25 @@ class AssistantDecisionExecutor:
                     "content": json.dumps(run.parameters["decision_context"], ensure_ascii=False),
                 },
             ]
+            correction, text = None, ""
             for attempt in range(2):
-                text = asyncio.run(infer(session, run, messages))
                 try:
+                    if react:
+                        from app.assistant_react import take_action
+
+                        async def invoke(body):
+                            return await infer(session, run, body, json_output=False)
+
+                        proposed = asyncio.run(
+                            take_action(run.parameters["decision_context"], invoke, correction)
+                        )
+                        text = json.dumps(proposed, ensure_ascii=False)
+                    else:
+                        text = asyncio.run(infer(session, run, messages))
                     value = asyncio.run(database_step(session, run, claim, deadline, lambda: validate(text)))
                     break
                 except ValueError as exc:
+                    correction = str(exc)[:1800]
                     if attempt:
                         value = Decision(
                             kind="clarify",

@@ -2,6 +2,7 @@
 
 import json
 
+import pytest
 from app.api import app
 from app.db import session_factory
 from app.local_provider import LocalChatProvider
@@ -15,13 +16,30 @@ from test_projects import repository as repository
 from test_python_data_agents import data_environment as data_environment
 
 
+@pytest.mark.parametrize("react_protocol", [False, True])
 def test_data_then_source_bound_agent_chain_preserves_verified_inputs_without_model_generated_ids(
-    data_environment, monkeypatch
+    data_environment, monkeypatch, react_protocol
 ):
+    if react_protocol:
+        monkeypatch.setattr("app.assistant_controller.PROTOCOL", "llamaindex-react-v1")
     original = LocalChatProvider.stream
 
     async def stream(self, **params):
         if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            if react_protocol:
+                yield json.dumps(
+                    {
+                        "reason": "Analyze and prepare an agent",
+                        "immediate": [{"kind": "text", "description": "The verified total"}],
+                        "automations": [
+                            {
+                                "goal": "Repeat the verified analysis",
+                                "schedule": {"trigger": "interval", "interval_seconds": 300},
+                            }
+                        ],
+                    }
+                )
+                return
             yield json.dumps(
                 {
                     "reason": "Analyze and prepare an agent",
@@ -36,7 +54,26 @@ def test_data_then_source_bound_agent_chain_preserves_verified_inputs_without_mo
                 }
             )
             return
-        if params["messages"][0]["content"].startswith("You operate AI Station"):
+        if react_protocol and "Action Input" in params["messages"][0]["content"]:
+            from test_assistant_react_workflow import action
+
+            state = next(
+                json.loads(message["content"].split("\n", 1)[1])
+                for message in params["messages"]
+                if message["content"].startswith("CURRENT REQUEST AND AVAILABLE STATE:")
+            )
+            if not state["analysis_results"]:
+                yield action("data_analyze", instruction="Calculate the total in the selected file.")
+            elif any(item["kind"] == "agent_draft" for item in state["missing_outcomes"]):
+                yield action(
+                    "agent_create",
+                    instruction="Repeat the verified analysis every five minutes",
+                    analysis=state["analysis_results"][0]["alias"],
+                    interval_seconds=300,
+                )
+            else:
+                yield action("chat_reply", instruction="Explain the total and the disabled recurring draft")
+        elif params["messages"][0]["content"].startswith("You operate AI Station"):
             context = json.loads(params["messages"][1]["content"])
             if not context["observations"]:
                 value = {
@@ -95,3 +132,7 @@ def test_data_then_source_bound_agent_chain_preserves_verified_inputs_without_mo
             assert agent.data["input_artifact_ids"] == [aid]
             assert agent.goal == "Calculate the total in the selected file."
             assert data_environment["calls"] == 1
+
+
+# Preserve regression coverage for queued/history JSON-controller Runs.
+pytestmark = pytest.mark.usefixtures("legacy_controller_protocol")

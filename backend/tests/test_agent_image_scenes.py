@@ -236,3 +236,13 @@ def test_old_saved_plans_and_frozen_histories_remain_readable_without_mutation()
     assert converted[0]["run_id"] == "previous"
     assert converted[0]["changes"]["setting"] == "A quiet cafe"
     assert old == snapshot
+
+
+def test_complete_structured_variation_does_not_require_redundant_prose():
+    plan = ImageVariation(
+        preserve=["Oak finish"],
+        changes={"setting": "A sunny garden", "composition": "Side view beside a fountain"},
+    )
+    prompt = plan.image_prompt()
+    assert "Oak finish" in prompt and "sunny garden" in prompt and "Side view" in prompt
+    assert not prompt.startswith("\n")

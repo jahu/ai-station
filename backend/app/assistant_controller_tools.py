@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 
 from app.models import Artifact, Message, Run
@@ -22,6 +22,13 @@ class Images(Instruction):
     images: list[Alias] = Field(default_factory=list, max_length=8)
 
 
+class ImageOperation(Images):
+    image_model: Alias | None = Field(
+        default=None,
+        description="An exact installed image_models alias. Honor the user's named model; omit to preserve the source profile or configured default.",
+    )
+
+
 class Media(Images):
     audio: Alias | None = None
     duration_seconds: int | None = Field(default=None, ge=1, le=600, strict=True)
@@ -35,8 +42,27 @@ class Effects(Instruction):
     video: Alias | None = None
 
 
-class AgentDraft(Instruction):
-    analysis: Alias | None = None
+class MediaAgentDraft(ImageOperation):
+    interval_seconds: int | None = Field(
+        default=None,
+        ge=60,
+        le=31536000,
+        strict=True,
+        description="Exact recurrence in seconds, e.g. 15 minutes is 900. Draft remains disabled for review.",
+    )
+
+
+class AgentDraft(MediaAgentDraft):
+    analysis: Alias | None = Field(
+        default=None,
+        description="Only a supplied analysis_results alias for repeating a completed data analysis; never an image or media result.",
+    )
+
+    @model_validator(mode="after")
+    def one_source_family(self):
+        if self.analysis and (self.images or self.image_model):
+            raise ValueError("Choose a completed analysis or recurring image references, not both")
+        return self
 
 
 class Search(BaseModel):
@@ -80,22 +106,23 @@ TOOLS = {
         True,
     ),
     "image.generate": Tool(
-        "Create a new image from text without image references. Returns a real image artifact.", Images
+        "Create one new image from text without references. instruction is the visual brief only, without scheduling or agent instructions. image_model selects an available image_models alias.",
+        ImageOperation,
     ),
     "image.edit": Tool(
         "Make small localized changes to one image while keeping its composition. Not for a substantially new scene or activity.",
-        Images,
+        ImageOperation,
     ),
     "image.recompose": Tool(
         "Create a substantially changed image/composition/activity using one or more ordered image references. Use even with ONE image when substantial changes are requested. Do not confuse with describing pixels.",
-        Images,
+        ImageOperation,
     ),
     "image.describe": Tool(
         "Inspect actual image pixels to answer/compare/analyze. Produces text, not a modified image.",
         Images,
         permissions=("filesystem_read", "manage_models"),
     ),
-    "image.upscale": Tool("Enlarge one existing image. Does not implement a new scene.", Images),
+    "image.upscale": Tool("Enlarge one existing image. Does not implement a new scene.", ImageOperation),
     "video.generate": Tool(
         "Create local video from a prompt and optionally one image. Supply explicit duration_seconds, at most 60.",
         Media,
@@ -224,7 +251,11 @@ def catalog(session, root):
     for item in root.parameters.get("controller_inputs", []):
         add(item["alias"], item["snapshot"]["id"], item["snapshot"])
         entries[item["alias"]].update(
-            {key: item[key] for key in ("origin", "source_tool", "source_step") if key in item}
+            {
+                key: item[key]
+                for key in ("origin", "source_tool", "source_step", "source_message_id")
+                if key in item
+            }
         )
     for step in root.metadata_json.get("controller_steps", []):
         for item in step.get("artifacts", []):
@@ -418,6 +449,12 @@ def wrapper_parameters(session, root, name, raw):
                 "Use the requested source aliases or the preceding generated image; do not replace them with an unrelated image"
             )
     images = resolve(entries, getattr(args, "images", []), "image")
+    agent_scope = None
+    if name == "agent.create":
+        from app.assistant_agent_media import capture
+
+        agent_scope = capture(session, root, args, entries)
+        images = []
     audio = resolve(entries, [args.audio], "audio")[0] if getattr(args, "audio", None) else None
     if name in {"image.edit", "image.upscale"} and len(images) != 1:
         raise ValueError("This tool requires exactly one image reference")
@@ -441,6 +478,23 @@ def wrapper_parameters(session, root, name, raw):
         agent_draft_authorized=name == "agent.create",
         controller_parent_id=root.id,
     )
+    if agent_scope is not None:
+        params["controller_agent_scope"] = agent_scope
+    if root.parameters.get("controller_image_catalog") and name in {
+        "image.generate",
+        "image.edit",
+        "image.recompose",
+        "image.upscale",
+    }:
+        from app.assistant_image_profiles import request_profile
+
+        mode = {
+            "image.generate": "t2i",
+            "image.edit": "img2img",
+            "image.recompose": "recompose",
+            "image.upscale": "upscale",
+        }[name]
+        params["controller_image_request"] = request_profile(session, root, args, mode, images)
     from app.vision_inputs import freeze
 
     params["image_inputs"] = freeze(session, images) if images else None
