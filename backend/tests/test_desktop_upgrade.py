@@ -51,6 +51,8 @@ def rows(path):
             # and verify populated tombstones too when comparing modern DBs.
             if name in {"agents", "projects"} and "deleted_at" not in columns:
                 values = [(*row, None) for row in values]
+            if name == "run_dependencies" and "require_success" not in columns:
+                values = [(*row, 1) for row in values]
             result[name] = sorted(values, key=repr)
         return result
 
@@ -180,7 +182,7 @@ def test_database_local_migration_resumes_publication_without_rewriting_its_back
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0043",)] and before == after
+    assert after.pop("alembic_version") == [("0045",)] and before == after
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen
 
 
@@ -487,7 +489,7 @@ def test_interrupted_publication_resumes_same_operation_without_recopied_backup(
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0043",)]
+    assert after.pop("alembic_version") == [("0045",)]
     assert after == before
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == backup_identity
 

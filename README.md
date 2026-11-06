@@ -121,6 +121,12 @@ unchanged.
 Example conversation and agent text is seeded for privacy; the selected images
 and landscape film come from recorded local generation. [Media provenance](docs/media/README.md).*
 
+Automatic multi-tool conversations are being qualified for the next development build: describe a
+complete outcome, and the assistant can research, create an image, transform the
+result and prepare a recurring agent draft in the same conversation. Each step
+retains its real status, sources, artifacts and Stop control; agents still require
+review before activation. [Implementation and verification status](docs/plans/react-assistant-controller.md).
+
 ## 🔓 Local by choice. Yours to control.
 
 **No platform censorship. No cloud inference account required for local workflows.** Run

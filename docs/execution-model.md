@@ -488,3 +488,12 @@ model. Initial background hashing reports `checking`; preparation defers the sam
 Run and retains its Task-wide Stop fence instead of treating that state as a
 failed installation. Verified cache reuse preserves file identity, including ctime,
 so that polling cannot invalidate the native readiness observation it awaits.
+
+
+The [conversation controller](plans/react-assistant-controller.md) candidate adds
+`waiting_for_tool` as an active durable Run state without a worker lease. A terminal
+prerequisite can unblock observation even when it failed, only on edges explicitly
+marked `require_success=false`; existing edges still propagate failure. The root
+rechecks dynamically published descendants before each inference round. Decisions
+are separate Runs so GPU eviction/reload and external-provider recovery retain
+their existing ownership contracts. Migration 0045 preserves old-edge semantics.

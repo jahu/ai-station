@@ -8,9 +8,9 @@ from app.api import app
 from app.config import get_settings
 from app.db import session_factory
 from app.engine import tick
-from app.models import Agent, Notice, Run, RuntimeInstance, Worktree
+from app.models import Agent, ModelFile, Notice, Run, RuntimeInstance, Worktree
 from app.runner_client import RunnerClient
-from app.runs import request_cancel
+from app.runs import create_run, create_task, request_cancel
 from app.state import ACTIVE
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -37,6 +37,36 @@ def data_environment(repository, owned_runner, monkeypatch):
             status="ready",
             metadata_json={"context_size": 131072, "model_file_id": model.removeprefix("llamacpp:")},
         )
+        session.add(
+            ModelFile(
+                id=model.removeprefix("llamacpp:"),
+                host_path="/configured/data-model.gguf",
+                filename="data-model.gguf",
+                category="llm",
+                format="gguf",
+                availability="present",
+                size_bytes=123,
+                mtime=456,
+            )
+        )
+        task = create_task(session, title="Synthetic model startup", prompt="", capability="runtime.load")
+        load = create_run(
+            session,
+            task,
+            run_type="model",
+            capability="runtime.load",
+            executor_type="llama_load",
+            parameters={
+                "instance_id": instance_id,
+                "model_path": "/configured/data-model.gguf",
+                "size_bytes": 123,
+                "mtime": 456,
+                "projector": None,
+                "gpus": [7],
+            },
+        )
+        load.status = "succeeded"
+        runtime.metadata_json = {**runtime.metadata_json, "load_run_id": load.id, "gpus": [7]}
         session.add(runtime)
         session.commit()
         iid = runtime.id
@@ -62,6 +92,31 @@ def data_environment(repository, owned_runner, monkeypatch):
     }
 
     async def stream(self, **kwargs):
+        if kwargs["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Analyze data",
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A verified analysis answer"}],
+                }
+            )
+            return
+        if kwargs["messages"][0]["content"].startswith("You operate AI Station"):
+            from test_assistant_controller import tool
+
+            context = json.loads(kwargs["messages"][1]["content"])
+            if not context["observations"]:
+                value = {
+                    **tool("data.analyze", instruction=context["instruction"]),
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A verified analysis answer"}],
+                }
+            else:
+                value = tool("chat.reply", instruction="Explain the verified analysis result")
+            value.pop("outcomes", None)  # Intent is independently frozen before tool selection.
+            yield json.dumps(value)
+            return
+        if not kwargs.get("json_output"):
+            yield "Verified total: 27"
+            return
         state["calls"] += 1
         state["model_requests"].append(kwargs)
         assert kwargs["json_output"] and kwargs["model"] == model

@@ -60,6 +60,23 @@ def cancel_task(session, task):
         append_event(session, run.id, "task.stop_requested", {"task_id": task.id})
         canceled.append(run.id)
     forwarded = []
+    # Controller tool Tasks are published with owned parentage, not arbitrary
+    # model-selected IDs. Stop follows that same bounded provenance graph.
+    for controller in session.scalars(
+        select(Run).where(Run.task_id == task.id, Run.executor_type == "assistant_controller")
+    ):
+        from app.assistant_controller_tools import subtree
+
+        child_tasks = {}
+        for step in controller.metadata_json.get("controller_steps", []):
+            for child in subtree(session, controller, step["run_id"]):
+                if child.task_id != task.id:
+                    child_tasks[child.task_id] = child.task
+        for child_task in child_tasks.values():
+            result = cancel_task(session, child_task)
+            canceled.extend(result["run_ids"])
+            retained.extend(result["retained_run_ids"])
+            append_event(session, controller.id, "assistant.tool.stop_forwarded", {"task_id": child_task.id})
     if task.intent == "agent.control":
         # A Stop may arrive just after the short controller atomically published
         # its separate background workflow. Forward only to that owned execution;

@@ -276,8 +276,10 @@ def test_oversized_source_is_rejected_without_loading_a_model(vision_runtime):
             assert not session.scalar(select(Run.id).where(Run.executor_type == "llama_load"))
 
 
-@pytest.mark.parametrize("action", ["auto", "chat"])
-@pytest.mark.parametrize("mode", ["chat", "assistant"])
+@pytest.mark.parametrize(
+    "mode,action",
+    [("chat", "auto"), ("chat", "chat"), ("assistant", "image.describe"), ("assistant", "chat")],
+)
 @pytest.mark.parametrize(
     "prompt",
     ["Jaki kolor ma ten prostokąt?", "Czy widzisz czerwony kształt?", "How many shapes are visible?"],

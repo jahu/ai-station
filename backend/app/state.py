@@ -11,6 +11,7 @@ class RunStatus(StrEnum):
     PREPARING = "preparing"
     RUNNING = "running"
     WAITING_FOR_APPROVAL = "waiting_for_approval"
+    WAITING_FOR_TOOL = "waiting_for_tool"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     CANCEL_REQUESTED = "cancel_requested"
@@ -31,6 +32,7 @@ ACTIVE = {
     RunStatus.PREPARING,
     RunStatus.RUNNING,
     RunStatus.WAITING_FOR_APPROVAL,
+    RunStatus.WAITING_FOR_TOOL,
     RunStatus.CANCEL_REQUESTED,
 }
 
@@ -56,7 +58,9 @@ TRANSITIONS: dict[RunStatus, set[RunStatus]] = {
         RunStatus.CANCEL_REQUESTED,
         RunStatus.WAITING_FOR_APPROVAL,
         RunStatus.INTERRUPTED,
+        RunStatus.WAITING_FOR_TOOL,
     },
+    RunStatus.WAITING_FOR_TOOL: {RunStatus.CLAIMED, RunStatus.CANCELED, RunStatus.FAILED},
     RunStatus.WAITING_FOR_APPROVAL: {
         RunStatus.QUEUED,
         RunStatus.RUNNING,

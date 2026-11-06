@@ -142,7 +142,7 @@ def test_default_sound_mix_is_an_owned_reopenable_timeline_with_exact_source_ste
 
     with TestClient(app) as api:
         source = source_video(api)
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages",
             json={
@@ -233,7 +233,7 @@ def test_new_film_then_sound_have_real_dependencies_and_do_not_show_silent_inter
     from app.models import RunDependency
 
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         body = {
             "content": "Generate a film of rain in a forest",
             "action": "video.generate",
@@ -294,13 +294,13 @@ def test_new_film_then_sound_have_real_dependencies_and_do_not_show_silent_inter
         "Wygeneruj 5 sekund filmu lasu z dźwiękiem: ptaki",
     ],
 )
-def test_natural_new_film_sound_runs_without_text_inference(film_bridge, monkeypatch, text):
+def test_legacy_new_film_sound_runs_without_text_inference(film_bridge, monkeypatch, text):
     def forbidden(*args, **kwargs):
         pytest.fail("Explicit new film+sound must not call a text provider")
 
     monkeypatch.setattr(assistant, "completion_stream", forbidden)
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(f"/api/chat/conversations/{cid}/messages", json={"content": text})
         assert response.status_code == 202, response.text
         drain()
@@ -308,11 +308,11 @@ def test_natural_new_film_sound_runs_without_text_inference(film_bridge, monkeyp
         assert message["task_status"] == "succeeded", message
 
 
-def test_automatic_film_followup_binds_verified_mix_and_rejects_latest_unfinished(film_bridge):
+def test_legacy_film_followup_binds_verified_mix_and_rejects_latest_unfinished(film_bridge):
     from app.models import Artifact
 
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         route = f"/api/chat/conversations/{cid}"
         first = api.post(route + "/messages", json={"content": "Generate a film with sound: rain"})
         assert first.status_code == 202, first.text
@@ -345,7 +345,7 @@ def test_film_sound_stop_before_source_completion_prevents_late_sound_publicatio
     from app.task_control import cancel_task
 
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages", json={"content": "Generate a film with sound: rain"}
         )
@@ -368,7 +368,7 @@ def test_changed_existing_film_bytes_fail_before_native_effects_dispatch(mix_bri
 
     with TestClient(app) as api:
         source = source_video(api)
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages",
             json={"content": "Rain", "action": "audio.effects", "effects": {"video_artifact_id": source}},
@@ -388,7 +388,7 @@ def test_sound_coordinator_receipt_reopens_without_a_second_dependency_graph(fil
     from app.film_sound import enqueue
 
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages", json={"content": "Generate a film with sound: rain"}
         )
@@ -441,7 +441,7 @@ def test_resume_failed_sound_reuses_completed_film_and_receipt_without_regenerat
 
     monkeypatch.setattr(executor, "execute", fail_once)
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         route = f"/api/chat/conversations/{cid}"
         response = api.post(
             route + "/messages",
@@ -496,7 +496,7 @@ def test_resume_failed_sound_reuses_completed_film_and_receipt_without_regenerat
 )
 def test_new_film_sound_rejects_invalid_or_injected_scope_before_work(film_bridge, extra):
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages",
             json={"content": "Generate a film", "action": "video.generate", "effects": extra},
@@ -508,7 +508,7 @@ def test_new_film_sound_rejects_invalid_or_injected_scope_before_work(film_bridg
 
 def test_sound_cues_are_rechecked_against_generated_film_before_gpu_dispatch(film_bridge):
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages",
             json={
@@ -533,7 +533,7 @@ def test_mix_publication_reconciles_same_child_workspace_revision_and_history_tu
 
     with TestClient(app) as api:
         source = source_video(api)
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages",
             json={"content": "Rain", "action": "audio.effects", "effects": {"video_artifact_id": source}},
@@ -559,7 +559,7 @@ def test_changed_admitted_effects_runtime_blocks_new_film_sound_before_gpu_work(
     from app import effects
 
     with TestClient(app) as api:
-        cid = conversation(api, "assistant")
+        cid = conversation(api, "work")
         response = api.post(
             f"/api/chat/conversations/{cid}/messages", json={"content": "Generate a film with sound: rain"}
         )

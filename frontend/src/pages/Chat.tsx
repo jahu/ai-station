@@ -419,9 +419,10 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
     refetchInterval: 2000,
   });
   const active = detail.data?.active_run;
+  const streamRunId = active?.stream_run_id ?? active?.id;
   useEffect(() => {
-    if (!active?.id) return;
-    const source = new EventSource(`/api/runs/${active.id}/stream`);
+    if (!streamRunId) return;
+    const source = new EventSource(`/api/runs/${streamRunId}/stream`);
     const epoch = accountEpoch();
     const refresh = () => {
       if (epoch !== accountEpoch()) {
@@ -444,7 +445,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
       void cache.invalidateQueries({ queryKey: ["conversations"] });
     });
     return () => source.close();
-  }, [active?.id, id, cache]);
+  }, [streamRunId, id, cache]);
   const history = () => (
     <ConversationHistory
       conversations={historyRows}
@@ -1049,6 +1050,8 @@ function Transcript({
               )}
               <AssistantResults
                 result={execution ?? message}
+                conversationContext={conversationContext}
+                active={current}
                 executionNote={execution?.content}
                 inputs={options}
                 busy={busy}

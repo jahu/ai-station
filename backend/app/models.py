@@ -226,6 +226,7 @@ class RunDependency(Base):
 
     run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True)
     prerequisite_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True, index=True)
+    require_success: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
 
 class RunEvent(Base):

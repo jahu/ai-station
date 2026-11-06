@@ -20,7 +20,7 @@ from test_unified_assistant import submit
 
 
 def image_turn(client, **values):
-    return submit(client, "Generate an image of a red bicycle", **values)
+    return submit(client, "Generate an image of a red bicycle", action="image.generate", **values)
 
 
 def result(client, identifier):

@@ -1,6 +1,7 @@
 """Web availability must not turn self-contained instructions into public queries."""
 
 import asyncio
+import json
 from uuid import uuid4
 
 import pytest
@@ -13,6 +14,7 @@ from app.models import Artifact, Message, Run
 from app.runs import request_cancel
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from test_assistant_controller import drain, tool
 
 
 def step():
@@ -50,7 +52,18 @@ def test_self_contained_reply_has_no_search_sources_or_artifact(monkeypatch, con
     calls = []
 
     async def stream(_self, **params):
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {
+                    "reason": "Interpret the current request",
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A written answer"}],
+                }
+            )
+            return
         calls.append(params)
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            yield json.dumps(tool("chat.reply", instruction="Answer the self-contained request"))
+            return
         if params["messages"][0]["content"].startswith("Route the user's request"):
             yield '{"action":"chat","reason":"A self-contained conversation request."}'
             return
@@ -69,6 +82,18 @@ def test_self_contained_reply_has_no_search_sources_or_artifact(monkeypatch, con
     monkeypatch.setattr(web_search, "search", forbidden)
     with TestClient(app) as client:
         path, run_id = queue(client, content, mode=mode)
+        if mode == "assistant":
+            drain()
+            root = client.get("/api/runs/" + run_id).json()
+            assert root["status"] == "succeeded", root
+            assert [item["tool"] for item in root["metadata"]["controller_steps"]] == ["chat.reply"]
+            message = client.get(path).json()["messages"][-1]
+            assert message["content"] == "SELF_CONTAINED_OK"
+            assert "web_search" not in message["metadata"]
+            with session_factory()() as session:
+                assert session.scalar(select(Artifact.id)) is None
+            assert len(calls) == 2
+            return
         assert step() == run_id
         if mode == "assistant":
             root = client.get("/api/runs/" + run_id).json()
@@ -239,7 +264,20 @@ def test_stop_during_no_search_decision_never_produces_an_answer(monkeypatch, fa
 
 def test_unified_turn_receipt_remains_idempotent_after_a_skipped_search(monkeypatch):
     async def stream(_self, **params):
-        yield '{"search_needed":false,"query":null}' if params.get("json_output") else "Hello."
+        if params["messages"][0]["content"].startswith("Infer the user's requested outcomes"):
+            yield json.dumps(
+                {"reason": "Greet", "outcomes": [{"kind": "text", "count": 1, "description": "A greeting"}]}
+            )
+            return
+        if params["messages"][0]["content"].startswith("You operate AI Station"):
+            yield json.dumps(
+                {
+                    **tool("chat.reply", instruction="Say hello"),
+                    "outcomes": [{"kind": "text", "count": 1, "description": "A greeting"}],
+                }
+            )
+        else:
+            yield '{"search_needed":false,"query":null}' if params.get("json_output") else "Hello."
 
     async def forbidden(_query):
         pytest.fail("This turn does not need research")
@@ -256,8 +294,8 @@ def test_unified_turn_receipt_remains_idempotent_after_a_skipped_search(monkeypa
         first = client.post("/api/chat/turns", json=body)
         assert first.status_code == 202, first.text
         receipt = first.json()
-        assert receipt["run"]["parameters"]["web_search_plan_version"] == 2
-        step()
+        assert receipt["run"]["executor_type"] == "assistant_controller"
+        drain()
         assert client.get("/api/runs/" + receipt["run"]["id"]).json()["status"] == "succeeded"
         repeated = client.post("/api/chat/turns", json=body)
         assert repeated.status_code == 202, repeated.text

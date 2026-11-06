@@ -9,6 +9,7 @@ from unittest.mock import Mock
 import desktop
 import httpx
 import pytest
+from app import __version__
 from app.api import app
 from app.config import Settings, get_settings
 from fastapi.testclient import TestClient
@@ -30,7 +31,7 @@ def test_public_health_identifies_a_desktop_without_exposing_setup_authority(mon
             response = client.get("/api/health")
             assert response.headers["cache-control"] == "no-store"
             value = response.json()
-            assert value == {"status": "ok", "version": "0.1.0", "desktop_instance_id": "a" * 32}
+            assert value == {"status": "ok", "version": __version__, "desktop_instance_id": "a" * 32}
     finally:
         get_settings.cache_clear()
 
