@@ -258,3 +258,22 @@ it("retains the reviewed framing of an existing variation agent until it is chan
     ).value,
   ).toBe("aligned");
 });
+
+it("keeps an installed Qwen model when an existing edit agent switches to Recompose", () => {
+  const id = "d70bd340-87c7-4c55-8d32-cbf5d54b5002";
+  const start: AgentMediaScope = {
+    ...initial,
+    request: { ...initial.request, backend: "qwen", model_id: id },
+  };
+  render(
+    <Frame>
+      <Editor start={start} />
+    </Frame>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  expect(saved().request).toMatchObject({
+    mode: "recompose",
+    backend: "qwen",
+    model_id: id,
+  });
+});

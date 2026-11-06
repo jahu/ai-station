@@ -42,6 +42,8 @@ On `develop`, the conversation now uses a ReAct orchestrator: it chooses an
 available tool, observes its actual result and can pass that result to the next
 tool. Reference images survive follow-up questions, and an image result can become
 the input of a recurring-agent draft for your review.
+Existing image agents expose compatible installed models for Generate, Edit and
+Recompose directly beside the image operation.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
 
 > **Early access:** AI Station brings desktop installers and guided model setup for

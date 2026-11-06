@@ -176,3 +176,22 @@ Library; final-result summaries require the verified preview, rather than treati
 an intermediate stem as a completed film. Perceptual quality remains separate
 from technical sample/frame verification. See operator QA cases AGENT-016 and
 AUDIO-102.
+
+## Changing an image agent's model
+
+Open an existing agent's editor and find **Your agent's output → Image model**,
+next to **Image operation**. Generate, Edit and Recompose share the Images
+workspace's installed model catalog, filtered by the selected operation. A model
+that is unavailable or cannot accept the current reference count is disabled;
+reference images are never silently removed to fit another model. Missing saved
+models remain visible until an explicit replacement is chosen.
+
+Selecting a replacement retains the visual brief and reference IDs, applies the
+model's recommended generation settings and removes incompatible controls. Krea
+Recompose initially allows new viewpoints; Edit retains reference framing unless
+a different reviewed preset applies. The composition choice remains editable.
+Changing between reference modes preserves a registered model identity. Loading
+the catalog does not alter the saved definition, download a model or queue work.
+Use **Save definition** to persist the choice; an active execution must finish or
+be canceled before its agent can be edited. Existing queued/running snapshots are
+not rewritten by later edits.

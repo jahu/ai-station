@@ -196,8 +196,8 @@ export default function AgentMediaScopeEditor({
   }
   function changeImageMode(mode: ImageMediaRequest["mode"]) {
     if (!image) return;
-    const keepKrea =
-      image.backend === "krea2" && !!image.model_id && mode !== "upscale";
+    const keepModel = !!image.model_id && mode !== "upscale";
+    const keepKrea = image.backend === "krea2" && keepModel;
     onChange({
       kind: "image",
       description_source:
@@ -209,10 +209,10 @@ export default function AgentMediaScopeEditor({
       ...(mode === "recompose" ? { vary_scenes: true } : {}),
       request: {
         mode,
-        backend: keepKrea ? "krea2" : "qwen",
+        backend: keepModel ? image.backend : "qwen",
+        ...(keepModel ? { model_id: image.model_id } : {}),
         ...(keepKrea
           ? {
-              model_id: image.model_id,
               steps: image.steps ?? 8,
               cfg: image.cfg ?? 1,
               seed: image.seed ?? 42,
@@ -362,6 +362,15 @@ export default function AgentMediaScopeEditor({
               <option value="upscale">Upscale 4×</option>
             </select>
           </label>
+        )}
+        {image && image.mode !== "upscale" && (
+          <AgentImageModel
+            request={image}
+            disabled={disabled || uploading}
+            onChange={(request) =>
+              onChange({ ...scope, kind: "image", request })
+            }
+          />
         )}
         {image?.mode === "img2img" && (
           <div className="agent-image-purpose notice">
@@ -787,15 +796,6 @@ export default function AgentMediaScopeEditor({
                     ? "Uses the references according to your brief: keep requested features and vary only the relevant aspects."
                     : "Makes the reviewed image four times larger. Research tools are available with Generate, Edit and Recompose."}
               </p>
-            )}
-            {image.mode === "t2i" && (
-              <AgentImageModel
-                request={image}
-                disabled={disabled || uploading}
-                onChange={(request) =>
-                  onChange({ ...scope, kind: "image", request })
-                }
-              />
             )}
             {image.mode !== "t2i" && (
               <div className="agent-media-references">
