@@ -94,7 +94,7 @@ The concrete adapter/dependency decision requires local-model comparison, not a
 framework name alone. All qualification examples are neutral; this work does not
 optimize sexual transformations of real people.
 
-## Candidate implementation and evidence (not deployed)
+## Initial candidate implementation and evidence (before deployment)
 
 The selected dependency is `llama-index-core==0.14.25`, without the meta-package,
 embedding plugins or a new provider. `ReActAgent.take_step` proposes exactly one
@@ -221,3 +221,34 @@ before dispatch. Missing selection is a correctable planning error, never an
 unrequested render. The model makes the semantic choice; no keyword matcher picks
 it. Result-bound recurring drafts may still inherit the actual result's reviewed
 profile. Historical queued policies and other image backends retain their contract.
+
+## Final deployed qualification
+
+PRs #679–#682 are merged into develop and the reviewed application image is
+deployed. The frozen native Runner retains the journal repair from #679.
+Offline backups, database integrity and foreign keys were checked; all existing
+relational records, account configuration, LAN bindings and native process
+identity were preserved during the application upgrades.
+
+The final real local Qwen 9B conversation used the configured Krea editor,
+explicitly selected beside composition, rendered one neutral reference cabinet
+from an elevated viewpoint in a green room with a wooden floor, then created one
+disabled image-agent definition. The definition uses that exact new artifact,
+the result model/profile and a 900-second interval. Visual inspection confirmed
+the changed viewpoint and setting; status alone was not the visual acceptance.
+Actual owned model unloading/reloading around GPU rendering completed in the same
+chain. The earlier omitted-layout qualification remains recorded as unsuccessful.
+
+Local verification included 8,803 backend/Runner tests with 19 opt-in skips,
+416 affected overlay tests, explicit profile/legacy-receipt regressions and 56
+tests for the final composition requirement. Frontend verification passed 1,157
+tests across 180 files, formatting, lint, final TypeScript checks and production
+build. Exact reviewed Docker images and effective Compose configuration passed.
+Hosted checks passed where present; GitHub Actions remain manual under repository
+policy. Separate real Qwen 9B/RVN 27B multi-turn continuity and two complete manual
+agent execution graphs passed as described above. QA agents remain disabled.
+
+This qualifies the implemented orchestration/continuity repair and the tested
+neutral image workflow. It does not claim every possible model, prompt or arbitrary
+long tool chain has been hardware-tested. Existing permission, approval, timeout,
+cancellation and supported-tool boundaries continue to apply.
