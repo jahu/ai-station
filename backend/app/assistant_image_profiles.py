@@ -116,8 +116,16 @@ def request_profile(session, root, args, mode, artifact_ids):
     item = catalog["models"].get(selected)
     if item is None or mode not in item["modes"]:
         raise ValueError("Choose an available compatible image_model alias from image_models")
-    current = choice(session, selected)
-    if (not current["available"] or identity(session, selected, mode) != item["identity"]) or any(
+    if len(artifact_ids) > item["maximum_references"]:
+        raise ValueError(
+            "The selected image model does not support this many references; choose a compatible image_model"
+        )
+    try:
+        current = choice(session, selected)
+        fingerprint = identity(session, selected, mode) if current["available"] else None
+    except HTTPException as exc:
+        raise ValueError("The selected image model became unavailable; review the model choice") from exc
+    if (not current["available"] or fingerprint != item["identity"]) or any(
         current.get(key) != item.get(key)
         for key in ("backend", "definition_id", "modes", "presets", "maximum_references")
     ):

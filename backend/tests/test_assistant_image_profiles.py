@@ -86,3 +86,22 @@ def test_same_definition_with_replaced_weights_is_rejected(session):
     model.metadata_json = {"image": {**model.metadata_json["image"], "sha256": "c" * 64}}
     with pytest.raises(ValueError, match="changed"):
         request_profile(session, root, SimpleNamespace(image_model=model.id), "recompose", [])
+
+
+def test_reference_limit_is_checked_before_dispatch(session):
+    model, _ = registered(session)
+    root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
+    with pytest.raises(ValueError, match="many references"):
+        request_profile(
+            session, root, SimpleNamespace(image_model=model.id), "recompose", ["one", "two", "three"]
+        )
+
+
+def test_deleted_definition_is_a_correctable_model_choice(session):
+    model, _ = registered(session)
+    selected = model.id
+    root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
+    session.delete(model)
+    session.flush()
+    with pytest.raises(ValueError, match="unavailable"):
+        request_profile(session, root, SimpleNamespace(image_model=selected), "recompose", [])
