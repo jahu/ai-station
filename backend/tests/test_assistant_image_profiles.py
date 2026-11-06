@@ -117,8 +117,17 @@ def test_new_transform_uses_configured_editor_instead_of_reference_generator(ses
             "controller_image_policy": "configured-default-v2",
         }
     )
-    values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    with pytest.raises(ValueError, match="Choose reference_layout explicitly"):
+        request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    values = request_profile(
+        session,
+        root,
+        SimpleNamespace(image_model=None, reference_layout="beside"),
+        "recompose",
+        [image.id],
+    )
     assert values["backend"] == "krea2" and values["model_id"] == model.id
+    assert values["reference_layout"] == "beside"
     explicit = request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", [image.id])
     assert explicit["backend"] == "qwen" and explicit["steps"] == 30 and explicit["cfg"] == 6
     recurring = request_profile(
