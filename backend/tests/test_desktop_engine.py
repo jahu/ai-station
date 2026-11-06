@@ -156,7 +156,12 @@ def test_supervisor_bootstrap_and_shutdown_keep_exact_engine(installed, tmp_path
             installed.endpoint,
         ],
     )
-    monkeypatch.setattr(launch.time, "sleep", Mock(side_effect=KeyboardInterrupt))
+    # Interrupt only the supervisor loop, never subprocess.wait's shared clock.
+    monkeypatch.setattr(
+        launch,
+        "time",
+        SimpleNamespace(monotonic=launch.time.monotonic, sleep=Mock(side_effect=KeyboardInterrupt)),
+    )
     original_run = launch.subprocess.run
 
     def execute(argv, **kwargs):
