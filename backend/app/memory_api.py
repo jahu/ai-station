@@ -14,7 +14,7 @@ from app.models import Agent, Conversation, MemoryEntry, Message, Project, Run
 from app.serialize import memory_dict
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 Scope = Literal["global", "conversation", "project", "agent"]
 Kind = Literal["fact", "decision", "preference", "project_context", "summary", "observation", "procedure"]
 

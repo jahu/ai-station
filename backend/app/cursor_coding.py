@@ -17,7 +17,9 @@ class CursorTask(CodingTask):
 
 
 @router.post("/cursor", status_code=202)
-def create_cursor_task(body: CursorTask, session: Annotated[Session, Depends(session_scope)]):
+def create_cursor_task(
+    body: CursorTask, session: Annotated[Session, Depends(session_scope, scope="function")]
+):
     run = enqueue_cursor_task(session, body)
     session.commit()
     return run_dict(run)

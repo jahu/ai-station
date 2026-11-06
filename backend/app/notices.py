@@ -17,7 +17,7 @@ from app.models import Agent, Notice, Run, Task
 from app.serialize import iso
 
 router = APIRouter(prefix="/api/notices", tags=["notices"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 KIND_POLICY = {
     "succeeded": "on_success",

@@ -18,7 +18,7 @@ from app.models import User, UserSession
 from app.private_access import private_access_enabled, secure_cookie
 
 router = APIRouter(prefix="/api", tags=["accounts"])
-DB = Annotated[Session, Depends(control_session_scope)]
+DB = Annotated[Session, Depends(control_session_scope, scope="function")]
 
 
 class IdentityPassword(BaseModel):

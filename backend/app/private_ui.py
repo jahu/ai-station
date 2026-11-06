@@ -19,7 +19,7 @@ from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.state import RunStatus
 
 router = APIRouter(prefix="/api/private-access", tags=["operator"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 OPS = {"install": "install", "start": "start", "login": "login", "enable": "serve_on", "disable": "stop"}
 
 

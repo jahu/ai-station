@@ -22,7 +22,7 @@ from app.validation_environment import ValidationEnvironment
 from app.worktree_expiry import pin_expiry, queue_worktree_removal, refresh_expiry
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 Argument = Annotated[str, Field(min_length=1, max_length=4096)]
 Command = Annotated[list[Argument], Field(min_length=1, max_length=64)]
 Commands = Annotated[list[Command], Field(max_length=20)]

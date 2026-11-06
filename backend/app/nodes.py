@@ -18,7 +18,7 @@ from app.models import StationNode
 from app.operator_auth import configured, public_status
 
 router = APIRouter(prefix="/api/nodes", tags=["nodes"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 LOCAL_NODE = {
     "id": "local",
     "name": "This workstation",

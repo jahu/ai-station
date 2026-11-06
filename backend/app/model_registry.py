@@ -23,7 +23,7 @@ from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/models", tags=["models"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 Category = Literal["llm", "image", "video", "audio", "other"]
 
 

@@ -18,7 +18,7 @@ from app.state import TERMINAL
 from app.worktree_expiry import refresh_expiry
 
 router = APIRouter(prefix="/api/coding")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 PROPOSALS = ("local_proposal", "cursor_proposal", "codex_proposal")
 
 

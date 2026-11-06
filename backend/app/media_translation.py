@@ -38,7 +38,7 @@ from app.runs import create_run, mark_failed, request_cancel, run_dict, transiti
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/generation", tags=["generation"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 KEY = "media_prompt_translation"
 RECEIPT = "prompt_translation"
 DEFAULT = {"revision": 0, "enabled": False, "model": "", "target_language": "en"}

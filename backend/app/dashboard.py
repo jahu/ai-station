@@ -15,7 +15,7 @@ from app.serialize import iso
 from app.state import ACTIVE
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def agent_summary(row):

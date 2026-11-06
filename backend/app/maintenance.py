@@ -31,7 +31,7 @@ from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.state import ACTIVE, TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 SETUP_KEY = "maintenance"
 PERMISSION = "manage_station"
 

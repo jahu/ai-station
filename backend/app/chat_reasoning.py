@@ -20,7 +20,7 @@ from app.runs import create_run, create_task, transition
 from app.state import RunStatus
 
 router = APIRouter(prefix="/api/llama")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class ReasoningOptions(BaseModel):

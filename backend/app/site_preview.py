@@ -188,7 +188,7 @@ def viewport_action(body, frame):
 
 # Handlers publish durable requests only. Native execution belongs to workers.
 router = APIRouter(prefix="/api/site-previews", tags=["site previews"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def get_preview(session, run_id):

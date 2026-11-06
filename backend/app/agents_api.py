@@ -25,7 +25,7 @@ from app.schedule_time import ScheduleTimezone
 from app.serialize import agent_dict
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def market_email_authorization(session, agent):

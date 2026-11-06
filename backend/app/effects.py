@@ -25,7 +25,7 @@ PROFILE = "mmaudio_large44_bf16_v1"
 RAM_MIB = 18432
 VRAM_MIB = 8192
 router = APIRouter(prefix="/api/audio/effects", tags=["sound effects"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def descriptive_fields(parameters):

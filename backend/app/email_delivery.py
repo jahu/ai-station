@@ -32,7 +32,7 @@ from app.secrets import resolve_secret
 from app.state import RunStatus
 
 router = APIRouter(prefix="/api/email", tags=["email"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def fingerprint(row):

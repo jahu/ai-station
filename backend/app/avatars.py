@@ -164,14 +164,14 @@ def create_avatar_run(
 
 
 @router.get("/runs/{run_id}/workflow")
-def workflow(run_id: UUID, session: Annotated[Session, Depends(session_scope)]):
+def workflow(run_id: UUID, session: Annotated[Session, Depends(session_scope, scope="function")]):
     from app.media_workflow import workflow_steps
 
     return workflow_steps(session, run_id, {"chatterbox", "echomimic", "sonic_whole"})
 
 
 @router.post("/runs", status_code=202)
-def generate(body: AvatarRequest, session: Annotated[Session, Depends(session_scope)]):
+def generate(body: AvatarRequest, session: Annotated[Session, Depends(session_scope, scope="function")]):
     run = create_avatar_run(session, body)
     session.commit()
     return run_dict(run)

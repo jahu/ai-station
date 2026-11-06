@@ -11,6 +11,7 @@ Read `docs/architecture.md`, `docs/security-model.md`, and `README.md` before ch
 
 - Preserve the modular monolith: Docker control plane, native user-level Host Runner, typed HTTP over a private Unix socket.
 - All workloads use Task → Run → Events → Artifacts. HTTP handlers enqueue; workers execute.
+- HTTP database dependencies use `scope="function"` so slow response delivery cannot retain a SQLite writer. Preserve per-batch SSE authorization and worker session lifetimes.
 - Keep app-owned paths relative to the data root. Validate canonical host paths and symlink boundaries.
 - Never expose arbitrary commands, Docker control, or unrestricted host mounts. Never modify external runtimes, models, drivers, or `reference/photo_pipe.py` to make tests pass.
 - New schema changes require Alembic migrations. Use temporary databases and fake executors in normal tests; expensive integrations must be explicitly opted in.
