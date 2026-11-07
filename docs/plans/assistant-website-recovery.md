@@ -241,3 +241,12 @@ authenticated local/LAN listeners and schema 0045. Native updates were limited t
 the reviewed owned coding adapter. Original failed conversations and all
 qualification attempts remain inspectable. No live source website, external
 checkout, model file, independent image script, driver or release branch changed.
+
+Final authenticated browser checks at desktop and phone widths confirmed that
+long commands start collapsed, expand to the exact saved argv, and collapse
+again; the completed receipt and artifact-preview link remain available.
+The generated site remains a proposal in the existing coding review flow, not
+a published production site. Rendering/build checks do not certify its design
+or every interaction: manual inspection recorded a clipped SVG wordmark and
+a mobile-menu positioning issue in that generated proposal. No sample-specific
+CSS patch was applied, and automatic publication/commit approval was not added.
