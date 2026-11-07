@@ -122,6 +122,9 @@ class CodingCompletion(Completion):
     proposal_paths: list[Annotated[str, Field(min_length=1, max_length=300)]] | None = Field(
         default=None, min_length=1, max_length=10, exclude_if=lambda value: value is None
     )
+    exploration_tools: (
+        list[Literal["list_files", "read_file", "search_files", "finish", "fetch_url", "web_search"]] | None
+    ) = Field(default=None, min_length=1, max_length=6, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def bound_context(self):
@@ -131,6 +134,12 @@ class CodingCompletion(Completion):
             len(set(self.proposal_paths)) != len(self.proposal_paths) or self.response_fields is not None
         ):
             raise ValueError("Coding proposal paths must be unique and use their dedicated output schema")
+        if self.exploration_tools is not None and (
+            len(set(self.exploration_tools)) != len(self.exploration_tools)
+            or self.proposal_paths is not None
+            or self.response_fields is not None
+        ):
+            raise ValueError("Coding exploration requires unique declared tools and its dedicated schema")
         return self
 
 
@@ -187,7 +196,10 @@ async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Req
         raise HTTPException(422, "Reasoning controls require an owned llama.cpp runtime")
     if body.response_fields is not None:
         raise HTTPException(422, "Bounded response fields require an owned llama.cpp runtime")
-    if getattr(body, "proposal_paths", None) is not None:
+    if (
+        getattr(body, "proposal_paths", None) is not None
+        or getattr(body, "exploration_tools", None) is not None
+    ):
         raise HTTPException(422, "Coding proposal schemas require an owned llama.cpp runtime")
     url = endpoint(expected)
     client = upstream_client()
@@ -202,7 +214,9 @@ async def coding_completion(body: CodingCompletion, expected: ExpectedEndpoint, 
 async def forward_completion(body, incoming, url, client, request_headers):
     response = None
     try:
-        payload = body.model_dump(exclude={"reasoning", "json_output", "response_fields", "proposal_paths"})
+        payload = body.model_dump(
+            exclude={"reasoning", "json_output", "response_fields", "proposal_paths", "exploration_tools"}
+        )
         if body.json_output:
             payload["response_format"] = {"type": "json_object"}
         if body.response_fields is not None:
@@ -220,6 +234,11 @@ async def forward_completion(body, incoming, url, client, request_headers):
             from ai_station_runner.coding_schema import proposal_schema
 
             payload["response_format"]["schema"] = proposal_schema(body.proposal_paths)
+            payload.update(chat_template_kwargs={"enable_thinking": False}, reasoning_effort="none")
+        if getattr(body, "exploration_tools", None) is not None:
+            from ai_station_runner.coding_schema import exploration_schema
+
+            payload["response_format"]["schema"] = exploration_schema(body.exploration_tools)
             payload.update(chat_template_kwargs={"enable_thinking": False}, reasoning_effort="none")
         if body.reasoning is not None:
             payload.update(

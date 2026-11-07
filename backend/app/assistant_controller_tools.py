@@ -548,6 +548,9 @@ def wrapper_parameters(session, root, name, raw):
         ProjectName(name=args.name)
         if name == "project.create":
             params["controller_project_name"] = args.name
+            # The legacy create-project request accepts its name as content;
+            # the full instruction remains in the controller's durable arguments.
+            params["content"] = args.name
         else:
             params["new_project"] = {
                 "name": args.name,

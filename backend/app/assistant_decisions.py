@@ -125,8 +125,17 @@ def scoped_context(context, outcomes):
 
     tools = {}
     pending = missing_outcomes(context.get("observations", []), outcomes)
+    new_implementation = (
+        "coding.local" not in context["tools"]
+        and sum(item.get("remaining", item["count"]) for item in pending if item["kind"] == "project") == 1
+        and any(item["kind"] == "local_changes" for item in pending)
+    )
     image_tools, _, _ = image_contract({**context, "outcomes": outcomes})
     for name, spec in context["tools"].items():
+        if name == "project.create" and new_implementation:
+            # An empty workspace cannot deliver code and supplies no existing
+            # coding scope. Use the available composed new-project build tool.
+            continue
         if name.startswith("image.") and name != "image.describe" and name not in image_tools:
             continue
         effective = (

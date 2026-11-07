@@ -73,3 +73,40 @@ def test_ordinary_coding_omits_the_optional_schema_and_rejects_conflicting_outpu
     assert "proposal_paths" not in CodingCompletion.model_validate(body).model_dump()
     with pytest.raises(ValidationError):
         CodingCompletion.model_validate({**BODY, "response_fields": {"prompt": 100}})
+
+
+@pytest.mark.parametrize("tools", [[], ["finish"] * 2, ["shell"]])
+def test_exploration_schema_cannot_advertise_arbitrary_or_duplicate_tools(tools):
+    body = {k: v for k, v in BODY.items() if k != "proposal_paths"}
+    with pytest.raises(ValidationError):
+        CodingCompletion.model_validate({**body, "exploration_tools": tools})
+
+
+def test_exploration_compiles_only_the_declared_operations_and_bounded_selection():
+    captured = []
+    body = {k: v for k, v in BODY.items() if k != "proposal_paths"}
+    body.update(max_tokens=2048, exploration_tools=["list_files", "read_file", "finish"])
+
+    def reply(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=b"data: [DONE]\n\n")
+
+    async def exercise():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(reply))
+        response = await forward_completion(
+            CodingCompletion.model_validate(body), Request({"type": "http"}), "http://llama/v1", client, {}
+        )
+        async for _ in response.body_iterator:
+            pass
+
+    asyncio.run(exercise())
+    actual = captured[0]
+    assert "exploration_tools" not in actual and actual["max_tokens"] == 2048
+    variants = actual["response_format"]["schema"]["oneOf"]
+    assert {v["properties"]["tool"]["const"] for v in variants} == set(body["exploration_tools"])
+    assert all(v["additionalProperties"] is False for v in variants)
+    finish = next(v for v in variants if v["properties"]["tool"]["const"] == "finish")
+    assert finish["properties"]["files"]["minItems"] == 1
+    assert finish["properties"]["files"]["maxItems"] == 10
+    with pytest.raises(ValidationError):
+        CodingCompletion.model_validate({**BODY, "exploration_tools": ["finish"]})

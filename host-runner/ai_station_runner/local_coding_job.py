@@ -71,7 +71,7 @@ def collect_proposal(body, selected, references=None):
             return text, provider
 
 
-def collect_completion(body, message, *, max_tokens=2048, proposal_paths=None):
+def collect_completion(body, message, *, max_tokens=2048, proposal_paths=None, exploration_tools=None):
     managed = body.model.startswith("llamacpp:")
     if managed:
         instance_id = str(UUID(body.endpoint.removeprefix("llamacpp:")))
@@ -96,9 +96,12 @@ def collect_completion(body, message, *, max_tokens=2048, proposal_paths=None):
     }
     if managed and proposal_paths is not None:
         payload["proposal_paths"] = proposal_paths
+    if managed and exploration_tools is not None:
+        payload["exploration_tools"] = exploration_tools
     route = (
         "/coding/completions"
         if "proposal_paths" in payload
+        or "exploration_tools" in payload
         or max_tokens > 8192
         or len(payload["messages"][0]["content"].encode()) > 100000
         else "/chat/completions"
@@ -194,7 +197,12 @@ def execute(run_id):
                 workspace,
                 body.prompt,
                 body.guidance,
-                lambda message: collect_completion(body, message)[0],
+                lambda message: collect_completion(
+                    body,
+                    message,
+                    exploration_tools=["list_files", "read_file", "search_files", "finish", "fetch_url"]
+                    + (["web_search"] if public_http.configured_search_url() else []),
+                )[0],
                 web=True,
                 local_context=True,
             )

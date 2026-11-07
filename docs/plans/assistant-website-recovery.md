@@ -144,6 +144,10 @@ arbitrary schema. This is an adapter-level output contract, not authority: the
 existing parser, UTF-8 byte bounds, duplicate-path checks, exact-match edits,
 stale snapshots and filesystem checks remain mandatory before any write.
 Ordinary Chat and configured-provider legacy requests omit this option.
+Owned-model exploration also uses a fixed schema for its declared read-only
+operations and one-to-ten-path finish action. It cannot spend the small operation
+budget emitting a whole source proposal in place of a tool request. The existing
+tool implementation still validates paths, public URLs and its finite budget.
 
 The constrained proposal then produced real source, but put its manifest inside
 `src/`; root-manifest discovery therefore found no build command. A corrective
@@ -162,3 +166,14 @@ fulfills its output; a failed replacement remains a failure. The original failed
 validation stays persisted and appears as recovered evidence, instead of
 incorrectly poisoning a later successful build. Both cases are tested with real
 disposable native validation/archive jobs and fake model changes.
+
+An independent attempt selected the empty-project tool. Its typed short name was
+only forwarded *after* legacy enqueue validation, which instead tried to validate
+the long tool instruction as a project name. The adapter now passes the validated
+name as that legacy name-only request; the root retains the full durable arguments.
+An API/worker/native-project regression verifies the real handoff with an
+instruction longer than 200 characters. When frozen pending outcomes require one
+new project plus implementation and no existing coding scope is available,
+affordances expose the composed build tool rather than an empty workspace.
+Multiple-project chains and existing-project coding retain their applicable tools.
+This uses typed requested results and real tool capabilities, never prompt words.

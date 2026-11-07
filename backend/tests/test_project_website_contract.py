@@ -11,6 +11,7 @@ from app.local_provider import LocalChatProvider
 from app.project_build import ProjectBuildScope
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from test_assistant_controller import model as controller_model  # noqa: F401
 from test_projects import local_coding_bridge, owned_runner, repository  # noqa: F401
 
 
@@ -114,3 +115,79 @@ def test_empty_project_cannot_fulfill_a_requested_implementation():
     assert missing_outcomes([empty], outcomes) == [{"kind": "local_changes", "count": 1, "remaining": 1}]
     built = {"tool": "project.create_code", "status": "succeeded", "produced_types": ["git_diff", "archive"]}
     assert missing_outcomes([built], outcomes) == []
+
+
+@pytest.mark.parametrize(
+    "count,existing,empty_available", [(1, False, False), (2, False, True), (1, True, True)]
+)
+def test_new_implementation_affordance_uses_composed_build_without_breaking_other_project_chains(
+    count, existing, empty_available
+):
+    from app.assistant_decisions import scoped_context
+
+    names = ["project.create", "project.create_code"] + (["coding.local"] if existing else [])
+    context = {
+        "tools": {name: {} for name in names},
+        "argument_types": {TOOLS[name].arguments.__name__: {} for name in names},
+    }
+    value = scoped_context(
+        context, [{"kind": "project", "count": count}, {"kind": "local_changes", "count": 1}]
+    )
+    assert ("project.create" in value["tools"]) is empty_available
+    assert "project.create_code" in value["tools"]
+
+
+def test_empty_project_tool_hands_the_typed_name_to_legacy_enqueue(session, monkeypatch):
+    from types import SimpleNamespace
+
+    from app import assistant_controller_tools as tools
+
+    root = SimpleNamespace(
+        id="controller",
+        parameters={"controller_request": {}, "controller_provider": {}},
+        metadata_json={"controller_steps": []},
+    )
+    monkeypatch.setattr(tools, "catalog", lambda *_: {})
+    args = {"name": "Simple project", "instruction": "Create the requested owned project. " * 20}
+    params = tools.wrapper_parameters(session, root, "project.create", args)
+    from app.assistant import requested_project_name
+    from app.project_setup import ProjectName
+
+    assert len(args["instruction"]) > 200
+    assert ProjectName(name=requested_project_name(params["content"], params["action"])).name == args["name"]
+    assert params["controller_project_name"] == args["name"]
+
+
+def test_empty_project_controller_executes_with_a_long_instruction_and_short_name(
+    controller_model, owned_runner
+):
+    from pathlib import Path
+
+    from app.models import Project, Run
+    from sqlalchemy import select
+    from test_assistant_controller import drain, finish, submit
+
+    controller_model["outcomes"] = [{"kind": "project", "count": 1, "description": "Create an empty project"}]
+    controller_model["decisions"] = [
+        {
+            "kind": "tool",
+            "reason": "Create the requested project",
+            "tool": "project.create",
+            "arguments": {
+                "name": "Simple project",
+                "instruction": "Create the requested owned project. " * 20,
+            },
+        },
+        finish(1),
+    ]
+    with TestClient(app) as api:
+        result = submit(api, "Create an empty owned project named Simple project")
+        drain()
+        with session_factory()() as s:
+            root = s.get(Run, result["run"]["id"])
+            assert root.status == "succeeded"
+            assert root.metadata_json["controller_steps"][0]["observation"]["status"] == "succeeded"
+            project = s.scalar(select(Project))
+            assert project.name == "Simple project"
+            assert Path(project.repo_path).is_relative_to(owned_runner.data_dir / "projects")
+            assert (Path(project.repo_path) / ".git").is_dir()
