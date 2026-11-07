@@ -177,3 +177,14 @@ new project plus implementation and no existing coding scope is available,
 affordances expose the composed build tool rather than an empty workspace.
 Multiple-project chains and existing-project coding retain their applicable tools.
 This uses typed requested results and real tool capabilities, never prompt words.
+
+The ordinary public-site request then completed all three tool steps, produced a
+verified six-file offline site, and passed desktop/mobile native rendering with
+zero blocked/missing external assets. The generated page's cookie control worked.
+Its final model response nevertheless had invalid terminal syntax and exhausted
+the two corrections, causing an unnecessary clarification after completed work.
+That fallback now finishes with authoritative successful evidence only when all
+independently frozen outcomes are fulfilled. Missing, failed, interrupted or
+undeclared outcomes still require clarification; no additional tool is executed.
+Both the complete and incomplete cases and the durable API/worker flow are
+regressed. The earlier attempt and its actual files remain unchanged.

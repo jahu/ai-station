@@ -200,6 +200,27 @@ class DecisionStopped(Exception):
     pass
 
 
+def invalid_decision_fallback(context):
+    """A bad terminal sentence cannot erase already verified requested results."""
+    from app.assistant_controller import missing_outcomes
+
+    outcomes = context.get("outcomes", [])
+    observations = context.get("observations", [])
+    evidence = [item["index"] for item in observations if item.get("status") == "succeeded"]
+    if outcomes and evidence and not missing_outcomes(observations, outcomes):
+        return Decision(
+            kind="finish",
+            reason="All requested outputs are verified",
+            response="Your requested results are ready. You can inspect the outputs and completed steps below.",
+            evidence=evidence,
+        )
+    return Decision(
+        kind="clarify",
+        reason="Unable to choose a valid next action",
+        response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
+    )
+
+
 async def database_step(session, run, claim, deadline, action):
     while True:
         try:
@@ -532,11 +553,7 @@ class AssistantDecisionExecutor:
                 except ValueError as exc:
                     correction = str(exc)[:1800]
                     if attempt:
-                        value = Decision(
-                            kind="clarify",
-                            reason="Unable to choose a valid next action",
-                            response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
-                        )
+                        value = invalid_decision_fallback(run.parameters["decision_context"])
                         break
                     messages = messages[:2] + [
                         {"role": "assistant", "content": text[:16000]},

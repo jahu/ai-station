@@ -158,8 +158,9 @@ def test_empty_project_tool_hands_the_typed_name_to_legacy_enqueue(session, monk
     assert params["controller_project_name"] == args["name"]
 
 
+@pytest.mark.parametrize("invalid_finish", [False, True])
 def test_empty_project_controller_executes_with_a_long_instruction_and_short_name(
-    controller_model, owned_runner
+    controller_model, owned_runner, invalid_finish
 ):
     from pathlib import Path
 
@@ -178,14 +179,19 @@ def test_empty_project_controller_executes_with_a_long_instruction_and_short_nam
                 "instruction": "Create the requested owned project. " * 20,
             },
         },
-        finish(1),
     ]
+    controller_model["decisions"] += (
+        [{"kind": "tool", "reason": "Invalid terminal action", "tool": "finish", "arguments": {}}] * 2
+        if invalid_finish
+        else [finish(1)]
+    )
     with TestClient(app) as api:
         result = submit(api, "Create an empty owned project named Simple project")
         drain()
         with session_factory()() as s:
             root = s.get(Run, result["run"]["id"])
             assert root.status == "succeeded"
+            assert root.metadata_json["controller_outcome"] == "finish"
             assert root.metadata_json["controller_steps"][0]["observation"]["status"] == "succeeded"
             project = s.scalar(select(Project))
             assert project.name == "Simple project"
