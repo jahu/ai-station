@@ -76,6 +76,22 @@ def test_exploration_has_a_finite_request_budget(workspace):
     assert len(calls) == 8
 
 
+@pytest.mark.parametrize("files", [[], ["app.py"] * 2, [f"file{i}.py" for i in range(11)], [42], [{}]])
+def test_invalid_selection_gets_bounded_feedback_without_weakening_path_checks(workspace, files):
+    actions = iter([{"tool": "finish", "files": files}, {"tool": "finish", "files": ["app.py"]}])
+    messages = []
+
+    def complete(message):
+        messages.append(message)
+        return json.dumps(next(actions))
+
+    selected, trace = explore(workspace, "Implement the requested result", "", complete)
+    assert [item["path"] for item in selected] == ["app.py"]
+    assert trace[0]["result"]["executed"] is False and "one to ten unique" in trace[0]["result"]["error"]
+    assert "No selection was applied" in messages[1]
+    assert (workspace / "app.py").read_text() == "def target():\n    return 1\n"
+
+
 def test_exploration_without_web_rejects_fetch_and_search(workspace):
     for action in (
         {"tool": "fetch_url", "url": "https://www.koratimber.com/"},
