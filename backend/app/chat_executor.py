@@ -34,6 +34,7 @@ class _DeliveryBuffer:
         self.parts = []
         self.characters = 0
         self.delivered = set()
+        self.persistence_failed = False
         self.deadline = clock() + DELIVERY_INTERVAL
 
     async def add(self, value):
@@ -74,7 +75,13 @@ class _DeliveryBuffer:
                 event_type = "chat.delta"
             append_event(self.session, self.run.id, event_type, {"message_id": self.message.id, "text": text})
 
-        await checkpoint(self.session, self.run, self.claim, self.persistence_deadline, persist)
+        try:
+            await checkpoint(self.session, self.run, self.claim, self.persistence_deadline, persist)
+        except BaseException:
+            # Only the checkpoint's transient BUSY/LOCKED retry may replay a
+            # write. Cleanup must not retry a failed integrity/ownership check.
+            self.persistence_failed = True
+            raise
         # A failed write retains the received batch; only a successful commit
         # consumes it. Inference is never restarted to retry persistence.
         self.parts, self.kind, self.characters = [], None, 0
@@ -255,7 +262,7 @@ class ChatExecutor:
             # A failed flush invalidates the transaction. Preserve the original
             # error and always close inference, even if persistence fails.
             try:
-                if session.is_active:
+                if session.is_active and not delivery.persistence_failed:
                     await delivery.flush()
                 else:
                     session.rollback()
