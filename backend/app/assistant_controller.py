@@ -69,6 +69,13 @@ def missing_outcomes(observations, outcomes):
             counts["local_changes"] = counts.get("local_changes", 0) + 1
         if name == "system.inspect" and "json" in types:
             counts["system_state"] = counts.get("system_state", 0) + 1
+    # Talking avatars are videos, but one output cannot fulfill two separate
+    # deliverables. Reserve explicitly requested avatars before allocating the
+    # remaining avatar videos to ordinary video outcomes, regardless of order.
+    avatars = counts.get("avatar", 0)
+    reserved = min(avatars, sum(item["count"] for item in outcomes if item["kind"] == "avatar"))
+    counts["avatar"] = reserved
+    counts["video"] = counts.get("video", 0) + avatars - reserved
     pending = []
     for item in outcomes:
         completed = min(item["count"], counts.get(item["kind"], 0))
