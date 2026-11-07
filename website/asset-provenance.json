@@ -31,5 +31,535 @@
     "upstream_license_sha256": "c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90",
     "included_license_sha256": "942560b236adfa83745b2c64e5fc09ebaf91cb331751b1157eb92187e5d6e930"
   },
-  "logo": "Existing frontend/public/station.svg"
+  "logo": "Existing frontend/public/station.svg",
+  "showcase": {
+    "publication_review": "pending owner review; never publish unapproved media",
+    "account": "Dedicated non-administrator demo account, empty at creation; no operator Library export",
+    "hardware": {
+      "cpu": "Intel Core i7-6900K",
+      "ram_gib": 32,
+      "gpus": ["NVIDIA RTX 3060 12 GB", "NVIDIA RTX 3060 12 GB"]
+    },
+    "media_disclosure": "Locally generated fictional scenes/characters and clearly identified synthetic English voice experiments. Separate licensed real portrait thumbnails identify the reference speakers; they are not generated outputs or endorsements. Public content is safe for work; source recordings are not redistributed.",
+    "assets": {
+      "showcase/coastal-original.webp": {
+        "sha256": "0e09d6412b9e45334f20761d5c73acbebcf418f160855d3918e24335e579fd2e",
+        "size_bytes": 293804,
+        "run_id": "237008b7-1e8b-4975-b01e-bb80725749f5",
+        "artifact_id": "d39e824e-56ed-4e35-ae5d-26135b352613",
+        "recipe": {
+          "capability": "image.generate",
+          "mode": "t2i",
+          "backend": "qwen",
+          "prompt": "An extraordinary photorealistic cinematic photograph: a beautifully restored unbranded deep burgundy 1960s grand touring sports coupe parked beside a small Mediterranean seaside cafe after a gentle rain. Rich wet cobblestone reflections, a quiet azure harbor, limestone cliffs and distant old terracotta buildings, golden morning sunlight cutting through the last silver clouds. Three-quarter front view, elegant authentic coachwork, beautifully rendered glass and chrome, natural perspective. A tiny terracotta espresso cup on a cafe table in the foreground, soft shallow depth of field, atmospheric sea mist. High-end automotive editorial photography, 35mm lens, realistic physically grounded detail, tasteful cinematic colors.",
+          "prompt_style": "prompt",
+          "negative": null,
+          "edit_prompt": "",
+          "width": 1344,
+          "height": 768,
+          "steps": 35,
+          "cfg": 4.0,
+          "seed": null,
+          "max_side": null,
+          "upscale_result": false,
+          "video_prompt": null,
+          "inputs": [],
+          "parent_artifact_ids": [],
+          "repeats": 1
+        },
+        "export": "WebP quality 93; no retouching",
+        "recorded_execution": {
+          "run_id": "237008b7-1e8b-4975-b01e-bb80725749f5",
+          "capability": "image.generate",
+          "executor": "photo_pipe",
+          "status": "succeeded",
+          "elapsed_seconds": 383.271,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/coastal-with-sound.mp4": {
+        "sha256": "0af7d6d20ec4bf9fa297d6afe9c1984676e530c128f4640cd155d8d2721dd005",
+        "size_bytes": 981048,
+        "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+        "artifact_id": "b72562a8-c1c0-4336-9058-4e6dff7041ff",
+        "recipe": {
+          "width": 1280,
+          "height": 704,
+          "fps": 24,
+          "duration_seconds": 3.375,
+          "parent_artifact_ids": [
+            "cd6b3676-7414-4512-b363-5809082716fa",
+            "7e06bff9-b583-4b74-ac56-0b138e5e2994"
+          ]
+        },
+        "export": "App-produced sound preview; stream copy with fast-start MP4 metadata",
+        "recorded_execution": {
+          "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+          "capability": "video.effects_preview",
+          "executor": "effects_preview",
+          "status": "succeeded",
+          "elapsed_seconds": 3.823,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        },
+        "creation_runs": [
+          {
+            "run_id": "237008b7-1e8b-4975-b01e-bb80725749f5",
+            "capability": "image.generate",
+            "executor": "photo_pipe",
+            "status": "succeeded",
+            "elapsed_seconds": 383.271,
+            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+          },
+          {
+            "run_id": "9dee82ea-a9b2-4909-a8aa-4a828a7bdac4",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 1016.11,
+            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+          },
+          {
+            "run_id": "4364ec30-edbf-4ab8-98ec-03848e06436c",
+            "capability": "audio.effects",
+            "executor": "mmaudio_effects",
+            "status": "succeeded",
+            "elapsed_seconds": 92.711,
+            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+          },
+          {
+            "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+            "capability": "video.effects_preview",
+            "executor": "effects_preview",
+            "status": "succeeded",
+            "elapsed_seconds": 3.823,
+            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+          }
+        ]
+      },
+      "showcase/coastal-workspace.webp": {
+        "sha256": "120505578a300b81401231f19324d3a65437016b54b2d74526cdd5ae23f78562",
+        "size_bytes": 195254,
+        "artifact_id": "d39e824e-56ed-4e35-ae5d-26135b352613",
+        "viewport": [1600, 1000],
+        "account": "demo",
+        "capture": "unaltered browser screenshot, WebP encoding"
+      },
+      "showcase/edit-workspace.webp": {
+        "sha256": "0ee649d3c6b1dacfa9a340d8be600da05f773324dcdeb34dcab025fcba2ef2a6",
+        "size_bytes": 119838,
+        "artifact_id": "9aa23997-0637-4988-a4e9-67e0222771db",
+        "viewport": [1600, 1000],
+        "account": "demo",
+        "capture": "unaltered browser screenshot, WebP encoding"
+      },
+      "showcase/maya-edited.webp": {
+        "sha256": "05e2a226a593f09dbc900c026c8eb41739cfdb99dda7900e88da9527df78ab44",
+        "size_bytes": 114712,
+        "run_id": "89e435c1-b170-4d3d-9bfe-732b42f9c3b2",
+        "artifact_id": "9aa23997-0637-4988-a4e9-67e0222771db",
+        "recipe": {
+          "mode": "img2img",
+          "backend": "krea2",
+          "edit_prompt": "Change the midnight-blue blazer to a deep emerald-green blazer with a small polished gold leaf brooch on the left lapel. Preserve her natural facial identity and photographic skin detail, hair, expression, pose, ivory blouse and soft studio lighting.",
+          "prompt": "",
+          "steps": 8,
+          "cfg": 1.0,
+          "seed": 173,
+          "reference_strength": 4.0,
+          "reference_layout": "aligned",
+          "width": 896,
+          "height": 1152,
+          "parent_artifact_ids": ["be87e04a-67ce-4c1b-9da7-9a41530cfbdf"]
+        },
+        "export": "WebP quality 93, no retouching",
+        "recorded_execution": {
+          "run_id": "89e435c1-b170-4d3d-9bfe-732b42f9c3b2",
+          "capability": "image.edit",
+          "executor": "photo_pipe",
+          "status": "succeeded",
+          "elapsed_seconds": 193.146,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/maya-original.webp": {
+        "sha256": "80318ff74c0371658a936e6fced91709a4487d0e9dd96a6135d028b3aa0bddf2",
+        "size_bytes": 139308,
+        "run_id": "cb16965d-8f66-48e0-861a-bfc949fb8b8e",
+        "artifact_id": "be87e04a-67ce-4c1b-9da7-9a41530cfbdf",
+        "recipe": {
+          "capability": "image.generate",
+          "mode": "t2i",
+          "backend": "qwen",
+          "prompt": "Photorealistic editorial studio portrait of a fictional adult woman, age 36, warm medium-brown skin, dark brown eyes, straight shoulder-length dark brown hair, wearing a beautifully fitted midnight-blue blazer over an ivory silk blouse. Waist-up composition, facing the camera directly, relaxed shoulders, gentle closed-mouth smile, natural understated makeup, individual skin pores and fine facial detail, clear eyes with soft realistic catchlights. A subtle warm-gray studio background, soft large-window key light and delicate rim light, flattering natural contrast. Professional 85mm portrait photography, realistic proportions, refined color grading, authentic magazine portrait.",
+          "prompt_style": "prompt",
+          "negative": null,
+          "edit_prompt": "",
+          "width": 896,
+          "height": 1152,
+          "steps": 35,
+          "cfg": 4.0,
+          "seed": null,
+          "max_side": null,
+          "upscale_result": false,
+          "video_prompt": null,
+          "inputs": [],
+          "parent_artifact_ids": [],
+          "repeats": 1
+        },
+        "export": "WebP quality 93; no retouching",
+        "recorded_execution": {
+          "run_id": "cb16965d-8f66-48e0-861a-bfc949fb8b8e",
+          "capability": "image.generate",
+          "executor": "photo_pipe",
+          "status": "succeeded",
+          "elapsed_seconds": 412.704,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/maya-studio.webp": {
+        "sha256": "9d26baa412db00346b14c9baa8d265615ae1cda1d31b3d7d66755178213cbf77",
+        "size_bytes": 98816,
+        "run_id": "8aec93a1-49fd-4c44-8105-a380655db3b6",
+        "artifact_id": "6412b3c7-154e-461b-9518-69a976c13251",
+        "recipe": {
+          "mode": "recompose",
+          "backend": "krea2",
+          "edit_prompt": "",
+          "prompt": "Photorealistic portrait of the same woman from the reference image in a modern television news studio. Cyan accent lighting, small fictional 'AI STATION' sign visible. Face is large and clearly recognizable.",
+          "steps": 8,
+          "cfg": 1.0,
+          "seed": 42,
+          "reference_strength": 2.0,
+          "reference_layout": "aligned",
+          "width": 768,
+          "height": 1024,
+          "parent_artifact_ids": ["be87e04a-67ce-4c1b-9da7-9a41530cfbdf"]
+        },
+        "export": "WebP quality 93, no retouching",
+        "recorded_execution": {
+          "run_id": "8aec93a1-49fd-4c44-8105-a380655db3b6",
+          "capability": "image.recompose",
+          "executor": "photo_pipe",
+          "status": "succeeded",
+          "elapsed_seconds": 169.964,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/original-voice.mp3": {
+        "sha256": "2dd4a9d954a77af2249d6afa376a0b5d6cdc1e0a5f8eb848abbcba1b9cf687db",
+        "size_bytes": 155585,
+        "run_id": "e0c18d24-e45e-4d17-8d4f-6a3b3b83c598",
+        "artifact_id": "4307a32d-6519-499a-a6e4-a436d1361567",
+        "backend": "Fish S2 Pro",
+        "voice_source": "model",
+        "language": "en",
+        "duration_seconds": 12.724535,
+        "attribution": "Built with Fish Audio",
+        "license": "https://github.com/fishaudio/fish-speech/blob/0f8a12e8a651062fdee9c33a894bdccd3a8513f1/LICENSE",
+        "export": "MP3 q2 with transparent linear playback gain +1.204 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "recorded_execution": {
+          "run_id": "e0c18d24-e45e-4d17-8d4f-6a3b3b83c598",
+          "capability": "audio.speech",
+          "executor": "fish_speech",
+          "status": "succeeded",
+          "elapsed_seconds": 149.819,
+          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/portrait-workspace.webp": {
+        "sha256": "58c422ebfe0ff2c9c574c74015a05e9529a47a04830fbb709e7789022754ee05",
+        "size_bytes": 132266,
+        "artifact_id": "be87e04a-67ce-4c1b-9da7-9a41530cfbdf",
+        "viewport": [1600, 1000],
+        "account": "demo",
+        "capture": "unaltered browser screenshot, WebP encoding"
+      },
+      "showcase/voice-workspace.webp": {
+        "sha256": "791bdbd5416a11ce0f20385495f80459cfae1dff359926f36eb21008c5eddb3b",
+        "size_bytes": 68092,
+        "artifact_id": "4307a32d-6519-499a-a6e4-a436d1361567",
+        "viewport": [1600, 1000],
+        "account": "demo",
+        "capture": "unaltered browser screenshot, WebP encoding"
+      },
+      "showcase/studio-avatar.mp4": {
+        "sha256": "ce3ab603164e8a6d5c01cfb4c3dc5cb300e9444b3c641c619c8abe14c742387d",
+        "size_bytes": 1369931,
+        "run_id": "3184f863-9498-4c1c-a18e-81bb862e8236",
+        "artifact_id": "35aeafb3-88d9-411e-b28c-636c1ecd7f5a",
+        "source_artifact_sha256": "7e72b078a6e3c33622a3b1e226332815677d9e085d8392605a3e4e72cc7d9aa6",
+        "export": "Application-produced whole-recording Sonic video; stream copy with fast-start MP4 metadata, no retouching or upscale",
+        "native_geometry": {
+          "width": 512,
+          "height": 640,
+          "fps": 25,
+          "frames": 319
+        },
+        "parent_artifact_ids": [
+          "6412b3c7-154e-461b-9518-69a976c13251",
+          "4307a32d-6519-499a-a6e4-a436d1361567"
+        ]
+      },
+      "showcase/avatar-poster.webp": {
+        "sha256": "0d38e97a38404a112d43b3606980c9f9816851f2a4f0ee8021651c8533a1b872",
+        "size_bytes": 34604,
+        "run_id": "3184f863-9498-4c1c-a18e-81bb862e8236",
+        "artifact_id": "35aeafb3-88d9-411e-b28c-636c1ecd7f5a",
+        "source_artifact_sha256": "7e72b078a6e3c33622a3b1e226332815677d9e085d8392605a3e4e72cc7d9aa6",
+        "export": "Frame at 0.2 seconds from the actual avatar output; WebP quality 93; no retouching",
+        "native_geometry": {
+          "width": 512,
+          "height": 640,
+          "fps": 25,
+          "frames": 319
+        },
+        "parent_artifact_ids": [
+          "6412b3c7-154e-461b-9518-69a976c13251",
+          "4307a32d-6519-499a-a6e4-a436d1361567"
+        ]
+      },
+      "showcase/avatar-en.vtt": {
+        "sha256": "22d69008e388d9fc0c4cdf0c58dbceb6b028d7e08eb1cf91cad166c80f317d68",
+        "size_bytes": 285,
+        "run_id": "3184f863-9498-4c1c-a18e-81bb862e8236",
+        "artifact_id": "35aeafb3-88d9-411e-b28c-636c1ecd7f5a",
+        "source_artifact_sha256": "7e72b078a6e3c33622a3b1e226332815677d9e085d8392605a3e4e72cc7d9aa6",
+        "export": "English captions aligned using offline ASR of the actual supplied recording, which the final audio matches",
+        "native_geometry": {
+          "width": 512,
+          "height": 640,
+          "fps": 25,
+          "frames": 319
+        },
+        "parent_artifact_ids": [
+          "6412b3c7-154e-461b-9518-69a976c13251",
+          "4307a32d-6519-499a-a6e4-a436d1361567"
+        ]
+      },
+      "showcase/morgan-synthetic-en.mp3": {
+        "sha256": "5c0ff78980ad63e2bd5d158c983bd7e3a79c41b57c120c7e504cfdc446e227b1",
+        "size_bytes": 80589,
+        "run_id": "66aa8c13-bf08-4986-b96e-352dc7bee493",
+        "artifact_id": "8fd7b602-8433-4e3b-bd02-1482c41c6eeb",
+        "backend": "Chatterbox",
+        "language": "en",
+        "duration_seconds": 8.68,
+        "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
+        "reference_source": [
+          "BBC · Film Programme · 2008",
+          "https://commons.wikimedia.org/wiki/File:Morgan_freeman_bbc_radio4_film_programme_12_09_2008_b00dbcdn.flac",
+          "CC BY 3.0; short reference excerpt, converted to mono PCM."
+        ],
+        "export": "MP3 q2 with transparent linear playback gain -1.221 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "disclosure": "Synthetic imitation, not authentic speech or endorsement. Not an official built-in voice preset.",
+        "recorded_execution": {
+          "run_id": "66aa8c13-bf08-4986-b96e-352dc7bee493",
+          "capability": "audio.speech",
+          "executor": "chatterbox",
+          "status": "succeeded",
+          "elapsed_seconds": 37.537,
+          "scope": "This Run only: start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/oprah-synthetic-en.mp3": {
+        "sha256": "93656c58507f0fba28e4e0b3d4a180bacded3873e89b24f7001540ebe65fb18e",
+        "size_bytes": 87117,
+        "run_id": "75fe121b-b006-430b-adc6-b1daba434dae",
+        "artifact_id": "afbd5ad5-62c8-47af-a576-93ebeda606e3",
+        "backend": "Chatterbox",
+        "language": "en",
+        "duration_seconds": 8.8,
+        "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
+        "reference_source": [
+          "White House · United State of Women · 2016",
+          "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/06/14/first-lady-michelle-obama-and-oprah-winfrey-white-house-summit-uni/index__q_page=367.html",
+          "Public-domain US government recording; short reference excerpt."
+        ],
+        "export": "MP3 q2 with transparent linear playback gain +8.812 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "disclosure": "Synthetic imitation, not authentic speech or endorsement. Not an official built-in voice preset.",
+        "recorded_execution": {
+          "run_id": "75fe121b-b006-430b-adc6-b1daba434dae",
+          "capability": "audio.speech",
+          "executor": "chatterbox",
+          "status": "succeeded",
+          "elapsed_seconds": 29.912,
+          "scope": "This Run only: start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/michelle-synthetic-en.mp3": {
+        "sha256": "e5eeff2b00469edf2da81023381dda4c024794194576b0ec51062002197af301",
+        "size_bytes": 73893,
+        "run_id": "ff056c62-4ee2-4938-939a-8956758f588a",
+        "artifact_id": "0e92eb65-7b1e-41d2-bdb1-15f14242d983",
+        "backend": "Chatterbox",
+        "language": "en",
+        "duration_seconds": 7.72,
+        "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
+        "reference_source": [
+          "White House · United State of Women · 2016",
+          "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/06/14/first-lady-michelle-obama-and-oprah-winfrey-white-house-summit-uni/index__q_page=367.html",
+          "Public-domain US government recording; short reference excerpt."
+        ],
+        "export": "MP3 q2 with transparent linear playback gain +6.384 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "disclosure": "Synthetic imitation, not authentic speech or endorsement. Not an official built-in voice preset.",
+        "recorded_execution": {
+          "run_id": "ff056c62-4ee2-4938-939a-8956758f588a",
+          "capability": "audio.speech",
+          "executor": "chatterbox",
+          "status": "succeeded",
+          "elapsed_seconds": 27.555,
+          "scope": "This Run only: start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/trump-synthetic-en.mp3": {
+        "sha256": "e0b440a8ec48a2cfa4124d4eb28eaae1d5137ca12ca1b08a00ade3270bcc47a5",
+        "size_bytes": 72813,
+        "run_id": "764503cf-deca-4575-951c-a36897ce5b4b",
+        "artifact_id": "a15d7935-9489-4d18-8bda-f7101efd9b83",
+        "backend": "Chatterbox",
+        "language": "en",
+        "duration_seconds": 7.68,
+        "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
+        "reference_source": [
+          "White House · 2016",
+          "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/11/10/president-obama-meets-president-elect-trump/",
+          "Public-domain US government recording; short reference excerpt."
+        ],
+        "export": "MP3 q2 with transparent linear playback gain -2.028 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "disclosure": "Synthetic imitation, not authentic speech or endorsement. Not an official built-in voice preset.",
+        "recorded_execution": {
+          "run_id": "764503cf-deca-4575-951c-a36897ce5b4b",
+          "capability": "audio.speech",
+          "executor": "chatterbox",
+          "status": "succeeded",
+          "elapsed_seconds": 27.968,
+          "scope": "This Run only: start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/elon-synthetic-en.mp3": {
+        "sha256": "0cc3b620d49bd70d0f7ae2a7e23025952d5494876ca0129d9ad47dd5ff22c70e",
+        "size_bytes": 68253,
+        "run_id": "316f07e3-c480-47b7-a6f0-07376c032021",
+        "artifact_id": "9a526394-5724-4d63-96fc-2a31d23a4005",
+        "backend": "Chatterbox",
+        "language": "en",
+        "duration_seconds": 7.52,
+        "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
+        "reference_source": [
+          "NASA / Chris Chamberland · 2021",
+          "https://images.nasa.gov/details/KSC-20210423-VP-CDC01-0001-SpaceX_Crew_2_Post_Launch_News_Conference-3273128",
+          "NASA source acknowledgment; short reference excerpt. No NASA endorsement."
+        ],
+        "export": "MP3 q2 with transparent linear playback gain +10.642 dB; no cuts, denoising, EQ or watermark-removal processing. Original app artifact unchanged.",
+        "disclosure": "Synthetic imitation, not authentic speech or endorsement. Not an official built-in voice preset.",
+        "recorded_execution": {
+          "run_id": "316f07e3-c480-47b7-a6f0-07376c032021",
+          "capability": "audio.speech",
+          "executor": "chatterbox",
+          "status": "succeeded",
+          "elapsed_seconds": 27.204,
+          "scope": "This Run only: start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+        }
+      },
+      "showcase/morgan-portrait.webp": {
+        "sha256": "ff16add33b32666dd1e3c9c24be71a804a5a1f8a41f121d426d2dd3733516186",
+        "size_bytes": 11936,
+        "kind": "Third-party portrait thumbnail, not an AI-generated output",
+        "subject": "Morgan Freeman",
+        "source": "https://commons.wikimedia.org/wiki/File:Morgan_Freeman_hosts_a_private_screening_and_conversation_about_his_documentary_film_on_the_761st_Tank_Battalion_at_The_Pentagon_on_Aug._2,_2023_-_230802-D-PM193-3427_(cropped).jpg",
+        "author": "U.S. Department of Defense / Petty Officer 1st Class Alexander Kubitza, 2 August 2023",
+        "license": "Public domain",
+        "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+      },
+      "showcase/trump-portrait.webp": {
+        "sha256": "34a3303399bce47f5d0c0aaa18056b9873babc24fa77415750ee271cc6ac0c8b",
+        "size_bytes": 9776,
+        "kind": "Third-party portrait thumbnail, not an AI-generated output",
+        "subject": "Donald Trump",
+        "source": "https://commons.wikimedia.org/wiki/File:Official_Presidential_Portrait_of_President_Donald_J._Trump_(2025)_(3x4_close_cropped).jpg",
+        "author": "The White House / Daniel Torok, 2 June 2025",
+        "license": "Public domain",
+        "license_url": "https://commons.wikimedia.org/wiki/File:Official_Presidential_Portrait_of_President_Donald_J._Trump_(2025)_(3x4_close_cropped).jpg#Licensing",
+        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+      },
+      "showcase/elon-portrait.webp": {
+        "sha256": "ab92f2f926345312a71c1d3a22eff082b3361c7765e79e3e468e1ee3f34fef4f",
+        "size_bytes": 7596,
+        "kind": "Third-party portrait thumbnail, not an AI-generated output",
+        "subject": "Elon Musk",
+        "source": "https://commons.wikimedia.org/wiki/File:Elon_Musk_Royal_Society_(crop2).jpg",
+        "author": "The Royal Society / Debbie Rowe, 13 July 2018",
+        "license": "CC BY-SA 3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+      },
+      "showcase/oprah-portrait.webp": {
+        "sha256": "bc93bc19fdb6757bc782f44a5178d43c69ac1713774235e1c0e90f24d7cd4d7a",
+        "size_bytes": 13918,
+        "kind": "Third-party portrait thumbnail, not an AI-generated output",
+        "subject": "Oprah Winfrey",
+        "source": "https://commons.wikimedia.org/wiki/File:Oprah_Winfrey_October_2014.jpg",
+        "author": "aphrodite-in-nyc, 25 October 2014",
+        "license": "CC BY 2.0",
+        "license_url": "https://creativecommons.org/licenses/by/2.0/",
+        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+      },
+      "showcase/michelle-portrait.webp": {
+        "sha256": "58e9d4dfc47be645e7dc9ef69b4c14d48803e883347aef35056a78c8616a35c9",
+        "size_bytes": 10032,
+        "kind": "Third-party portrait thumbnail, not an AI-generated output",
+        "subject": "Michelle Obama",
+        "source": "https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg",
+        "author": "The White House / Joyce N. Boghosian, 18 February 2009",
+        "license": "Public domain",
+        "license_url": "https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg#Licensing",
+        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+      },
+      "showcase/conversation-request.webp": {
+        "sha256": "8310da76da80c40a66e7041e7db57f577fd7d53630379f555e6dbd94bcab5b99",
+        "size_bytes": 61010,
+        "type": "Actual demo-account browser capture",
+        "conversation_id": "fc86e565-e9f4-459d-80b6-66e5995ef759",
+        "viewport": [1440, 1800],
+        "capture": "Actual browser screenshot, WebP encoded; request clipped to header and complete user message; result scrolls to actual avatar tool output. No DOM edits or fabricated messages. The historical final-wording defect is disclosed in orchestration evidence below."
+      },
+      "showcase/conversation-result.webp": {
+        "sha256": "2b4a7ed53ba0c1d12c65994205f04a6873a01b9c11ea88aa30dc124a581d6995",
+        "size_bytes": 80364,
+        "type": "Actual demo-account browser capture",
+        "conversation_id": "fc86e565-e9f4-459d-80b6-66e5995ef759",
+        "viewport": [1440, 1800],
+        "capture": "Actual browser screenshot, WebP encoded; request clipped to header and complete user message; result scrolls to actual avatar tool output. No DOM edits or fabricated messages. The historical final-wording defect is disclosed in orchestration evidence below."
+      }
+    },
+    "orchestration": {
+      "root_run_id": "987a306c-61ce-44f0-b7f0-06270b69328e",
+      "status": "succeeded",
+      "model": "Qwen3.8-27B-RVN-Uncensored Q4_K_M via llama.cpp",
+      "request": "Take this fictional presenter portrait and this voice recording. Use the installed LUSTIFY image model to create a new photorealistic portrait of the same woman in a modern television news studio, with cyan accent lighting and a small fictional AI STATION sign. Keep her face large and recognizable. Then animate that new studio portrait with the exact supplied recording to produce the complete speaking-avatar video, using the available whole-recording Sonic engine. Keep both the new studio image and finished video in this conversation.",
+      "input_artifact_ids": [
+        "be87e04a-67ce-4c1b-9da7-9a41530cfbdf",
+        "4307a32d-6519-499a-a6e4-a436d1361567"
+      ],
+      "steps": [
+        {
+          "tool": "image.recompose",
+          "run_id": "5265baaf-51b8-4c72-9c76-1269c9677010",
+          "status": "succeeded",
+          "result_aliases": ["step:1:image:1"]
+        },
+        {
+          "tool": "avatar.animate",
+          "run_id": "eaac928e-c6be-4b89-8093-98861cdc33c7",
+          "status": "succeeded",
+          "result_aliases": ["step:2:video:1"]
+        }
+      ],
+      "scope": "One request, two actual tools. The image and original voice recording were supplied inputs; TTS was generated separately before this request. No manual tool substitutions or fabricated success.",
+      "recorded_controller_outcome": "clarify",
+      "recording_note": "Both media tools completed and returned their real artifacts. The recorded final model reply asked for clarification because avatar output was not counted as video; the generic fulfillment repair is PR #691. Historical text/decisions were not rewritten and no tool was replayed for the showcase.",
+      "accounting_fix": "https://github.com/jahu/ai-station/pull/691"
+    }
+  }
 }

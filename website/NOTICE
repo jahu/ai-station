@@ -5,3 +5,50 @@ Commercial licensing: https://github.com/jahu/ai-station/blob/master/COMMERCIAL.
 
 Geist font: copyright and SIL Open Font License in assets/fonts/OFL.txt.
 Media provenance: asset-provenance.json. Model weights are not distributed here.
+
+New local showcase (publication pending owner review): synthetic images, video,
+speech and screenshots are generated/captured in the dedicated demo account.
+Models retain their own terms; model weights and complete source recordings
+are not redistributed with this website.
+
+Original model-generated voice: Built with Fish Audio. Fish Audio Community
+License, installed source revision 0f8a12e8a651062fdee9c33a894bdccd3a8513f1:
+https://github.com/fishaudio/fish-speech/blob/0f8a12e8a651062fdee9c33a894bdccd3a8513f1/LICENSE
+
+Synthetic reference-voice impressions: generated with Chatterbox (MIT).
+They are not authentic recordings, subject authorization or endorsements.
+Reference recording credits and source links appear beside each player and in
+asset-provenance.json. BBC Morgan Freeman reference: BBC Film Programme,
+12 September 2008, CC BY 3.0, a short excerpt converted to mono PCM for reference.
+BBC reference license: https://creativecommons.org/licenses/by/3.0/
+White House references: original US government recordings (2016).
+Elon Musk reference: NASA / Chris Chamberland, Crew-2 post-launch news conference,
+23 April 2021. No NASA endorsement is implied.
+
+
+Portrait thumbnails (separate from the site software/media license):
+
+Morgan Freeman: U.S. Department of Defense / Petty Officer 1st Class Alexander Kubitza, 2 August 2023
+Source: https://commons.wikimedia.org/wiki/File:Morgan_Freeman_hosts_a_private_screening_and_conversation_about_his_documentary_film_on_the_761st_Tank_Battalion_at_The_Pentagon_on_Aug._2,_2023_-_230802-D-PM193-3427_(cropped).jpg
+License: Public domain — https://creativecommons.org/publicdomain/mark/1.0/
+Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.
+
+Donald Trump: The White House / Daniel Torok, 2 June 2025
+Source: https://commons.wikimedia.org/wiki/File:Official_Presidential_Portrait_of_President_Donald_J._Trump_(2025)_(3x4_close_cropped).jpg
+License: Public domain — https://commons.wikimedia.org/wiki/File:Official_Presidential_Portrait_of_President_Donald_J._Trump_(2025)_(3x4_close_cropped).jpg#Licensing
+Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.
+
+Elon Musk: The Royal Society / Debbie Rowe, 13 July 2018
+Source: https://commons.wikimedia.org/wiki/File:Elon_Musk_Royal_Society_(crop2).jpg
+License: CC BY-SA 3.0 — https://creativecommons.org/licenses/by-sa/3.0/
+Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.
+
+Oprah Winfrey: aphrodite-in-nyc, 25 October 2014
+Source: https://commons.wikimedia.org/wiki/File:Oprah_Winfrey_October_2014.jpg
+License: CC BY 2.0 — https://creativecommons.org/licenses/by/2.0/
+Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.
+
+Michelle Obama: The White House / Joyce N. Boghosian, 18 February 2009
+Source: https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg
+License: Public domain — https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg#Licensing
+Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.

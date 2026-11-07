@@ -168,3 +168,88 @@
       : "Commands selected. Copy the selection with your device’s copy command.";
   });
 })();
+
+// Progressive enhancement: native audio controls remain usable without JavaScript.
+(() => {
+  const showcase = document.querySelector("#showcase");
+  if (!showcase) return;
+  const players = [...showcase.querySelectorAll("audio, video")];
+  players.forEach((player) =>
+    player.addEventListener("play", () => {
+      players.forEach((other) => {
+        if (other !== player) other.pause();
+      });
+    }),
+  );
+  showcase.querySelectorAll(".reference-voice").forEach((card) => {
+    const audio = card.querySelector("audio");
+    const transport = card.querySelector(".voice-transport");
+    const button = card.querySelector(".voice-toggle");
+    const name = card.querySelector("h4").textContent;
+    const action = card.querySelector(".voice-action");
+    const progress = card.querySelector("progress");
+    const time = card.querySelector(".voice-time");
+    const error = card.querySelector(".voice-error");
+    if (!audio || !transport || !button) return;
+    const format = (seconds) =>
+      `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+    const update = () => {
+      const playing = !audio.paused && !audio.ended;
+      card.classList.toggle("is-playing", playing);
+      button.setAttribute("aria-pressed", String(playing));
+      button.setAttribute(
+        "aria-label",
+        `${playing ? "Pause" : "Play"} synthetic ${name} sample`,
+      );
+      action.textContent = playing
+        ? "Now playing"
+        : audio.ended
+          ? "Play again"
+          : audio.currentTime > 0
+            ? "Continue listening"
+            : "Listen to the sample";
+      progress.value =
+        Number.isFinite(audio.duration) && audio.duration > 0
+          ? audio.currentTime / audio.duration
+          : 0;
+      time.textContent = format(
+        playing || audio.currentTime > 0
+          ? audio.currentTime
+          : Number.isFinite(audio.duration)
+            ? audio.duration
+            : 0,
+      );
+    };
+    ["play", "pause", "ended", "timeupdate", "loadedmetadata"].forEach(
+      (event) => audio.addEventListener(event, update),
+    );
+    button.addEventListener("click", async () => {
+      error.textContent = "";
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      try {
+        await audio.play();
+      } catch {
+        error.textContent =
+          "Playback could not start. Try again or use the audio controls below.";
+        audio.controls = true;
+      }
+    });
+    const loadError = () => {
+      error.textContent = "This sample could not load. Please try again.";
+      audio.controls = true;
+      update();
+    };
+    audio.addEventListener("error", loadError);
+    // Failed <source> downloads do not bubble their error to <audio>.
+    audio
+      .querySelectorAll("source")
+      .forEach((source) => source.addEventListener("error", loadError));
+    transport.hidden = false;
+    audio.controls = false;
+    audio.preload = "metadata";
+    update();
+  });
+})();

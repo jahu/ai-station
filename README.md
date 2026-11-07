@@ -94,6 +94,53 @@ of public reports.
 [Suggest an improvement](https://github.com/jahu/ai-station/issues/new?title=Suggestion%3A%20) ·
 [Contribution guide](CONTRIBUTING.md).
 
+## ✨ Made in AI Station. On a real home workstation.
+
+A fictional presenter, a new outfit, a coastal photograph, a short film with its
+own soundscape, and generated voices. These are real local outputs, created in a
+separate **demo** account — with their prompts and execution history preserved.
+
+<p align="center">
+  <a href="website/assets/showcase/maya-original.webp"><img src="website/assets/showcase/maya-original.webp" width="270" alt="Before: fictional presenter generated locally with Qwen, wearing a navy blazer" /></a>
+  <a href="website/assets/showcase/maya-edited.webp"><img src="website/assets/showcase/maya-edited.webp" width="270" alt="After: the same presenter edited locally with LUSTIFY, wearing an emerald blazer and gold brooch" /></a>
+</p>
+
+**Qwen creates the portrait. LUSTIFY changes the outfit.**
+[Inspect the real portrait and prompt](website/assets/showcase/portrait-workspace.webp) ·
+[Inspect the edit](website/assets/showcase/edit-workspace.webp).
+
+[![Locally generated cinematic coastal scene with a classic burgundy car](website/assets/showcase/coastal-original.webp)](https://ai-station.dev/#showcase)
+
+**An image becomes a film, then gets its own sound.** The scene above was generated
+with Qwen, animated with Wan 2.2 and given a harbor soundscape with MMAudio.
+[Watch and listen to the real examples](https://ai-station.dev/#showcase), including
+original English speech and clearly labeled synthetic reference-voice impressions
+based on Morgan Freeman, Donald Trump, Elon Musk, Oprah Winfrey and Michelle Obama.
+The impressions speak English; they are not authentic recordings, endorsements or
+official built-in celebrity voice presets.
+
+**One prompt, connected tools.** Supply a portrait and a recording, then ask for
+a studio presenter. The local assistant created the studio image, observed its
+actual result and passed it with the supplied recording to Sonic. Both outputs
+remain in the same conversation. The film below is the real 12.76-second result,
+shown at native 512 × 640 resolution without face retouching or upscaling.
+
+<p align="center"><a href="https://ai-station.dev/#workflow-title"><img src="website/assets/showcase/avatar-poster.webp" width="320" alt="Frame from the real locally generated speaking-avatar film of the fictional presenter in a television studio" /></a></p>
+
+[Watch the real two-tool example, with captions](https://ai-station.dev/#workflow-title).
+The voice was generated separately and supplied as an input; the demonstration
+does not pretend TTS was a third tool call in that request.
+
+**Made on an i7-6900K, 32 GB RAM and two RTX 3060 12 GB GPUs.** Faster hardware can
+reduce generation time; additional VRAM can enable larger models and higher
+settings. Image quality depends on the model and settings as well as the task.
+Public examples stay safe for work; compatible uncensored models also support
+adult/NSFW creation without an extra AI Station content filter.
+
+Want to try your own idea? [Get started](#-get-started),
+[share your results or report a problem](https://github.com/jahu/ai-station/issues/new),
+or [help develop the platform](CONTRIBUTING.md).
+
 ## 🎛 One station. Many ways to create.
 
 | You want to… | AI Station gives you… |
