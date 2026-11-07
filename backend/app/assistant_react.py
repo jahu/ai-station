@@ -75,7 +75,12 @@ def bounded_context(context):
             if len(item.get(key, "")) > limit:
                 item[key] = item[key][:limit]
                 changed = True
-        for key, limit in (("responses", 1200), ("summaries", 400), ("errors", 500)):
+        for key, limit in (
+            ("responses", 1200),
+            ("summaries", 400),
+            ("errors", 500),
+            ("recovered_errors", 500),
+        ):
             values = item.get(key, [])
             bounded = [
                 {field: text[:limit] if isinstance(text, str) else text for field, text in value.items()}

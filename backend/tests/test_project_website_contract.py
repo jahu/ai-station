@@ -69,7 +69,10 @@ def test_existing_project_build_freezes_website_validation_through_worktree_hand
         assert params["output_contract"] == "static_site"
         assert params["project_check_policy"]["auto_validate"] is True
         assert params["project_check_policy"]["auto_install_dependencies"] is False
-        assert "dist/index.html" in params["guidance"]
+        from app.static_site import commands
+
+        assert params["commands"] == commands()
+        assert "src/index.html" in params["guidance"]
         assert params["worktree_run_id"] == proposal["parent_run_id"]
         assert not local_coding_bridge["requests"]
         assert (repository / "README.md").read_bytes() == original

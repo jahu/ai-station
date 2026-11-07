@@ -356,6 +356,7 @@ def observation(session, root, step):
     if len(artifacts) > 64:
         raise ValueError("Controller tool produced too many artifacts")
     wrapper = next((row for row in rows if row.executor_type == "orchestrator"), None)
+    superseded = set()
     if wrapper is not None:
         from app.assistant import task_results
 
@@ -366,7 +367,9 @@ def observation(session, root, step):
             # Reuse the capability's canonical published results. Internal film
             # segments, scripts and source captures are not interchangeable with
             # the final film/download the user asked the next tool to consume.
-            published = task_results(session, receipt, wrapper).get("artifacts", [])
+            projected = task_results(session, receipt, wrapper)
+            published = projected.get("artifacts", [])
+            superseded = {item["id"] for item in projected.get("steps", []) if item.get("superseded")}
             by_id = {artifact.id: artifact for artifact in artifacts}
             artifacts = [by_id[item["id"]] for item in published if item["id"] in by_id]
     aliases, counts = [], {}
@@ -396,7 +399,7 @@ def observation(session, root, step):
     failures = [
         {"capability": row.capability, "error": row.error_message[:1000], "status": row.status}
         for row in rows
-        if row.status != "succeeded"
+        if row.status != "succeeded" and row.id not in superseded
     ]
     if (
         step["tool"] not in {"web.search", "web.read", "artifact.read"}
@@ -422,6 +425,17 @@ def observation(session, root, step):
         "summaries": [row.summary[:1000] for row in rows if row.summary][:8],
         "responses": [message.content[:2500] for message in messages if message.content][-3:],
         "errors": failures[:4],
+        **(
+            {
+                "recovered_errors": [
+                    {"capability": row.capability, "error": row.error_message[:500], "status": row.status}
+                    for row in rows
+                    if row.status != "succeeded" and row.id in superseded
+                ][:4]
+            }
+            if superseded
+            else {}
+        ),
         "artifacts": aliases,
         "produced_types": sorted({row.artifact_type for row in artifacts}),
         "tool_data": tool_data,

@@ -139,6 +139,8 @@ def queue_project_build(session, setup, project):
             str(exc.detail) if isinstance(exc, HTTPException) else str(exc),
         )
     if scope.output_contract and child.status != "failed":
+        from app.static_site import commands
+
         request = child.parameters["local_coding"]
         if not request["project_check_policy"]["auto_validate"]:
             raise ValueError("The website build lost its required validation policy")
@@ -147,17 +149,17 @@ def queue_project_build(session, setup, project):
             "local_coding": {
                 **request,
                 "output_contract": scope.output_contract,
+                "commands": commands(),
                 "guidance": request["guidance"]
                 + "\n"
                 + (
                     "Create a complete static website with real HTML, CSS and local assets under src/. "
-                    "Provide a zero-dependency package.json with real build/test scripts. The offline build "
-                    "must produce a nonempty dist/index.html and copy all needed local assets to dist/. "
-                    "Node's standard-library fs.cpSync can copy src to dist recursively. "
-                    "The existing validation service checks and archives the actual build for preview/download. "
-                    "Package installation is not authorized by this output contract. Use available standard libraries, "
-                    "no runtime CDNs, interactive prompts or network fetches during builds/tests. "
-                    "Do not change saved project policies or use echo-only placeholder tests/builds."
+                    "AI Station supplies fixed offline Node checks/build commands which validate src/index.html "
+                    "and copy src/ into the verified dist/ archive for preview/download. You do not need to "
+                    "create package.json or build/test scripts. Concentrate on a complete, usable website with "
+                    "local CSS/JS and actual assets; use CSS or inline SVG when no real image asset is available. "
+                    "Package installation is not authorized. No runtime CDNs, interactive prompts or network "
+                    "fetches during builds/tests. Do not change saved project policies or validation commands."
                 ),
             },
         }

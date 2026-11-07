@@ -73,7 +73,14 @@ The structured-error ReAct bridge test and durable failed-reply workflow pass;
 ordinary Chat, reasoning, provider failure, Stop and prior controller regressions
 passed in the initial focused runs (39, 20 and 53 cases respectively). These
 are fake-provider/disposable-database checks, not real website qualification.
-The complete backend/Runner regression and final image/rollout remain pending.
+The broad backend/Runner sweep found one cleanup regression after 8,881 passing
+cases (19 opt-in skips): a nontransient failed delta write was attempted again
+from `finally`. The unchanged existing regression now passes after preventing
+that cleanup replay; the full affected Chat family passes (41 cases). Final
+controller/project families pass 279 cases (5 opt-in skips). The native Runner
+suite passes 2,474 cases (8 opt-in skips), with the 20 archive cases checked
+separately. Ruff/format and the production image build pass. These overlapping
+suites are not additive unique-test counts or real-model qualification.
 
 ## Required website output
 
@@ -88,3 +95,70 @@ on the existing coding preparation; existing proposal/validation propagation
 then requires a new, nonempty `dist/index.html` in its verified archive before
 success. This reuses the already-tested website validation/preview contract and
 is selected semantically by the model, without domain/keyword routing.
+
+## Additional real-run finding
+
+The first separate local-model qualification correctly read the supplied source,
+inferred both project and implemented-code outcomes, created an owned Git project
+and worktree, and selected the existing Auto coding model. However, native coding
+stopped at its old 2 MiB *wire* limit before any proposal was applied: token SSE
+frames repeat substantial metadata, so this limit is not a content budget.
+The next controller decision processed that structured failure successfully,
+without the original slice crash. This attempt is preserved as a failed coding
+attempt, not reported as a completed website.
+
+Bound stream transport separately (16 MiB), while retaining a 2 MiB UTF-8 content
+and per-event bound, confirmed terminal completion, existing output-token limits,
+timeouts and typed local-only execution. A metadata-heavy stream with a small
+valid JSON proposal reproduces the rejection on the preceding code and passes on
+the candidate. Oversized content, individual frames and total wire traffic are
+still rejected. This requires the reviewed native parser update as well as the
+control-plane image; it changes no installed model or external runtime.
+
+The next qualification passed that transport threshold, but its format-correction
+completion reached the separate 8,192 output-token limit. This was not a failure
+to allocate the existing large coding context. No incomplete proposal was applied.
+The typed single-message coding bridge now allows up to 16,384 output tokens and
+native proposal generation uses that budget, including small-input proposals via
+the coding route. Ordinary Chat remains limited to 8,192. Source/path/file-size,
+two-attempt formatting, timeout, JSON-only and no-model-tools contracts remain
+unchanged. Invalid file-object diagnostics name the permitted fields instead of
+only saying "Invalid file replacement". Boundary tests cover both bridges and
+reject coding requests beyond the new maximum. The test workflow was stopped
+through its normal Task API before upgrading the native parser; old attempts and
+their owned projects remain inspectable.
+
+Subsequent real qualification exposed two model-protocol weaknesses. A model
+selected eleven files; exploration previously aborted instead of returning its
+validation error. Invalid count/duplicates/non-string selections now receive at
+most two corrections within the existing request budget, without executing the
+selection. Hidden/credential/symlink/path violations still fail immediately.
+The editor is explicitly text-only; it does not invent binary media assets.
+
+Finally, repeated file objects still violated the required proposal shape despite
+format correction. Owned llama.cpp proposal calls now carry only the bounded
+selected-path list to the typed coding bridge. The Runner constructs its fixed
+JSON schema (summary/files; whole content, unique replacements or deletion) and
+constrains model decoding to those paths and fields. No caller supplies an
+arbitrary schema. This is an adapter-level output contract, not authority: the
+existing parser, UTF-8 byte bounds, duplicate-path checks, exact-match edits,
+stale snapshots and filesystem checks remain mandatory before any write.
+Ordinary Chat and configured-provider legacy requests omit this option.
+
+The constrained proposal then produced real source, but put its manifest inside
+`src/`; root-manifest discovery therefore found no build command. A corrective
+proposal cannot add an unselected root manifest without violating its frozen file
+scope. New owned `static_site` tasks now freeze Station-supplied, literal Node
+test/build argv: validate ordinary nonlinked files and a nonempty `src/index.html`,
+then copy `src/` to the verified `dist/` archive offline. No generated manifest,
+dependency installation or model-authored build wiring is needed. Existing
+projects, other software contracts and their configured commands are unchanged.
+The fixed commands are tested with actual Node on disposable source, including
+missing/empty entry points, root/child symlinks and hard links.
+
+Controller observations also reuse the existing canonical superseded-step
+projection after bounded validation repair. A successful checked replacement
+fulfills its output; a failed replacement remains a failure. The original failed
+validation stays persisted and appears as recovered evidence, instead of
+incorrectly poisoning a later successful build. Both cases are tested with real
+disposable native validation/archive jobs and fake model changes.
