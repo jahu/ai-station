@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
+from app.db import read_projection
 from app.models import ChatProvider, ModelDefinition, ModelFile
 from app.serialize import iso
 
@@ -57,6 +58,7 @@ def build_catalog(session, *, discover_provider=None):
 
     ensure_builtin(session)
     session.commit()
+    read_projection(session)
     providers = list(
         session.scalars(select(ChatProvider).order_by(ChatProvider.builtin.desc(), ChatProvider.name))
     )
