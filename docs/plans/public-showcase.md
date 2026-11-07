@@ -252,8 +252,9 @@ Subjective whole-film approval remains with the owner before public upload.
 The original Market Lens agent completed a real research → generated Python →
 restricted execution → verified outputs graph after one automatic code repair.
 Its original chart, report, CSV and Excel remain in the application. Public
-candidates contain the original chart/report/CSV bytes, with no externally redrawn
-replacement. All 23 common dates and reported changes match the same captured
+candidates preserve the original chart and report/CSV contents, with no externally
+redrawn replacement. Web text exports normalize line endings and trailing padding;
+original source hashes remain recorded. All 23 common dates and reported changes match the same captured
 Yahoo Finance responses. The UI card is a presentation of those recorded numbers,
 not a live feed. No trade or email is performed; the daily trigger is paused.
 
@@ -321,3 +322,11 @@ market-example hierarchy, keyboard evidence disclosure and no-JavaScript text
 and download links remain usable. Media bytes and player behavior are unchanged
 from the earlier full candidate checks. Prepare a reviewed source PR to develop;
 master promotion remains exclusively the human owner's action.
+
+Full source-diff review found CRLF/trailing padding in the original agent CSV
+and aligned text report. Web exports now normalize only LF line endings and
+trailing whitespace. Parsed CSV cells and report words were compared unchanged;
+exact source-artifact hashes remain alongside the export hashes. The chart
+stays byte-for-byte original. Full `git diff --check origin/develop...HEAD` is
+required after this formatting correction, rather than checking only uncommitted
+files.

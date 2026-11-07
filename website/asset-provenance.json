@@ -795,18 +795,20 @@
       "showcase/market-report.txt": {
         "run_id": "b91cf59c-73fb-4729-8070-2e8c862d96d5",
         "artifact_id": "6adf5baa-43c1-431e-bd75-ec0da35013ea",
-        "export": "Exact original verified application artifact, byte-for-byte; no external redraw or substituted report",
+        "export": "Original verified application content. Formatting only: UTF-8 LF line endings and trailing padding trimmed; report words and parsed CSV cells unchanged. Exact source artifact hash is retained separately.",
         "source_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
-        "sha256": "b91cd887fa35904159db0eca110fdc5f97de4d92bc7f51e15706ce63af7b03ad",
-        "size_bytes": 1554
+        "sha256": "3d3672fce01dae3c75e340e33588a839123ec2808284cbd802e8973daeaa0712",
+        "size_bytes": 1525,
+        "source_artifact_sha256": "b91cd887fa35904159db0eca110fdc5f97de4d92bc7f51e15706ce63af7b03ad"
       },
       "showcase/market-prices.csv": {
         "run_id": "b91cf59c-73fb-4729-8070-2e8c862d96d5",
         "artifact_id": "e53b25e9-6d1b-43d9-b789-42bf23fd0e4a",
-        "export": "Exact original verified application artifact, byte-for-byte; no external redraw or substituted report",
+        "export": "Original verified application content. Formatting only: UTF-8 LF line endings and trailing padding trimmed; report words and parsed CSV cells unchanged. Exact source artifact hash is retained separately.",
         "source_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
-        "sha256": "a520a7223e7870973fd538c6be9e8bcc1276c41ffb61f713f820143100210301",
-        "size_bytes": 780
+        "sha256": "08c4e6a8996d34d2c456c9682169c8ed463438303bc23728e4cba64434376465",
+        "size_bytes": 756,
+        "source_artifact_sha256": "a520a7223e7870973fd538c6be9e8bcc1276c41ffb61f713f820143100210301"
       },
       "showcase/market-chart-workspace.webp": {
         "capture": {

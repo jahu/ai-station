@@ -125,7 +125,8 @@ The coastal film candidate is 8 seconds at 1280×704/24 fps, generated as three 
 Wan continuation segments, then given fresh MMAudio sound and an app-produced
 preview mix. Its poster comes from the actual final film. The original short
 version remains in private evidence as historical evidence. The market example
-publishes the exact original agent chart/report/CSV and source dates; it is a
+publishes the original agent chart and report/CSV contents with source dates;
+text exports normalize line endings/trailing padding and retain source hashes. It is a
 recorded research result, not a live quote feed or proof of unattended daily runs.
 
 Agent positioning leads with one natural-language instruction, review/enable,
