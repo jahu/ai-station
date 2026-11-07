@@ -22,3 +22,19 @@ The owner reviewed and approved these four screenshots and GIF/MP4 tour for
 publication on 2026-10-26. Only the approved subset is included.
 The exact local sources, capture checks and asset hashes are recorded under
 ignored `data/acceptance/readme-showcase-20261026/`.
+
+## Current workspace captures (2026-11-07 candidate)
+
+The main README now references the same four images in `website/assets/` as the
+website carousel. They are actual 1600×1200 browser views captured at device scale 2
+in the dedicated demo account. Chat contains an actual local-model response;
+Library contains real generated photos, an edit and completed films; Video shows
+the completed 8-second coastal job and its real source/prompt; Agents shows a
+saved, disabled daily research draft, without claiming it has executed. No DOM
+or message rewriting is used. The separately linked market chart/report/CSV
+come from a verified execution of the original demonstration agent.
+
+These new images and the longer film remain private for owner visual review.
+The files in this historical directory and its animated tour retain their
+original provenance above. Current hashes and Run/artifact lineage live in
+`website/asset-provenance.json`.

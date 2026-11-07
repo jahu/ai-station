@@ -169,8 +169,8 @@ Historical v0.0.2 packages are unchanged.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/media/conversation.png" alt="AI Station conversation with a local model and an example film-planning discussion" /></td>
-<td width="50%"><img src="docs/media/video.png" alt="Video workspace with a completed, locally generated landscape film" /></td>
+<td width="50%"><img src="website/assets/conversation.png" alt="Real AI Station Chat with a completed local Qwen film-planning reply" /></td>
+<td width="50%"><img src="website/assets/video.png" alt="Actual Video workspace with the source image, motion prompt and completed eight-second coastal film" /></td>
 </tr>
 <tr><td align="center"><strong>One conversation to begin.</strong></td><td align="center"><strong>A workspace when you want control.</strong></td></tr>
 </table>
@@ -178,14 +178,22 @@ Historical v0.0.2 packages are unchanged.
 <details>
 <summary>Explore the Library and agent workspace</summary>
 
-![Library with selected neutral demonstration images and a local film](docs/media/library.png)
-![Agent workspace with example draft definitions](docs/media/agents.png)
+![Real demo Library with generated photos, an outfit edit and completed films](website/assets/library.png)
+![Actual Agents workspace with a saved, paused daily market-research draft](website/assets/agents.png)
 
 </details>
 
-*Screenshots show the actual application with a separate demonstration dataset.
-Example conversation and agent text is seeded for privacy; the selected images
-and landscape film come from recorded local generation. [Media provenance](docs/media/README.md).*
+*Chat and Library show real completed generations in a separate demo account, captured at 2× resolution. No operator Library or fabricated messages. Video shows the real completed eight-second coastal job. Agents shows a saved review draft, without claiming it has executed. The animated tour retains its historical demonstration provenance. [Media provenance](website/asset-provenance.json).*
+
+**A useful agent, with evidence.** The [Market Lens example](https://ai-station.dev/#market-agent-title)
+reads public Apple, Microsoft and NVIDIA prices, runs local Python, and produces a
+[research brief](website/assets/showcase/market-report.txt),
+[chart](website/assets/showcase/market-chart.png) and
+[verifiable CSV](website/assets/showcase/market-prices.csv).
+This recorded execution uses closing data through 6 November 2026; the daily
+07:00 Europe/Warsaw trigger is paused after the demo. It is a price-based
+research watchlist, with source/code/Run history retained, rather than a live
+feed or a trading service.
 
 Automatic multi-tool conversations are being qualified for the next development build: describe a
 complete outcome, and the assistant can research, create an image, transform the

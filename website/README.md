@@ -84,7 +84,7 @@ to `master` are created by the existing bot and remain for human-owner approval.
   asks for attempted action, expected result and actual result, without secrets.
 - Benchmarks quote the existing recorded runs, with hardware, scope and a link to
   the full methodology. It does not invent user counts, testimonials or partners.
-- Previously owner-approved neutral screenshots and the tour remain unchanged.
+- Current Chat, Library, Video and Agents captures replace the older screenshots; the tour remains a historical composition. The agent screenshot is explicitly a disabled review draft, while the market chart/report links come from the separate verified execution. New images and the longer film await owner visual review before publication.
   The new showcase uses actual generated outputs and real result/recipe views
   from a separate demo account. No operator Library, conversation or agent
   configuration is exported. Failed experiments are excluded from the curated
@@ -120,3 +120,10 @@ Music examples use the same exclusive playback, with keyboard-accessible seeking
 Both are complete 45-second tracks, exported from real demo-owned
 ACE-Step Runs as 320 kbps stereo MP3s. Prompts and settings are visible; the
 owner-selected synthpop recording includes a synthetic vocal and its supplied lyrics.
+
+The coastal film candidate is 8 seconds at 1280×704/24 fps, generated as three real
+Wan continuation segments, then given fresh MMAudio sound and an app-produced
+preview mix. Its poster comes from the actual final film. The original short
+version remains in private evidence until owner review. The market example
+publishes the exact original agent chart/report/CSV and source dates; it is a
+recorded research result, not a live quote feed or proof of unattended daily runs.

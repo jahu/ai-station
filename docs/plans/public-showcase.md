@@ -207,3 +207,89 @@ synthpop recording to Neon Current. Restore Little Signals as the second public
 sample. Automated speech transcription is not a valid proxy for musical quality
 or a reason to overrule owner listening acceptance; exact sung-lyric fidelity
 remains unclaimed. Neon Current stays private. No new generation was needed.
+
+### Requested stock-agent example
+
+Add a real demo-owned daily research brief for AAPL, MSFT and NVDA. Reuse the
+existing reviewed `http_fetch` and offline `python_data` agent tools with public
+Yahoo Finance daily-chart URLs; no paid account, trading, email or new connector.
+The schedule is 07:00 Europe/Warsaw. Keep the demonstration paused after its
+manual execution, rather than leaving recurring GPU work unattended.
+
+Require the actual report, CSV and PNG chart before claiming success. A workflow
+Run can succeed after publishing children even when a later program fails; audit
+the result artifacts and complete child graph. Compare the calculated values
+against the same captured sources. The chart compares closes normalized to 100,
+with visible capture/source dates. Research considerations must stay conditional
+and sourced; do not invent fundamentals or personalized trading instructions.
+
+The original execution is verified below. Early attempts exposed insufficient
+context in one selected model and repeated source-shape mistakes in generated
+Python; those attempts are retained privately and are not showcase successes.
+No numerical result or chart will be fabricated or produced outside the agent's
+normal application workflow to conceal a failed execution.
+
+### Current workspace and longer-film candidate (2026-11-07)
+
+Replace the four carousel images and the corresponding README references with
+shared, actual 1600 × 1200 browser captures at device scale 2. Chat shows a real
+completed local Qwen reply; Library uses five curated SFW demo-owned outputs;
+Video shows the source, real motion prompt and completed eight-second film.
+Agents shows a saved, disabled daily-research review draft, explicitly without
+claiming execution of that draft. Existing historical screenshots and the tour
+retain their original provenance; no DOM or conversation text was rewritten.
+
+The new Wan film is eight real seconds at 1280 × 704 / 24 fps, produced through
+three normal continuous-video segments with the existing APG continuation
+contract. A stronger dolly/sideways-camera prompt creates visible foreground
+parallax. The result retains the parked car and clear wheel/body detail in the
+reviewed frame sequence, including the final frame. Fresh MMAudio sound and the
+application's own preview executor produce the combined film. Full decoding
+passed; the website export changes only MP4 fast-start metadata, without looping,
+interpolation, retouching or upscale. Its poster is an actual output frame.
+Subjective whole-film approval remains with the owner before public upload.
+
+The original Market Lens agent completed a real research → generated Python →
+restricted execution → verified outputs graph after one automatic code repair.
+Its original chart, report, CSV and Excel remain in the application. Public
+candidates contain the original chart/report/CSV bytes, with no externally redrawn
+replacement. All 23 common dates and reported changes match the same captured
+Yahoo Finance responses. The UI card is a presentation of those recorded numbers,
+not a live feed. No trade or email is performed; the daily trigger is paused.
+
+Subsequent style-only experiments failed: one generated program accessed the
+wrong symbol key; a later concise-instruction attempt contained a syntax error.
+These do not invalidate the earlier verified result, and are not represented as
+successful autonomous executions. The original chart's duplicated legend is
+retained rather than silently altered. The screenshots distinguish the saved
+review draft from that separately verified execution. Factory-from-one-sentence
+and generic unattended reliability are not claimed by this showcase.
+
+During concurrent model work, some browser attempts saw SQLite HTTP500 responses
+and were rejected. Final selected captures were made without HTTP or JavaScript
+errors. Known contention remains a separate application follow-up; a clean idle
+capture is not evidence that contention is fixed. A generated-program syntax
+error currently fails generation before the Python repair loop; retain this as
+a separate generic agent-reliability follow-up rather than concealing it in
+marketing or adding a task-specific workaround.
+
+New captures, the longer film and the agent-result presentation remain private
+for the owner's requested visual review. The previously approved gallery and
+owner-selected First Light / Little Signals are already merged through #694;
+protected release PR #695 remains human-owned. Before a public source PR, verify
+static build, formatting, JavaScript syntax, image/hash lineage, responsive
+layouts, screenshot-dialog keyboard behavior, report links and full video end.
+
+Candidate verification: static website build, Prettier check, JavaScript syntax,
+`git diff --check`, exact hashes for all 42 current media files, full MP4 decode,
+and complete eight-second browser playback passed. Browser checks at widths
+1440, 768 and 390 found no horizontal overflow, failed HTTP responses, JavaScript
+errors or external requests. Carousel selection, keyboard Home/End, screenshot
+modal open/Escape/focus return, actual report/CSV downloads and no-JavaScript
+native-video/report fallback passed. The AAC-decoded soundtrack is non-silent
+and has no clipped PCM samples. Website remux preserves the application's final
+video stream exactly; the application mix itself uses its normal CPU H.264
+encode. Existing voice/music files and player behavior are unchanged from their
+previous full-playback checks. No backend, runner, app frontend, database schema
+or deployment files changed; this is equivalent focused local validation for a
+static content change, not a claim of another complete application test run.

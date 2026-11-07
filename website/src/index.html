@@ -88,7 +88,7 @@
           for noncommercial use
         </p>
 
-        <div class="workspace-preview">
+        <div class="workspace-preview" id="workspace-preview">
           <div class="window-bar">
             <span class="window-dots" aria-hidden="true"
               ><i></i><i></i><i></i></span
@@ -154,9 +154,9 @@
             <img
               id="workspace-image"
               src="assets/conversation.png"
-              width="1440"
-              height="960"
-              alt="Actual conversation interface with a local model and an example film-planning discussion"
+              width="1600"
+              height="1200"
+              alt="Actual Chat with a completed local Qwen film-planning reply in the demo account"
               fetchpriority="high"
             />
             <button
@@ -381,7 +381,7 @@
               controls
               playsinline
               preload="none"
-              poster="assets/showcase/coastal-original.webp"
+              poster="assets/showcase/coastal-video-poster.webp"
               aria-label="Locally animated coastal scene with AI-generated harbor sound"
             >
               <source
@@ -396,27 +396,29 @@
           </div>
           <div class="creation-caption">
             <p class="eyebrow">PICTURE → MOTION → SOUND</p>
-            <h3>Let a still moment<br />come to life.</h3>
+            <h3 id="film-title">Let a still moment<br />come to life.</h3>
             <p>
-              The Qwen image above becomes a short camera move with Wan 2.2.
-              MMAudio creates a harbor soundscape from the resulting video.
+              The Qwen image above becomes an eight-second moving shot with Wan
+              2.2. MMAudio creates a harbor soundscape from the resulting video.
               Press play with sound.
             </p>
             <div class="creation-meta">
-              <span>1280 × 704</span><span>3.375 seconds</span
-              ><span>24 fps</span>
+              <span>1280 × 704</span><span>8 seconds</span><span>24 fps</span>
             </div>
             <details>
               <summary>Read the motion and sound prompts</summary>
               <p>
-                <strong>Motion:</strong> A slow, smooth cinematic dolly toward
-                the parked burgundy classic grand touring car. The car stays
-                parked and physically stable. Soft morning sea mist drifts over
-                the turquoise harbor, gentle ripples move across the water, tiny
-                sunlight reflections shimmer on rain-wet cobblestones, delicate
-                breeze. Beautiful realistic automotive commercial
-                cinematography, natural continuous motion, stable clean camera
-                movement.
+                <strong>Motion:</strong> An elegant continuous automotive cinema
+                shot at a Mediterranean harbor at dawn. The camera makes a
+                confident smooth forward dolly with a gentle leftward slide,
+                creating clearly visible parallax across the wet foreground
+                cobblestones and the parked burgundy classic grand touring car.
+                Keep the exact same car body, wheels, headlights and paint
+                physically stable and sharply detailed throughout. The car
+                remains parked. Turquoise water ripples visibly, small reflected
+                highlights sparkle, a thin veil of sea mist moves gently across
+                the harbor. Rich natural dawn light, realistic smooth motion,
+                restrained premium cinematography. No sudden camera changes.
               </p>
               <p>
                 <strong>Sound:</strong> A peaceful Mediterranean harbor at dawn:
@@ -1330,6 +1332,132 @@
             </article>
           </div>
         </section>
+        <section class="market-showcase" aria-labelledby="market-agent-title">
+          <div class="market-intro">
+            <div>
+              <p class="eyebrow">A SMALL AGENT. A USEFUL DAILY HABIT.</p>
+              <h3 id="market-agent-title">
+                Your watchlist.<br /><span>Already researched.</span>
+              </h3>
+            </div>
+            <p>
+              Apple, Microsoft, NVIDIA. One local agent reads public prices,
+              writes and runs its analysis, then leaves a brief, a chart and the
+              numbers behind them. No paid market-data key.
+            </p>
+          </div>
+          <div class="market-result">
+            <div class="market-report">
+              <div class="market-report-heading">
+                <span class="market-agent-mark" aria-hidden="true"
+                  ><svg><use href="#icon-agent" /></svg
+                ></span>
+                <div>
+                  <strong>Market Lens</strong
+                  ><span>Daily research brief · local AI + Python</span>
+                </div>
+              </div>
+              <p class="market-snapshot">
+                A recorded example · closing data, 6 November 2026
+              </p>
+              <table class="market-quotes">
+                <caption>
+                  Actual report values · USD close and last-session change
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Company</th>
+                    <th scope="col">Close</th>
+                    <th scope="col">Session</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Apple <span>AAPL</span></th>
+                    <td>$342.37</td>
+                    <td>−0.52%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Microsoft <span>MSFT</span></th>
+                    <td>$530.61</td>
+                    <td>−0.99%</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">NVIDIA <span>NVDA</span></th>
+                    <td>$186.64</td>
+                    <td class="market-positive">+2.78%</td>
+                  </tr>
+                </tbody>
+              </table>
+              <blockquote>
+                “Watch for stabilization or further downside.”<cite
+                  >NVIDIA · actual report watch item after a −21.40%
+                  observed-window move</cite
+                >
+              </blockquote>
+              <div class="market-downloads">
+                <a href="assets/showcase/market-report.txt"
+                  >Read the actual brief <span aria-hidden="true">↗</span></a
+                ><a href="assets/showcase/market-prices.csv" download
+                  >Download CSV <span aria-hidden="true">↓</span></a
+                >
+              </div>
+            </div>
+            <figure class="market-chart">
+              <a
+                href="assets/showcase/market-chart.png"
+                aria-label="Open the original agent-generated price chart at full size"
+                ><img
+                  src="assets/showcase/market-chart.png"
+                  width="1430"
+                  height="890"
+                  loading="lazy"
+                  alt="Actual agent-generated AAPL, MSFT and NVDA closing-price chart, rebased to 100 over 23 common trading dates"
+              /></a>
+              <figcaption>
+                Original agent output. 7 October–6 November 2026 · 23 common
+                trading dates · Yahoo Finance.
+              </figcaption>
+            </figure>
+          </div>
+          <ol class="market-steps" aria-label="The actual agent workflow">
+            <li>
+              <span>01</span><strong>Read public sources</strong>
+              <p>Three captured daily-price responses, with source links.</p>
+            </li>
+            <li>
+              <span>02</span><strong>Run local analysis</strong>
+              <p>Generated Python runs in an owned, restricted workspace.</p>
+            </li>
+            <li>
+              <span>03</span><strong>Keep the evidence</strong>
+              <p>Report, chart, CSV, source code and execution history.</p>
+            </li>
+          </ol>
+          <details class="market-method">
+            <summary>Schedule, source and verification</summary>
+            <p>
+              This is one verified execution of a configured persistent agent,
+              with its daily trigger set to 07:00 Europe/Warsaw and paused after
+              the demonstration. It is not a live price feed or a claim of
+              repeated daily execution. Local Qwen via llama.cpp generated the
+              analysis; the exported prices and percentage changes were checked
+              against the same captured Yahoo Finance responses. Earlier
+              unsuccessful experiments remain in the application's history.
+            </p>
+            <p>
+              The brief is a general, price-based research watchlist. Its
+              conditional watch items do not establish why prices changed. No
+              trade was placed and no email was sent.
+            </p>
+            <a
+              class="showcase-proof"
+              href="assets/showcase/market-chart-workspace.webp"
+              >Inspect the original chart in Library
+              <span aria-hidden="true">↗</span></a
+            >
+          </details>
+        </section>
         <aside class="showcase-hardware" aria-label="Demonstration hardware">
           <span class="showcase-hardware-mark" aria-hidden="true">✳</span>
           <div>
@@ -1919,7 +2047,7 @@ cp .env.example .env
           <button aria-label="Close screenshot">×</button>
         </form>
       </div>
-      <img alt="" width="1440" height="960" />
+      <img alt="" width="1600" height="1200" />
     </dialog>
 
     <svg

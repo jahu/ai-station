@@ -1,0 +1,28 @@
+Daily Research Brief: AAPL, MSFT, NVDA
+========================================
+Data Date: 2026-11-06
+Observed Window: 23 trading days
+Source URLs: https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d, https://query1.finance.yahoo.com/v8/finance/chart/MSFT?range=1mo&interval=1d, https://query1.finance.yahoo.com/v8/finance/chart/NVDA?range=1mo&interval=1d
+
+Methodology Note:
+- Data sourced from Yahoo Finance daily charts (1mo range, 1d interval).
+- Timestamps aligned on common dates across all three symbols.
+- Prices rebased to 100 at the first common date for comparison.
+- Calculated metrics: latest close, last-session % change, full-window % change.
+- All values derived strictly from captured JSON responses.
+
+Summary Table:
+------------------------------------------------------------
+Symbol     Latest Close    Last Session %  Full Window %   Days      
+------------------------------------------------------------
+AAPL       342.37          -0.52           1.69            23        
+MSFT       530.61          -0.99           0.16            23        
+NVDA       186.64          2.78            -21.40          23        
+
+Key Observations & Watch Items:
+- AAPL: Monitor for trend confirmation or breakout. (Full-window change: 1.69%)
+- MSFT: Monitor for trend confirmation or breakout. (Full-window change: 0.16%)
+- NVDA: Watch for stabilization or further downside. (Full-window change: -21.40%)
+
+Attribution: Yahoo Finance (via captured HTTP responses).
+General watchlist; not a personalized trade recommendation.
