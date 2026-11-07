@@ -1886,3 +1886,8 @@ An authorized HTTP response does not retain database authority during transport.
 Function-scoped request and inspection sessions close before body delivery;
 authorization and serialization still occur within their original owner scope.
 SSE continues revalidating the actual device for each separately read batch.
+
+Backup artifact classification uses correlated existence, not nullable membership
+negation. Ordinary member uploads with no Run remain usable after station backups
+exist; protected backup paths, backup Runs and foreign owners remain unavailable.
+See [the member-upload regression](plans/account-upload-visibility.md).
