@@ -114,8 +114,9 @@ to keep a particular speaker; a neutral recording can soften emotional delivery.
 Slower/Faster adjusts speaking speed while preserving pitch; Natural keeps the
 model's original pace.
 It requires a configured two-GPU runtime and retains Fish Audio's separate
-model license. Chatterbox remains the default; historical v0.0.2 packages are
-unchanged.
+model license. Chatterbox remains the default. Audio offers Polish or English
+when the selected adapter supports it; older Polish adapters remain compatible.
+Historical v0.0.2 packages are unchanged.
 
 <table>
 <tr>

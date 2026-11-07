@@ -12,6 +12,7 @@ export const defaultSpeechDelivery: SpeechDelivery = {
 
 export type SpeechCapabilities = {
   available?: boolean;
+  languages?: ("pl" | "en")[];
   delivery?: { version: string } | null;
   engines?: {
     fish_s2_pro?: {

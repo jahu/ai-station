@@ -16,7 +16,7 @@ from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_checkpoints import selected_environment
 from ai_station_runner.speech_chunks import text_chunks
 from ai_station_runner.speech_chunks_job import delivery_arguments
-from ai_station_runner.speech_delivery import inspect_delivery
+from ai_station_runner.speech_delivery import inspect_delivery, inspect_language
 from ai_station_runner.speech_runtime_schema import CheckpointSource, ManagedRuntime
 from ai_station_runner.speech_selection import selection
 from ai_station_runner.telemetry import collect
@@ -34,6 +34,8 @@ class AudioRequest(BaseModel):
     run_id: UUID
     deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     text: str = Field(min_length=1, max_length=1000)
+    language: Literal["pl", "en"] = "pl"
+    language_source_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     reference_relative: str = Field(max_length=500)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
@@ -45,6 +47,8 @@ class AudioRequest(BaseModel):
 
     @model_validator(mode="after")
     def frozen_selection(self):
+        if self.language != "pl" and not self.language_source_sha256:
+            raise ValueError("A selected language requires its frozen CLI language contract")
         if (self.checkpoint is None) != (self.managed_runtime is None):
             raise ValueError("A selected speech checkpoint needs its exact managed environment")
         if self.checkpoint is not None and (
@@ -103,6 +107,7 @@ def capabilities(checkpoint=None, runtime=None):
         runtime_manifest = fingerprint(recipe())
     else:
         runtime_manifest = None
+    language = inspect_language(script) if configured else None
     return {
         "available": configured and supported,
         "configuration_present": configured,
@@ -111,7 +116,8 @@ def capabilities(checkpoint=None, runtime=None):
         "eligible_gpu_indices": eligible,
         "runtime_manifest_sha256": runtime_manifest,
         **({"managed_runtime": runtime} if checkpoint else {}),
-        "languages": ["pl"],
+        "languages": language["languages"] if language else ["pl"],
+        **({"language_selection": language} if language else {}),
         "max_text_characters": 1000,
         "reference_min_seconds": 0.1,
         "reference_max_seconds": 60,
@@ -149,6 +155,14 @@ def start_audio(manager, body):
         inspected = inspect_delivery(script)
         if not inspected or inspected["source_sha256"] != body.delivery_source_sha256:
             raise HTTPException(409, "Speech delivery runtime changed or does not support these controls")
+    if body.language_source_sha256:
+        language = inspect_language(script)
+        if (
+            not language
+            or body.language not in language["languages"]
+            or language["source_sha256"] != body.language_source_sha256
+        ):
+            raise HTTPException(409, "Speech language runtime changed or does not support this language")
     root = settings.host_data_dir().resolve()
     reference = resolve_child(root, body.reference_relative)
     if not body.reference_relative.startswith("artifacts/") or reference != root / body.reference_relative:
@@ -188,6 +202,7 @@ def start_audio(manager, body):
         "--out",
         str(output),
         *delivery_arguments(delivery),
+        *(["--language", body.language] if body.language != "pl" else []),
     ]
     chunks = text_chunks(body.text)
     if len(chunks) > 1 and not source.get("managed"):
@@ -204,6 +219,7 @@ def start_audio(manager, body):
                     "output": str(output),
                     "chunks": chunks,
                     **({"delivery": delivery} if delivery is not None else {}),
+                    **({"language": body.language} if body.language != "pl" else {}),
                 },
                 ensure_ascii=False,
             )

@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--checkpoint-request", type=Path)
     parser.add_argument("--ref", type=Path, required=True)
     parser.add_argument("--text", required=True)
+    parser.add_argument("--language", choices=["pl", "en"], default="pl")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--cfg", type=float, default=0.4)
     parser.add_argument("--exaggeration", type=float, default=0.8)
@@ -81,7 +82,7 @@ def main():
         audio = (
             model.generate(
                 text,
-                language_id="pl",
+                language_id=args.language,
                 audio_prompt_path=str(args.ref),
                 cfg_weight=args.cfg,
                 exaggeration=args.exaggeration,

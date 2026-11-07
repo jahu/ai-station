@@ -27,3 +27,48 @@ def inspect_delivery(script):
     if not {"--ref", "--text", "--out", "--cfg", "--exaggeration", "--temperature"} <= flags:
         return None
     return {"version": "chatterbox-controls-v1", "source_sha256": hashlib.sha256(content).hexdigest()}
+
+
+def inspect_language(script):
+    """Advertise only an explicit CLI choice wired to multilingual generation."""
+    try:
+        with Path(script).expanduser().open("rb") as source:
+            content = source.read(512 * 1024 + 1)
+        if len(content) > 512 * 1024:
+            return None
+        tree = ast.parse(content)
+    except (OSError, SyntaxError, ValueError, TypeError):
+        return None
+    declared = False
+    used = False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr == "add_argument" and any(
+            isinstance(arg, ast.Constant) and arg.value == "--language" for arg in node.args
+        ):
+            options = {kw.arg: kw.value for kw in node.keywords}
+            choices, default = options.get("choices"), options.get("default")
+            declared = declared or (
+                isinstance(choices, (ast.List, ast.Tuple))
+                and all(isinstance(item, ast.Constant) for item in choices.elts)
+                and {item.value for item in choices.elts} == {"pl", "en"}
+                and isinstance(default, ast.Constant)
+                and default.value == "pl"
+            )
+        if node.func.attr == "generate":
+            used = used or any(
+                kw.arg == "language_id"
+                and isinstance(kw.value, ast.Attribute)
+                and isinstance(kw.value.value, ast.Name)
+                and kw.value.value.id == "args"
+                and kw.value.attr == "language"
+                for kw in node.keywords
+            )
+    if not declared or not used:
+        return None
+    return {
+        "version": "chatterbox-language-v1",
+        "languages": ["pl", "en"],
+        "source_sha256": hashlib.sha256(content).hexdigest(),
+    }

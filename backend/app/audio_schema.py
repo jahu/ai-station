@@ -16,6 +16,9 @@ class SpeechDelivery(BaseModel):
 class SpeechRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     text: str = Field(min_length=1, max_length=1000)
+    language: Literal["pl", "en"] | None = Field(
+        default=None, description="Explicit Chatterbox language; Fish follows the supplied text."
+    )
     model_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
     reference_artifact_id: UUID | None
     voice_source: Literal["reference", "model"] = "reference"
@@ -23,7 +26,7 @@ class SpeechRequest(BaseModel):
     delivery: SpeechDelivery | None = None
     engine: Literal["fish_s2_pro"] | None = Field(
         default=None,
-        description="Choose Fish for expressive speech directions; omit for the existing Polish Chatterbox voice.",
+        description="Choose Fish for expressive speech directions; omit for the Chatterbox voice.",
     )
     direction: (
         Literal[
@@ -35,6 +38,8 @@ class SpeechRequest(BaseModel):
 
     @model_validator(mode="after")
     def supported_delivery(self):
+        if self.engine is not None and self.language is not None:
+            raise ValueError("Fish follows the text language; omit the Chatterbox language setting")
         if self.model_id is not None and self.engine is not None:
             raise ValueError("An installed Chatterbox model cannot be used with the Fish engine")
         if self.voice_source == "model" and (
@@ -54,6 +59,8 @@ class SpeechRequest(BaseModel):
             values.pop("voice_source", None)
         if self.delivery is None:
             values.pop("delivery", None)
+        if self.language in {None, "pl"}:
+            values.pop("language", None)
         for field in ("engine", "direction", "pace"):
             if values.get(field) is None:
                 values.pop(field, None)

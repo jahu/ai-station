@@ -37,6 +37,9 @@ def generate(config_path: Path) -> None:
         raise ValueError("Inspect the existing speech output")
     parts = config["chunks"]
     delivery = delivery_arguments(config.get("delivery"))
+    language = config.get("language", "pl")
+    if language not in {"pl", "en"}:
+        raise ValueError("Unsupported speech language")
     if not 2 <= len(parts) <= 20 or any(not part or len(part) > 220 for part in parts):
         raise ValueError("Invalid bounded speech chunks")
     temporary = work / "complete.wav"
@@ -61,6 +64,7 @@ def generate(config_path: Path) -> None:
                     "--out",
                     str(path),
                     *delivery,
+                    *(["--language", language] if language != "pl" else []),
                 ],
                 check=True,
             )

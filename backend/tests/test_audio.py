@@ -494,3 +494,135 @@ def test_delivery_schema_is_finite_and_default_request_identity_is_unchanged():
         for value in (float("nan"), float("inf"), float("-inf")):
             with pytest.raises(ValidationError):
                 cls(temperature=value)
+
+
+@pytest.fixture
+def multilingual_audio(audio_bridge):
+    from pathlib import Path
+
+    from ai_station_runner.config import get_settings as native_settings
+
+    script = Path(native_settings().chatterbox_script)
+    script.write_text(
+        script.read_text().replace(
+            "options = parser.parse_args()",
+            "parser.add_argument('--language', choices=['pl', 'en'], default='pl')\n"
+            "args = parser.parse_args()\n"
+            "class FakeModel:\n def generate(self, **kwargs): return kwargs\n"
+            "FakeModel().generate(language_id=args.language)\noptions = args",
+        )
+    )
+    return script
+
+
+@pytest.mark.parametrize("long", [False, True])
+def test_english_language_is_frozen_and_forwarded_to_every_owned_child(multilingual_audio, long):
+    import json
+
+    text = (
+        ("This is a complete English sentence for the voice demonstration. " * 8) if long else "Hello there."
+    )
+    with TestClient(app) as client:
+        source = reference(client)
+        caps = client.get("/api/audio/capabilities").json()
+        assert caps["languages"] == ["pl", "en"]
+        run = client.post(
+            "/api/audio/runs", json={"text": text, "language": "en", "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "english-test")
+            actual = session.get(Run, run["id"])
+            assert actual.status == "succeeded", actual.error_message
+            assert actual.parameters["language"] == "en"
+            assert actual.parameters["language_source_sha256"] == caps["language_selection"]["source_sha256"]
+            assert not active_locks(session)
+        calls = [
+            json.loads(line) for line in multilingual_audio.with_suffix(".options").read_text().splitlines()
+        ]
+        assert len(calls) > 1 if long else len(calls) == 1
+        assert all(call["language"] == "en" for call in calls)
+        assert client.get("/api/artifacts", params={"run_id": run["id"]}).json()[0][
+            "parent_artifact_ids"
+        ] == [source["id"]]
+
+
+def test_english_cannot_silently_fall_back_to_polish(audio_bridge):
+    with TestClient(app) as client:
+        source = reference(client)
+        assert client.get("/api/audio/capabilities").json()["languages"] == ["pl"]
+        run = client.post(
+            "/api/audio/runs", json={"text": "Hello", "language": "en", "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "unsupported-language")
+            actual = session.get(Run, run["id"])
+            assert actual.status == "failed"
+            assert "language" in actual.error_message
+            assert not active_locks(session)
+        from ai_station_runner.processes import ProcessNotOwned
+
+        with pytest.raises(ProcessNotOwned):
+            host_app.manager().inspect(run["id"])
+
+
+def test_language_runtime_change_after_freezing_is_rejected(multilingual_audio, monkeypatch):
+    original = RunnerClient.request
+
+    def request(self, method, path, json=None):
+        if path == "/v1/runs/audio":
+            multilingual_audio.write_text(multilingual_audio.read_text() + "\n# changed source\n")
+        return original(self, method, path, json)
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs", json={"text": "Hello", "language": "en", "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "changed-language")
+            actual = session.get(Run, run["id"])
+            assert actual.status == "failed"
+            assert "language runtime changed" in actual.error_message
+            assert not active_locks(session)
+        assert not multilingual_audio.with_suffix(".calls").exists()
+
+
+def test_language_request_keeps_legacy_identity_and_does_not_accept_shell_flags():
+    from uuid import uuid4
+
+    from app.audio_schema import SpeechRequest
+    from pydantic import ValidationError
+
+    body = {"text": "Hello", "reference_artifact_id": uuid4()}
+    assert SpeechRequest(**body).model_dump(mode="json") == SpeechRequest(**body, language="pl").model_dump(
+        mode="json"
+    )
+    assert SpeechRequest(**body, language="en").model_dump()["language"] == "en"
+    for extra in ({"language": "--arbitrary"}, {"language": "en", "engine": "fish_s2_pro"}):
+        with pytest.raises(ValidationError):
+            SpeechRequest(**body, **extra)
+
+
+def test_english_cancellation_still_stops_only_the_owned_process(multilingual_audio, monkeypatch):
+    original = RunnerClient.request
+
+    def request(self, method, path, json=None):
+        result = original(self, method, path, json)
+        if path == "/v1/runs/audio":
+            with session_factory()() as session:
+                request_cancel(session, session.get(Run, json["run_id"]))
+                session.commit()
+        return result
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs", json={"text": "wait", "language": "en", "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "cancel-english")
+            assert session.get(Run, run["id"]).status == "canceled"
+            assert not active_locks(session)
+        assert not host_app.manager().inspect(run["id"])["alive"]
