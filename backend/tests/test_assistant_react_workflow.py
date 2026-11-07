@@ -402,3 +402,37 @@ def test_raw_react_can_chain_web_two_images_and_a_different_future_media_agent(
             agent = db.scalar(select(Agent))
             assert agent and not agent.enabled and agent.interval_seconds == 86400
             assert agent.media["kind"] == "avatar" and "web_search" in agent.tools
+
+
+def test_failed_reply_is_observed_without_masking_its_error(react_model, monkeypatch):
+    from app.providers import ProviderError
+
+    react_model["immediate"] = [{"kind": "text", "description": "Explain the requested subject"}]
+    react_model["actions"] = [
+        action("chat_reply", instruction="Explain the requested subject"),
+        action("ask_user", question="The response was interrupted. Would you like to continue?"),
+    ]
+    original = LocalChatProvider.stream
+
+    async def failing_reply(self, **params):
+        first = params["messages"][0]["content"]
+        if first.startswith("Infer the user's requested outcomes") or "Action Input" in first:
+            async for token in original(self, **params):
+                yield token
+        else:
+            yield "An actual partial explanation."
+            raise ProviderError("Synthetic provider disconnect")
+
+    monkeypatch.setattr(LocalChatProvider, "stream", failing_reply)
+    with TestClient(app) as api:
+        result = submit(api, "Explain the requested subject")
+        drain()
+        state = root_state(result)
+        assert state["controller_outcome"] == "clarify"
+        observation = state["controller_steps"][0]["observation"]
+        assert observation["status"] == "failed"
+        assert observation["errors"][0]["error"] == "Synthetic provider disconnect"
+        messages = api.get("/api/chat/conversations/" + result["conversation_id"]).json()["messages"]
+        partial = next(row for row in messages if row["content"] == "An actual partial explanation.")
+        assert partial["run_status"] == "failed" and partial["metadata"]["partial"] is True
+        assert not react_model["actions"]

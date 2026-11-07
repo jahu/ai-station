@@ -43,6 +43,14 @@ class Project(Instruction):
     name: str = Field(min_length=1, max_length=200)
 
 
+class ProjectCode(Project):
+    output_contract: Literal["static_site"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="For a requested working website use static_site: require an actual verified dist/index.html and preview/download archive. Omit for other software. This constrains output validation; it grants no extra package installation or publication authority.",
+    )
+
+
 class Effects(Instruction):
     video: Alias | None = None
 
@@ -159,8 +167,8 @@ TOOLS = {
         "Create a NEW owned Git project by name; no existing repository mutation.", Project
     ),
     "project.create_code": Tool(
-        "Create a NEW owned project and implement its first task with local coding in an isolated worktree.",
-        Project,
+        "Build a working website, application or other new software deliverable in a NEW owned project with local coding in an isolated worktree. Use the supplied research context; a design proposal or code snippets in chat are not an implemented result.",
+        ProjectCode,
     ),
     "coding.local": Tool(
         "Code in the project/workspace scope already selected by the user. Does not grant a new path or external AI permission.",
@@ -527,7 +535,16 @@ def wrapper_parameters(session, root, name, raw):
         if name == "project.create":
             params["controller_project_name"] = args.name
         else:
-            params["new_project"] = {"name": args.name, "model": "auto", "executor": "local"}
+            params["new_project"] = {
+                "name": args.name,
+                "model": "auto",
+                "executor": "local",
+                **(
+                    {"output_contract": args.output_contract, "auto_validate": True, "max_repair_attempts": 1}
+                    if args.output_contract
+                    else {}
+                ),
+            }
     if name == "chat.reply":
         params["controller_reply_context"] = [
             {key: value for key, value in step["observation"].items() if key != "artifacts"}

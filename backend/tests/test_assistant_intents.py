@@ -82,3 +82,18 @@ def test_planning_keeps_the_current_request_after_history_and_marks_reference_da
     assert "instruction" not in reference and "recent_context" not in reference
     assert reference["available_inputs"][0]["alias"] == "previous:image:1"
     assert "Read-only" in reference["context_role"]
+
+
+def test_planning_describes_working_deliverables_and_available_affordances():
+    import json
+
+    from app.assistant_intents import PLANNING_SYSTEM, planning_messages
+
+    tools = {"project.create_code": {"description": "Create a new owned implementation"}}
+    messages = planning_messages(
+        {"instruction": "Build a new version from this public source", "tools": tools}
+    )
+    assert json.loads(messages[1]["content"])["available_tools"] == tools
+    assert "working deliverables" in PLANNING_SYSTEM and "design proposal" in PLANNING_SYSTEM
+    assert "project/local_changes/files" in PLANNING_SYSTEM
+    assert json.loads(messages[-1]["content"])["instruction"] == "Build a new version from this public source"
