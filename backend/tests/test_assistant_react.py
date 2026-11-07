@@ -127,3 +127,37 @@ def test_rejected_action_feedback_cannot_replace_the_current_request():
         )
     )
     assert value["tool"] == "chat.reply"
+
+
+def test_failed_structured_observation_remains_usable_by_next_react_decision():
+    from app.assistant_react import bounded_context
+
+    error = {"capability": "chat.completion", "status": "interrupted", "error": "Lost lease " * 100}
+    context = {
+        "instruction": "Continue the requested result only if possible",
+        "tools": {"chat.reply": {}},
+        "observations": [
+            {
+                "index": 1,
+                "tool": "chat.reply",
+                "arguments": {"instruction": "Explain shelves"},
+                "status": "failed",
+                "errors": ["An older text error", error],
+                "responses": ["Partial answer"],
+            }
+        ],
+    }
+    bounded = bounded_context(context)
+    observation = bounded["observations"][0]
+    assert observation["errors"][0] == "An older text error"
+    assert observation["errors"][1] == {**error, "error": error["error"][:500]}
+    assert context["observations"][0]["errors"][1] == error
+    assert observation["status"] == "failed" and observation["context_excerpt_truncated"]
+
+    async def infer(messages):
+        text = "\n".join(row["content"] for row in messages)
+        assert '"status": "interrupted"' in text and '"capability": "chat.completion"' in text
+        return 'Thought: Preserve the partial result and explain the failed step.\nAction: ask_user\nAction Input: {"question":"The response was interrupted; would you like to continue?"}'
+
+    result = asyncio.run(take_action(context, infer))
+    assert result["kind"] == "clarify" and "interrupted" in result["response"]

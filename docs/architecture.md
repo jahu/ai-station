@@ -1659,3 +1659,13 @@ the supplied text and does not accept this Chatterbox-specific option. Long
 configured speech forwards the same language to every owned subprocess. The
 app-owned configured adapter reuses the operator's existing Python/cache offline;
 independent external speech scripts remain untouched.
+
+
+Streaming Chat retries short SQLite persistence checkpoints independently of its
+one provider stream. Every update verifies the original worker/claim and a
+nonterminal Run in the same transaction. Received batches remain in memory until
+commit; silent waits reserve no writer, and recovery cannot be overwritten by a
+stale stream. Controller observations retain structured failures while bounding
+prompt excerpts. Working software requests remain project/code/file outcomes,
+with existing owned workspace and validation services.
+[Repair and verification](plans/assistant-website-recovery.md).

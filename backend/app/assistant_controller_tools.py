@@ -159,7 +159,7 @@ TOOLS = {
         "Create a NEW owned Git project by name; no existing repository mutation.", Project
     ),
     "project.create_code": Tool(
-        "Create a NEW owned project and implement its first task with local coding in an isolated worktree.",
+        "Build a working website, application or other new software deliverable in a NEW owned project with local coding in an isolated worktree. Use the supplied research context; a design proposal or code snippets in chat are not an implemented result.",
         Project,
     ),
     "coding.local": Tool(
