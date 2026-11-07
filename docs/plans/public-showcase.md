@@ -155,8 +155,8 @@ was rejected. The subsequent capture completed without HTTP or JS errors.
 Residual database contention under simultaneous generation/navigation remains
 recorded for follow-up; no blanket all-load reliability claim is made.
 
-Publication still requires the owner's review of the complete private gallery,
-including the new portraits, English audio, avatar and actual UI captures.
+The owner subsequently reviewed and accepted the complete existing private
+gallery, including portraits, English audio, avatar and actual UI captures.
 
 
 Final private browser checks passed at 1440, 768 and 390 pixels with no overflow,
@@ -175,4 +175,28 @@ also belong to the non-administrator demo account and succeeded. Five additional
 unaltered Library screenshots show the actual English voice results and exact
 spoken text, linked from each voice card. Titles were saved through the normal
 demo-owned annotation API; neither DOM text nor execution history was rewritten.
-Publication and subjective visual/listening approval remain pending.
+The owner subsequently accepted this existing gallery; see the approval record below.
+
+
+### Owner approval and original music (2026-11-07)
+
+The owner reviewed and approved the complete existing gallery ("wszystko wyglada
+bardzo dobrze, commituj") and requested two generated music examples. Preserve
+that approval for the existing 30 assets; no previously rejected image or Polish
+draft is added. Two ordinary demo-owned ACE-Step music Runs produced First Light
+(45-second instrumental) and Neon Current (45-second synthwave instrumental). Source and export signal/decode checks are recorded privately.
+The complete uncut stereo MP3s use 320 kbps encoding and only linear peak headroom;
+no external mastering, stitched musical performance or substituted audio is used.
+
+Music cards reuse the keyboard-accessible, exclusive sample playback and add a
+seek slider. Full prompts, lyrics, duration and settings remain inspectable. The
+new artwork is native HTML/CSS/SVG, not additional photographic/generated media.
+Existing image-publication approval is preserved; the owner can assess the new
+music's musical quality in the preview. No human-listening verdict is invented.
+Normal publication proceeds through a reviewed PR to develop and an owner-merged
+protected master promotion; no direct release-branch push or merge is authorized.
+
+The initial optional vocal experiment executed successfully but its automated
+transcription did not establish clear lyric fidelity. It is excluded from the
+gallery; Neon Current is the second curated instrumental. This is not presented
+as a diagnosis of a model bug or as a successful lyrics demonstration.

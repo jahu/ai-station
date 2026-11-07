@@ -640,7 +640,11 @@
             </p>
           </div>
           <div class="reference-voice-grid">
-            <article class="reference-voice" data-voice="morgan">
+            <article
+              class="reference-voice"
+              data-audio-sample
+              data-voice="morgan"
+            >
               <div class="reference-voice-person">
                 <img
                   src="assets/showcase/morgan-portrait.webp"
@@ -727,7 +731,11 @@
                 </p>
               </details>
             </article>
-            <article class="reference-voice" data-voice="trump">
+            <article
+              class="reference-voice"
+              data-audio-sample
+              data-voice="trump"
+            >
               <div class="reference-voice-person">
                 <img
                   src="assets/showcase/trump-portrait.webp"
@@ -811,7 +819,11 @@
                 </p>
               </details>
             </article>
-            <article class="reference-voice" data-voice="elon">
+            <article
+              class="reference-voice"
+              data-audio-sample
+              data-voice="elon"
+            >
               <div class="reference-voice-person">
                 <img
                   src="assets/showcase/elon-portrait.webp"
@@ -894,7 +906,11 @@
                 </p>
               </details>
             </article>
-            <article class="reference-voice" data-voice="oprah">
+            <article
+              class="reference-voice"
+              data-audio-sample
+              data-voice="oprah"
+            >
               <div class="reference-voice-person">
                 <img
                   src="assets/showcase/oprah-portrait.webp"
@@ -977,7 +993,11 @@
                 </p>
               </details>
             </article>
-            <article class="reference-voice" data-voice="michelle">
+            <article
+              class="reference-voice"
+              data-audio-sample
+              data-voice="michelle"
+            >
               <div class="reference-voice-person">
                 <img
                   src="assets/showcase/michelle-portrait.webp"
@@ -1070,6 +1090,240 @@
             </p>
           </details>
         </div>
+        <section class="music-showcase" aria-labelledby="music-title">
+          <div class="music-showcase-heading">
+            <div>
+              <p class="eyebrow">FROM AN IDEA TO A SOUNDTRACK</p>
+              <h3 id="music-title">
+                Find your sound.<br /><span>Make it your own.</span>
+              </h3>
+            </div>
+            <p>
+              Write a mood, a genre or your own lyrics. These two original
+              45-second examples were made locally in AI Station — one
+              cinematic, one electronic.
+            </p>
+          </div>
+          <div class="music-grid">
+            <article
+              class="music-card music-card-1"
+              data-audio-sample
+              data-sample-label="original First Light music"
+            >
+              <div class="music-card-heading">
+                <span class="music-number" aria-hidden="true">01</span>
+                <div>
+                  <p class="eyebrow">Cinematic instrumental</p>
+                  <h4>First Light</h4>
+                </div>
+                <svg
+                  class="music-symbol"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 27V11l16-4v16M16 15l16-4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <ellipse
+                    cx="11"
+                    cy="28"
+                    rx="5"
+                    ry="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <ellipse
+                    cx="27"
+                    cy="24"
+                    rx="5"
+                    ry="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+              </div>
+              <p class="music-description">
+                Felt piano, warm strings and a slow sunrise.
+              </p>
+              <p class="music-facts">
+                <span>ACE-Step 1.5 Turbo</span><span>45 seconds</span
+                ><span>Local generation</span>
+              </p>
+              <div class="voice-transport" hidden>
+                <button
+                  type="button"
+                  class="voice-toggle"
+                  aria-label="Play original First Light music"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="voice-play-icon" d="M9 5l11 7-11 7z" />
+                    <path
+                      class="voice-pause-icon"
+                      d="M7 5h4v14H7z M15 5h4v14h-4z"
+                    />
+                  </svg>
+                </button>
+                <div class="voice-playback">
+                  <span class="voice-action">Listen to the sample</span
+                  ><input
+                    type="range"
+                    class="music-seek"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0"
+                    aria-label="Seek within First Light"
+                    disabled
+                  />
+                </div>
+                <span class="voice-time">0:00</span>
+              </div>
+              <p class="voice-error" role="status"></p>
+              <audio
+                controls
+                preload="none"
+                aria-label="Original locally generated First Light music"
+              >
+                <source
+                  src="assets/showcase/first-light.mp3"
+                  type="audio/mpeg"
+                />
+                <a href="assets/showcase/first-light.mp3"
+                  >Download First Light</a
+                >
+              </audio>
+              <details>
+                <summary>Prompt &amp; settings</summary>
+                <p>
+                  Cinematic ambient instrumental, intimate felt piano melody,
+                  warm swelling strings, delicate analog pads, subtle organic
+                  percussion. Evocative sunrise atmosphere, spacious detailed
+                  stereo production, gentle dynamic build to a beautiful
+                  resolved ending. No vocals, no speech.
+                </p>
+                <p>Instrumental · no supplied lyrics or voice reference.</p>
+                <p>
+                  Seed 732041 · full, uncut stereo output, exported as a 320
+                  kbps MP3. Generated in the separate demo account. No existing
+                  song or artist recording was supplied.
+                </p>
+              </details>
+            </article>
+            <article
+              class="music-card music-card-2"
+              data-audio-sample
+              data-sample-label="original Neon Current music"
+            >
+              <div class="music-card-heading">
+                <span class="music-number" aria-hidden="true">02</span>
+                <div>
+                  <p class="eyebrow">Electronic instrumental</p>
+                  <h4>Neon Current</h4>
+                </div>
+                <svg
+                  class="music-symbol"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 27V11l16-4v16M16 15l16-4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <ellipse
+                    cx="11"
+                    cy="28"
+                    rx="5"
+                    ry="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <ellipse
+                    cx="27"
+                    cy="24"
+                    rx="5"
+                    ry="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+              </div>
+              <p class="music-description">
+                Analog synths, a driving beat and a neon-lit night drive.
+              </p>
+              <p class="music-facts">
+                <span>ACE-Step 1.5 Turbo</span><span>45 seconds</span
+                ><span>Local generation</span>
+              </p>
+              <div class="voice-transport" hidden>
+                <button
+                  type="button"
+                  class="voice-toggle"
+                  aria-label="Play original Neon Current music"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="voice-play-icon" d="M9 5l11 7-11 7z" />
+                    <path
+                      class="voice-pause-icon"
+                      d="M7 5h4v14H7z M15 5h4v14h-4z"
+                    />
+                  </svg>
+                </button>
+                <div class="voice-playback">
+                  <span class="voice-action">Listen to the sample</span
+                  ><input
+                    type="range"
+                    class="music-seek"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0"
+                    aria-label="Seek within Neon Current"
+                    disabled
+                  />
+                </div>
+                <span class="voice-time">0:00</span>
+              </div>
+              <p class="voice-error" role="status"></p>
+              <audio
+                controls
+                preload="none"
+                aria-label="Original locally generated Neon Current music"
+              >
+                <source
+                  src="assets/showcase/neon-current.mp3"
+                  type="audio/mpeg"
+                />
+                <a href="assets/showcase/neon-current.mp3"
+                  >Download Neon Current</a
+                >
+              </audio>
+              <details>
+                <summary>Prompt &amp; settings</summary>
+                <p>
+                  Energetic instrumental synthwave, driving electronic drums,
+                  warm analog synthesizer chords, sparkling melodic arpeggios,
+                  deep rounded bass, retro-futuristic night-drive atmosphere,
+                  polished wide stereo production, 124 BPM. Strong memorable
+                  instrumental hook, rhythmic build, clean resolved ending. No
+                  vocals, no speech.
+                </p>
+                <p>Instrumental · no supplied lyrics or voice reference.</p>
+                <p>
+                  Seed 732043 · full, uncut stereo output, exported as a 320
+                  kbps MP3. Generated in the separate demo account. No existing
+                  song or artist recording was supplied.
+                </p>
+              </details>
+            </article>
+          </div>
+        </section>
         <aside class="showcase-hardware" aria-label="Demonstration hardware">
           <span class="showcase-hardware-mark" aria-hidden="true">✳</span>
           <div>

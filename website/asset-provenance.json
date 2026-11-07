@@ -33,7 +33,7 @@
   },
   "logo": "Existing frontend/public/station.svg",
   "showcase": {
-    "publication_review": "pending owner review; never publish unapproved media",
+    "publication_review": "Owner approved existing 30-asset visual/voice/UI bundle in conversation on 2026-11-07 and requested two additional original local music examples.",
     "account": "Dedicated non-administrator demo account, empty at creation; no operator Library export",
     "hardware": {
       "cpu": "Intel Core i7-6900K",
@@ -576,6 +576,68 @@
         "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
         "viewport": [1600, 1000],
         "account": "Dedicated non-administrator demo account"
+      },
+      "showcase/first-light.mp3": {
+        "sha256": "6cd283c0f763dffe6d990500ae4d35dbec57921ecce8324cd133f5b712c548d9",
+        "size_bytes": 1801965,
+        "run_id": "c4ecfb54-7bc8-4b6f-a840-04438fe1ed9a",
+        "artifact_id": "3bf717ce-6a58-4fe2-884c-827371909dc6",
+        "backend": "ACE-Step 1.5 Turbo",
+        "caption": "Cinematic ambient instrumental, intimate felt piano melody, warm swelling strings, delicate analog pads, subtle organic percussion. Evocative sunrise atmosphere, spacious detailed stereo production, gentle dynamic build to a beautiful resolved ending. No vocals, no speech.",
+        "lyrics": "",
+        "instrumental": true,
+        "duration_seconds": 45.0,
+        "sample_rate": 48000,
+        "channels": 2,
+        "seed": 732041,
+        "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
+        "code_revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+        "export": "Full, uncut 320 kbps stereo MP3; linear peak headroom only, original application WAV unchanged",
+        "linear_gain": 0.9441097148042925,
+        "disclosure": "Original AI-generated music, no existing song or artist recording supplied. The examples are instrumentals.",
+        "recorded_execution": {
+          "run_id": "c4ecfb54-7bc8-4b6f-a840-04438fe1ed9a",
+          "capability": "audio.music",
+          "executor": "ace_step_music",
+          "status": "succeeded",
+          "elapsed_seconds": 49.318,
+          "scope": "This Run only, start to finish including setup, excluding queue; not a cross-hardware benchmark."
+        },
+        "sources": [
+          "https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22",
+          "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE"
+        ]
+      },
+      "showcase/neon-current.mp3": {
+        "sha256": "5f3bfff14532708b2766f38746e3971c758f009424e4129978ceb7aaefca689c",
+        "size_bytes": 1801965,
+        "run_id": "e3f6c169-edab-4b06-9509-ccb4e3dd8f48",
+        "artifact_id": "9f0a6826-c0bf-4a40-ad7f-d9f3224d3aa7",
+        "backend": "ACE-Step 1.5 Turbo",
+        "caption": "Energetic instrumental synthwave, driving electronic drums, warm analog synthesizer chords, sparkling melodic arpeggios, deep rounded bass, retro-futuristic night-drive atmosphere, polished wide stereo production, 124 BPM. Strong memorable instrumental hook, rhythmic build, clean resolved ending. No vocals, no speech.",
+        "lyrics": "",
+        "instrumental": true,
+        "duration_seconds": 45.0,
+        "sample_rate": 48000,
+        "channels": 2,
+        "seed": 732043,
+        "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
+        "code_revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
+        "export": "Full, uncut 320 kbps stereo MP3; linear peak headroom only, original application WAV unchanged",
+        "linear_gain": 0.9441097148042925,
+        "disclosure": "Original AI-generated music, no existing song or artist recording supplied. The examples are instrumentals.",
+        "recorded_execution": {
+          "run_id": "e3f6c169-edab-4b06-9509-ccb4e3dd8f48",
+          "capability": "audio.music",
+          "executor": "ace_step_music",
+          "status": "succeeded",
+          "elapsed_seconds": 34.605,
+          "scope": "This Run only, start to finish including setup, excluding queue; not a cross-hardware benchmark."
+        },
+        "sources": [
+          "https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22",
+          "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE"
+        ]
       }
     },
     "orchestration": {

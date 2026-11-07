@@ -3,9 +3,10 @@
 Release 0.3 adds durable ReAct conversation chains, retained references and
 compatible model selection for existing image agents.
 
-A real creation showcase is being prepared in `assets/showcase/` from a dedicated
-non-administrator demo account. Its new images, media and screenshots are **pending
-owner review**: do not push these assets or deploy this checkout until approved.
+The real creation showcase in `assets/showcase/` uses a dedicated
+non-administrator demo account. The owner approved the 30-asset image/voice/UI
+bundle on 2026-11-07 and requested two additional original local music examples.
+Future new photographic/generated imagery still requires its own review.
 See [the showcase plan](../docs/plans/public-showcase.md).
 
 Release 0.2 adds capability-guided public model discovery and hardware advice
@@ -114,3 +115,8 @@ Escape, video, clipboard fallback, no external requests, and no JavaScript error
 Use the compiled output and include a GitHub Pages-style subpath. Application
 tests are independent; do not claim a new full app qualification for a site-only
 change.
+
+Music examples use the same exclusive playback, with keyboard-accessible seeking.
+Both are complete 45-second instrumentals, exported from real demo-owned
+ACE-Step Runs as 320 kbps stereo MP3s. Prompts and settings are visible; the
+rejected vocal experiment remains private and is not advertised.

@@ -6,7 +6,7 @@ Commercial licensing: https://github.com/jahu/ai-station/blob/master/COMMERCIAL.
 Geist font: copyright and SIL Open Font License in assets/fonts/OFL.txt.
 Media provenance: asset-provenance.json. Model weights are not distributed here.
 
-New local showcase (publication pending owner review): synthetic images, video,
+Owner-approved local showcase: synthetic images, video,
 speech and screenshots are generated/captured in the dedicated demo account.
 Models retain their own terms; model weights and complete source recordings
 are not redistributed with this website.
@@ -52,3 +52,14 @@ Michelle Obama: The White House / Joyce N. Boghosian, 18 February 2009
 Source: https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg
 License: Public domain — https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg#Licensing
 Cropped/resized to 256×320 and converted to WebP. The Elon Musk adaptation remains CC BY-SA 3.0; the Oprah Winfrey adaptation remains CC BY 2.0. These third-party images are expressly excluded from the site PolyForm Noncommercial license. No subject endorsement is implied.
+
+
+Original local music examples: First Light and Neon Current, generated with
+ACE-Step 1.5 Turbo. Caption/lyrics and exact source/model revisions appear in
+asset-provenance.json. No existing song or artist recording was supplied.
+ACE-Step SDK source (MIT):
+https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE
+Model source:
+https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22
+Model weights and SDK code are not redistributed with the website; component
+terms remain independent of the AI Station application/site license.

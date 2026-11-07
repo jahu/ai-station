@@ -181,13 +181,14 @@
       });
     }),
   );
-  showcase.querySelectorAll(".reference-voice").forEach((card) => {
+  showcase.querySelectorAll("[data-audio-sample]").forEach((card) => {
     const audio = card.querySelector("audio");
     const transport = card.querySelector(".voice-transport");
     const button = card.querySelector(".voice-toggle");
     const name = card.querySelector("h4").textContent;
+    const sampleLabel = card.dataset.sampleLabel || `synthetic ${name} sample`;
     const action = card.querySelector(".voice-action");
-    const progress = card.querySelector("progress");
+    const progress = card.querySelector("progress, .music-seek");
     const time = card.querySelector(".voice-time");
     const error = card.querySelector(".voice-error");
     if (!audio || !transport || !button) return;
@@ -199,7 +200,7 @@
       button.setAttribute("aria-pressed", String(playing));
       button.setAttribute(
         "aria-label",
-        `${playing ? "Pause" : "Play"} synthetic ${name} sample`,
+        `${playing ? "Pause" : "Play"} ${sampleLabel}`,
       );
       action.textContent = playing
         ? "Now playing"
@@ -212,6 +213,11 @@
         Number.isFinite(audio.duration) && audio.duration > 0
           ? audio.currentTime / audio.duration
           : 0;
+      if (progress.matches("input")) {
+        progress.disabled =
+          !Number.isFinite(audio.duration) || audio.duration <= 0;
+        progress.style.setProperty("--played", `${progress.value * 100}%`);
+      }
       time.textContent = format(
         playing || audio.currentTime > 0
           ? audio.currentTime
@@ -223,6 +229,11 @@
     ["play", "pause", "ended", "timeupdate", "loadedmetadata"].forEach(
       (event) => audio.addEventListener(event, update),
     );
+    if (progress.matches("input"))
+      progress.addEventListener("input", () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0)
+          audio.currentTime = Number(progress.value) * audio.duration;
+      });
     button.addEventListener("click", async () => {
       error.textContent = "";
       if (!audio.paused) {
