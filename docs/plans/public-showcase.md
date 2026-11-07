@@ -184,7 +184,7 @@ The owner reviewed and approved the complete existing gallery ("wszystko wyglada
 bardzo dobrze, commituj") and requested two generated music examples. Preserve
 that approval for the existing 30 assets; no previously rejected image or Polish
 draft is added. Two ordinary demo-owned ACE-Step music Runs produced First Light
-(45-second instrumental) and Neon Current (45-second synthwave instrumental). Source and export signal/decode checks are recorded privately.
+(45-second instrumental) and Little Signals (45-second synthpop with synthetic vocal). Source and export signal/decode checks are recorded privately.
 The complete uncut stereo MP3s use 320 kbps encoding and only linear peak headroom;
 no external mastering, stitched musical performance or substituted audio is used.
 
@@ -196,10 +196,10 @@ music's musical quality in the preview. No human-listening verdict is invented.
 Normal publication proceeds through a reviewed PR to develop and an owner-merged
 protected master promotion; no direct release-branch push or merge is authorized.
 
-The initial optional vocal experiment executed successfully but its automated
-transcription did not establish clear lyric fidelity. It is excluded from the
-gallery; Neon Current is the second curated instrumental. This is not presented
-as a diagnosis of a model bug or as a successful lyrics demonstration.
+Automated speech transcription did not establish exact lyric fidelity for the
+synthpop sample. Its supplied original lyrics are shown as generation inputs,
+not a verified transcript. Music quality follows owner listening acceptance;
+ASR alone must not disqualify a sung performance.
 
 
 The owner subsequently listened and explicitly preferred the original vocal
