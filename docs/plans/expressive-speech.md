@@ -260,3 +260,21 @@ cache and image. External runtimes were unchanged.
 Evidence remains private under `data/acceptance/fish-model-voice-api-20261103/`.
 This verifies execution, cancellation and recovery; it does not establish human
 listening acceptance of every emotion, script or cloned speaker.
+
+
+### Explicit Chatterbox language (2026-11-07)
+
+The public showcase needs real English recordings rather than relabeled Polish
+outputs. Audio and the shared speech request accept English explicitly. The
+worker freezes a statically advertised CLI source hash; native dispatch rejects
+an unsupported or changed contract. Every long-text child inherits the selected
+language. Existing requests and independent Polish adapters keep their behavior.
+The app-owned configured v3 launcher reuses an existing cache and Python offline;
+it does not modify external `clone_pl.py` or download weights. Managed multilingual
+speech uses its existing prepared SDK and cache. Fish remains automatic by text.
+
+Fake-process tests cover direct/chunked English, unsupported-language rejection,
+source replacement, ownership-safe cancellation, legacy request identity and
+Fish compatibility. SDK fakes exercise real configured-launcher argument routing,
+offline enforcement and non-overwriting publication. Real English inference is a
+separate opt-in qualification, not implied by these tests.
