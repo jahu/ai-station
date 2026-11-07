@@ -3047,3 +3047,13 @@ dialog > p a {
     margin-bottom: 2.5rem;
   }
 }
+
+@media (min-width: 761px) and (max-width: 960px) {
+  #text-to-video {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  #text-to-video .creation-caption {
+    padding: 24px;
+  }
+}
