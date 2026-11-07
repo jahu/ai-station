@@ -153,3 +153,44 @@ def test_permission_alone_does_not_allow_a_member_to_run_station_backup(accounts
     with control_session_factory()() as queue:
         assert queue.get(Run, run_id).status == "failed"
         assert not queue.scalars(select(Artifact).where(Artifact.run_id == run_id)).all()
+
+
+@pytest.mark.parametrize("kind", ["image", "audio"])
+def test_member_uploads_remain_private_and_usable_after_a_station_backup(accounts, kind):
+    import io
+    import wave
+
+    from app.data_access import DataScope, ScopedSession
+    from app.db import get_engine
+    from test_account_private_api import upload
+
+    owner, alice, bob = accounts
+    _, backup_artifact = backup(owner)
+    if kind == "image":
+        identity, content = upload(alice, "green")
+    else:
+        stream = io.BytesIO()
+        with wave.open(stream, "wb") as recording:
+            recording.setnchannels(1)
+            recording.setsampwidth(2)
+            recording.setframerate(24000)
+            recording.writeframes(b"\x00\x00" * 24000)
+        content = stream.getvalue()
+        response = alice.post(
+            "/api/audio/uploads", files={"file": ("own-reference.wav", content, "audio/wav")}
+        )
+        assert response.status_code == 201, response.text
+        identity = response.json()["id"]
+    actor = alice.get("/api/auth").json()["user"]["id"]
+    with control_session_factory()() as control:
+        row = control.get(Artifact, identity)
+        assert row.owner_id == actor and row.run_id is None
+    assert alice.get("/api/artifacts/" + identity).status_code == 200
+    assert alice.get("/api/artifacts/" + identity + "/file").content == content
+    assert identity in {row["id"] for row in alice.get("/api/artifacts").json()}
+    assert bob.get("/api/artifacts/" + identity).status_code == 404
+    assert owner.get("/api/artifacts/" + identity).status_code == 404
+    assert alice.get("/api/artifacts/" + backup_artifact).status_code == 404
+    with ScopedSession(bind=get_engine(), scope=DataScope(actor, execution=True)) as execution:
+        assert execution.get(Artifact, identity) is not None
+        assert execution.get(Artifact, backup_artifact) is None

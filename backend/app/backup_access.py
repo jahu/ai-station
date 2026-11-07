@@ -19,8 +19,12 @@ def artifact_access(user_id):
         )
         .exists()
     )
-    backup = Artifact.relative_path.startswith("backups/", autoescape=True) | Artifact.run_id.in_(
-        select(runs.c.id).where(runs.c.executor_type == "sqlite_backup")
+    # Uploads have no Run. EXISTS stays false for NULL run_id even when backup
+    # Runs exist; NOT(NULL IN populated_query) would hide ordinary member files.
+    backup = Artifact.relative_path.startswith("backups/", autoescape=True) | (
+        select(runs.c.id)
+        .where(runs.c.id == Artifact.run_id, runs.c.executor_type == "sqlite_backup")
+        .exists()
     )
     return ~backup | administrator
 
