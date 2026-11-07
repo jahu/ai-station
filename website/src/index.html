@@ -1332,18 +1332,123 @@
             </article>
           </div>
         </section>
-        <section class="market-showcase" aria-labelledby="market-agent-title">
+        <section
+          class="market-showcase"
+          id="agents-showcase"
+          aria-labelledby="agents-title"
+        >
           <div class="market-intro">
             <div>
-              <p class="eyebrow">A SMALL AGENT. A USEFUL DAILY HABIT.</p>
-              <h3 id="market-agent-title">
-                Your watchlist.<br /><span>Already researched.</span>
+              <p class="eyebrow">AUTONOMOUS AGENTS. ON YOUR TERMS.</p>
+              <h3 id="agents-title">
+                One prompt.<br /><span>Your own agent.</span>
               </h3>
             </div>
             <p>
-              Apple, Microsoft, NVIDIA. One local agent reads public prices,
-              writes and runs its analysis, then leaves a brief, a chart and the
-              numbers behind them. No paid market-data key.
+              Describe what you want done and how often. AI Station turns your
+              request into an agent draft with instructions, tools and a
+              schedule. Review it, enable it, and let it get to work — on your
+              machine.
+            </p>
+          </div>
+          <div
+            class="agent-ideas"
+            aria-label="Example instructions for different agents"
+          >
+            <article class="agent-idea">
+              <div class="agent-idea-heading">
+                <svg aria-hidden="true"><use href="#icon-image" /></svg>
+                <h4>Create on repeat</h4>
+              </div>
+              <p class="agent-idea-label">Example instruction</p>
+              <blockquote>
+                “Every morning, create a new product photo using these
+                references, with a different setting each time.”
+              </blockquote>
+              <p>Fresh images, campaign concepts and regular creative work.</p>
+            </article>
+            <article class="agent-idea">
+              <div class="agent-idea-heading">
+                <svg aria-hidden="true"><use href="#icon-play" /></svg>
+                <h4>Make social content</h4>
+              </div>
+              <p class="agent-idea-label">Example instruction</p>
+              <blockquote>
+                “Every Monday, generate a short video for my next social post,
+                using this image.”
+              </blockquote>
+              <p>
+                Clips for your content calendar. Direct social publishing
+                integrations are planned.
+              </p>
+            </article>
+            <article class="agent-idea">
+              <div class="agent-idea-heading">
+                <svg aria-hidden="true"><use href="#icon-chat" /></svg>
+                <h4>Follow what matters</h4>
+              </div>
+              <p class="agent-idea-label">Example instruction</p>
+              <blockquote>
+                “Each morning, research my stock watchlist and give me a short
+                report with a chart.”
+              </blockquote>
+              <p>
+                Research, public information and a regular brief you can return
+                to.
+              </p>
+            </article>
+            <article class="agent-idea">
+              <div class="agent-idea-heading">
+                <svg aria-hidden="true"><use href="#icon-agent" /></svg>
+                <h4>Handle the routine</h4>
+              </div>
+              <p class="agent-idea-label">Example instruction</p>
+              <blockquote>
+                “Every Friday, analyze this spreadsheet and summarize the
+                changes in a report.”
+              </blockquote>
+              <p>
+                File analysis and recurring jobs, with local Python when the
+                work needs code.
+              </p>
+            </article>
+          </div>
+          <ol
+            class="market-steps agent-setup-steps"
+            aria-label="From one instruction to a recurring agent"
+          >
+            <li>
+              <span>01</span><strong>Describe the job</strong>
+              <p>
+                Say what you need, in your own words. Add files or references
+                when useful.
+              </p>
+            </li>
+            <li>
+              <span>02</span><strong>Review and enable</strong>
+              <p>
+                Check the proposed tools, access and schedule. You decide when
+                it starts.
+              </p>
+            </li>
+            <li>
+              <span>03</span><strong>Come back to results</strong>
+              <p>
+                Let it work on schedule. Inspect the output, follow its history
+                or pause it.
+              </p>
+            </li>
+          </ol>
+          <div class="market-example-heading">
+            <p class="eyebrow">ONE EXAMPLE. REAL OUTPUT.</p>
+            <h4 id="market-agent-title">
+              An agent that follows your watchlist.
+            </h4>
+            <p>
+              This configured agent reads public Apple, Microsoft and NVIDIA
+              prices, runs local analysis, and leaves a brief, a chart and the
+              numbers behind them. The same agent workspace supports other jobs;
+              this is one recorded example.
             </p>
           </div>
           <div class="market-result">
@@ -1420,20 +1525,6 @@
               </figcaption>
             </figure>
           </div>
-          <ol class="market-steps" aria-label="The actual agent workflow">
-            <li>
-              <span>01</span><strong>Read public sources</strong>
-              <p>Three captured daily-price responses, with source links.</p>
-            </li>
-            <li>
-              <span>02</span><strong>Run local analysis</strong>
-              <p>Generated Python runs in an owned, restricted workspace.</p>
-            </li>
-            <li>
-              <span>03</span><strong>Keep the evidence</strong>
-              <p>Report, chart, CSV, source code and execution history.</p>
-            </li>
-          </ol>
           <details class="market-method">
             <summary>Schedule, source and verification</summary>
             <p>

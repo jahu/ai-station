@@ -185,15 +185,18 @@ Historical v0.0.2 packages are unchanged.
 
 *Chat and Library show real completed generations in a separate demo account, captured at 2× resolution. No operator Library or fabricated messages. Video shows the real completed eight-second coastal job. Agents shows a saved review draft, without claiming it has executed. The animated tour retains its historical demonstration provenance. [Media provenance](website/asset-provenance.json).*
 
-**A useful agent, with evidence.** The [Market Lens example](https://ai-station.dev/#market-agent-title)
-reads public Apple, Microsoft and NVIDIA prices, runs local Python, and produces a
-[research brief](website/assets/showcase/market-report.txt),
+**One prompt. Your own autonomous agent.** Describe the job and how often it should run.
+AI Station prepares the instructions, tools and schedule for your review; enable
+it when you're ready. Create regular images or short videos, research topics,
+analyze files and automate recurring jobs with local code when needed.
+Direct social publishing integrations are planned.
+
+[Explore agent ideas](https://ai-station.dev/#agents-showcase), including a
+[recorded market-research example](https://ai-station.dev/#market-agent-title)
+with its actual [brief](website/assets/showcase/market-report.txt),
 [chart](website/assets/showcase/market-chart.png) and
-[verifiable CSV](website/assets/showcase/market-prices.csv).
-This recorded execution uses closing data through 6 November 2026; the daily
-07:00 Europe/Warsaw trigger is paused after the demo. It is a price-based
-research watchlist, with source/code/Run history retained, rather than a live
-feed or a trading service.
+[CSV](website/assets/showcase/market-prices.csv). That example uses closing data
+through 6 November 2026; its daily trigger is paused after the demo.
 
 Automatic multi-tool conversations are being qualified for the next development build: describe a
 complete outcome, and the assistant can research, create an image, transform the

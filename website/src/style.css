@@ -2959,3 +2959,91 @@ dialog > p a {
     margin-top: 3.2rem;
   }
 }
+
+/* Agent creation leads; the recorded market result is one supporting example. */
+.agent-ideas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.agent-idea {
+  min-width: 0;
+  padding: 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.agent-idea-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.agent-idea-heading svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--green);
+}
+.agent-idea h4 {
+  font-size: 1.05rem;
+  font-weight: 550;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.agent-idea-label {
+  font-size: 0.67rem;
+  color: var(--muted);
+  margin: 1.3rem 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+.agent-idea blockquote {
+  font-size: 1.08rem;
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+  margin: 0;
+  max-width: 43ch;
+}
+.agent-idea > p:last-child {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  margin: 1rem 0 0;
+  max-width: 55ch;
+}
+.agent-setup-steps {
+  margin: 1.7rem 0 3.8rem;
+}
+.market-example-heading {
+  border-top: 1px solid var(--line);
+  padding-top: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+.market-example-heading h4 {
+  margin: 0.6rem 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.market-example-heading > p:last-child {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 75ch;
+  margin: 0;
+}
+.market-method {
+  margin-top: 1rem;
+}
+@media (max-width: 600px) {
+  .agent-ideas {
+    grid-template-columns: 1fr;
+  }
+  .agent-idea {
+    padding: 1.25rem;
+  }
+  .agent-setup-steps {
+    grid-template-columns: 1fr;
+    margin-bottom: 2.5rem;
+  }
+}

@@ -34,7 +34,8 @@ saved, disabled daily research draft, without claiming it has executed. No DOM
 or message rewriting is used. The separately linked market chart/report/CSV
 come from a verified execution of the original demonstration agent.
 
-These new images and the longer film remain private for owner visual review.
+The owner reviewed these images and the longer film on 2026-11-07 and identified
+only agent-section messaging as needing a change. That wording is now updated.
 The files in this historical directory and its animated tour retain their
 original provenance above. Current hashes and Run/artifact lineage live in
 `website/asset-provenance.json`.

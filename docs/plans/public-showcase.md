@@ -293,3 +293,31 @@ encode. Existing voice/music files and player behavior are unchanged from their
 previous full-playback checks. No backend, runner, app frontend, database schema
 or deployment files changed; this is equivalent focused local validation for a
 static content change, not a claim of another complete application test run.
+
+### Owner feedback: agents are general-purpose (2026-11-07)
+
+Lead the website and README with “One prompt. Your own agent.” Explain the actual
+product path: natural-language request → AI-assisted disabled definition with
+instructions, operational tools and cadence → review/enable → recurring work and
+inspectable results. The stock report is a subordinate, recorded example, not
+the product's defining agent category. Include illustrative instructions for
+regular creative work, short social videos, research/monitoring and file jobs.
+Available tools and local code support different purposes; do not present
+arbitrary integrations or unconditional execution of every possible instruction
+as already implemented. Direct social publishing remains planned, visibly beside
+the social-content example. Preserve all original report/CSV/chart data, source
+lineage and the distinction between a real recorded execution and example prompts.
+This copy/layout change needs no new inference, model download or media capture.
+
+
+The owner reviewed the candidate and identified only the agent positioning as
+needing revision; no additional image, voice or film change was requested.
+The revised section and README now lead with general-purpose autonomous agents,
+illustrative one-prompt requests, review/enable and recurring results. Static
+build, Prettier, JavaScript syntax and diff checks passed. Focused browser checks
+at widths 1440, 768 and 390 passed without overflow, failed HTTP responses,
+JavaScript errors or external requests; the four prompt cards, three setup steps,
+market-example hierarchy, keyboard evidence disclosure and no-JavaScript text
+and download links remain usable. Media bytes and player behavior are unchanged
+from the earlier full candidate checks. Prepare a reviewed source PR to develop;
+master promotion remains exclusively the human owner's action.

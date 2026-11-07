@@ -1,5 +1,5 @@
 {
-  "media": "Four actual 2026-11-07 browser captures in the dedicated demo account at 1600x1200, device scale2. Chat, Library and Video show real completed results. Agents shows a saved disabled review draft, without an execution claim. No DOM rewrites or operator Library export. New images/film remain private pending owner visual review. The station tour retains its historical owner-approved provenance.",
+  "media": "Four actual 2026-11-07 browser captures in the dedicated demo account at 1600x1200, device scale2. Chat, Library and Video show real completed results. Agents shows a saved disabled review draft, without an execution claim. No DOM rewrites or operator Library export. Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example. The station tour retains its historical owner-approved provenance.",
   "media_sha256": {
     "conversation.png": {
       "sha256": "ebc267a542edfc861e9dc2eafad6a7476d979e4a0031700b0e6b4459724666f8",
@@ -13,7 +13,7 @@
         "capture": "Actual browser screenshot, real completed local-model reply; no DOM rewrites or seeded messages",
         "http_errors": [],
         "js_errors": [],
-        "publication": "New screenshot pending owner review"
+        "publication": "Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example."
       }
     },
     "library.png": {
@@ -34,7 +34,7 @@
         ],
         "capture": "Actual browser screenshot; real Library annotations/search, no DOM rewrites",
         "http_errors": [],
-        "publication": "New screenshot pending owner review"
+        "publication": "Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example."
       }
     },
     "agents.png": {
@@ -79,7 +79,7 @@
   },
   "logo": "Existing frontend/public/station.svg",
   "showcase": {
-    "publication_review": "Owner approved existing 30-asset visual/voice/UI bundle in conversation on 2026-11-07 and requested two additional original local music examples.",
+    "publication_review": "Owner approved existing 30-asset visual/voice/UI bundle in conversation on 2026-11-07 and requested two additional original local music examples. Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example.",
     "account": "Dedicated non-administrator demo account, empty at creation; no operator Library export",
     "hardware": {
       "cpu": "Intel Core i7-6900K",
