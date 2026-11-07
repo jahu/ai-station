@@ -29,7 +29,9 @@ def collect_proposal(body, selected, references=None):
     )
     original = message
     for attempt in range(1, 3):
-        text, provider = collect_completion(body, message, max_tokens=16384)
+        text, provider = collect_completion(
+            body, message, max_tokens=16384, proposal_paths=[item["path"] for item in selected]
+        )
         try:
             # Validate before the common executor applies any file. A second
             # completion gets the same selected snapshot and no extra tools.
@@ -69,7 +71,7 @@ def collect_proposal(body, selected, references=None):
             return text, provider
 
 
-def collect_completion(body, message, *, max_tokens=2048):
+def collect_completion(body, message, *, max_tokens=2048, proposal_paths=None):
     managed = body.model.startswith("llamacpp:")
     if managed:
         instance_id = str(UUID(body.endpoint.removeprefix("llamacpp:")))
@@ -92,9 +94,13 @@ def collect_completion(body, message, *, max_tokens=2048):
         "stream": True,
         "json_output": True,
     }
+    if managed and proposal_paths is not None:
+        payload["proposal_paths"] = proposal_paths
     route = (
         "/coding/completions"
-        if max_tokens > 8192 or len(payload["messages"][0]["content"].encode()) > 100000
+        if "proposal_paths" in payload
+        or max_tokens > 8192
+        or len(payload["messages"][0]["content"].encode()) > 100000
         else "/chat/completions"
     )
     content, buffer, size = [], b"", 0

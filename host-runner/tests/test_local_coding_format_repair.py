@@ -24,7 +24,8 @@ def test_one_corrected_completion_keeps_the_original_snapshot_and_bounded_budget
 ):
     requests = []
 
-    def complete(body, message, *, max_tokens):
+    def complete(body, message, *, max_tokens, proposal_paths):
+        assert proposal_paths == [item["path"] for item in SELECTED]
         requests.append((message, max_tokens))
         return (invalid if len(requests) == 1 else json.dumps(VALID)), {"name": "fake-local"}
 
@@ -104,7 +105,7 @@ def test_ambiguous_edit_correction_retains_other_occurrences_and_large_file_poli
     }
     requests = []
 
-    def complete(body, message, *, max_tokens):
+    def complete(body, message, *, max_tokens, proposal_paths):
         requests.append(message)
         return json.dumps(invalid if len(requests) == 1 else good), {}
 
