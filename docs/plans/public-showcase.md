@@ -330,3 +330,57 @@ exact source-artifact hashes remain alongside the export hashes. The chart
 stays byte-for-byte original. Full `git diff --check origin/develop...HEAD` is
 required after this formatting correction, rather than checking only uncommitted
 files.
+
+### Text-to-video with generated sound (2026-11-07)
+
+The owner requested a photorealistic text-to-video example with sound in the
+website and README, then asked for a longer comparison. Two real demo-owned
+candidates were qualified privately: a 3.375-second standalone shot and an
+eight-second continuous film. After reviewing the comparison, the owner selected
+and approved the eight-second version for publication on 2026-11-07. Only its
+movie and actual-frame poster enter the public source; the unselected short
+candidate and comparison page remain private.
+
+The selected film contains 192 actual frames at native 1280 × 704 / 24 fps.
+Its first segment is generated from text without a supplied photograph. Two
+later segments use the existing frozen last-frame APG continuation contract,
+then the ordinary composition executor produces the full eight seconds. This is
+not an eight-second single-model invocation or a loop of a shorter film. All
+three Wan Runs use 40 steps and CFG 5, with base seed 317749. Fresh MMAudio uses
+the complete film (35 steps, CFG 4.5), and the normal effects-preview executor
+produces the final mixed movie. All six Runs/Tasks/artifacts were checked against
+the same non-admin demo owner; no operator Library media was exported.
+
+Recorded intervals including setup and excluding queue are 1,138.756 s,
+1,152.258 s and 445.752 s for the three video windows, 6.674 s for composition,
+77.210 s for sound and 6.814 s for mixing. Inference used dynamically allocated
+GPU 0 on this workstation. The three video intervals sum to 45 min 37 s when
+rounded; this excludes composition/mixing and is not a general hardware or
+end-to-end benchmark. The existing hardware disclosure remains applicable.
+
+The complete sampled sequence and native ending were inspected; the first two
+segments were also checked separately while generation continued. Later detail
+is softer than the standalone short candidate; the owner saw both full films
+before selecting the longer one. Human aesthetic acceptance does not establish
+universal model quality or perfect identity preservation for future generations.
+
+The website export copies the application's final H.264/AAC streams unchanged
+and adds MP4 fast-start metadata. Stream hashes match; full decoding passed.
+There is no additional encode, frame interpolation, looping, upscale or facial
+retouching. The poster is an actual frame at four seconds. All original decoded
+audio channels passed non-silence and clipping checks (peak 0.8104, RMS 0.0672,
+zero clipped samples). Exact source/export hashes, prompt/settings and per-Run
+receipts are included in the curated asset provenance.
+
+The private comparison passed complete playback of both films at 1440, 768 and
+390 pixels, with exclusive players, no autoplay, no overflow, no failed HTTP/JS
+requests and no external requests. Native controls also work without page
+JavaScript. The selected website presentation retains native controls and
+collapsed prompt/recipe details, a large tablet preview and a concise README
+poster/link. The selected website passed complete unmuted playback, pause/resume, keyboard
+prompt disclosure and exclusive-player checks at 1440, 768 and 390 pixels,
+without overflow, HTTP/JavaScript errors or external requests. Native video and
+prompts also passed without page JavaScript. Static build, Prettier, JavaScript
+syntax, complete media decode, all curated asset hashes and diff checks passed. Application code, runtimes, schema, dependencies and deployment remain
+unchanged; focused static/media checks are appropriate to this source change.
+Normal reviewed PRs target develop; master promotion remains human-owned.

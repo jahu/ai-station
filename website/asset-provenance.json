@@ -821,6 +821,123 @@
         "export": "Actual2x browser screenshot converted to WebPquality92; no DOM rewrites",
         "sha256": "32a618b6600579f183ac8fcd2dc5946b20d6732cdc339dfc7ff853b7fb20d86d",
         "size_bytes": 220612
+      },
+      "showcase/text-video-with-sound.mp4": {
+        "sha256": "a4bf076b558e24b2aee4617141e36b21f996124cdf68a02788d617450c8221e8",
+        "size_bytes": 1680894,
+        "artifact_id": "6e7b9a19-3d62-47e1-a092-64ebe5ec2cd9",
+        "run_id": "1bc51180-bac0-49cc-b3d3-a0ee41ef990e",
+        "source_artifact_sha256": "f88efe512f48c8c7d3fcf357c38e7e996c2dd7a9344e797843e6ab04b8de31a7",
+        "video_job_id": "ad3ffe58-0452-440d-822c-69e449ceb521",
+        "source_video_artifact_id": "4d6149ea-722a-41b8-9a5d-8a0a176c9118",
+        "source_video_sha256": "e4e82b85a8523344f026c3d4a058a9f336ea87227a5fc49b0bd25c117758b3e7",
+        "source_audio_artifact_id": "1c0baffc-3596-4abf-8db5-7caaa5272a13",
+        "source_audio_sha256": "89b8e3d085091e6db567961ea6796f3e55823a88565286e0d567a97565847d72",
+        "recipe": {
+          "capability": "video.generate",
+          "backend": "wan2.2-5b",
+          "input_mode": "text_origin_continuous",
+          "image_input_artifact_id": null,
+          "prompt": "Photorealistic live-action cinema. A medium close-up portrait of one fictional adult woman, about thirty years old, standing on a quiet Atlantic coastal path at golden hour. She wears a textured charcoal wool coat and a soft cream scarf. Her auburn hair moves naturally in a light sea breeze. She looks out toward the ocean, then gently turns her head a little toward the camera with a relaxed, subtle closed-mouth smile. Clear natural eyes, consistent facial identity and proportions, realistic skin texture and fine hair detail. Soft warm side light, delicate highlights in her eyes, ocean waves softly out of focus behind her. Authentic high-end documentary cinematography, restrained film color, shallow depth of field, an 85mm portrait lens. The camera is stable, with a very gentle cinematic push-in. Continuous single shot, believable natural movement, crisp face, realistic cloth and hair. Fully clothed, tasteful editorial portrait. Maintain the same person and natural facial proportions throughout the continuous take. After a small head turn, hold the relaxed gaze rather than restarting the action. Keep the camera movement restrained and the ocean background coherent.",
+          "negative_prompt": "animation, cartoon, illustration, CGI, video game, plastic skin, waxy face, beauty filter, airbrushed skin, doll, distorted anatomy, asymmetric eyes, changing face, deformed mouth, warped teeth, extra limbs, blurry face, smeared detail, flicker, jitter, rapid movement, camera shake, abrupt cuts, morphing, text, subtitles, watermark",
+          "width": 1280,
+          "height": 704,
+          "steps": 40,
+          "cfg": 5.0,
+          "seed": 317749,
+          "gpu": "auto",
+          "memory_profile": "bounded_11g",
+          "duration_seconds": 8,
+          "composition_mode": "continuous",
+          "frames": 192,
+          "fps": 24,
+          "segments": 3,
+          "continuation_strategy": "last_frame_apg_v1",
+          "sound": {
+            "backend": "mmaudio",
+            "profile": "mmaudio_large44_bf16_v1",
+            "prompt": "A calm coastal ambience matching the video: a light sea breeze brushing nearby grass and a wool scarf, gentle ocean surf in the distance, one quiet distant gull. Subtle realistic location sound. No speech, no music, no crowd.",
+            "negative_prompt": "speech, voices, music, distorted sound, loud wind noise, crowd",
+            "steps": 35,
+            "cfg": 4.5,
+            "seed": 317749,
+            "gpu": "auto",
+            "video_artifact_id": "4d6149ea-722a-41b8-9a5d-8a0a176c9118"
+          }
+        },
+        "export": "Application-produced continuous film and effects preview use their normal H.264/AAC composition. Website export copies the final video/audio streams unchanged and adds fast-start metadata. The first segment has no supplied photograph; later segments condition on preceding generated video. No looping, interpolation, upscale or face retouching.",
+        "creation_runs": [
+          {
+            "run_id": "f343fe8a-9a81-465b-b0ae-fb742825ec3c",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 1138.756,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "c88f8224-6a0d-488b-87bd-0c7eb384403a",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 1152.258,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "dc8aaeff-d912-47c3-a7cc-d6179a5d4e05",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 445.752,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "b6e26347-eec4-4272-8e1b-068732c7b76f",
+            "capability": "media.compose",
+            "executor": "media_compose",
+            "status": "succeeded",
+            "elapsed_seconds": 6.674,
+            "actual_gpu": null,
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "b79c9f3b-c644-4f87-a439-e66b943773db",
+            "capability": "audio.effects",
+            "executor": "mmaudio_effects",
+            "status": "succeeded",
+            "elapsed_seconds": 77.21,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "1bc51180-bac0-49cc-b3d3-a0ee41ef990e",
+            "capability": "video.effects_preview",
+            "executor": "effects_preview",
+            "status": "succeeded",
+            "elapsed_seconds": 6.814,
+            "actual_gpu": null,
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          }
+        ],
+        "verification": {
+          "full_decode": true,
+          "audio_non_silent": true,
+          "decoded_audio_clipped_samples": 0,
+          "stream_copy_matches_app_mix": true,
+          "same_nonadmin_owner_verified": true
+        },
+        "publication_review": "Owner reviewed the private short/long comparison and selected this eight-second film and its poster for website/README publication on 2026-11-07."
+      },
+      "showcase/text-video-poster.webp": {
+        "sha256": "f555e8afc8f4b4f843f11d557cba5b9cb27e81d347e94bad237ad2c8aa149d4a",
+        "size_bytes": 99190,
+        "source_artifact_id": "6e7b9a19-3d62-47e1-a092-64ebe5ec2cd9",
+        "source_run_id": "1bc51180-bac0-49cc-b3d3-a0ee41ef990e",
+        "export": "Actual frame at 4 seconds from the application-produced eight-second mixed film, WebP quality 93; no face retouching or upscale.",
+        "publication_review": "Owner reviewed the private short/long comparison and selected this eight-second film and its poster for website/README publication on 2026-11-07."
       }
     },
     "orchestration": {

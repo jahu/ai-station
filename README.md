@@ -125,6 +125,16 @@ based on Morgan Freeman, Donald Trump, Elon Musk, Oprah Winfrey and Michelle Oba
 The impressions speak English; they are not authentic recordings, endorsements or
 official built-in celebrity voice presets.
 
+**Text becomes a film, with its own sound.** No reference image: a written
+coastal-portrait description becomes a short Wan 2.2 scene, then MMAudio generates
+the ocean ambience. The fictional person, motion and sound are created locally.
+Three generated segments form the continuous shot.
+Native 1280 × 704, 8 seconds, 24 fps; no upscale or face retouching.
+
+<p align="center"><a href="https://ai-station.dev/#text-to-video"><img src="website/assets/showcase/text-video-poster.webp" width="720" alt="Actual frame from a locally text-generated film of a fictional adult woman by the ocean, with generated coastal sound" /></a></p>
+
+[Watch the text-to-video example with sound and inspect its prompts](https://ai-station.dev/#text-to-video).
+
 **Two moods. Two original soundtracks.** Hear “First Light”, a cinematic piano-and-strings instrumental, and “Little Signals”, bright synthpop with a synthetic English vocal. Both are complete 45-second local ACE-Step 1.5 Turbo generations, with prompts and generation settings beside the players. [Listen to the music examples](https://ai-station.dev/#music-title).
 
 **One prompt, connected tools.** Supply a portrait and a recording, then ask for
