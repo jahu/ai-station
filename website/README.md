@@ -117,6 +117,6 @@ tests are independent; do not claim a new full app qualification for a site-only
 change.
 
 Music examples use the same exclusive playback, with keyboard-accessible seeking.
-Both are complete 45-second instrumentals, exported from real demo-owned
+Both are complete 45-second tracks, exported from real demo-owned
 ACE-Step Runs as 320 kbps stereo MP3s. Prompts and settings are visible; the
-rejected vocal experiment remains private and is not advertised.
+owner-selected synthpop recording includes a synthetic vocal and its supplied lyrics.

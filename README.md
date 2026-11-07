@@ -119,7 +119,7 @@ based on Morgan Freeman, Donald Trump, Elon Musk, Oprah Winfrey and Michelle Oba
 The impressions speak English; they are not authentic recordings, endorsements or
 official built-in celebrity voice presets.
 
-**Two moods. Two original soundtracks.** Hear “First Light”, a cinematic piano-and-strings instrumental, and “Neon Current”, a driving synthwave instrumental. Both are complete 45-second local ACE-Step 1.5 Turbo generations, with prompts and generation settings beside the players. [Listen to the music examples](https://ai-station.dev/#music-title).
+**Two moods. Two original soundtracks.** Hear “First Light”, a cinematic piano-and-strings instrumental, and “Little Signals”, bright synthpop with a synthetic English vocal. Both are complete 45-second local ACE-Step 1.5 Turbo generations, with prompts and generation settings beside the players. [Listen to the music examples](https://ai-station.dev/#music-title).
 
 **One prompt, connected tools.** Supply a portrait and a recording, then ask for
 a studio presenter. The local assistant created the studio image, observed its

@@ -200,3 +200,10 @@ The initial optional vocal experiment executed successfully but its automated
 transcription did not establish clear lyric fidelity. It is excluded from the
 gallery; Neon Current is the second curated instrumental. This is not presented
 as a diagnosis of a model bug or as a successful lyrics demonstration.
+
+
+The owner subsequently listened and explicitly preferred the original vocal
+synthpop recording to Neon Current. Restore Little Signals as the second public
+sample. Automated speech transcription is not a valid proxy for musical quality
+or a reason to overrule owner listening acceptance; exact sung-lyric fidelity
+remains unclaimed. Neon Current stays private. No new generation was needed.

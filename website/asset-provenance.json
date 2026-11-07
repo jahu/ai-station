@@ -608,30 +608,30 @@
           "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE"
         ]
       },
-      "showcase/neon-current.mp3": {
-        "sha256": "5f3bfff14532708b2766f38746e3971c758f009424e4129978ceb7aaefca689c",
+      "showcase/little-signals.mp3": {
+        "sha256": "4fa43d26f9d9c9065836d3da2c6253615bbe015e00525b81d53f97530946609b",
         "size_bytes": 1801965,
-        "run_id": "e3f6c169-edab-4b06-9509-ccb4e3dd8f48",
-        "artifact_id": "9f0a6826-c0bf-4a40-ad7f-d9f3224d3aa7",
+        "run_id": "2dfba12c-0d60-42c0-bc78-bd2e42c0affb",
+        "artifact_id": "dc607e93-f9b6-4478-893a-ece548f6d200",
         "backend": "ACE-Step 1.5 Turbo",
-        "caption": "Energetic instrumental synthwave, driving electronic drums, warm analog synthesizer chords, sparkling melodic arpeggios, deep rounded bass, retro-futuristic night-drive atmosphere, polished wide stereo production, 124 BPM. Strong memorable instrumental hook, rhythmic build, clean resolved ending. No vocals, no speech.",
-        "lyrics": "",
-        "instrumental": true,
+        "caption": "Bright energetic synthpop song in English, clear expressive female lead vocal, warm analog synthesizer chords, melodic arpeggios, tight punchy electronic drums and deep rounded bass. Memorable uplifting chorus, polished spacious stereo mix, 124 BPM, short intro, distinct ending.",
+        "lyrics": "[Verse]\nWindows open to the light\nQuiet sparks across the night\nEvery thought can find a way\nTurn the dark into the day\n\n[Chorus]\nWe make a little signal\nLet it travel through the room\nA thousand small beginnings\nAnd a sky about to bloom",
+        "instrumental": false,
         "duration_seconds": 45.0,
         "sample_rate": 48000,
         "channels": 2,
-        "seed": 732043,
+        "seed": 732042,
         "model_revision": "19671f406d603126926c1b7e2adc169acbcade22",
         "code_revision": "ca1e85fe9430179831e6bc6be790c332190a3866",
         "export": "Full, uncut 320 kbps stereo MP3; linear peak headroom only, original application WAV unchanged",
         "linear_gain": 0.9441097148042925,
-        "disclosure": "Original AI-generated music, no existing song or artist recording supplied. The examples are instrumentals.",
+        "disclosure": "Original AI-generated synthpop with synthetic vocal. Original English lyrics supplied; automated ASR is not claimed to verify singing or exact lyric fidelity. Owner preferred this recording after listening.",
         "recorded_execution": {
-          "run_id": "e3f6c169-edab-4b06-9509-ccb4e3dd8f48",
+          "run_id": "2dfba12c-0d60-42c0-bc78-bd2e42c0affb",
           "capability": "audio.music",
           "executor": "ace_step_music",
           "status": "succeeded",
-          "elapsed_seconds": 34.605,
+          "elapsed_seconds": 36.35,
           "scope": "This Run only, start to finish including setup, excluding queue; not a cross-hardware benchmark."
         },
         "sources": [
