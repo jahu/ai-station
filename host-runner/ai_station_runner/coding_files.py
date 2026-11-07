@@ -156,7 +156,10 @@ def resolve_content(original: dict, item: dict, *, local_context=False) -> str |
             raise ValueError("File replacements must be bounded UTF-8 text")
         return content
     if keys != {"path", "replacements"}:
-        raise ValueError("Invalid file replacement")
+        raise ValueError(
+            "Invalid file replacement: use path with exactly one of content, replacements or delete; "
+            "no additional keys are accepted"
+        )
     if original["content"] is None:
         raise ValueError("Search replacements require an existing selected file")
     replacements = item["replacements"]

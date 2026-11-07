@@ -1681,8 +1681,8 @@ def test_local_coding_applies_validates_and_commits_only_owned_worktree(
         assert committed["status"] == "succeeded", committed
         assert len(local_coding_bridge["requests"]) == 1
         target, payload = local_coding_bridge["requests"][0]
-        assert target == "/v1/llm/chat/completions" and payload["model"] == "fixture-local"
-        assert payload["max_tokens"] == 8192
+        assert target == "/v1/llm/coding/completions" and payload["model"] == "fixture-local"
+        assert payload["max_tokens"] == 16384
         assert "tools" not in payload and "Original repository" in payload["messages"][0]["content"]
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert not (repository / "new.py").exists()
@@ -1813,7 +1813,7 @@ def test_local_coding_refuses_unfinished_or_tool_responses(
         assert run["status"] == "failed", run
         assert "coding_review" not in run["metadata"]
         if mode == "truncated":
-            assert "8192 tokens" in run["error_message"]
+            assert "16384 tokens" in run["error_message"]
             assert "No proposal was applied" in run["error_message"]
         worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
         assert (

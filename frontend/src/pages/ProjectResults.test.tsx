@@ -79,6 +79,28 @@ it("moves through validation commands with arrow keys", () => {
   expect(first.tabIndex).toBe(0);
 });
 
+it("keeps long inline programs collapsed while retaining the exact recorded command for inspection", () => {
+  const argv = ["node", "-e", "console.log('bounded validation');".repeat(20)];
+  render(
+    <ValidationResults
+      events={[
+        event("long-build", "validation.completed", {
+          kind: "build",
+          argv,
+          exit_code: 0,
+          duration_seconds: 0.2,
+        }),
+      ]}
+    />,
+  );
+  const summary = screen.getByText(/Full command/);
+  const details = summary.closest("details") as HTMLDetailsElement;
+  expect(details.open).toBe(false);
+  expect(summary.textContent).toContain("node");
+  expect(details.querySelector("pre")?.textContent).toBe(JSON.stringify(argv));
+  expect(screen.getByLabelText("Command build long-build").tabIndex).toBe(0);
+});
+
 it("moves through dependency installs with arrow keys", () => {
   render(
     <DependencyResults

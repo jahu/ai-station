@@ -71,7 +71,8 @@ def explore(workspace, prompt, guidance, complete, *, web=False, local_context=F
         "Select source files for this coding task by exploring an isolated repository. "
         "Reply with exactly one JSON object, no Markdown. Available operations: "
         f"{operations}. "
-        "Use finish when you have enough context; select at most ten paths, including new files to create. "
+        "Use finish when you have enough context; select one to ten unique paths, including new files to create. "
+        "Selected files are UTF-8 source; this editor does not generate binary image/media files. "
         + (
             "Local read_file supports start_line and max_lines (1..200), with a 16000-byte observation bound. "
             "Larger files are passed in full bounded form to the final proposal after finish. "
@@ -93,7 +94,7 @@ def explore(workspace, prompt, guidance, complete, *, web=False, local_context=F
             declared.add("web_search")
     for step in range(budget):
         correction = (
-            "Controller correction: your previous operation had missing or extra keys and was not executed. "
+            "Controller correction: your previous operation was invalid and was not executed. Review its error. "
             'Include the tool name explicitly; file selection requires {"tool":"finish","files":["path"]}. '
             if corrections
             else ""
@@ -117,8 +118,23 @@ def explore(workspace, prompt, guidance, complete, *, web=False, local_context=F
         tool = action.get("tool")
         print(json.dumps({"event": "tool.requested", "tool": tool, "arguments": action}), flush=True)
         if tool == "finish" and set(action) == {"tool", "files"}:
-            if not isinstance(action["files"], list):
-                raise ValueError("Exploration must select a list of file paths")
+            files = action["files"]
+            if (
+                not isinstance(files, list)
+                or not 1 <= len(files) <= 10
+                or not all(isinstance(path, str) for path in files)
+                or len(set(files)) != len(files)
+            ):
+                if corrections >= 2:
+                    raise ValueError("Invalid file selection after two corrections")
+                corrections += 1
+                feedback = "Finish requires one to ten unique source paths as a JSON list of strings. No selection was applied."
+                observations.append({"request": action, "result": {"error": feedback, "executed": False}})
+                print(
+                    json.dumps({"event": "tool.failed", "tool": tool, "step": step + 1, "error": feedback}),
+                    flush=True,
+                )
+                continue
             selected = read_selected(workspace, action["files"], local_context=local_context)
             observations.append({"request": action, "result": {"selected": action["files"]}})
             print(
