@@ -74,3 +74,17 @@ ordinary Chat, reasoning, provider failure, Stop and prior controller regression
 passed in the initial focused runs (39, 20 and 53 cases respectively). These
 are fake-provider/disposable-database checks, not real website qualification.
 The complete backend/Runner regression and final image/rollout remain pending.
+
+## Required website output
+
+The existing generic new-project path does not require a website build archive by
+default. Add an optional typed `static_site` output expectation to the existing
+local new-project/build scope and ReAct tool arguments. Selecting it requires
+automatic validation and uses the existing one-attempt local validation-repair
+policy for this new owned website scope. It remains local and adds no dependency-installation or
+publication authority. Ordinary software scopes omit this field, preserving
+legacy request serialization. Freeze the expectation and offline build guidance
+on the existing coding preparation; existing proposal/validation propagation
+then requires a new, nonempty `dist/index.html` in its verified archive before
+success. This reuses the already-tested website validation/preview contract and
+is selected semantically by the model, without domain/keyword routing.
