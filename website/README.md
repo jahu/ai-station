@@ -1,15 +1,21 @@
 # Project landing page
 
 Release 0.3 adds durable ReAct conversation chains, retained references and
-compatible model selection for existing image agents. No new private media is
-published.
+compatible model selection for existing image agents.
+
+The real creation showcase in `assets/showcase/` uses a dedicated
+non-administrator demo account. The owner approved the 30-asset image/voice/UI
+bundle on 2026-11-07 and requested two additional original local music examples.
+Future new photographic/generated imagery still requires its own review.
+See [the showcase plan](../docs/plans/public-showcase.md).
 
 Release 0.2 adds capability-guided public model discovery and hardware advice
 before weights transfer. Publisher links, complete model components, reviewed
 installation and explicit update review reuse the application model lifecycle.
 Download filenames and release-note URLs come from `site.config.json`; do not
 hard-code a prior version in HTML. The preview must use the newly compiled output.
-Approved media assets remain unchanged; no new private screenshots are published.
+Previously approved neutral media stays unchanged. New showcase assets require
+their own publication review.
 
 A standalone, static product website. It lives alongside the application so its
 claims and screenshots can be reviewed together. It has **no application runtime,
@@ -78,9 +84,25 @@ to `master` are created by the existing bot and remain for human-owner approval.
   asks for attempted action, expected result and actual result, without secrets.
 - Benchmarks quote the existing recorded runs, with hardware, scope and a link to
   the full methodology. It does not invent user counts, testimonials or partners.
-- Only the previously owner-approved neutral screenshots and tour are included,
-  unchanged. No current production Library, private conversation or real agent
-  configuration is exported. Example conversation/agent text is seeded demo data.
+- Previously owner-approved neutral screenshots and the tour remain unchanged.
+  The new showcase uses actual generated outputs and real result/recipe views
+  from a separate demo account. No operator Library, conversation or agent
+  configuration is exported. Failed experiments are excluded from the curated
+  gallery. Voice impressions are labeled synthetic, with source attribution;
+  they are not authentic speech, endorsements or official built-in presets.
+  Playback MP3s use documented linear volume matching only; original application
+  artifacts stay unchanged. No denoising, EQ or watermark-removal processing.
+- Original public examples stay safe for work. Compatible adult/NSFW models are
+  described in text, without generating nudity or implying that blurred clothed
+  photography was explicit material. Faster GPU performance is distinguished
+  from model/settings-dependent quality.
+- Native audio/video controls work without JavaScript. Media uses explicit
+  playback; no voice or video autoplays. The enhanced voice cards load metadata
+  for real durations, provide keyboard play/pause and progress, and pause other
+  showcase players. Native audio controls remain the no-JavaScript fallback.
+  Five English clips replace the Polish drafts. Licensed portrait thumbnails
+  retain their separate source licenses and attribution in each card and NOTICE. Per-result links
+  expose the actual prompt/recipe screenshot, not a fabricated chat success.
 - `asset-provenance.json` records the media hashes and upstream font source. Geist
   is hosted locally under the SIL OFL; its full license is included.
 - `LICENSE` and `NOTICE` are included here and in the output so this directory can
@@ -93,3 +115,8 @@ Escape, video, clipboard fallback, no external requests, and no JavaScript error
 Use the compiled output and include a GitHub Pages-style subpath. Application
 tests are independent; do not claim a new full app qualification for a site-only
 change.
+
+Music examples use the same exclusive playback, with keyboard-accessible seeking.
+Both are complete 45-second tracks, exported from real demo-owned
+ACE-Step Runs as 320 kbps stereo MP3s. Prompts and settings are visible; the
+owner-selected synthpop recording includes a synthetic vocal and its supplied lyrics.
