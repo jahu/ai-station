@@ -188,3 +188,19 @@ independently frozen outcomes are fulfilled. Missing, failed, interrupted or
 undeclared outcomes still require clarification; no additional tool is executed.
 Both the complete and incomplete cases and the durable API/worker flow are
 regressed. The earlier attempt and its actual files remain unchanged.
+
+Content inspection found a further provenance bug after a successful retry: the
+planner's smaller implementation notes explicitly requested generic sample news
+and placeholder contact details, dropping the source URL. The adapter forwarded
+only those notes as the coding task, so native exploration lost the real source
+despite the earlier successful public-page read (whose full text contained the
+contact details). A technically valid prototype was therefore not a faithful
+rebuild of the user's requested source.
+
+The NEW static-site handoff now binds the original user request and bounded
+canonical successful page observations to the code task. Planner notes remain
+implementation suggestions, not authority to drop requirements or invent facts.
+Source excerpts preserve both heading and footer when bounded, remain untrusted
+data, and grant no extra permissions. Failed reads are not promoted to evidence.
+Explicitly requested examples/placeholders remain supported. Other software and
+existing-project coding handoffs retain their previous request shape.
