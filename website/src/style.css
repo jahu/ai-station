@@ -2622,6 +2622,8 @@ dialog > p a {
   font-size: 12px;
 }
 .music-card-heading h4 {
+  margin: 0;
+  line-height: 1.2;
   font-size: 28px;
   font-weight: 500;
   letter-spacing: -0.04em;
