@@ -32,7 +32,8 @@ worker/Runner; do not execute a parallel media pipeline outside the application.
 5. A short image-to-video scene with generated synchronized sound, complete
    decoding and browser playback checked.
 6. A genuine conversation that chains a reference image and speech input through
-   studio restaging, speech and avatar output. Show actual tool/result history,
+   studio restaging and then avatar output, retaining the supplied recording.
+   Show actual tool/result history,
    not a seeded fictitious success. Explain that the assistant selects tools,
    observes results and passes artifacts forward; technical LlamaIndex details
    belong in an optional implementation note.
@@ -162,7 +163,16 @@ Final private browser checks passed at 1440, 768 and 390 pixels with no overflow
 HTTP failures, JavaScript errors or external requests. All eight media players
 completed actual playback with pause/resume/end. Dedicated checks passed for
 keyboard playback, progress, exclusive playback, no autoplay, no-JavaScript
-native controls and a visible native fallback when an audio source fails. All 25
+native controls and a visible native fallback when an audio source fails. All 30
 showcase source assets match their hashes and exact compiled-file whitelist;
 Polish draft clips are excluded from the final gallery. This is browser emulation,
 not a claim of physical-phone or subjective listening acceptance.
+
+
+Final source audit confirmed current database ownership and original application
+file hashes for all 12 distinct generated media artifacts; their Tasks and Runs
+also belong to the non-administrator demo account and succeeded. Five additional
+unaltered Library screenshots show the actual English voice results and exact
+spoken text, linked from each voice card. Titles were saved through the normal
+demo-owned annotation API; neither DOM text nor execution history was rewritten.
+Publication and subjective visual/listening approval remain pending.

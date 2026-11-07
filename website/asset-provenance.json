@@ -531,6 +531,51 @@
         "conversation_id": "fc86e565-e9f4-459d-80b6-66e5995ef759",
         "viewport": [1440, 1800],
         "capture": "Actual browser screenshot, WebP encoded; request clipped to header and complete user message; result scrolls to actual avatar tool output. No DOM edits or fabricated messages. The historical final-wording defect is disclosed in orchestration evidence below."
+      },
+      "showcase/morgan-voice-workspace.webp": {
+        "sha256": "4388f97fe61c3701e58ad68832aa85511d1e6135be4573acf198ebfb7f286ee7",
+        "size_bytes": 57876,
+        "artifact_id": "8fd7b602-8433-4e3b-bd02-1482c41c6eeb",
+        "run_id": "66aa8c13-bf08-4986-b96e-352dc7bee493",
+        "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
+        "viewport": [1600, 1000],
+        "account": "Dedicated non-administrator demo account"
+      },
+      "showcase/oprah-voice-workspace.webp": {
+        "sha256": "60184f93e5d22b85dd0b1074c0ce7cfd67d660487fa4830afbe1bd0b475fe489",
+        "size_bytes": 58014,
+        "artifact_id": "afbd5ad5-62c8-47af-a576-93ebeda606e3",
+        "run_id": "75fe121b-b006-430b-adc6-b1daba434dae",
+        "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
+        "viewport": [1600, 1000],
+        "account": "Dedicated non-administrator demo account"
+      },
+      "showcase/michelle-voice-workspace.webp": {
+        "sha256": "d734deb511e70c0c931e695eaecce85082607f3e1de49c58865f4ebcfad7a893",
+        "size_bytes": 58272,
+        "artifact_id": "0e92eb65-7b1e-41d2-bdb1-15f14242d983",
+        "run_id": "ff056c62-4ee2-4938-939a-8956758f588a",
+        "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
+        "viewport": [1600, 1000],
+        "account": "Dedicated non-administrator demo account"
+      },
+      "showcase/trump-voice-workspace.webp": {
+        "sha256": "08e1b27a55669aabeaa4f56a8a7e926efb73439765f006e23be6423a54c3972c",
+        "size_bytes": 57526,
+        "artifact_id": "a15d7935-9489-4d18-8bda-f7101efd9b83",
+        "run_id": "764503cf-deca-4575-951c-a36897ce5b4b",
+        "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
+        "viewport": [1600, 1000],
+        "account": "Dedicated non-administrator demo account"
+      },
+      "showcase/elon-voice-workspace.webp": {
+        "sha256": "1332d98c8f6addc7388ec6ad1efd8a7c39fa7eaff429600a066fb426981f5f11",
+        "size_bytes": 56940,
+        "artifact_id": "9a526394-5724-4d63-96fc-2a31d23a4005",
+        "run_id": "316f07e3-c480-47b7-a6f0-07376c032021",
+        "capture": "Unaltered browser screenshot, WebP encoding; real Library title saved through normal annotation API, actual spoken text visible",
+        "viewport": [1600, 1000],
+        "account": "Dedicated non-administrator demo account"
       }
     },
     "orchestration": {
