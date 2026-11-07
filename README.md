@@ -45,6 +45,11 @@ the input of a recurring-agent draft for your review.
 Existing image agents expose compatible installed models for Generate, Edit and
 Recompose directly beside the image operation.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
+The [website-task and stream recovery repair](docs/plans/assistant-website-recovery.md)
+tracks working-deliverable planning, structured tool failures and claim-fenced
+stream persistence during transient database contention.
+Website-building tasks use an isolated owned project and return a checked offline
+build with a ZIP download and interactive preview.
 The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
 tracks per-Run admission backoff and durable recovery after transient SQLite contention.
 

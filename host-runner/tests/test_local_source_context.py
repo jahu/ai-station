@@ -130,6 +130,22 @@ def test_typed_coding_bridge_keeps_chat_limits_and_excludes_images_history_reaso
             CodingCompletion.model_validate(invalid)
 
 
+def test_larger_coding_output_budget_does_not_expand_the_chat_or_input_contract():
+    body = {
+        "model": "fixture",
+        "messages": [{"role": "user", "content": "A bounded source-edit request"}],
+        "temperature": 0.1,
+        "max_tokens": 16384,
+        "stream": True,
+        "json_output": True,
+    }
+    assert CodingCompletion.model_validate(body).max_tokens == 16384
+    with pytest.raises(ValidationError):
+        Completion.model_validate(body)
+    with pytest.raises(ValidationError):
+        CodingCompletion.model_validate({**body, "max_tokens": 16385})
+
+
 def test_owned_coding_route_retains_identity_and_private_transport(monkeypatch, tmp_path):
     from uuid import uuid4
 

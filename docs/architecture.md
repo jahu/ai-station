@@ -1659,3 +1659,24 @@ the supplied text and does not accept this Chatterbox-specific option. Long
 configured speech forwards the same language to every owned subprocess. The
 app-owned configured adapter reuses the operator's existing Python/cache offline;
 independent external speech scripts remain untouched.
+
+
+Streaming Chat retries short SQLite persistence checkpoints independently of its
+one provider stream. Every update verifies the original worker/claim and a
+nonterminal Run in the same transaction. Received batches remain in memory until
+commit; silent waits reserve no writer, and recovery cannot be overwritten by a
+stale stream. Controller observations retain structured failures while bounding
+prompt excerpts. Working software requests remain project/code/file outcomes,
+with existing owned workspace and validation services.
+[Repair and verification](plans/assistant-website-recovery.md).
+
+Native local coding bounds SSE transport independently of decoded proposal
+content: repeated token metadata is not code. Transport remains capped at 16 MiB,
+decoded UTF-8 content and individual events at 2 MiB, alongside the existing
+model output-token budget, timeout and confirmed-completion checks.
+The single-message, JSON-only coding bridge admits a separate 16,384-token output
+budget. Ordinary Chat retains its 8,192-token maximum; this does not change model
+context/VRAM admission or selected-path authority.
+Owned llama.cpp coding proposals use a Runner-constructed JSON schema for the
+bounded selected-path list. This constrains decoding; the canonical proposal
+parser and checked filesystem application remain the permission boundary.

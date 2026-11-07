@@ -1,6 +1,7 @@
 """Compose owned project setup with the existing coding workflow."""
 
 import re
+from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import Field, StrictBool, StrictInt, ValidationError, model_validator
@@ -12,10 +13,15 @@ class ProjectBuildScope(ProjectName):
     executor: str = Field(default="local", pattern=r"^(local|cursor|codex)$")
     external_ai: StrictBool = False
     model: str = Field(default="", max_length=100, pattern=r"^[A-Za-z0-9._:/ -]*$")
+    output_contract: Literal["static_site"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
 
     @model_validator(mode="after")
     def permission_scope(self):
+        if self.output_contract and (self.executor != "local" or not self.auto_validate):
+            raise ValueError("A verified website requires local coding with automatic validation")
         if self.executor != "local" and not self.external_ai:
             raise ValueError("Allow sharing with the selected coding agent before creating the project")
         if self.executor == "local" and (self.external_ai or self.model not in {"", "auto"}):
@@ -132,6 +138,31 @@ def queue_project_build(session, setup, project):
             "CodingSetupFailed",
             str(exc.detail) if isinstance(exc, HTTPException) else str(exc),
         )
+    if scope.output_contract and child.status != "failed":
+        from app.static_site import commands
+
+        request = child.parameters["local_coding"]
+        if not request["project_check_policy"]["auto_validate"]:
+            raise ValueError("The website build lost its required validation policy")
+        child.parameters = {
+            **child.parameters,
+            "local_coding": {
+                **request,
+                "output_contract": scope.output_contract,
+                "commands": commands(),
+                "guidance": request["guidance"]
+                + "\n"
+                + (
+                    "Create a complete static website with real HTML, CSS and local assets under src/. "
+                    "AI Station supplies fixed offline Node checks/build commands which validate src/index.html "
+                    "and copy src/ into the verified dist/ archive for preview/download. You do not need to "
+                    "create package.json or build/test scripts. Concentrate on a complete, usable website with "
+                    "local CSS/JS and actual assets; use CSS or inline SVG when no real image asset is available. "
+                    "Package installation is not authorized. No runtime CDNs, interactive prompts or network "
+                    "fetches during builds/tests. Do not change saved project policies or validation commands."
+                ),
+            },
+        }
     setup.metadata_json = {**setup.metadata_json, "coding_run_id": child.id}
     setup.summary = "Project created; coding preparation " + (
         "failed." if child.status == "failed" else "queued."

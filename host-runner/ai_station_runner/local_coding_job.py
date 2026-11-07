@@ -15,6 +15,9 @@ from ai_station_runner.coding_job import execute_proposal
 from ai_station_runner.config import get_settings
 from ai_station_runner.local_coding_runs import directory, load_request
 
+MAX_STREAM_BYTES = 16 * 1024 * 1024
+MAX_CONTENT_BYTES = 2 * 1024 * 1024
+
 
 def collect_proposal(body, selected, references=None):
     message = proposal_prompt(
@@ -26,7 +29,9 @@ def collect_proposal(body, selected, references=None):
     )
     original = message
     for attempt in range(1, 3):
-        text, provider = collect_completion(body, message, max_tokens=8192)
+        text, provider = collect_completion(
+            body, message, max_tokens=16384, proposal_paths=[item["path"] for item in selected]
+        )
         try:
             # Validate before the common executor applies any file. A second
             # completion gets the same selected snapshot and no extra tools.
@@ -66,7 +71,7 @@ def collect_proposal(body, selected, references=None):
             return text, provider
 
 
-def collect_completion(body, message, *, max_tokens=2048):
+def collect_completion(body, message, *, max_tokens=2048, proposal_paths=None, exploration_tools=None):
     managed = body.model.startswith("llamacpp:")
     if managed:
         instance_id = str(UUID(body.endpoint.removeprefix("llamacpp:")))
@@ -89,16 +94,23 @@ def collect_completion(body, message, *, max_tokens=2048):
         "stream": True,
         "json_output": True,
     }
+    if managed and proposal_paths is not None:
+        payload["proposal_paths"] = proposal_paths
+    if managed and exploration_tools is not None:
+        payload["exploration_tools"] = exploration_tools
     route = (
         "/coding/completions"
-        if len(payload["messages"][0]["content"].encode()) > 100000
+        if "proposal_paths" in payload
+        or "exploration_tools" in payload
+        or max_tokens > 8192
+        or len(payload["messages"][0]["content"].encode()) > 100000
         else "/chat/completions"
     )
     content, buffer, size = [], b"", 0
     done, finished = False, False
     started = time.monotonic()
     last_progress = started
-    characters = 0
+    characters = content_bytes = 0
     transport = httpx.HTTPTransport(uds=get_settings().socket_path())
     with httpx.Client(
         transport=transport, timeout=httpx.Timeout(300, connect=10), trust_env=False, follow_redirects=False
@@ -109,11 +121,15 @@ def collect_completion(body, message, *, max_tokens=2048):
                 raise ValueError("Local coding requires a streaming response")
             for chunk in response.iter_bytes():
                 size += len(chunk)
-                if size > 2 * 1024 * 1024 or time.monotonic() - started > 900:
-                    raise ValueError("Local coding exceeded its response limit")
+                if size > MAX_STREAM_BYTES:
+                    raise ValueError("Local coding exceeded its stream transport limit")
+                if time.monotonic() - started > 900:
+                    raise ValueError("Local coding exceeded its response time limit")
                 buffer += chunk
                 while b"\n" in buffer:
                     line, buffer = buffer.split(b"\n", 1)
+                    if len(line) > MAX_CONTENT_BYTES:
+                        raise ValueError("Local coding exceeded its event size limit")
                     if not line.startswith(b"data:"):
                         continue
                     data = line[5:].strip()
@@ -145,6 +161,9 @@ def collect_completion(body, message, *, max_tokens=2048):
                         if text is not None:
                             if not isinstance(text, str):
                                 raise ValueError("Local coding requires text content")
+                            content_bytes += len(text.encode())
+                            if content_bytes > MAX_CONTENT_BYTES:
+                                raise ValueError("Local coding exceeded its content limit")
                             content.append(text)
                             characters += len(text)
                             if time.monotonic() - last_progress >= 10:
@@ -155,6 +174,8 @@ def collect_completion(body, message, *, max_tokens=2048):
                                 last_progress = time.monotonic()
                 if done:
                     break
+                if len(buffer) > MAX_CONTENT_BYTES:
+                    raise ValueError("Local coding exceeded its event size limit")
     if not done or not finished:
         raise ValueError("Local coding response ended without confirmed completion")
     return "".join(content), {"name": "local-openai-compatible", "model": body.model}
@@ -176,7 +197,12 @@ def execute(run_id):
                 workspace,
                 body.prompt,
                 body.guidance,
-                lambda message: collect_completion(body, message)[0],
+                lambda message: collect_completion(
+                    body,
+                    message,
+                    exploration_tools=["list_files", "read_file", "search_files", "finish", "fetch_url"]
+                    + (["web_search"] if public_http.configured_search_url() else []),
+                )[0],
                 web=True,
                 local_context=True,
             )

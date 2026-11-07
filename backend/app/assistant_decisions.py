@@ -125,8 +125,17 @@ def scoped_context(context, outcomes):
 
     tools = {}
     pending = missing_outcomes(context.get("observations", []), outcomes)
+    new_implementation = (
+        "coding.local" not in context["tools"]
+        and sum(item.get("remaining", item["count"]) for item in pending if item["kind"] == "project") == 1
+        and any(item["kind"] == "local_changes" for item in pending)
+    )
     image_tools, _, _ = image_contract({**context, "outcomes": outcomes})
     for name, spec in context["tools"].items():
+        if name == "project.create" and new_implementation:
+            # An empty workspace cannot deliver code and supplies no existing
+            # coding scope. Use the available composed new-project build tool.
+            continue
         if name.startswith("image.") and name != "image.describe" and name not in image_tools:
             continue
         effective = (
@@ -189,6 +198,27 @@ def validate_affordance(tool, outcomes):
 
 class DecisionStopped(Exception):
     pass
+
+
+def invalid_decision_fallback(context):
+    """A bad terminal sentence cannot erase already verified requested results."""
+    from app.assistant_controller import missing_outcomes
+
+    outcomes = context.get("outcomes", [])
+    observations = context.get("observations", [])
+    evidence = [item["index"] for item in observations if item.get("status") == "succeeded"]
+    if outcomes and evidence and not missing_outcomes(observations, outcomes):
+        return Decision(
+            kind="finish",
+            reason="All requested outputs are verified",
+            response="Your requested results are ready. You can inspect the outputs and completed steps below.",
+            evidence=evidence,
+        )
+    return Decision(
+        kind="clarify",
+        reason="Unable to choose a valid next action",
+        response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
+    )
 
 
 async def database_step(session, run, claim, deadline, action):
@@ -523,11 +553,7 @@ class AssistantDecisionExecutor:
                 except ValueError as exc:
                     correction = str(exc)[:1800]
                     if attempt:
-                        value = Decision(
-                            kind="clarify",
-                            reason="Unable to choose a valid next action",
-                            response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
-                        )
+                        value = invalid_decision_fallback(run.parameters["decision_context"])
                         break
                     messages = messages[:2] + [
                         {"role": "assistant", "content": text[:16000]},

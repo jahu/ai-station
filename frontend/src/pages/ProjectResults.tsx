@@ -3,6 +3,23 @@ import type { RunEvent } from "../api";
 import { Badge } from "../components/common";
 import { useListKeyboard } from "./useListKeyboard";
 
+function RecordedCommand({ argv }: { argv: unknown }) {
+  const recorded = JSON.stringify(argv) ?? "";
+  if (recorded.length <= 160) return <pre>{recorded}</pre>;
+  const executable =
+    Array.isArray(argv) && typeof argv[0] === "string"
+      ? argv[0].split(/[\\/]/).pop() || "Command"
+      : "Command";
+  return (
+    <details>
+      <summary className="muted">
+        <code>{executable}</code> · Full command
+      </summary>
+      <pre>{recorded}</pre>
+    </details>
+  );
+}
+
 export function ValidationResults({ events }: { events: RunEvent[] }) {
   const headingId = useId();
   const labelId = useId();
@@ -35,7 +52,7 @@ export function ValidationResults({ events }: { events: RunEvent[] }) {
           >
             <div>
               <strong>{String(event.payload.kind)}</strong>
-              <pre>{JSON.stringify(event.payload.argv)}</pre>
+              <RecordedCommand argv={event.payload.argv} />
               <p className="muted">
                 Exit {String(event.payload.exit_code)} ·{" "}
                 {String(event.payload.duration_seconds)} seconds
