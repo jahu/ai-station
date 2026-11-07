@@ -391,7 +391,7 @@ h2 span {
 #workspace-image {
   width: 100%;
   height: auto;
-  aspect-ratio: 1.5;
+  aspect-ratio: 4 / 3;
   object-fit: contain;
   background: #101510;
 }
@@ -2737,5 +2737,313 @@ dialog > p a {
   }
   .music-showcase {
     margin-top: 50px;
+  }
+}
+
+/* A real agent result, with the original generated chart and downloadable evidence. */
+.market-showcase {
+  margin: 5rem 0 3rem;
+}
+.market-intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: end;
+  margin-bottom: 1.8rem;
+}
+.market-intro h3 {
+  margin: 0.6rem 0 0;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+.market-intro h3 span {
+  color: var(--green);
+}
+.market-intro > p {
+  color: var(--muted);
+  max-width: 31rem;
+  line-height: 1.7;
+  margin: 0;
+}
+.market-result {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #151a15;
+}
+.market-report {
+  padding: 1.8rem;
+  min-width: 0;
+}
+.market-report-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.market-agent-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #c5f49a17;
+  color: var(--green);
+  display: grid;
+  place-items: center;
+}
+.market-agent-mark svg {
+  width: 22px;
+  height: 22px;
+}
+.market-report-heading strong,
+.market-report-heading div > span {
+  display: block;
+}
+.market-report-heading strong {
+  font-size: 1.15rem;
+}
+.market-report-heading div > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin-top: 0.25rem;
+}
+.market-snapshot {
+  color: var(--muted);
+  font-size: 0.73rem;
+  margin: 1.2rem 0 0.5rem;
+}
+.market-quotes {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+}
+.market-quotes caption {
+  text-align: left;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.market-quotes th,
+.market-quotes td {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.market-quotes th:first-child {
+  text-align: left;
+}
+.market-quotes thead {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.market-quotes tbody th {
+  font-weight: 500;
+}
+.market-quotes th span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.66rem;
+  margin-top: 0.2rem;
+}
+.market-positive {
+  color: var(--green);
+}
+.market-report blockquote {
+  margin: 1.2rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid var(--green);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.market-report cite {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-style: normal;
+  margin-top: 0.45rem;
+}
+.market-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--green);
+}
+.market-downloads a {
+  padding: 0.35rem 0;
+}
+.market-chart {
+  margin: 0;
+  min-width: 0;
+  background: #f9faf9;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem;
+}
+.market-chart img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.market-chart figcaption {
+  color: #455045;
+  font-size: 0.67rem;
+  line-height: 1.5;
+  padding: 0.65rem 0.3rem 0;
+}
+.market-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  list-style: none;
+  padding: 0;
+  margin: 1.3rem 0;
+  gap: 1.5rem;
+}
+.market-steps li {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.market-steps li > span {
+  color: var(--green);
+  font-size: 0.7rem;
+  margin-right: 0.6rem;
+}
+.market-steps strong {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.market-steps p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  margin: 0.5rem 0 0;
+}
+.market-method {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+}
+.market-method summary {
+  color: var(--text);
+  cursor: pointer;
+}
+.market-method > p {
+  max-width: 75ch;
+}
+@media (max-width: 850px) {
+  .market-intro {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .market-result {
+    grid-template-columns: 1fr;
+  }
+  .market-chart {
+    padding: 0.6rem;
+  }
+}
+@media (max-width: 540px) {
+  .market-report {
+    padding: 1.2rem;
+  }
+  .market-steps {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+  .market-showcase {
+    margin-top: 3.2rem;
+  }
+}
+
+/* Agent creation leads; the recorded market result is one supporting example. */
+.agent-ideas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.agent-idea {
+  min-width: 0;
+  padding: 1.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.agent-idea-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.agent-idea-heading svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--green);
+}
+.agent-idea h4 {
+  font-size: 1.05rem;
+  font-weight: 550;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.agent-idea-label {
+  font-size: 0.67rem;
+  color: var(--muted);
+  margin: 1.3rem 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+.agent-idea blockquote {
+  font-size: 1.08rem;
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+  margin: 0;
+  max-width: 43ch;
+}
+.agent-idea > p:last-child {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  margin: 1rem 0 0;
+  max-width: 55ch;
+}
+.agent-setup-steps {
+  margin: 1.7rem 0 3.8rem;
+}
+.market-example-heading {
+  border-top: 1px solid var(--line);
+  padding-top: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+.market-example-heading h4 {
+  margin: 0.6rem 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.market-example-heading > p:last-child {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 75ch;
+  margin: 0;
+}
+.market-method {
+  margin-top: 1rem;
+}
+@media (max-width: 600px) {
+  .agent-ideas {
+    grid-template-columns: 1fr;
+  }
+  .agent-idea {
+    padding: 1.25rem;
+  }
+  .agent-setup-steps {
+    grid-template-columns: 1fr;
+    margin-bottom: 2.5rem;
   }
 }

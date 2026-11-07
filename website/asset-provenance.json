@@ -1,21 +1,67 @@
 {
-  "media": "Existing owner-approved neutral README showcase, reused byte-for-byte. Separate demo dataset; no production Library export.",
+  "media": "Four actual 2026-11-07 browser captures in the dedicated demo account at 1600x1200, device scale2. Chat, Library and Video show real completed results. Agents shows a saved disabled review draft, without an execution claim. No DOM rewrites or operator Library export. Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example. The station tour retains its historical owner-approved provenance.",
   "media_sha256": {
     "conversation.png": {
-      "sha256": "d036fda30feddd833356edff08209ab35a397c129cac8bbe1afb51190ff330ad",
-      "size_bytes": 108004
+      "sha256": "ebc267a542edfc861e9dc2eafad6a7476d979e4a0031700b0e6b4459724666f8",
+      "size_bytes": 360892,
+      "capture": {
+        "account": "demo",
+        "conversation_id": "566e80d0-c19f-4fc6-a2a6-16d71b682f0d",
+        "run_id": "d28ab9dc-c5b9-4d9f-97b6-e514e4ba7018",
+        "viewport": [1600, 1200],
+        "device_scale_factor": 2,
+        "capture": "Actual browser screenshot, real completed local-model reply; no DOM rewrites or seeded messages",
+        "http_errors": [],
+        "js_errors": [],
+        "publication": "Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example."
+      }
     },
     "library.png": {
-      "sha256": "d1493b4e29ad64f42927cdf0abdd5d958dfbc2fc8ecdda84965d4399c53a1162",
-      "size_bytes": 303604
+      "sha256": "ab0fe79f4758314f83367ace6a54613c92cea123cd11dbb55541b105f2c35421",
+      "size_bytes": 1381400,
+      "capture": {
+        "account": "demo",
+        "route": "/library",
+        "viewport": [1600, 1200],
+        "device_scale_factor": 2,
+        "actual_search": "Showcase visual",
+        "artifact_ids": [
+          "be87e04a-67ce-4c1b-9da7-9a41530cfbdf",
+          "9aa23997-0637-4988-a4e9-67e0222771db",
+          "6412b3c7-154e-461b-9518-69a976c13251",
+          "b72562a8-c1c0-4336-9058-4e6dff7041ff",
+          "35aeafb3-88d9-411e-b28c-636c1ecd7f5a"
+        ],
+        "capture": "Actual browser screenshot; real Library annotations/search, no DOM rewrites",
+        "http_errors": [],
+        "publication": "Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example."
+      }
     },
     "agents.png": {
-      "sha256": "60931e31eea1f97ac871aa00fe20214023317cdfdbe3f1b4fd06feeb357c5570",
-      "size_bytes": 106496
+      "sha256": "6c6efcf8c3a7b4c7f4fa0a0d1fb6b27a12eb1b85b048f283bd2bc75855c73c03",
+      "size_bytes": 299689,
+      "capture": {
+        "account": "demo",
+        "agent_id": "c34aad27-5174-4be2-b71c-d8ee30e72236",
+        "viewport": [1600, 1200],
+        "device_scale_factor": 2,
+        "capture": "Actual saved, disabled review draft. No execution claim for this draft. Demonstrated report is separately sourced to the verified original agent Task. No DOM rewrites.",
+        "http_errors": [],
+        "js_errors": []
+      }
     },
     "video.png": {
-      "sha256": "bca1ad0ba712e600f62a5942fd3e0e991d609a9c2dccc8bc22fc73a2e562d759",
-      "size_bytes": 274851
+      "sha256": "6ce17864219317c78e8b1304409eb677681ca265801bcbb89f9accbcc3590c96",
+      "size_bytes": 1405509,
+      "capture": {
+        "account": "demo",
+        "job_id": "9dc7c84b-547b-447b-ac07-b83f6152117c",
+        "viewport": [1600, 1200],
+        "device_scale_factor": 2,
+        "capture": "Actual Video workspace and completed Wan result, paused at 1 second using its normal media element. No DOM rewrites.",
+        "http_errors": [],
+        "js_errors": []
+      }
     },
     "station-tour.mp4": {
       "sha256": "a8144eff48c7e9e1ac5ce5f0dd1b1bc2c06555987be6b24e29e36ced0033d2db",
@@ -33,7 +79,7 @@
   },
   "logo": "Existing frontend/public/station.svg",
   "showcase": {
-    "publication_review": "Owner approved existing 30-asset visual/voice/UI bundle in conversation on 2026-11-07 and requested two additional original local music examples.",
+    "publication_review": "Owner approved existing 30-asset visual/voice/UI bundle in conversation on 2026-11-07 and requested two additional original local music examples. Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example.",
     "account": "Dedicated non-administrator demo account, empty at creation; no operator Library export",
     "hardware": {
       "cpu": "Intel Core i7-6900K",
@@ -78,63 +124,156 @@
         }
       },
       "showcase/coastal-with-sound.mp4": {
-        "sha256": "0af7d6d20ec4bf9fa297d6afe9c1984676e530c128f4640cd155d8d2721dd005",
-        "size_bytes": 981048,
-        "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
-        "artifact_id": "b72562a8-c1c0-4336-9058-4e6dff7041ff",
+        "sha256": "831eb9696b7fd1bc7cdf193e6e8013620fe7d460b449750bb45ad1c1f4bcaf14",
+        "size_bytes": 2286302,
+        "run_id": "a3bccdef-9973-4aca-b235-099282a81495",
+        "artifact_id": "8fc2f137-d65e-4d84-8bde-4967372171a7",
         "recipe": {
           "width": 1280,
           "height": 704,
           "fps": 24,
-          "duration_seconds": 3.375,
+          "duration_seconds": 8,
           "parent_artifact_ids": [
-            "cd6b3676-7414-4512-b363-5809082716fa",
-            "7e06bff9-b583-4b74-ac56-0b138e5e2994"
-          ]
+            "87b1b961-5b78-445d-9fe4-18293eeb8cac",
+            "38b51a7f-9e44-4aa0-8873-4e3ef69be7f1"
+          ],
+          "motion_prompt": "An elegant continuous automotive cinema shot at a Mediterranean harbor at dawn. The camera makes a confident smooth forward dolly with a gentle leftward slide, creating clearly visible parallax across the wet foreground cobblestones and the parked burgundy classic grand touring car. Keep the exact same car body, wheels, headlights and paint physically stable and sharply detailed throughout. The car remains parked. Turquoise water ripples visibly, small reflected highlights sparkle, a thin veil of sea mist moves gently across the harbor. Rich natural dawn light, realistic smooth motion, restrained premium cinematography. No sudden camera changes.",
+          "negative_prompt": "distorted car, changing car body, warped wheels, melting geometry, wobbling headlights, duplicated objects, moving vehicle, blur, smeared detail, flickering, camera shake, sudden cuts, text overlays",
+          "sound_prompt": "A peaceful Mediterranean harbor at dawn: quiet gentle water lapping against the stone quay, a soft sea breeze, one distant gull call. Subtle realistic ambience. The parked car is silent.",
+          "steps": 30,
+          "composition_mode": "continuous",
+          "segments": 3,
+          "continuation_strategy": "last_frame_apg_v1"
         },
-        "export": "App-produced sound preview; stream copy with fast-start MP4 metadata",
+        "export": "Application-produced preview mix uses its normal CPU H.264 encode and AAC audio mux. The website export preserves that video/audio with stream copy and fast-start metadata; no extra encode, loop, upscale or retouch.",
         "recorded_execution": {
-          "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+          "run_id": "a3bccdef-9973-4aca-b235-099282a81495",
           "capability": "video.effects_preview",
           "executor": "effects_preview",
           "status": "succeeded",
-          "elapsed_seconds": 3.823,
-          "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+          "elapsed_seconds": 7.36,
+          "actual_gpu": null,
+          "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
         },
         "creation_runs": [
           {
-            "run_id": "237008b7-1e8b-4975-b01e-bb80725749f5",
-            "capability": "image.generate",
-            "executor": "photo_pipe",
-            "status": "succeeded",
-            "elapsed_seconds": 383.271,
-            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
-          },
-          {
-            "run_id": "9dee82ea-a9b2-4909-a8aa-4a828a7bdac4",
+            "run_id": "c26a18a2-5179-416d-a5c1-f5f766a79e27",
             "capability": "video.generate",
             "executor": "wan_video",
             "status": "succeeded",
-            "elapsed_seconds": 1016.11,
-            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            "elapsed_seconds": 922.676,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
           },
           {
-            "run_id": "4364ec30-edbf-4ab8-98ec-03848e06436c",
+            "run_id": "7043b281-00db-44b2-8bf8-714b41fe6b1d",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 917.156,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "03bce7df-bd69-458e-994c-a8b3d3026d4a",
+            "capability": "video.generate",
+            "executor": "wan_video",
+            "status": "succeeded",
+            "elapsed_seconds": 380.732,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "3ef1eb45-88dc-467e-8557-8391d7abcc67",
+            "capability": "media.compose",
+            "executor": "media_compose",
+            "status": "succeeded",
+            "elapsed_seconds": 7.651,
+            "actual_gpu": null,
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          },
+          {
+            "run_id": "1f8da2bd-be4a-409a-b6a4-140a3efffbf1",
             "capability": "audio.effects",
             "executor": "mmaudio_effects",
             "status": "succeeded",
-            "elapsed_seconds": 92.711,
-            "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            "elapsed_seconds": 92.01,
+            "actual_gpu": "0",
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
           },
           {
+            "run_id": "a3bccdef-9973-4aca-b235-099282a81495",
+            "capability": "video.effects_preview",
+            "executor": "effects_preview",
+            "status": "succeeded",
+            "elapsed_seconds": 7.36,
+            "actual_gpu": null,
+            "scope": "This individual Run only, including setup, excluding queue; not an end-to-end or cross-hardware benchmark"
+          }
+        ],
+        "previous_approved_version": {
+          "sha256": "0af7d6d20ec4bf9fa297d6afe9c1984676e530c128f4640cd155d8d2721dd005",
+          "size_bytes": 981048,
+          "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+          "artifact_id": "b72562a8-c1c0-4336-9058-4e6dff7041ff",
+          "recipe": {
+            "width": 1280,
+            "height": 704,
+            "fps": 24,
+            "duration_seconds": 3.375,
+            "parent_artifact_ids": [
+              "cd6b3676-7414-4512-b363-5809082716fa",
+              "7e06bff9-b583-4b74-ac56-0b138e5e2994"
+            ]
+          },
+          "export": "App-produced sound preview; stream copy with fast-start MP4 metadata",
+          "recorded_execution": {
             "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
             "capability": "video.effects_preview",
             "executor": "effects_preview",
             "status": "succeeded",
             "elapsed_seconds": 3.823,
             "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
-          }
-        ]
+          },
+          "creation_runs": [
+            {
+              "run_id": "237008b7-1e8b-4975-b01e-bb80725749f5",
+              "capability": "image.generate",
+              "executor": "photo_pipe",
+              "status": "succeeded",
+              "elapsed_seconds": 383.271,
+              "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            },
+            {
+              "run_id": "9dee82ea-a9b2-4909-a8aa-4a828a7bdac4",
+              "capability": "video.generate",
+              "executor": "wan_video",
+              "status": "succeeded",
+              "elapsed_seconds": 1016.11,
+              "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            },
+            {
+              "run_id": "4364ec30-edbf-4ab8-98ec-03848e06436c",
+              "capability": "audio.effects",
+              "executor": "mmaudio_effects",
+              "status": "succeeded",
+              "elapsed_seconds": 92.711,
+              "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            },
+            {
+              "run_id": "3cb09ba4-561c-4d06-b457-281b77fa3de1",
+              "capability": "video.effects_preview",
+              "executor": "effects_preview",
+              "status": "succeeded",
+              "elapsed_seconds": 3.823,
+              "scope": "This Run only, start to finish including setup, excluding queue; not total pipeline or a cross-hardware benchmark"
+            }
+          ]
+        },
+        "source_video_task_id": "9dc7c84b-547b-447b-ac07-b83f6152117c",
+        "source_video_artifact_id": "87b1b961-5b78-445d-9fe4-18293eeb8cac",
+        "sound_run_id": "1f8da2bd-be4a-409a-b6a4-140a3efffbf1",
+        "video_stream_sha256": "723d63eac36c1d2754d13745cc5a9864276886d6adb35099126b6ca50bf4f46f"
       },
       "showcase/coastal-workspace.webp": {
         "sha256": "120505578a300b81401231f19324d3a65437016b54b2d74526cdd5ae23f78562",
@@ -346,7 +485,7 @@
         "duration_seconds": 8.68,
         "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
         "reference_source": [
-          "BBC · Film Programme · 2008",
+          "BBC \u00b7 Film Programme \u00b7 2008",
           "https://commons.wikimedia.org/wiki/File:Morgan_freeman_bbc_radio4_film_programme_12_09_2008_b00dbcdn.flac",
           "CC BY 3.0; short reference excerpt, converted to mono PCM."
         ],
@@ -371,7 +510,7 @@
         "duration_seconds": 8.8,
         "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
         "reference_source": [
-          "White House · United State of Women · 2016",
+          "White House \u00b7 United State of Women \u00b7 2016",
           "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/06/14/first-lady-michelle-obama-and-oprah-winfrey-white-house-summit-uni/index__q_page=367.html",
           "Public-domain US government recording; short reference excerpt."
         ],
@@ -396,7 +535,7 @@
         "duration_seconds": 7.72,
         "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
         "reference_source": [
-          "White House · United State of Women · 2016",
+          "White House \u00b7 United State of Women \u00b7 2016",
           "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/06/14/first-lady-michelle-obama-and-oprah-winfrey-white-house-summit-uni/index__q_page=367.html",
           "Public-domain US government recording; short reference excerpt."
         ],
@@ -421,7 +560,7 @@
         "duration_seconds": 7.68,
         "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
         "reference_source": [
-          "White House · 2016",
+          "White House \u00b7 2016",
           "https://obamawhitehouse.archives.gov/photos-and-video/video/2016/11/10/president-obama-meets-president-elect-trump/",
           "Public-domain US government recording; short reference excerpt."
         ],
@@ -446,7 +585,7 @@
         "duration_seconds": 7.52,
         "spoken_text": "This is a synthetic voice demonstration, not a real recording. A quiet harbor, warm light, and a story that is only just beginning.",
         "reference_source": [
-          "NASA / Chris Chamberland · 2021",
+          "NASA / Chris Chamberland \u00b7 2021",
           "https://images.nasa.gov/details/KSC-20210423-VP-CDC01-0001-SpaceX_Crew_2_Post_Launch_News_Conference-3273128",
           "NASA source acknowledgment; short reference excerpt. No NASA endorsement."
         ],
@@ -470,7 +609,7 @@
         "author": "U.S. Department of Defense / Petty Officer 1st Class Alexander Kubitza, 2 August 2023",
         "license": "Public domain",
         "license_url": "https://creativecommons.org/publicdomain/mark/1.0/",
-        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+        "modification": "Center-cropped/resized to 256\u00d7320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
       },
       "showcase/trump-portrait.webp": {
         "sha256": "34a3303399bce47f5d0c0aaa18056b9873babc24fa77415750ee271cc6ac0c8b",
@@ -481,7 +620,7 @@
         "author": "The White House / Daniel Torok, 2 June 2025",
         "license": "Public domain",
         "license_url": "https://commons.wikimedia.org/wiki/File:Official_Presidential_Portrait_of_President_Donald_J._Trump_(2025)_(3x4_close_cropped).jpg#Licensing",
-        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+        "modification": "Center-cropped/resized to 256\u00d7320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
       },
       "showcase/elon-portrait.webp": {
         "sha256": "ab92f2f926345312a71c1d3a22eff082b3361c7765e79e3e468e1ee3f34fef4f",
@@ -492,7 +631,7 @@
         "author": "The Royal Society / Debbie Rowe, 13 July 2018",
         "license": "CC BY-SA 3.0",
         "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+        "modification": "Center-cropped/resized to 256\u00d7320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
       },
       "showcase/oprah-portrait.webp": {
         "sha256": "bc93bc19fdb6757bc782f44a5178d43c69ac1713774235e1c0e90f24d7cd4d7a",
@@ -503,7 +642,7 @@
         "author": "aphrodite-in-nyc, 25 October 2014",
         "license": "CC BY 2.0",
         "license_url": "https://creativecommons.org/licenses/by/2.0/",
-        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+        "modification": "Center-cropped/resized to 256\u00d7320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
       },
       "showcase/michelle-portrait.webp": {
         "sha256": "58e9d4dfc47be645e7dc9ef69b4c14d48803e883347aef35056a78c8616a35c9",
@@ -514,7 +653,7 @@
         "author": "The White House / Joyce N. Boghosian, 18 February 2009",
         "license": "Public domain",
         "license_url": "https://commons.wikimedia.org/wiki/File:Michelle_Obama_official_portrait_headshot.jpg#Licensing",
-        "modification": "Center-cropped/resized to 256×320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
+        "modification": "Center-cropped/resized to 256\u00d7320 and converted to WebP; retains source license, excluded from site PolyForm Noncommercial license. No endorsement implied."
       },
       "showcase/conversation-request.webp": {
         "sha256": "8310da76da80c40a66e7041e7db57f577fd7d53630379f555e6dbd94bcab5b99",
@@ -638,6 +777,50 @@
           "https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22",
           "https://github.com/ace-step/ACE-Step-1.5/blob/ca1e85fe9430179831e6bc6be790c332190a3866/LICENSE"
         ]
+      },
+      "showcase/coastal-video-poster.webp": {
+        "artifact_id": "8fc2f137-d65e-4d84-8bde-4967372171a7",
+        "export": "First frame of the actual8s final MP4, WebPquality93; no retouching or upscale",
+        "sha256": "d4d4687e1d6698d6e5fd742b0761183d9f4e6a2c736e2c820cf1a324ea71b9f2",
+        "size_bytes": 154576
+      },
+      "showcase/market-chart.png": {
+        "run_id": "b91cf59c-73fb-4729-8070-2e8c862d96d5",
+        "artifact_id": "22e7bf00-1e05-47b4-91cf-ed2675e8f155",
+        "export": "Exact original verified application artifact, byte-for-byte; no external redraw or substituted report",
+        "source_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
+        "sha256": "5fc708e8528afa46f368d4139b4f05320b95c6b7bc7a453feaf1c8e9413609c8",
+        "size_bytes": 128080
+      },
+      "showcase/market-report.txt": {
+        "run_id": "b91cf59c-73fb-4729-8070-2e8c862d96d5",
+        "artifact_id": "6adf5baa-43c1-431e-bd75-ec0da35013ea",
+        "export": "Original verified application content. Formatting only: UTF-8 LF line endings and trailing padding trimmed; report words and parsed CSV cells unchanged. Exact source artifact hash is retained separately.",
+        "source_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
+        "sha256": "3d3672fce01dae3c75e340e33588a839123ec2808284cbd802e8973daeaa0712",
+        "size_bytes": 1525,
+        "source_artifact_sha256": "b91cd887fa35904159db0eca110fdc5f97de4d92bc7f51e15706ce63af7b03ad"
+      },
+      "showcase/market-prices.csv": {
+        "run_id": "b91cf59c-73fb-4729-8070-2e8c862d96d5",
+        "artifact_id": "e53b25e9-6d1b-43d9-b789-42bf23fd0e4a",
+        "export": "Original verified application content. Formatting only: UTF-8 LF line endings and trailing padding trimmed; report words and parsed CSV cells unchanged. Exact source artifact hash is retained separately.",
+        "source_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
+        "sha256": "08c4e6a8996d34d2c456c9682169c8ed463438303bc23728e4cba64434376465",
+        "size_bytes": 756,
+        "source_artifact_sha256": "a520a7223e7870973fd538c6be9e8bcc1276c41ffb61f713f820143100210301"
+      },
+      "showcase/market-chart-workspace.webp": {
+        "capture": {
+          "account": "demo",
+          "artifact_id": "22e7bf00-1e05-47b4-91cf-ed2675e8f155",
+          "capture": "Actual Library detail for the original verified agent chart; no DOM rewrites.",
+          "http_errors": [],
+          "js_errors": []
+        },
+        "export": "Actual2x browser screenshot converted to WebPquality92; no DOM rewrites",
+        "sha256": "32a618b6600579f183ac8fcd2dc5946b20d6732cdc339dfc7ff853b7fb20d86d",
+        "size_bytes": 220612
       }
     },
     "orchestration": {
@@ -667,6 +850,50 @@
       "recorded_controller_outcome": "clarify",
       "recording_note": "Both media tools completed and returned their real artifacts. The recorded final model reply asked for clarification because avatar output was not counted as video; the generic fulfillment repair is PR #691. Historical text/decisions were not rewritten and no tool was replayed for the showcase.",
       "accounting_fix": "https://github.com/jahu/ai-station/pull/691"
+    },
+    "market_agent": {
+      "agent_id": "bdb8ec8c-6ab0-4d9d-b0b7-bb0bc3af5ece",
+      "verified_task_id": "0f94a8f3-5a59-45e8-afd5-30d647673c80",
+      "model": "Local Qwen3.5-9B through llama.cpp, Auto selected with actual100k+context allocation",
+      "tools": ["http_fetch", "python_data"],
+      "schedule": "0 7 * * *, Europe/Warsaw; paused after demonstration",
+      "source_urls": [
+        "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d",
+        "https://query1.finance.yahoo.com/v8/finance/chart/MSFT?range=1mo&interval=1d",
+        "https://query1.finance.yahoo.com/v8/finance/chart/NVDA?range=1mo&interval=1d"
+      ],
+      "verification": {
+        "source": "Actual same-Task captured Yahoo Finance JSON, HTTP200, untruncated",
+        "source_urls": [
+          "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d",
+          "https://query1.finance.yahoo.com/v8/finance/chart/MSFT?range=1mo&interval=1d",
+          "https://query1.finance.yahoo.com/v8/finance/chart/NVDA?range=1mo&interval=1d"
+        ],
+        "first_date": "2026-10-07",
+        "last_date": "2026-11-06",
+        "common_trading_days": 23,
+        "all_csv_closes_match_original_sources_to_half_cent": true,
+        "all_report_metrics_match_original_sources_to_0_0051_percent": true,
+        "metrics": {
+          "AAPL": {
+            "latest_close": 342.3699951171875,
+            "last_session_percent": -0.5230026557571765,
+            "period_percent": 1.6930470377863438
+          },
+          "MSFT": {
+            "latest_close": 530.6099853515625,
+            "last_session_percent": -0.9926683329770536,
+            "period_percent": 0.1604454036297609
+          },
+          "NVDA": {
+            "latest_close": 186.63999938964844,
+            "last_session_percent": 2.7753266061345316,
+            "period_percent": -21.404809689546255
+          }
+        },
+        "chart": "Original verified PNG artifact from the actual agent Python execution, not redrawn outside the app"
+      },
+      "qualification": "One verified successful execution after an automatic Python repair. Later visual-refinement experiments failed, including a source-key error and a generated syntax error; they are retained privately and not represented as successes. No claim of generic reliability, zero-shot factory generation or daily unattended execution. The carousel Agents image is a separate unexecuted review draft."
     }
   }
 }

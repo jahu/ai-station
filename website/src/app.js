@@ -36,23 +36,23 @@
   const screens = {
     chat: [
       "conversation.png",
-      "Actual conversation interface with a local model and an example film-planning discussion",
+      "Actual Chat with a completed local Qwen film-planning reply in the demo account",
       "Start with a conversation. Keep your ideas, files and results together.",
     ],
     create: [
       "library.png",
-      "Actual Library interface with approved neutral demonstration images and a locally generated landscape film",
+      "Actual demo Library with the generated presenter, emerald-blazer edit, studio image and two completed films",
       "Make something. Keep the output, its settings and where it came from.",
     ],
     video: [
       "video.png",
-      "Actual video workspace showing a completed locally generated landscape film",
+      "Actual Video workspace with the coastal source image, real motion prompt and completed eight-second film",
       "From a scene to a short film, with inspectable progress and reusable results.",
     ],
     agents: [
       "agents.png",
-      "Actual agents workspace with illustrative draft agent definitions",
-      "Give recurring work a home. Draft an agent, review its permissions, then enable it.",
+      "Actual Agents workspace showing a saved, paused daily market-research draft awaiting review",
+      "Review a saved daily research draft. Its schedule and tools stay under your control.",
     ],
   };
   document.querySelector(".workspace-tabs").hidden = false;
