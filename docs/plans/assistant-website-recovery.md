@@ -204,3 +204,40 @@ Source excerpts preserve both heading and footer when bounded, remain untrusted
 data, and grant no extra permissions. Failed reads are not promoted to evidence.
 Explicitly requested examples/placeholders remain supported. Other software and
 existing-project coding handoffs retain their previous request shape.
+
+## Final qualification
+
+The exact original public-site request was executed again through the normal
+authenticated conversation API on the deployed candidate. All three tool steps
+(page read, captured-reference read, owned project/code) succeeded on that run's
+first coding attempt. The verified ZIP contains ten real HTML/CSS/JS/SVG files,
+with no missing assets or runtime network dependencies. The actual source name,
+address, postcode, telephone and news were retained; the placeholder address from
+the preceding attempt is absent. Native desktop/mobile previews rendered with
+zero blocked requests and accepted interaction. The Chat UI exposes the ready
+receipt and real preview link without the original error banners. A separate real
+local Chat smoke matched its durable message exactly to streamed delta events.
+Coding admission recorded a 129,280-token context on one dynamically selected GPU.
+
+Local verification includes the broad sweep (8,872 passing cases and 19 explicit
+opt-in skips before updating two old assertions for the intentional 16K coding
+endpoint/budget), the entire corrected Projects family (115 pass, 5 skips), final
+assistant/Chat/provenance cases (339 pass), native Runner cases (2,478 pass,
+8 skips), binary-fixture/archive cases (67 pass) and six actual Node copy/check
+cases. Counts overlap. Timestamp-dependent binary parameter IDs were run
+serially rather than weakening their assertions for parallel collection.
+Ruff/format, frontend lint/typecheck/build, relevant UI tests and the production
+image build passed; existing frontend warnings remain unchanged.
+
+Phone inspection also caught a new presentation issue: the fixed inline Node
+program made the validation panel very tall. Long recorded commands now default
+to a compact, keyboard-accessible disclosure; the exact argv remains available
+for inspection. Short commands retain their existing presentation. This changes
+display only, not command execution or audit records.
+
+Each local rollout drained owned work, took a consistent private SQLite backup,
+preserved all preexisting relational records and retained the same settings,
+authenticated local/LAN listeners and schema 0045. Native updates were limited to
+the reviewed owned coding adapter. Original failed conversations and all
+qualification attempts remain inspectable. No live source website, external
+checkout, model file, independent image script, driver or release branch changed.
