@@ -32,7 +32,7 @@ def test_one_corrected_completion_keeps_the_original_snapshot_and_bounded_budget
     body = SimpleNamespace(prompt="Update title", guidance="Keep the selected source")
     text, provider = local_coding_job.collect_proposal(body, SELECTED)
     assert json.loads(text) == VALID and provider == {"name": "fake-local"}
-    assert len(requests) == 2 and [r[1] for r in requests] == [8192, 8192]
+    assert len(requests) == 2 and [r[1] for r in requests] == [16384, 16384]
     assert requests[1][0].startswith(requests[0][0])
     assert "SAME task and selected files" in requests[1][0]
     assert "Use each selected path at most once" in requests[1][0]

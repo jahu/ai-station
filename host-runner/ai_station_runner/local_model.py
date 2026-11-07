@@ -117,6 +117,7 @@ class CodingCompletion(Completion):
     """Single bounded text-only source proposal; ordinary Chat limits stay intact."""
 
     messages: list[CodingMessage] = Field(min_length=1, max_length=1)
+    max_tokens: int = Field(ge=1, le=16384)
     json_output: Literal[True] = True
 
     @model_validator(mode="after")

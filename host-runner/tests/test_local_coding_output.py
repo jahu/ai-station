@@ -42,20 +42,22 @@ def streamed_completion(monkeypatch, events, max_tokens=8192):
 
     def reply(request):
         assert json.loads(request.content)["max_tokens"] == max_tokens
+        assert request.url.path.endswith("/coding/completions" if max_tokens > 8192 else "/chat/completions")
         return httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=Stream())
 
     monkeypatch.setattr(httpx, "HTTPTransport", lambda **_: httpx.MockTransport(reply))
     return local_coding_job.collect_completion(body, "Implement a working deliverable", max_tokens=max_tokens)
 
 
-def test_sse_metadata_does_not_consume_the_actual_coding_content_budget(monkeypatch):
+@pytest.mark.parametrize("max_tokens", [8192, 16384])
+def test_sse_metadata_does_not_consume_the_actual_coding_content_budget(monkeypatch, max_tokens):
     # Real token streams repeat request/model/timing metadata in every frame.
     # More than 2 MiB on the wire can still contain a small, valid proposal.
     text = json.dumps({"summary": "Ready " + "x" * 550, "files": []})
     events = [{"metadata": "m" * 4096, "choices": [{"delta": {"content": char}}]} for char in text]
     events.append({"choices": [{"delta": {}, "finish_reason": "stop"}]})
     assert sum(len(json.dumps(event).encode()) for event in events) > 2 * 1024 * 1024
-    actual, _ = streamed_completion(monkeypatch, events)
+    actual, _ = streamed_completion(monkeypatch, events, max_tokens=max_tokens)
     assert actual == text and json.loads(actual)["files"] == []
 
 

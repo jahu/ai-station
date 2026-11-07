@@ -29,7 +29,7 @@ def collect_proposal(body, selected, references=None):
     )
     original = message
     for attempt in range(1, 3):
-        text, provider = collect_completion(body, message, max_tokens=8192)
+        text, provider = collect_completion(body, message, max_tokens=16384)
         try:
             # Validate before the common executor applies any file. A second
             # completion gets the same selected snapshot and no extra tools.
@@ -94,7 +94,7 @@ def collect_completion(body, message, *, max_tokens=2048):
     }
     route = (
         "/coding/completions"
-        if len(payload["messages"][0]["content"].encode()) > 100000
+        if max_tokens > 8192 or len(payload["messages"][0]["content"].encode()) > 100000
         else "/chat/completions"
     )
     content, buffer, size = [], b"", 0
