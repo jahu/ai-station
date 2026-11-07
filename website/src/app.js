@@ -36,23 +36,23 @@
   const screens = {
     chat: [
       "conversation.png",
-      "Actual conversation interface with a local model and an example film-planning discussion",
+      "Actual Chat with a completed local Qwen film-planning reply in the demo account",
       "Start with a conversation. Keep your ideas, files and results together.",
     ],
     create: [
       "library.png",
-      "Actual Library interface with approved neutral demonstration images and a locally generated landscape film",
+      "Actual demo Library with the generated presenter, emerald-blazer edit, studio image and two completed films",
       "Make something. Keep the output, its settings and where it came from.",
     ],
     video: [
       "video.png",
-      "Actual video workspace showing a completed locally generated landscape film",
+      "Actual Video workspace with the coastal source image, real motion prompt and completed eight-second film",
       "From a scene to a short film, with inspectable progress and reusable results.",
     ],
     agents: [
       "agents.png",
-      "Actual agents workspace with illustrative draft agent definitions",
-      "Give recurring work a home. Draft an agent, review its permissions, then enable it.",
+      "Actual Agents workspace showing a saved, paused daily market-research draft awaiting review",
+      "Review a saved daily research draft. Its schedule and tools stay under your control.",
     ],
   };
   document.querySelector(".workspace-tabs").hidden = false;
@@ -166,5 +166,101 @@
     status.textContent = copied
       ? "Commands copied. Follow the setup guide to configure your models."
       : "Commands selected. Copy the selection with your device’s copy command.";
+  });
+})();
+
+// Progressive enhancement: native audio controls remain usable without JavaScript.
+(() => {
+  const showcase = document.querySelector("#showcase");
+  if (!showcase) return;
+  const players = [...showcase.querySelectorAll("audio, video")];
+  players.forEach((player) =>
+    player.addEventListener("play", () => {
+      players.forEach((other) => {
+        if (other !== player) other.pause();
+      });
+    }),
+  );
+  showcase.querySelectorAll("[data-audio-sample]").forEach((card) => {
+    const audio = card.querySelector("audio");
+    const transport = card.querySelector(".voice-transport");
+    const button = card.querySelector(".voice-toggle");
+    const name = card.querySelector("h4").textContent;
+    const sampleLabel = card.dataset.sampleLabel || `synthetic ${name} sample`;
+    const action = card.querySelector(".voice-action");
+    const progress = card.querySelector("progress, .music-seek");
+    const time = card.querySelector(".voice-time");
+    const error = card.querySelector(".voice-error");
+    if (!audio || !transport || !button) return;
+    const format = (seconds) =>
+      `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+    const update = () => {
+      const playing = !audio.paused && !audio.ended;
+      card.classList.toggle("is-playing", playing);
+      button.setAttribute("aria-pressed", String(playing));
+      button.setAttribute(
+        "aria-label",
+        `${playing ? "Pause" : "Play"} ${sampleLabel}`,
+      );
+      action.textContent = playing
+        ? "Now playing"
+        : audio.ended
+          ? "Play again"
+          : audio.currentTime > 0
+            ? "Continue listening"
+            : "Listen to the sample";
+      progress.value =
+        Number.isFinite(audio.duration) && audio.duration > 0
+          ? audio.currentTime / audio.duration
+          : 0;
+      if (progress.matches("input")) {
+        progress.disabled =
+          !Number.isFinite(audio.duration) || audio.duration <= 0;
+        progress.style.setProperty("--played", `${progress.value * 100}%`);
+      }
+      time.textContent = format(
+        playing || audio.currentTime > 0
+          ? audio.currentTime
+          : Number.isFinite(audio.duration)
+            ? audio.duration
+            : 0,
+      );
+    };
+    ["play", "pause", "ended", "timeupdate", "loadedmetadata"].forEach(
+      (event) => audio.addEventListener(event, update),
+    );
+    if (progress.matches("input"))
+      progress.addEventListener("input", () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0)
+          audio.currentTime = Number(progress.value) * audio.duration;
+      });
+    button.addEventListener("click", async () => {
+      error.textContent = "";
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      try {
+        await audio.play();
+      } catch {
+        error.textContent =
+          "Playback could not start. Try again or use the audio controls below.";
+        audio.controls = true;
+      }
+    });
+    const loadError = () => {
+      error.textContent = "This sample could not load. Please try again.";
+      audio.controls = true;
+      update();
+    };
+    audio.addEventListener("error", loadError);
+    // Failed <source> downloads do not bubble their error to <audio>.
+    audio
+      .querySelectorAll("source")
+      .forEach((source) => source.addEventListener("error", loadError));
+    transport.hidden = false;
+    audio.controls = false;
+    audio.preload = "metadata";
+    update();
   });
 })();

@@ -25,7 +25,7 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
 
 router = APIRouter(prefix="/api/audio/music")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 MODEL_REVISION = "19671f406d603126926c1b7e2adc169acbcade22"
 CODE_REVISION = "ca1e85fe9430179831e6bc6be790c332190a3866"
 PROFILE_SHA256 = "912b4a5cd50f729d8874dcbd44776d87643f04d199b748ba3706b7181a69c658"

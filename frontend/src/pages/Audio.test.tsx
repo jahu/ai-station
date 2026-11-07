@@ -470,3 +470,50 @@ it("uses an installed speech model from its preparation link despite unavailable
     ),
   );
 });
+
+it("sends an explicit English language only when the selected engine supports it", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/audio/capabilities")
+        ? { available: true, languages: ["pl", "en"] }
+        : path.endsWith("/hardware")
+          ? { gpus: [] }
+          : path.includes("/runs")
+            ? { id: "speech", status: "queued" }
+            : {
+                id: "voice",
+                original_filename: "reference.wav",
+                type: "audio",
+                mime_type: "audio/wav",
+              },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/audio?input=voice");
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("option", { name: "English" }) as HTMLOptionElement)
+        .disabled,
+    ).toBe(false),
+  );
+  fireEvent.change(screen.getByLabelText("Spoken language"), {
+    target: { value: "en" },
+  });
+  fireEvent.change(screen.getByLabelText("Text to speak"), {
+    target: { value: "Hello there." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/audio/runs",
+      expect.objectContaining({
+        body: JSON.stringify({
+          text: "Hello there.",
+          language: "en",
+          gpu: "auto",
+          reference_artifact_id: "voice",
+        }),
+      }),
+    ),
+  );
+});

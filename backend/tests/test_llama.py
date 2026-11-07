@@ -1183,3 +1183,45 @@ def test_chat_stop_cancels_unshared_startup_and_does_not_attach_new_consumer(man
         )
         assert response.status_code == 409, response.text
         assert "canceled startup" in response.text
+
+
+def test_owned_gpu_lock_wait_is_deferred_then_original_load_starts_once(managed):
+    from app.models import ResourceLock
+    from app.runs import create_run, create_task
+
+    model_id, records = managed
+    with TestClient(app) as client:
+        queued = load(client, model_id)
+        with session_factory()() as session:
+            holding = create_run(
+                session,
+                create_task(session, title="Owned GPU holder", prompt="", capability="test"),
+                run_type="test",
+                capability="test",
+                executor_type="fake",
+            )
+            holding.status = "running"
+            session.add(ResourceLock(resource_key="gpu:2", run_id=holding.id))
+            session.commit()
+        assert tick_once() == queued["id"]
+        with session_factory()() as session:
+            run = session.get(Run, queued["id"])
+            assert run.status == "queued" and run.worker_id is None
+            assert run.metadata_json["resource_wait"]["reason"] == "gpu"
+            assert run.metadata_json["resource_wait_until"] > utcnow().isoformat()
+            assert claim_next(session, "other-slot") is None
+            session.commit()
+            assert not records
+            from app.resources import release_run_locks
+
+            release_run_locks(session, holding.id)
+            run.metadata_json = {
+                **run.metadata_json,
+                "resource_wait_until": (utcnow() - timedelta(seconds=1)).isoformat(),
+            }
+            session.commit()
+        assert tick_once() == queued["id"]
+        with session_factory()() as session:
+            run = session.get(Run, queued["id"])
+            assert run.status == "succeeded" and "resource_wait_until" not in run.metadata_json
+            assert len(records) == 1

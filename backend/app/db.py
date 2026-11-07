@@ -73,11 +73,13 @@ def get_engine() -> Engine:
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
         kwargs = {"connect_args": connect_args, "pool_pre_ping": True}
         _engine = create_engine(url, **kwargs)
+        event.listen(_engine, "before_cursor_execute", _guard_read_projection)
         if url.startswith("sqlite"):
             event.listen(_engine, "connect", _apply_sqlite_pragmas)
             # sqlite3's legacy transaction mode otherwise leaves SELECT outside
             # the transaction. A short, explicit transaction serializes claims,
             # event sequencing, resource reservations, and scheduler ticks.
+            # Only explicit SELECT-only metadata projections use a WAL reader.
             event.listen(_engine, "connect", _disable_legacy_transactions)
             event.listen(_engine, "begin", _begin_immediate)
         _session_factory = sessionmaker(bind=_engine, expire_on_commit=False, class_=Session)
@@ -89,7 +91,25 @@ def _disable_legacy_transactions(connection, _record) -> None:
 
 
 def _begin_immediate(connection) -> None:
-    connection.exec_driver_sql("BEGIN IMMEDIATE")
+    connection.exec_driver_sql(
+        "BEGIN" if connection.get_execution_options().get("ai_station_read_projection") else "BEGIN IMMEDIATE"
+    )
+
+
+def _guard_read_projection(connection, _cursor, statement, _parameters, context, _executemany) -> None:
+    if not connection.get_execution_options().get("ai_station_read_projection") or statement == "BEGIN":
+        return
+    if context.compiled is None or not getattr(context.compiled.statement, "is_select", False):
+        raise RuntimeError("Read projections accept only SQLAlchemy SELECT statements")
+
+
+def read_projection(session: Session) -> None:
+    """Start a SELECT-only snapshot; ordinary transactions keep writer reservation."""
+    if session.in_transaction():
+        raise RuntimeError("Finish the previous transaction before starting a read projection")
+    if not isinstance(session.get_bind(), Engine):
+        raise RuntimeError("Read projections require an engine-bound session")
+    session.connection(execution_options={"ai_station_read_projection": True})
 
 
 def sqlite_busy(error) -> bool:

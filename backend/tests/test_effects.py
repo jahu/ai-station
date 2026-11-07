@@ -182,14 +182,20 @@ def test_effects_wait_for_ram_vram_and_stop_only_the_owned_process(sound_bridge,
         with control_session_factory()() as db:
             from app.resources import RESOURCE_WAIT_KEY
 
-            task = db.get(Run, run["id"]).task
+            waiting = db.get(Run, run["id"])
+            assert waiting.metadata_json.get(RESOURCE_WAIT_KEY)
+            waiting.metadata_json = {k: v for k, v in waiting.metadata_json.items() if k != RESOURCE_WAIT_KEY}
+            task = waiting.task
             task.metadata_json = {k: v for k, v in task.metadata_json.items() if k != RESOURCE_WAIT_KEY}
             db.commit()
         work()
         assert not sound_bridge["launches"]
         sound_bridge["hardware"]["gpus"][0]["memory_used_mib"] = 100
         with control_session_factory()() as db:
-            task = db.get(Run, run["id"]).task
+            waiting = db.get(Run, run["id"])
+            assert waiting.metadata_json.get(RESOURCE_WAIT_KEY)
+            waiting.metadata_json = {k: v for k, v in waiting.metadata_json.items() if k != RESOURCE_WAIT_KEY}
+            task = waiting.task
             task.metadata_json = {k: v for k, v in task.metadata_json.items() if k != RESOURCE_WAIT_KEY}
             db.commit()
         original = RunnerClient.request

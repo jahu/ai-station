@@ -18,7 +18,7 @@ from app.runs import run_dict
 from app.serialize import artifact_dict
 
 Capability = Literal["images", "video", "music", "speech", "avatars", "effects", "timeline"]
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 router = APIRouter(prefix="/api/creative/sessions", tags=["creative workspaces"])
 
 

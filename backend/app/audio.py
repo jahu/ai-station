@@ -1,4 +1,4 @@
-"""Bounded PCM uploads and queued local Polish speech generation."""
+"""Bounded PCM uploads and queued local speech generation."""
 
 import io
 import tempfile
@@ -21,7 +21,7 @@ from app.runs import create_run, create_task, run_dict
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/audio")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 MAX_BYTES = 20 * 1024 * 1024
 
 
@@ -133,7 +133,7 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None, observed_p
         parameters={
             **selected,
             "text": body.text,
-            "language": "pl",
+            "language": body.language or "pl",
             "reference_relative": reference.relative_path,
             "parent_artifact_ids": [reference.id],
             "backend": "chatterbox",
@@ -166,31 +166,46 @@ class AudioExecutor(HostMediaExecutor):
             capabilities = profile_for(session, run.parameters["speech_model"]["definition_id"])
             if not same_model(capabilities.get("speech_model"), run.parameters["speech_model"]):
                 raise ValueError("The selected speech model changed after this Run was queued")
-            if run.parameters.get("delivery") is not None:
-                delivery = capabilities.get("delivery") or {}
-                if delivery.get("version") != "chatterbox-controls-v1":
-                    raise ValueError("The selected speech engine does not support delivery controls")
-                run.parameters = {**run.parameters, "delivery_source_sha256": delivery["source_sha256"]}
         else:
             capabilities = RunnerClient().request("GET", "/v1/audio/capabilities")
-        if capabilities.get("configuration_source") == "managed":
+        updates = {}
+        if run.parameters.get("delivery") is not None:
+            delivery = capabilities.get("delivery") or {}
+            if delivery.get("version") != "chatterbox-controls-v1":
+                raise ValueError("The selected speech engine does not support delivery controls")
+            updates["delivery_source_sha256"] = delivery["source_sha256"]
+        if run.parameters.get("backend") == "chatterbox" and run.parameters.get("language", "pl") != "pl":
+            language = capabilities.get("language_selection") or {}
+            if (
+                run.parameters["language"] not in capabilities.get("languages", [])
+                or language.get("version") != "chatterbox-language-v1"
+                or not language.get("source_sha256")
+            ):
+                raise ValueError("The selected speech engine does not support the requested language")
+            updates["language_source_sha256"] = language["source_sha256"]
+        managed = capabilities.get("configuration_source") == "managed"
+        if managed or updates:
             lock_task(session, run.task)
             session.refresh(run)
             if run.worker_id != worker or run.claimed_at != claim:
                 session.rollback()
                 return "done"
-            manifest = capabilities.get("runtime_manifest_sha256")
-            if not manifest or run.parameters.get("speech_runtime_manifest_sha256", manifest) != manifest:
-                raise ValueError("The selected managed speech runtime changed before execution")
-            run.requested_resources = {
-                **run.requested_resources,
-                "ram_mib": max(4096, run.requested_resources.get("ram_mib", 0)),
-            }
-            run.parameters = {
-                **run.parameters,
-                "speech_runtime_manifest_sha256": manifest,
-                "speech_runtime_eligible_gpus": capabilities.get("eligible_gpu_indices") or [],
-            }
+            for key, value in updates.items():
+                if run.parameters.get(key) is not None and run.parameters[key] != value:
+                    raise ValueError("The frozen speech runtime changed before execution")
+            if managed:
+                manifest = capabilities.get("runtime_manifest_sha256")
+                if not manifest or run.parameters.get("speech_runtime_manifest_sha256", manifest) != manifest:
+                    raise ValueError("The selected managed speech runtime changed before execution")
+                run.requested_resources = {
+                    **run.requested_resources,
+                    "ram_mib": max(4096, run.requested_resources.get("ram_mib", 0)),
+                }
+                updates.update(
+                    speech_runtime_manifest_sha256=manifest,
+                    speech_runtime_eligible_gpus=capabilities.get("eligible_gpu_indices") or [],
+                )
+            run.parameters = {**run.parameters, **updates}
             session.commit()
         return super().execute(session, run)
 
@@ -265,6 +280,14 @@ class AudioExecutor(HostMediaExecutor):
                 "reference_relative": run.parameters["reference_relative"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {
+                        "language": run.parameters["language"],
+                        "language_source_sha256": run.parameters["language_source_sha256"],
+                    }
+                    if run.parameters.get("language", "pl") != "pl"
+                    else {}
+                ),
                 **(
                     {
                         "checkpoint": run.parameters["checkpoint"],

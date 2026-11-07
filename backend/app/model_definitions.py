@@ -27,7 +27,7 @@ from app.serialize import iso
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/models", tags=["models"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 _MMPROJ = re.compile(r"(^|[-_.])mmproj([-_.]|$)", re.IGNORECASE)
 
 COMPATIBILITY = (

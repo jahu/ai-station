@@ -25,7 +25,7 @@ from app.runs import create_run, run_dict, transition
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/coding")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def source_commit(session, source_id):

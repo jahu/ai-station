@@ -1649,3 +1649,13 @@ source-bound image drafts retain actual result hashes, compatible model settings
 and exact cadence, and remain disabled for review. Bounded owned conversation
 attachments and visible dialogue survive clarification and intervening text turns.
 [Repair plan and qualification gates](plans/conversation-reliability-repair.md).
+
+Configured and managed Chatterbox speech may explicitly select Polish or English.
+The runner advertises English only when static inspection finds the bounded CLI
+language contract wired into multilingual generation. The worker freezes that
+source hash before dispatch; the runner rejects a changed or unsupported adapter.
+Legacy requests remain Polish and keep their original serialization. Fish follows
+the supplied text and does not accept this Chatterbox-specific option. Long
+configured speech forwards the same language to every owned subprocess. The
+app-owned configured adapter reuses the operator's existing Python/cache offline;
+independent external speech scripts remain untouched.

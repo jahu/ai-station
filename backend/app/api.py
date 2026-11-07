@@ -91,7 +91,7 @@ from app.transcription import router as transcription_router
 from app.video import router as video_router
 from app.video_models import router as video_models_router
 
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 @asynccontextmanager

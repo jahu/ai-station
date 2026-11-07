@@ -18,7 +18,7 @@ class CodexTask(CodingTask):
 
 
 @router.post("/codex", status_code=202)
-def create_codex_task(body: CodexTask, session: Annotated[Session, Depends(session_scope)]):
+def create_codex_task(body: CodexTask, session: Annotated[Session, Depends(session_scope, scope="function")]):
     run = enqueue_coding_task(session, body, provider="codex")
     session.commit()
     return run_dict(run)

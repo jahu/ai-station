@@ -47,7 +47,7 @@ from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
 
 router = APIRouter(prefix="/api/chat")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class ConversationBody(BaseModel):

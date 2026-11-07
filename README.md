@@ -45,6 +45,8 @@ the input of a recurring-agent draft for your review.
 Existing image agents expose compatible installed models for Generate, Edit and
 Recompose directly beside the image operation.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
+The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
+tracks per-Run admission backoff and durable recovery after transient SQLite contention.
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
@@ -92,6 +94,55 @@ of public reports.
 [Suggest an improvement](https://github.com/jahu/ai-station/issues/new?title=Suggestion%3A%20) ·
 [Contribution guide](CONTRIBUTING.md).
 
+## ✨ Made in AI Station. On a real home workstation.
+
+A fictional presenter, a new outfit, a coastal photograph, a short film with its
+own soundscape, and generated voices. These are real local outputs, created in a
+separate **demo** account — with their prompts and execution history preserved.
+
+<p align="center">
+  <a href="website/assets/showcase/maya-original.webp"><img src="website/assets/showcase/maya-original.webp" width="270" alt="Before: fictional presenter generated locally with Qwen, wearing a navy blazer" /></a>
+  <a href="website/assets/showcase/maya-edited.webp"><img src="website/assets/showcase/maya-edited.webp" width="270" alt="After: the same presenter edited locally with LUSTIFY, wearing an emerald blazer and gold brooch" /></a>
+</p>
+
+**Qwen creates the portrait. LUSTIFY changes the outfit.**
+[Inspect the real portrait and prompt](website/assets/showcase/portrait-workspace.webp) ·
+[Inspect the edit](website/assets/showcase/edit-workspace.webp).
+
+[![Locally generated cinematic coastal scene with a classic burgundy car](website/assets/showcase/coastal-original.webp)](https://ai-station.dev/#showcase)
+
+**An image becomes a film, then gets its own sound.** The scene above was generated
+with Qwen, animated with Wan 2.2 and given a harbor soundscape with MMAudio.
+[Watch and listen to the real examples](https://ai-station.dev/#showcase), including
+original English speech and clearly labeled synthetic reference-voice impressions
+based on Morgan Freeman, Donald Trump, Elon Musk, Oprah Winfrey and Michelle Obama.
+The impressions speak English; they are not authentic recordings, endorsements or
+official built-in celebrity voice presets.
+
+**Two moods. Two original soundtracks.** Hear “First Light”, a cinematic piano-and-strings instrumental, and “Little Signals”, bright synthpop with a synthetic English vocal. Both are complete 45-second local ACE-Step 1.5 Turbo generations, with prompts and generation settings beside the players. [Listen to the music examples](https://ai-station.dev/#music-title).
+
+**One prompt, connected tools.** Supply a portrait and a recording, then ask for
+a studio presenter. The local assistant created the studio image, observed its
+actual result and passed it with the supplied recording to Sonic. Both outputs
+remain in the same conversation. The film below is the real 12.76-second result,
+shown at native 512 × 640 resolution without face retouching or upscaling.
+
+<p align="center"><a href="https://ai-station.dev/#workflow-title"><img src="website/assets/showcase/avatar-poster.webp" width="320" alt="Frame from the real locally generated speaking-avatar film of the fictional presenter in a television studio" /></a></p>
+
+[Watch the real two-tool example, with captions](https://ai-station.dev/#workflow-title).
+The voice was generated separately and supplied as an input; the demonstration
+does not pretend TTS was a third tool call in that request.
+
+**Made on an i7-6900K, 32 GB RAM and two RTX 3060 12 GB GPUs.** Faster hardware can
+reduce generation time; additional VRAM can enable larger models and higher
+settings. Image quality depends on the model and settings as well as the task.
+Public examples stay safe for work; compatible uncensored models also support
+adult/NSFW creation without an extra AI Station content filter.
+
+Want to try your own idea? [Get started](#-get-started),
+[share your results or report a problem](https://github.com/jahu/ai-station/issues/new),
+or [help develop the platform](CONTRIBUTING.md).
+
 ## 🎛 One station. Many ways to create.
 
 | You want to… | AI Station gives you… |
@@ -112,13 +163,14 @@ to keep a particular speaker; a neutral recording can soften emotional delivery.
 Slower/Faster adjusts speaking speed while preserving pitch; Natural keeps the
 model's original pace.
 It requires a configured two-GPU runtime and retains Fish Audio's separate
-model license. Chatterbox remains the default; historical v0.0.2 packages are
-unchanged.
+model license. Chatterbox remains the default. Audio offers Polish or English
+when the selected adapter supports it; older Polish adapters remain compatible.
+Historical v0.0.2 packages are unchanged.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/media/conversation.png" alt="AI Station conversation with a local model and an example film-planning discussion" /></td>
-<td width="50%"><img src="docs/media/video.png" alt="Video workspace with a completed, locally generated landscape film" /></td>
+<td width="50%"><img src="website/assets/conversation.png" alt="Real AI Station Chat with a completed local Qwen film-planning reply" /></td>
+<td width="50%"><img src="website/assets/video.png" alt="Actual Video workspace with the source image, motion prompt and completed eight-second coastal film" /></td>
 </tr>
 <tr><td align="center"><strong>One conversation to begin.</strong></td><td align="center"><strong>A workspace when you want control.</strong></td></tr>
 </table>
@@ -126,14 +178,25 @@ unchanged.
 <details>
 <summary>Explore the Library and agent workspace</summary>
 
-![Library with selected neutral demonstration images and a local film](docs/media/library.png)
-![Agent workspace with example draft definitions](docs/media/agents.png)
+![Real demo Library with generated photos, an outfit edit and completed films](website/assets/library.png)
+![Actual Agents workspace with a saved, paused daily market-research draft](website/assets/agents.png)
 
 </details>
 
-*Screenshots show the actual application with a separate demonstration dataset.
-Example conversation and agent text is seeded for privacy; the selected images
-and landscape film come from recorded local generation. [Media provenance](docs/media/README.md).*
+*Chat and Library show real completed generations in a separate demo account, captured at 2× resolution. No operator Library or fabricated messages. Video shows the real completed eight-second coastal job. Agents shows a saved review draft, without claiming it has executed. The animated tour retains its historical demonstration provenance. [Media provenance](website/asset-provenance.json).*
+
+**One prompt. Your own autonomous agent.** Describe the job and how often it should run.
+AI Station prepares the instructions, tools and schedule for your review; enable
+it when you're ready. Create regular images or short videos, research topics,
+analyze files and automate recurring jobs with local code when needed.
+Direct social publishing integrations are planned.
+
+[Explore agent ideas](https://ai-station.dev/#agents-showcase), including a
+[recorded market-research example](https://ai-station.dev/#market-agent-title)
+with its actual [brief](website/assets/showcase/market-report.txt),
+[chart](website/assets/showcase/market-chart.png) and
+[CSV](website/assets/showcase/market-prices.csv). That example uses closing data
+through 6 November 2026; its daily trigger is paused after the demo.
 
 Automatic multi-tool conversations are being qualified for the next development build: describe a
 complete outcome, and the assistant can research, create an image, transform the

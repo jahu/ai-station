@@ -53,3 +53,32 @@ def test_native_controls_require_real_values_before_dispatch():
     with pytest.raises(ValidationError):
         AudioRequest(**body, delivery_source_sha256="not a hash")
     assert delivery_arguments(None) == []
+
+
+def test_language_contract_requires_declared_choices_and_actual_generation_wiring(tmp_path):
+    from ai_station_runner.speech_delivery import inspect_language
+
+    script = tmp_path / "speech.py"
+    source = "raise RuntimeError('never execute')\nparser.add_argument('--language', choices=['pl','en'], default='pl')\nmodel.generate(language_id=args.language)\n"
+    script.write_text(source)
+    inspected = inspect_language(script)
+    assert inspected["languages"] == ["pl", "en"]
+    for altered in (
+        source.replace("args.language", "'pl'"),
+        source.replace("'en'", "'de'"),
+        source.replace("default='pl'", "default='en'"),
+    ):
+        script.write_text(altered)
+        assert inspect_language(script) is None
+    script.write_text(source + "# changed")
+    assert inspect_language(script)["source_sha256"] != inspected["source_sha256"]
+
+
+def test_app_owned_multilingual_launchers_declare_the_same_contract():
+    from pathlib import Path
+
+    from ai_station_runner import configured_speech_job, managed_speech_job
+    from ai_station_runner.speech_delivery import inspect_language
+
+    for module in (configured_speech_job, managed_speech_job):
+        assert inspect_language(Path(module.__file__))["languages"] == ["pl", "en"]

@@ -15,7 +15,7 @@ from app.model_setup import INTENT, administrator, attempt, fingerprint, view
 from app.models import Run, Task
 
 router = APIRouter(prefix="/api/model-hub", tags=["model discovery"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class PlanRequest(BaseModel):

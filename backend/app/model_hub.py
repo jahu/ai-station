@@ -28,7 +28,7 @@ from app.runs import create_run, request_cancel, run_dict, touch_lease, transiti
 from app.state import TERMINAL, RunStatus
 
 router = APIRouter(prefix="/api/model-hub", tags=["model discovery"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 INTENT = "model.hub.inspect"
 
 

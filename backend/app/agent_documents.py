@@ -33,7 +33,7 @@ from app.python_execution import read_owned_file
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def _snapshot(row):

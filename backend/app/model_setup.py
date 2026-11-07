@@ -24,7 +24,7 @@ from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
 
 router = APIRouter(prefix="/api/setup", tags=["guided model setup"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 INTENT = "model.catalog.download"
 PERMISSIONS = ["filesystem_read", "workspace_write", "network_read", "manage_models"]
 

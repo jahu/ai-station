@@ -243,7 +243,14 @@ def test_packaged_supervisor_records_before_ready_and_forgets_after_successful_d
     monkeypatch.setattr(launch.os, "chdir", lambda _: None)
     monkeypatch.setattr(launch.signal, "signal", lambda *args: None)
     monkeypatch.setattr(launch, "runner_health", lambda _: True)
-    monkeypatch.setattr(launch.time, "sleep", lambda _: (_ for _ in ()).throw(KeyboardInterrupt()))
+    # Keep subprocess waiting independent of the simulated supervisor Ctrl+C.
+    monkeypatch.setattr(
+        launch,
+        "time",
+        SimpleNamespace(
+            monotonic=launch.time.monotonic, sleep=lambda _: (_ for _ in ()).throw(KeyboardInterrupt())
+        ),
+    )
     original = launch.subprocess.run
     operations = []
 

@@ -37,7 +37,7 @@ class ProjectName(ProjectAutomation):
 
 
 @router.post("/create", status_code=202)
-def create_project(body: ProjectName, session: Annotated[Session, Depends(session_scope)]):
+def create_project(body: ProjectName, session: Annotated[Session, Depends(session_scope, scope="function")]):
     run = enqueue_project(session, body)
     session.commit()
     return run_dict(run)

@@ -37,7 +37,7 @@ from app.video_schema import LongVideoSettings
 from app.video_schema import VideoScene as VideoScene
 
 router = APIRouter(prefix="/api/media/jobs", tags=["media jobs"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class LongVideoRequest(LongVideoSettings):

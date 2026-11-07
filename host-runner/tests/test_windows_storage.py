@@ -127,8 +127,18 @@ def test_concurrent_atomic_refresh_does_not_interrupt_an_admitted_download(guest
 def test_linux_keeps_its_actual_filesystem_policy(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "GUEST", tmp_path / "absent")
     expected = storage.shutil.disk_usage(tmp_path)
+    observations = []
+
+    def current_usage(path):
+        observations.append(path)
+        return expected
+
+    # Keep one real native observation: concurrent writers can change disk usage
+    # between two samples, even when the storage policy is completely unchanged.
+    monkeypatch.setattr(storage.shutil, "disk_usage", current_usage)
     assert storage.physical(tmp_path) is None
     assert storage.disk_usage(tmp_path) == expected
+    assert observations == [tmp_path]
 
 
 def test_fixed_entry_point_rejects_paths_and_non_decimal_inputs(monkeypatch):

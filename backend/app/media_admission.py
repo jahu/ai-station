@@ -27,8 +27,11 @@ def shot_task(session, run):
 
 
 def defer_media_task(session, run):
+    from app.resources import defer_resource_run
+
     task = shot_task(session, run)
     if task is None:
+        defer_resource_run(run)
         return True
     if task.metadata_json.get("stop_requested_at"):
         # A Stop may have committed between resource inspection and requeue.

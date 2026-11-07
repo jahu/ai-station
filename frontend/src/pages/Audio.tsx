@@ -151,6 +151,9 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
     ),
   );
   const [text, setText] = useState(String(restored.text ?? ""));
+  const [language, setLanguage] = useState(
+    restored.language === "en" ? "en" : "pl",
+  );
   const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
   const [engine, setEngine] = useState(
     search.get("engine") === "fish_s2_pro"
@@ -208,6 +211,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
     formState: {
       reference,
       text,
+      ...(!fish && language === "en" ? { language } : {}),
       gpu,
       ...(!fish && modelId ? { model_id: modelId } : {}),
       ...(fish
@@ -233,8 +237,17 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         throw new Error(
           "Delivery controls are unavailable. Turn them off to use the standard voice.",
         );
+      if (
+        !fish &&
+        language === "en" &&
+        !capabilities.data?.languages?.includes("en")
+      )
+        throw new Error(
+          "This speech engine does not support English. Choose Polish or another engine.",
+        );
       const parameters = {
         text,
+        ...(!fish && language === "en" ? { language } : {}),
         gpu,
         reference_artifact_id: modelVoice ? null : reference,
         ...(!fish && modelId ? { model_id: modelId } : {}),
@@ -387,6 +400,27 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 disabled={uploading || busy}
                 onBusy={setUploading}
               />
+            )}
+            {!fish && (
+              <label>
+                Spoken language
+                <select
+                  aria-label="Spoken language"
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value)}
+                >
+                  <option value="pl">Polish</option>
+                  <option
+                    value="en"
+                    disabled={!capabilities.data?.languages?.includes("en")}
+                  >
+                    English
+                    {capabilities.data?.languages?.includes("en")
+                      ? ""
+                      : " · unavailable for this engine"}
+                  </option>
+                </select>
+              </label>
             )}
             <label className="media-text-label">
               <span>

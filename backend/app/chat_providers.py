@@ -34,7 +34,7 @@ from app.secrets import (
 from app.serialize import iso
 
 router = APIRouter(prefix="/api/chat")
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 BUILTIN_KEY = LocalChatProvider.key
 _KEY = re.compile(r"^[a-z][a-z0-9-]{1,78}$")
 

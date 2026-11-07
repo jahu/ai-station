@@ -21,7 +21,7 @@ from app.models import Setting
 from app.private_access import access_origins, private_access_enabled, secure_cookie
 
 router = APIRouter(prefix="/api/operator-auth", tags=["operator"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 SETUP_KEY = "operator_auth"
 SESSION_KEY = "operator_session"
 COOKIE = "ais_operator"

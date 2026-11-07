@@ -18,7 +18,7 @@ from app.runs import create_run, create_task, run_dict
 from app.video_schema import VideoRequest as VideoRequest
 
 router = APIRouter(prefix="/api/video", tags=["video"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 def valid_guidance_observation(value):

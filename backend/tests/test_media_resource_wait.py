@@ -16,6 +16,8 @@ from test_media_jobs import bridge as bridge
 
 @pytest.mark.parametrize("available", [None, 12272])
 def test_wait_observation_is_reported_then_cleared_after_admission(bridge, monkeypatch, available):
+    from datetime import datetime, timedelta
+
     with TestClient(app) as client:
         response = client.post(
             "/api/media/jobs/video",
@@ -61,6 +63,10 @@ def test_wait_observation_is_reported_then_cleared_after_admission(bridge, monke
         event = next(event for event in events if event["event_type"] == "run.interrupted")
         assert event["payload"]["resource_wait"]["available_mib"] == available
         assert not bridge
+        with session_factory()() as session:
+            assert tick(session, "too-soon-to-repeat-admission") is None
+        deadline = datetime.fromisoformat(waiting["metadata"]["resource_wait_until"])
+        monkeypatch.setattr("app.runs.utcnow", lambda: deadline + timedelta(microseconds=1))
         monkeypatch.setattr(
             RunnerClient, "hardware", lambda _: {"gpus": [{"index": 7}], "memory": {"available_mib": 64000}}
         )
@@ -69,6 +75,7 @@ def test_wait_observation_is_reported_then_cleared_after_admission(bridge, monke
         finished = client.get(f"/api/runs/{rid}").json()
         assert finished["status"] == "succeeded" and finished["resource_wait"] is None
         assert "resource_wait" not in finished["metadata"]
+        assert "resource_wait_until" not in finished["metadata"]
         assert client.get(f"/api/media/jobs/{tid}").json()["resource_wait"] is None
         assert bridge == [rid]
 

@@ -41,7 +41,7 @@ from app.serialize import memory_dict
 from app.state import ACTIVE, RunStatus
 
 router = APIRouter(prefix="/api/memory/embeddings", tags=["memory"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 SETUP_KEY = "memory_embeddings"
 SETUP_FIELDS = (
     "backend",

@@ -37,7 +37,7 @@ from app.stock_quotes import (
 )
 
 router = APIRouter(prefix="/api/market-feeds", tags=["market data"])
-DB = Annotated[Session, Depends(session_scope)]
+DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
 class MarketFeedError(ValueError):
