@@ -15,6 +15,9 @@ from ai_station_runner.coding_job import execute_proposal
 from ai_station_runner.config import get_settings
 from ai_station_runner.local_coding_runs import directory, load_request
 
+MAX_STREAM_BYTES = 16 * 1024 * 1024
+MAX_CONTENT_BYTES = 2 * 1024 * 1024
+
 
 def collect_proposal(body, selected, references=None):
     message = proposal_prompt(
@@ -98,7 +101,7 @@ def collect_completion(body, message, *, max_tokens=2048):
     done, finished = False, False
     started = time.monotonic()
     last_progress = started
-    characters = 0
+    characters = content_bytes = 0
     transport = httpx.HTTPTransport(uds=get_settings().socket_path())
     with httpx.Client(
         transport=transport, timeout=httpx.Timeout(300, connect=10), trust_env=False, follow_redirects=False
@@ -109,11 +112,15 @@ def collect_completion(body, message, *, max_tokens=2048):
                 raise ValueError("Local coding requires a streaming response")
             for chunk in response.iter_bytes():
                 size += len(chunk)
-                if size > 2 * 1024 * 1024 or time.monotonic() - started > 900:
-                    raise ValueError("Local coding exceeded its response limit")
+                if size > MAX_STREAM_BYTES:
+                    raise ValueError("Local coding exceeded its stream transport limit")
+                if time.monotonic() - started > 900:
+                    raise ValueError("Local coding exceeded its response time limit")
                 buffer += chunk
                 while b"\n" in buffer:
                     line, buffer = buffer.split(b"\n", 1)
+                    if len(line) > MAX_CONTENT_BYTES:
+                        raise ValueError("Local coding exceeded its event size limit")
                     if not line.startswith(b"data:"):
                         continue
                     data = line[5:].strip()
@@ -145,6 +152,9 @@ def collect_completion(body, message, *, max_tokens=2048):
                         if text is not None:
                             if not isinstance(text, str):
                                 raise ValueError("Local coding requires text content")
+                            content_bytes += len(text.encode())
+                            if content_bytes > MAX_CONTENT_BYTES:
+                                raise ValueError("Local coding exceeded its content limit")
                             content.append(text)
                             characters += len(text)
                             if time.monotonic() - last_progress >= 10:
@@ -155,6 +165,8 @@ def collect_completion(body, message, *, max_tokens=2048):
                                 last_progress = time.monotonic()
                 if done:
                     break
+                if len(buffer) > MAX_CONTENT_BYTES:
+                    raise ValueError("Local coding exceeded its event size limit")
     if not done or not finished:
         raise ValueError("Local coding response ended without confirmed completion")
     return "".join(content), {"name": "local-openai-compatible", "model": body.model}
