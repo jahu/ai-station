@@ -21,6 +21,11 @@ foreach($text in @($code,('Error code: '+$code),('Kod: '+$code),([string]::Join(
   Check ($view.Description -match 'restart Windows' -and $view.Details -notmatch $secret) 'Disk-lock guidance or private error handling differs.'
  }
 }
+foreach($text in @('Wsl/WSL_E_OS_NOT_SUPPORTED','Error code: Wsl/WSL_E_OS_NOT_SUPPORTED',('PRIVATE-BOOTSTRAP-TOKEN'+[Environment]::NewLine+'Kod: Wsl/WSL_E_OS_NOT_SUPPORTED'))){
+ $view=Get-StationFailurePresentation (New-StationWslFailure $text '')
+ Check ($view.Title -ceq 'Update Windows to continue' -and $view.WindowsSupportAction -ceq 'windows_update') 'The stable unsupported-OS code lost Windows Update recovery.'
+ Check ($view.Details -notmatch $secret) 'Private native output leaked into OS update guidance.'
+}
 foreach($text in @(('prefix '+$code),($code+'/extra'),('https://example.invalid/#'+$code),('x'*65537+$code))) {
  $failure=New-StationWslFailure $text ''
  Check ((Get-StationFailurePresentation $failure).Title -ceq 'Needs attention') 'An incomplete, oversized or non-error URL was accepted as a WSL code.'

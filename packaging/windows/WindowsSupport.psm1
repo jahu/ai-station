@@ -38,14 +38,18 @@ function Receive-StationWslInstaller {
     $response=$request.GetResponse()
     try {
         if($response.ContentLength -ne -1 -and $response.ContentLength -ne $Recipe.Bytes){throw 'The Windows prerequisite length differs from its reviewed recipe.'}
-        $input=$response.GetResponseStream();$output=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        $networkStream=$response.GetResponseStream();$downloadFile=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
         try {
             $buffer=[byte[]]::new(1048576);$remaining=$Recipe.Bytes
-            while($remaining -gt 0){$count=$input.Read($buffer,0,[int][Math]::Min($buffer.Length,$remaining));if($count -le 0){throw 'The Windows prerequisite download was interrupted.'};$output.Write($buffer,0,$count);$remaining-=$count}
-            if($input.ReadByte() -ne -1){throw 'The Windows prerequisite exceeded its reviewed size.'}
-            $output.Flush($true)
-        } finally {$output.Dispose();$input.Dispose()}
-    } finally {$response.Dispose()}
+            $progress=0
+            while($remaining -gt 0){$count=$networkStream.Read($buffer,0,[int][Math]::Min($buffer.Length,$remaining));if($count -le 0){throw 'The Windows prerequisite download was interrupted.'};$downloadFile.Write($buffer,0,$count);$remaining-=$count
+                $percent=[int](100*($Recipe.Bytes-$remaining)/$Recipe.Bytes)
+                if($percent -ge $progress+5){Write-Progress -Activity 'Preparing Windows support' -Status 'Downloading Microsoft WSL' -PercentComplete $percent;$progress=$percent}
+            }
+            if($networkStream.ReadByte() -ne -1){throw 'The Windows prerequisite exceeded its reviewed size.'}
+            $downloadFile.Flush($true)
+        } finally {$downloadFile.Dispose();$networkStream.Dispose()}
+    } finally {$response.Dispose();Write-Progress -Activity 'Preparing Windows support' -Completed}
 }
 
 function Assert-StationWslInstallerSignature {
@@ -57,7 +61,7 @@ function Assert-StationWslInstallerSignature {
 function Invoke-StationWindowsFeature {
     param([ValidateSet('VirtualMachinePlatform','Microsoft-Windows-Subsystem-Linux')][string]$Name)
     $exe=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'dism.exe'
-    $process=Start-Process -FilePath $exe -ArgumentList @('/online','/enable-feature',('/featurename:'+$Name),'/all','/norestart') -Wait -PassThru
+    $process=Start-Process -FilePath $exe -ArgumentList @('/online','/enable-feature',('/featurename:'+$Name),'/all','/norestart') -NoNewWindow -Wait -PassThru
     try{if($process.ExitCode -notin @(0,3010)){throw 'Windows could not prepare its virtualization features. Saved distributions were preserved.'};return $process.ExitCode -eq 3010}finally{$process.Dispose()}
 }
 
