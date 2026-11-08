@@ -55,8 +55,9 @@ tracks per-Run admission backoff and durable recovery after transient SQLite con
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 10 (21H2/22H2) or 11 x64. macOS is not supported yet.
-> Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
-> and human evaluation of the new voice/film samples follow release.
+> Windows 10 installation, login and worker execution were tested in a CPU-only VM.
+> First local-model replies were tested separately on Windows 11; physical Windows
+> NVIDIA tests and human evaluation of the new voice/film samples follow release.
 > [Exact qualification and known issues](docs/releases/0.3.2.md).
 
 **New in 0.3.2: Windows 10 joins the station.** The desktop installer admits
@@ -461,7 +462,7 @@ Desktop packages bundle Python and the application image, open
 account/model setup in your browser and keep data outside the installed package.
 Clean installation, a real first CPU conversation and preserving update/reinstall
 have been verified on [Linux x86-64](docs/plans/linux-consumer-qualification.md)
-and [Windows / WSL2](docs/plans/windows-consumer-installation.md).
+and [Windows 11 / WSL2](docs/plans/windows-consumer-installation.md).
 The [Windows 10 extension](docs/plans/windows-10-compatibility.md) records its
 separate installation, prerequisite and runtime qualification.
 The Linux package explains any required Docker permission through a native dialog

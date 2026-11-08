@@ -55,7 +55,7 @@ user distribution, changes the default distro/global WSL settings, touches GPU
 drivers, or grants OS setup to application tools. Temporary downloaded inputs
 are removed afterward; a requested Windows restart remains the user's action.
 The modern WSL update action stays the trusted system launcher's fixed `--update`.
-Native qualification of this added bootstrap path remains pending.
+The real bootstrap qualification is recorded below.
 
 The real bootstrap installed WSL 3.0.3 and both features, removed its temporary
 MSI, and created no distributions. After reboot the old system launcher still
@@ -74,3 +74,52 @@ preflight now checks the actual registry UBR before downloads/import and routes
 the native UI to Windows Update. The bootstrap helper applies the same guard.
 Windows 11 is unaffected. No arbitrary OS update is silently installed by AI
 Station; the fresh owned Windows 10 qualification VM is updated separately.
+
+
+## Actual Windows 10 qualification — 2026-11-08
+
+The owned, isolated x64 Windows 10 22H2 VM was updated from 19045.2006 to
+19045.2311 using the official Microsoft KB5020030 package, then restarted normally.
+This was a test-fixture operation; AI Station does not install cumulative OS
+updates. Neither the Ubuntu development workstation nor the retained Windows 11
+fixture was changed. The VM had 8 GiB RAM, four virtual CPUs, no GPU passthrough
+and no host filesystem mounts.
+
+The final 0.3.2 installer and WSL payload were built from
+`033fbfc5fd7a6d4e4fce5e4dd5c326fe37d3cbc8`. Native PowerShell 5.1 and Inno
+compiled the installer; the installed native app imported only its own WSL guest,
+started its bundled Docker control plane, worker, scheduler and user-level Runner,
+and opened the actual browser UI. The following checks were executed:
+
+- Real first administrator setup, browser login and compiled UI delivery.
+- Actual Linux Runner hardware response from the CPU-only WSL guest.
+- Healthy worker/scheduler heartbeats and a successful normal SQLite backup
+  Task/Run with two inspectable artifacts.
+- Enabled native actions exposed through Windows MSAA, normal Stop followed by
+  Start, a new desktop instance, and the same account, completed Run and artifacts.
+- Final normal Stop and export of the exact installer checked by byte length
+  and SHA256. No inference, GPU or external-model result is inferred from these checks.
+
+The existing managed UI Automation observer failed inside Windows' .NET proxy
+registration, including from a separate STA observer. That check is **not marked
+passed**. Native MSAA separately exposed the named, enabled `Press` actions and
+was used for the actual Stop/Start above. Disabled buttons have no default action;
+the first overly strict observer incorrectly required one. Narrator and the
+managed UI Automation observer remain unqualified on this Windows 10 fixture.
+The browser and ordinary native controls were inspected independently.
+
+Portable PowerShell contracts and relevant native PowerShell 5.1 contracts passed.
+Release-local checks passed Ruff lint/format, 293 focused Python packaging/release
+cases and 1,165 frontend tests, plus frontend lint, typecheck and production build.
+Compose configuration and the actual bundled Docker image were validated. An
+isolated offline 0.3.1 → 0.3.2 upgrade preserved records in twelve original tables,
+artifact bytes and schema 0045; SQLite integrity/foreign keys and the real new API
+and UI passed. A separately started broad Python run was stopped after 98 passing
+cases and is not reported as a full-suite pass.
+
+Windows 10 local-model inference and physical Windows NVIDIA execution were not
+run in this fixture. The earlier Windows 11 CPU first-reply qualification is
+separate evidence. Windows 10 21H2/LTSC admission has boundary-test coverage;
+actual installation in this change was on 22H2. The installer remains unsigned
+under the owner's existing decision. Published 0.3.1 assets/tags are unchanged;
+0.3.2 publication follows the human-owned master promotion.
