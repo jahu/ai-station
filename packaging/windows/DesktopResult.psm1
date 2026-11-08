@@ -7,6 +7,13 @@ function Get-StationFailurePresentation {
     $message=$(if($Failure -is [Exception]) {$Failure.Message} else {[string]$Failure})
     $cause=$Failure
     for($depth=0; $depth -lt 16 -and $cause -is [Exception]; $depth++) {
+        if($cause.Data['AIStationWslFailure'] -ceq 'update_required') {
+            return [pscustomobject]@{
+                Title='Update Windows support'
+                Description='WSL needs to be installed or updated before AI Station can prepare its workspace. Open Details for the Windows commands, then retry Prepare.'
+                Details=$cause.Message
+            }
+        }
         if($cause.Data['AIStationWslFailure'] -ceq 'disk_busy') {
             return [pscustomobject]@{
                 Title='Local data disk is busy'

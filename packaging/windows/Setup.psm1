@@ -145,10 +145,17 @@ function Invoke-StationSetup {
     Assert-StationWindowsPreparationReady
     $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
-    foreach ($probe in @('--version','--status')) {
+    $CancellationToken.ThrowIfCancellationRequested()
+    try {
+        $version=Wait-StationWslProcess (Start-StationWslProcess $executable @('--version') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -KeepOutput $true -CancellationToken $CancellationToken
+    } catch {
         $CancellationToken.ThrowIfCancellationRequested()
-        Wait-StationWslProcess (Start-StationWslProcess $executable @($probe) ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -CancellationToken $CancellationToken
+        # Legacy inbox WSL lacks --version. Its raw localized output may contain
+        # private paths; show fixed upgrade guidance before reserving any guest.
+        throw (New-StationWslUpdateRequired)
     }
+    Assert-StationWslVersion $version
+    Wait-StationWslProcess (Start-StationWslProcess $executable @('--status') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -CancellationToken $CancellationToken
     $manifest=Read-StationPublishedManifest $PackageFolder
     $lease=New-StationPrivateStore
     $archive=$null

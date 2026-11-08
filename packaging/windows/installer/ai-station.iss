@@ -18,7 +18,8 @@ ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
 DefaultDirName={localappdata}\Programs\AI Station
 PrivilegesRequired=lowest
-MinVersion=10.0.22000
+; Windows 10 21H2/LTSC 2021 and later; keep native preflight in sync.
+MinVersion=10.0.19044
 DisableProgramGroupPage=yes
 LicenseFile={#Payload}\LICENSE
 OutputBaseFilename=AI-Station-{#VersionId}-Setup
