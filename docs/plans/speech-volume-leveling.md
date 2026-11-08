@@ -80,5 +80,8 @@ The native updater now accepts safe owned, non-writable parents while retaining
 0700 for application data and rejecting symlinks. It does not chmod user folders.
 Both its admission and backup checks use the same policy, with preservation and
 refusal tests. Early transfer rejection also gets a bounded safe explanation.
-The rebuilt native Windows installer must include this fix and pass the actual
-preserving update before qualification is completed in the release notes.
+The rebuilt native Windows installer includes that fix at source
+`010d8dedda1944864cfb968e39321dd60f4a73e7`. Its actual Windows 10 preserving update,
+retained account/history, new CPU repair Run, source/lineage and playback hashes
+passed; the release notes separate these checks from unexecuted human listening
+and physical GPU checks.
