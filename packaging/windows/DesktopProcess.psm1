@@ -14,7 +14,7 @@ function Format-StationWslArguments {
 function New-StationWslFailure {
     param([string]$StandardOutput='', [string]$StandardError='',
           [string]$Fallback='The Windows preparation step did not finish. Saved state and guest data were retained; check preparation before retrying.')
-    $busy=$false
+    $busy=$false;$osUpdate=$false
     foreach($stream in @($StandardOutput,$StandardError)) {
         # Some Windows WSL errors arrive as NUL-padded UTF-16 text while Linux
         # bridge replies use UTF-8. Match only a complete, stable machine-code
@@ -22,10 +22,16 @@ function New-StationWslFailure {
         if($stream.Length -gt 65536) { continue }
         $text=$stream.Replace([string][char]0,'')
         if($text -match '(?im)^[ \t]*(?:[^\r\n:]{1,80}:[ \t]*)?Wsl/Service/CreateInstance/MountDisk/HCS/ERROR_SHARING_VIOLATION[ \t]*\r?$') { $busy=$true }
+        if($text -match '(?im)^[ \t]*(?:[^\r\n:]{1,80}:[ \t]*)?Wsl/WSL_E_OS_NOT_SUPPORTED[ \t]*\r?$') { $osUpdate=$true }
     }
     if($busy) {
         $failure=[InvalidOperationException]::new('Windows cannot open AI Station''s local data disk because it is in use. Close backup or disk tools and try again. If it stays busy, save other work and restart Windows, then reopen AI Station. Keep the existing installation and data folder.')
         $failure.Data['AIStationWslFailure']='disk_busy'
+        return $failure
+    }
+    if($osUpdate){
+        $failure=[InvalidOperationException]::new('Windows needs a cumulative update before the installed WSL version can run. Open Windows Update, install updates and restart Windows, then reopen AI Station. Saved work was preserved.')
+        $failure.Data['AIStationWslFailure']='os_update_required'
         return $failure
     }
     return [InvalidOperationException]::new($Fallback)
