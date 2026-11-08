@@ -537,6 +537,7 @@ it("restores the exact narration and reference voice", async () => {
     capability: "speech",
     draft: {
       formState: {
+        level_volume: false,
         text: "Dzień dobry. To jest dokładny tekst.",
         reference: "voice-reference",
         gpu: "auto",
@@ -549,6 +550,7 @@ it("restores the exact narration and reference voice", async () => {
   );
   await waitFor(() => expect(backend.submissions).toHaveLength(1));
   expect(backend.submissions[0].parameters).toEqual({
+    level_volume: false,
     text: "Dzień dobry. To jest dokładny tekst.",
     reference_artifact_id: "voice-reference",
     gpu: "auto",
@@ -650,6 +652,7 @@ it("restores generated voice and never attaches an old hidden recording to a var
   fireEvent.click(submit);
   await waitFor(() => expect(backend.submissions).toHaveLength(1));
   expect(backend.submissions[0].parameters).toEqual({
+    level_volume: true,
     text: "Dokładny tekst.",
     engine: "fish_s2_pro",
     voice_source: "model",

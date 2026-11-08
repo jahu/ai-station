@@ -183,7 +183,8 @@ def enqueue_level(artifact_id: UUID, body: LevelRequest, session: DB):
         if existing.metadata_json != {"voice_source": snapshot, "profile": PROFILE}:
             raise HTTPException(409, "This request already refers to different voice input")
         return run_dict(existing.runs[0])
-    if (source.metadata_json.get("audio_leveling") or {}).get("profile") == PROFILE:
+    prior_receipt = source.metadata_json.get("audio_leveling")
+    if isinstance(prior_receipt, dict) and prior_receipt.get("profile") == PROFILE:
         raise HTTPException(409, "This recording already has even voice volume")
     task = Task(
         id=identity,

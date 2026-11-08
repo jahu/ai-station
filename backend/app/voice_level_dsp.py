@@ -113,7 +113,10 @@ def level_wave(source: Path, output: Path, check=lambda: None):
         limiter.link_to(fmt)
         fmt.link_to(sink)
         graph.configure()
-        with output.open("xb") as target_file, av.open(target_file, "w", format="wav") as target:
+        with (
+            output.open("xb") as target_file,
+            av.open(target_file, "w", format="wav", options={"fflags": "+bitexact"}) as target,
+        ):
             encoder = target.add_stream("pcm_s16le", rate=rate)
             encoder.layout = layout
 
