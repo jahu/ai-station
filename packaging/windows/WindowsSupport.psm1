@@ -81,7 +81,7 @@ function New-StationWindowsSupportDirectory {
 }
 
 function Invoke-StationWindowsSupport {
-    Assert-StationWindowsHost
+    Assert-StationWindowsPreparationReady
     Assert-StationWindowsSupportAdmin
     $directory=$null;$archive=$null;$restart=$false
     try {

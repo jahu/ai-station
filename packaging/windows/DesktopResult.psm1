@@ -7,6 +7,14 @@ function Get-StationFailurePresentation {
     $message=$(if($Failure -is [Exception]) {$Failure.Message} else {[string]$Failure})
     $cause=$Failure
     for($depth=0; $depth -lt 16 -and $cause -is [Exception]; $depth++) {
+        if($cause.Data['AIStationWslFailure'] -ceq 'os_update_required') {
+            return [pscustomobject]@{
+                Title='Update Windows to continue'
+                Description='Install Windows updates and restart, then choose Prepare again. Windows support below opens your update settings.'
+                Details=$cause.Message
+                WindowsSupportAction='windows_update'
+            }
+        }
         if($cause.Data['AIStationWslFailure'] -ceq 'update_required') {
             return [pscustomobject]@{
                 Title='Update Windows support'

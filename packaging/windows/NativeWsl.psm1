@@ -69,8 +69,29 @@ function Get-StationWslRegistrations {
     } finally { $registry.Dispose() }
 }
 
-function Assert-StationWindowsPreparationReady {
+function Assert-StationWslOsCompatibility {
+    param([int]$Build,[Nullable[int]]$Revision)
+    if($Build -in @(19044,19045) -and ($null -eq $Revision -or $Revision -lt 2311)){
+        $failure=[InvalidOperationException]::new('Windows 10 needs KB5020030 (build revision 2311) or a newer cumulative update before packaged WSL can run. Open Windows Update, install updates, restart Windows, then reopen AI Station.')
+        $failure.Data['AIStationWslFailure']='os_update_required';throw $failure
+    }
+}
+
+function Assert-StationPackagedWslOsSupport {
     Assert-StationWindowsHost
+    $build=[Environment]::OSVersion.Version.Build
+    if($build -in @(19044,19045)){
+        $key=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Microsoft\Windows NT\CurrentVersion',$false)
+        try{
+            $revision=$(if($null -ne $key){$key.GetValue('UBR')}else{$null})
+            if($null -ne $revision -and $revision -isnot [int]){throw 'The Windows update revision could not be verified.'}
+            Assert-StationWslOsCompatibility $build $revision
+        }finally{if($null -ne $key){$key.Dispose()}}
+    }
+}
+
+function Assert-StationWindowsPreparationReady {
+    Assert-StationPackagedWslOsSupport
     foreach($path in @('SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending','SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')) {
         $key=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($path,$false)
         try {

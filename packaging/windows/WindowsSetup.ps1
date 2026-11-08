@@ -105,9 +105,9 @@ function Show-Failure($Failure) {
  $view=Get-StationFailurePresentation $Failure
  $script:lastError=$view.Details;$script:attention=$true;$details.Visible=$true;$status.Text=$view.Title
  $description.Text=$view.Description
- if ($view.PSObject.Properties.Name -contains 'WindowsSupportAction' -and $view.WindowsSupportAction -in @('install','update')) {
+ if ($view.PSObject.Properties.Name -contains 'WindowsSupportAction' -and $view.WindowsSupportAction -in @('install','update','windows_update')) {
   $script:windowsSupportAction=$view.WindowsSupportAction
-  $support.Text=$(if ($script:windowsSupportAction -eq 'update') {'Update Windows support'} else {'Set up Windows support'})
+  $support.Text=$(if ($script:windowsSupportAction -eq 'windows_update') {'Open Windows Update'} elseif ($script:windowsSupportAction -eq 'update') {'Update Windows support'} else {'Set up Windows support'})
  }
 }
 function Begin-StationAction([string]$Action) {
@@ -156,7 +156,11 @@ $stopExit.Add_Click({
  }
 })
 $support.Add_LinkClicked({
- $answer=[Windows.Forms.MessageBox]::Show($form,'Windows will ask permission to install or update WSL2. A restart may be required; save other work first. Existing Linux distributions are not imported, deleted or adopted. Continue?','Prepare Windows support','YesNo','Question')
+ if ($script:windowsSupportAction -eq 'windows_update') {
+  try { [void][Diagnostics.Process]::Start('ms-settings:windowsupdate') } catch { Show-Failure $_.Exception }
+  return
+ }
+ $answer=[Windows.Forms.MessageBox]::Show($form,'Windows will ask permission to install or update WSL2. Setup may download about 370 MB from Microsoft. A restart may be required; save other work first. Existing Linux distributions are not imported, deleted or adopted. Continue?','Prepare Windows support','YesNo','Question')
  if ($answer -eq [Windows.Forms.DialogResult]::Yes) {
   try {
    $info=[Diagnostics.ProcessStartInfo]::new();$info.UseShellExecute=$true;$info.Verb='runas'

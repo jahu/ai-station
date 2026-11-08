@@ -7,7 +7,7 @@ $module=Import-Module (Join-Path $PSScriptRoot '../WindowsSupport.psm1') -Force 
  $recipe=Get-StationWslInstallerRecipe
  Check ($recipe.Url -ceq 'https://github.com/microsoft/WSL/releases/download/3.0.3/wsl.3.0.3.0.x64.msi' -and $recipe.Bytes -eq 367575040 -and $recipe.Sha256 -ceq 'ae977286974255bd26bf925f00f40f5692c6b2084155cbc0563c09aea091f211') 'The reviewed Microsoft prerequisite recipe changed.'
  $script:events=[Collections.Generic.List[string]]::new();$script:modern=$true;$script:admin=$true;$script:badHash=$false;$script:badSignature=$false;$script:restart=$false
- function script:Assert-StationWindowsHost {}
+ function script:Assert-StationWindowsPreparationReady {}
  function script:Assert-StationWindowsSupportAdmin {if(-not $script:admin){throw 'No Windows consent'}}
  function script:Test-StationModernWsl {return $script:modern}
  function script:Receive-StationWslInstaller {param($Path,$Recipe);$script:events.Add('download')}

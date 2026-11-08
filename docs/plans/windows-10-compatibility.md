@@ -65,3 +65,12 @@ prefers that fixed Microsoft MSI location, validates the same signature/path
 requirements and retains the system launcher fallback. PATH/user aliases are
 never searched; an untrusted preferred executable fails closed. This also keeps
 future preparation from unnecessarily reinstalling already modern MSI-based WSL.
+
+Actual WSL `--status` then identified the base evaluation OS as too old:
+`Wsl/WSL_E_OS_NOT_SUPPORTED` on 19045.2006. Microsoft's own diagnostic points to
+[KB5020030 / revision 2311](https://aka.ms/store-wsl-kb-win10). Windows 10
+21H2/22H2 therefore requires that cumulative update or a newer one. Read-only
+preflight now checks the actual registry UBR before downloads/import and routes
+the native UI to Windows Update. The bootstrap helper applies the same guard.
+Windows 11 is unaffected. No arbitrary OS update is silently installed by AI
+Station; the fresh owned Windows 10 qualification VM is updated separately.

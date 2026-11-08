@@ -19,6 +19,11 @@ Import-Module (Join-Path $PSScriptRoot '../DesktopResult.psm1') -Force
   try { Assert-StationWindowsCompatibility $case[0] ([version]$case[1]) $case[2] $case[3] } catch {$refused=$true}
   if(-not $refused){throw 'An unsupported OS/architecture was admitted.'};$cases++
  }
+ foreach($case in @(@(19044,2311),@(19045,2311),@(19045,6456),@(22000,0),@(26100,0))){Assert-StationWslOsCompatibility $case[0] $case[1];$cases++}
+ foreach($revision in @($null,0,2006,2310)){
+  $failure=$null;try{Assert-StationWslOsCompatibility 19045 $revision}catch{$failure=$_.Exception}
+  if($null -eq $failure -or $failure.Data['AIStationWslFailure'] -cne 'os_update_required'){throw 'Missing Windows cumulative update was not refused before WSL setup'};$cases++
+ }
  Write-Output ('PASS '+$cases+' Windows host admission boundaries')
 }
 $cases=0
@@ -31,6 +36,9 @@ foreach($text in @('','WSL version: 0.67.5','WSL version: 0.66.2.0','Invalid com
  $view=Get-StationFailurePresentation ([InvalidOperationException]::new('Wrapped background failure',$failure))
  if($view.Title -cne 'Update Windows support' -or $view.WindowsSupportAction -cne 'update' -or $view.Details -notmatch 'wsl --update' -or $view.Details -match 'Invalid command line option'){throw 'WSL recovery guidance was lost or raw output exposed.'};$cases++
 }
+$failure=[InvalidOperationException]::new('Fixed Windows update guidance');$failure.Data['AIStationWslFailure']='os_update_required'
+$view=Get-StationFailurePresentation $failure
+if($view.WindowsSupportAction -cne 'windows_update' -or $view.Title -cne 'Update Windows to continue'){throw 'The operator cannot reach Windows Update from the native recovery state.'}
 $installer=[IO.File]::ReadAllText((Join-Path $PSScriptRoot '../installer/ai-station.iss'))
 if($installer -notmatch '(?m)^MinVersion=10\.0\.19044\r?$'){throw 'Native preflight and installer minimum diverged.'}
 if([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT){Assert-StationWindowsHost}
