@@ -256,7 +256,12 @@ def publish(
 
         speech = create_audio_run(
             session,
-            SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
+            SpeechRequest(
+                text=body.speech_text,
+                reference_artifact_id=body.audio_artifact_id,
+                gpu=body.gpu,
+                level_volume=body.level_volume,
+            ),
             task=task,
             parent_run_id=parent_run_id,
         )

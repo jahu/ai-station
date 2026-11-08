@@ -26,6 +26,7 @@ from app.python_execution import read_owned_file
 from app.resources import ResourceUnknown, reserve_gpu_bundle
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run
+from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 PROFILE = "sonic_whole_768_v1"
 RAM_MIB = 18432
@@ -233,6 +234,8 @@ def create_whole_run(
             "steps": 25,
             "max_side": 768,
             "backend": "sonic",
+            "level_volume": body.level_volume,
+            "audio_level_profile": VOICE_LEVEL_PROFILE if body.level_volume else None,
             "execution_deadline_at": deadline,
             "parent_artifact_ids": [item["artifact_id"] for item in inputs],
         },

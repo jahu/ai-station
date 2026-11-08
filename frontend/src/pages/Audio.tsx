@@ -1,3 +1,4 @@
+import VoiceVolumeControl from "../components/media/VoiceVolumeControl";
 import CreativeWorkspace from "../components/creative/CreativeWorkspace";
 import {
   useCreative,
@@ -163,6 +164,9 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   const [direction, setDirection] = useState(
     String(restored.direction ?? "natural"),
   );
+  const [levelVolume, setLevelVolume] = useState(
+    restored.level_volume !== false,
+  );
   const [pace, setPace] = useState(String(restored.pace ?? "natural"));
   const fish = engine === "fish_s2_pro";
   const [modelId, setModelId] = useState(
@@ -210,6 +214,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   useCreativeDraft({
     formState: {
       reference,
+      level_volume: levelVolume,
       text,
       ...(!fish && language === "en" ? { language } : {}),
       gpu,
@@ -246,6 +251,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
           "This speech engine does not support English. Choose Polish or another engine.",
         );
       const parameters = {
+        level_volume: levelVolume,
         text,
         ...(!fish && language === "en" ? { language } : {}),
         gpu,
@@ -446,6 +452,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 onChange={setDelivery}
               />
             )}
+            <VoiceVolumeControl value={levelVolume} onChange={setLevelVolume} />
             <details className="media-advanced">
               <summary>
                 <Settings2 size={15} />

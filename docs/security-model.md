@@ -1891,3 +1891,13 @@ Backup artifact classification uses correlated existence, not nullable membershi
 negation. Ordinary member uploads with no Run remain usable after station backups
 exist; protected backup paths, backup Runs and foreign owners remain unavailable.
 See [the member-upload regression](plans/account-upload-visibility.md).
+
+
+[Speech volume finishing](plans/speech-volume-leveling.md) runs in the control-plane
+worker on app-owned artifacts, using a fixed CPU filter policy. No model, network,
+GPU, host command or user-defined filter is involved. Database transactions close
+before DSP; cancellation, source identity and the worker claim are rechecked
+between bounded processing steps and before publication. Native model outputs
+remain intact. Library repair creates an owned Task/Run and separate derived
+artifact. MP4 processing copies encoded video packets and checks their timestamps;
+already processed canonical speech is inherited by avatars without double processing.

@@ -1,5 +1,5 @@
 {
-  "version": 55,
+  "version": 56,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6519,6 +6519,57 @@
       "minutes": 20,
       "requirements": [
         "docs/plans/conversation-reliability-repair.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "VOICE-006",
+      "area": "Audio i awatary",
+      "title": "Równa głośność nowej mowy i awatara",
+      "priority": "P0",
+      "prerequisites": [
+        "Własny lub licencjonowany neutralny głos i portret; istniejący WAV/awatar lub działające lokalne modele."
+      ],
+      "steps": [
+        "W Audio pozostaw Even voice volume włączone i wygeneruj kilkuzdaniowy tekst. Odsłuchaj całość.",
+        "Użyj nagrania jako głosu awatara, odsłuchaj i sprawdź synchronizację.",
+        "Powtórz krótką próbkę z Even voice volume wyłączonym."
+      ],
+      "expected": [
+        "Nowe nagranie ma oznaczenie wyrównanej głośności; brak nagłych skoków i uciętych końcówek. Naturalność oceń osobno.",
+        "Awatar dziedziczy wyrównanie bez ponownej kompresji; usta pozostają zsynchronizowane.",
+        "Wyłączenie opcji zachowuje oryginalną dynamikę bez oznaczenia wyrównania."
+      ],
+      "resources": "Model mowy i jeden awatar na GPU; wyrównanie używa CPU.",
+      "minutes": 15,
+      "requirements": [
+        "docs/plans/speech-volume-leveling.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "VOICE-007",
+      "area": "Audio i awatary",
+      "title": "Poprawienie istniejącego WAV i awatara bez nadpisania źródła",
+      "priority": "P0",
+      "prerequisites": [
+        "Własny lub licencjonowany neutralny głos i portret; istniejący WAV/awatar lub działające lokalne modele."
+      ],
+      "steps": [
+        "Otwórz istniejący nierówny WAV w Library i wybierz Even out voice volume. Otwórz balanced copy.",
+        "Porównaj całe pliki przy jednakowej głośności odtwarzacza. Powtórz dla istniejącego MP4.",
+        "Sprawdź oryginały i Sources/derived artifacts. Na długim pliku wypróbuj Stop."
+      ],
+      "expected": [
+        "Powstają osobne Task/Run i nowe pliki; oryginały pozostają niezmienione i dostępne.",
+        "Głos ma równiejszy poziom bez zmiany słów, tempa i pauz. Obraz, długość i synchronizacja są zachowane.",
+        "Nie są ładowane modele ani uruchamiana generacja na GPU. Stop nie publikuje częściowego pliku.",
+        "Wyrównana kopia ma oznaczenie; nie oferuje przypadkowej ponownej obróbki."
+      ],
+      "resources": "Tylko CPU; własne lub licencjonowane nagrania WAV i neutralny awatar MP4.",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/speech-volume-leveling.md",
         "Task → Run → Events → Artifacts"
       ]
     }
