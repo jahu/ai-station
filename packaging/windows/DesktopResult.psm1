@@ -10,8 +10,9 @@ function Get-StationFailurePresentation {
         if($cause.Data['AIStationWslFailure'] -ceq 'update_required') {
             return [pscustomobject]@{
                 Title='Update Windows support'
-                Description='WSL needs to be installed or updated before AI Station can prepare its workspace. Open Details for the Windows commands, then retry Prepare.'
+                Description='WSL needs to be installed or updated. Choose Windows support below, approve the Windows prompt, then retry Prepare. Details include manual steps.'
                 Details=$cause.Message
+                WindowsSupportAction=$cause.Data['AIStationWslAction']
             }
         }
         if($cause.Data['AIStationWslFailure'] -ceq 'disk_busy') {

@@ -15,6 +15,7 @@ function Assert-StationWindowsHost {
 function New-StationWslUpdateRequired {
     $failure=[InvalidOperationException]::new('Install or update Windows Subsystem for Linux (WSL 0.67.6 or newer). In an Administrator PowerShell window, run wsl --install --no-distribution, then wsl --update. Restart Windows if requested, reopen AI Station and choose Prepare. Existing distributions and saved work are preserved.')
     $failure.Data['AIStationWslFailure']='update_required'
+    $failure.Data['AIStationWslAction']='update'
     return $failure
 }
 
@@ -32,7 +33,11 @@ function Assert-StationWslVersion {
 function Get-StationWslExecutable {
     Assert-StationWindowsHost
     $path = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'wsl.exe'
-    if (-not [IO.File]::Exists($path)) { throw (New-StationWslUpdateRequired) }
+    if (-not [IO.File]::Exists($path)) {
+        $failure=New-StationWslUpdateRequired
+        $failure.Data['AIStationWslAction']='install'
+        throw $failure
+    }
     $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
     if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'The WSL launcher must be the trusted system executable.' }
     $signature = Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop

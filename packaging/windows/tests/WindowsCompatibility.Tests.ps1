@@ -30,7 +30,7 @@ foreach($text in @('','WSL version: 0.67.5','WSL version: 0.66.2.0','Invalid com
  $failure=$null;try{Assert-StationWslVersion $text}catch{$failure=$_.Exception}
  if($null -eq $failure){throw 'An old or unknown WSL installation was admitted.'}
  $view=Get-StationFailurePresentation ([InvalidOperationException]::new('Wrapped background failure',$failure))
- if($view.Title -cne 'Update Windows support' -or $view.Details -notmatch 'wsl --update' -or $view.Details -match 'Invalid command line option'){throw 'WSL recovery guidance was lost or raw output exposed.'};$cases++
+ if($view.Title -cne 'Update Windows support' -or $view.WindowsSupportAction -cne 'update' -or $view.Details -notmatch 'wsl --update' -or $view.Details -match 'Invalid command line option'){throw 'WSL recovery guidance was lost or raw output exposed.'};$cases++
 }
 $installer=[IO.File]::ReadAllText((Join-Path $PSScriptRoot '../installer/ai-station.iss'))
 if($installer -notmatch '(?m)^MinVersion=10\.0\.19044\r?$'){throw 'Native preflight and installer minimum diverged.'}

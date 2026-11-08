@@ -36,6 +36,7 @@ try { $uiLease=Open-StationUiLease } catch { [void][Windows.Forms.MessageBox]::S
 $script:worker=$null;$script:station=$null;$script:reader=$null;$script:stderr=$null
 $script:ready=$null;$script:running=$false;$script:prepared=$false;$script:stopPending=$false;$script:exitAfterStop=$false;$script:allowExit=$false
 $script:startupOutput='';$script:startupOutputTruncated=$false;$script:startupReady=$false
+$script:windowsSupportAction='install'
 $script:nextCheck=[DateTime]::UtcNow;$script:lastError='';$script:attention=$false
 $script:updateAvailable=$false;$script:updatePending=$false;$script:refreshAfterFailure=$false
 
@@ -104,6 +105,10 @@ function Show-Failure($Failure) {
  $view=Get-StationFailurePresentation $Failure
  $script:lastError=$view.Details;$script:attention=$true;$details.Visible=$true;$status.Text=$view.Title
  $description.Text=$view.Description
+ if ($view.PSObject.Properties.Name -contains 'WindowsSupportAction' -and $view.WindowsSupportAction -in @('install','update')) {
+  $script:windowsSupportAction=$view.WindowsSupportAction
+  $support.Text=$(if ($script:windowsSupportAction -eq 'update') {'Update Windows support'} else {'Set up Windows support'})
+ }
 }
 function Begin-StationAction([string]$Action) {
  if ($null -ne $script:worker) { return }
@@ -151,11 +156,11 @@ $stopExit.Add_Click({
  }
 })
 $support.Add_LinkClicked({
- $answer=[Windows.Forms.MessageBox]::Show($form,'Windows will ask permission to install WSL2. A restart may be required; save other work first. Existing Linux distributions are not imported, deleted or adopted. Continue?','Prepare Windows support','YesNo','Question')
+ $answer=[Windows.Forms.MessageBox]::Show($form,'Windows will ask permission to install or update WSL2. A restart may be required; save other work first. Existing Linux distributions are not imported, deleted or adopted. Continue?','Prepare Windows support','YesNo','Question')
  if ($answer -eq [Windows.Forms.DialogResult]::Yes) {
   try {
    $exe=Get-StationWslExecutable
-   $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$exe;$info.Arguments='--install --no-distribution';$info.Verb='runas';$info.UseShellExecute=$true
+   $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$exe;$info.Arguments=$(if ($script:windowsSupportAction -eq 'update') {'--update'} else {'--install --no-distribution'});$info.Verb='runas';$info.UseShellExecute=$true
    [void][Diagnostics.Process]::Start($info)
    $status.Text='Complete the Windows setup';$description.Text='Follow the Windows prompt. If Windows asks for a restart, reopen AI Station afterward and choose Prepare.'
   } catch { Show-Failure $_.Exception }
