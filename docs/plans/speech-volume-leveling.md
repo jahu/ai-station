@@ -40,3 +40,38 @@ measured differences without claiming a human listening pass. Keep private media
 out of the repository and public release. Update README, UI and qualification;
 build checked Linux/Windows 0.4.0 assets and use the owner-reviewed master release
 workflow. No new GPU/Windows-inference qualification is implied by a CPU fix.
+
+## Verified implementation — 2026-11-08
+
+The worker's fixed `speech-volume-v1` profile combines soft-knee compression,
+smoothed RMS gain and a peak limiter. Processing supports mono/stereo WAV speech
+and MP4 voice tracks up to five minutes. Measurements are active one-second RMS
+windows in dBFS, not perceived-loudness LUFS scores or a promise to remove prosody.
+
+Two ordinary owner-scoped repair Runs completed on the reported private media in
+the deployed 0.4.0 preview. The audio's active-window P90–P10 spread changed from
+13.390 to 8.407 dB; the avatar's changed from 13.398 to 8.485 dB. Original file
+hashes and derived-artifact lineage were checked. The avatar retained its encoded
+video packets and their timestamps; its decoded audio timing stayed within two
+samples. This is measured qualification, not a human listening verdict. Private
+recordings and comparison files are excluded from public assets.
+
+The built Linux application image passed real API → queued Run → CPU worker →
+WAV/MP4 playback tests with neutral synthetic media. An offline 0.3.2 → 0.4.0
+upgrade retained twelve populated tables and artifact bytes, passed SQLite
+integrity/foreign-key checks and served the compiled UI on unchanged schema 0045.
+Actual Chromium checks at 1440- and 390-pixel widths passed the Library action,
+progress/Stop controls, result navigation, balanced badge and audio playback
+element, with no page errors or document horizontal overflow.
+
+Automated tests cover sample count, finite/limited gain, silence/stereo, video
+packet/timestamp preservation, source hashes, idempotency, ownership, cancellation,
+lost claims, source removal/symlinks and defaults/opt-out. A legacy fake-avatar
+fixture now produces a valid neutral MP4 with audio instead of text masquerading
+as a movie. This allows the real finishing path to run in its lifecycle tests.
+Operator cases `VOICE-006` and `VOICE-007` remain unexecuted listening/comparison
+checks in the QA workbook.
+
+Release assets were built from production source `027437a16192382a39b19a80f083cddbf0fbc9ce`;
+later fixture and qualification-document changes do not change shipped runtime
+code. Final regression and native installer results belong in the release notes.
