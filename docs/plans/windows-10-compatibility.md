@@ -35,3 +35,24 @@ Update the README, download page and setup guide with the precise Windows range
 and prerequisites once verified. Do not replace existing published release
 binaries or move tags: publish a new installer through the normal reviewed
 release workflow. Master approval/merge stays exclusively with the human owner.
+
+## Fresh Windows 10 observation and prerequisite repair
+
+A real clean Windows 10 22H2 evaluation VM (19045) passed native PowerShell 5.1
+contracts, built the installer with Inno and installed/launched the native UI.
+Its original inbox WSL had neither `--version`, `--update` nor
+`--no-distribution`; both virtualization features were absent. The old setup
+command therefore could not prepare this OS. This is independent of the
+Windows 11-only admission bug.
+
+The existing explicit Windows-support action now launches a fixed elevated
+installer helper. It reuses sufficiently recent WSL; otherwise it downloads
+one exact Microsoft x64 WSL MSI, bounds its bytes, verifies SHA256 and a valid
+Microsoft signature before any OS change. It enables only the two documented
+WSL/Virtual Machine Platform prerequisites and installs that MSI without reboot.
+The ordinary UI and a UAC prompt precede the helper. It never creates/adopts a
+user distribution, changes the default distro/global WSL settings, touches GPU
+drivers, or grants OS setup to application tools. Temporary downloaded inputs
+are removed afterward; a requested Windows restart remains the user's action.
+The modern WSL update action stays the trusted system launcher's fixed `--update`.
+Native qualification of this added bootstrap path remains pending.

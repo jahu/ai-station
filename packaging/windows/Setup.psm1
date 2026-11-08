@@ -152,7 +152,9 @@ function Invoke-StationSetup {
         $CancellationToken.ThrowIfCancellationRequested()
         # Legacy inbox WSL lacks --version. Its raw localized output may contain
         # private paths; show fixed upgrade guidance before reserving any guest.
-        throw (New-StationWslUpdateRequired)
+        $failure=New-StationWslUpdateRequired
+        $failure.Data['AIStationWslAction']='install'
+        throw $failure
     }
     Assert-StationWslVersion $version
     Wait-StationWslProcess (Start-StationWslProcess $executable @('--status') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -CancellationToken $CancellationToken

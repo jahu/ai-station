@@ -159,8 +159,13 @@ $support.Add_LinkClicked({
  $answer=[Windows.Forms.MessageBox]::Show($form,'Windows will ask permission to install or update WSL2. A restart may be required; save other work first. Existing Linux distributions are not imported, deleted or adopted. Continue?','Prepare Windows support','YesNo','Question')
  if ($answer -eq [Windows.Forms.DialogResult]::Yes) {
   try {
-   $exe=Get-StationWslExecutable
-   $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$exe;$info.Arguments=$(if ($script:windowsSupportAction -eq 'update') {'--update'} else {'--install --no-distribution'});$info.Verb='runas';$info.UseShellExecute=$true
+   $info=[Diagnostics.ProcessStartInfo]::new();$info.UseShellExecute=$true;$info.Verb='runas'
+   if ($script:windowsSupportAction -eq 'update') {
+    $info.FileName=Get-StationWslExecutable;$info.Arguments='--update'
+   } else {
+    $info.FileName=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'WindowsPowerShell\v1.0\powershell.exe'
+    $info.Arguments='-NoLogo -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $PSScriptRoot 'Prepare-Windows.ps1')+'"'
+   }
    [void][Diagnostics.Process]::Start($info)
    $status.Text='Complete the Windows setup';$description.Text='Follow the Windows prompt. If Windows asks for a restart, reopen AI Station afterward and choose Prepare.'
   } catch { Show-Failure $_.Exception }

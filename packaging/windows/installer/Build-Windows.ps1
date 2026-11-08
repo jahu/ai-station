@@ -27,7 +27,7 @@ try {
  if ($manifest.PSObject.Properties.Name -notcontains 'package_bytes') { throw 'Build the complete update-capable guest payload.' }
  $updatePackage=Open-StationVerifiedArchive (Join-Path $GuestPackage 'station.deb') $manifest.package_sha256 $manifest.package_bytes
  [void][IO.Directory]::CreateDirectory($stage)
- $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','GuestUpdate.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','Uninstall-Check.ps1')
+ $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','GuestUpdate.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','WindowsSupport.psm1','Prepare-Windows.ps1','Uninstall-Check.ps1')
  foreach ($name in $files) {
   # A BOM keeps built-in Windows PowerShell 5.1 source decoding unambiguous.
   $text=[IO.File]::ReadAllText((Join-Path $source $name),[Text.UTF8Encoding]::new($false,$true))
