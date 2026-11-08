@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.3.1` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.3.2` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -54,12 +54,17 @@ The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
 tracks per-Run admission backoff and durable recovery after transient SQLite contention.
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
-> Ubuntu 24.04 x86-64 and Windows 11 x64. macOS is not supported yet.
+> Ubuntu 24.04 x86-64 and Windows 10 (21H2/22H2) or 11 x64. macOS is not supported yet.
 > Windows installation/first reply is CPU-tested; physical Windows NVIDIA tests
 > and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.3.1.md).
+> [Exact qualification and known issues](docs/releases/0.3.2.md).
 
-**New in 0.3.1: more reliable conversations and working website results.**
+**New in 0.3.2: Windows 10 joins the station.** The desktop installer admits
+Windows 10 21H2/22H2 x64 with KB5020030 or newer. It guides Windows support setup,
+verifies Microsoft's WSL download and keeps your existing Linux distributions.
+[Windows compatibility and prerequisites](docs/plans/windows-10-compatibility.md).
+
+**Reliable conversations and working website results.**
 Ask for a new website from a public source: the assistant reads it, creates an
 isolated project and returns checked files with a ZIP and interactive preview.
 Streaming preserves received text during transient database contention, and
@@ -86,7 +91,7 @@ choice silently. [Supported families and actual tests](docs/models.md) ·
 
 Release 0.3 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.3.1 release notes and qualification status](docs/releases/0.3.1.md).
+[0.3.2 release notes and qualification status](docs/releases/0.3.2.md).
 
 ## Help make it simple
 
@@ -301,13 +306,17 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 11 x64:** `AI-Station-0.3.1-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.3.1-linux-amd64.deb`.
+- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.3.2-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.3.2-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
 Python and the app are bundled; the installer guides required OS permissions.
-Windows uses its own WSL2 environment and may require an OS restart.
+Windows uses its own WSL2 environment and may require an OS restart. Windows 10
+needs KB5020030 or a newer cumulative update (build 19044/19045, revision 2311+).
+Setup points you to Windows Update when needed. **Set up Windows support** prepares
+WSL with your Windows permission, downloading about 370 MB from Microsoft when
+WSL is missing; Docker Desktop and a separate Ubuntu installation are unnecessary.
 Model downloads and larger media need additional disk space and suitable hardware.
 
 **Windows installer notice:** the installer is **not digitally signed**. Windows may show
@@ -316,7 +325,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.3.1.md).
+[Installation, updates and known issues](docs/releases/0.3.2.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -354,7 +363,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.3.1.md).
+post-release QA are listed in the [release notes](docs/releases/0.3.2.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -452,7 +461,9 @@ Desktop packages bundle Python and the application image, open
 account/model setup in your browser and keep data outside the installed package.
 Clean installation, a real first CPU conversation and preserving update/reinstall
 have been verified on [Linux x86-64](docs/plans/linux-consumer-qualification.md)
-and [Windows 11 / WSL2](docs/plans/windows-consumer-installation.md).
+and [Windows / WSL2](docs/plans/windows-consumer-installation.md).
+The [Windows 10 extension](docs/plans/windows-10-compatibility.md) records its
+separate installation, prerequisite and runtime qualification.
 The Linux package explains any required Docker permission through a native dialog
 and keeps the app running as your ordinary user. Physical Windows NVIDIA and
 combined fresh Linux GPU qualification remain unverified; CPU first use and
@@ -608,7 +619,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.3.1.md#validation) ·
+[Release verification](docs/releases/0.3.2.md#validation) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
