@@ -19,6 +19,7 @@ $module=Get-Module Setup
   $script:Saved=Clone $script:Original;$script:Guest=Clone $script:Old;$script:Events=[Collections.Generic.List[string]]::new()
   $script:Pending=$false;$script:LostAck=$false;$script:Busy=$false;$script:ReplaceRegistration=$false
   $script:StorageFailure=$false
+  $script:WslVersion='WSL version: 2.4.13.0';$script:LegacyWsl=$false
  }
  # Only the native orchestration is exercised here. All OS/WSL operations are
  # fake, immutable manifests and the real typed planners/confirmation remain.
@@ -47,6 +48,7 @@ $module=Get-Module Setup
  }
  function script:Wait-StationWslProcess {param($Process,[bool]$KeepOutput,$CancellationToken)
   $args=$Process.Arguments
+  if($args -contains '--version'){if($script:LegacyWsl){throw 'Synthetic legacy WSL failure with private output'};return $script:WslVersion}
   if($args[-1] -ceq '/usr/lib/ai-station-wsl-build.json'){return ($script:Guest|ConvertTo-Json -Depth 8)}
   if($args[-1] -ceq 'describe'){return '{"desktop_protocol":2}'}
   if($args -contains '-c'){return [string]$script:Pending}
@@ -63,6 +65,12 @@ $module=Get-Module Setup
  function script:Get-StationAvailablePort {return 8765}
  function script:Test-StationFixedGuestFile {param($Lease,$Record,$Executable,$Path,[switch]$ExecutableFile,[switch]$RootUser);if($Path -eq '/var/lib/ai-station-updates/python/bin/python3'){Check ($RootUser -and $ExecutableFile) 'Wrong stable interpreter inspection';return $false};Check (-not $RootUser -and -not $ExecutableFile) 'Status/Stop acquired root authority';return $script:Pending}
 
+ foreach($legacy in @($true,$false)) {
+  ResetFixture;$script:LegacyWsl=$legacy;$script:WslVersion='WSL version: 0.66.2.0'
+  $failure=$null;try{Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate|Out-Null}catch{$failure=$_.Exception}
+  Check ($null -ne $failure -and $failure.Data['AIStationWslFailure'] -ceq 'update_required') 'Old WSL was not stopped with explicit update guidance'
+  Check ($script:Events.Count -eq 0 -and $script:Saved.Manifest.package_sha256 -ceq $script:Old.package_sha256) 'Old WSL changed state or started an update'
+ }
  ResetFixture
  $refused=$false;try{Invoke-StationSetup -PackageFolder 'C:\Package'|Out-Null}catch{$refused=$true}
  Check $refused 'An update was installed without an explicit Update action'

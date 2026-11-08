@@ -4,6 +4,29 @@ AI Station is source-available under [PolyForm Noncommercial 1.0.0](../LICENSE).
 Permitted noncommercial use is free; other commercial use requires a separate
 written license. See [licensing](../COMMERCIAL.md) and [contributing](../CONTRIBUTING.md).
 
+## Desktop installation
+
+Download the Windows or Ubuntu installer from the
+[latest release](https://github.com/jahu/ai-station/releases/latest), open
+AI Station and follow account/model setup. No host Python or Node installation
+is needed for the desktop packages.
+
+On Windows use x64 Windows 10 21H2/22H2 with KB5020030 or newer (build revision
+2311+), or Windows 11. Enable CPU virtualization in firmware if Windows reports
+it unavailable. **Prepare AI Station** checks prerequisites before importing the
+private app environment. If offered, **Open Windows Update** opens your Windows
+settings; install updates and restart, then retry Prepare. **Set up Windows
+support** requests Windows permission, verifies a fixed Microsoft WSL installer
+when needed (about 370 MB), and prepares WSL2 without an automatic restart.
+Reopen AI Station after any requested Windows restart. An existing recent WSL
+is reused, and the app never adopts or deletes your other Linux distributions.
+Docker Desktop, a user-installed Ubuntu and terminal commands are unnecessary.
+
+The installer is unsigned; see the [official installation and qualification
+notes](releases/0.3.2.md). macOS remains unsupported.
+
+## Source development on Linux
+
 Run the commands below from the repository root. For the product overview, see
 [AI Station](../README.md).
 
