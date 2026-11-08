@@ -1,7 +1,6 @@
 # No elevation, network, WSL or OS feature mutation in normal tests.
 $ErrorActionPreference='Stop'
-Import-Module (Join-Path $PSScriptRoot '../WindowsSupport.psm1') -Force
-$module=Get-Module WindowsSupport
+$module=Import-Module (Join-Path $PSScriptRoot '../WindowsSupport.psm1') -Force -PassThru
 & $module {
  $script:Cases=0
  function Check($condition,[string]$message){if(-not $condition){throw $message};$script:Cases++}

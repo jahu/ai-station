@@ -1,9 +1,8 @@
 # Pure admission tests run on Linux PowerShell and native Windows PowerShell 5.1.
 # No version spoofing establishes native Windows installation qualification.
 $ErrorActionPreference='Stop'
-Import-Module (Join-Path $PSScriptRoot '../NativeWsl.psm1') -Force
+$module=Import-Module (Join-Path $PSScriptRoot '../NativeWsl.psm1') -Force -PassThru
 Import-Module (Join-Path $PSScriptRoot '../DesktopResult.psm1') -Force
-$module=Get-Module NativeWsl
 & $module {
  $cases=0
  foreach($version in @('10.0.19044','10.0.19045','10.0.22000','10.0.22631','10.0.26100')) {
