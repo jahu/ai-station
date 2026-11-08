@@ -56,3 +56,12 @@ drivers, or grants OS setup to application tools. Temporary downloaded inputs
 are removed afterward; a requested Windows restart remains the user's action.
 The modern WSL update action stays the trusted system launcher's fixed `--update`.
 Native qualification of this added bootstrap path remains pending.
+
+The real bootstrap installed WSL 3.0.3 and both features, removed its temporary
+MSI, and created no distributions. After reboot the old system launcher still
+rejected `--version`, while the signed Microsoft launcher in Program Files
+reported WSL 3.0.3 successfully on Windows 10 19045.2006. Native selection now
+prefers that fixed Microsoft MSI location, validates the same signature/path
+requirements and retains the system launcher fallback. PATH/user aliases are
+never searched; an untrusted preferred executable fails closed. This also keeps
+future preparation from unnecessarily reinstalling already modern MSI-based WSL.

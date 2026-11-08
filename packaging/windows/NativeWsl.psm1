@@ -30,19 +30,27 @@ function Assert-StationWslVersion {
     if (-not [version]::TryParse($Matches[1],[ref]$version) -or $version -lt [version]'0.67.6') { throw (New-StationWslUpdateRequired) }
 }
 
+function Select-StationWslExecutable {
+    param([string[]]$Candidates)
+    foreach($path in $Candidates){
+        if(-not [IO.File]::Exists($path)){continue}
+        $item=Get-Item -LiteralPath $path -Force -ErrorAction Stop
+        if(($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){throw 'The WSL launcher must be a regular trusted Microsoft executable.'}
+        $signature=Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop
+        if($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)'){throw 'The Windows WSL launcher signature could not be verified.'}
+        return $path
+    }
+    $failure=New-StationWslUpdateRequired;$failure.Data['AIStationWslAction']='install';throw $failure
+}
+
 function Get-StationWslExecutable {
     Assert-StationWindowsHost
-    $path = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'wsl.exe'
-    if (-not [IO.File]::Exists($path)) {
-        $failure=New-StationWslUpdateRequired
-        $failure.Data['AIStationWslAction']='install'
-        throw $failure
-    }
-    $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
-    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'The WSL launcher must be the trusted system executable.' }
-    $signature = Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop
-    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') { throw 'The Windows WSL launcher signature could not be verified.' }
-    return $path
+    # The MSI installs the current Microsoft launcher here. Older Windows 10
+    # system stubs do not forward new flags, even after WSL has been upgraded.
+    # Never search PATH, user aliases or arbitrary caller-provided locations.
+    $modern=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles)) 'WSL\wsl.exe'
+    $system=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'wsl.exe'
+    return (Select-StationWslExecutable @($modern,$system))
 }
 
 function Get-StationWslRegistrations {

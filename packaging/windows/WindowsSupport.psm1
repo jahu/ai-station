@@ -12,9 +12,10 @@ function Assert-StationWindowsSupportAdmin {
 }
 
 function Test-StationModernWsl {
-    $path=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'wsl.exe'
-    if(-not [IO.File]::Exists($path)){return $false}
-    $path=Get-StationWslExecutable # Signature/path failures are not an excuse to replace a launcher.
+    try{$path=Get-StationWslExecutable}catch{
+        if($_.Exception.Data['AIStationWslFailure'] -ceq 'update_required'){return $false}
+        throw # Signature/path failures are not an excuse to replace a launcher.
+    }
     $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$path;$info.Arguments='--version';$info.UseShellExecute=$false;$info.CreateNoWindow=$true
     $info.RedirectStandardInput=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
     $process=[Diagnostics.Process]::Start($info)

@@ -40,6 +40,7 @@ jobs:
           if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Use native Windows PowerShell 5.1 for these contracts.' }
           & ./packaging/windows/tests/WindowsCompatibility.Tests.ps1
           & ./packaging/windows/tests/WindowsSupport.Tests.ps1
+          & ./packaging/windows/tests/WslExecutable.Tests.ps1
           & ./packaging/windows/tests/StartupFailure.Tests.ps1
           & ./packaging/windows/tests/DesktopProcess.Tests.ps1
           & ./packaging/windows/tests/UpdateCoordinator.Tests.ps1
