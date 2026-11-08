@@ -216,6 +216,45 @@ def apply():
     return guest.update(io.BytesIO(BYTES), receipt(1), receipt(2), len(BYTES), os.getuid())
 
 
+def test_update_preserves_ordinary_xdg_parents_and_private_database(fixture):
+    root, store, database, _, calls = fixture
+    parents = [guest.HOME / ".local", guest.HOME / ".local/share"]
+    for parent in parents:
+        parent.chmod(0o755)
+    before = database.read_bytes()
+    assert apply()["data_preserved"] is True
+    assert "installed" in calls and len(list(store.glob("*.sqlite"))) == 1
+    assert database.read_bytes() == before
+    assert all(parent.stat().st_mode & 0o777 == 0o755 for parent in parents)
+    assert root.stat().st_mode & 0o777 == 0o700
+
+
+@pytest.mark.parametrize(
+    "relative,mode",
+    [(".local", 0o775), (".local/share", 0o777), (".local/share/ai-station-desktop", 0o755)],
+)
+def test_update_still_refuses_writable_parents_or_exposed_application_root(fixture, relative, mode):
+    _, _, database, _, calls = fixture
+    (guest.HOME / relative).chmod(mode)
+    before = database.read_bytes()
+    with pytest.raises(ValueError, match="unsafe ownership or permissions"):
+        apply()
+    assert not calls and database.read_bytes() == before
+
+
+@pytest.mark.parametrize("relative", [".local", ".local/share"])
+def test_update_still_refuses_symlink_xdg_parents(fixture, relative):
+    _, _, database, _, calls = fixture
+    before = database.read_bytes()
+    path = guest.HOME / relative
+    moved = guest.HOME / "retained-directory"
+    path.rename(moved)
+    path.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(ValueError, match="unsafe ownership or permissions"):
+        apply()
+    assert not calls and database.read_bytes() == before
+
+
 def test_preview_to_stable_retains_private_database_and_reconciles_acknowledgement(fixture):
     _, store, database, manifest, calls = fixture
     previous, target = receipt(1), receipt(2)

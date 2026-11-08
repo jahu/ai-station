@@ -1,3 +1,9 @@
+Windows preserving updates accept ordinary owned XDG parents (`~/.local` and
+`~/.local/share`) with read/execute access such as 0755. Symlink parents,
+unexpected owners and group/world-writable directories remain rejected. The
+application root, data, runtime and update locks still require private ownership
+and permissions. The updater never chmods existing shared parent directories.
+
 The optional native Linux graphics action is a separate argument-free polkit
 helper in an explicitly built Debian package, never an HTTP/Runner/agent tool.
 It admits only an ordinary invoking account, native Ubuntu 24.04 amd64 and the

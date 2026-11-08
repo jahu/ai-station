@@ -73,5 +73,12 @@ Operator cases `VOICE-006` and `VOICE-007` remain unexecuted listening/compariso
 checks in the QA workbook.
 
 Release assets were built from production source `027437a16192382a39b19a80f083cddbf0fbc9ce`;
-later fixture and qualification-document changes do not change shipped runtime
-code. Final regression and native installer results belong in the release notes.
+the application image/guest retain that source. Qualification uncovered an
+independent Windows updater issue before publication: it incorrectly required
+0700 on ordinary owned XDG parents created as 0755 by a fresh WSL installation.
+The native updater now accepts safe owned, non-writable parents while retaining
+0700 for application data and rejecting symlinks. It does not chmod user folders.
+Both its admission and backup checks use the same policy, with preservation and
+refusal tests. Early transfer rejection also gets a bounded safe explanation.
+The rebuilt native Windows installer must include this fix and pass the actual
+preserving update before qualification is completed in the release notes.
