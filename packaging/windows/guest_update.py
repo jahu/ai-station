@@ -425,7 +425,10 @@ def backup_database(root, uid, operation):
     path = root / "data/db/ai-station.sqlite"
     if root.exists() or root.is_symlink():
         for folder in [HOME / ".local", HOME / ".local/share", root]:
-            directory(folder, uid, private=True)
+            # Ordinary XDG parents may already be 0755. Ownership and refusal
+            # of writable/symlink parents protect the private application root;
+            # do not chmod unrelated user directories to admit an update.
+            directory(folder, uid, private=folder == root)
     if (root / "data").exists() or (root / "data").is_symlink():
         directory(root / "data", uid, private=True)
     if path.parent.exists() or path.parent.is_symlink():
@@ -507,7 +510,7 @@ def update(source, previous, target, size, uid):
                 folder.mkdir(mode=0o700)
                 if os.geteuid() == 0:
                     os.chown(folder, uid, -1)
-            directory(folder, uid, private=True)
+            directory(folder, uid, private=folder == root)
         stack.enter_context(locked(root / "desktop.lock", uid, create=True))
         runtime = root / "data/runtime"
         if runtime.exists() or runtime.is_symlink():

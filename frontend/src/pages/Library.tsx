@@ -1,3 +1,4 @@
+import VoiceVolumeAction from "../components/media/VoiceVolumeAction";
 import ArtifactThumbnail from "../components/media/ArtifactThumbnail";
 import { copyText } from "../lib/clipboard";
 import EditTimelineLink from "../components/media/EditTimelineLink";
@@ -486,6 +487,7 @@ export function ArtifactDetail() {
         a && (
           <div className="image-workspace">
             <section className="panel artifact-preview">
+              <VoiceVolumeAction key={a.id} artifact={a} />
               {a.purged_at || a.purge_run_id ? (
                 <div className="library-deleted-placeholder">
                   <Trash2 size={38} />

@@ -19,6 +19,7 @@ from app.models import Artifact
 from app.paths import safe_join
 from app.runs import create_run, create_task, run_dict
 from app.serialize import artifact_dict
+from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 router = APIRouter(prefix="/api/audio")
 DB = Annotated[Session, Depends(session_scope, scope="function")]
@@ -137,6 +138,8 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None, observed_p
             "reference_relative": reference.relative_path,
             "parent_artifact_ids": [reference.id],
             "backend": "chatterbox",
+            "level_volume": body.level_volume,
+            "audio_level_profile": VOICE_LEVEL_PROFILE if body.level_volume else None,
             **({"delivery": body.delivery.model_dump()} if body.delivery is not None else {}),
         },
     )

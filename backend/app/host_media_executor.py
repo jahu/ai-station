@@ -337,6 +337,17 @@ class HostMediaExecutor:
         if not self._database_step(session, run, claim, confirmed_exit):
             return
 
+        publication_output, finishing_metadata = output, {}
+        if info.get("exit_code") == 0 and info.get("status") not in {"canceled", "interrupted"}:
+            from app.voice_level import FinishingCanceled, FinishingClaimLost, finish_generated
+
+            try:
+                publication_output, finishing_metadata = finish_generated(self, session, run, claim, output)
+            except FinishingClaimLost:
+                return
+            except FinishingCanceled:
+                pass  # The final claim-fenced transaction records ordinary cancellation.
+
         def finish():
             # Result/children publish atomically. Retain the independently committed
             # exit proof even if output validation fails; don't loop on bad files.
@@ -355,15 +366,24 @@ class HostMediaExecutor:
             else:
                 artifact = adopt_existing(
                     session,
-                    relative_path=output,
+                    relative_path=publication_output,
                     artifact_type=self.artifact_type,
                     mime_type=self.mime_type,
                     original_filename=f"{run_id}{self.suffix}",
                     run_id=run_id,
-                    metadata={"capability": run.capability, **run.parameters, **self.output_metadata(output)},
+                    metadata={
+                        "capability": run.capability,
+                        **run.parameters,
+                        **self.output_metadata(output),
+                        **finishing_metadata,
+                    },
                     parent_artifact_ids=run.parameters.get("parent_artifact_ids", []),
                 )
                 self.on_success(session, run, artifact)
+                if finishing_metadata:
+                    append_event(
+                        session, run.id, "audio.leveling.completed", finishing_metadata["audio_leveling"]
+                    )
                 if run.metadata_json.get("prompt_translation"):
                     from app.media_translation import decorate_output
 

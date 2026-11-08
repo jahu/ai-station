@@ -1,3 +1,4 @@
+import VoiceVolumeControl from "../components/media/VoiceVolumeControl";
 import {
   useCreative,
   useCreativeDraft,
@@ -97,6 +98,7 @@ function AvatarForm({
   const [audio, setAudio] = useState(
     String(saved.audio ?? saved.audio_artifact_id ?? initialAudio ?? ""),
   );
+  const [levelVolume, setLevelVolume] = useState(saved.level_volume !== false);
   const [voiceMode, setVoiceMode] = useState<"recording" | "text">(
     saved.voiceMode === "text" || saved.speech_text ? "text" : "recording",
   );
@@ -166,6 +168,7 @@ function AvatarForm({
     formState: {
       image,
       audio,
+      level_volume: levelVolume,
       voiceMode,
       speechText,
       prompt,
@@ -206,6 +209,7 @@ function AvatarForm({
               }),
           image_artifact_id: image,
           audio_artifact_id: audio,
+          level_volume: levelVolume,
           seed,
           gpu,
           ...(voiceMode === "text" ? { speech_text: speechText } : {}),
@@ -231,6 +235,7 @@ function AvatarForm({
               ...profileParameters,
               image_artifact_id: image,
               audio_artifact_id: audio,
+              level_volume: levelVolume,
               prompt,
               ...promptPreparation,
               size,
@@ -250,6 +255,7 @@ function AvatarForm({
           ...profileParameters,
           image_artifact_id: image,
           audio_artifact_id: audio,
+          level_volume: levelVolume,
           prompt,
           ...promptPreparation,
           size,
@@ -382,6 +388,7 @@ function AvatarForm({
                 onBusy={setUploading}
               />
             </div>
+            <VoiceVolumeControl value={levelVolume} onChange={setLevelVolume} />
             {voiceMode === "text" && (
               <label className="media-text-label">
                 <span>

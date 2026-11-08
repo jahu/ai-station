@@ -138,7 +138,21 @@ with av.open(sys.argv[1],'w') as c:
         kwargs["argv"] = [
             sys.executable,
             "-c",
-            delay + "import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b'fake MP4')",
+            delay
+            + """import av,numpy as np,sys
+with av.open(sys.argv[1],'w') as c:
+ v=c.add_stream('libx264',rate=25);v.width=v.height=64;v.pix_fmt='yuv420p'
+ a=c.add_stream('aac',rate=16000);a.layout='mono'
+ for n in range(25):
+  f=av.VideoFrame.from_ndarray(np.full((64,64,3),70,dtype=np.uint8),format='rgb24')
+  f.pts=n
+  for p in v.encode(f):c.mux(p)
+ for p in v.encode():c.mux(p)
+ f=av.AudioFrame.from_ndarray(np.zeros((1,16000),dtype=np.float32),format='fltp',layout='mono')
+ f.sample_rate=16000;f.pts=0
+ for p in a.encode(f):c.mux(p)
+ for p in a.encode():c.mux(p)
+""",
             output,
         ]
         return original(**kwargs)

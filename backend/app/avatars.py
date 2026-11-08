@@ -15,6 +15,7 @@ from app.models import Artifact
 from app.motion_artifacts import MotionArtifacts
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
+from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 router = APIRouter(prefix="/api/avatars")
 
@@ -125,7 +126,12 @@ def create_avatar_run(
         policy = freeze_prompt_policy(session, body, preparation_policy)
         speech = create_audio_run(
             session,
-            SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
+            SpeechRequest(
+                text=body.speech_text,
+                reference_artifact_id=body.audio_artifact_id,
+                gpu=body.gpu,
+                level_volume=body.level_volume,
+            ),
             task=task,
             parent_run_id=parent_run_id,
         )
@@ -154,6 +160,8 @@ def create_avatar_run(
             "audio_relative": audio.relative_path,
             "parent_artifact_ids": [image.id, audio.id],
             "backend": "echomimic-v3",
+            "level_volume": body.level_volume,
+            "audio_level_profile": VOICE_LEVEL_PROFILE if body.level_volume else None,
         },
     )
     if body.translation is not None and _prepare_translation:

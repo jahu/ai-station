@@ -11,12 +11,15 @@ STANDARD_RAM_MIB = 24576
 
 
 class AvatarMemorySettings(BaseModel):
+    level_volume: bool = Field(default=True, strict=True)
     memory_profile: Literal["default", "bounded_11g"] = "default"
     translation: TranslationOptions | None = None
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
+        if self.level_volume:
+            values.pop("level_volume", None)
         if values.get("model_id") is None:
             values.pop("model_id", None)
         if self.translation is None:

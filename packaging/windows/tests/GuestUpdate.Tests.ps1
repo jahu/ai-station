@@ -76,6 +76,18 @@ for($i=0;$i -lt $data.Length;$i++){if($data[$i] -ne [byte]($i%256)){throw 'Binar
   Check ($result.status -ceq 'updated' -and $result.data_preserved -and -not $result.backup_available) 'Binary native transport did not confirm receipt'
  } finally {$memory.Dispose()}
 
+ # A rejected update can close stdin before the archive arrives. Preserve a
+ # useful bounded explanation instead of exposing the platform pipe exception.
+ $early="[Console]::Error.WriteLine('Synthetic private fixture detail');exit 7"
+ $info.Arguments='-NoLogo -NoProfile -NonInteractive -EncodedCommand '+[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($early))
+ $process=[Diagnostics.Process]::Start($info)
+ $memory=[IO.MemoryStream]::new([byte[]]::new(4MB),$false);$message=''
+ try {
+  try {[void](Send-StationGuestUpdate $process ([pscustomobject]@{Stream=$memory}) ([Text.Encoding]::UTF8.GetBytes("{`"fixture`":true}`n")))}catch{$message=$_.Exception.Message}
+  Check ($message -like 'The local update stopped before receiving the complete package.*') 'Early rejection lost its safe update explanation'
+  Check ($message -notlike '*Synthetic private fixture detail*') 'Private native output escaped into the presentation'
+ } finally {$memory.Dispose()}
+
  # A token does not interrupt Windows PowerShell's pending anonymous-pipe write.
  # Exercise both an oversized header and body backpressure against a real child
  # that never reads stdin. A separate sleeping process must remain untouched.
