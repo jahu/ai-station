@@ -119,6 +119,13 @@ authority. The control handler only journals and dispatches the fixed helper;
 timeouts and worker ownership rules are unchanged. Regression tests cover both
 platforms, modified source identities/bytes and cancellation during hashing.
 This fix still requires a rebuilt native package exercise.
+That exercise also caught a platform mix-up in the shared source verifier: its
+Linux-only compatibility predicate rejects Microsoft WSL. The shared verifier now
+requires the caller's platform validator explicitly; Windows supplies its
+dedicated-guest validator. Windows staging regressions keep native-Linux support
+disabled, matching WSL instead of inheriting the Linux development host's result.
+The refused Run finalized as failed with its gate cleared and no native installer
+dispatched. A stock fresh PowerShell process could still open and Stop the app.
 
 Guest readiness also validates its bound native identity without requiring the
 interactive update channel's 60-second presence lease. A cold startup may exceed

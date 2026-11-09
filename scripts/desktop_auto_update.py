@@ -284,12 +284,12 @@ class DesktopUpdates:
         return self.inspect(run_id)
 
 
-def verify_source(root, run_id, saved, check):
+def verify_source(root, run_id, saved, check, *, validate):
     """Hash the retained source in the helper, outside the short control RPC."""
     check()
     publish(root, run_id, "preparing")
     current = desktop.manifest(desktop.ROOT)
-    linux.compatible(current)
+    validate(current)
     if versions.package_identity(current) != saved["previous"]:
         raise ValueError("The native update source package changed")
     desktop.verify(desktop.ROOT, current)
@@ -327,7 +327,7 @@ def execute(root, run_id):
 
         progress.last = 0
         try:
-            verify_source(root, run_id, saved, lambda: check(True))
+            verify_source(root, run_id, saved, lambda: check(True), validate=linux.compatible)
             publish(root, run_id, "downloading")
             coordinates = saved["request"]
             package, snapshot = download(

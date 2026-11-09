@@ -62,6 +62,9 @@ def test_windows_native_preparation_is_finite_idempotent_and_uses_its_own_helper
 @pytest.mark.parametrize("canceled", [False, True])
 def test_verified_staging_never_runs_the_windows_installer(accounts, tmp_path, monkeypatch, canceled):
     root, _, identity, _, owner, snapshot, _, spawn, _ = prepared(accounts, tmp_path, monkeypatch)
+    # An actual WSL guest is not a native-Linux update target. Keep that
+    # exclusion active while exercising the Windows source verification.
+    monkeypatch.setattr(journal.linux, "supported", lambda _value: False)
     calls = []
 
     def download(*args, **kwargs):
