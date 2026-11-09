@@ -110,8 +110,11 @@ function Invoke-StationSetup {
     $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
     $CancellationToken.ThrowIfCancellationRequested()
+    # Launch errors (including programming/import errors) are not evidence of
+    # an old WSL version and must not be replaced with misleading setup advice.
+    $versionProcess=Start-StationWslProcess $executable @('--version') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))
     try {
-        $version=Wait-StationWslProcess (Start-StationWslProcess $executable @('--version') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -KeepOutput $true -CancellationToken $CancellationToken
+        $version=Wait-StationWslProcess $versionProcess -KeepOutput $true -CancellationToken $CancellationToken
     } catch {
         $CancellationToken.ThrowIfCancellationRequested()
         # Legacy inbox WSL lacks --version. Its raw localized output may contain

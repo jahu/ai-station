@@ -1,7 +1,7 @@
 # Shared fixed guest transport and publisher receipts; no caller-selected shell.
 Set-StrictMode -Version 2.0
 $ErrorActionPreference='Stop'
-foreach($name in @('InstallState','InstallFiles','PrivateStore','GuestManifest','NativeWsl')){Import-Module (Join-Path $PSScriptRoot ($name+'.psm1'))}
+foreach($name in @('InstallState','InstallFiles','PrivateStore','GuestManifest','NativeWsl','DesktopProcess')){Import-Module (Join-Path $PSScriptRoot ($name+'.psm1'))}
 
 function Read-StationPublishedManifest {
     param([string]$PackageFolder)
