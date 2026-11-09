@@ -84,6 +84,8 @@ from app.runtime_setup_api import router as runtime_setup_router
 from app.site_preview import router as site_preview_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
+from app.station_update_install import router as station_update_install_router
+from app.station_updates import router as station_updates_router
 from app.telemetry_store import history
 from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router
@@ -494,6 +496,8 @@ app.include_router(project_setup_router)
 app.include_router(data_inputs_router)
 app.include_router(project_router)
 app.include_router(maintenance_router)
+app.include_router(station_updates_router)
+app.include_router(station_update_install_router)
 app.include_router(memory_router)
 app.include_router(embedding_router)
 app.include_router(private_ui_router)

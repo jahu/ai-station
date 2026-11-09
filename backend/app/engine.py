@@ -162,6 +162,8 @@ def _execute_claimed(session, run, worker_id, executors):
             "publication_reconcile",
             "github_read",
             "sqlite_backup",
+            "station_update_check",
+            "station_update",
             "private_access",
             "runtime_observation",
             "station_snapshot",

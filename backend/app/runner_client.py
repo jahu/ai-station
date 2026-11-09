@@ -21,6 +21,12 @@ class RunnerError(Exception):
 
 
 class RunnerClient:
+    def station_update_capabilities(self) -> dict:
+        return self.request("GET", "/v1/station/updates/capabilities")
+
+    def station_update(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/station/updates", payload)
+
     def __init__(self, socket_path: str | None = None, timeout: float = 30.0):
         self.socket_path = socket_path or get_settings().runner_socket
         self.timeout = timeout

@@ -75,6 +75,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:
             continue
+        if run.executor_type == "station_update":
+            from app.station_update_install import recover
+
+            recover(session, run, runner)
+            session.commit()
+            touched.append(run.id)
+            continue
         from app.heartbeat import cancel_expired_run
 
         cancel_expired_run(session, run.id)

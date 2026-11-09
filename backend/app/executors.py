@@ -85,6 +85,8 @@ from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecuto
 from app.speech_setup_job import SpeechSetupExecutor
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
+from app.station_update_install import StationUpdateExecutor
+from app.station_updates import StationUpdateCheckExecutor
 from app.summary_executor import SummaryExecutor
 from app.timeline_waveforms import WaveformExecutor
 from app.timelines import TimelineExecutor
@@ -422,6 +424,8 @@ EXECUTORS = {
     "github_read": GithubReadExecutor(),
     "memory_embed": MemoryEmbedExecutor(),
     "sqlite_backup": SqliteBackupExecutor(),
+    "station_update_check": StationUpdateCheckExecutor(),
+    "station_update": StationUpdateExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),
 }
 

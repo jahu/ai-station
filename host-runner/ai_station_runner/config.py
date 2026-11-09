@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("./data")
     data_host_path: Path | None = None
     runner_socket: str = ""
+    desktop_control_socket: str = ""
     photo_python: str = ""
     photo_script: str = ""
     krea_runtime_dir: str = ""
