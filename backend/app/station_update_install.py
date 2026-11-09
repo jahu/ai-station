@@ -125,6 +125,47 @@ def enqueue(body: InstallRequest, session: DB):
     return run_dict(run)
 
 
+def checked_target(run, target):
+    if not isinstance(target, dict) or target.get("version") != run.metadata_json.get("target_version"):
+        raise ValueError("The native update has no exact verified target package")
+    platform = run.parameters.get("platform")
+    if platform == "windows-x64":
+        # The approved EXE binds its retained native/guest payload. Do not invent
+        # a Linux image identity before the Windows installer is opened.
+        package = run.metadata_json.get("release", {}).get("packages", {}).get(platform)
+        if not isinstance(package, dict):
+            raise ValueError("The Windows update lost its frozen publisher package")
+        expected = {
+            "version": run.metadata_json["target_version"],
+            "asset_id": package.get("id"),
+            "installer_sha256": package.get("sha256"),
+            "installer_bytes": package.get("size_bytes"),
+        }
+        if (
+            target != expected
+            or type(target.get("asset_id")) is not int
+            or type(target.get("installer_bytes")) is not int
+            or target["asset_id"] <= 0
+            or not 0 < target["installer_bytes"] <= 4 * 1024**3
+            or not isinstance(target.get("installer_sha256"), str)
+            or not re.fullmatch(r"[a-f0-9]{64}", target["installer_sha256"])
+        ):
+            raise ValueError("The Windows installer no longer matches its approved publisher package")
+    elif platform == "linux-amd64":
+        if (
+            set(target) != {"version", "bundle_id", "image_id", "source_epoch"}
+            or not isinstance(target.get("bundle_id"), str)
+            or not re.fullmatch(r"[a-f0-9]{64}", target["bundle_id"])
+            or not isinstance(target.get("image_id"), str)
+            or not re.fullmatch(r"sha256:[a-f0-9]{64}", target["image_id"])
+            or type(target.get("source_epoch")) is not int
+            or not 0 <= target["source_epoch"] < 2**63
+        ):
+            raise ValueError("The Linux update has no exact verified target bundle")
+    else:
+        raise ValueError("The native update platform is unsupported")
+
+
 def checked_reply(run, value):
     if (
         not isinstance(value, dict)
@@ -136,18 +177,7 @@ def checked_reply(run, value):
         raise ValueError("The native update reply does not match this approved operation")
     if value["phase"] in {"ready", "apply_requested", "applying", "applied", "succeeded"}:
         target = value.get("target")
-        if (
-            not isinstance(target, dict)
-            or set(target) != {"version", "bundle_id", "image_id", "source_epoch"}
-            or target.get("version") != run.metadata_json.get("target_version")
-            or not isinstance(target.get("bundle_id"), str)
-            or not re.fullmatch(r"[a-f0-9]{64}", target["bundle_id"])
-            or not isinstance(target.get("image_id"), str)
-            or not re.fullmatch(r"sha256:[a-f0-9]{64}", target["image_id"])
-            or type(target.get("source_epoch")) is not int
-            or not 0 <= target["source_epoch"] < 2**63
-        ):
-            raise ValueError("The native update has no exact verified target package")
+        checked_target(run, target)
         expected = run.metadata_json.get("native_update", {}).get("target")
         if expected is not None and expected != target:
             raise ValueError("The native update target changed after preparation")

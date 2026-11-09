@@ -988,10 +988,18 @@ def main():
                 progress.close()
                 reexecute(installed, args)
             native_updates = None
+            windows_updates = False
             if linux_updates:
                 from desktop_auto_update import DesktopUpdates
 
                 native_updates = DesktopUpdates(root, installed, value)
+            elif platform.system() == "Linux":
+                from desktop_windows_updates import WindowsUpdates
+                from desktop_windows_updates import enabled as windows_updates_enabled
+
+                windows_updates = windows_updates_enabled(root, value)
+                if windows_updates:
+                    native_updates = WindowsUpdates(root, installed, value)
             with (
                 (root / "desktop.log").open("a", encoding="utf-8") as log,
                 DesktopControl(
@@ -1061,6 +1069,10 @@ def main():
                         from desktop_update_recovery import acknowledge_ready
 
                         acknowledge_ready(root, value)
+                    elif windows_updates:
+                        from desktop_windows_updates import ready as windows_ready
+
+                        windows_ready(root, value, config, control.instance_id)
                     publish_ready(root, url, instance_id=instance_id)
 
                 supervise(

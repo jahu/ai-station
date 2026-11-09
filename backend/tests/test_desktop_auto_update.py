@@ -18,6 +18,7 @@ def prepared(accounts, tmp_path, monkeypatch):
     root = installation(tmp_path)
     installed = tmp_path / "installed"
     value = bundle(installed, PACKAGE | {"version": "0.4.0", "release_version": "0.4.0"})
+    monkeypatch.setattr(module.desktop, "ROOT", installed)
     owner = module.DesktopUpdates(root, installed, value)
     spawn = Mock()
     monkeypatch.setattr(module.subprocess, "Popen", spawn)
@@ -38,6 +39,75 @@ def test_identical_native_preparation_reuses_journal_without_dispatching_twice(
     with pytest.raises(ValueError):
         owner.handle({**message, "request": {**message["request"], "fingerprint": "f" * 64}})
     assert spawn.call_count == 1
+
+
+@pytest.mark.parametrize("platform", ["linux", "windows"])
+def test_control_acknowledges_before_hashing_the_large_source_package(
+    accounts, tmp_path, monkeypatch, platform
+):
+    def unexpected_hash(*_):
+        pytest.fail("Full package hashing must not block the short native control RPC")
+
+    monkeypatch.setattr(module.desktop, "verify", unexpected_hash)
+    if platform == "windows":
+        from test_desktop_windows_updates import prepared as windows_prepared
+
+        _, _, identity, _, owner, _, _, spawn, message = windows_prepared(accounts, tmp_path, monkeypatch)
+    else:
+        _, owner, identity, _, message, spawn = prepared(accounts, tmp_path, monkeypatch)
+    assert owner.inspect(identity)["phase"] == "queued"
+    assert owner.handle(message)["phase"] == "queued"
+    assert spawn.call_count == 1
+
+
+@pytest.mark.parametrize("platform", ["linux", "windows"])
+@pytest.mark.parametrize("change", ["contents", "identity", "canceled_during_hash"])
+def test_helper_rechecks_source_and_authority_before_download(
+    accounts, tmp_path, monkeypatch, platform, change
+):
+    import desktop_release_download
+
+    if platform == "windows":
+        import desktop_windows_updates
+        from test_desktop_windows_updates import prepared as windows_prepared
+
+        root, _, identity, _, owner, _, _, spawn, _ = windows_prepared(accounts, tmp_path, monkeypatch)
+        execute = desktop_windows_updates.prepare
+    else:
+        root, owner, identity, _, _, spawn = prepared(accounts, tmp_path, monkeypatch)
+        execute = module.execute
+
+    if change == "contents":
+        (owner.installed / "neutral").write_bytes(b"changed source bytes")
+    elif change == "identity":
+        import json
+
+        value = dict(owner.value, bundle_id="f" * 64, image_tag="ai-station:desktop-" + "f" * 16)
+        (owner.installed / "desktop-manifest.json").write_text(json.dumps(value))
+    else:
+        verify = module.desktop.verify
+
+        def cancel_during_hash(*args):
+            assert owner.inspect(identity)["phase"] == "preparing"
+            verify(*args)
+            with control_session_factory()() as session:
+                session.get(Run, identity).status = "cancel_requested"
+                session.commit()
+
+        monkeypatch.setattr(module.desktop, "verify", cancel_during_hash)
+
+    download = Mock(side_effect=AssertionError("An invalid source must not start downloading"))
+    monkeypatch.setattr(module, "download", download)
+    monkeypatch.setattr(desktop_release_download, "download", download)
+    if change == "canceled_during_hash":
+        execute(root, identity)
+        assert owner.inspect(identity)["phase"] == "canceled"
+    else:
+        with pytest.raises(ValueError, match="changed"):
+            execute(root, identity)
+        assert owner.inspect(identity)["phase"] == "failed"
+    download.assert_not_called()
+    assert spawn.call_count == 1  # No installer or restarted application.
 
 
 @pytest.mark.parametrize("failure", [None, "download", "activation", "cancel"])
@@ -162,3 +232,50 @@ def test_native_apply_requires_idle_gate_even_after_verified_preparation(account
     with pytest.raises(ValueError, match="idle dispatch gate"):
         owner.handle({"action": "updates.apply", "run_id": identity})
     assert owner.inspect(identity)["phase"] == "ready"
+
+
+@pytest.mark.parametrize("activation_started", [False, True])
+def test_lost_helper_is_not_replayed_or_left_permanently_preparing(
+    accounts, tmp_path, monkeypatch, activation_started
+):
+    root, owner, identity, _, _, spawn = prepared(accounts, tmp_path, monkeypatch)
+    module.publish(root, identity, "applying" if activation_started else "downloading", helper_started_at=0)
+    result = owner.inspect(identity)
+    assert result["phase"] == ("inspection_required" if activation_started else "failed")
+    assert result["error"] and spawn.call_count == 1
+
+
+@pytest.mark.parametrize("entry", ["desktop_auto_update.py", "desktop_windows_updates.py"])
+def test_isolated_native_helper_bootstraps_its_verified_siblings_without_pythonpath(tmp_path, entry):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2]
+    # Only the runner dependency is supplied from this checkout; deliberately do
+    # not supply scripts/. The entry point must restore its own sibling imports.
+    code = (
+        "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));"
+        "sys.argv=sys.argv[1:];runpy.run_path(sys.argv[0],run_name='__main__')"
+    )
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            code,
+            str(source / "host-runner"),
+            str(source / "scripts" / entry),
+            "--help",
+        ],
+        cwd=tmp_path,
+        env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(tmp_path / "untrusted")},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--run-id" in result.stdout and "ModuleNotFoundError" not in result.stderr
+    after = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    assert after == before  # Keep the existing autouse test database untouched.

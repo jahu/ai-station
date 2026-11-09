@@ -206,3 +206,36 @@ def test_unavailable_native_inspection_is_bounded_and_never_redispatches(account
         recover_stale(session, Offline())
         assert session.get(Run, identity).status == "running"
     assert calls == ["inspect"] and not native.calls
+
+
+def test_denied_activation_ack_keeps_the_original_gate_recoverable(accounts, offer, monkeypatch):
+    from app.models import User
+    from app.runner_client import RunnerError
+    from sqlalchemy import select
+
+    native = Native("ready")
+    identity, _ = installed(accounts, offer, monkeypatch, native)
+
+    def denied(value):
+        if value["action"] == "apply":
+            with control_session_factory()() as other:
+                row = other.get(Run, identity)
+                other.scalar(select(User).where(User.id != row.owner_id)).is_admin = True
+                other.get(User, row.owner_id).is_admin = False
+                other.commit()
+            native.phase = "failed"  # Native proof: activation was denied before Stop.
+            raise RunnerError("The native operation no longer has administrator authority")
+
+    native.hook = denied
+    with control_session_factory()() as session:
+        tick(session, "first-updater")
+        session.expire_all()
+        assert session.get(Run, identity).status == "running"
+        assert session.get(Run, identity).lease_expires_at <= utcnow()
+        assert session.get(Setting, KEY) is not None
+    with control_session_factory()() as session:
+        tick(session, "result-inspector", runner=native)
+        session.expire_all()
+        assert session.get(Run, identity).status == "failed"
+        assert session.get(Setting, KEY) is None
+    assert [value["action"] for value in native.calls] == ["prepare", "apply", "inspect"]

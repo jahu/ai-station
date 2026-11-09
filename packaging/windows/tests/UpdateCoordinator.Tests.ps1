@@ -52,7 +52,7 @@ $module=Get-Module Setup
   if($args[-1] -ceq '/usr/lib/ai-station-wsl-build.json'){return ($script:Guest|ConvertTo-Json -Depth 8)}
   if($args[-1] -ceq 'describe'){return '{"desktop_protocol":2}'}
   if($args -contains '-c'){return [string]$script:Pending}
-  return '{"running":false}'
+  if($KeepOutput){return '{"running":false}'}
  }
  function script:Send-StationGuestUpdate {param($Process,$Archive,[byte[]]$Header,$CancellationToken)
   $body=[Text.Encoding]::UTF8.GetString($Header)|ConvertFrom-Json
@@ -115,5 +115,17 @@ $module=Get-Module Setup
  $rootCalls=@($script:Events|Where-Object{$_ -ceq 'root-update'}).Count
  Invoke-StationDesktop -Action stop -PackageFolder 'C:\Package'|Out-Null
  Check (@($script:Events|Where-Object{$_ -ceq 'root-update'}).Count -eq $rootCalls) 'Capacity failure made Stop acquire root authority'
+
+ ResetFixture
+ $originalAutomatic=Clone $script:Original
+ $context=[pscustomobject]@{channel_id=[Guid]::NewGuid().ToString('D');run_id=[Guid]::NewGuid().ToString('D');fingerprint=('c'*64)}
+ $result=Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate -AutomaticUpdate $context -OriginalUpdateRecord $originalAutomatic
+ Check ($result.UpdateProof.data_preserved -and $result.UpdateProof.backup_available) 'Automatic continuation lost the actual root transaction proof'
+ Check ($script:Saved.PSObject.Properties.Name -notcontains 'UpdateProof') 'Completion proof polluted the durable installation record schema'
+ $result=Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate -AutomaticUpdate $context -OriginalUpdateRecord $originalAutomatic
+ Check ($result.UpdateProof.data_preserved -and $result.UpdateProof.backup_available) 'Lost host proof could not resume the original old/target pair'
+ $wrong=Clone $originalAutomatic;$wrong.State.RegistrationId='{abcdefab-1234-4234-8234-123456789abc}'
+ $failed=$false;try{Invoke-StationSetup -PackageFolder 'C:\Package' -AllowUpdate -AutomaticUpdate $context -OriginalUpdateRecord $wrong|Out-Null}catch{$failed=$true}
+ Check $failed 'Automatic continuation adopted a different original registration'
  Write-Output ('PASS '+$script:Cases+' update coordinator assertions; fake WSL only')
 }

@@ -1,5 +1,5 @@
 # Native onboarding/lifecycle shell. Workloads remain in the existing control plane.
-param([string]$PackageFolder=$PSScriptRoot)
+param([string]$PackageFolder=$PSScriptRoot,[switch]$StartAutomatically)
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'NativeWsl.psm1')
 Import-Module (Join-Path $PSScriptRoot 'DesktopResult.psm1')
@@ -40,6 +40,9 @@ $script:windowsSupportAction='install'
 $script:nextCheck=[DateTime]::UtcNow;$script:lastError='';$script:attention=$false
 $script:updateAvailable=$false;$script:updatePending=$false;$script:refreshAfterFailure=$false
 $script:failureSticky=$false;$script:needsSupport=$false
+$script:automaticStart=[bool]$StartAutomatically
+$script:nativeUpdate=$null;$script:nextNativeCheck=[DateTime]::UtcNow
+Import-Module (Join-Path $PSScriptRoot 'AutomaticUpdate.psm1')
 
 $form=[Windows.Forms.Form]::new()
 $ownedIcon=$null
@@ -110,6 +113,19 @@ function Sync-Buttons {
  $primary.BackColor=[Drawing.ColorTranslator]::FromHtml('#B9ED98');$primary.ForeColor=[Drawing.ColorTranslator]::FromHtml('#142015')
  $form.AcceptButton=$primary
  $background.Visible=$script:running -or $preparing
+ $nativeActive=$null -ne $script:nativeUpdate -and $script:nativeUpdate.phase -notin @('complete','failed')
+ $stopExit.Enabled=-not $nativeActive
+ if($nativeActive){
+  $canContinue=-not $script:nativeUpdate.helper_alive -and ($script:nativeUpdate.phase -eq 'inspection_required' -or [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()-$script:nativeUpdate.updated_at -gt 30)
+  foreach($button in @($start,$open,$stop,$support)){$button.Enabled=$false;$button.Visible=$false}
+  $prepare.Visible=$true;$prepare.Enabled=$canContinue -and $null -eq $script:worker -and -not $script:stopPending
+  $prepare.Text=$(if($prepare.Enabled){'Continue update'}else{'Updating...'})
+  $prepare.AccessibleName=$prepare.Text;$prepare.SetBounds(32,284,550,42)
+  $prepare.BackColor=[Drawing.ColorTranslator]::FromHtml($(if($prepare.Enabled){'#B9ED98'}else{'#203327'}))
+  $prepare.ForeColor=$(if($prepare.Enabled){[Drawing.ColorTranslator]::FromHtml('#142015')}else{$form.ForeColor})
+  $form.AcceptButton=$(if($prepare.Enabled){$prepare}else{$null})
+  $progress.Visible=-not $prepare.Enabled;$background.Visible=$true
+ }
 }
 function Show-Failure($Failure) {
  $view=Get-StationFailurePresentation $Failure
@@ -128,7 +144,11 @@ function Begin-StationAction([string]$Action) {
  $cancellation=[Threading.CancellationTokenSource]::new()
  [void]$engine.AddCommand('Microsoft.PowerShell.Core\Import-Module').AddParameter('Name',(Join-Path $PSScriptRoot 'Setup.psm1'))
  [void]$engine.AddStatement()
- if ($Action -eq 'prepare') {
+ if($Action -eq 'resume-update'){
+  [void]$engine.AddCommand('Microsoft.PowerShell.Core\Import-Module').AddParameter('Name',(Join-Path $PSScriptRoot 'AutomaticUpdate.psm1'))
+  [void]$engine.AddStatement().AddCommand('Resume-StationAutomaticUpdate')
+  $status.Text='Continuing the original update';$description.Text='Inspecting the saved operation. An uncertain installer will not be run twice.'
+ } elseif ($Action -eq 'prepare') {
   [void]$engine.AddCommand('Invoke-StationSetup').AddParameter('PackageFolder',$PackageFolder).AddParameter('CancellationToken',$cancellation.Token)
   if ($script:updateAvailable) { [void]$engine.AddParameter('AllowUpdate',$true) }
   $status.Text=$(if ($script:updateAvailable) {'Updating your station'} else {'Preparing your private workspace'})
@@ -150,7 +170,7 @@ function Open-ReadyTarget($Ready) {
  Import-Module (Join-Path $PSScriptRoot 'DesktopLink.psm1')
  Open-StationBrowser $Ready
 }
-$prepare.Add_Click({ if($script:needsSupport){Invoke-RequiredWindowsSupport}else{Begin-StationAction 'prepare'} });$start.Add_Click({ if ($script:attention -and $null -ne $script:station -and $null -eq $script:ready) { Begin-StationAction 'status' } else { Begin-StationAction 'start' } })
+$prepare.Add_Click({ if($null -ne $script:nativeUpdate -and $script:nativeUpdate.phase -notin @('complete','failed')){Begin-StationAction 'resume-update'}elseif($script:needsSupport){Invoke-RequiredWindowsSupport}else{Begin-StationAction 'prepare'} });$start.Add_Click({ if ($script:attention -and $null -ne $script:station -and $null -eq $script:ready) { Begin-StationAction 'status' } else { Begin-StationAction 'start' } })
 $open.Add_Click({ Begin-StationAction 'open' });$stop.Add_Click({
  if ($null -ne $script:worker -and $script:worker.Action -eq 'prepare') {
   $script:worker.Cancellation.Cancel();$status.Text='Canceling setup';$description.Text='Finishing the current safe step. Saved work stays in place.';Sync-Buttons
@@ -162,10 +182,16 @@ $showItem.Add_Click({ $form.Show();$form.Activate() });$tray.Add_DoubleClick({ $
 $stopExit.Add_Click({
  $script:exitAfterStop=$true
  if ($null -ne $script:worker -and $script:worker.Action -eq 'prepare') { $script:worker.Cancellation.Cancel() }
- if ($null -eq $script:worker) {
-  if ($script:running) { Begin-StationAction 'stop' } elseif ($null -ne $script:station) { $status.Text='Finishing startup before stopping' } else { $script:allowExit=$true;$form.Close() }
- }
+ Invoke-StationPendingStop
 })
+function Invoke-StationPendingStop {
+ # A tray request can arrive during a read-only status job. Retain it until
+ # that job finishes instead of losing it or starting a competing lifecycle job.
+ if(-not $script:exitAfterStop -or $script:allowExit -or $null -ne $script:worker -or $script:stopPending){return}
+ if($script:running){Begin-StationAction 'stop'}
+ elseif($null -ne $script:station){$status.Text='Finishing startup before stopping'}
+ else{$script:allowExit=$true;$form.Close()}
+}
 function Invoke-RequiredWindowsSupport {
  if ($script:windowsSupportAction -eq 'windows_update') {
   try { [void][Diagnostics.Process]::Start('ms-settings:windowsupdate') } catch { Show-Failure $_.Exception }
@@ -198,12 +224,23 @@ $timer=[Windows.Forms.Timer]::new();$timer.Interval=200
 $timer.Add_Tick({
  try {
   if ($showEvent.WaitOne(0)) { $form.Show();$form.Activate() }
+  if([DateTime]::UtcNow -ge $script:nextNativeCheck){
+   $script:nextNativeCheck=[DateTime]::UtcNow.AddSeconds(1)
+   $script:nativeUpdate=Read-StationNativeUpdate
+   if($null -ne $script:nativeUpdate -and $script:nativeUpdate.phase -notin @('complete','failed')){
+    $status.Text='Updating AI Station';$description.Text='Keeping your accounts, models and saved work. The app will reopen automatically.'
+    if($script:nativeUpdate.phase -eq 'inspection_required' -or (-not $script:nativeUpdate.helper_alive -and [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()-$script:nativeUpdate.updated_at -gt 30)){$status.Text='Continue your update';$description.Text='The previous update stopped. Continue inspects the same installation and preserves your saved work.'}
+    if($script:nativeUpdate.phase -eq 'stop_requested' -and -not $script:exitAfterStop -and $null -eq $script:worker){$script:exitAfterStop=$true;Begin-StationAction 'stop'}
+   }
+   Sync-Buttons
+  }
   if ($null -ne $script:worker -and $script:worker.Handle.IsCompleted) {
    $job=$script:worker;$script:worker=$null
    try {
     $value=Receive-StationActionResult $job.Engine $job.Handle
     if ($job.Action -eq 'prepare') { $job.Cancellation.Token.ThrowIfCancellationRequested() }
     switch ($job.Action) {
+     'resume-update' { $script:nextNativeCheck=[DateTime]::UtcNow }
      'prepare' { $script:prepared=$true;$script:updateAvailable=$false;$script:updatePending=$false;if ($script:exitAfterStop) { $script:allowExit=$true;$form.Close() } else { Begin-StationAction 'start' } }
      'start' {
       $script:station=$value;$script:ready=$null
@@ -242,6 +279,7 @@ $timer.Add_Tick({
        $description.Text='Disk space could not be refreshed. Open the app to review storage. Your saved work and Stop remain available.'
       }
       if($script:failureSticky){$status.Text=$savedStatus;$description.Text=$savedDescription;$details.Visible=($script:lastError.Length -gt 0)}
+      if($script:automaticStart -and -not $script:exitAfterStop -and -not $script:allowExit -and -not $body.running -and $script:prepared -and -not $script:updateAvailable){$script:automaticStart=$false;Begin-StationAction 'start'}
      }
     }
    } catch {
@@ -296,9 +334,10 @@ $timer.Add_Tick({
    }
    Sync-Buttons
   }
+  Invoke-StationPendingStop
   if ($script:stopPending -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(2);Begin-StationAction 'status'
-  } elseif ($script:running -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
+  } elseif ($script:running -and $null -eq $script:worker -and ($null -eq $script:nativeUpdate -or $script:nativeUpdate.phase -in @('complete','failed')) -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(15);Begin-StationAction 'status'
   }
  } catch { Show-Failure $_.Exception;Sync-Buttons }
