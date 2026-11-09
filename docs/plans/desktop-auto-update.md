@@ -195,7 +195,8 @@ head and per-command results are retained with local acceptance receipts.
 Remaining gates for this user goal:
 
 1. Finish reviewing and validating the Linux follow-up and merge its PR to develop.
-2. Implement the independent Windows publisher-download/silent per-user installer
+2. Follow [Windows handoff](windows-auto-update-handoff.md) to implement the
+   independent Windows publisher-download/silent per-user installer
    handoff and preserving WSL update/restart/reconciliation. Keep Windows admission
    closed until its own native candidate passes. Boot the retained Windows fixture
    only for that frozen candidate, then shut it down normally.

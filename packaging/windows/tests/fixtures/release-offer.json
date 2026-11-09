@@ -1,0 +1,53 @@
+{
+  "raw": {
+    "id": 123,
+    "tag_name": "v0.5.1",
+    "draft": false,
+    "prerelease": false,
+    "html_url": "https://github.com/jahu/ai-station/releases/tag/v0.5.1",
+    "published_at": "2026-11-09T12:00:00Z",
+    "body": "Synthetic cross-platform publisher contract.",
+    "assets": [
+      {
+        "id": 456,
+        "name": "AI-Station-0.5.1-windows-x64-Setup.exe",
+        "state": "uploaded",
+        "size": 1024,
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "url": "https://api.github.com/repos/jahu/ai-station/releases/assets/456",
+        "browser_download_url": "https://github.com/jahu/ai-station/releases/download/v0.5.1/AI-Station-0.5.1-windows-x64-Setup.exe"
+      },
+      {
+        "id": 789,
+        "name": "AI-Station-0.5.1-linux-amd64.deb",
+        "state": "uploaded",
+        "size": 2048,
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "url": "https://api.github.com/repos/jahu/ai-station/releases/assets/789",
+        "browser_download_url": "https://github.com/jahu/ai-station/releases/download/v0.5.1/AI-Station-0.5.1-linux-amd64.deb"
+      }
+    ]
+  },
+  "expected": {
+    "release_id": 123,
+    "version": "0.5.1",
+    "packages": {
+      "linux-amd64": {
+        "id": 789,
+        "name": "AI-Station-0.5.1-linux-amd64.deb",
+        "size_bytes": 2048,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "windows-x64": {
+        "id": 456,
+        "name": "AI-Station-0.5.1-windows-x64-Setup.exe",
+        "size_bytes": 1024,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "fingerprint": "1f24a7f4d31f631690f947fd805f3d45f747f0ae0f30f24de0353131842fd715",
+    "release_url": "https://github.com/jahu/ai-station/releases/tag/v0.5.1",
+    "published_at": "2026-11-09T12:00:00+00:00",
+    "notes": "Synthetic cross-platform publisher contract."
+  }
+}
