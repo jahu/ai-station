@@ -546,6 +546,52 @@ def installed(target):
     )
 
 
+def install_bridge(target):
+    """Publish only the exact reviewed additive bridge from verified app bytes.
+
+    Dpkg updates application files, not the rootfs-only /usr/libexec bridge.
+    Both old and new identities are pinned; foreign files are never adopted.
+    """
+    wanted = target["sources"]["guest_control.py"]
+    if wanted != BRIDGE_TARGET:
+        return  # Existing releases with an unchanged legacy bridge keep its contract.
+    directory(BRIDGE.parent, 0)
+    info = regular(BRIDGE, 0)
+    if info.st_size > 16384:
+        raise ValueError("The existing guest bridge exceeds its source bound")
+    current = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
+    if current == wanted:
+        if info.st_mode & 0o111 != 0o111:
+            raise ValueError("The installed guest bridge is not executable")
+        return
+    if not BRIDGE_MIGRATION_QUALIFIED or current != BRIDGE_PREVIOUS:
+        raise ValueError("The guest bridge is not the exact qualified previous source")
+    source = APP / "packaging/windows/guest_control.py"
+    for parent in [APP, APP / "packaging", source.parent]:
+        directory(parent, 0)
+    if regular(source, 0).st_size > 16384:
+        raise ValueError("The packaged guest bridge exceeds its source bound")
+    payload = source.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != wanted:
+        raise ValueError("The packaged guest bridge differs from the accepted target")
+    descriptor, name = tempfile.mkstemp(prefix=".wsl-control-", dir=BRIDGE.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
+            output.flush()
+            os.fchmod(output.fileno(), 0o755)
+            os.fsync(output.fileno())
+        os.replace(temporary, BRIDGE)
+        descriptor = os.open(BRIDGE.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def update(source, previous, target, size, uid, *, automatic_update=None):
     accepted = plan(previous, target)
     previous, target = accepted["previous"], accepted["target"]
@@ -603,6 +649,7 @@ def update(source, previous, target, size, uid, *, automatic_update=None):
             if current != target:
                 run("/usr/bin/dpkg", "--install", str(stage))
             installed(target)
+            install_bridge(target)
             if target["package"].get("X-AI-Station-WSL-GPU-Recipe") == GPU_RECIPE:
                 prepared = json.loads(
                     run(

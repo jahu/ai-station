@@ -172,6 +172,10 @@ def build(
         if windows_gpu or linux_gpu:
             shutil.copy2(ROOT / "scripts/windows_gpu_install.py", bundle / "scripts/windows_gpu_install.py")
             prepare_windows_gpu(bundle / "windows-gpu", cache=gpu_cache)
+        if windows_gpu:
+            bridge = bundle / "packaging/windows/guest_control.py"
+            bridge.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / "packaging/windows/guest_control.py", bridge)
         if linux_gpu:
             shutil.copy2(ROOT / "scripts/linux_gpu_install.py", bundle / "scripts/linux_gpu_install.py")
             for name in ("gpu_access.py", "org.ai-station.gpu-access.policy"):

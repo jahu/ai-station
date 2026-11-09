@@ -863,3 +863,54 @@ def test_new_additive_bridge_migration_remains_closed_until_native_qualification
 def test_bridge_target_hash_is_the_actual_reviewed_additive_protocol():
     source = Path(__file__).resolve().parents[2] / "packaging/windows/guest_control.py"
     assert hashlib.sha256(source.read_bytes()).hexdigest() == guest.BRIDGE_TARGET
+
+
+@pytest.mark.parametrize(
+    "variant", ["verified", "source_changed", "foreign_bridge", "source_link", "disabled"]
+)
+def test_preserving_update_publishes_only_the_exact_qualified_bridge(tmp_path, monkeypatch, variant):
+    app = tmp_path / "app"
+    source = app / "packaging/windows/guest_control.py"
+    source.parent.mkdir(parents=True)
+    old, new = b"previous finite bridge\n", b"new finite bridge\n"
+    source.write_bytes(new)
+    source.chmod(0o644)
+    for folder in [app, app / "packaging", source.parent]:
+        folder.chmod(0o755)
+    bridge = tmp_path / "libexec/wsl-control"
+    bridge.parent.mkdir(mode=0o755)
+    bridge.write_bytes(old)
+    bridge.chmod(0o755)
+    neighbour = bridge.parent / "unrelated"
+    neighbour.write_bytes(b"preserve")
+    target = receipt(2)
+    expected = hashlib.sha256(new).hexdigest()
+    target["sources"]["guest_control.py"] = expected
+    monkeypatch.setattr(guest, "BRIDGE", bridge)
+    monkeypatch.setattr(guest, "APP", app)
+    monkeypatch.setattr(guest, "BRIDGE_PREVIOUS", hashlib.sha256(old).hexdigest())
+    monkeypatch.setattr(guest, "BRIDGE_TARGET", expected)
+    monkeypatch.setattr(guest, "BRIDGE_MIGRATION_QUALIFIED", variant != "disabled")
+    original_regular, original_directory = guest.regular, guest.directory
+    monkeypatch.setattr(guest, "regular", lambda path, uid: original_regular(path, os.getuid()))
+    monkeypatch.setattr(guest, "directory", lambda path, uid: original_directory(path, os.getuid()))
+    if variant == "source_changed":
+        source.write_bytes(b"unreviewed")
+    elif variant == "foreign_bridge":
+        bridge.write_bytes(b"foreign")
+    elif variant == "source_link":
+        source.unlink()
+        source.symlink_to(neighbour)
+    before = bridge.read_bytes()
+    if variant == "verified":
+        guest.install_bridge(target)
+        assert bridge.read_bytes() == new and bridge.stat().st_mode & 0o777 == 0o755
+        inode = bridge.stat().st_ino
+        guest.install_bridge(target)
+        assert bridge.stat().st_ino == inode  # Resume inspects the completed atomic publication.
+    else:
+        with pytest.raises(ValueError):
+            guest.install_bridge(target)
+        assert bridge.read_bytes() == before
+    assert neighbour.read_bytes() == b"preserve"
+    assert not list(bridge.parent.glob(".wsl-control-*"))
