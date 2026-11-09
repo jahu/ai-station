@@ -204,10 +204,13 @@ Remaining gates for this user goal:
 3. The new native Windows presentation passed real WinForms/UI checks. The
    separate illustrated `/install/`
    guide is merged to develop and checked on desktop/mobile without JavaScript;
-   its first-account screenshot was approved by the owner. Capture real
-   neutral native Windows setup as well, without personal files or setup tokens.
-4. Complete final applicable checks, qualification/release docs and versioned
-   assets. Only the human owner approves and merges the release PR to master.
+   its first-account screenshot was approved by the owner. A genuine neutral
+   native Windows Start screen has also been captured privately, without personal
+   files or setup tokens. Its public use awaits the owner's standing image review.
+4. Final 0.5.0 Linux/Windows assets, QA ZIP and SHA256SUMS are built and checked;
+   identities and exact verification scope are in [release notes](../releases/0.5.0.md).
+   Finish the guide image review and feature PR, then prepare the bot-authored
+   release PR. Only the human owner approves and merges that PR to master.
 
 Linux and Windows execution qualification is complete. The overall user goal is
 not reported delivered until the remaining guide capture/release steps are ready;
