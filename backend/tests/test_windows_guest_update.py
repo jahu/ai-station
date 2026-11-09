@@ -848,16 +848,17 @@ def test_automatic_update_preserves_queued_work_but_never_exempts_another_active
     assert len(commands) == 1
 
 
-def test_new_additive_bridge_migration_remains_closed_until_native_qualification(monkeypatch):
+def test_qualified_additive_bridge_migration_is_exact_and_can_be_disabled(monkeypatch):
     previous, target = receipt(1), receipt(2)
     previous["sources"]["guest_control.py"] = guest.BRIDGE_PREVIOUS
     target["sources"]["guest_control.py"] = guest.BRIDGE_TARGET
-    with pytest.raises(ValueError, match="separately qualified"):
-        guest.plan(previous, target)
-    monkeypatch.setattr(guest, "BRIDGE_MIGRATION_QUALIFIED", True)
+    assert guest.BRIDGE_MIGRATION_QUALIFIED is True
     assert guest.plan(previous, target)["target"] == target
     with pytest.raises(ValueError, match="separately qualified"):
         guest.plan(target, previous)
+    monkeypatch.setattr(guest, "BRIDGE_MIGRATION_QUALIFIED", False)
+    with pytest.raises(ValueError, match="separately qualified"):
+        guest.plan(previous, target)
 
 
 def test_bridge_target_hash_is_the_actual_reviewed_additive_protocol():

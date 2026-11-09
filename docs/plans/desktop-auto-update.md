@@ -137,7 +137,8 @@ on that release; qualification below uses isolated native desktop installations.
 ### Native Linux update and recovery
 
 **Linux x86-64 is qualified for native automatic application.** The Runner's
-`QUALIFIED_PLATFORMS` admits only `linux-amd64`. Windows and macOS are not admitted.
+`QUALIFIED_PLATFORMS` admits `linux-amd64` and the separately qualified dedicated
+`windows-x64` guest. macOS is not admitted.
 Development checkouts without the installed supervisor cannot self-update.
 
 Activation freezes the exact local Docker connection and the already-attested
@@ -195,18 +196,19 @@ head and per-command results are retained with local acceptance receipts.
 Remaining gates for this user goal:
 
 1. Linux review, packaged update/recovery and the merge to develop are complete.
-2. Follow [Windows handoff](windows-auto-update-handoff.md) to implement the
-   independent Windows publisher-download/silent per-user installer
-   handoff and preserving WSL update/restart/reconciliation. Keep Windows admission
-   closed until its own native candidate passes. Boot the retained Windows fixture
-   only for that frozen candidate, then shut it down normally.
-3. Qualify the new native Windows presentation. The separate illustrated `/install/`
+2. [Windows handoff](windows-auto-update-handoff.md) and native qualification are
+   complete: preserving installed update, same-Run reconciliation, cancellation,
+   actual UI Continue without replay, stock startup, clean tray shutdown and
+   nonempty saved-history/file hashes. Windows admission is enabled. The retained
+   CPU-only fixture was shut down normally after qualification.
+3. The new native Windows presentation passed real WinForms/UI checks. The
+   separate illustrated `/install/`
    guide is merged to develop and checked on desktop/mobile without JavaScript;
    its first-account screenshot was approved by the owner. Capture real
    neutral native Windows setup as well, without personal files or setup tokens.
 4. Complete final applicable checks, qualification/release docs and versioned
    assets. Only the human owner approves and merges the release PR to master.
 
-Windows auto-apply and the overall user goal are not reported complete by the
-Linux qualification or the guide merge. Native Windows package qualification
-remains in progress.
+Linux and Windows execution qualification is complete. The overall user goal is
+not reported delivered until the remaining guide capture/release steps are ready;
+only the human owner may approve and merge the release PR into master.

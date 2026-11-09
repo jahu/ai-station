@@ -10,9 +10,9 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.desktop_update_channel import command, request
 
 router = APIRouter(prefix="/v1/station/updates")
-# Native Linux passed frozen-package preserving apply, restart, cold recovery
-# and subsequent stock-launch qualification. Windows/macOS remain unavailable.
-QUALIFIED_PLATFORMS = frozenset({"linux-amd64"})
+# Linux and dedicated Windows/WSL passed preserving package/restart/recovery
+# qualification. macOS remains unavailable.
+QUALIFIED_PLATFORMS = frozenset({"linux-amd64", "windows-x64"})
 
 
 def qualified(value):
@@ -59,6 +59,9 @@ def operate(body: UpdateOperation):
         value = command(value)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    if not qualified(native({"action": "updates.capabilities"})):
+    installation = native({"action": "updates.capabilities"})
+    if not qualified(installation):
         raise HTTPException(503, "Automatic updates are not qualified for this native installation")
+    if body.action == "prepare" and value["request"]["platform"] != installation["platform"]:
+        raise HTTPException(422, "The approved update belongs to a different native platform")
     return native(value)

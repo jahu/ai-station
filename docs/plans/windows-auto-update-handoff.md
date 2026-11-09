@@ -1,8 +1,9 @@
 # Windows automatic update handoff
 
-Continuation of [desktop updates](desktop-auto-update.md). Linux is qualified;
-Windows remains outside `QUALIFIED_PLATFORMS` until its own implementation and
-native package qualification are complete.
+Continuation of [desktop updates](desktop-auto-update.md). Linux and dedicated
+Windows/WSL are qualified. The Windows gate and exact bridge migration are now
+enabled after native qualification; the chronological findings below retain the
+failed attempts as well as the final proof.
 
 ## Fixed boundaries
 
@@ -214,8 +215,50 @@ and closes only after confirmed shutdown. An exit request also prevents a queued
 automatic startup from reopening the app. Source-level UI policy regressions
 cover deferral, single dispatch, startup ownership and idempotent close.
 
-Remaining native qualification covers preserved account/history/artifact bytes,
-one-click normal update,
-cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
-Run WinPS5 checks on Windows 10 and preserve Windows 11 contracts; do not claim
-physical Windows 11/GPU testing that was not actually performed.
+## Final qualification — 2026-11-09
+
+- A real private installed **0.5.11 → 0.5.12** update completed native Inno
+  installation, the preserving WSL transaction, automatic stock UI/guest restart,
+  and the same administrator Run's `succeeded` state. The dispatch gate cleared.
+- Account credentials, one nonempty conversation, two messages and four artifact
+  hashes matched before/after. The existing account authenticated afterward.
+- The archived root-owned transaction also proves the real **0.4.0 → 0.5.0**
+  bootstrap and exact `caff9096…` → `76961bbe…` bridge migration completed.
+- Real pre-activation cancellation retained the running source without an
+  installer dispatch. Explicit native UI Continue recovered a deliberately lost
+  host acknowledgement with the same running instance, native registration,
+  guest installation record and completion proof, without replaying an installer.
+- The final result-envelope/tray fixes were checked in a normally built native
+  payload against the registered packaged guest. Actual Continue returned to
+  **Running locally** without stale errors. Stock guest startup used no publisher
+  override. Actual tray Stop/exit released the UI owner and process; the guest
+  stopped, SQLite integrity was `ok`, and all saved record/file hashes still matched.
+- All 15 manual-CI native contract scripts passed in fresh Windows PowerShell 5.1
+  processes, including real WinForms controls. The dedicated fixture was Windows
+  10 build 19045.6456, CPU-only, without host-drive mounts or GPU passthrough.
+
+Publisher observations/cache were explicit private fixtures; no fake GitHub
+release was published. Receipts are retained privately under
+`data/acceptance/windows-auto-update-native-20261109/`, notably results 095,
+112–113, 122, 124–128. Initial recovery/CLI fixture failures remain recorded and
+are not counted as passes. These checks do not claim physical Windows 11/GPU
+qualification. Release promotion/publication and the guide's additional native
+Windows capture are separate remaining delivery steps.
+
+
+### Final local verification
+
+The complete partitioned Python baseline passed **9,117 tests with 25 platform
+or explicit opt-in skips**. After the final native handoff fixes and Windows
+admission, all **403 tests in the 20 affected update/package/Runner files** passed
+(`PYTHONPATH` pointed at this checkout, including subprocesses). Repository-wide
+Ruff lint and formatting passed for **1,253 files**; `git diff --check` passed.
+The 15 native Windows contracts above run in separate PowerShell 5.1 processes
+in the manually dispatched CI operation too, so fake module functions cannot leak
+between scripts. No automatic or paid hosted CI was enabled.
+
+The unchanged frontend's prior lint, typecheck, production build and 1,176 tests,
+plus Compose/image verification from the update foundation, remain the applicable
+baseline. Private frozen target packages were also built and exercised through
+real Docker/guest startup. This PR changes no frontend or Compose/Dockerfile
+configuration. No GPU inference or physical Windows 11 result is claimed.

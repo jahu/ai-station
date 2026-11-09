@@ -5,7 +5,7 @@ Import-Module (Join-Path $PSScriptRoot 'InstallState.psm1')
 Import-Module (Join-Path $PSScriptRoot 'GuestManifest.psm1')
 Import-Module (Join-Path $PSScriptRoot 'DesktopProcess.psm1')
 
-$script:BridgeMigrationQualified=$false
+$script:BridgeMigrationQualified=$true
 $script:BridgePrevious='caff909648082ea5db41292510596f670f40a5d3eb854b537e97b59a20dd2b0a'
 $script:BridgeTarget='76961bbe83179cb2415615a7245d87238c554a116ba66a783539bc9ca9fc6af3'
 

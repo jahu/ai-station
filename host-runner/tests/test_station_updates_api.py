@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+import pytest
 from ai_station_runner import station_updates as module
 from ai_station_runner.app import app
 from fastapi.testclient import TestClient
@@ -22,12 +23,13 @@ def test_uninstalled_or_unqualified_native_updater_never_reports_operational(mon
     assert response.status_code == 503
 
 
-def test_native_operations_require_finite_input_and_station_management(monkeypatch):
+@pytest.mark.parametrize("platform", ["linux-amd64", "windows-x64"])
+def test_native_operations_require_finite_input_and_station_management(monkeypatch, platform):
     seen = []
 
     def native(value):
         if value["action"] == "updates.capabilities":
-            return {"installed": True, "platform": "linux-amd64", "version": "0.5.0"}
+            return {"installed": True, "platform": platform, "version": "0.5.0"}
         seen.append(value)
         return {"run_id": value["run_id"], "phase": "ready"}
 
@@ -50,7 +52,7 @@ def test_native_operations_require_finite_input_and_station_management(monkeypat
     assert seen == [{"action": "updates.inspect", "run_id": body["run_id"]}]
 
 
-def test_unqualified_platform_cannot_acquire_linux_install_authority(monkeypatch):
+def test_unqualified_platform_cannot_acquire_install_authority(monkeypatch):
     from ai_station_runner.config import clear_settings_cache
 
     monkeypatch.setenv("AI_STATION_DESKTOP_CONTROL_SOCKET", "/native/desktop-control.sock")
@@ -59,7 +61,7 @@ def test_unqualified_platform_cannot_acquire_linux_install_authority(monkeypatch
 
     def native(value):
         seen.append(value)
-        return {"installed": True, "platform": "windows-x64", "version": "0.5.0"}
+        return {"installed": True, "platform": "macos-arm64", "version": "0.5.0"}
 
     monkeypatch.setattr(module, "native", native)
     client = TestClient(app)
@@ -70,3 +72,35 @@ def test_unqualified_platform_cannot_acquire_linux_install_authority(monkeypatch
     )
     assert reply.status_code == 503
     assert seen == [{"action": "updates.capabilities"}] * 2
+
+
+@pytest.mark.parametrize("requested", ["linux-amd64", "windows-x64"])
+def test_prepare_uses_only_its_qualified_native_platform(monkeypatch, requested):
+    seen = []
+
+    def native(value):
+        seen.append(value)
+        return {"installed": True, "platform": "windows-x64", "version": "0.5.0"}
+
+    monkeypatch.setattr(module, "native", native)
+    client = TestClient(app)
+    response = client.post(
+        "/v1/station/updates",
+        json={
+            "action": "prepare",
+            "run_id": str(uuid4()),
+            "permissions": ["manage_station", "network_read"],
+            "request": {
+                "release_id": 10,
+                "fingerprint": "a" * 64,
+                "platform": requested,
+                "current_version": "0.5.0",
+            },
+        },
+    )
+    assert response.status_code == (200 if requested == "windows-x64" else 422)
+    assert [value["action"] for value in seen] == (
+        ["updates.capabilities", "updates.prepare"]
+        if requested == "windows-x64"
+        else ["updates.capabilities"]
+    )

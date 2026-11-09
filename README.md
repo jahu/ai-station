@@ -101,6 +101,15 @@ Release 0.4 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
 [0.4.0 release notes and qualification status](docs/releases/0.4.0.md).
 
+**Coming in the next desktop release: one-click updates.** Your app version stays
+visible in the sidebar. In **Settings → Updates**, administrators can check the
+new release and choose **Update and restart**. AI Station downloads and verifies
+the official package, keeps your saved work, and reopens automatically. Linux and
+Windows native update/recovery checks passed. Version 0.4 and older need the new
+desktop client installed once before subsequent in-app updates become available;
+development checkouts keep their normal development workflow.
+[Update design and exact qualification](docs/plans/desktop-auto-update.md).
+
 ## Help make it simple
 
 **We especially need testers and feedback.** Try AI Station on your hardware and

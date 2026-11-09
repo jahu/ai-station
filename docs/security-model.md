@@ -1916,8 +1916,9 @@ Quarantine, retained code and native journals stay outside mounted application
 data. The native owner independently reads the exact standalone administrator Run,
 current worker claim and idle dispatch gate before Stop. Private Unix peer checks
 and finite bridge messages add no shell, Docker socket mount, arbitrary process
-signal or agent installation permission. The real apply adapter remains unavailable
-until its preserving package/restart/recovery qualification passes.
+signal or agent installation permission. Native Linux and dedicated Windows/WSL
+apply adapters passed preserving package/restart/recovery qualification; other
+platforms remain unavailable.
 
 Interrupted activation has a separate local native recovery action. An explicit
 OS-owner approval may finish the same already-approved update after its worker
@@ -1929,7 +1930,7 @@ offers Resume or a role/lease-bypass flag. Confirmed publication or abort must
 match the native version receipt before startup fencing is cleared.
 
 
-The Windows update candidate adds only fixed ordinary-guest control actions,
+The Windows update adapter adds only fixed ordinary-guest control actions,
 not a Windows command bridge. A native SID-private journal freezes the original
 Run, installation record, publisher fingerprint and target installer identity.
 Native publisher reobservation and bounded binary transfer/hash verification
@@ -1939,5 +1940,8 @@ a second installer launch. The retained manifest and original distribution
 registration are checked before the existing root-owned WSL update. Its native
 continuation exemption covers only the original idle-gated maintenance Run and
 queued work, never another active workload. This exemption is absent from Runner
-and HTTP input. Windows platform admission and its exact bridge migration remain
-closed until native package qualification; component tests alone do not open them.
+and HTTP input. Windows admission and the exact old/new bridge migration were
+enabled only after native package qualification. Readiness observation validates
+the owned registration without taking the installation lease needed by startup.
+An expired matching native binding permits lifecycle/readiness wiring, while new
+capabilities and prepare/apply requests still require fresh native presence.

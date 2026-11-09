@@ -1699,11 +1699,11 @@ The Runner bridges finite messages to the supervisor's private socket and never
 accepts shell commands, destinations or arbitrary publisher URLs. A short global
 idle gate participates in atomic claiming while preserving queued Runs. Recovery
 inspects the same native operation rather than redispatching installation. Native
-Linux application is qualified through the preserving package/restart/recovery
-exercise. Windows admission remains closed pending its native package test; this
-does not enable the Mac installer or change external runtimes.
+Linux and dedicated Windows/WSL application are qualified through preserving
+package/restart/recovery exercises. This does not enable the Mac installer or
+change external runtimes.
 
-The [Windows handoff candidate](plans/windows-auto-update-handoff.md) transfers
+The [Windows handoff](plans/windows-auto-update-handoff.md) transfers
 only the approved installer over finite ordinary-guest WSL stdin/stdout operations.
 A separate SID-private native owner independently checks the official publisher,
 waits for normal Stop and UI-lease release, runs the per-user installer silently
