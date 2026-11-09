@@ -182,10 +182,16 @@ $showItem.Add_Click({ $form.Show();$form.Activate() });$tray.Add_DoubleClick({ $
 $stopExit.Add_Click({
  $script:exitAfterStop=$true
  if ($null -ne $script:worker -and $script:worker.Action -eq 'prepare') { $script:worker.Cancellation.Cancel() }
- if ($null -eq $script:worker) {
-  if ($script:running) { Begin-StationAction 'stop' } elseif ($null -ne $script:station) { $status.Text='Finishing startup before stopping' } else { $script:allowExit=$true;$form.Close() }
- }
+ Invoke-StationPendingStop
 })
+function Invoke-StationPendingStop {
+ # A tray request can arrive during a read-only status job. Retain it until
+ # that job finishes instead of losing it or starting a competing lifecycle job.
+ if(-not $script:exitAfterStop -or $script:allowExit -or $null -ne $script:worker -or $script:stopPending){return}
+ if($script:running){Begin-StationAction 'stop'}
+ elseif($null -ne $script:station){$status.Text='Finishing startup before stopping'}
+ else{$script:allowExit=$true;$form.Close()}
+}
 function Invoke-RequiredWindowsSupport {
  if ($script:windowsSupportAction -eq 'windows_update') {
   try { [void][Diagnostics.Process]::Start('ms-settings:windowsupdate') } catch { Show-Failure $_.Exception }
@@ -273,7 +279,7 @@ $timer.Add_Tick({
        $description.Text='Disk space could not be refreshed. Open the app to review storage. Your saved work and Stop remain available.'
       }
       if($script:failureSticky){$status.Text=$savedStatus;$description.Text=$savedDescription;$details.Visible=($script:lastError.Length -gt 0)}
-      if($script:automaticStart -and -not $body.running -and $script:prepared -and -not $script:updateAvailable){$script:automaticStart=$false;Begin-StationAction 'start'}
+      if($script:automaticStart -and -not $script:exitAfterStop -and -not $script:allowExit -and -not $body.running -and $script:prepared -and -not $script:updateAvailable){$script:automaticStart=$false;Begin-StationAction 'start'}
      }
     }
    } catch {
@@ -328,6 +334,7 @@ $timer.Add_Tick({
    }
    Sync-Buttons
   }
+  Invoke-StationPendingStop
   if ($script:stopPending -and $null -eq $script:worker -and [DateTime]::UtcNow -ge $script:nextCheck) {
    $script:nextCheck=[DateTime]::UtcNow.AddSeconds(2);Begin-StationAction 'status'
   } elseif ($script:running -and $null -eq $script:worker -and ($null -eq $script:nativeUpdate -or $script:nativeUpdate.phase -in @('complete','failed')) -and [DateTime]::UtcNow -ge $script:nextCheck) {

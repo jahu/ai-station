@@ -207,6 +207,12 @@ but returned zero objects, which its background lifecycle reader correctly
 rejected. Resume now returns one original-Run dispatch receipt; failures still
 throw and live-owner checks are unchanged. The new receipt contract and final
 stock launch need their last native UI checks before admission opens.
+The native shutdown review also found that a tray Stop requested during a
+background status job was latched but never drained. The UI now dispatches that
+same normal Stop after its current job finishes, waits for a live startup client,
+and closes only after confirmed shutdown. An exit request also prevents a queued
+automatic startup from reopening the app. Source-level UI policy regressions
+cover deferral, single dispatch, startup ownership and idempotent close.
 
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
