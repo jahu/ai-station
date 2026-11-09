@@ -187,6 +187,13 @@ lease; final binding and acknowledgement still acquire the real lease. Native
 regressions reject a retained lease or the old lock-taking readiness path. The
 failed attempt is inspection evidence, not successful one-click qualification;
 the corrected packaged restart and subsequent launch still need verification.
+Stock startup exposed a second expiry boundary: verifying/copying a retained
+bundle can exceed 60 seconds before installing its Windows lifecycle adapter.
+The app then served real health without recording the new native readiness
+receipt. Adapter selection now accepts the exact installed binding independently
+of its age. Capabilities and prepare/apply still require fresh native presence;
+neither selecting the adapter nor recording health renews permission. Regression
+coverage distinguishes an expired matching binding from a wrong-version binding.
 
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,

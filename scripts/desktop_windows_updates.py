@@ -61,7 +61,10 @@ def enabled(root, current):
         return False
     try:
         compatible(current)
-        channel(root, current)
+        # Retained bundle verification/copying can outlast interactive presence.
+        # Keep lifecycle/readiness wired to this exact installation; capability
+        # and prepare/apply handlers separately require fresh native permission.
+        channel(root, current, fresh=False)
     except (OSError, ValueError):
         return False
     return True
