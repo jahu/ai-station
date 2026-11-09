@@ -55,4 +55,15 @@ $fresh=& (Get-Module UpdateBridge) {
  }finally{[IO.Directory]::Delete($root,$true)}
 }
 Check $fresh 'Read-only polling created unmarked data that would block first setup'
+$taskContracts=& (Get-Module UpdateBridge) {
+ $task=[Threading.Tasks.Task]::Delay(5)
+ Wait-StationUpdateTransfer $task ([Threading.CancellationToken]::None)
+ if(-not $task.IsCompleted){return $false}
+ $fault=[Threading.Tasks.TaskCompletionSource[object]]::new();$fault.SetException([IO.IOException]::new('Synthetic source failure'))
+ $rejected=$false;try{Wait-StationUpdateTransfer $fault.Task ([Threading.CancellationToken]::None)}catch{$rejected=$true}
+ if(-not $rejected){return $false}
+ $cancel=[Threading.CancellationTokenSource]::new();$cancel.CancelAfter(5)
+ try{$rejected=$false;try{Wait-StationUpdateTransfer ([Threading.Tasks.Task]::Delay(10000)) $cancel.Token}catch{$rejected=$true};return $rejected}finally{$cancel.Dispose()}
+}
+Check $taskContracts 'Event-driven transfer wait lost completion, fault or cancellation semantics'
 Write-Output ('PASS '+$script:cases+' bounded Windows package stream assertions; no network, WSL or installer')

@@ -153,7 +153,8 @@ function Receive-StationUpdateStream {
 
 function Wait-StationUpdateTransfer {
  param([Threading.Tasks.Task]$Task,[Threading.CancellationToken]$CancellationToken)
- while(-not $Task.IsCompleted){$CancellationToken.ThrowIfCancellationRequested();[Threading.Thread]::Sleep(25)}
+ # Wake on completion instead of adding a fixed delay to every pipe fragment.
+ while(-not $Task.IsCompleted){[void]$Task.Wait(100,$CancellationToken)}
  $CancellationToken.ThrowIfCancellationRequested()
  [void]$Task.GetAwaiter().GetResult()
 }
@@ -171,7 +172,7 @@ function Receive-StationWindowsPackage {
  if([IO.DriveInfo]::new([IO.Path]::GetPathRoot($directory)).AvailableFreeSpace -lt $Offer.Package.size_bytes+268435456){throw 'Free more Windows disk space before installing this update.'}
  $partial=$path+'.'+[Guid]::NewGuid().ToString('N')+'.partial'
  $deadline=[Threading.CancellationTokenSource]::new();$deadline.CancelAfter([TimeSpan]::FromMinutes(15))
- $process=$null;$output=$null;$errors=$null;$errorText=''
+ $process=$null;$output=$null;$errors=$null;$errorText='';$transferError=$null;[long]$receivedBytes=0
  try{
   $process=Start-StationWslProcess (Get-StationWslExecutable) @('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control','update-export') $Lease.Root -KeepInput
   $errors=$process.StandardError.ReadToEndAsync()
@@ -188,9 +189,24 @@ function Receive-StationWindowsPackage {
   Assert-StationPrivateAcl $partial
   [IO.File]::Move($partial,$path)
   return $path
+ }catch{
+  $transferError=$_
+  throw
  }finally{
+  if($null -ne $output){$receivedBytes=$output.Length}
   if($null -ne $output){$output.Dispose()}
   if($null -ne $process){try{if(-not $process.HasExited){$process.Kill();[void]$process.WaitForExit(10000)}}finally{$process.Dispose()}}
+  if($null -ne $transferError){
+   # Diagnostics stay in the SID-private native store, never in the Run reply.
+   try{
+    if($null -ne $errors -and $errors.IsCompleted){$errorText=$errors.GetAwaiter().GetResult()}
+    if($errorText.Length -gt 4096){$errorText=$errorText.Substring($errorText.Length-4096)}
+    $diagnostic=[IO.Path]::Combine($directory,($Pending.run_id+'.transfer-error.json'))
+    Assert-StationNoReparsePath $diagnostic
+    if([IO.File]::Exists($diagnostic)){Assert-StationPrivateAcl $diagnostic}
+    [IO.File]::WriteAllText($diagnostic,(@{received_bytes=$receivedBytes;expected_bytes=$Offer.Package.size_bytes;message=$transferError.Exception.Message;guest_stderr=$errorText}|ConvertTo-Json -Depth 3 -Compress),[Text.UTF8Encoding]::new($false))
+   }catch{} # Retain the original transport failure even if diagnostics fail.
+  }
   $deadline.Dispose()
   if([IO.File]::Exists($partial)){[IO.File]::Delete($partial)}
  }

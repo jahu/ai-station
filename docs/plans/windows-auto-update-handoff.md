@@ -160,6 +160,20 @@ code. Clean but inconsistent, duplicate or executable declarations are rejected.
 Qualification uses a new consistently numbered pair; the refused pair is not
 successful update evidence.
 
+The first real native transfer was held by a qualification-only callback:
+PowerShell mutates a saved FunctionInfo when that function is replaced, so the
+fixture recursively invoked itself. The exact owned fixture was stopped before
+activation and its original Run was failed through the typed native channel.
+The fixture now replaces only publisher metadata; the transfer is unmodified.
+A read-only reference export then verified all 881,758,787 package bytes and
+their SHA256 in about 35 seconds. The original async receiver obtained only
+474,218,496 bytes before a deliberately bounded 90-second observation canceled
+it; small memory/file cases passed. Its per-fragment fixed sleep is replaced by
+an interruptible task-completion wait. Completion, faults and cancellation stay
+tested, and transfer failures retain bounded source diagnostics only in the
+SID-private native store. Full packaged transfer/install qualification remains
+required; these diagnostic Runs never dispatch an installer.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
