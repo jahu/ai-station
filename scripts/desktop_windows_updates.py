@@ -119,7 +119,10 @@ def channel(root, current, *, fresh=True):
 def ready(root, current, config, instance_id):
     """After actual guest health, and only for its verified native host binding."""
     compatible(current)
-    channel(root, current)
+    # Cold startup can outlast the short interactive-update presence lease.
+    # Recording actual health is not update permission; new operations still
+    # require a fresh native channel in capabilities/prepare/apply.
+    channel(root, current, fresh=False)
     if not isinstance(instance_id, str) or not re.fullmatch(r"[a-f0-9]{32}", instance_id):
         raise ValueError("The Windows guest supervisor identity is invalid")
     namespace = versions.namespace(config)[1]

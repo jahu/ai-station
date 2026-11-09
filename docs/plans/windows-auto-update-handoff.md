@@ -120,6 +120,12 @@ timeouts and worker ownership rules are unchanged. Regression tests cover both
 platforms, modified source identities/bytes and cancellation during hashing.
 This fix still requires a rebuilt native package exercise.
 
+Guest readiness also validates its bound native identity without requiring the
+interactive update channel's 60-second presence lease. A cold startup may exceed
+that lease; recording real healthy startup does not renew it or authorize a new
+update. Capabilities and new preparation/apply requests retain fresh-presence
+checks, and a wrong native version/channel still refuses the readiness receipt.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.

@@ -123,6 +123,20 @@ def test_wrong_or_expired_native_host_binding_does_not_advertise_installed_updat
     assert owner.handle(message)["phase"] == "queued"  # Existing uncertain dispatch retains its stage.
 
 
+def test_slow_guest_start_records_health_without_renewing_update_permission(accounts, tmp_path, monkeypatch):
+    root, current, _, _, owner, _, _, _, _ = prepared(accounts, tmp_path, monkeypatch)
+    attachment = journal.read(root / windows.ATTACHMENT)
+    journal.write(root / windows.ATTACHMENT, {**attachment, "updated_at": 0})
+    windows.ready(root, current, root / "desktop.env", OWNER)
+    assert windows.versions.load(root)["phase"] == "ready"
+    assert owner.handle({"action": "updates.capabilities"})["installed"] is False
+    assert journal.read(root / windows.ATTACHMENT)["updated_at"] == 0
+    # Expiry does not waive the exact installed-version binding.
+    journal.write(root / windows.ATTACHMENT, {**attachment, "version": "0.0.1"})
+    with pytest.raises(ValueError, match="Reopen"):
+        windows.ready(root, current, root / "desktop.env", OWNER)
+
+
 @pytest.mark.parametrize("variant", ["verified", "changed", "canceled", "symlink"])
 def test_native_export_is_bound_to_verified_bytes_and_never_accepts_a_caller_path(
     accounts, tmp_path, monkeypatch, variant
