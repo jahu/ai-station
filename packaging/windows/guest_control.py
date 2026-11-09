@@ -12,7 +12,21 @@ from pathlib import Path
 APP = Path("/usr/lib/ai-station")
 USER = "station"
 HOME = Path("/home/station")
-ACTIONS = frozenset({"start", "status", "open", "stop", "describe"})
+ACTIONS = frozenset(
+    {
+        "start",
+        "status",
+        "open",
+        "stop",
+        "describe",
+        "update-bind",
+        "update-poll",
+        "update-export",
+        "update-result",
+        "update-status",
+        "update-authorize",
+    }
+)
 
 
 def trusted(path):
@@ -90,12 +104,68 @@ def main(argv=None):
     os.umask(0o077)
     os.environ.clear()
     os.environ.update(environment())
+    if args[0].startswith("update-") and sys.flags.no_site:
+        # New finite operations need the packaged dotenv/native modules. Enable
+        # only the root-owned packaged site, as the ordinary station account;
+        # -I still excludes user site, ambient Python paths and the working dir.
+        python = APP / "python/bin/python3"
+        os.execve(str(python), [str(python), "-IB", str(Path(__file__).resolve()), *args], environment())
+        return
     sys.path.insert(0, str(APP / "scripts"))
     import desktop
 
     action = args[0]
+    if action.startswith("update-"):
+        import desktop_windows_updates as updates
+
+        current = desktop.manifest(APP)
+        updates.compatible(current)
+        raw = sys.stdin.buffer.readline(8193)
+        if len(raw) > 8192 or not raw.endswith(b"\n"):
+            raise ValueError("The native update control frame exceeds its bound")
+
+        def unique(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("Duplicate native update control field")
+                result[key] = value
+            return result
+
+        value = json.loads(raw, object_pairs_hook=unique)
+        root = desktop.state_root()
+        if action == "update-export":
+            updates.export_package(root, current, value, output=sys.stdout.buffer)
+            return
+        if action == "update-bind":
+            result = updates.bind(root, current, value)
+        elif action == "update-poll":
+            result = updates.poll(root, current, value)
+        elif action == "update-result":
+            result = updates.host_result(root, current, value)
+        elif action == "update-authorize":
+            result = updates.authorize_guest_update(root, value)
+        else:
+            if not isinstance(value, dict) or set(value) != {"channel_id", "run_id"}:
+                raise ValueError("Update status accepts only its native operation identity")
+            updates.bound(root, value["channel_id"])
+            saved = updates.owner.request(root, updates.uuid(value["run_id"]))
+            if saved["request"]["platform"] != "windows-x64":
+                raise ValueError("This operation belongs to another native platform")
+            result = updates.WindowsUpdates(root, APP, current).inspect(value["run_id"])
+        print(json.dumps(result, separators=(",", ":")), flush=True)
+        return
     if action == "describe":
-        print(json.dumps({"desktop_protocol": getattr(desktop, "DESKTOP_PROTOCOL", 0)}), flush=True)
+        print(
+            json.dumps(
+                {
+                    "desktop_protocol": getattr(desktop, "DESKTOP_PROTOCOL", 0),
+                    "windows_update_protocol": 1,
+                    "version": desktop.manifest(APP).get("version"),
+                }
+            ),
+            flush=True,
+        )
         return
     if action == "start" and getattr(desktop, "DESKTOP_PROTOCOL", 0) != 2:
         raise RuntimeError("The guest desktop does not support this Windows launcher")

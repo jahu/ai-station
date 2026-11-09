@@ -162,3 +162,14 @@ def test_native_apply_requires_idle_gate_even_after_verified_preparation(account
     with pytest.raises(ValueError, match="idle dispatch gate"):
         owner.handle({"action": "updates.apply", "run_id": identity})
     assert owner.inspect(identity)["phase"] == "ready"
+
+
+@pytest.mark.parametrize("activation_started", [False, True])
+def test_lost_helper_is_not_replayed_or_left_permanently_preparing(
+    accounts, tmp_path, monkeypatch, activation_started
+):
+    root, owner, identity, _, _, spawn = prepared(accounts, tmp_path, monkeypatch)
+    module.publish(root, identity, "applying" if activation_started else "downloading", helper_started_at=0)
+    result = owner.inspect(identity)
+    assert result["phase"] == ("inspection_required" if activation_started else "failed")
+    assert result["error"] and spawn.call_count == 1

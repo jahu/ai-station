@@ -786,3 +786,80 @@ def test_stable_python_handoff_preserves_exact_fixed_invocation_and_private_stdi
         [python, "-IBS", "-c", program, distro],
         {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "WSL_DISTRO_NAME": distro},
     )
+
+
+@pytest.mark.parametrize("other_running", [False, True])
+def test_automatic_update_preserves_queued_work_but_never_exempts_another_active_job(
+    fixture, monkeypatch, other_running
+):
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    root, store, database, manifest, calls = fixture
+    update_id = str(uuid4())
+    context = {"run_id": update_id, "channel_id": str(uuid4()), "fingerprint": "a" * 64}
+    with sqlite3.connect(database) as connection:
+        connection.execute("ALTER TABLE runs ADD COLUMN id TEXT")
+        connection.execute("UPDATE runs SET id='completed'")
+        connection.executemany(
+            "INSERT INTO runs(id,status) VALUES(?,?)",
+            [(update_id, "running"), ("durable-queued", "queued"), ("approval", "waiting_for_approval")],
+        )
+        if other_running:
+            connection.execute("INSERT INTO runs(id,status) VALUES('another-job','running')")
+    source_bytes = database.read_bytes()
+    commands = []
+
+    def authorize(argv, **kwargs):
+        commands.append(argv)
+        assert argv[:4] == ["/usr/sbin/runuser", "--user", "station", "--"]
+        assert argv[-1] == "update-authorize"
+        assert json.loads(kwargs["input"]) == context
+        return SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    "run_id": update_id,
+                    "namespace_sha256": "d" * 64,
+                    "data_root": str(root / "data"),
+                    "target_version": receipt(2)["package"]["Version"],
+                }
+            ).encode()
+        )
+
+    monkeypatch.setattr(guest.subprocess, "run", authorize)
+    if other_running:
+        with pytest.raises(RuntimeError, match="active"):
+            guest.update(
+                io.BytesIO(BYTES), receipt(1), receipt(2), len(BYTES), os.getuid(), automatic_update=context
+            )
+        assert "installed" not in calls
+        assert database.read_bytes() == source_bytes
+    else:
+        result = guest.update(
+            io.BytesIO(BYTES), receipt(1), receipt(2), len(BYTES), os.getuid(), automatic_update=context
+        )
+        assert result["data_preserved"] and result["backup_available"]
+        assert database.read_bytes() == source_bytes
+        with sqlite3.connect(database) as connection:
+            assert connection.execute("SELECT status FROM runs WHERE id='durable-queued'").fetchone() == (
+                "queued",
+            )
+        assert calls == ["validated", "installed", "verified_installed_files"]
+    assert len(commands) == 1
+
+
+def test_new_additive_bridge_migration_remains_closed_until_native_qualification(monkeypatch):
+    previous, target = receipt(1), receipt(2)
+    previous["sources"]["guest_control.py"] = guest.BRIDGE_PREVIOUS
+    target["sources"]["guest_control.py"] = guest.BRIDGE_TARGET
+    with pytest.raises(ValueError, match="separately qualified"):
+        guest.plan(previous, target)
+    monkeypatch.setattr(guest, "BRIDGE_MIGRATION_QUALIFIED", True)
+    assert guest.plan(previous, target)["target"] == target
+    with pytest.raises(ValueError, match="separately qualified"):
+        guest.plan(target, previous)
+
+
+def test_bridge_target_hash_is_the_actual_reviewed_additive_protocol():
+    source = Path(__file__).resolve().parents[2] / "packaging/windows/guest_control.py"
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == guest.BRIDGE_TARGET

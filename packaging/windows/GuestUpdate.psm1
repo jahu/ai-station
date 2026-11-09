@@ -5,14 +5,19 @@ Import-Module (Join-Path $PSScriptRoot 'InstallState.psm1')
 Import-Module (Join-Path $PSScriptRoot 'GuestManifest.psm1')
 Import-Module (Join-Path $PSScriptRoot 'DesktopProcess.psm1')
 
+$script:BridgeMigrationQualified=$false
+$script:BridgePrevious='caff909648082ea5db41292510596f670f40a5d3eb854b537e97b59a20dd2b0a'
+$script:BridgeTarget='76961bbe83179cb2415615a7245d87238c554a116ba66a783539bc9ca9fc6af3'
+
 function Assert-StationUpdateRecipe {
  param($Previous,$Target)
  Assert-StationGuestManifest $Previous
  Assert-StationGuestManifest $Target
  if ($Previous.base -cne $Target.base) { throw 'This package needs a different guest OS. The existing distribution was preserved.' }
- foreach($name in @('wsl.conf','guest_control.py')) {
+ foreach($name in @('wsl.conf')) {
   if ($Previous.sources.$name -cne $Target.sources.$name) { throw 'A guest OS or bridge change needs its separately qualified migration.' }
  }
+ if($Previous.sources.'guest_control.py' -cne $Target.sources.'guest_control.py' -and -not ($script:BridgeMigrationQualified -and $Previous.sources.'guest_control.py' -ceq $script:BridgePrevious -and $Target.sources.'guest_control.py' -ceq $script:BridgeTarget)){throw 'A bridge protocol update requires its separately qualified migration.'}
  $old=$Previous.sources.'guest.Dockerfile';$new=$Target.sources.'guest.Dockerfile'
  $recipe='nvidia-container-toolkit-1.20.1-amd64-v1'
  $oldRecipe='b6a35aa0a71b8f2b2a63c3878bfabc7ac9f88bee43606f2d0f501bc32002c9ae'
@@ -24,7 +29,7 @@ function Assert-StationUpdateRecipe {
 }
 
 function Get-StationGuestUpdatePlan {
- param($State,[string]$Root,$Previous,$Target,[byte[]]$Program,[switch]$StablePython)
+ param($State,[string]$Root,$Previous,$Target,[byte[]]$Program,[switch]$StablePython,$AutomaticUpdate=$null)
  Assert-StationInstallState $State $Root
  Assert-StationUpdateRecipe $Previous $Target
  if ($State.Phase -cne 'ready' -or $State.PackageSha256 -cne $Previous.package_sha256) { throw 'Verify the existing registered application before updating.' }
@@ -40,7 +45,16 @@ function Get-StationGuestUpdatePlan {
  $python=$(if($StablePython){'/var/lib/ai-station-updates/python/bin/python3'}else{'/usr/lib/ai-station/python/bin/python3'})
  $arguments=[string[]]@('--distribution',$State.Distribution,'--user','root','--exec',$python,'-IBS','-c',$code,$State.Distribution)
  if ((Format-StationWslArguments $arguments).Length -gt 30000) { throw 'The fixed Windows updater exceeds the native argument limit.' }
- $header=[Text.UTF8Encoding]::new($false,$true).GetBytes((@{previous=$Previous;target=$Target;package_bytes=[long]$Target.package_bytes}|ConvertTo-Json -Depth 8 -Compress)+"`n")
+ $request=@{previous=$Previous;target=$Target;package_bytes=[long]$Target.package_bytes}
+ if($null -ne $AutomaticUpdate){
+  if((@($AutomaticUpdate.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'channel_id|fingerprint|run_id' -or $AutomaticUpdate.fingerprint -isnot [string] -or $AutomaticUpdate.fingerprint -cnotmatch '\A[a-f0-9]{64}\z'){throw 'Invalid original automatic update identity.'}
+  foreach($key in @('run_id','channel_id')){
+   $identifier=[Guid]::Empty
+   if($AutomaticUpdate.$key -isnot [string] -or -not [Guid]::TryParseExact($AutomaticUpdate.$key,'D',[ref]$identifier) -or $identifier.ToString('D') -cne $AutomaticUpdate.$key){throw 'Use a canonical automatic update identity.'}
+  }
+  $request.automatic_update=$AutomaticUpdate
+ }
+ $header=[Text.UTF8Encoding]::new($false,$true).GetBytes(($request|ConvertTo-Json -Depth 8 -Compress)+"`n")
  if ($header.Length -gt 16384) { throw 'The update identity exceeds its private input limit.' }
  return [pscustomobject]@{Arguments=$arguments;Header=$header}
 }

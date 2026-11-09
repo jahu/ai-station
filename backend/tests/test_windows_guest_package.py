@@ -329,8 +329,13 @@ def test_guest_can_describe_its_installed_protocol_without_starting_services(mon
     monkeypatch.setattr(guest.os, "environ", {})
     execute = Mock()
     monkeypatch.setattr(guest.os, "execve", execute)
+    monkeypatch.setattr(desktop, "manifest", lambda root: {"version": "0.5.0"})
     guest.main(["describe"])
-    assert json.loads(capsys.readouterr().out) == {"desktop_protocol": 2}
+    assert json.loads(capsys.readouterr().out) == {
+        "desktop_protocol": 2,
+        "windows_update_protocol": 1,
+        "version": "0.5.0",
+    }
     execute.assert_not_called()
 
 
@@ -365,3 +370,16 @@ def test_changed_published_update_package_never_leaves_a_valid_guest_payload(
     assert not list(tmp_path.glob(".wsl-build-*"))
     assert calls[-1][0:2] == ["docker", "rm"]
     assert package.read_bytes() == b"audited private package fixture"
+
+
+def test_native_update_control_enables_only_the_owned_packaged_site_before_reading_input(monkeypatch):
+    monkeypatch.setattr(guest, "identity", lambda: None)
+    monkeypatch.setattr(guest.os, "environ", {})
+    monkeypatch.setattr(guest, "sys", SimpleNamespace(flags=SimpleNamespace(no_site=True)))
+    execute = Mock()
+    monkeypatch.setattr(guest.os, "execve", execute)
+    guest.main(["update-poll"])
+    binary, arguments, environment = execute.call_args.args
+    assert binary == "/usr/lib/ai-station/python/bin/python3"
+    assert arguments[1] == "-IB" and arguments[-1] == "update-poll"
+    assert "PYTHONPATH" not in environment and "WSLENV" not in environment

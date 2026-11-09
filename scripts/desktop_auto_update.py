@@ -83,8 +83,15 @@ def publish(root, run_id, phase, **values):
 
 
 class DesktopUpdates:
-    def __init__(self, root, installed, value):
+    platform = "linux-amd64"
+    helper = "desktop_auto_update.py"
+    helper_phases = {"queued", "downloading", "preparing", "ready", "apply_requested", "applying"}
+
+    def validate(self, value):
         linux.compatible(value)
+
+    def __init__(self, root, installed, value):
+        self.validate(value)
         self.root, self.installed, self.value = root, installed, value
 
     def inspect(self, run_id):
@@ -103,6 +110,7 @@ class DesktopUpdates:
                 and completed(self.root, operation(self.root, run_id))
             ):
                 phase = "succeeded"
+        phase = self.orphaned_phase(run_id, saved, result, phase)
         return {
             "run_id": run_id,
             "phase": phase,
@@ -114,20 +122,97 @@ class DesktopUpdates:
             },
         }
 
+    def orphaned_phase(self, run_id, saved, stage, phase):
+        """Inspect a vanished preparer; never replay its installation intent."""
+        started = stage.get("helper_started_at")
+        if phase not in self.helper_phases or type(started) not in (int, float) or time.time() - started < 30:
+            return phase
+        try:
+            descriptor = lock_file(folder(self.root, run_id), "helper.lock")
+        except FileNotFoundError:
+            descriptor = None
+        try:
+            if descriptor is not None:
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return phase
+            current = versions.load(self.root)
+            before_activation = (
+                phase != "applying"
+                and current["phase"] == "ready"
+                and current["package"] == saved["previous"]
+                and current["namespace_sha256"] == saved["namespace_sha256"]
+                and not (self.root / "desktop-auto-update-pending.json").exists()
+                and not (self.root / "desktop-auto-update-pending.json").is_symlink()
+                and not (self.root / "image-upgrades" / run_id).exists()
+            )
+            result = "failed" if before_activation else "inspection_required"
+            publish(
+                self.root,
+                run_id,
+                result,
+                error=(
+                    "The update helper stopped before activation. Your current app was kept; check and retry."
+                    if before_activation
+                    else "The interrupted update needs native inspection before continuing."
+                ),
+            )
+            stage.update(state(self.root, run_id))
+            return result
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def refuse(self, run_id, parameters, error):
+        """Durable pre-dispatch refusal for a real original maintenance claim.
+
+        Read-only recovery authority proves the exact idle-gated Run even if
+        its administrator was revoked. This path never launches or applies work.
+        """
+        path = folder(self.root, run_id)
+        record = path / "request.json"
+        if record.exists() or record.is_symlink():
+            if request(self.root, run_id)["request"] != parameters:
+                raise ValueError("The refused update request changed")
+            return self.inspect(run_id)  # Keep an uncertain dispatched operation's original stage.
+        proof = authority(self.root, run_id, expected=parameters, idle=True, native_resume=True)
+        if parameters["platform"] != self.platform or parameters["current_version"] != self.value["version"]:
+            raise ValueError("The refused update belongs to another installed desktop")
+        write(
+            record,
+            {
+                "schema": 1,
+                "run_id": run_id,
+                "request": proof["request"],
+                "previous": versions.package_identity(self.value),
+                "namespace_sha256": proof["namespace_sha256"],
+            },
+        )
+        write(path / "state.json", {"run_id": run_id, "phase": "failed", "error": error})
+        return self.inspect(run_id)
+
     def handle(self, value):
         value = command(value)
         action = value["action"]
         if action == "updates.capabilities":
-            return {"installed": True, "platform": "linux-amd64", "version": self.value["version"]}
+            return {"installed": True, "platform": self.platform, "version": self.value["version"]}
         run_id = value["run_id"]
         if action == "updates.inspect":
             return self.inspect(run_id)
         if action == "updates.prepare":
-            proof = authority(self.root, run_id, expected=value["request"])
+            try:
+                proof = authority(self.root, run_id, expected=value["request"])
+            except ValueError:
+                return self.refuse(
+                    run_id,
+                    value["request"],
+                    "The update approval is no longer active. Your current app was kept.",
+                )
             if proof["canceled"]:
                 raise ValueError("The desktop update was canceled")
             if (
-                proof["request"]["platform"] != "linux-amd64"
+                proof["request"]["platform"] != self.platform
                 or proof["request"]["current_version"] != self.value["version"]
             ):
                 raise ValueError("The update does not match this installed desktop")
@@ -146,7 +231,9 @@ class DesktopUpdates:
                 return self.inspect(run_id)  # Never repeat an uncertain native dispatch.
             desktop.verify(self.installed, self.value)
             write(record, expected)
-            write(path / "state.json", {"run_id": run_id, "phase": "queued"})
+            write(
+                path / "state.json", {"run_id": run_id, "phase": "queued", "helper_started_at": time.time()}
+            )
             log = path / "native.log"
             descriptor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
             try:
@@ -154,7 +241,7 @@ class DesktopUpdates:
                     [
                         str(self.installed / "python/bin/python3"),
                         "-I",
-                        str(self.installed / "scripts/desktop_auto_update.py"),
+                        str(self.installed / "scripts" / self.helper),
                         "--run-id",
                         run_id,
                     ],

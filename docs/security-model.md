@@ -1927,3 +1927,17 @@ gate and original coordinator evidence. This is trusted installer authority,
 not an application account permission: neither the HTTP nor Runner/socket schema
 offers Resume or a role/lease-bypass flag. Confirmed publication or abort must
 match the native version receipt before startup fencing is cleared.
+
+
+The Windows update candidate adds only fixed ordinary-guest control actions,
+not a Windows command bridge. A native SID-private journal freezes the original
+Run, installation record, publisher fingerprint and target installer identity.
+Native publisher reobservation and bounded binary transfer/hash verification
+precede normal shutdown. Inno dispatch intent is durable before process creation;
+lost acknowledgement permits inspection of the exact registered target, never
+a second installer launch. The retained manifest and original distribution
+registration are checked before the existing root-owned WSL update. Its native
+continuation exemption covers only the original idle-gated maintenance Run and
+queued work, never another active workload. This exemption is absent from Runner
+and HTTP input. Windows platform admission and its exact bridge migration remain
+closed until native package qualification; component tests alone do not open them.

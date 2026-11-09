@@ -70,4 +70,4 @@ function Open-StationVerifiedArchive {
     } catch { $stream.Dispose(); throw }
 }
 
-Export-ModuleMember -Function New-StationFileLease,Read-StationStateFile,Write-StationStateFile,Open-StationVerifiedArchive
+Export-ModuleMember -Function Assert-StationRegularFile,New-StationFileLease,Read-StationStateFile,Write-StationStateFile,Open-StationVerifiedArchive

@@ -88,4 +88,4 @@ function Get-StationOfficialReleaseOffer {
  }
 }
 
-Export-ModuleMember -Function ConvertTo-StationReleaseOffer,Get-StationOfficialReleaseOffer
+Export-ModuleMember -Function ConvertTo-StationStableVersion,ConvertTo-StationReleaseOffer,Get-StationOfficialReleaseOffer

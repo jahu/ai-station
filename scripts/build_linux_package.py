@@ -34,6 +34,7 @@ SOURCE = (
     "scripts/desktop_release_download.py",
     "scripts/desktop_linux_update.py",
     "scripts/desktop_auto_update.py",
+    "scripts/desktop_windows_updates.py",
     "scripts/desktop_update_authority.py",
     "scripts/desktop_update_recovery.py",
     "scripts/desktop_upgrade_image.py",
