@@ -42,6 +42,7 @@ def deb(tmp_path, value=None):
     value = bundle(root / "usr/lib/ai-station", value)
     control = root / "DEBIAN"
     control.mkdir()
+    control.chmod(0o755)  # dpkg requires this even under the runner's private umask.
     (control / "control").write_text(
         "Package: ai-station\nVersion: 0.5.0\nArchitecture: amd64\nMaintainer: QA\nDescription: synthetic installer fixture\n"
     )
