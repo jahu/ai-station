@@ -67,7 +67,9 @@ def request(path, value):
         result = json.loads(raw)
         if not isinstance(result, dict):
             raise ValueError("The desktop update status is invalid")
-        if "error" in result:
+        # Operation status includes its own failure explanation. Only the
+        # control protocol's error-only envelope rejects the request itself.
+        if set(result) == {"error"}:
             raise ValueError(str(result["error"])[:300])
         if "run_id" in value and result.get("run_id") != value["run_id"]:
             raise ValueError("The desktop update status belongs to another Run")

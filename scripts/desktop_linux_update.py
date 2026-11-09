@@ -3,6 +3,7 @@
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -131,9 +132,12 @@ def local_engine(environment):
         or not parsed.path.startswith("/")
     ):
         raise ValueError("Updates require the existing local Unix Docker connection")
-    socket = Path(parsed.path)
-    if socket.resolve(strict=True) != socket:
-        raise ValueError("The local Docker connection must not be redirected")
+    # /var/run -> /run is a normal OS-owned alias on Linux. Pin the resolved
+    # socket, then attest its daemon against the supervisor's namespace receipt.
+    socket = Path(parsed.path).resolve(strict=True)
+    if not stat.S_ISSOCK(socket.stat().st_mode):
+        raise ValueError("The local Docker connection must be a Unix socket")
+    endpoint = "unix://" + str(socket)
     clean = {
         key: value
         for key, value in environment.items()

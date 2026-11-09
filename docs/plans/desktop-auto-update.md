@@ -207,3 +207,12 @@ is absent. Explicit socket identities remain unchanged. A regression uses an
 actual freshly generated Linux configuration rather than the Mac-style fixture.
 The failed package attempt remains recorded; rebuilt-package qualification is
 still pending and admission remains closed.
+
+The first real preserving-update attempt also exposed standard Linux `/var/run`
+Docker aliases and operation errors being mistaken for control-protocol errors.
+The native client now pins the canonical socket and still attests the original
+supervisor daemon. An operation's `error` explanation remains part of its typed
+status; the protocol's error-only envelope still rejects invalid requests.
+Regression tests exercise a real local Unix listener and the private control
+channel, including failure/inspection statuses. Neither attempt altered live
+user data; their isolated receipts/logs remain available for diagnosis.

@@ -1,3 +1,4 @@
+import socket
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -29,3 +30,25 @@ def test_native_update_admits_only_the_supervisors_recorded_daemon(
         with pytest.raises(ValueError, match="original owned Docker connection"):
             module.attested_engine(root, root)
     assert factory.call_args.args[0] == config
+
+
+def test_local_engine_pins_a_normal_canonical_socket_alias(tmp_path, monkeypatch):
+    real = tmp_path / "run"
+    real.mkdir()
+    alias = tmp_path / "var-run"
+    alias.symlink_to(real, target_is_directory=True)
+    monkeypatch.setattr(module.shutil, "which", lambda *args, **kwargs: "/usr/bin/true")
+    with socket.socket(socket.AF_UNIX) as listener:
+        listener.bind(str(real / "docker.sock"))
+        engine = module.local_engine({"DOCKER_HOST": "unix://" + str(alias / "docker.sock")})
+    assert engine.identity[1] == "unix://" + str(real / "docker.sock")
+    assert engine.environment["DOCKER_HOST"] == engine.identity[1]
+    assert engine.prefix[1:] == ("--host", engine.identity[1])
+
+
+def test_local_engine_refuses_a_regular_file_instead_of_a_socket(tmp_path, monkeypatch):
+    path = tmp_path / "docker.sock"
+    path.touch()
+    monkeypatch.setattr(module.shutil, "which", lambda *args, **kwargs: "/usr/bin/true")
+    with pytest.raises(ValueError, match="must be a Unix socket"):
+        module.local_engine({"DOCKER_HOST": "unix://" + str(path)})
