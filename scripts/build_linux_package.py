@@ -1,6 +1,7 @@
 """Build a private Linux desktop bundle/deb; no models or workstation config."""
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -113,7 +114,18 @@ def release_source(version, head):
         for part in ("backend", "host-runner")
     ]
     versions.append(json.loads((ROOT / "frontend/package.json").read_text())["version"])
-    if versions != [version] * 3:
+    for name in ("backend/app/__init__.py", "host-runner/ai_station_runner/__init__.py"):
+        # Inspect literals without importing application code or running setup.
+        declarations = [
+            node.value
+            for node in ast.parse((ROOT / name).read_text()).body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets)
+        ]
+        if len(declarations) != 1 or not isinstance(declarations[0], ast.Constant):
+            raise ValueError("Align literal runtime versions before stable packaging")
+        versions.append(declarations[0].value)
+    if versions != [version] * 5:
         raise ValueError("Align backend, Host Runner and frontend versions before stable packaging")
     observed = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = subprocess.check_output(
