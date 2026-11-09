@@ -82,8 +82,25 @@ fake WSL/installer processes and real binary streams, temporary SQLite databases
 private native journals, canceled transfers and lost acknowledgement boundaries.
 These are component results, not a claim of a successful Windows package update.
 
-The Windows VM stays off until a complete frozen native candidate is built. Then
-qualify preserved account/history/artifact bytes, one-click normal update,
+Native Windows 10 / Windows PowerShell 5.1 checks and preserving bootstrap are
+now being exercised on the retained disposable VM. The first native package
+exercise found and corrected a missing shared process-module import that was
+misreported as an old WSL version. A real owned-child regression now covers that
+transport without caller-global imports; WinPS5 informational CLIXML progress is
+drained like the production waiter, rather than mistaken for a failed process.
+
+The exercise also found that updating the application Debian package leaves the
+rootfs-only `/usr/libexec/ai-station/wsl-control` unchanged. Windows packages now
+carry the exact bridge under the protected application manifest. After verifying
+the installed target, the root updater atomically publishes only the pinned old
+→ new bridge, with an executable mode and fsync, before completing its receipt.
+Changed source bytes, foreign installed bridges and symlinks are refused; exact
+completed publication is idempotent on recovery. This is an application-owned
+WSL file, not a host OS or external runtime migration. Its gate remains closed
+until the rebuilt native package exercise completes.
+
+Remaining native qualification covers preserved account/history/artifact bytes,
+one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
 Run WinPS5 checks on Windows 10 and preserve Windows 11 contracts; do not claim
 physical Windows 11/GPU testing that was not actually performed.

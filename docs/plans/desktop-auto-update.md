@@ -194,18 +194,19 @@ head and per-command results are retained with local acceptance receipts.
 
 Remaining gates for this user goal:
 
-1. Finish reviewing and validating the Linux follow-up and merge its PR to develop.
+1. Linux review, packaged update/recovery and the merge to develop are complete.
 2. Follow [Windows handoff](windows-auto-update-handoff.md) to implement the
    independent Windows publisher-download/silent per-user installer
    handoff and preserving WSL update/restart/reconciliation. Keep Windows admission
    closed until its own native candidate passes. Boot the retained Windows fixture
    only for that frozen candidate, then shut it down normally.
 3. Qualify the new native Windows presentation. The separate illustrated `/install/`
-   guide is prepared locally and checked on desktop/mobile without JavaScript;
-   new screenshots await the owner's explicit publication review. Capture real
+   guide is merged to develop and checked on desktop/mobile without JavaScript;
+   its first-account screenshot was approved by the owner. Capture real
    neutral native Windows setup as well, without personal files or setup tokens.
 4. Complete final applicable checks, qualification/release docs and versioned
    assets. Only the human owner approves and merges the release PR to master.
 
-Windows auto-apply, native Windows appearance, the unpublished illustrated guide
-and the overall user goal are not reported complete by the Linux qualification.
+Windows auto-apply and the overall user goal are not reported complete by the
+Linux qualification or the guide merge. Native Windows package qualification
+remains in progress.
