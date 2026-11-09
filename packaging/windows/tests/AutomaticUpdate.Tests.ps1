@@ -28,6 +28,7 @@ $module=Get-Module AutomaticUpdate
  function script:Get-StationRegisteredUpdateTarget {param($InstallRoot,$TargetVersion);$script:events.Add('registered-target');if($script:missingTarget){throw 'No matching target registration'};return [pscustomobject]@{Folder='C:\Synthetic\versions\bbbbbbbbbbbbbbbb';Hash=('b'*64)}}
  function script:Invoke-StationUpdateGuestControl {param($Lease,$Record,$Action,$Body);if(-not $script:completedAck -or $Action -cne 'update-status'){throw 'Unexpected guest ACK probe'};$script:events.Add('completed-ack');return [pscustomobject]@{phase='succeeded'}}
  function script:Start-StationUpdateChild {param($Info)
+  $script:events.Add('child:'+$Info.Arguments)
   $exitCode=0
   if($Info.FileName -ceq 'fixed.exe' -or $Info.FileName.EndsWith('.exe') -and $Info.Arguments.StartsWith('/VERYSILENT')){
    Check ($script:op.phase -ceq 'installer_dispatched') 'Installer launched before durable intent'
@@ -79,6 +80,14 @@ $module=Get-Module AutomaticUpdate
   $script:op.proof=[pscustomobject]@{host_manifest_sha256=('b'*64);version='0.5.1';installer_sha256=('b'*64);data_preserved=$true;backup_available=$true}
   Invoke-StationAutomaticUpdate
   Check ($script:op.phase -ceq 'complete' -and $script:events.Contains('completed-ack') -and -not $script:events.Contains('normal-status') -and -not $script:events.Contains('installer') -and -not $script:events.Contains('guest-transaction')) 'Lost host completion write replayed a completed update'
+  foreach($name in @('helper.lock','finisher.lock')){
+   Reset 'restarting'
+   $live=[IO.File]::Open([IO.Path]::Combine($script:root,$name),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+   try{
+    $failed=$false;try{Resume-StationAutomaticUpdate}catch{$failed=$true}
+    Check ($failed -and $script:events.Count -eq 0) ('Continue dispatched another child while '+$name+' remained owned')
+   }finally{$live.Dispose()}
+  }
   Reset 'complete'
   Invoke-StationAutomaticUpdate
   Check ($script:events.Count -eq 0) 'Completed operation was run again'

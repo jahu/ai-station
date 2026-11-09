@@ -113,6 +113,19 @@ function Sync-Buttons {
  $primary.BackColor=[Drawing.ColorTranslator]::FromHtml('#B9ED98');$primary.ForeColor=[Drawing.ColorTranslator]::FromHtml('#142015')
  $form.AcceptButton=$primary
  $background.Visible=$script:running -or $preparing
+ $nativeActive=$null -ne $script:nativeUpdate -and $script:nativeUpdate.phase -notin @('complete','failed')
+ $stopExit.Enabled=-not $nativeActive
+ if($nativeActive){
+  $canContinue=-not $script:nativeUpdate.helper_alive -and ($script:nativeUpdate.phase -eq 'inspection_required' -or [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()-$script:nativeUpdate.updated_at -gt 30)
+  foreach($button in @($start,$open,$stop,$support)){$button.Enabled=$false;$button.Visible=$false}
+  $prepare.Visible=$true;$prepare.Enabled=$canContinue -and $null -eq $script:worker -and -not $script:stopPending
+  $prepare.Text=$(if($prepare.Enabled){'Continue update'}else{'Updating...'})
+  $prepare.AccessibleName=$prepare.Text;$prepare.SetBounds(32,284,550,42)
+  $prepare.BackColor=[Drawing.ColorTranslator]::FromHtml($(if($prepare.Enabled){'#B9ED98'}else{'#203327'}))
+  $prepare.ForeColor=$(if($prepare.Enabled){[Drawing.ColorTranslator]::FromHtml('#142015')}else{$form.ForeColor})
+  $form.AcceptButton=$(if($prepare.Enabled){$prepare}else{$null})
+  $progress.Visible=-not $prepare.Enabled;$background.Visible=$true
+ }
 }
 function Show-Failure($Failure) {
  $view=Get-StationFailurePresentation $Failure

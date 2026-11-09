@@ -42,16 +42,24 @@ function Get-StationRegisteredUpdateTarget {
  return $identity
 }
 
+function Test-StationNativeUpdateActive {
+ param([string]$Directory)
+ foreach($name in @('helper.lock','finisher.lock')){
+  $path=[IO.Path]::Combine($Directory,$name)
+  if([IO.File]::Exists($path)){
+   Assert-StationPrivateAcl $path
+   try{$probe=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None);$probe.Dispose()}catch [IO.IOException]{return $true}
+  }
+ }
+ return $false
+}
+
 function Read-StationNativeUpdate {
  $root=[IO.Path]::Combine([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),'AIStation-Desktop')
  if(-not [IO.File]::Exists([IO.Path]::Combine($root,'install-state.json'))){return $null}
  $operation=Read-StationUpdateObject ([pscustomobject]@{Root=$root}) 'operation.json'
  if($null -ne $operation -and $operation.phase -notin @('complete','failed')){
-  $alive=$false;$path=[IO.Path]::Combine($root,'automatic-updates','helper.lock')
-  if([IO.File]::Exists($path)){
-   Assert-StationPrivateAcl $path
-   try{$probe=[IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None);$probe.Dispose()}catch [IO.IOException]{$alive=$true}
-  }
+  $alive=Test-StationNativeUpdateActive ([IO.Path]::Combine($root,'automatic-updates'))
   $operation|Add-Member -NotePropertyName 'helper_alive' -NotePropertyValue $alive
  }
  return $operation
@@ -268,6 +276,7 @@ function Resume-StationAutomaticUpdate {
  try{
   $operation=Read-StationUpdateObject $lease 'operation.json'
   if($null -eq $operation -or $operation.phase -in @('complete','failed')){throw 'No native application update needs continuation.'}
+  if(Test-StationNativeUpdateActive (Get-StationUpdateDirectory $lease)){throw 'Your update helper is still running. Wait for it to finish before continuing.'}
   $path=[IO.Path]::Combine((Get-StationUpdateDirectory $lease),'helper.lock')
   if([IO.File]::Exists($path)){Assert-StationPrivateAcl $path}
   $probe=[IO.File]::Open($path,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)

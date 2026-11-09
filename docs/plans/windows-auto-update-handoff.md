@@ -143,6 +143,14 @@ newer restarting/completed proof. Explicit Resume verifies the existing guest
 acknowledgement without another installer, Stop or guest transaction; proof for
 a different source remains refused. Both incomplete and completed child writes
 are covered by the native stage tests.
+Inspection and explicit Resume now consider both the parent helper's and the
+independent finisher's exclusive handles. A regression reproduced a second child
+dispatch while only the finisher remained alive; both live owners now block it.
+The actual progress capture also exposed a visible Start button during updating.
+The shared native button synchronizer now hides conflicting lifecycle actions,
+disables keyboard/tray Stop, and offers Continue only for an abandoned operation.
+Its source is exercised with portable controls and real WinForms controls on
+Windows; normal startup/setup behavior is retained.
 
 The first rebuilt pair was refused by the real API identity check before any
 update request: its private version bump changed package declarations but missed
