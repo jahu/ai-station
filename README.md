@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [Installation guide](https://ai-station.dev/install/) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.4.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.5.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -58,7 +58,7 @@ tracks per-Run admission backoff and durable recovery after transient SQLite con
 > Windows 10 installation, login and worker execution were tested in a CPU-only VM.
 > First local-model replies were tested separately on Windows 11; physical Windows
 > NVIDIA tests and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.4.0.md).
+> [Exact qualification and known issues](docs/releases/0.5.0.md).
 
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled
@@ -97,11 +97,11 @@ settings. Publisher update review is explicit: a new revision never replaces you
 choice silently. [Supported families and actual tests](docs/models.md) ·
 [Discovery design and installation lifecycle](docs/plans/open-model-discovery.md).
 
-Release 0.4 retains reliable setup on Linux and Windows, your first local
+Release 0.5 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.4.0 release notes and qualification status](docs/releases/0.4.0.md).
+[0.5.0 release notes and qualification status](docs/releases/0.5.0.md).
 
-**Coming in the next desktop release: one-click updates.** Your app version stays
+**One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the
 new release and choose **Update and restart**. AI Station downloads and verifies
 the official package, keeps your saved work, and reopens automatically. Linux and
@@ -323,8 +323,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.4.0-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.4.0-linux-amd64.deb`.
+- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.5.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.5.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -342,7 +342,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.4.0.md).
+[Installation, updates and known issues](docs/releases/0.5.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -380,7 +380,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.4.0.md).
+post-release QA are listed in the [release notes](docs/releases/0.5.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -637,7 +637,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.4.0.md#validation) ·
+[Release verification](docs/releases/0.5.0.md#qualification) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
