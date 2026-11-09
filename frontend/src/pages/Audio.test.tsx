@@ -71,6 +71,7 @@ it("keeps speech generation in the workspace with visible progress and stop", as
       "/api/audio/runs",
       expect.objectContaining({
         body: JSON.stringify({
+          level_volume: true,
           text: "Witaj",
           gpu: "auto",
           reference_artifact_id: "voice",
@@ -164,6 +165,7 @@ it("sends real delivery controls only after opting in, without changing narratio
       "/api/audio/runs",
       expect.objectContaining({
         body: JSON.stringify({
+          level_volume: true,
           text: "Witaj. To dokładnie moje słowa.",
           gpu: "auto",
           reference_artifact_id: "voice",
@@ -215,6 +217,7 @@ it("turning delivery off restores the original speech request", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toEqual({
+    level_volume: true,
     text: "Witaj",
     gpu: "auto",
     reference_artifact_id: "voice",
@@ -278,6 +281,7 @@ it("chooses expressive speech and sends voice direction without Chatterbox contr
   fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toEqual({
+    level_volume: true,
     text: "To są dokładne słowa.",
     gpu: "auto",
     reference_artifact_id: "voice",
@@ -405,6 +409,7 @@ it("generates an expressive voice without uploading a recording and keeps record
   fireEvent.click(submit);
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toEqual({
+    level_volume: true,
     text: "Dokładne słowa.",
     gpu: "auto",
     reference_artifact_id: null,
@@ -461,6 +466,7 @@ it("uses an installed speech model from its preparation link despite unavailable
       "/api/audio/runs",
       expect.objectContaining({
         body: JSON.stringify({
+          level_volume: true,
           text: "Dzień dobry",
           gpu: "auto",
           reference_artifact_id: "voice",
@@ -508,6 +514,7 @@ it("sends an explicit English language only when the selected engine supports it
       "/api/audio/runs",
       expect.objectContaining({
         body: JSON.stringify({
+          level_volume: true,
           text: "Hello there.",
           language: "en",
           gpu: "auto",

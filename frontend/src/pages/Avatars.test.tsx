@@ -337,6 +337,7 @@ it("selects existing inputs, queues video and keeps the live result beside the f
       body: JSON.stringify({
         image_artifact_id: "portrait",
         audio_artifact_id: "speech",
+        level_volume: true,
         prompt: "A person speaking naturally, static camera.",
         size: 256,
         frames: 81,

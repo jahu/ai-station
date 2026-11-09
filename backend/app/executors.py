@@ -93,6 +93,7 @@ from app.transcription import TranscriptionExecutor
 from app.validation_executor import ProjectValidationExecutor
 from app.video import VideoExecutor
 from app.video_setup_job import VideoSetupExecutor
+from app.voice_level import VoiceLevelExecutor
 from app.whole_avatars import WholeAvatarExecutor
 from app.worktree_executor import WorktreeExecutor
 from app.worktree_remove import WorktreeRemoveExecutor
@@ -375,6 +376,7 @@ EXECUTORS = {
     "llama_wait": LlamaWaitExecutor(),
     "llama_resume_consumer": LlamaResumeConsumerExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
+    "voice_level": VoiceLevelExecutor(),
     "chatterbox": AudioExecutor(),
     "fish_speech": FishSpeechExecutor(),
     EffectsExecutor.name: EffectsExecutor(),

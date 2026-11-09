@@ -16,6 +16,7 @@ class SpeechDelivery(BaseModel):
 class SpeechRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     text: str = Field(min_length=1, max_length=1000)
+    level_volume: bool = Field(default=True, strict=True)
     language: Literal["pl", "en"] | None = Field(
         default=None, description="Explicit Chatterbox language; Fish follows the supplied text."
     )
@@ -55,6 +56,8 @@ class SpeechRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_legacy_identity(self, handler):
         values = handler(self)
+        if self.level_volume:
+            values.pop("level_volume", None)
         if self.voice_source == "reference":
             values.pop("voice_source", None)
         if self.delivery is None:

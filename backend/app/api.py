@@ -90,6 +90,7 @@ from app.timelines import router as timeline_router
 from app.transcription import router as transcription_router
 from app.video import router as video_router
 from app.video_models import router as video_models_router
+from app.voice_level import router as voice_level_router
 
 DB = Annotated[Session, Depends(session_scope, scope="function")]
 
@@ -469,6 +470,7 @@ app.include_router(connector_router)
 app.include_router(email_router)
 app.include_router(market_feed_router)
 app.include_router(audio_router)
+app.include_router(voice_level_router)
 app.include_router(audio_models_router)
 app.include_router(music_router)
 app.include_router(music_models_router)

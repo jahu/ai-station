@@ -116,9 +116,24 @@ def test_audio_run_artifact_lineage_and_playback(audio_bridge):
         assert result["parent_artifact_ids"] == [source["id"]]
         assert result["metadata"]["sample_rate"] == 24000
         assert result["metadata"]["duration_seconds"] == 0.2
+        assert result["metadata"]["audio_leveling"]["profile"] == "speech-volume-v1"
         file = client.get(f"/api/artifacts/{result['id']}/file")
         assert file.status_code == 200 and file.headers["content-disposition"].startswith("inline")
         assert file.content.startswith(b"RIFF")
+
+
+def test_generated_speech_can_keep_original_dynamics(audio_bridge):
+    with TestClient(app) as client:
+        source = reference(client)
+        response = client.post(
+            "/api/audio/runs",
+            json={"text": "Witaj", "reference_artifact_id": source["id"], "level_volume": False},
+        )
+        assert response.status_code == 202
+        with session_factory()() as session:
+            tick(session, "audio-test")
+        result = client.get("/api/artifacts", params={"run_id": response.json()["id"]}).json()[0]
+        assert "audio_leveling" not in result["metadata"]
 
 
 @pytest.mark.parametrize("data", [b"bad", wav_bytes()[:-10]])

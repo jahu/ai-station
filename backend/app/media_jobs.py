@@ -35,6 +35,7 @@ from app.video import (
 )
 from app.video_schema import LongVideoSettings
 from app.video_schema import VideoScene as VideoScene
+from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 router = APIRouter(prefix="/api/media/jobs", tags=["media jobs"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
@@ -1010,7 +1011,12 @@ def publish_avatar(
             task.metadata_json = {**task.metadata_json, "avatar_prompt_policy": policy}
         speech = create_audio_run(
             session,
-            SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
+            SpeechRequest(
+                text=body.speech_text,
+                reference_artifact_id=body.audio_artifact_id,
+                gpu=body.gpu,
+                level_volume=body.level_volume,
+            ),
             task=task,
             parent_run_id=parent_run_id,
         )
@@ -1100,6 +1106,7 @@ def publish_avatar(
             seed=segment.seed,
             gpu=body.gpu,
             frames=segment.generated_frames,
+            level_volume=False,
             memory_profile=body.memory_profile,
             translation=body.translation,
         )
@@ -1142,6 +1149,8 @@ def publish_avatar(
             "width": body.size,
             "height": body.size,
             "backend": "echomimic-v3",
+            "level_volume": body.level_volume,
+            "audio_level_profile": VOICE_LEVEL_PROFILE if body.level_volume else None,
             "composition_mode": "continuous",
             **({"memory_profile": body.memory_profile} if body.memory_profile != "default" else {}),
             "canonical_audio_id": audio.id,

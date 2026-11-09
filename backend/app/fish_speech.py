@@ -18,6 +18,7 @@ from app.paths import safe_join
 from app.python_execution import read_owned_file
 from app.resources import ResourceUnknown, reserve_gpu_bundle
 from app.runs import create_run, create_task
+from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 PROFILE = "fish_s2_bf16_dual_v1"
 RAM_MIB = 24576
@@ -111,6 +112,8 @@ def execution_reference(session, source, transcript):
 
 def _parameters(body, ready):
     return {
+        "level_volume": body.level_volume,
+        "audio_level_profile": VOICE_LEVEL_PROFILE if body.level_volume else None,
         "text": body.text,
         "language": "auto",
         "backend": "fish_s2_pro",

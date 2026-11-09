@@ -75,6 +75,13 @@ function Send-StationGuestUpdate {
   $result=$text|ConvertFrom-Json -ErrorAction Stop
   if ((@($result.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'backup_available|data_preserved|status' -or $result.status -cne 'updated' -or $result.data_preserved -isnot [bool] -or -not $result.data_preserved -or $result.backup_available -isnot [bool]) { throw 'The guest did not confirm the exact preserved-data update. Inspect before starting.' }
   return $result
+ } catch {
+  $cause=$_.Exception;$pipeFailure=$false
+  while($null -ne $cause){if($cause -is [IO.IOException]){$pipeFailure=$true};$cause=$cause.InnerException}
+  if(-not $waiting -and $pipeFailure -and -not $deadline.IsCancellationRequested) {
+   throw [InvalidOperationException]::new('The local update stopped before receiving the complete package. Your existing installation and saved work were preserved. Check setup before retrying.',$_.Exception)
+  }
+  throw
  } finally {
   if (-not $waiting) {
    try {
@@ -85,7 +92,16 @@ function Send-StationGuestUpdate {
     }
     if (-not $Process.WaitForExit(10000)) { throw 'The update client is still stopping. Preserve its recorded operation and inspect.' }
    } finally {
-    try { $Process.StandardInput.Close() } finally { $Process.Dispose() }
+    try {
+     try { $Process.StandardInput.Close() } catch {
+      # A rejected receiver can also fault StreamWriter.Close after the exact
+      # child was reaped. Do not replace the useful transfer failure with that
+      # secondary broken-pipe error; unexpected cleanup failures still surface.
+      $cause=$_.Exception;$closedPipe=$false
+      while($null -ne $cause){if($cause -is [IO.IOException] -or $cause -is [ObjectDisposedException]){$closedPipe=$true};$cause=$cause.InnerException}
+      if(-not $closedPipe -or -not $Process.HasExited){throw}
+     }
+    } finally { $Process.Dispose() }
    }
   }
   $deadline.Dispose()
