@@ -178,3 +178,24 @@ Remaining delivery gates:
 4. Review the complete diff, run final applicable backend/Runner/frontend/package/
    Compose/image checks, update qualification and versioned release documentation,
    and deliver PRs to develop. Only the owner promotes the release to master.
+
+## Native recovery continuation (candidate)
+
+The follow-up separates trusted native Resume from normal worker dispatch.
+Activation journals a private top-level marker before Stop. It freezes the exact
+local Docker connection and verifies the supervisor's recorded daemon before
+image operations; changing contexts must never select another installation.
+Normal startup can adopt an already-applied coordinator result, but unfinished
+application needs local Continue approval (or explicit `--resume-update`). An
+active original helper is never launched again. Resume inspects its existing
+command identity and publishes only a prepared transaction; an already-applied
+publication is not repeated. Confirmed abort can reopen the verified previous
+bundle. The marker is removed only after matching publication/readiness or a
+verified abort, never merely because a PID disappeared.
+
+After local recovery, a trusted worker reconciles the same interrupted Run from
+native proof. Its inspection transitions and dispatch-gate removal are one
+transaction, with original claim provenance retained. They call no executor or
+installer and expose no queued interval to other workers. Real packaged Linux
+and Windows qualification, Windows automatic handoff and the illustrated guide
+remain delivery gates; this continuation does not enable native apply yet.

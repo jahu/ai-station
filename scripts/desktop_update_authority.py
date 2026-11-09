@@ -12,12 +12,17 @@ from ai_station_runner.station_release_metadata import update_request
 GATE = "station_update_dispatch_gate"
 
 
-def authority(root, run_id, *, expected=None, idle=False):
+def authority(root, run_id, *, expected=None, idle=False, native_resume=False):
+    # native_resume is used only by the local, explicitly approved recovery UI.
+    # It is absent from the Runner/socket request schema. An OS owner can finish
+    # the same approved offline installation after its worker has disappeared.
     if not isinstance(run_id, str) or str(UUID(run_id)) != run_id:
         raise ValueError("Use a canonical desktop update Run identity")
     data, namespace = versions.namespace(root / "desktop.env")
     receipt = versions.load(root)
-    if receipt["namespace_sha256"] != namespace or receipt["phase"] != "ready":
+    if receipt["namespace_sha256"] != namespace or receipt["phase"] not in (
+        {"ready", "starting"} if native_resume else {"ready"}
+    ):
         raise ValueError("The running desktop no longer matches its private installation")
     database = data / "db/ai-station.sqlite"
     with sqlite3.connect(f"file:{quote(str(database), safe='/')}?mode=ro", uri=True, timeout=2) as connection:
@@ -34,9 +39,8 @@ def authority(root, run_id, *, expected=None, idle=False):
             raise ValueError("The administrator update Run is unavailable")
         parameters = update_request(json.loads(row["parameters"]))
         if (
-            not row["account_enabled"]
-            or not row["account_admin"]
-            or row["account_pending"]
+            not native_resume
+            and (not row["account_enabled"] or not row["account_admin"] or row["account_pending"])
             or row["task_owner"] != row["owner_id"]
             or row["executor_type"] != "station_update"
             or row["run_type"] != "maintenance"
@@ -55,8 +59,14 @@ def authority(root, run_id, *, expected=None, idle=False):
                     "task_conversation",
                 )
             )
-            or row["status"] not in {"running", "cancel_requested"}
-            or parameters["current_version"] != receipt["package"]["version"]
+            or row["status"]
+            not in (
+                {"running", "cancel_requested", "interrupted"}
+                if native_resume
+                else {"running", "cancel_requested"}
+            )
+            or not native_resume
+            and parameters["current_version"] != receipt["package"]["version"]
             or expected is not None
             and parameters != expected
         ):
@@ -64,10 +74,10 @@ def authority(root, run_id, *, expected=None, idle=False):
         if row["lease_expires_at"] is None:
             raise ValueError("The native update has no live worker claim")
         lease = datetime.fromisoformat(row["lease_expires_at"]).replace(tzinfo=UTC)
-        if lease <= datetime.now(UTC):
+        if lease <= datetime.now(UTC) and not native_resume:
             raise ValueError("The native update worker claim expired")
         if idle:
-            if row["status"] != "running":
+            if row["status"] != "running" and not native_resume:
                 raise ValueError("The desktop update was canceled before activation")
             saved = connection.execute("SELECT value FROM settings WHERE key=?", (GATE,)).fetchone()
             if saved is None:

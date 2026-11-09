@@ -33,6 +33,8 @@ def test_native_operations_require_finite_input_and_station_management(monkeypat
     assert client.post("/v1/station/updates", json={**body, "permissions": []}).status_code == 403
     assert client.post("/v1/station/updates", json={**body, "command": "install"}).status_code == 422
     assert client.post("/v1/station/updates", json={**body, "action": "shell"}).status_code == 422
+    assert client.post("/v1/station/updates", json={**body, "action": "resume"}).status_code == 422
+    assert client.post("/v1/station/updates", json={**body, "native_resume": True}).status_code == 422
     assert (
         client.post(
             "/v1/station/updates", json={**body, "request": {"url": "https://other.example"}}

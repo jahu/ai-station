@@ -35,6 +35,7 @@ SOURCE = (
     "scripts/desktop_linux_update.py",
     "scripts/desktop_auto_update.py",
     "scripts/desktop_update_authority.py",
+    "scripts/desktop_update_recovery.py",
     "scripts/desktop_upgrade_image.py",
     "scripts/desktop_bridge.py",
     "scripts/macos_transport_probe.py",

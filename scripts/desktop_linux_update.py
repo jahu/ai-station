@@ -53,14 +53,18 @@ def active_payload(root, current):
         raise ValueError("The active desktop data changed; inspect it before starting")
     if receipt["package"] == versions.package_identity(current):
         return None
-    source = root / "releases" / receipt["package"]["bundle_id"]
+    return retained(root, receipt["package"])[0]
+
+
+def retained(root, package):
+    source = root / "releases" / package["bundle_id"]
     versions.directory(source)
     value = desktop.manifest(source)
     compatible(value)
-    if versions.package_identity(value) != receipt["package"]:
+    if versions.package_identity(value) != package:
         raise ValueError("The active Linux desktop package no longer matches its receipt")
     desktop.verify(source, value)
-    return source
+    return source, value
 
 
 def ready(root, package, config, owner):
@@ -189,7 +193,27 @@ def retain_package(root, package, snapshot, *, check=lambda: None):
         return retained, value
 
 
-def apply(root, installed, target, operation_id, *, consent):
+def attested_engine(root, source):
+    """Match the supervisor's owned daemon before any update image operation."""
+    from io import StringIO
+
+    from desktop_project import DesktopProject
+    from dotenv import dotenv_values
+
+    config = root / "desktop.env"
+    values = dotenv_values(stream=StringIO(versions.read_private(config, 65536).decode()), interpolate=False)
+    environment = {
+        **desktop.launch_environment(),
+        **{key: value for key, value in values.items() if isinstance(value, str)},
+    }
+    engine = local_engine(environment)
+    owner = DesktopProject(config, environment, engine, None, source)
+    if owner.record is None or owner.daemon() != owner.record["daemon"]:
+        raise ValueError("Select the original owned Docker connection before updating AI Station")
+    return engine
+
+
+def apply(root, installed, target, operation_id, *, consent, engine=None):
     """Called by an independent native owner after its Run's idle fence is ready."""
     from desktop_update_owner import handoff
     from desktop_upgrade_image import UpgradeImage, data_info
@@ -199,7 +223,10 @@ def apply(root, installed, target, operation_id, *, consent):
         raise ValueError("The retained update manifest changed before activation")
     desktop.verify(installed, target)
     config = root / "desktop.env"
-    engine = local_engine(desktop.launch_environment())
+    observed = attested_engine(root, desktop.ROOT)
+    if engine is not None and engine.identity != observed.identity:
+        raise ValueError("The owned Docker connection changed before native update activation")
+    engine = observed
     log_path = root / "desktop.log"
     descriptor = os.open(
         log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600

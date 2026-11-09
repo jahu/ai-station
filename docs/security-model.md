@@ -1918,3 +1918,12 @@ current worker claim and idle dispatch gate before Stop. Private Unix peer check
 and finite bridge messages add no shell, Docker socket mount, arbitrary process
 signal or agent installation permission. The real apply adapter remains unavailable
 until its preserving package/restart/recovery qualification passes.
+
+Interrupted activation has a separate local native recovery action. An explicit
+OS-owner approval may finish the same already-approved update after its worker
+or application account is unavailable. It still requires the private activation
+marker, exact request/target/namespace, original Docker connection, idle dispatch
+gate and original coordinator evidence. This is trusted installer authority,
+not an application account permission: neither the HTTP nor Runner/socket schema
+offers Resume or a role/lease-bypass flag. Confirmed publication or abort must
+match the native version receipt before startup fencing is cleared.

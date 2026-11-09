@@ -91,13 +91,16 @@ class DesktopUpdates:
         saved = request(self.root, run_id)
         result = state(self.root, run_id)
         phase = result["phase"]
-        if phase == "applied":
+        if phase in {"applied", "applying", "inspection_required"}:
+            from desktop_update_recovery import completed, operation
+
             current = versions.load(self.root)
             if (
                 current["phase"] == "ready"
                 and current["package"] == result.get("target")
                 and current["package"] == versions.package_identity(self.value)
                 and current["namespace_sha256"] == saved["namespace_sha256"]
+                and completed(self.root, operation(self.root, run_id))
             ):
                 phase = "succeeded"
         return {
@@ -250,10 +253,15 @@ def execute(root, run_id):
                 if previous != saved["previous"] or candidate != versions.package_identity(target):
                     raise ValueError("The update source or target changed before activation")
                 authority(root, run_id, expected=saved["request"], idle=True)
+                from desktop_update_recovery import begin
+
+                begin(root, run_id)
                 publish(root, run_id, "applying")
                 return True  # The specific release was approved by the original app action.
 
-            if not linux.apply(root, installed, target, run_id, consent=consent):
+            engine = linux.attested_engine(root, desktop.ROOT)
+            publish(root, run_id, "apply_requested", engine=list(engine.identity))
+            if not linux.apply(root, installed, target, run_id, consent=consent, engine=engine):
                 raise RuntimeError("The native update was not activated")
             publish(root, run_id, "applied")
             subprocess.Popen(
