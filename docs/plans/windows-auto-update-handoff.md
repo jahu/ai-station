@@ -126,6 +126,14 @@ that lease; recording real healthy startup does not renew it or authorize a new
 update. Capabilities and new preparation/apply requests retain fresh-presence
 checks, and a wrong native version/channel still refuses the readiness receipt.
 
+The first rebuilt pair was refused by the real API identity check before any
+update request: its private version bump changed package declarations but missed
+the two runtime `__version__` literals. Stable packaging now compares both runtime
+literals with backend/Runner/frontend declarations, without importing application
+code. Clean but inconsistent, duplicate or executable declarations are rejected.
+Qualification uses a new consistently numbered pair; the refused pair is not
+successful update evidence.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
