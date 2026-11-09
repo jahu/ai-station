@@ -119,8 +119,11 @@ def test_owned_helper_stages_preserves_exact_consent_and_never_replays_installat
 
     monkeypatch.setattr(
         module.linux,
-        "attested_engine",
-        lambda *args: SimpleNamespace(identity=("/usr/bin/docker", "unix:///run/docker.sock")),
+        "attestation",
+        lambda *args: (
+            SimpleNamespace(identity=("/usr/bin/docker", "unix:///run/docker.sock")),
+            "owned-daemon",
+        ),
     )
     monkeypatch.setattr(module.time, "sleep", sleeping)
     if failure in {"download", "activation"}:

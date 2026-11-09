@@ -259,8 +259,8 @@ def execute(root, run_id):
                 publish(root, run_id, "applying")
                 return True  # The specific release was approved by the original app action.
 
-            engine = linux.attested_engine(root, desktop.ROOT)
-            publish(root, run_id, "apply_requested", engine=list(engine.identity))
+            engine, daemon = linux.attestation(root, desktop.ROOT)
+            publish(root, run_id, "apply_requested", engine=list(engine.identity), daemon_id=daemon)
             if not linux.apply(root, installed, target, run_id, consent=consent, engine=engine):
                 raise RuntimeError("The native update was not activated")
             publish(root, run_id, "applied")

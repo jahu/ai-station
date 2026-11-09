@@ -216,3 +216,18 @@ status; the protocol's error-only envelope still rejects invalid requests.
 Regression tests exercise a real local Unix listener and the private control
 channel, including failure/inspection statuses. Neither attempt altered live
 user data; their isolated receipts/logs remain available for diagnosis.
+
+A real frozen-package 0.5.0 → 0.5.1 update completed through one administrator
+HTTP request, native Stop, offline image/database publication, automatic restart
+and completion of its original Run. Accounts, conversation records and artifact
+bytes matched their before/after hashes; the dispatch gate and activation marker
+were removed. A subsequent stock old launcher followed the verified new bundle,
+accepted the preserved login and showed the saved conversation. This uses an
+explicit frozen publisher/cache fixture, not a fabricated public GitHub release.
+
+Cold interrupted-apply testing additionally showed that ordinary Compose Stop
+removes its current ownership receipt. The native activation marker therefore
+freezes the already-attested daemon ID along with its local connection before
+Stop. Cold Resume compares that original identity without depending on a live
+supervisor receipt; changed/absent identity still requires inspection. Final
+packaged cold-recovery qualification of that correction remains pending.

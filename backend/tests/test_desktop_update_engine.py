@@ -9,15 +9,18 @@ from test_desktop_versions import installation as installation
 
 
 @pytest.mark.parametrize(
-    "daemon,record,allowed",
+    "daemon,record,expected,allowed",
     [
-        ("owned-daemon", {"daemon": "owned-daemon"}, True),
-        ("foreign-daemon", {"daemon": "owned-daemon"}, False),
-        ("owned-daemon", None, False),
+        ("owned-daemon", {"daemon": "owned-daemon"}, None, True),
+        ("foreign-daemon", {"daemon": "owned-daemon"}, None, False),
+        ("owned-daemon", None, None, False),
+        ("owned-daemon", None, "owned-daemon", True),
+        ("foreign-daemon", None, "owned-daemon", False),
+        ("owned-daemon", {"daemon": "foreign-daemon"}, "owned-daemon", False),
     ],
 )
 def test_native_update_admits_only_the_supervisors_recorded_daemon(
-    installation, monkeypatch, daemon, record, allowed
+    installation, monkeypatch, daemon, record, expected, allowed
 ):
     root, config, _ = installation
     engine = SimpleNamespace(identity=("/usr/bin/docker", "unix:///run/docker.sock"))
@@ -25,10 +28,10 @@ def test_native_update_admits_only_the_supervisors_recorded_daemon(
     factory = Mock(return_value=SimpleNamespace(record=record, daemon=lambda: daemon))
     monkeypatch.setattr(desktop_project, "DesktopProject", factory)
     if allowed:
-        assert module.attested_engine(root, root) is engine
+        assert module.attested_engine(root, root, expected_daemon=expected) is engine
     else:
         with pytest.raises(ValueError, match="original owned Docker connection"):
-            module.attested_engine(root, root)
+            module.attested_engine(root, root, expected_daemon=expected)
     assert factory.call_args.args[0] == config
 
 

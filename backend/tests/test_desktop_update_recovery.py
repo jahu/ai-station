@@ -37,6 +37,7 @@ def suspended(accounts, tmp_path, monkeypatch):
         "apply_requested",
         target=versions.package_identity(target),
         engine=list(engine.identity),
+        daemon_id="owned-daemon",
     )
     recovery.begin(root, identity)
     operation.publish(root, identity, "inspection_required")
@@ -45,7 +46,7 @@ def suspended(accounts, tmp_path, monkeypatch):
         run.lease_expires_at = utcnow() - timedelta(seconds=1)
         run.status = "interrupted"
         session.commit()
-    monkeypatch.setattr(operation.linux, "attested_engine", lambda *args: engine)
+    monkeypatch.setattr(operation.linux, "attested_engine", lambda *args, **kwargs: engine)
     return root, identity, installed, target, engine
 
 
@@ -117,10 +118,18 @@ def test_active_original_helper_is_never_replayed(accounts, tmp_path, monkeypatc
             recovery.resume(root, console=True, approved=True)
 
 
-def test_changed_marker_is_refused_before_resume(accounts, tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "changed",
+    [
+        {"request_sha256": "f" * 64},
+        {"daemon_id": "foreign-daemon"},
+        {"engine": ["/other/docker", "unix:///run/other.sock"]},
+    ],
+)
+def test_changed_marker_is_refused_before_resume(accounts, tmp_path, monkeypatch, changed):
     root, _, _, _, _ = suspended(accounts, tmp_path, monkeypatch)
     marker = operation.read(root / recovery.MARKER)
-    operation.write(root / recovery.MARKER, marker | {"request_sha256": "f" * 64})
+    operation.write(root / recovery.MARKER, marker | changed)
     with pytest.raises(ValueError, match="no longer matches"):
         recovery.pending(root)
 
@@ -132,7 +141,7 @@ def test_changed_local_engine_is_refused_before_any_coordinator_action(accounts,
     monkeypatch.setattr(
         operation.linux,
         "attested_engine",
-        lambda *args: SimpleNamespace(identity=("/other/docker", "unix:///run/other.sock")),
+        lambda *args, **kwargs: SimpleNamespace(identity=("/other/docker", "unix:///run/other.sock")),
     )
 
     def forbidden(*args):

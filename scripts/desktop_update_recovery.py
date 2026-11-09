@@ -4,6 +4,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import time
 from contextlib import contextmanager
 from uuid import UUID
@@ -49,13 +50,29 @@ def desktop_live(root):
         os.close(descriptor)
 
 
-def identity(saved):
+def connection(stage):
+    engine, daemon = stage.get("engine"), stage.get("daemon_id")
+    if (
+        not isinstance(engine, list)
+        or len(engine) != 2
+        or not all(isinstance(v, str) for v in engine)
+        or not isinstance(daemon, str)
+        or not re.fullmatch(r"[A-Za-z0-9:_-]{8,128}", daemon)
+    ):
+        raise ValueError("The pending native update lost its original local Docker identity")
+    return tuple(engine), daemon
+
+
+def identity(saved, stage):
+    engine, daemon = connection(stage)
     return {
         "schema": 1,
         "run_id": saved["run_id"],
         "request_sha256": hashlib.sha256(
             json.dumps(saved, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest(),
+        "engine": list(engine),
+        "daemon_id": daemon,
     }
 
 
@@ -70,7 +87,7 @@ def begin(root, run_id):
         or len(stage["engine"]) != 2
     ):
         raise ValueError("The native update has no frozen local activation request")
-    expected = identity(saved)
+    expected = identity(saved, stage)
     path = root / MARKER
     if path.exists() or path.is_symlink():
         if read(path) != expected:
@@ -92,13 +109,11 @@ def pending(root):
     if not isinstance(run_id, str) or str(UUID(run_id)) != run_id:
         raise ValueError("The pending native update identity changed")
     saved = request(root, run_id)
-    if marker != identity(saved):
-        raise ValueError("The native activation marker no longer matches its approved request")
     stage = state(root, run_id)
+    if marker != identity(saved, stage):
+        raise ValueError("The native activation marker no longer matches its approved request")
     target = versions.package_identity(stage.get("target"))
-    engine = stage.get("engine")
-    if not isinstance(engine, list) or len(engine) != 2 or not all(isinstance(v, str) for v in engine):
-        raise ValueError("The pending native update lost its local Docker identity")
+    engine, daemon = connection(stage)
     descriptor = lock_file(folder(root, run_id), "helper.lock")
     try:
         try:
@@ -115,6 +130,7 @@ def pending(root):
         "state": stage,
         "target": target,
         "engine": tuple(engine),
+        "daemon_id": daemon,
         "active": active,
     }
 
@@ -125,10 +141,15 @@ def operation(root, run_id):
     saved = request(root, run_id)
     stage = state(root, run_id)
     target = versions.package_identity(stage.get("target"))
-    engine = stage.get("engine")
-    if not isinstance(engine, list) or len(engine) != 2 or not all(isinstance(v, str) for v in engine):
-        raise ValueError("The native update lost its original local Docker connection")
-    return {"run_id": run_id, "saved": saved, "state": stage, "target": target, "engine": tuple(engine)}
+    engine, daemon = connection(stage)
+    return {
+        "run_id": run_id,
+        "saved": saved,
+        "state": stage,
+        "target": target,
+        "engine": engine,
+        "daemon_id": daemon,
+    }
 
 
 def outcome(root, item):
@@ -249,7 +270,7 @@ def resume(root, *, console, approved=False):
             raise ValueError("The interrupted update changed during local approval")
         if versions.load(root)["package"] not in (item["saved"]["previous"], item["target"]):
             raise ValueError("A different application version is now active; inspect it before continuing")
-        engine = linux.attested_engine(root, desktop.ROOT)
+        engine = linux.attested_engine(root, desktop.ROOT, expected_daemon=item["daemon_id"])
         if engine.identity != item["engine"]:
             raise RuntimeError("Select the original local Docker connection before continuing this update")
         progress = desktop.Preparation(console, heading="Finishing your local update")

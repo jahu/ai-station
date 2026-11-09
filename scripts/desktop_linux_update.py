@@ -197,7 +197,7 @@ def retain_package(root, package, snapshot, *, check=lambda: None):
         return retained, value
 
 
-def attested_engine(root, source):
+def attestation(root, source, *, expected_daemon=None):
     """Match the supervisor's owned daemon before any update image operation."""
     from io import StringIO
 
@@ -212,9 +212,20 @@ def attested_engine(root, source):
     }
     engine = local_engine(environment)
     owner = DesktopProject(config, environment, engine, None, source)
-    if owner.record is None or owner.daemon() != owner.record["daemon"]:
+    expected = expected_daemon or (owner.record["daemon"] if owner.record is not None else None)
+    actual = owner.daemon()
+    if (
+        expected is None
+        or actual != expected
+        or owner.record is not None
+        and owner.record["daemon"] != expected
+    ):
         raise ValueError("Select the original owned Docker connection before updating AI Station")
-    return engine
+    return engine, actual
+
+
+def attested_engine(root, source, *, expected_daemon=None):
+    return attestation(root, source, expected_daemon=expected_daemon)[0]
 
 
 def apply(root, installed, target, operation_id, *, consent, engine=None):
