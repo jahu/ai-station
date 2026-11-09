@@ -66,4 +66,18 @@ $taskContracts=& (Get-Module UpdateBridge) {
  try{$rejected=$false;try{Wait-StationUpdateTransfer ([Threading.Tasks.Task]::Delay(10000)) $cancel.Token}catch{$rejected=$true};return $rejected}finally{$cancel.Dispose()}
 }
 Check $taskContracts 'Event-driven transfer wait lost completion, fault or cancellation semantics'
+$readiness=& (Get-Module UpdateBridge) {
+ $script:readOnlyCalls=[Collections.Generic.List[string]]::new()
+ function script:New-StationPrivateStore {throw 'Read-only health must not open install.lock'}
+ function script:Assert-StationPrivateAcl {param($Path);if($Path -cne 'owned-root'){throw 'Wrong root'}}
+ function script:Assert-StationUpdateGuestRegistration {param($Owner,$Record);if($Owner.Root -cne 'owned-root' -or $Record.State -cne 'owned-state'){throw 'Wrong registration'};$script:readOnlyCalls.Add('registration')}
+ function script:Get-StationLifecyclePlan {param($State,$Root,$Action);if($State -cne 'owned-state' -or $Root -cne 'owned-root' -or $Action -cne 'open'){throw 'Unexpected lifecycle capability'};$script:readOnlyCalls.Add('open');return @('fixed','open')}
+ function script:Get-StationWslExecutable {return 'fixed-wsl'}
+ function script:Start-StationWslProcess {param($Executable,$Arguments,$Directory);if($Executable -cne 'fixed-wsl' -or ($Arguments -join '|') -cne 'fixed|open' -or $Directory -cne 'owned-root'){throw 'Changed fixed readiness command'};return 'owned-client'}
+ function script:Wait-StationWslProcess {param($Process,$KeepOutput);if($Process -cne 'owned-client' -or -not $KeepOutput){throw 'Wrong readiness client'};return 'actual readiness frame'}
+ $result=Read-StationUpdateGuestReady 'owned-root' ([pscustomobject]@{State='owned-state'})
+ $rejected=$false;try{Read-StationUpdateGuestReady 'owned-root' ([pscustomobject]@{State='foreign-state'})}catch{$rejected=$true}
+ return $result -ceq 'actual readiness frame' -and $rejected -and ($script:readOnlyCalls -join '|') -ceq 'registration|open'
+}
+Check $readiness 'Readiness competed for installation ownership or skipped namespace validation'
 Write-Output ('PASS '+$script:cases+' bounded Windows package stream assertions; no network, WSL or installer')

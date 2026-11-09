@@ -174,6 +174,20 @@ tested, and transfer failures retain bounded source diagnostics only in the
 SID-private native store. Full packaged transfer/install qualification remains
 required; these diagnostic Runs never dispatch an installer.
 
+The corrected receiver transferred all approved bytes with matching SHA256 in
+39 seconds on Windows 10. Actual administrator cancellation also finalized its
+original Run without dispatching an installer. The next packaged attempt applied
+the native/guest target and retained its backup proof, but failed at automatic
+startup: the UI's Details dialog reported a sharing violation on `install.lock`.
+The finisher's read-only `open` polling acquired the same exclusive installation
+lease needed by the target UI's initial status/start. That first status failure
+left the UI stopped. Readiness now uses the existing fixed ordinary-guest `open`
+operation with private-root/registration validation, without an installation
+lease; final binding and acknowledgement still acquire the real lease. Native
+regressions reject a retained lease or the old lock-taking readiness path. The
+failed attempt is inspection evidence, not successful one-click qualification;
+the corrected packaged restart and subsequent launch still need verification.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.

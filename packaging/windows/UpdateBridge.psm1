@@ -104,7 +104,18 @@ function Connect-StationUpdateOwner {
  return $true
 }
 
-Export-ModuleMember -Function Get-StationUpdateDirectory,Read-StationUpdateObject,Write-StationUpdateObject,Get-StationUpdateChannel,Invoke-StationUpdateGuestControl,Connect-StationUpdateOwner
+function Read-StationUpdateGuestReady {
+ param([string]$Root,$Record)
+ # The target UI needs install.lock for its initial status/start. Read-only
+ # health observation must not compete for that exclusive installation lease.
+ $owner=[pscustomobject]@{Root=$Root}
+ Assert-StationPrivateAcl $Root
+ Assert-StationUpdateGuestRegistration $owner $Record
+ $arguments=Get-StationLifecyclePlan $Record.State $Root 'open'
+ return Wait-StationWslProcess (Start-StationWslProcess (Get-StationWslExecutable) $arguments $Root) -KeepOutput $true
+}
+
+Export-ModuleMember -Function Get-StationUpdateDirectory,Read-StationUpdateObject,Write-StationUpdateObject,Get-StationUpdateChannel,Invoke-StationUpdateGuestControl,Connect-StationUpdateOwner,Read-StationUpdateGuestReady
 
 function Assert-StationUpdateRequest {
  param($Pending,[string]$ChannelId)

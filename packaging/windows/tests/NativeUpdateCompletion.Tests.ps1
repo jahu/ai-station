@@ -9,7 +9,7 @@ $module=Get-Module AutomaticUpdate
  $script:target=[pscustomobject]@{Folder=([IO.Path]::GetDirectoryName((Get-Module AutomaticUpdate).Path));Hash=('c'*64);Manifest=[pscustomobject]@{package=[pscustomobject]@{Version='0.5.1'}}}
  # The fake child is never executed; System is empty on a portable Unix host.
  function script:Join-Path {param([AllowEmptyString()][string]$Path,[string]$ChildPath);return [IO.Path]::Combine($Path,$ChildPath)}
- function script:New-StationPrivateStore {return [pscustomobject]@{Root=$script:root;Stream=[IO.MemoryStream]::new()}}
+ function script:New-StationPrivateStore {$script:lastLease=[IO.MemoryStream]::new();return [pscustomobject]@{Root=$script:root;Stream=$script:lastLease}}
  function script:Get-StationUpdateDirectory {param($Lease);return $script:root}
  function script:Assert-StationPrivateAcl {param($Path)}
  function script:Read-StationUpdateObject {param($Lease,$Name);return $script:op}
@@ -19,7 +19,8 @@ $module=Get-Module AutomaticUpdate
  function script:Invoke-StationSetup {param($PackageFolder,[switch]$AllowUpdate,$AutomaticUpdate,$OriginalUpdateRecord);$script:events.Add('preserving-update');return [pscustomobject]@{UpdateProof=[pscustomobject]@{data_preserved=$true;backup_available=$true}}}
  function script:Connect-StationUpdateOwner {param($Lease,$Record,$PackageFolder);if($PackageFolder -cne $script:target.Folder){throw 'Wrong native binding'};$script:bindings++;$script:events.Add('bind');return $true}
  function script:Start-StationUpdateChild {param($Info);if($Info.Arguments -notlike '*-StartAutomatically'){throw 'Unexpected installer or child replay'};$script:events.Add('start-ui');return [IO.MemoryStream]::new()}
- function script:Invoke-StationDesktop {param($Action,$PackageFolder);if($Action -cne 'open'){throw 'Unexpected lifecycle action'};$script:events.Add('ready');return 'fixed private readiness frame'}
+ function script:Invoke-StationDesktop {throw 'Readiness must not acquire the target UI installation lock'}
+ function script:Read-StationUpdateGuestReady {param($Root,$Record);if($Root -cne $script:root -or $script:lastLease.CanWrite){throw 'Health polling retained an installation lease'};$script:events.Add('ready');return 'fixed private readiness frame'}
  function script:Read-StationReadyFrame {param($Text);return [pscustomobject]@{InstanceId=('d'*32)}}
  function script:Confirm-StationBrowserTarget {param($Ready);$script:events.Add('health')}
  function script:Send-StationNativeUpdateResult {

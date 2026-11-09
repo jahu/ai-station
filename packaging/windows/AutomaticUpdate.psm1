@@ -240,6 +240,7 @@ function Complete-StationAutomaticGuestUpdate {
   $operation.proof=[pscustomobject]@{host_manifest_sha256=$target.Hash;version=$target.Manifest.package.Version;installer_sha256=$operation.target.installer_sha256;data_preserved=$true;backup_available=$outcome.UpdateProof.backup_available}
   Set-StationNativeUpdatePhase $lease $operation 'restarting'
   [void](Connect-StationUpdateOwner $lease $record $target.Folder)
+  $nativeRoot=$lease.Root
   $lease.Stream.Dispose();$lease=$null
   $powershell=Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) 'WindowsPowerShell\v1.0\powershell.exe'
   $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$powershell;$info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.WorkingDirectory=$target.Folder
@@ -249,7 +250,7 @@ function Complete-StationAutomaticGuestUpdate {
   while([DateTime]::UtcNow -lt $deadline){
    [Threading.Thread]::Sleep(1000)
    try{
-    $line=Invoke-StationDesktop 'open' -PackageFolder $target.Folder
+    $line=Read-StationUpdateGuestReady $nativeRoot $record
     $ready=Read-StationReadyFrame ([string]$line).Trim()
     if($null -eq $ready){continue}
     Confirm-StationBrowserTarget $ready
