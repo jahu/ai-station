@@ -10,7 +10,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 **Your models. Your rules. No cloud quotas or per-token fees for local generation.**
 
-[Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
+[Get started](#-get-started) · [Installation guide](https://ai-station.dev/install/) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
 `v0.4.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 

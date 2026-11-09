@@ -134,3 +134,12 @@ and recurring results across content creation, research and routine file jobs.
 The market result is one supporting example. The prompt cards are illustrative,
 not fabricated transcripts or additional smoke tests. Social video generation is
 distinguished from direct social publishing, whose integrations remain planned.
+
+## Installation guide
+
+The separate `install/` page renders from `src/install.html`, with its own
+`src/install.css`. The landing page links to it; no setup wizard or additional
+installation detail is added to the showcase. Both pages work without JavaScript.
+Canonical URLs and the sitemap include the guide and preserve a configured
+repository subpath. Public screenshots must be real neutral QA captures, recorded
+in asset provenance and reviewed by the owner before publication.

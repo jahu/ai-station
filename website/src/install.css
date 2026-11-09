@@ -1,0 +1,253 @@
+.installation-guide .header-inner {
+  min-height: 80px;
+}
+.guide-home {
+  color: var(--muted);
+  font-size: 14px;
+}
+.guide-home:hover,
+.guide-steps a,
+.guide-note a,
+.guide-help a {
+  color: var(--green);
+}
+.guide-main {
+  padding-top: 85px;
+}
+.guide-intro {
+  max-width: 950px;
+  padding-bottom: 90px;
+}
+.guide-intro h1 {
+  font-size: clamp(44px, 7vw, 84px);
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+  margin: 20px 0 30px;
+}
+.guide-lead {
+  color: #c3ccbf;
+  max-width: 690px;
+  font-size: 21px;
+  line-height: 1.65;
+}
+.guide-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 38px 0 24px;
+}
+.guide-choices a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  transition: border-color 0.15s;
+}
+.guide-choices a:hover {
+  border-color: var(--green);
+}
+.guide-choices span {
+  color: var(--green);
+  font-size: 12px;
+}
+.guide-choices b {
+  margin-left: auto;
+  font-weight: 400;
+}
+.guide-note {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 770px;
+}
+.guide-section {
+  display: grid;
+  grid-template-columns: 1fr 1.7fr;
+  gap: 65px;
+  border-top: 1px solid var(--line);
+  padding: 65px 0 80px;
+  align-items: start;
+}
+.guide-section-title {
+  position: sticky;
+  top: 110px;
+}
+.guide-section h2,
+.guide-help h2 {
+  font-size: clamp(30px, 3.1vw, 44px);
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+  margin: 16px 0 28px;
+}
+.guide-section .button {
+  white-space: normal;
+}
+.guide-prerequisite {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 26px;
+  background: var(--panel);
+}
+.guide-steps h3 {
+  font-size: 18px;
+  margin: 0 0 10px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.guide-steps p {
+  color: #bec7bb;
+  margin: 0 0 14px;
+  line-height: 1.8;
+}
+.guide-steps p:last-child {
+  margin-bottom: 0;
+}
+.guide-steps ol {
+  padding-left: 24px;
+  margin: 0;
+}
+.guide-steps li {
+  padding-left: 8px;
+  margin-bottom: 28px;
+}
+.guide-steps li::marker {
+  color: var(--green);
+  font-size: 14px;
+}
+.guide-steps code {
+  color: var(--text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.guide-steps .guide-warning {
+  font-size: 14px;
+  color: #d5c9a5;
+  border-left: 2px solid #8c7844;
+  padding-left: 16px;
+  margin-top: 16px;
+}
+.guide-capture {
+  margin: 22px 0 34px;
+}
+.guide-capture img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.guide-capture figcaption {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+.guide-prose h3:not(:first-child) {
+  margin-top: 30px;
+}
+.guide-help {
+  border-top: 1px solid var(--line);
+  padding: 64px 0 70px;
+}
+.guide-faq {
+  margin: 30px 0;
+}
+.guide-faq details {
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+}
+.guide-faq summary {
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 500;
+}
+.guide-faq p {
+  color: var(--muted);
+  max-width: 860px;
+  line-height: 1.8;
+  padding-left: 20px;
+}
+.guide-feedback {
+  color: var(--muted);
+  max-width: 860px;
+}
+.guide-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  padding-top: 30px;
+  padding-bottom: 35px;
+  font-size: 14px;
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .guide-main {
+    padding-top: 45px;
+  }
+  .guide-home {
+    font-size: 12px;
+  }
+  .guide-intro {
+    padding-bottom: 48px;
+  }
+  .guide-lead {
+    font-size: 18px;
+  }
+  .guide-choices {
+    grid-template-columns: 1fr;
+    margin-top: 28px;
+  }
+  .guide-section {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 42px 0;
+  }
+  .guide-section-title {
+    position: static;
+  }
+  .guide-section-title h2 br {
+    display: none;
+  }
+  .guide-prerequisite {
+    padding: 18px;
+  }
+  .guide-capture {
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  .guide-help {
+    padding-top: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .installation-guide {
+    scroll-behavior: auto;
+  }
+  .guide-choices a {
+    transition: none;
+  }
+}
+.guide-terminal {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.guide-terminal summary {
+  cursor: pointer;
+  color: var(--green);
+  font-size: 14px;
+}
+.guide-terminal p {
+  margin-top: 14px;
+  font-size: 14px;
+}
+.guide-terminal pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}

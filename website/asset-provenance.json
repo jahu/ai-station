@@ -1012,5 +1012,20 @@
       },
       "qualification": "One verified successful execution after an automatic Python repair. Later visual-refinement experiments failed, including a source-key error and a generated syntax error; they are retained privately and not represented as successes. No claim of generic reliability, zero-shot factory generation or daily unattended execution. The carousel Agents image is a separate unexecuted review draft."
     }
+  },
+  "installation_guide": {
+    "first-account.png": {
+      "sha256": "f2be98a61c10fcb618061ee243e435e43a9c11dff65773d39661d65ce852b37e",
+      "size_bytes": 200263,
+      "capture": "Actual first-account page in an isolated packaged Linux QA installation; no DOM rewrites.",
+      "fixture_version": "0.5.0",
+      "viewport": [
+        1360,
+        980
+      ],
+      "device_scale_factor": 1,
+      "privacy": "No personal conversations, user files, passwords or setup tokens visible.",
+      "publication": "Owner explicitly approved publication on 2026-11-09."
+    }
   }
 }

@@ -51,7 +51,8 @@ def build(output: Path) -> None:
         "RELEASE_URL": f"{repository}/releases/tag/v{config['version']}",
         "MEDIA_URL": f"{docs}/media/README.md",
         "MODELS_URL": f"{docs}/models.md",
-        "SETUP_URL": f"{docs}/getting-started.md",
+        "SETUP_URL": "install/",
+        "TECHNICAL_SETUP_URL": f"{docs}/getting-started.md",
         "BENCHMARKS_URL": f"{docs}/benchmarks.md",
         "ARCHITECTURE_URL": f"{docs}/architecture.md",
         "ROADMAP_URL": f"{docs}/plans/consumer-first-setup.md",
@@ -61,31 +62,38 @@ def build(output: Path) -> None:
         "ISSUES_URL": f"{repository}/issues/new",
         "SUGGEST_URL": f"{repository}/issues/new?title=Suggestion%3A%20",
     }
-    document = (ROOT / "src/index.html").read_text()
-    for key, value in values.items():
-        document = document.replace("{{" + key + "}}", html.escape(str(value), quote=True))
-    canonical_meta = ""
-    if canonical:
-        address = html.escape(canonical + "/", quote=True)
-        image = html.escape(canonical + "/assets/conversation.png", quote=True)
-        canonical_meta = f'<link rel="canonical" href="{address}">\n  <meta property="og:url" content="{address}">\n  <meta property="og:image" content="{image}">'
-    document = document.replace("{{CANONICAL_META}}", canonical_meta)
-    if re.search(r"\{\{[A-Z_]+\}\}", document):
-        raise ValueError("Unresolved template variable.")
     output.mkdir(parents=True, exist_ok=True)
     shutil.copytree(ROOT / "assets", output / "assets", dirs_exist_ok=True)
-    for name in ["style.css", "app.js"]:
+    for name in ["style.css", "install.css", "app.js"]:
         shutil.copyfile(ROOT / "src" / name, output / "assets" / name)
     for name in ["LICENSE", "NOTICE", "asset-provenance.json"]:
         shutil.copyfile(ROOT / name, output / name)
-    (output / "index.html").write_text(document)
+    routes = {"": "index.html", "install/": "install.html"}
+    for route, source in routes.items():
+        document = (ROOT / "src" / source).read_text()
+        for key, value in values.items():
+            document = document.replace("{{" + key + "}}", html.escape(str(value), quote=True))
+        canonical_meta = ""
+        if canonical:
+            address = html.escape(canonical + "/" + route, quote=True)
+            image = html.escape(canonical + "/assets/conversation.png", quote=True)
+            canonical_meta = f'<link rel="canonical" href="{address}">\n  <meta property="og:url" content="{address}">\n  <meta property="og:image" content="{image}">'
+        document = document.replace("{{CANONICAL_META}}", canonical_meta)
+        if re.search(r"\{\{[A-Z_]+\}\}", document):
+            raise ValueError("Unresolved template variable.")
+        destination = output / route / "index.html"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(document)
     (output / "robots.txt").write_text(
         "User-agent: *\nAllow: /\n" + (f"Sitemap: {canonical}/sitemap.xml\n" if canonical else "")
     )
     sitemap = output / "sitemap.xml"
     if canonical:
+        urls = "".join(f"<url><loc>{html.escape(canonical + '/' + route)}</loc></url>" for route in routes)
         sitemap.write_text(
-            f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{html.escape(canonical + "/")}</loc></url></urlset>\n'
+            '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + urls
+            + "</urlset>\n"
         )
     elif sitemap.exists():
         sitemap.unlink()
