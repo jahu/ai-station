@@ -10,8 +10,14 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.desktop_update_channel import command, request
 
 router = APIRouter(prefix="/v1/station/updates")
-# Admission stays closed until packaged preserving apply/restart/recovery proof.
-APPLY_QUALIFIED = False
+# Native Linux passed frozen-package preserving apply, restart, cold recovery
+# and subsequent stock-launch qualification. Windows/macOS remain unavailable.
+QUALIFIED_PLATFORMS = frozenset({"linux-amd64"})
+
+
+def qualified(value):
+    platform = value.get("platform")
+    return value.get("installed") is True and isinstance(platform, str) and platform in QUALIFIED_PLATFORMS
 
 
 class UpdateOperation(BaseModel):
@@ -39,7 +45,7 @@ def capabilities():
     if not get_settings().desktop_control_socket:
         return {"installed": False, "apply_available": False}
     value = native({"action": "updates.capabilities"})
-    return {**value, "apply_available": APPLY_QUALIFIED}
+    return {**value, "apply_available": qualified(value)}
 
 
 @router.post("")
@@ -53,6 +59,6 @@ def operate(body: UpdateOperation):
         value = command(value)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    if not APPLY_QUALIFIED:
-        raise HTTPException(503, "Native automatic update qualification is not complete")
+    if not qualified(native({"action": "updates.capabilities"})):
+        raise HTTPException(503, "Automatic updates are not qualified for this native installation")
     return native(value)
