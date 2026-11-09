@@ -188,6 +188,7 @@ def test_isolated_native_helper_bootstraps_its_verified_siblings_without_pythonp
         "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));"
         "sys.argv=sys.argv[1:];runpy.run_path(sys.argv[0],run_name='__main__')"
     )
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     result = subprocess.run(
         [
             sys.executable,
@@ -206,4 +207,5 @@ def test_isolated_native_helper_bootstraps_its_verified_siblings_without_pythonp
     )
     assert result.returncode == 0, result.stderr
     assert "--run-id" in result.stdout and "ModuleNotFoundError" not in result.stderr
-    assert not list(tmp_path.iterdir())  # --help starts no execution or installation.
+    after = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    assert after == before  # Keep the existing autouse test database untouched.
