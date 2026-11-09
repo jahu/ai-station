@@ -42,6 +42,8 @@ $module=Get-Module AutomaticUpdate
     if($script:foreignFinisher){$script:op.source_hash=('f'*64)}
     $exitCode=1
    }
+  }elseif($Info.Arguments.EndsWith('Apply-Update.ps1"')){
+   $script:events.Add('resume-child')
   }else{throw 'Unexpected native child'}
   $process=[pscustomobject]@{ExitCode=$exitCode};$process|Add-Member -MemberType ScriptMethod -Name WaitForExit -Value {param($Timeout);return $true};$process|Add-Member -MemberType ScriptMethod -Name Dispose -Value {};return $process
  }
@@ -88,6 +90,9 @@ $module=Get-Module AutomaticUpdate
     Check ($failed -and $script:events.Count -eq 0) ('Continue dispatched another child while '+$name+' remained owned')
    }finally{$live.Dispose()}
   }
+  Reset 'restarting'
+  $receipt=@(Resume-StationAutomaticUpdate)
+  Check ($receipt.Count -eq 1 -and $receipt[0].status -ceq 'continuing' -and $receipt[0].run_id -ceq $run -and $script:events.Contains('resume-child')) 'Continue did not return the one original-operation receipt required by the UI runspace'
   Reset 'complete'
   Invoke-StationAutomaticUpdate
   Check ($script:events.Count -eq 0) 'Completed operation was run again'

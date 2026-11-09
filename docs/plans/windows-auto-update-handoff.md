@@ -195,6 +195,19 @@ of its age. Capabilities and prepare/apply still require fresh native presence;
 neither selecting the adapter nor recording health renews permission. Regression
 coverage distinguishes an expired matching binding from a wrong-version binding.
 
+The corrected 0.5.11→0.5.12 private package exercise completed automatically:
+native installer, preserving guest transaction, real target readiness and the
+original Run's `succeeded` status with its dispatch gate cleared. An existing
+account authenticated afterward; the same nonempty conversation, two messages
+and four artifact hashes matched the pre-update snapshot. A deliberately lost
+host acknowledgement recovered through the actual native Continue button with
+the same running instance, native payload, guest installation record and proof.
+The UI then exposed a separate result-envelope defect: Resume dispatched safely
+but returned zero objects, which its background lifecycle reader correctly
+rejected. Resume now returns one original-Run dispatch receipt; failures still
+throw and live-owner checks are unchanged. The new receipt contract and final
+stock launch need their last native UI checks before admission opens.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.

@@ -287,6 +287,7 @@ function Resume-StationAutomaticUpdate {
   $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$powershell;$info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.WorkingDirectory=$source.Folder
   $info.Arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $source.Folder 'Apply-Update.ps1')+'"'
   $process=(Start-StationUpdateChild $info);$process.Dispose()
+  return [pscustomobject]@{status='continuing';run_id=$operation.run_id}
  }finally{if($null -ne $probe){$probe.Dispose()};$lease.Stream.Dispose()}
 }
 Export-ModuleMember -Function Resume-StationAutomaticUpdate
