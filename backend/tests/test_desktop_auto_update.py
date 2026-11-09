@@ -73,19 +73,58 @@ def test_owned_helper_stages_preserves_exact_consent_and_never_replays_installat
         take(identity, claim)
         assert owner.handle({"action": "updates.apply", "run_id": identity})["phase"] == "apply_requested"
 
-    def apply(app_root, retained, value, run_id, *, consent):
+    def apply(app_root, retained, value, run_id, *, consent, engine=None):
         assert (app_root, retained, value, run_id) == (root, installed, target, identity)
         assert consent(versions.package_identity(owner.value), versions.package_identity(target)) is True
         calls.append("activate")
         if failure == "activation":
             raise RuntimeError("Synthetic interruption after consent")
         previous = versions.load(root)
+        core = root / "image-upgrades"
+        core.mkdir(mode=0o700)
+        core /= identity
+        core.mkdir(mode=0o700)
+        saved = module.request(root, identity)
+        module.write(
+            core / "request.json",
+            {
+                "operation_id": identity,
+                "previous": saved["previous"],
+                "target": versions.package_identity(target),
+                "namespace_sha256": saved["namespace_sha256"],
+                "engine": list(engine.identity),
+            },
+        )
+        module.write(
+            core / "state.json",
+            {
+                "current": None,
+                "final": {
+                    "operation_id": identity,
+                    "phase": "applied",
+                    "schema_before": "0045",
+                    "schema_after": "0045",
+                    "backup_relative": f"desktop-upgrades/{identity}/original.sqlite",
+                    "backup_verified": True,
+                },
+            },
+        )
         versions.save(root, previous | {"package": versions.package_identity(target), "phase": "starting"})
         return True
 
     monkeypatch.setattr(module, "download", download)
     monkeypatch.setattr(module.linux, "retain_package", lambda *args, **kwargs: (installed, target))
     monkeypatch.setattr(module.linux, "apply", apply)
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        module.linux,
+        "attestation",
+        lambda *args: (
+            SimpleNamespace(identity=("/usr/bin/docker", "unix:///run/docker.sock")),
+            "owned-daemon",
+        ),
+    )
     monkeypatch.setattr(module.time, "sleep", sleeping)
     if failure in {"download", "activation"}:
         with pytest.raises((ValueError, RuntimeError)):
@@ -107,6 +146,11 @@ def test_owned_helper_stages_preserves_exact_consent_and_never_replays_installat
     assert calls == before
     if failure is None:
         module.linux.ready(root, target, root / "desktop.env", "e" * 32)
+        from desktop_update_recovery import MARKER, acknowledge_ready
+
+        assert acknowledge_ready(root, target)
+        assert not (root / MARKER).exists()
+        assert not acknowledge_ready(root, target)
         new_owner = module.DesktopUpdates(root, installed, target)
         assert new_owner.inspect(identity)["phase"] == "succeeded"
         assert result["request"] == message["request"]

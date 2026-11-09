@@ -188,21 +188,36 @@ def finish(session, run, value):
         transition(session, run, RunStatus.INTERRUPTED, event_type="station.update.inspection_required")
 
 
-def recover(session, run, runner):
+def recover(session, run, runner, *, worker_id=None):
     """No executor/installer replay: adopt only the original native operation's proof."""
     if run.executor_type != "station_update":
         return False
     if not run.metadata_json.get("dispatch_attempted"):
-        transition(session, run, RunStatus.INTERRUPTED, event_type="station.update.inspection_required")
+        if run.status != "interrupted":
+            transition(session, run, RunStatus.INTERRUPTED, event_type="station.update.inspection_required")
         return True
     now = utcnow().timestamp()
     next_check = run.metadata_json.get("native_update_inspect_after")
     if type(next_check) in (int, float) and now < next_check <= now + 30:
         return True
+    original_claim = run.worker_id, run.claimed_at
     run.metadata_json = {**run.metadata_json, "native_update_inspect_after": now + 10}
     session.commit()  # No writer or read transaction spans native IPC waits.
     try:
-        value = checked_reply(run, runner.station_update(message(run, "inspect")))
+        reply = runner.station_update(message(run, "inspect"))
+        # Inspection can outlive a coordinator tick. Reacquire the short writer
+        # and current identity before publishing a result from the native owner.
+        session.refresh(run)
+        if (
+            run.status in {"succeeded", "failed", "canceled"}
+            or (
+                run.worker_id,
+                run.claimed_at,
+            )
+            != original_claim
+        ):
+            return True
+        value = checked_reply(run, reply)
     except (RunnerUnavailable, RunnerError, ValueError):
         append_event(session, run.id, "station.update.inspection_unavailable", {})
         return True
@@ -210,6 +225,27 @@ def recover(session, run, runner):
         # The independent owner may still be applying/restarting. It is never
         # launched a second time and the dispatch gate remains closed.
         return True
+    if run.status == "interrupted":
+        if value["phase"] == "inspection_required":
+            return True
+        if not worker_id:
+            raise ValueError("Native result reconciliation requires its current coordinator identity")
+        # These transitions are one transaction under the still-closed gate.
+        # Queued/claimed states never become visible and no executor is called.
+        original = {
+            "worker_id": run.worker_id,
+            "claimed_at": run.claimed_at.isoformat() if run.claimed_at else None,
+        }
+        run.metadata_json = {**run.metadata_json, "native_result_original_claim": original}
+        transition(session, run, RunStatus.QUEUED, event_type="station.update.result_reconciliation")
+        run.worker_id = worker_id
+        transition(session, run, RunStatus.CLAIMED, event_type="station.update.result_claimed")
+        transition(session, run, RunStatus.PREPARING, event_type="station.update.result_preparing")
+        transition(session, run, RunStatus.RUNNING, event_type="station.update.result_verified")
+        if value["phase"] == "canceled":
+            transition(
+                session, run, RunStatus.CANCEL_REQUESTED, event_type="station.update.cancellation_verified"
+            )
     finish(session, run, value)
     gate = session.get(Setting, KEY)
     if (
@@ -221,6 +257,24 @@ def recover(session, run, runner):
             raise ValueError("The native update completion does not own the dispatch gate")
         session.delete(gate)  # Same commit as terminal history; no crash gap.
     return True
+
+
+def recover_gate(session, runner, worker_id):
+    """Reconcile an interrupted update after the operator finished native recovery."""
+    gate = session.get(Setting, KEY)
+    if gate is None or not isinstance(gate.value, dict):
+        return
+    run = session.get(Run, gate.value.get("run_id"))
+    if (
+        run is None
+        or run.executor_type != "station_update"
+        or run.status != "interrupted"
+        or run.owner_id != gate.value.get("owner_id")
+    ):
+        return  # Unknown gates remain closed for inspection.
+    session.commit()
+    recover(session, run, runner, worker_id=worker_id)
+    session.commit()
 
 
 class StationUpdateExecutor(HostMediaExecutor):

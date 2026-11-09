@@ -3,6 +3,7 @@
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -53,14 +54,18 @@ def active_payload(root, current):
         raise ValueError("The active desktop data changed; inspect it before starting")
     if receipt["package"] == versions.package_identity(current):
         return None
-    source = root / "releases" / receipt["package"]["bundle_id"]
+    return retained(root, receipt["package"])[0]
+
+
+def retained(root, package):
+    source = root / "releases" / package["bundle_id"]
     versions.directory(source)
     value = desktop.manifest(source)
     compatible(value)
-    if versions.package_identity(value) != receipt["package"]:
+    if versions.package_identity(value) != package:
         raise ValueError("The active Linux desktop package no longer matches its receipt")
     desktop.verify(source, value)
-    return source
+    return source, value
 
 
 def ready(root, package, config, owner):
@@ -127,9 +132,12 @@ def local_engine(environment):
         or not parsed.path.startswith("/")
     ):
         raise ValueError("Updates require the existing local Unix Docker connection")
-    socket = Path(parsed.path)
-    if socket.resolve(strict=True) != socket:
-        raise ValueError("The local Docker connection must not be redirected")
+    # /var/run -> /run is a normal OS-owned alias on Linux. Pin the resolved
+    # socket, then attest its daemon against the supervisor's namespace receipt.
+    socket = Path(parsed.path).resolve(strict=True)
+    if not stat.S_ISSOCK(socket.stat().st_mode):
+        raise ValueError("The local Docker connection must be a Unix socket")
+    endpoint = "unix://" + str(socket)
     clean = {
         key: value
         for key, value in environment.items()
@@ -189,7 +197,38 @@ def retain_package(root, package, snapshot, *, check=lambda: None):
         return retained, value
 
 
-def apply(root, installed, target, operation_id, *, consent):
+def attestation(root, source, *, expected_daemon=None):
+    """Match the supervisor's owned daemon before any update image operation."""
+    from io import StringIO
+
+    from desktop_project import DesktopProject
+    from dotenv import dotenv_values
+
+    config = root / "desktop.env"
+    values = dotenv_values(stream=StringIO(versions.read_private(config, 65536).decode()), interpolate=False)
+    environment = {
+        **desktop.launch_environment(),
+        **{key: value for key, value in values.items() if isinstance(value, str)},
+    }
+    engine = local_engine(environment)
+    owner = DesktopProject(config, environment, engine, None, source)
+    expected = expected_daemon or (owner.record["daemon"] if owner.record is not None else None)
+    actual = owner.daemon()
+    if (
+        expected is None
+        or actual != expected
+        or owner.record is not None
+        and owner.record["daemon"] != expected
+    ):
+        raise ValueError("Select the original owned Docker connection before updating AI Station")
+    return engine, actual
+
+
+def attested_engine(root, source, *, expected_daemon=None):
+    return attestation(root, source, expected_daemon=expected_daemon)[0]
+
+
+def apply(root, installed, target, operation_id, *, consent, engine=None):
     """Called by an independent native owner after its Run's idle fence is ready."""
     from desktop_update_owner import handoff
     from desktop_upgrade_image import UpgradeImage, data_info
@@ -199,7 +238,10 @@ def apply(root, installed, target, operation_id, *, consent):
         raise ValueError("The retained update manifest changed before activation")
     desktop.verify(installed, target)
     config = root / "desktop.env"
-    engine = local_engine(desktop.launch_environment())
+    observed = attested_engine(root, desktop.ROOT)
+    if engine is not None and engine.identity != observed.identity:
+        raise ValueError("The owned Docker connection changed before native update activation")
+    engine = observed
     log_path = root / "desktop.log"
     descriptor = os.open(
         log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600

@@ -760,6 +760,11 @@ def main():
     )
     parser.add_argument("--background", action="store_true", help="Run without a native status window")
     parser.add_argument(
+        "--resume-update",
+        action="store_true",
+        help="Explicitly continue this native Linux installation's interrupted update",
+    )
+    parser.add_argument(
         "--install-update", type=Path, help="Install a selected native Mac application bundle"
     )
     parser.add_argument("--manage-backups", action="store_true", help="Open native Mac backup and restore")
@@ -782,6 +787,7 @@ def main():
             or args.host_port is not None
             or args.install_update
             or args.manage_backups
+            or args.resume_update
         ):
             parser.error("--package-check must be used on its own")
         value = manifest(ROOT)
@@ -801,6 +807,15 @@ def main():
         or not 8765 <= args.host_port < 8865
     ):
         parser.error("--host-port requires console background startup and a port between 8765 and 8864")
+    if args.resume_update and (
+        platform.system() != "Linux"
+        or args.status
+        or args.stop
+        or args.install_update
+        or args.manage_backups
+        or args.host_port is not None
+    ):
+        parser.error("--resume-update requires native Linux update recovery on its own")
     os.umask(0o077)
     if args.manage_backups and (
         platform.system() != "Darwin"
@@ -840,7 +855,28 @@ def main():
         from desktop_linux_update import enabled as linux_updates_enabled
 
         linux_updates = linux_updates_enabled(value)
+        if args.resume_update and not linux_updates:
+            raise ValueError("Native update recovery requires a supported installed Linux desktop client")
         if linux_updates and not (args.status or args.stop):
+            from desktop_update_recovery import completed as update_completed
+            from desktop_update_recovery import pending as pending_update
+            from desktop_update_recovery import resume as resume_update
+
+            pending_installation = pending_update(root)
+            if pending_installation is not None and not update_completed(root, pending_installation):
+                if pending_installation["active"]:
+                    message = "AI Station is being updated. It will reopen automatically; the updater was not launched again."
+                    if args.console:
+                        print(message, flush=True)
+                    else:
+                        dialog("--info", "--text=" + message)
+                    return
+                selected = resume_update(root, console=args.console, approved=args.resume_update)
+                if selected is not None:
+                    reexecute(selected, args)
+                return
+            if args.resume_update and pending_installation is None:
+                raise ValueError("No interrupted native update was found")
             active = linux_active_payload(root, value)
             if active is not None and active.resolve() != ROOT.resolve():
                 reexecute(active, args)
@@ -1022,6 +1058,9 @@ def main():
                         from desktop_linux_update import ready as linux_ready
 
                         linux_ready(root, value, config, control.instance_id)
+                        from desktop_update_recovery import acknowledge_ready
+
+                        acknowledge_ready(root, value)
                     publish_ready(root, url, instance_id=instance_id)
 
                 supervise(

@@ -132,6 +132,22 @@ def test_installed_launcher_follows_verified_active_payload_and_refuses_tamperin
         update.active_payload(root, old)
 
 
+def test_normal_linux_configuration_has_the_same_frozen_namespace_as_explicit_runner_socket(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "desktop"
+    root.mkdir(mode=0o700)
+    monkeypatch.setattr(desktop.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(desktop, "free_port", lambda: 8766)
+    config = desktop.configuration(root)
+    assert "AI_STATION_RUNNER_SOCKET" not in config.read_text()
+    data, implicit = versions.namespace(config)
+    update.ready(root, PACKAGE, config, OWNER)
+    config.write_text(config.read_text() + f'AI_STATION_RUNNER_SOCKET="{data}/runtime/runner/runner.sock"\n')
+    assert versions.namespace(config) == (data, implicit)
+    assert versions.load(root)["namespace_sha256"] == implicit
+
+
 def test_remote_docker_is_refused_before_any_image_or_signal(monkeypatch):
     monkeypatch.setattr(update.shutil, "which", lambda *args, **kwargs: "/usr/bin/true")
     call = Mock()

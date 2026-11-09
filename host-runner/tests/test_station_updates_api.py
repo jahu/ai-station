@@ -24,15 +24,21 @@ def test_uninstalled_or_unqualified_native_updater_never_reports_operational(mon
 
 def test_native_operations_require_finite_input_and_station_management(monkeypatch):
     seen = []
-    monkeypatch.setattr(module, "APPLY_QUALIFIED", True)
-    monkeypatch.setattr(
-        module, "native", lambda value: seen.append(value) or {"run_id": value["run_id"], "phase": "ready"}
-    )
+
+    def native(value):
+        if value["action"] == "updates.capabilities":
+            return {"installed": True, "platform": "linux-amd64", "version": "0.5.0"}
+        seen.append(value)
+        return {"run_id": value["run_id"], "phase": "ready"}
+
+    monkeypatch.setattr(module, "native", native)
     client = TestClient(app)
     body = {"action": "inspect", "run_id": str(uuid4()), "permissions": ["manage_station", "network_read"]}
     assert client.post("/v1/station/updates", json={**body, "permissions": []}).status_code == 403
     assert client.post("/v1/station/updates", json={**body, "command": "install"}).status_code == 422
     assert client.post("/v1/station/updates", json={**body, "action": "shell"}).status_code == 422
+    assert client.post("/v1/station/updates", json={**body, "action": "resume"}).status_code == 422
+    assert client.post("/v1/station/updates", json={**body, "native_resume": True}).status_code == 422
     assert (
         client.post(
             "/v1/station/updates", json={**body, "request": {"url": "https://other.example"}}
@@ -42,3 +48,25 @@ def test_native_operations_require_finite_input_and_station_management(monkeypat
     assert not seen
     assert client.post("/v1/station/updates", json=body).status_code == 200
     assert seen == [{"action": "updates.inspect", "run_id": body["run_id"]}]
+
+
+def test_unqualified_platform_cannot_acquire_linux_install_authority(monkeypatch):
+    from ai_station_runner.config import clear_settings_cache
+
+    monkeypatch.setenv("AI_STATION_DESKTOP_CONTROL_SOCKET", "/native/desktop-control.sock")
+    clear_settings_cache()
+    seen = []
+
+    def native(value):
+        seen.append(value)
+        return {"installed": True, "platform": "windows-x64", "version": "0.5.0"}
+
+    monkeypatch.setattr(module, "native", native)
+    client = TestClient(app)
+    assert client.get("/v1/station/updates/capabilities").json()["apply_available"] is False
+    reply = client.post(
+        "/v1/station/updates",
+        json={"action": "apply", "run_id": str(uuid4()), "permissions": ["manage_station", "network_read"]},
+    )
+    assert reply.status_code == 503
+    assert seen == [{"action": "updates.capabilities"}] * 2

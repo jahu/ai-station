@@ -113,68 +113,98 @@ These are completion gates, not already-qualified capability claims. Reuse the
 current workstation preview and existing test fixtures. Keep the Windows VM off
 until a frozen native candidate needs qualification, then shut it down normally.
 
-## Implementation checkpoint — 2026-11-09 (candidate, not released)
+## Implementation checkpoint — 2026-11-09
 
-Release `v0.4.0` was published from the owner's merged master. Anonymous downloads
-of all four release assets matched their retained SHA256/size receipts. The live
-workstation remains on that qualified release; the changes below are isolated in
-the automatic-update feature checkout.
+Release `v0.4.0` is published from the owner's merged master. All four public
+assets matched their retained SHA256/size receipts. The live workstation remains
+on that release; qualification below uses isolated native desktop installations.
 
-- The footer shows the API version, falling back to the compiled UI version.
-  Administrators of installed clients get cached background metadata checks and
-  a discreet link when a newer stable release exists. Settings → Updates provides
-  manual checks, the exact offered version, notes, package size, one update action,
-  progress, pre-activation cancellation and reconnect/reload presentation.
-- Checks and install requests use owned standalone maintenance Tasks/Runs.
-  Install requests freeze an owned successful observation and an idempotent request
-  identity. The shared release parser and native downloader admit only the fixed
-  publisher's stable version, package identity, byte size and SHA256. The actual
-  public 0.4.0 metadata matched through both control-plane and native transports.
-- The native Linux candidate retains verified Debian contents without root or
-  package scripts, records the running bundle after healthy startup, and follows
-  its verified active receipt on later launches. An independent helper journals
-  preparation/application outside application data. It reuses the existing native
-  handoff and offline backup/image transaction, rather than rewriting those layers.
-- The typed private native bridge accepts only capabilities, prepare, inspect,
-  apply and cancel. Installation coordinates come from the desktop supervisor.
-  Native SQLite reads recheck the exact owned administrator Run, its current
-  worker claim, parameters and idle gate before Stop. No caller supplies an
-  executable, destination, shell text or replacement publisher URL.
-- The short trusted coordination transaction takes an idle gate only after active
-  work finishes. Both selection and atomic claiming test that gate; queued work
-  stays durable. Restart recovery inspects the original native journal and can
-  complete history and release the gate in one database commit without repeating
-  the installer. An uncertain activation retains its inspection fence.
-- Windows source now embeds the existing brand icon in the executable, installer,
-  window and tray. Setup shows one primary action for its current stage. Failure
-  explanations survive read-only status refreshes. Portable PowerShell parsing
-  and the existing 15 file/lease/hash assertions passed; new native appearance
-  and automatic Windows application are not qualified yet.
+### Delivered foundation
 
-Normal tests use synthetic packages, accounts and native replies; they do not
-change the running station, start Windows, load a GPU or fetch model weights.
-Focused tests cover metadata hostility/bounds, transfer hashes, canonical file
-boundaries, extraction, retained launch selection, administrator revocation,
-cancellation, idle dispatch, native duplicate requests, uncertain activation,
-and original-operation restart recovery. Frontend tests cover the footer, update
-offer, exact one-click request and restart presentation. These are component
-proofs, not a real installed old→new update claim or final full-suite validation.
+- Sidebar version, cached administrator update checks and a subtle available-update
+  link. Settings → Updates shows the exact release, notes, package size, one
+  update action, progress, pre-activation cancellation and reconnect/reload.
+- Owned standalone maintenance Tasks/Runs freeze the official release fingerprint
+  and an idempotent request identity. The native owner reobserves the publisher,
+  verifies package bytes, and retains the exact bundle outside application data.
+- Atomic claims honor the idle dispatch gate. Activation uses the existing native
+  handoff and offline image/database backup transaction. Recovery inspects the
+  original operation; it never repeats an uncertain installer dispatch.
+- Windows source embeds the existing brand icon in the executable, installer,
+  window and tray. One primary action follows the current setup stage, while Stop,
+  cancellation and failure explanations retain their existing contracts.
 
-**The native Runner's `APPLY_QUALIFIED` flag remains false.** The application must
-not offer an operational Update button through the real Runner until the
-packaged apply, restart and recovery gates pass. Test fixtures explicitly opt in
-only inside their isolated tests.
+### Native Linux update and recovery
 
-Remaining delivery gates:
+**Linux x86-64 is qualified for native automatic application.** The Runner's
+`QUALIFIED_PLATFORMS` admits only `linux-amd64`. Windows and macOS are not admitted.
+Development checkouts without the installed supervisor cannot self-update.
 
-1. Finish interrupted native Linux application/resume and validate actual full
-   packaged old→new preservation, owned shutdown, healthy restart and subsequent
-   launch. Harden any failures found; do not flip admission merely for progress.
+Activation freezes the exact local Docker connection and the already-attested
+supervisor daemon ID in a private marker before Stop. Cold recovery verifies that
+original daemon even after ordinary shutdown removes the active Compose receipt.
+Changed or missing identity requires inspection. A live original helper is not
+launched again; local Continue (or `--resume-update`) finishes an interrupted
+operation. No Runner/agent Resume operation exists.
+
+The original coordinator request binds the source/target bundle and namespace.
+Completion reuses its actual transaction-receipt validator for operation, backup
+and schema proof, followed by the new supervisor's healthy ready receipt. A
+confirmed abort may reopen only the verified previous bundle. Private native
+logs retain early restart errors. A PID disappearing is not completion evidence.
+
+Trusted workers reconcile the same interrupted Run and remove its own dispatch
+gate in one transaction. Rechecking the current claim/state after native IPC
+prevents a second inspector from publishing a duplicate result. Queued/claimed
+reconciliation transitions never expose a dispatchable interval or call an executor.
+
+Actual installed qualification used clean frozen **0.5.0 → 0.5.1** candidates:
+
+- One administrator HTTP request used verified Debian bytes from a frozen package cache,
+  stopped the owned desktop, applied the actual offline image/database transaction,
+  restarted the target and completed the original Run. Account/conversation rows
+  and artifact bytes matched before/after hashes; the gate and marker cleared.
+- The unmodified old launcher subsequently followed the verified new bundle.
+  Login and the saved conversation worked; normal Stop completed.
+- A one-shot qualification-driver exit after actual Prepare and before Publish
+  exercised cold interruption. Explicit native Resume completed the original
+  operation with exactly **one Prepare and one Publish**, then restarted and
+  reconciled the same Run. Preservation and a subsequent stock launch passed.
+
+Publisher metadata and package cache were explicit fixtures; no fake stable
+GitHub release was published. The packages, independent helper, native ownership,
+Docker transaction, database backup, restart and stock subsequent launch were real.
+No GPU, model download, live user data, Windows VM or unrelated container was used.
+
+Real package tests found and fixed implicit Linux Runner-socket admission,
+canonical `/var/run` aliases, operation-error transport handling, the shared
+coordinator receipt contract and daemon-proof retention across Stop. The failed
+attempts remain recorded with the successful qualification; failures were not
+waived. Normal regression tests now exercise actual Linux-generated configuration
+and private Unix listeners as well as synthetic owner/coordinator fixtures.
+
+### Verification and remaining delivery
+
+The foundation passed 9,061 Python cases with 25 platform/opt-in skips, 1,176
+frontend cases, lint, formatting, TypeScript, production build, Compose validation
+and Docker build. Its six Debian-fixture mode failures were corrected and the
+whole affected file passed under both private and normal umasks. Follow-up native,
+coordinator, worker/Run and concurrent-inspector regressions passed; exact reviewed
+head and per-command results are retained with local acceptance receipts.
+
+Remaining gates for this user goal:
+
+1. Finish reviewing and validating the Linux follow-up and merge its PR to develop.
 2. Implement the independent Windows publisher-download/silent per-user installer
-   handoff and preserving WSL update/restart/reconciliation. Validate Windows 10/11
-   contracts; boot the retained Windows fixture only for the frozen native candidate.
-3. Capture the actual new native installer and neutral browser setup. Build the
-   separate illustrated `/install/` guide, landing/README links and accurate notices.
-4. Review the complete diff, run final applicable backend/Runner/frontend/package/
-   Compose/image checks, update qualification and versioned release documentation,
-   and deliver PRs to develop. Only the owner promotes the release to master.
+   handoff and preserving WSL update/restart/reconciliation. Keep Windows admission
+   closed until its own native candidate passes. Boot the retained Windows fixture
+   only for that frozen candidate, then shut it down normally.
+3. Qualify the new native Windows presentation. The separate illustrated `/install/`
+   guide is prepared locally and checked on desktop/mobile without JavaScript;
+   new screenshots await the owner's explicit publication review. Capture real
+   neutral native Windows setup as well, without personal files or setup tokens.
+4. Complete final applicable checks, qualification/release docs and versioned
+   assets. Only the human owner approves and merges the release PR to master.
+
+Windows auto-apply, native Windows appearance, the unpublished illustrated guide
+and the overall user goal are not reported complete by the Linux qualification.
