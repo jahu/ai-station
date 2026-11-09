@@ -562,6 +562,7 @@ would otherwise spread across separate AI apps.
 - **Easier media setup:** prepare compatible runtimes and presets instead of asking people to wire them together.
 - **Hardware-aware choices:** propose a model, quantization and context that fit the available devices.
 - **A friendlier daily experience:** clearer language, strong mobile UX and optional push notifications.
+- **Simpler installation and updates:** an illustrated setup guide and in-app updates that keep your work. [Implementation and qualification plan](docs/plans/desktop-auto-update.md).
 - **More capabilities over time:** additional models, runtimes and devices through the existing execution boundaries.
 
 The goal is the familiarity of a ChatGPT-style conversation and a creative suite,

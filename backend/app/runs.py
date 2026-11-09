@@ -157,6 +157,7 @@ def transition(
 
 def claim_next(session: Session, worker_id: str) -> Run | None:
     from app.runtime_coordination import runtime_ready_condition
+    from app.station_update_gate import dispatch_allowed
 
     settings = get_settings()
     now = utcnow()
@@ -173,6 +174,7 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
             Run.id.not_in(blocked),
             resource_ready_condition(now),
             runtime_ready_condition(now),
+            dispatch_allowed(),
         )
         .order_by(Run.queued_at, Run.created_at)
         .limit(1)
@@ -187,6 +189,7 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
             Run.status.in_({RunStatus.QUEUED.value, RunStatus.WAITING_FOR_TOOL.value}),
             resource_ready_condition(now),
             runtime_ready_condition(now),
+            dispatch_allowed(),
         )
         .values(
             status=RunStatus.CLAIMED.value,

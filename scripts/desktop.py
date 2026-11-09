@@ -468,6 +468,8 @@ def supervise(
         if container_gpu_status not in {"ready", "cpu"}:
             raise ValueError("Unexpected native graphics readiness")
         env["AI_STATION_CONTAINER_GPU_READY"] = "true" if container_gpu_status == "ready" else "false"
+    if control is not None and getattr(control, "updates", None) is not None:
+        env["AI_STATION_DESKTOP_CONTROL_SOCKET"] = str(control.path)
     docker_handoff = []
     if engine is not None and engine.identity is not None:
         # The child re-discovers and compares both coordinates before any engine
@@ -832,6 +834,16 @@ def main():
             raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
     value = manifest(ROOT)
     root = state_root()
+    linux_updates = False
+    if platform.system() == "Linux":
+        from desktop_linux_update import active_payload as linux_active_payload
+        from desktop_linux_update import enabled as linux_updates_enabled
+
+        linux_updates = linux_updates_enabled(value)
+        if linux_updates and not (args.status or args.stop):
+            active = linux_active_payload(root, value)
+            if active is not None and active.resolve() != ROOT.resolve():
+                reexecute(active, args)
     if platform.system() == "Darwin" and not (args.status or args.stop):
         from desktop_update import active_payload, install_update, pending
 
@@ -939,10 +951,17 @@ def main():
             if installed.resolve() != ROOT.resolve():
                 progress.close()
                 reexecute(installed, args)
+            native_updates = None
+            if linux_updates:
+                from desktop_auto_update import DesktopUpdates
+
+                native_updates = DesktopUpdates(root, installed, value)
             with (
                 (root / "desktop.log").open("a", encoding="utf-8") as log,
                 DesktopControl(
-                    control_directory(root), package=value if platform.system() == "Darwin" else None
+                    control_directory(root),
+                    package=value if platform.system() == "Darwin" or linux_updates else None,
+                    updates=native_updates,
                 ) as control,
             ):
                 progress.stage("Preparing the bundled application image…")
@@ -999,6 +1018,10 @@ def main():
                         from desktop_versions import ready
 
                         ready(root, value, config, control.instance_id)
+                    elif linux_updates:
+                        from desktop_linux_update import ready as linux_ready
+
+                        linux_ready(root, value, config, control.instance_id)
                     publish_ready(root, url, instance_id=instance_id)
 
                 supervise(

@@ -1907,3 +1907,14 @@ between bounded processing steps and before publication. Native model outputs
 remain intact. Library repair creates an owned Task/Run and separate derived
 artifact. MP4 processing copies encoded video packets and checks their timestamps;
 already processed canonical speech is inherited by avatars without double processing.
+
+The [automatic desktop update candidate](plans/desktop-auto-update.md) admits
+only stable official GitHub releases with exact asset IDs, lengths and server
+SHA256 digests. Metadata checks are administrator-owned Runs; native preparation
+refetches the approved release identity. TLS and hashes are not publisher signing.
+Quarantine, retained code and native journals stay outside mounted application
+data. The native owner independently reads the exact standalone administrator Run,
+current worker claim and idle dispatch gate before Stop. Private Unix peer checks
+and finite bridge messages add no shell, Docker socket mount, arbitrary process
+signal or agent installation permission. The real apply adapter remains unavailable
+until its preserving package/restart/recovery qualification passes.
