@@ -18,6 +18,7 @@ def prepared(accounts, tmp_path, monkeypatch):
     root = installation(tmp_path)
     installed = tmp_path / "installed"
     value = bundle(installed, PACKAGE | {"version": "0.4.0", "release_version": "0.4.0"})
+    monkeypatch.setattr(module.desktop, "ROOT", installed)
     owner = module.DesktopUpdates(root, installed, value)
     spawn = Mock()
     monkeypatch.setattr(module.subprocess, "Popen", spawn)
@@ -38,6 +39,75 @@ def test_identical_native_preparation_reuses_journal_without_dispatching_twice(
     with pytest.raises(ValueError):
         owner.handle({**message, "request": {**message["request"], "fingerprint": "f" * 64}})
     assert spawn.call_count == 1
+
+
+@pytest.mark.parametrize("platform", ["linux", "windows"])
+def test_control_acknowledges_before_hashing_the_large_source_package(
+    accounts, tmp_path, monkeypatch, platform
+):
+    def unexpected_hash(*_):
+        pytest.fail("Full package hashing must not block the short native control RPC")
+
+    monkeypatch.setattr(module.desktop, "verify", unexpected_hash)
+    if platform == "windows":
+        from test_desktop_windows_updates import prepared as windows_prepared
+
+        _, _, identity, _, owner, _, _, spawn, message = windows_prepared(accounts, tmp_path, monkeypatch)
+    else:
+        _, owner, identity, _, message, spawn = prepared(accounts, tmp_path, monkeypatch)
+    assert owner.inspect(identity)["phase"] == "queued"
+    assert owner.handle(message)["phase"] == "queued"
+    assert spawn.call_count == 1
+
+
+@pytest.mark.parametrize("platform", ["linux", "windows"])
+@pytest.mark.parametrize("change", ["contents", "identity", "canceled_during_hash"])
+def test_helper_rechecks_source_and_authority_before_download(
+    accounts, tmp_path, monkeypatch, platform, change
+):
+    import desktop_release_download
+
+    if platform == "windows":
+        import desktop_windows_updates
+        from test_desktop_windows_updates import prepared as windows_prepared
+
+        root, _, identity, _, owner, _, _, spawn, _ = windows_prepared(accounts, tmp_path, monkeypatch)
+        execute = desktop_windows_updates.prepare
+    else:
+        root, owner, identity, _, _, spawn = prepared(accounts, tmp_path, monkeypatch)
+        execute = module.execute
+
+    if change == "contents":
+        (owner.installed / "neutral").write_bytes(b"changed source bytes")
+    elif change == "identity":
+        import json
+
+        value = dict(owner.value, bundle_id="f" * 64, image_tag="ai-station:desktop-" + "f" * 16)
+        (owner.installed / "desktop-manifest.json").write_text(json.dumps(value))
+    else:
+        verify = module.desktop.verify
+
+        def cancel_during_hash(*args):
+            assert owner.inspect(identity)["phase"] == "preparing"
+            verify(*args)
+            with control_session_factory()() as session:
+                session.get(Run, identity).status = "cancel_requested"
+                session.commit()
+
+        monkeypatch.setattr(module.desktop, "verify", cancel_during_hash)
+
+    download = Mock(side_effect=AssertionError("An invalid source must not start downloading"))
+    monkeypatch.setattr(module, "download", download)
+    monkeypatch.setattr(desktop_release_download, "download", download)
+    if change == "canceled_during_hash":
+        execute(root, identity)
+        assert owner.inspect(identity)["phase"] == "canceled"
+    else:
+        with pytest.raises(ValueError, match="changed"):
+            execute(root, identity)
+        assert owner.inspect(identity)["phase"] == "failed"
+    download.assert_not_called()
+    assert spawn.call_count == 1  # No installer or restarted application.
 
 
 @pytest.mark.parametrize("failure", [None, "download", "activation", "cancel"])

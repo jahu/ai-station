@@ -20,6 +20,7 @@ def prepared(accounts, tmp_path, monkeypatch, payload=None):
     root = installation(tmp_path)
     installed = tmp_path / "installed"
     current = bundle(installed, PACKAGE | {"version": "0.4.0", "release_version": "0.4.0"})
+    monkeypatch.setattr(windows.desktop, "ROOT", installed)
     monkeypatch.setattr(windows, "guest", lambda: True)  # Isolated fixture; no real WSL or model.
     binding = {"schema": 1, "channel_id": str(uuid4()), "host_manifest_sha256": "b" * 64, "version": "0.4.0"}
     windows.bind(root, current, binding)

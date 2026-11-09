@@ -234,7 +234,6 @@ class DesktopUpdates:
                 if request(self.root, run_id) != expected:
                     raise ValueError("The native update was prepared for different input")
                 return self.inspect(run_id)  # Never repeat an uncertain native dispatch.
-            desktop.verify(self.installed, self.value)
             write(record, expected)
             write(
                 path / "state.json", {"run_id": run_id, "phase": "queued", "helper_started_at": time.time()}
@@ -285,6 +284,18 @@ class DesktopUpdates:
         return self.inspect(run_id)
 
 
+def verify_source(root, run_id, saved, check):
+    """Hash the retained source in the helper, outside the short control RPC."""
+    check()
+    publish(root, run_id, "preparing")
+    current = desktop.manifest(desktop.ROOT)
+    linux.compatible(current)
+    if versions.package_identity(current) != saved["previous"]:
+        raise ValueError("The native update source package changed")
+    desktop.verify(desktop.ROOT, current)
+    check()
+
+
 def execute(root, run_id):
     path = folder(root, run_id)
     saved = request(root, run_id)
@@ -316,7 +327,7 @@ def execute(root, run_id):
 
         progress.last = 0
         try:
-            check(True)
+            verify_source(root, run_id, saved, lambda: check(True))
             publish(root, run_id, "downloading")
             coordinates = saved["request"]
             package, snapshot = download(

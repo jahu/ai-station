@@ -503,7 +503,7 @@ def prepare(root, run_id):
                 last = time.monotonic()
 
         try:
-            check()
+            owner.verify_source(root, run_id, saved, check)
             owner.publish(root, run_id, "downloading")
             coordinates = saved["request"]
             _, snapshot = download(

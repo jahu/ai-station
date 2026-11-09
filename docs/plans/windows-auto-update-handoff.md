@@ -109,6 +109,17 @@ and installs its publisher fixture only after the stock helper has imported its
 own modules, so it cannot conceal this entry failure. No installed package file
 is edited to inject the fixture.
 
+The next real preparation exposed a control-channel timeout: hashing the whole
+retained bundle, including its large image archive, blocked the five-second
+prepare acknowledgement. Worker recovery expired the uncertain claim before the
+helper could validate it. Full source verification now runs in the independent
+helper's observable preparing phase, before any download. It checks the frozen
+source identity and all manifest hashes, then rechecks cancellation and live
+authority. The control handler only journals and dispatches the fixed helper;
+timeouts and worker ownership rules are unchanged. Regression tests cover both
+platforms, modified source identities/bytes and cancellation during hashing.
+This fix still requires a rebuilt native package exercise.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
