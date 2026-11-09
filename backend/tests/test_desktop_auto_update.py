@@ -173,3 +173,37 @@ def test_lost_helper_is_not_replayed_or_left_permanently_preparing(
     result = owner.inspect(identity)
     assert result["phase"] == ("inspection_required" if activation_started else "failed")
     assert result["error"] and spawn.call_count == 1
+
+
+@pytest.mark.parametrize("entry", ["desktop_auto_update.py", "desktop_windows_updates.py"])
+def test_isolated_native_helper_bootstraps_its_verified_siblings_without_pythonpath(tmp_path, entry):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2]
+    # Only the runner dependency is supplied from this checkout; deliberately do
+    # not supply scripts/. The entry point must restore its own sibling imports.
+    code = (
+        "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));"
+        "sys.argv=sys.argv[1:];runpy.run_path(sys.argv[0],run_name='__main__')"
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            code,
+            str(source / "host-runner"),
+            str(source / "scripts" / entry),
+            "--help",
+        ],
+        cwd=tmp_path,
+        env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(tmp_path / "untrusted")},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--run-id" in result.stdout and "ModuleNotFoundError" not in result.stderr
+    assert not list(tmp_path.iterdir())  # --help starts no execution or installation.

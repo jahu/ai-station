@@ -12,17 +12,21 @@ import platform
 import pwd
 import re
 import stat
+import sys
 import time
 from pathlib import Path
 from uuid import UUID
 
-import desktop
-import desktop_auto_update as owner
-import desktop_versions as versions
-from ai_station_runner.desktop_update_channel import command
-from ai_station_runner.station_release_metadata import update_package, version_number
-from desktop_update_authority import authority
-from desktop_upgrade_image import write
+# The independently launched -I helper cannot inherit its script directory.
+# Match the desktop launcher: import only siblings of this verified package.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import desktop  # noqa: E402
+import desktop_auto_update as owner  # noqa: E402
+import desktop_versions as versions  # noqa: E402
+from ai_station_runner.desktop_update_channel import command  # noqa: E402
+from ai_station_runner.station_release_metadata import update_package, version_number  # noqa: E402
+from desktop_update_authority import authority  # noqa: E402
+from desktop_upgrade_image import write  # noqa: E402
 
 ATTACHMENT = "windows-update-channel.json"
 PENDING = "windows-update-pending.json"

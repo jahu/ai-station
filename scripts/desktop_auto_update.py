@@ -5,16 +5,21 @@ import fcntl
 import json
 import os
 import subprocess
+import sys
 import time
+from pathlib import Path
 
-import desktop
-import desktop_linux_update as linux
-import desktop_versions as versions
-from ai_station_runner.desktop_update_channel import command
-from desktop_release_download import download
-from desktop_update_authority import authority
-from desktop_update_owner import lock_file
-from desktop_upgrade_image import write
+# The independently launched -I helper cannot inherit its script directory.
+# Match the desktop launcher: import only siblings of this verified package.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import desktop  # noqa: E402
+import desktop_linux_update as linux  # noqa: E402
+import desktop_versions as versions  # noqa: E402
+from ai_station_runner.desktop_update_channel import command  # noqa: E402
+from desktop_release_download import download  # noqa: E402
+from desktop_update_authority import authority  # noqa: E402
+from desktop_update_owner import lock_file  # noqa: E402
+from desktop_upgrade_image import write  # noqa: E402
 
 PHASES = {
     "queued",
