@@ -199,3 +199,11 @@ transaction, with original claim provenance retained. They call no executor or
 installer and expose no queued interval to other workers. Real packaged Linux
 and Windows qualification, Windows automatic handoff and the illustrated guide
 remain delivery gates; this continuation does not enable native apply yet.
+
+The first real packaged Linux startup exposed a missing explicit Runner socket in
+normal Linux configuration. Namespace admission now derives exactly the same
+`data/runtime/runner/runner.sock` as the existing launcher when that optional key
+is absent. Explicit socket identities remain unchanged. A regression uses an
+actual freshly generated Linux configuration rather than the Mac-style fixture.
+The failed package attempt remains recorded; rebuilt-package qualification is
+still pending and admission remains closed.

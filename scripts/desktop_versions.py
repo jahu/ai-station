@@ -73,7 +73,10 @@ def base_namespace(config):
     values = dotenv_values(stream=StringIO(read_private(config, 65536).decode()), interpolate=False)
     data = canonical(values.get("AI_STATION_DATA_HOST_PATH") or "")
     info = directory(data)
-    socket = canonical(values.get("AI_STATION_RUNNER_SOCKET") or "")
+    # Native Linux configurations historically omit the derived socket. Match
+    # launch.configuration exactly so a normal installed client can be updated;
+    # an explicit socket still participates in the frozen namespace unchanged.
+    socket = canonical(values.get("AI_STATION_RUNNER_SOCKET") or data / "runtime/runner/runner.sock")
     if socket.name != "runner.sock" or values.get("AI_STATION_ACCESS_PROFILE") != "accounts":
         raise ValueError("Desktop installation coordinates are invalid")
     # The private runtime directory can disappear across reboot. Validate its
