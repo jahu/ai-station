@@ -15,7 +15,12 @@ function Get-StationUpdateDirectory {
 
 function Read-StationUpdateObject {
  param($Lease,[ValidateSet('channel.json','operation.json')][string]$Name)
- $path=[IO.Path]::Combine((Get-StationUpdateDirectory $Lease),$Name)
+ Assert-StationPrivateAcl $Lease.Root
+ $directory=[IO.Path]::Combine($Lease.Root,'automatic-updates')
+ Assert-StationNoReparsePath $directory
+ if(-not [IO.Directory]::Exists($directory)){return $null}
+ Assert-StationPrivateAcl $directory
+ $path=[IO.Path]::Combine($directory,$Name)
  if(-not [IO.File]::Exists($path)){return $null}
  Assert-StationPrivateAcl $path
  if([IO.FileInfo]::new($path).Length -gt 65536){throw 'The native update journal exceeds its bound.'}

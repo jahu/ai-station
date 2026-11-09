@@ -40,6 +40,7 @@ $script:windowsSupportAction='install'
 $script:nextCheck=[DateTime]::UtcNow;$script:lastError='';$script:attention=$false
 $script:updateAvailable=$false;$script:updatePending=$false;$script:refreshAfterFailure=$false
 $script:failureSticky=$false;$script:needsSupport=$false
+$script:automaticStart=[bool]$StartAutomatically
 $script:nativeUpdate=$null;$script:nextNativeCheck=[DateTime]::UtcNow
 Import-Module (Join-Path $PSScriptRoot 'AutomaticUpdate.psm1')
 
@@ -259,7 +260,7 @@ $timer.Add_Tick({
        $description.Text='Disk space could not be refreshed. Open the app to review storage. Your saved work and Stop remain available.'
       }
       if($script:failureSticky){$status.Text=$savedStatus;$description.Text=$savedDescription;$details.Visible=($script:lastError.Length -gt 0)}
-      if($StartAutomatically -and -not $body.running -and $script:prepared -and -not $script:updateAvailable){$StartAutomatically=$false;Begin-StationAction 'start'}
+      if($script:automaticStart -and -not $body.running -and $script:prepared -and -not $script:updateAvailable){$script:automaticStart=$false;Begin-StationAction 'start'}
      }
     }
    } catch {

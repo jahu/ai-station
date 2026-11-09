@@ -44,4 +44,15 @@ $source=[IO.MemoryStream]::new([Text.Encoding]::UTF8.GetBytes('x'*8193));$destin
 try{Reject {Receive-StationUpdateStream $source $destination $pending $channel $offer}}finally{$source.Dispose();$destination.Dispose()}
 $source=Frame $header $payload;$destination=[IO.MemoryStream]::new();$cancel=[Threading.CancellationTokenSource]::new();$cancel.Cancel()
 try{Reject {Receive-StationUpdateStream $source $destination $pending $channel $offer $cancel.Token};Check ($destination.Length -eq 0) 'Canceled transfer wrote package bytes'}finally{$source.Dispose();$destination.Dispose();$cancel.Dispose()}
+$fresh=& (Get-Module UpdateBridge) {
+ function script:Assert-StationPrivateAcl {param($Path)}
+ function script:Assert-StationNoReparsePath {param($Path)}
+ $root=Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
+ [void][IO.Directory]::CreateDirectory($root)
+ try{
+  $value=Read-StationUpdateObject ([pscustomobject]@{Root=$root}) 'operation.json'
+  return $null -eq $value -and -not [IO.Directory]::Exists((Join-Path $root 'automatic-updates'))
+ }finally{[IO.Directory]::Delete($root,$true)}
+}
+Check $fresh 'Read-only polling created unmarked data that would block first setup'
 Write-Output ('PASS '+$script:cases+' bounded Windows package stream assertions; no network, WSL or installer')

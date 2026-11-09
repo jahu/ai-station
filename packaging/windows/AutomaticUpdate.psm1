@@ -44,7 +44,7 @@ function Get-StationRegisteredUpdateTarget {
 
 function Read-StationNativeUpdate {
  $root=[IO.Path]::Combine([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),'AIStation-Desktop')
- if(-not [IO.Directory]::Exists($root)){return $null}
+ if(-not [IO.File]::Exists([IO.Path]::Combine($root,'install-state.json'))){return $null}
  $operation=Read-StationUpdateObject ([pscustomobject]@{Root=$root}) 'operation.json'
  if($null -ne $operation -and $operation.phase -notin @('complete','failed')){
   $alive=$false;$path=[IO.Path]::Combine($root,'automatic-updates','helper.lock')
@@ -116,6 +116,10 @@ function Invoke-StationAutomaticUpdate {
   $source=Get-StationHostPayloadIdentity $operation.source_folder $operation.source_hash
   $record=Read-StationInstallRecord $lease
   if($record.State.InstallId -cne $operation.original_record.State.InstallId -or $record.State.RegistrationId -ine $operation.original_record.State.RegistrationId -or $record.State.Distribution -cne $operation.original_record.State.Distribution){throw 'The original distribution ownership changed.'}
+  if($operation.phase -in @('installer_dispatched','native_installed','guest_update','restarting')){
+   $operation|Add-Member -NotePropertyName 'resume_after_stop' -NotePropertyValue $operation.phase -Force
+   Set-StationNativeUpdatePhase $lease $operation 'stop_requested'
+  }
   if($operation.phase -in @('created','staging')){
    Set-StationNativeUpdatePhase $lease $operation 'staging'
    $offer=Get-StationOfficialReleaseOffer $operation.request.release_id $operation.request.current_version $operation.request.fingerprint
@@ -140,6 +144,10 @@ function Invoke-StationAutomaticUpdate {
     if($status.running -or ($status.PSObject.Properties.Name -contains 'inspection_required' -and $status.inspection_required)){throw 'The owned station has not stopped safely.'}
     $lease=New-StationPrivateStore
     $record=Read-StationInstallRecord $lease
+    if($operation.PSObject.Properties.Name -contains 'resume_after_stop' -and $null -ne $operation.resume_after_stop){
+     $resume=$operation.resume_after_stop;$operation.resume_after_stop=$null
+     Set-StationNativeUpdatePhase $lease $operation $resume
+    }else{
     # The private host copy is opened and rehashed under a deny-write handle.
     $path=[IO.Path]::Combine((Get-StationUpdateDirectory $lease),($operation.run_id+'.exe'))
     $archive=Open-StationVerifiedArchive $path $operation.target.installer_sha256 $operation.target.installer_bytes
@@ -154,6 +162,7 @@ function Invoke-StationAutomaticUpdate {
      if($installer.ExitCode -ne 0){throw 'The installer did not confirm completion. It will not be dispatched again.'}
     }finally{$archive.Stream.Dispose()}
     Set-StationNativeUpdatePhase $lease $operation 'native_installed'
+    }
    }finally{if($null -ne $exclusive){$exclusive.Dispose()}}
   }
   if($null -eq $lease){$lease=New-StationPrivateStore}
