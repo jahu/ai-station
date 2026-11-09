@@ -14,7 +14,10 @@ try{
  $read=$process.StandardOutput.ReadToEndAsync();$errors=$process.StandardError.ReadToEndAsync()
  if(-not $process.WaitForExit(30000)){throw 'The owned harmless transport child did not finish'}
  $body=$read.GetAwaiter().GetResult()|ConvertFrom-Json -ErrorAction Stop
- if($process.ExitCode -ne 0 -or $body.fixture -cne 'native-transport' -or $body.stdin_closed -isnot [bool] -or -not $body.stdin_closed -or $body.no_forwarding -isnot [bool] -or -not $body.no_forwarding -or $errors.GetAwaiter().GetResult()) {throw 'Shared transport changed framing, stdin lifetime or guest environment'}
+ # WinPS5 may emit first-use module progress as CLIXML on stderr even on
+ # success. Like the real waiter, drain it and trust exit status plus framing.
+ [void]$errors.GetAwaiter().GetResult()
+ if($process.ExitCode -ne 0 -or $body.fixture -cne 'native-transport' -or $body.stdin_closed -isnot [bool] -or -not $body.stdin_closed -or $body.no_forwarding -isnot [bool] -or -not $body.no_forwarding) {throw 'Shared transport changed framing, stdin lifetime or guest environment'}
  Write-Output 'PASS shared native transport with actual owned child; no WSL, installer or model was run'
 }finally{
  $env:WSLENV=$old
