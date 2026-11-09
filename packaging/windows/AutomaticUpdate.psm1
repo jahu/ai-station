@@ -237,6 +237,9 @@ function Complete-StationAutomaticGuestUpdate {
     Confirm-StationBrowserTarget $ready
     $lease=New-StationPrivateStore
     $record=Read-StationInstallRecord $lease
+    # Cold startup can outlast the interactive channel's presence lease.
+    # Rebind the exact registered target before its final acknowledgement.
+    if(-not (Connect-StationUpdateOwner $lease $record $target.Folder)){throw 'The updated guest did not confirm its native owner.'}
     $result=Send-StationNativeUpdateResult $lease $record $operation 'applied' $operation.proof
     if($result.phase -cne 'succeeded'){throw 'The new guest has not confirmed readiness for this original Run.'}
     Set-StationNativeUpdatePhase $lease $operation 'complete'

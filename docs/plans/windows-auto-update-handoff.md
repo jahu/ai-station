@@ -125,6 +125,10 @@ interactive update channel's 60-second presence lease. A cold startup may exceed
 that lease; recording real healthy startup does not renew it or authorize a new
 update. Capabilities and new preparation/apply requests retain fresh-presence
 checks, and a wrong native version/channel still refuses the readiness receipt.
+After real healthy startup, the native finisher rebinds the exact registered
+target immediately before acknowledging completion. That preserves the final
+acknowledgement's fresh-presence check even when startup exceeded 60 seconds.
+The component regression covers the complete finisher order and rejects replay.
 
 The first rebuilt pair was refused by the real API identity check before any
 update request: its private version bump changed package declarations but missed
