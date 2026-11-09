@@ -41,8 +41,9 @@ try {
  try { $updatePackage.Stream.CopyTo($target);$target.Flush($true) } finally { $target.Dispose() }
  [IO.File]::Copy((Join-Path $source 'guest_update.py'),(Join-Path $stage 'guest_update.py'),$false)
  foreach ($name in @('LICENSE','NOTICE','COMMERCIAL.md')) { [IO.File]::Copy((Join-Path $repo $name),(Join-Path $stage $name),$false) }
+ [IO.File]::Copy((Join-Path $PSScriptRoot 'AIStation.ico'),(Join-Path $stage 'AIStation.ico'),$false)
  $parameters=[CodeDom.Compiler.CompilerParameters]::new()
- $parameters.CompilerOptions='/platform:x64 /target:winexe';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
+ $parameters.CompilerOptions='/platform:x64 /target:winexe /win32icon:"'+(Join-Path $PSScriptRoot 'AIStation.ico')+'"';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
  $parameters.OutputAssembly=Join-Path $stage 'AIStation.exe'
  [void]$parameters.ReferencedAssemblies.Add('System.dll');[void]$parameters.ReferencedAssemblies.Add('System.Core.dll')
  # Compile without loading application types into this PowerShell session.
