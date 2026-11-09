@@ -99,6 +99,16 @@ completed publication is idempotent on recovery. This is an application-owned
 WSL file, not a host OS or external runtime migration. Its gate remains closed
 until the rebuilt native package exercise completes.
 
+A later actual preparation attempt exposed an isolated Python entry issue: `-I`
+does not add a script's directory to imports. Both independent helpers now
+bootstrap only their own verified sibling directory, as the desktop launcher
+already does. Tests run each real entry without `scripts/` or ambient
+`PYTHONPATH`; the actual bundled interpreter also runs both stock `--help`
+entries. The qualification observer now follows retained desktop re-execution
+and installs its publisher fixture only after the stock helper has imported its
+own modules, so it cannot conceal this entry failure. No installed package file
+is edited to inject the fixture.
+
 Remaining native qualification covers preserved account/history/artifact bytes,
 one-click normal update,
 cancellation, interruption/no replay, stock subsequent launch and native UI/icon.
