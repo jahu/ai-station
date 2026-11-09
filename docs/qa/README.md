@@ -1,5 +1,11 @@
 # Operator QA catalog and workbook
 
+Catalog v57 adds UPDATE-101–103 for the visible running version, administrator
+release checks, a preserving one-click update and cancellation before activation.
+All 287 active cases start untested in new release exports; an unavailable
+newer official release is recorded as blocked, never replaced with a fake public
+release. Previously returned workbooks and answers remain unchanged.
+
 Catalog v55 adds CHAT-103/104 and AGENT-021/022 for multi-turn image continuity,
 result-bound ReAct chains, existing-agent model selection and generic variations.
 All 282 active cases start untested in new release exports.
