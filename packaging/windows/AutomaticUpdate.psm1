@@ -116,6 +116,20 @@ function Invoke-StationAutomaticUpdate {
   $source=Get-StationHostPayloadIdentity $operation.source_folder $operation.source_hash
   $record=Read-StationInstallRecord $lease
   if($record.State.InstallId -cne $operation.original_record.State.InstallId -or $record.State.RegistrationId -ine $operation.original_record.State.RegistrationId -or $record.State.Distribution -cne $operation.original_record.State.Distribution){throw 'The original distribution ownership changed.'}
+  if($null -ne $operation.proof -and $operation.phase -in @('restarting','guest_update')){
+   # The guest may have acknowledged completion before the host journal write.
+   # Recover that ACK against the exact retained native target and live health;
+   # a completed original Run must not require another Stop or root transaction.
+   $ack=Invoke-StationUpdateGuestControl $lease $record 'update-status' ([pscustomobject]@{channel_id=$operation.channel_id;run_id=$operation.run_id})
+   if($ack.phase -ceq 'succeeded'){
+    $target=Get-StationRegisteredUpdateTarget $operation.install_root $operation.target.version
+    if($operation.proof.host_manifest_sha256 -cne $target.Hash -or $operation.proof.version -cne $operation.target.version -or $operation.proof.installer_sha256 -cne $operation.target.installer_sha256 -or $operation.proof.data_preserved -isnot [bool] -or -not $operation.proof.data_preserved){throw 'The original native completion proof changed.'}
+    # The guest's succeeded stage already binds the actual ready receipt and
+    # original native health acknowledgement. A later user Stop does not undo it.
+    Set-StationNativeUpdatePhase $lease $operation 'complete'
+    return
+   }
+  }
   if($operation.phase -in @('installer_dispatched','native_installed','guest_update','restarting')){
    $operation|Add-Member -NotePropertyName 'resume_after_stop' -NotePropertyValue $operation.phase -Force
    Set-StationNativeUpdatePhase $lease $operation 'stop_requested'

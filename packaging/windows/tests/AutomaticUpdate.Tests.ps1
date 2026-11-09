@@ -11,7 +11,7 @@ $module=Get-Module AutomaticUpdate
  $run=[Guid]::NewGuid().ToString('D');$channel=[Guid]::NewGuid().ToString('D')
  $record=[pscustomobject]@{State=[pscustomobject]@{InstallId='fixed';RegistrationId='fixed-registration';Distribution='AIStation-fixed'}}
  $script:original=[pscustomobject]@{schema=1;updated_at=1;phase='created';run_id=$run;channel_id=$channel;request=[pscustomobject]@{release_id=10;fingerprint=('c'*64);current_version='0.5.0';platform='windows-x64'};target=[pscustomobject]@{version='0.5.1';installer_sha256=('b'*64);installer_bytes=12};original_record=$record;source_folder='C:\Synthetic\versions\aaaaaaaaaaaaaaaa';source_hash=('a'*64);install_root='C:\Synthetic';proof=$null}
- function Reset([string]$Phase){$script:op=Clone $script:original;$script:op.phase=$Phase;$script:events=[Collections.Generic.List[string]]::new();$script:missingTarget=$false;$script:lostGuestAck=$false}
+ function Reset([string]$Phase){$script:op=Clone $script:original;$script:op.phase=$Phase;$script:events=[Collections.Generic.List[string]]::new();$script:missingTarget=$false;$script:lostGuestAck=$false;$script:completedAck=$false}
  function script:New-StationPrivateStore {return [pscustomobject]@{Root=$script:root;Stream=[IO.MemoryStream]::new()}}
  function script:Assert-StationPrivateAcl {param($Path)}
  function script:Get-StationUpdateDirectory {param($Lease);return $script:root}
@@ -25,7 +25,8 @@ $module=Get-Module AutomaticUpdate
  function script:Send-StationNativeUpdateResult {param($Lease,$Record,$Operation,$Phase,$Proof);$script:events.Add('guest:'+ $Phase);if($script:lostGuestAck -and $Phase -ceq 'applying'){throw 'Synthetic lost activation acknowledgement'};return [pscustomobject]@{phase='succeeded'}}
  function script:Invoke-StationDesktop {param($Action,$PackageFolder);$script:events.Add('normal-status');return '{"running":false}'}
  function script:Open-StationVerifiedArchive {param($Path,$Sha256,$Bytes);Check ($Sha256 -ceq ('b'*64) -and $Bytes -eq 12) 'Installer changed before dispatch';return [pscustomobject]@{Stream=[IO.MemoryStream]::new()}}
- function script:Get-StationRegisteredUpdateTarget {param($InstallRoot,$TargetVersion);$script:events.Add('registered-target');if($script:missingTarget){throw 'No matching target registration'};return [pscustomobject]@{Folder='C:\Synthetic\versions\bbbbbbbbbbbbbbbb'}}
+ function script:Get-StationRegisteredUpdateTarget {param($InstallRoot,$TargetVersion);$script:events.Add('registered-target');if($script:missingTarget){throw 'No matching target registration'};return [pscustomobject]@{Folder='C:\Synthetic\versions\bbbbbbbbbbbbbbbb';Hash=('b'*64)}}
+ function script:Invoke-StationUpdateGuestControl {param($Lease,$Record,$Action,$Body);if(-not $script:completedAck -or $Action -cne 'update-status'){throw 'Unexpected guest ACK probe'};$script:events.Add('completed-ack');return [pscustomobject]@{phase='succeeded'}}
  function script:Start-StationUpdateChild {param($Info)
   if($Info.FileName -ceq 'fixed.exe' -or $Info.FileName.EndsWith('.exe') -and $Info.Arguments.StartsWith('/VERYSILENT')){
    Check ($script:op.phase -ceq 'installer_dispatched') 'Installer launched before durable intent'
@@ -53,6 +54,10 @@ $module=Get-Module AutomaticUpdate
   Reset 'created';$script:lostGuestAck=$true
   $failed=$false;try{Invoke-StationAutomaticUpdate}catch{$failed=$true}
   Check ($failed -and $script:op.phase -ceq 'inspection_required' -and $script:op.resume_phase -ceq 'activation_requested' -and -not $script:events.Contains('installer')) 'Lost activation ACK discarded the original recovery stage'
+  Reset 'restarting';$script:completedAck=$true
+  $script:op.proof=[pscustomobject]@{host_manifest_sha256=('b'*64);version='0.5.1';installer_sha256=('b'*64);data_preserved=$true;backup_available=$true}
+  Invoke-StationAutomaticUpdate
+  Check ($script:op.phase -ceq 'complete' -and $script:events.Contains('completed-ack') -and -not $script:events.Contains('normal-status') -and -not $script:events.Contains('installer') -and -not $script:events.Contains('guest-transaction')) 'Lost host completion write replayed a completed update'
   Reset 'complete'
   Invoke-StationAutomaticUpdate
   Check ($script:events.Count -eq 0) 'Completed operation was run again'

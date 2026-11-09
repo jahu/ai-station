@@ -55,9 +55,17 @@ function Get-StationUpdateChannel {
  return $record.channel_id
 }
 
+function Assert-StationUpdateGuestRegistration {
+ param($Lease,$Record)
+ Assert-StationInstallState $Record.State $Lease.Root
+ Assert-StationNoReparsePath $Record.State.Directory
+ $plan=Get-StationImportPlan $Record.State $Lease.Root ([IO.Path]::Combine($Lease.Root,'accepted-rootfs.tar.gz')) -Inventory @(Get-StationWslRegistrations) -ExistingDisk $true
+ if($plan.Kind -cne 'VerifyGuest'){throw 'Inspect the original WSL registration before updating. Nothing was adopted.'}
+}
+
 function Invoke-StationUpdateGuestControl {
  param($Lease,$Record,[ValidateSet('update-bind','update-poll','update-result','update-status','update-authorize')][string]$Action,$Body,[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
- Assert-StationInstallState $Record.State $Lease.Root
+ Assert-StationUpdateGuestRegistration $Lease $Record
  $bytes=[Text.UTF8Encoding]::new($false,$true).GetBytes(($Body|ConvertTo-Json -Depth 8 -Compress)+"`n")
  if($bytes.Length -gt 8192){throw 'The finite native update request exceeds its bound.'}
  $arguments=@('--distribution',$Record.State.Distribution,'--user','station','--exec','/usr/libexec/ai-station/wsl-control',$Action)
@@ -152,6 +160,7 @@ function Wait-StationUpdateTransfer {
 
 function Receive-StationWindowsPackage {
  param($Lease,$Record,$Pending,[string]$ChannelId,$Offer)
+ Assert-StationUpdateGuestRegistration $Lease $Record
  $directory=Get-StationUpdateDirectory $Lease
  $path=[IO.Path]::Combine($directory,($Pending.run_id+'.exe'))
  if([IO.File]::Exists($path)){
