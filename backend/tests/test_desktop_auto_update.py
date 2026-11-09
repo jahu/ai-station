@@ -99,7 +99,14 @@ def test_owned_helper_stages_preserves_exact_consent_and_never_replays_installat
             core / "state.json",
             {
                 "current": None,
-                "final": {"operation_id": identity, "target_bundle": target["bundle_id"], "phase": "applied"},
+                "final": {
+                    "operation_id": identity,
+                    "phase": "applied",
+                    "schema_before": "0045",
+                    "schema_after": "0045",
+                    "backup_relative": f"desktop-upgrades/{identity}/original.sqlite",
+                    "backup_verified": True,
+                },
             },
         )
         versions.save(root, previous | {"package": versions.package_identity(target), "phase": "starting"})

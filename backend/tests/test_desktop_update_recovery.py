@@ -189,7 +189,10 @@ def test_aborted_transaction_reopens_previous_version_only_with_original_coordin
                         "final": {
                             "phase": "aborted",
                             "operation_id": identity,
-                            "target_bundle": target["bundle_id"],
+                            "schema_before": "0045",
+                            "schema_after": "0045",
+                            "backup_relative": f"desktop-upgrades/{identity}/original.sqlite",
+                            "backup_verified": True,
                         },
                     },
                 )

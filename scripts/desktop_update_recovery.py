@@ -163,11 +163,14 @@ def outcome(root, item):
         or final.get("phase") not in {"applied", "aborted"}
     ):
         return None
-    if (
-        final.get("operation_id") != item["run_id"]
-        or final.get("target_bundle") != item["target"]["bundle_id"]
-    ):
-        raise ValueError("The native update final result belongs to different input")
+    # Reuse the coordinator's actual six-field receipt contract. The immutable
+    # request above binds previous/target bundles; the result binds operation,
+    # backup and schema. Do not invent a second, incompatible result schema.
+    from desktop_upgrade_image import transaction_result
+
+    final = transaction_result(json.dumps(final), "status", item["run_id"])
+    if final["phase"] == "applied" and not final["backup_verified"]:
+        raise ValueError("The applied native update has no verified backup")
     receipt = versions.load(root)
     expected = item["target"] if final["phase"] == "applied" else item["saved"]["previous"]
     return (

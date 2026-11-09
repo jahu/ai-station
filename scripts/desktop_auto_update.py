@@ -275,8 +275,8 @@ def execute(root, run_id):
                 env=desktop.launch_environment(),
                 start_new_session=True,
                 stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                # Inherit this helper's private native.log so an early restart
+                # failure remains inspectable after the old owner has exited.
                 close_fds=True,
             )
         except InterruptedError:
