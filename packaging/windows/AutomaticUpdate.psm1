@@ -194,6 +194,16 @@ function Invoke-StationAutomaticUpdate {
  }catch{
   if($null -eq $lease){$lease=New-StationPrivateStore}
   if($null -ne $operation){
+   if($operation.phase -ceq 'guest_update'){
+    # The independent finisher can persist proof before its process ACK is lost.
+    # Preserve that same operation's newer state instead of publishing our stale
+    # pre-child copy over it. Resume still verifies actual guest/registry proof.
+    $latest=Read-StationUpdateObject $lease 'operation.json'
+    if($null -ne $latest -and $latest.run_id -ceq $operation.run_id -and $latest.channel_id -ceq $operation.channel_id -and $latest.source_hash -ceq $operation.source_hash -and $latest.request.fingerprint -ceq $operation.request.fingerprint -and $latest.target.version -ceq $operation.target.version -and $latest.target.installer_sha256 -ceq $operation.target.installer_sha256 -and $null -ne $latest.proof -and $latest.phase -in @('restarting','complete')){
+     $operation=$latest
+     if($operation.phase -ceq 'complete'){return}
+    }
+   }
    $phase=$(if($operation.phase -in @('created','staging')){'failed'}else{'inspection_required'})
    $operation | Add-Member -NotePropertyName 'resume_phase' -NotePropertyValue $operation.phase -Force
    Set-StationNativeUpdatePhase $lease $operation $phase

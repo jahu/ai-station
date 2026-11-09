@@ -11,7 +11,7 @@ $module=Get-Module AutomaticUpdate
  $run=[Guid]::NewGuid().ToString('D');$channel=[Guid]::NewGuid().ToString('D')
  $record=[pscustomobject]@{State=[pscustomobject]@{InstallId='fixed';RegistrationId='fixed-registration';Distribution='AIStation-fixed'}}
  $script:original=[pscustomobject]@{schema=1;updated_at=1;phase='created';run_id=$run;channel_id=$channel;request=[pscustomobject]@{release_id=10;fingerprint=('c'*64);current_version='0.5.0';platform='windows-x64'};target=[pscustomobject]@{version='0.5.1';installer_sha256=('b'*64);installer_bytes=12};original_record=$record;source_folder='C:\Synthetic\versions\aaaaaaaaaaaaaaaa';source_hash=('a'*64);install_root='C:\Synthetic';proof=$null}
- function Reset([string]$Phase){$script:op=Clone $script:original;$script:op.phase=$Phase;$script:events=[Collections.Generic.List[string]]::new();$script:missingTarget=$false;$script:lostGuestAck=$false;$script:completedAck=$false}
+ function Reset([string]$Phase){$script:op=Clone $script:original;$script:op.phase=$Phase;$script:events=[Collections.Generic.List[string]]::new();$script:missingTarget=$false;$script:lostGuestAck=$false;$script:completedAck=$false;$script:lostFinisherAck=$false;$script:finisherComplete=$false;$script:foreignFinisher=$false}
  function script:New-StationPrivateStore {return [pscustomobject]@{Root=$script:root;Stream=[IO.MemoryStream]::new()}}
  function script:Assert-StationPrivateAcl {param($Path)}
  function script:Get-StationUpdateDirectory {param($Lease);return $script:root}
@@ -28,12 +28,21 @@ $module=Get-Module AutomaticUpdate
  function script:Get-StationRegisteredUpdateTarget {param($InstallRoot,$TargetVersion);$script:events.Add('registered-target');if($script:missingTarget){throw 'No matching target registration'};return [pscustomobject]@{Folder='C:\Synthetic\versions\bbbbbbbbbbbbbbbb';Hash=('b'*64)}}
  function script:Invoke-StationUpdateGuestControl {param($Lease,$Record,$Action,$Body);if(-not $script:completedAck -or $Action -cne 'update-status'){throw 'Unexpected guest ACK probe'};$script:events.Add('completed-ack');return [pscustomobject]@{phase='succeeded'}}
  function script:Start-StationUpdateChild {param($Info)
+  $exitCode=0
   if($Info.FileName -ceq 'fixed.exe' -or $Info.FileName.EndsWith('.exe') -and $Info.Arguments.StartsWith('/VERYSILENT')){
    Check ($script:op.phase -ceq 'installer_dispatched') 'Installer launched before durable intent'
    Check ($script:events.Contains('normal-status') -and $script:events.Contains('guest:applying')) 'Installer launched before approved owned shutdown'
    $script:events.Add('installer')
-  }elseif($Info.Arguments.EndsWith('-FinishGuest')){$script:events.Add('guest-transaction')}else{throw 'Unexpected native child'}
-  $process=[pscustomobject]@{ExitCode=0};$process|Add-Member -MemberType ScriptMethod -Name WaitForExit -Value {param($Timeout);return $true};$process|Add-Member -MemberType ScriptMethod -Name Dispose -Value {};return $process
+  }elseif($Info.Arguments.EndsWith('-FinishGuest')){
+   $script:events.Add('guest-transaction')
+   if($script:lostFinisherAck){
+    $script:op.phase=$(if($script:finisherComplete){'complete'}else{'restarting'})
+    $script:op.proof=[pscustomobject]@{host_manifest_sha256=('b'*64);version='0.5.1';installer_sha256=('b'*64);data_preserved=$true;backup_available=$true}
+    if($script:foreignFinisher){$script:op.source_hash=('f'*64)}
+    $exitCode=1
+   }
+  }else{throw 'Unexpected native child'}
+  $process=[pscustomobject]@{ExitCode=$exitCode};$process|Add-Member -MemberType ScriptMethod -Name WaitForExit -Value {param($Timeout);return $true};$process|Add-Member -MemberType ScriptMethod -Name Dispose -Value {};return $process
  }
  # Supply a harmless platform-independent fixed System path in the only native
  # executable selection seam; all launched children above are fakes.
@@ -54,6 +63,18 @@ $module=Get-Module AutomaticUpdate
   Reset 'created';$script:lostGuestAck=$true
   $failed=$false;try{Invoke-StationAutomaticUpdate}catch{$failed=$true}
   Check ($failed -and $script:op.phase -ceq 'inspection_required' -and $script:op.resume_phase -ceq 'activation_requested' -and -not $script:events.Contains('installer')) 'Lost activation ACK discarded the original recovery stage'
+  Reset 'native_installed';$script:lostFinisherAck=$true
+  $failed=$false;try{Invoke-StationAutomaticUpdate}catch{$failed=$true}
+  Check ($failed -and $script:op.phase -ceq 'inspection_required' -and $script:op.resume_phase -ceq 'restarting' -and $null -ne $script:op.proof) 'The parent overwrote the independent finisher recovery proof'
+  $script:lostFinisherAck=$false;$script:completedAck=$true;$script:events.Clear()
+  Invoke-StationAutomaticUpdate
+  Check ($script:op.phase -ceq 'complete' -and $script:events.Contains('completed-ack') -and -not $script:events.Contains('installer') -and -not $script:events.Contains('guest-transaction')) 'Finisher exit replayed an already acknowledged update'
+  Reset 'native_installed';$script:lostFinisherAck=$true;$script:finisherComplete=$true
+  Invoke-StationAutomaticUpdate
+  Check ($script:op.phase -ceq 'complete' -and $null -ne $script:op.proof -and -not $script:events.Contains('guest:inspection_required')) 'The parent replaced authoritative child completion with its stale state'
+  Reset 'native_installed';$script:lostFinisherAck=$true;$script:foreignFinisher=$true
+  $failed=$false;try{Invoke-StationAutomaticUpdate}catch{$failed=$true}
+  Check ($failed -and $script:op.phase -ceq 'inspection_required' -and $script:op.resume_phase -ceq 'guest_update' -and $null -eq $script:op.proof) 'The parent adopted proof for a different frozen native source'
   Reset 'restarting';$script:completedAck=$true
   $script:op.proof=[pscustomobject]@{host_manifest_sha256=('b'*64);version='0.5.1';installer_sha256=('b'*64);data_preserved=$true;backup_available=$true}
   Invoke-StationAutomaticUpdate

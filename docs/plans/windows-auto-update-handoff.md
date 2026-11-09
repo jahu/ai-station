@@ -136,6 +136,13 @@ After real healthy startup, the native finisher rebinds the exact registered
 target immediately before acknowledging completion. That preserves the final
 acknowledgement's fresh-presence check even when startup exceeded 60 seconds.
 The component regression covers the complete finisher order and rejects replay.
+Another recovery regression reproduced a lost child-exit acknowledgement after
+the finisher had persisted its proof: the parent wrote its stale pre-child copy
+over the newer journal. The parent now retains only the same frozen operation's
+newer restarting/completed proof. Explicit Resume verifies the existing guest
+acknowledgement without another installer, Stop or guest transaction; proof for
+a different source remains refused. Both incomplete and completed child writes
+are covered by the native stage tests.
 
 The first rebuilt pair was refused by the real API identity check before any
 update request: its private version bump changed package declarations but missed
