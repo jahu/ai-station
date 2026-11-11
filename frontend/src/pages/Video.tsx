@@ -49,6 +49,12 @@ export default function Video({
   withCreativeSessions?: boolean;
 }) {
   const [search, setSearch] = useSearchParams();
+  function modeQuery(mode?: string) {
+    const next = new URLSearchParams(mode ? { mode } : {});
+    const project = search.get("project");
+    if (project) next.set("project", project);
+    return next;
+  }
   const currentRun = useMediaRun(search.get("run") ?? "");
   const currentJob = useMediaJob(search.get("job") ?? "");
   const busy =
@@ -78,7 +84,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={!avatar && !editing}
           className={!avatar && !editing ? "active" : ""}
-          onClick={() => setSearch(new URLSearchParams())}
+          onClick={() => setSearch(modeQuery())}
         >
           Create a scene
         </button>
@@ -87,7 +93,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={avatar}
           className={avatar ? "active" : ""}
-          onClick={() => setSearch({ mode: "avatar" })}
+          onClick={() => setSearch(modeQuery("avatar"))}
         >
           Talking avatar
         </button>
@@ -96,7 +102,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={editing}
           className={editing ? "active" : ""}
-          onClick={() => setSearch({ mode: "edit" })}
+          onClick={() => setSearch(modeQuery("edit"))}
         >
           Edit a film
         </button>

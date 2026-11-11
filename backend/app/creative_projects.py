@@ -18,7 +18,9 @@ Color = Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")]
 
 
 class Identity(Fields):
-    colors: list[Color] = Field(default_factory=lambda: ["#A8CC74", "#101311", "#F7F8F4"], max_length=8)
+    colors: list[Color] = Field(
+        default_factory=lambda: ["#A8CC74", "#101311", "#F7F8F4"], min_length=1, max_length=8
+    )
     typography: Literal["sans", "humanist", "editorial", "mono"] = "sans"
     visual_direction: str = Field(default="", max_length=4000)
     tone: str = Field(default="", max_length=2000)

@@ -174,6 +174,7 @@ def test_foreign_logo_and_direct_orm_membership_cannot_cross_accounts(accounts):
     [
         {"name": " "},
         {"identity": {"colors": ["url(https://example.org)"]}},
+        {"identity": {"colors": []}},
         {"identity": {"typography": "<script>"}},
         {"defaults": {"duration_seconds": 100000}},
         {"defaults": {"duration_seconds": True}},

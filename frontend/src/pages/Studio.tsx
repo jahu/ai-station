@@ -1,4 +1,9 @@
-import { useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useLayoutEffect,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   useInfiniteQuery,
@@ -53,6 +58,14 @@ const date = (value: string) =>
     day: "numeric",
   });
 
+function useStudioEntry() {
+  useLayoutEffect(() => {
+    const main = document.getElementById("main");
+    if (main) main.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  }, []);
+}
+
 function Swatches({ colors }: { colors: string[] }) {
   return (
     <span className="studio-swatches" aria-label="Project palette">
@@ -64,6 +77,7 @@ function Swatches({ colors }: { colors: string[] }) {
 }
 
 export function Studio() {
+  useStudioEntry();
   const { user } = useAccount();
   const [archived, setArchived] = useState(false);
   const projects = useInfiniteQuery({
@@ -215,6 +229,7 @@ export function StudioProject({ create = false }: { create?: boolean }) {
 }
 
 function ProjectEditor({ project }: { project?: CreativeProject }) {
+  useStudioEntry();
   const { user } = useAccount();
   const cache = useQueryClient();
   const navigate = useNavigate();
