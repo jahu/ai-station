@@ -343,3 +343,54 @@ def test_rejected_missing_dispatch_is_fenced_before_resource_release(ready, monk
                 select(ResourceLock).where(ResourceLock.run_id == run.id, ResourceLock.released_at.is_(None))
             )
         assert fake.fences == 1 and not fake.started
+
+
+def test_export_history_is_private_and_revision_scoped(accounts, ready):  # noqa: F811
+    _, alice, bob = accounts
+    image, _ = upload(alice, "blue")
+    row, revision = draft(alice)
+    queued = render(alice, row, revision, image)
+    assert queued.status_code == 202, queued.text
+    url = f"/api/studio/materials/{row['id']}/exports?revision_id={revision['id']}"
+    response = alice.get(url)
+    assert response.status_code == 200
+    assert [r["id"] for r in response.json()["runs"]] == [queued.json()["id"]]
+    assert response.json()["artifacts"] == []
+    assert bob.get(url).status_code == 404
+    assert alice.get(url.replace(revision["id"], str(uuid4()))).status_code == 404
+
+
+def test_export_history_never_presents_partial_internal_or_deleted_files_as_a_film(ready):
+    with TestClient(app) as client:
+        image, _ = upload(client, "blue")
+        row, revision = draft(client)
+        queued = render(client, row, revision, image).json()
+        with session_factory()() as session:
+            run = session.get(Run, queued["id"])
+            run.status = "succeeded"  # Metadata-only output fixture, no rendering claimed.
+            for metadata, trashed in (
+                ({}, False),
+                ({"partial": True}, False),
+                ({"internal_media": True}, False),
+                ({}, True),
+            ):
+                identity = str(uuid4())
+                session.add(
+                    Artifact(
+                        id=identity,
+                        owner_id=run.owner_id,
+                        run_id=run.id,
+                        artifact_type="video",
+                        mime_type="video/mp4",
+                        relative_path=f"artifacts/{identity}.mp4",
+                        original_filename="fixture.mp4",
+                        size_bytes=1,
+                        sha256="a" * 64,
+                        metadata_json=metadata,
+                        trashed_at=utcnow() if trashed else None,
+                    )
+                )
+            session.commit()
+        response = client.get(f"/api/studio/materials/{row['id']}/exports").json()
+        assert len(response["artifacts"]) == 1
+        assert response["artifacts"][0]["metadata"] == {}

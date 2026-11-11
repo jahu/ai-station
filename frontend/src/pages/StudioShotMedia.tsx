@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   Square,
 } from "lucide-react";
-import { api, type Artifact, type Run } from "../api";
+import { api, type Run } from "../api";
 import { useAccount } from "../account-context";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -18,37 +18,30 @@ import { randomId } from "../lib/random-id";
 import type { ImageModelCatalog } from "./image-models";
 import { materialBase, type StudioRevision } from "./studio-material";
 
-const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
-export type ShotProduction = { runs: Run[]; artifacts: Artifact[] };
-function useShotProduction(materialId: string, revisionId: string) {
-  const { user } = useAccount();
-  return useQuery({
-    queryKey: ["studio-production", user?.id, materialId, revisionId],
-    queryFn: ({ signal }) =>
-      api<ShotProduction>(
-        `${materialBase}/${materialId}/revisions/${revisionId}/production`,
-        { signal },
-      ),
-    refetchInterval: (q) =>
-      q.state.data?.runs?.some((r) => !terminal.has(r.status)) ? 1500 : false,
-  });
-}
+import {
+  useShotProduction,
+  terminal,
+  type ShotProduction,
+} from "./studio-production";
 
 export default function StudioShotMedia({
   materialId,
   revision,
   scene,
   disabled,
+  selectedArtifactId,
+  onSelect,
 }: {
   materialId: string;
   revision: StudioRevision;
   scene: number;
   disabled: boolean;
+  selectedArtifactId?: string;
+  onSelect: (id: string) => void;
 }) {
   const { user } = useAccount();
   const cache = useQueryClient();
   const production = useShotProduction(materialId, revision.id);
-  const [selected, setSelected] = useState("");
   const [playbackError, setPlaybackError] = useState(false);
   const [settings, setSettings] = useState(false);
   const [imageModel, setImageModel] = useState("");
@@ -70,10 +63,12 @@ export default function StudioShotMedia({
         r.status,
       ),
     ) ?? runs.find((r) => !terminal.has(r.status));
-  const takes = (production.data?.artifacts ?? []).filter((a) =>
-    runs.some((r) => r.id === a.run_id),
+  const takes = (production.data?.artifacts ?? []).filter(
+    (a) => a.type === shot.visual_kind && runs.some((r) => r.id === a.run_id),
   );
-  const source = takes.find((a) => a.id === selected) ?? takes[0];
+  const source = selectedArtifactId
+    ? takes.find((a) => a.id === selectedArtifactId)
+    : takes[0];
   const sourceDuration = Number(
     source?.metadata?.duration_seconds ??
       Number(source?.metadata?.frames) / Number(source?.metadata?.fps),
@@ -124,6 +119,7 @@ export default function StudioShotMedia({
     },
     onSuccess: (run) => {
       receipt.current = null;
+      onSelect("");
       cache.setQueryData<ShotProduction>(
         ["studio-production", user?.id, materialId, revision.id],
         (previous) => ({
@@ -197,8 +193,13 @@ export default function StudioShotMedia({
           <select
             aria-label={`Shot ${scene + 1} take`}
             value={source?.id ?? ""}
-            onChange={(e) => setSelected(e.target.value)}
+            onChange={(e) => onSelect(e.target.value)}
           >
+            {!source && (
+              <option value="" disabled>
+                Choose an available take
+              </option>
+            )}
             {takes.map((a, i) => (
               <option key={a.id} value={a.id}>
                 Take {takes.length - i} ·{" "}

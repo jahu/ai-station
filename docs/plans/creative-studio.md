@@ -170,7 +170,11 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
   utterances retain their complete narration while a bounded derived voice sample
   supports later cues. Fake generators/PCM and fixture browser checks qualify
   orchestration, not newly generated voice/music quality.
+- Export UI now freezes the same selected takes shown in the storyboard, uses
+  complete measured audio and shows actual MP4s, earlier versions, download,
+  progress and Stop. Private source/type/ownership tests and fixture playback
+  qualify the UI; missing native readiness is displayed as unavailable.
 - Remaining: guided renderer preparation, full-material automation with reuse,
-  render/export UI,
+  actual native portrait-footage qualification,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.

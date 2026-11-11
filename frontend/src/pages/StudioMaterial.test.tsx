@@ -112,6 +112,13 @@ function fixture(path = "/studio/materials/material-one", empty = false) {
           url.pathname.endsWith("/audio/music/models")
         )
           return json({ items: [] });
+        if (url.pathname.endsWith("/exports"))
+          return json({ runs: [], artifacts: [] });
+        if (url.pathname.endsWith("/renderer/capabilities"))
+          return json({
+            available: false,
+            reason: "Renderer is not prepared in this fixture",
+          });
         if (url.pathname.endsWith("/production"))
           return json({ runs: [], artifacts: [] });
         if (url.pathname.endsWith("/revisions/revision-old"))

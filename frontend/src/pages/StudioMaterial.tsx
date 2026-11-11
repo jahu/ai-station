@@ -42,6 +42,7 @@ import {
 } from "./studio-material";
 import StudioShotMedia from "./StudioShotMedia";
 import StudioSoundtrack from "./StudioSoundtrack";
+import StudioExport from "./StudioExport";
 import "./Studio.css";
 import "./StudioMaterial.css";
 
@@ -514,6 +515,7 @@ function StoryboardEditor({
   onSaved: (saved: StudioRevision) => void;
 }) {
   const [board, setBoard] = useState<Storyboard>(revision.storyboard);
+  const [takes, setTakes] = useState<Record<number, string>>({});
   const [dirty, setDirty] = useState(false);
   const receipt = useRef<{ fingerprint: string; id: string } | null>(null);
   function edit(next: Storyboard) {
@@ -639,6 +641,10 @@ function StoryboardEditor({
                 materialId={material.id}
                 revision={revision}
                 scene={index}
+                selectedArtifactId={takes[index]}
+                onSelect={(id) =>
+                  setTakes((value) => ({ ...value, [index]: id }))
+                }
                 disabled={readOnly || dirty || save.isPending}
               />
               {(shot.title || shot.eyebrow) && (
@@ -773,6 +779,13 @@ function StoryboardEditor({
             `${materialBase}/${material.id}/revisions/${id}`,
           ).then(onSaved)
         }
+      />
+      <StudioExport
+        materialId={material.id}
+        revision={revision}
+        selectedTakes={takes}
+        readOnly={readOnly}
+        disabled={dirty || save.isPending}
       />
       <ErrorNotice error={save.error} />
       <div className="studio-story-save">

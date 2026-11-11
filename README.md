@@ -114,8 +114,10 @@ results without losing earlier work. Soundtrack production now chains local
 narration, a score sized to the actual spoken passages, and a balanced mix; listen
 to takes and apply measured timing without losing existing visuals. An isolated
 Hyperframes renderer and the API/worker export bridge are qualified with actual
-image/video fixtures; complete-material automation, export UI, newly generated
-film/voice quality and automatic project selection remain in development. This is not a feature
+image/video fixtures. Export the selected takes and complete soundtrack from the
+workspace, review earlier MP4s and download the result. Guided renderer setup,
+complete-material automation, newly generated film/voice quality and automatic
+project selection remain in development. This is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 
 **One-click desktop updates.** Your app version stays

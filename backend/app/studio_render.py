@@ -21,6 +21,7 @@ from app.models import Artifact, Run
 from app.paths import safe_join
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
+from app.serialize import artifact_dict
 from app.studio_director import router
 from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
 from app.studio_schema import Fields, Storyboard
@@ -269,6 +270,42 @@ def create_render(session, material_id, body, *, task=None, parent_run_id=None, 
     )
     run.parameters = {**run.parameters, "native_request_sha256": digest(native_request(run))}
     return run
+
+
+@router.get("/{material_id}/exports")
+def exports(material_id: UUID, session: DB, revision_id: UUID | None = None):
+    row = get_material(session, material_id)
+    if revision_id:
+        get_revision(session, row, revision_id)
+    query = select(Run).where(
+        Run.executor_type == "motion_render",
+        Run.parameters["studio_material_id"].as_string() == row.id,
+    )
+    if revision_id:
+        query = query.where(Run.parameters["studio_revision_id"].as_string() == str(revision_id))
+    runs = list(session.scalars(query.order_by(Run.created_at.desc(), Run.id.desc()).limit(50)))
+    outputs = list(
+        session.scalars(
+            select(Artifact)
+            .where(
+                Artifact.run_id.in_([r.id for r in runs if r.status == "succeeded"]),
+                Artifact.artifact_type == "video",
+                Artifact.mime_type == "video/mp4",
+                Artifact.trashed_at.is_(None),
+                Artifact.purged_at.is_(None),
+                Artifact.purge_run_id.is_(None),
+            )
+            .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+        )
+    )
+    return {
+        "runs": [run_dict(r) for r in runs],
+        "artifacts": [
+            artifact_dict(a)
+            for a in outputs
+            if not a.metadata_json.get("partial") and not a.metadata_json.get("internal_media")
+        ],
+    }
 
 
 @router.post("/{material_id}/render", status_code=202)
