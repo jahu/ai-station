@@ -1,8 +1,9 @@
 # Isolated Studio renderer
 
 This increment provides the native rendering component for [Creative Studio](plans/creative-studio.md).
-It does not yet provide the material director, soundtrack generation or the
-end-to-end Studio export UI. Existing image/video workspaces remain unchanged.
+The local material director and typed API/worker export bridge are now connected;
+see [materials](studio-materials.md). Soundtrack/shot generation and the end-to-end
+export UI remain in development. Existing image/video workspaces remain unchanged.
 
 The native Runner accepts a finite composition: full-HD portrait, landscape or
 square, 30 fps, up to ten minutes, bounded editorial scenes and owned Artifact

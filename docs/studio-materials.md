@@ -38,9 +38,26 @@ Requested voice/music policy cannot silently disappear. Sources can only come
 from the supplied owner-scoped catalog. Source descriptions are not claimed as
 visual inspection; model output is a plan, not evidence that assets were made.
 
-This increment does **not** execute shot generation, speech/music synthesis,
-render/export or Chat project inference. The isolated renderer is available as
-a separately qualified native component; the director's planned assets must
-next be connected to actual child Runs and observed before composition. Final
-publication-quality acceptance requires a complete generated voiced/scored reel
-and educational film with playback/visual review, not just a valid storyboard.
+The typed export bridge now accepts a saved revision with actual owned media
+bindings and a complete soundtrack. It enqueues a normal `motion_render` Run,
+reserves 4352 MiB and dispatches through the private Runner socket. A planned
+video shot requires real video; missing footage cannot become a text template.
+The soundtrack must contain exactly the saved frame coverage in 48-kHz stereo
+PCM. Source hashes and the frozen storyboard are rechecked before dispatch and
+Library publication. The export retains its revision, identity and source lineage.
+
+A lost launch reply leads to observation, never replay. A missing native record
+must be cancellation-fenced before release; unreachable or unconfirmed container
+cleanup retains reservations for inspection. The control-plane image includes
+only the pure composition contract, never native launchers or Docker authority.
+
+Private actual API/worker/Unix-socket qualification on 2026-11-11 produced a
+1080×1920, 30-fps, 180-frame MP4 with real image/video sources and calibration
+audio, adopted into the private Library with verified cleanup. Fake tests also
+cover ownership, changed sources, lost replies and uncertain cleanup. This is
+integration evidence, not a professional complete reel or generated narration.
+
+Shot generation, speech/music synthesis/mixing, export UI and Chat project
+inference remain in development. Final publication-quality acceptance requires
+a complete newly generated voiced/scored reel and educational film with full
+playback/visual review, not just a valid storyboard or fixture export.

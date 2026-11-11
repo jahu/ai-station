@@ -106,8 +106,8 @@ brand, course or series, with a shared visual identity and editorial brief.
 The first increment adds private projects, editable identities and grouping of
 existing creative workspaces. Materials now have versioned briefs, scripts and
 shot plans with a local director and an editable storyboard on develop. An
-isolated Hyperframes renderer is qualified as
-a component; the full material workflow, audio orchestration and automatic
+isolated Hyperframes renderer and the API/worker export bridge are qualified
+with actual image/video fixtures; the full material workflow, audio orchestration and automatic
 project selection are still being implemented; this is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 

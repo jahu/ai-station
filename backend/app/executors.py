@@ -88,6 +88,7 @@ from app.station_snapshot import StationSnapshotExecutor
 from app.station_update_install import StationUpdateExecutor
 from app.station_updates import StationUpdateCheckExecutor
 from app.studio_director import StudioDirector
+from app.studio_render import StudioRenderExecutor
 from app.summary_executor import SummaryExecutor
 from app.timeline_waveforms import WaveformExecutor
 from app.timelines import TimelineExecutor
@@ -394,6 +395,7 @@ EXECUTORS = {
     "wan_video": VideoExecutor(),
     CompositionExecutor.name: CompositionExecutor(),
     StudioDirector.name: StudioDirector(),
+    StudioRenderExecutor.name: StudioRenderExecutor(),
     AvatarPlannerExecutor.name: AvatarPlannerExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),

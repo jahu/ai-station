@@ -36,6 +36,7 @@ RESUMABLE_MEDIA = {
     "effects_preview",
     "ace_step_music",
     "timeline_render",
+    "motion_render",
     "media_compose",
 }
 

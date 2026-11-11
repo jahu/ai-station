@@ -1727,8 +1727,9 @@ The [Hyperframes renderer](hyperframes-renderer.md) uses the native Runner's
 owned process lifecycle and one fixed, network-disabled CPU container. It
 compiles typed scenes into trusted local HTML/GSAP, combines frozen image/video
 assets and an already-mixed soundtrack, and verifies full-HD exports. It is a
-rendering component; the Studio material planner, audio orchestration and Chat
-integration remain subsequent increments. The control plane receives no Docker
+rendering component connected to saved materials through a typed API/worker
+export bridge. Actual shot/audio orchestration and Chat integration remain
+subsequent increments. The control plane receives no Docker
 socket or new execution privileges.
 
 Studio [materials and editorial versions](studio-materials.md) persist independently
@@ -1736,3 +1737,9 @@ of software repositories. Owner-scoped planning Runs use the existing local
 provider/model lifecycle and save immutable brief/identity/source snapshots.
 Typed storyboards separate planned visual and audio work from actual completed
 child Runs; the editor never presents a plan as rendered media.
+
+Studio exports freeze the saved revision and actual owned image/video/audio
+sources, reserve the combined 4352-MiB native/container budget and publish the
+verified output into the existing Library. Missing native dispatch records are
+fenced before release; uncertain cleanup retains resources. The Docker image
+shares only the pure composition contract, without native execution modules.
