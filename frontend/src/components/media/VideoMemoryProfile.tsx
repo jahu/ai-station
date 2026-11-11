@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
+import { boundedResolutions } from "./video-geometry";
 
 export type VideoProfile = "default" | "bounded_11g";
 export type VideoCapabilities = {
@@ -8,7 +9,11 @@ export type VideoCapabilities = {
   configuration_source?: "managed" | "configured";
   eligible_gpu_indices?: number[];
   recommended_memory_profile?: VideoProfile;
-  memory_profiles?: { id: string; available: boolean }[];
+  memory_profiles?: {
+    id: string;
+    available: boolean;
+    resolutions?: { width: number; height: number }[];
+  }[];
 };
 
 export default function VideoMemoryProfile({
@@ -40,13 +45,15 @@ export default function VideoMemoryProfile({
     capability.data.memory_profiles?.some(
       (profile) => profile.id === "bounded_11g" && profile.available,
     );
+  const portrait = boundedResolutions(capability.data).length > 1;
   if (capability.data?.configuration_source === "managed")
     return (
       <div className="notice">
         <strong>Installed video profile</strong>
         <p>
-          1280 × 704 · at least 20 steps · 11 GiB system RAM without swap.
-          Clips, image animation and longer films use the same local engine.
+          {portrait ? "Landscape or portrait" : "1280 × 704"} · at least 20
+          steps · 11 GiB system RAM without swap. Clips, image animation and
+          longer films use the same local engine.
         </p>
       </div>
     );
@@ -62,7 +69,7 @@ export default function VideoMemoryProfile({
       >
         <option value="default">Standard</option>
         <option value="bounded_11g" disabled={!ready}>
-          Reduced RAM · landscape
+          Reduced RAM · {portrait ? "landscape or portrait" : "landscape"}
         </option>
       </select>
       <small className="muted">
@@ -72,7 +79,7 @@ export default function VideoMemoryProfile({
           "Selected for the currently available memory. "}
         {value === "bounded_11g"
           ? ready
-            ? "Limits system RAM to 11 GB without swap. Uses 1280 × 704 and at least 20 steps; generation may take longer."
+            ? `Limits system RAM to 11 GB without swap. Uses ${portrait ? "1280 × 704 or 704 × 1280" : "1280 × 704"} and at least 20 steps; generation may take longer.`
             : "This saved profile is currently unavailable. Choose Standard or check the video runtime."
           : "Use Reduced RAM when other applications leave less memory for video."}
       </small>

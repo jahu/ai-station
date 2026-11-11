@@ -133,8 +133,15 @@ soundtracks keep their original audio. Complete generated-film quality remains
 under review. Storyboards on develop can explicitly share one image or clip
 across scenes while keeping separate captions, motion and timing. The director
 fits new plans to the requested duration; manual edits remain explicit and
-measured speech may extend the film rather than cutting words. Real prompt
-qualification of these source/timing constraints is still pending.
+measured speech may extend the film rather than cutting words.
+Real local-model checks now cover two distinct brands: an eight-second
+widescreen silent presentation and a portrait music reel, each sharing one
+generated image across scenes. Both final MP4s passed full decoding and the
+requested duration/source checks; complete publication-quality review continues.
+The bounded Wan engine also supports native portrait footage, preserving vertical
+composition. A real four-second 704×1280 film passed two-window generation,
+continuation and complete decoding. Each inference process used an enforced
+11 GiB RAM limit with swap disabled.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the

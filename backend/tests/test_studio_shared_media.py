@@ -83,6 +83,10 @@ def test_generated_clip_budget_covers_later_shared_scene_trim(monkeypatch):
         )
         assert result.status_code == 202, result.text
         assert result.json()["parameters"]["timeline"]["target_frames"] >= 8 * 24
+        assert (
+            result.json()["parameters"]["width"],
+            result.json()["parameters"]["height"],
+        ) == (704, 1280)
         with session_factory()() as db:
             run = db.get(Run, result.json()["id"])
             assert run.parameters["studio_storyboard_sha256"]

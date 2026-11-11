@@ -278,3 +278,42 @@ transactions before awaiting the provider, and retain the ordinary heartbeat.
 Unknown database errors remain errors. Historical interrupted Runs stay unchanged.
 Regression checks cover transient SQLite codes, binding and publication without
 duplicate inference/revisions, and Stop or claim replacement during backoff.
+
+## Native portrait footage candidate (2026-11-11)
+
+The Studio canvas supports portrait, but the bounded/managed Wan recipe currently
+forces landscape footage. Native portrait must generate 704×1280, not crop a
+1280×704 scene into a narrow strip. Admit only the transposed existing geometry
+with the same pixel/frame/step bounds, 11 GiB memory scope and process ownership.
+Advertise supported resolutions in native memory-profile metadata; a control
+plane connected to an older Runner must reject unsupported portrait generation
+before dispatch. Keep legacy landscape receipts and defaults unchanged.
+
+Studio uses its frozen aspect for generated shots. Video workspace format choice
+must remain editable for an engine that advertises portrait; unsupported square
+choices cannot silently enter the bounded profile. Continuation keeps the exact
+width/height and existing checkpoint validation. Qualification needs API/native
+validation, managed and configured profiles, continuation/Stop/recovery checks,
+format UI and a real owned portrait generation with complete decoding and visual
+review. Equal pixel count is a budget bound, not proof of actual quality or GPU
+inference success. No model downloads or changes to external runtimes are needed.
+
+
+### Actual portrait qualification — 2026-11-12
+
+The ordinary owned media queue generated a four-second 704×1280 lighthouse film
+through two native Wan windows (81 and 17 frames), twenty sampling steps each,
+and the existing single-frame APG continuation. The final file contains exactly
+96 frames at 24 fps. Both raw windows and the composed MP4 passed complete
+decoding, canonical ownership/content checks and native process completion.
+Actual systemd scopes for both windows confirmed 11 GiB RAM and zero swap.
+Sampled frames before and after the join retained the full vertical composition
+and coherent lighthouse geometry. Media and inspection records remain private.
+This qualification covers the short two-window flow; long-film quality, fresh
+engine installation and avatar postproduction remain delivery requirements.
+
+The actual conversation checks also now pass for two different project styles:
+an eight-second widescreen silent presentation and an eight-second portrait
+music reel. Each uses one real generated image shared across multiple scenes;
+both full files decoded and retained the selected brand, aspect and audio policy.
+The earlier interrupted planning and timing/source failures remain recorded.

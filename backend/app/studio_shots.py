@@ -130,6 +130,8 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
         request = LongVideoRequest(
             client_request_id=body.client_request_id,
             prompt=prompt,
+            width=704 if revision.options["aspect"] == "portrait" else 1280,
+            height=1280 if revision.options["aspect"] == "portrait" else 704,
             duration_seconds=max(1, seconds),
             composition_mode="continuous",
             seed=body.client_request_id.int % 2**31,

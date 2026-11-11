@@ -256,6 +256,7 @@ def memory_profiles(*, explicit_managed=False):
             "width": 1280,
             "height": 704,
             "minimum_steps": 20,
+            "resolutions": [{"width": 1280, "height": 704}, {"width": 704, "height": 1280}],
             **(
                 {}
                 if enabled
