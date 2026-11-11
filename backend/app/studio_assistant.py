@@ -4,7 +4,7 @@ Its model supplies editorial text and captured aliases, never task IDs or paths.
 Waiting relinquishes the worker; only the complete owned MP4 fulfills the tool.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID, uuid5
 
 from sqlalchemy import select
@@ -280,6 +280,35 @@ class AssistantStudioExecutor:
                 )
                 if revision is None or revision.material_id != run.metadata_json["studio_material_id"]:
                     raise ValueError("The completed Studio storyboard is missing")
+                # Cold native metadata verification is transient and starts no
+                # generation. Keep the completed plan, release the worker slot
+                # and use ordinary durable admission backoff before trying again.
+                from app import studio_render
+                from app.db import utcnow
+                from app.events import append_event
+                from app.resources import defer_resource_run
+
+                readiness = studio_render.capabilities()
+                if not readiness.get("available") and readiness.get("readiness") == "checking":
+                    started = run.metadata_json.get("studio_renderer_check_started_at")
+                    if started and utcnow() - datetime.fromisoformat(started) > timedelta(minutes=2):
+                        raise ValueError(
+                            "Studio renderer verification did not finish; inspect its readiness before continuing"
+                        )
+                    run.metadata_json = {
+                        **run.metadata_json,
+                        "studio_renderer_check_started_at": started or utcnow().isoformat(),
+                    }
+                    defer_resource_run(run)
+                    append_event(
+                        session,
+                        run.id,
+                        "studio.renderer.verifying",
+                        {"reason": readiness.get("reason", "Checking the isolated renderer")},
+                    )
+                    wait_for(session, run, [])
+                    session.commit()
+                    return "done"
                 production = create_production(
                     session,
                     revision.material_id,

@@ -108,12 +108,12 @@ def validate_intent(text, context):
     )
     prior_image = False
     for item in intent.outcomes:
-        if (
-            item.kind == "studio_material"
-            and item.studio.project is not None
-            and item.studio.project not in context.get("creative_projects", {})
-        ):
-            raise ValueError("Choose only a supplied creative-project alias")
+        if item.kind == "studio_material" and item.studio.project is not None:
+            from app.studio_assistant_contract import resolve_project_alias
+
+            item.studio.project = resolve_project_alias(
+                item.studio.project, context.get("creative_projects", {})
+            )
         unknown = set(item.source_inputs) - aliases
         if unknown:
             if item.kind == "image" and item.reference_mode == "sequential" and prior_image:
