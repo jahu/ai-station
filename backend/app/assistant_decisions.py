@@ -10,11 +10,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.chat_providers import completion_stream
-from app.db import sqlite_busy, utcnow
+from app.db import utcnow
 from app.events import append_event
 from app.providers import ProviderError
+from app.run_transactions import RunStopped as DecisionStopped
+from app.run_transactions import database_step as database_step
 from app.runs import transition
-from app.state import TERMINAL, RunStatus
+from app.state import RunStatus
 from app.studio_assistant_contract import StudioIntent
 
 
@@ -218,10 +220,6 @@ def validate_affordance(tool, outcomes):
         )
 
 
-class DecisionStopped(Exception):
-    pass
-
-
 def invalid_decision_fallback(context):
     """A bad terminal sentence cannot erase already verified requested results."""
     from app.assistant_controller import missing_outcomes
@@ -241,30 +239,6 @@ def invalid_decision_fallback(context):
         reason="Unable to choose a valid next action",
         response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
     )
-
-
-async def database_step(session, run, claim, deadline, action):
-    while True:
-        try:
-            session.refresh(run)
-            if (run.worker_id, run.claimed_at) != claim or run.status in TERMINAL:
-                raise DecisionStopped()
-            if run.status == "cancel_requested":
-                transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
-                session.commit()
-                raise DecisionStopped()
-            result = action()
-            session.commit()
-            return result
-        except Exception as exc:
-            session.rollback()
-            if not sqlite_busy(exc):
-                raise
-            if utcnow() >= deadline:
-                raise ProviderError(
-                    "Controller decision deadline exceeded during database contention"
-                ) from exc
-            await asyncio.sleep(0.05)
 
 
 async def infer(session, run, messages, *, json_output=True):
