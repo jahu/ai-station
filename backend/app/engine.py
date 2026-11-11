@@ -59,8 +59,10 @@ def tick(
 
     recover_gate(session, runner or RunnerClient(), worker_id)
     recover_stale(session, runner)
-    cancel_expired_waiting(session)
+    expired = cancel_expired_waiting(session)
     session.commit()
+    if expired:
+        return expired[0]  # Preserve one unit of maintenance/dispatch per tick.
     run = claim_next(session, worker_id)
     if run is None:
         session.commit()

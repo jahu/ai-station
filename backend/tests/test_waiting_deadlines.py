@@ -52,7 +52,7 @@ def test_queued_expired_budget_is_canceled_before_any_executor_dispatch():
         )
         expired_id = expired.id
         session.commit()
-        assert tick(session, "deadline-test", executors={}) is None
+        assert tick(session, "deadline-test", executors={}) == expired_id
         assert session.get(Run, expired_id).status == "canceled"
 
 
@@ -69,3 +69,24 @@ def test_waiting_sweep_preserves_future_and_unbounded_work():
         session.commit()
         cancel_expired_waiting(session)
         assert all(r.status == "queued" for r in runs)
+
+
+def test_already_requested_native_cleanup_is_not_starved_by_deadline_sweep():
+    with control_session_factory()() as session:
+        task = create_task(session, title="Owned cleanup", prompt="Neutral QA", capability="test")
+        run = _create_run(
+            session,
+            task,
+            run_type="runtime",
+            capability="runtime.load",
+            executor_type="llama_load",
+            parameters={"execution_deadline_at": (utcnow() - timedelta(seconds=1)).isoformat()},
+        )
+        run.metadata_json = {"dispatch_attempted": True}
+        session.commit()
+        assert cancel_expired_waiting(session) == [run.id]
+        assert run.status == "queued" and run.metadata_json["cancel_on_resume"] is True
+        requested_at = run.cancellation_requested_at
+        session.commit()
+        assert cancel_expired_waiting(session) == []
+        assert run.cancellation_requested_at == requested_at

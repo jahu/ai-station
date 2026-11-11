@@ -38,6 +38,7 @@ def cancel_expired_waiting(session):
             select(Run.id)
             .where(
                 Run.status.in_({"queued", "waiting_for_tool"}),
+                Run.cancellation_requested_at.is_(None),
                 deadline <= utcnow().isoformat(),
             )
             .order_by(Run.created_at)
@@ -46,14 +47,18 @@ def cancel_expired_waiting(session):
     )
     from app.task_control import lock_task
 
+    touched = []
     for run_id in ids:
         run = session.get(Run, run_id)
         if run is None:
             continue
         lock_task(session, run.task)
         session.refresh(run)
-        if run.status in {"queued", "waiting_for_tool"}:
+        if run.status in {"queued", "waiting_for_tool"} and run.cancellation_requested_at is None:
             cancel_expired_run(session, run_id)
+            if run.cancellation_requested_at is not None:
+                touched.append(run_id)
+    return touched
 
 
 # Existing coding/check integrations use this name; both contracts now share
