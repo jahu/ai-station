@@ -1990,3 +1990,13 @@ Bounded decoder buffers and app-owned temporary disk hold the two-pass bus.
 Task Stop/claim checks gate publication; partial mixes never become revisions or
 Library artifacts. Complete narration is preserved, while requested music must
 cover the edit rather than being invisibly looped or replaced with silence.
+
+
+Studio audio coordinators enqueue only the existing typed local speech/music
+operations under private material/version ownership. Generated reference samples
+are a bounded CPU PCM derivation, with original source hash/size/Run lineage,
+regular canonical file checks, no external/network/host execution, and claim/Stop
+verification before publication. Internal short voice references never replace
+complete narration. Recovery's SQL-only publication exemption requires its fixed
+executor/marker, matching owner/Task root, absent process/dispatch evidence and an
+expired unchanged claim; it grants no replay authority to actual generators.

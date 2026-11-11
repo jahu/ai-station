@@ -164,7 +164,13 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 - Completed-PCM soundtrack assembly now extends timing for complete narration,
   ducks/fades a covering score and publishes canonical PCM plus an immutable
   measured edit; synthetic integration tests are not generated-audio acceptance.
-- Remaining: guided renderer preparation, full-material automation/audio generation child Runs,
-  timing/mix and render/export UI,
+- Durable soundtrack production now composes real speech/music child executors,
+  measured score coverage and the PCM mix; desktop/mobile exposes actual takes,
+  model/reference choices, Stop and measured-version application. Long first
+  utterances retain their complete narration while a bounded derived voice sample
+  supports later cues. Fake generators/PCM and fixture browser checks qualify
+  orchestration, not newly generated voice/music quality.
+- Remaining: guided renderer preparation, full-material automation with reuse,
+  render/export UI,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.

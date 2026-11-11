@@ -9,6 +9,13 @@ from app.creative_projects import Defaults
 from app.creative_sessions import Fields
 
 
+class NarrationDelivery(Fields):
+    direction: Literal[
+        "natural", "whisper", "happy", "sad", "afraid", "angry", "calm", "excited", "breathy", "sighing"
+    ] = "natural"
+    pace: Literal["natural", "slow", "fast"] = "natural"
+
+
 class Shot(Fields):
     purpose: str = Field(min_length=1, max_length=500)
     duration_frames: StrictInt = Field(ge=30, le=2700)
@@ -54,6 +61,7 @@ class Storyboard(Fields):
     hook: str = Field(min_length=1, max_length=1000)
     audio: Literal["voice_music", "voice", "music", "silent"]
     voice_direction: str = Field(default="", max_length=1000)
+    narration_delivery: NarrationDelivery = Field(default_factory=NarrationDelivery)
     music_brief: str = Field(default="", max_length=2000)
     scenes: list[Shot] = Field(min_length=1, max_length=60)
 

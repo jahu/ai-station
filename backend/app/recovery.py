@@ -86,6 +86,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
+        if run.executor_type == "studio_audio_step":
+            from app.studio_audio_production import recover_enqueue_step
+
+            if recover_enqueue_step(session, run):
+                session.commit()
+                touched.append(run.id)
+                continue
         from app.host_media_executor import RESUMABLE_MEDIA
 
         if (

@@ -87,7 +87,7 @@ from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.station_update_install import router as station_update_install_router
 from app.station_updates import router as station_updates_router
-from app.studio_soundtrack import router as studio_material_router
+from app.studio_audio_production import router as studio_material_router
 from app.telemetry_store import history
 from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router

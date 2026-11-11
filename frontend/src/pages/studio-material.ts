@@ -35,6 +35,7 @@ export interface Storyboard {
   hook: string;
   audio: CreativeDefaults["audio"];
   voice_direction: string;
+  narration_delivery?: { direction: string; pace: string };
   music_brief: string;
   scenes: StudioShot[];
 }
