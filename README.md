@@ -52,6 +52,9 @@ Website-building tasks use an isolated owned project and return a checked offlin
 build with a ZIP download and interactive preview.
 The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
 tracks per-Run admission backoff and durable recovery after transient SQLite contention.
+The [web continuation repair](docs/plans/conversation-source-binding.md) binds
+exact observed source URLs to their existing aliases before typed validation;
+a completed Run alone is not treated as answer-quality evidence.
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 10 (21H2/22H2) or 11 x64. macOS is not supported yet.

@@ -85,7 +85,34 @@ class Search(BaseModel):
 
 class Pages(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    sources: list[Alias] = Field(min_length=1, max_length=3)
+    sources: list[Alias] = Field(
+        min_length=1,
+        max_length=3,
+        description="Keys from the supplied sources catalog, e.g. step:1:source:1; never invent URLs or aliases.",
+    )
+
+
+def bind_page_arguments(raw: dict, links: dict[str, str]) -> dict:
+    """An exact catalog URL denotes its existing alias, never a new destination.
+
+    Normalize before alias-length validation and duplicate-call comparison.
+    No URL parsing, decoding, prefix matching or network lookup expands authority.
+    Dispatch and observation still retain only the canonical supplied aliases.
+    """
+    values = raw.get("sources")
+    if isinstance(values, list) and len(values) <= 3:
+        aliases = []
+        for value in values:
+            if not isinstance(value, str):
+                raise ValueError("Choose a supplied public source alias")
+            alias = (
+                value if value in links else next((key for key, url in links.items() if value == url), None)
+            )
+            if alias is None:
+                raise ValueError("Choose a supplied public source alias")
+            aliases.append(alias)
+        raw = {**raw, "sources": aliases}
+    return Pages.model_validate(raw).model_dump()
 
 
 class ArtifactRead(BaseModel):
