@@ -17,6 +17,7 @@ from app.studio_materials import DB, digest, get_material, get_revision, source_
 from app.studio_render import router
 from app.studio_schema import Fields, Storyboard
 from app.studio_storyboard import source_end_seconds
+from app.video_schema import MAX_VIDEO_SECONDS
 
 
 class ShotRequest(Fields):
@@ -82,7 +83,7 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
     if any(source["kind"] != "image" for source in references):
         raise HTTPException(422, "Generated shot references must be images")
     prompt = shot_prompt(revision, shot)
-    deadline = (utcnow() + timedelta(hours=4)).isoformat()
+    deadline = (utcnow() + timedelta(hours=24 if shot.visual_kind == "video" else 4)).isoformat()
     task = create_task(
         session, title=f"Shot {body.scene + 1} · {row.title}", prompt=prompt, capability="studio.shot"
     )
@@ -120,8 +121,11 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
         if len(prompt) > 2000:
             raise HTTPException(422, "Keep this shot's combined visual direction within 2000 characters")
         seconds = math.ceil(source_end_seconds(plan, body.scene))
-        if seconds > 60:
-            raise HTTPException(422, "Split footage longer than sixty seconds into separate storyboard shots")
+        if seconds > MAX_VIDEO_SECONDS:
+            raise HTTPException(
+                422,
+                "Keep one generated source within five minutes; shorten the trim window or use separate source shots",
+            )
         profile = profile_for(session, body.video_model_id, observed_video_profile)
         if not profile.get("available"):
             raise HTTPException(409, profile.get("reason", "Prepare local video before generating footage"))

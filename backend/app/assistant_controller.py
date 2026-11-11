@@ -315,7 +315,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "reference_text": user.content[len(body.content) :][:24000],
             "web_search": body.web_search.model_dump(),
             **{name: request.get(name) for name in ("coding", "data", "effects")},
-            "execution_deadline_at": (utcnow() + timedelta(hours=4)).isoformat(),
+            "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         metadata={"controller_steps": [], "controller_phase": "decide"},
     )

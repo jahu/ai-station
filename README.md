@@ -141,7 +141,10 @@ requested duration/source checks; complete publication-quality review continues.
 The bounded Wan engine also supports native portrait footage, preserving vertical
 composition. A real four-second 704×1280 film passed two-window generation,
 continuation and complete decoding. Each inference process used an enforced
-11 GiB RAM limit with swap disabled.
+11 GiB RAM limit with swap disabled. Source-video workflows on develop now
+accept up to five minutes through the same segmented queue, Stop and resume;
+long-duration queue/result handling is qualified separately from the short
+real-GPU footage checks.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the

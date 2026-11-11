@@ -16,8 +16,8 @@ export function scenePlanError(shared: string, scenes: SceneDraft[]) {
     )
   )
     return "Each scene needs a duration from 1 to 60 whole seconds.";
-  if (scenes.reduce((total, scene) => total + scene.duration_seconds, 0) > 60)
-    return "The complete film can be up to 60 seconds.";
+  if (scenes.reduce((total, scene) => total + scene.duration_seconds, 0) > 300)
+    return "The complete film can be up to 5 minutes.";
   if (
     scenes.some(
       (scene) => shared.trim().length + 2 + scene.prompt.trim().length > 2000,

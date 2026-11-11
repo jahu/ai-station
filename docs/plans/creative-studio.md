@@ -317,3 +317,23 @@ an eight-second widescreen silent presentation and an eight-second portrait
 music reel. Each uses one real generated image shared across multiple scenes;
 both full files decoded and retained the selected brand, aspect and audio policy.
 The earlier interrupted planning and timing/source failures remain recorded.
+
+## Longer footage delivery
+
+Extend continuous/shot-sequence source production to five minutes within the
+existing 7,500-frame, 256-segment native timeline. Studio keeps individual
+editorial beats at ninety seconds and uses the complete shared-source trim window.
+The UI, typed chat tool and legacy request adapter must agree on the same limit.
+New long-workflow deadlines must cover deliberate generation; individual native
+process deadlines, Stop, leases and recovery remain bounded and unchanged.
+
+A longer queue must not hide its final film behind the first forty rows or fail
+because internal segment/checkpoint artifacts exhaust a conversation's result
+limit. Project user-visible artifacts before applying output bounds; retain
+bounded recent activity plus the explicit child anchor. Full stage history stays
+in Runs and the media job. Keep canonical owner/conversation checks and finite
+graph bounds. Persistent-agent definitions retain their independent four-hour
+maximum; the longer operator workflow budget does not grant agents more runtime.
+Test complete queue coverage, whole-Task Stop, receipt compatibility,
+final result projection and account isolation. Short GPU continuation evidence
+qualifies the primitive; it does not claim a real five-minute film was generated.

@@ -199,7 +199,7 @@ def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge, monkeypat
     "extra",
     [
         {"frames": 81},
-        {"duration_seconds": 61},
+        {"duration_seconds": 301},
         {"composition_mode": "loop"},
         {"duration_seconds": True},
     ],
