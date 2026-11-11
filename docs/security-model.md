@@ -1981,3 +1981,12 @@ coverage, and validates the native provenance report before publication. A
 changed source cannot silently replace a frozen binding. Recovery retains RAM
 when native ownership/cleanup cannot be confirmed and fences missing dispatches
 before release. A lost launch reply is never permission to launch again.
+
+The Studio CPU soundtrack assembler accepts only private live WAV Artifact IDs,
+finite mix levels and exact saved revision coordinates. Canonical regular files
+have bounded headers, durations and bytes; hashes are rechecked before/after
+streaming decode. It uses no URL, shell, executable filter or host authority.
+Bounded decoder buffers and app-owned temporary disk hold the two-pass bus.
+Task Stop/claim checks gate publication; partial mixes never become revisions or
+Library artifacts. Complete narration is preserved, while requested music must
+cover the edit rather than being invisibly looped or replaced with silence.
