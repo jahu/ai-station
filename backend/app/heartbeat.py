@@ -5,7 +5,7 @@ import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 
 from app.config import get_settings
 from app.db import control_session_factory, utcnow
@@ -25,6 +25,40 @@ def cancel_expired_run(session, run_id):
         if run.status != "cancel_requested":
             append_event(session, run.id, "agent.runtime_limit", {})
             request_cancel(session, run)
+
+
+def cancel_expired_waiting(session):
+    """Budgets include dependency/resource waits, which have no worker heartbeat."""
+    deadline = func.coalesce(
+        func.nullif(Run.parameters["execution_deadline_at"].as_string(), ""),
+        Run.parameters["agent_coding_deadline"].as_string(),
+    )
+    ids = list(
+        session.scalars(
+            select(Run.id)
+            .where(
+                Run.status.in_({"queued", "waiting_for_tool"}),
+                Run.cancellation_requested_at.is_(None),
+                deadline <= utcnow().isoformat(),
+            )
+            .order_by(Run.created_at)
+            .limit(100)
+        )
+    )
+    from app.task_control import lock_task
+
+    touched = []
+    for run_id in ids:
+        run = session.get(Run, run_id)
+        if run is None:
+            continue
+        lock_task(session, run.task)
+        session.refresh(run)
+        if run.status in {"queued", "waiting_for_tool"} and run.cancellation_requested_at is None:
+            cancel_expired_run(session, run_id)
+            if run.cancellation_requested_at is not None:
+                touched.append(run_id)
+    return touched
 
 
 # Existing coding/check integrations use this name; both contracts now share

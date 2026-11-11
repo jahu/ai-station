@@ -12,7 +12,7 @@ from app.dependencies import failed_prerequisites
 from app.events import append_event
 from app.executor import Executor
 from app.executors import EXECUTORS
-from app.heartbeat import cancel_expired_run, keep_lease
+from app.heartbeat import cancel_expired_run, cancel_expired_waiting, keep_lease
 from app.models import WorkerRow
 from app.recovery import recover_stale
 from app.resources import release_run_locks
@@ -59,7 +59,10 @@ def tick(
 
     recover_gate(session, runner or RunnerClient(), worker_id)
     recover_stale(session, runner)
+    expired = cancel_expired_waiting(session)
     session.commit()
+    if expired:
+        return expired[0]  # Preserve one unit of maintenance/dispatch per tick.
     run = claim_next(session, worker_id)
     if run is None:
         session.commit()
