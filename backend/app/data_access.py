@@ -54,6 +54,7 @@ ROOTS = (
     m.ChatProvider,
     m.CreativeSession,
     m.CreativeProject,
+    m.StudioMaterial,
 )
 SHARED = (m.ModelFile, m.ModelDefinition, m.Runtime, m.RuntimeInstance, m.TelemetrySample)
 ADMIN = (m.Setting, m.StationNode, m.WorkerRow)
@@ -61,6 +62,7 @@ ACCOUNTS = (m.User, m.UserSession, m.UserSetting, m.AccountEvent)
 
 # Each inherited record is visible only through all of its private parents.
 PARENTS = {
+    m.StudioRevision: (("material_id", m.StudioMaterial), ("source_run_id", m.Run)),
     m.TimelineRevision: (("session_id", m.CreativeSession),),
     m.CreativeTurn: (("session_id", m.CreativeSession), ("task_id", m.Task), ("run_id", m.Run)),
     m.ResourceLock: (("run_id", m.Run),),
@@ -93,6 +95,8 @@ PARENTS = {
     m.EmailDelivery: (("run_id", m.Run), ("connector_id", m.Connector)),
 }
 REFERENCES = {
+    m.StudioMaterial: (("creative_project_id", m.CreativeProject),),
+    m.StudioRevision: (("parent_revision_id", m.StudioRevision),),
     m.CreativeProject: (("logo_artifact_id", m.Artifact),),
     m.CreativeSession: (("creative_project_id", m.CreativeProject),),
     m.TimelineRevision: (("parent_revision_id", m.TimelineRevision),),

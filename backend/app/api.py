@@ -87,6 +87,7 @@ from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.station_update_install import router as station_update_install_router
 from app.station_updates import router as station_updates_router
+from app.studio_director import router as studio_material_router
 from app.telemetry_store import history
 from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router
@@ -521,6 +522,7 @@ app.include_router(llama_router)
 app.include_router(browser_router)
 app.include_router(site_preview_router)
 app.include_router(creative_router)
+app.include_router(studio_material_router)
 app.include_router(creative_project_router)
 
 if get_settings().access_profile == "accounts":

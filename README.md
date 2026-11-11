@@ -104,7 +104,9 @@ result, and updates that keep your accounts, models and saved work.
 **In development: Creative Studio.** Organize reels, presentations and films by
 brand, course or series, with a shared visual identity and editorial brief.
 The first increment adds private projects, editable identities and grouping of
-existing creative workspaces. An isolated Hyperframes renderer is qualified as
+existing creative workspaces. Materials now have versioned briefs, scripts and
+shot plans with a local director and an editable storyboard on develop. An
+isolated Hyperframes renderer is qualified as
 a component; the full material workflow, audio orchestration and automatic
 project selection are still being implemented; this is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).

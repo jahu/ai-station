@@ -64,7 +64,11 @@ function fixture(
           );
         if (url.pathname === "/api/creative/projects/project-one")
           return response(project);
-        if (url.pathname === "/api/creative/sessions") return response([]);
+        if (
+          url.pathname === "/api/creative/sessions" ||
+          url.pathname === "/api/studio/materials"
+        )
+          return response([]);
       }
       const body = JSON.parse(String(init?.body ?? "{}")) as Record<
         string,

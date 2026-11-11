@@ -1,9 +1,4 @@
-import {
-  useLayoutEffect,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-} from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   useInfiniteQuery,
@@ -33,6 +28,9 @@ import {
   type CreativeProject,
 } from "../components/creative/creative-project";
 import "./Studio.css";
+import "./StudioMaterial.css";
+import StudioMaterials from "./StudioMaterials";
+import { useCreativeEntry as useStudioEntry } from "../components/creative/useCreativeEntry";
 
 const projectUrl = "/creative/projects";
 const font = {
@@ -57,14 +55,6 @@ const date = (value: string) =>
     month: "short",
     day: "numeric",
   });
-
-function useStudioEntry() {
-  useLayoutEffect(() => {
-    const main = document.getElementById("main");
-    if (main) main.scrollTop = 0;
-    document.documentElement.scrollTop = 0;
-  }, []);
-}
 
 function Swatches({ colors }: { colors: string[] }) {
   return (
@@ -110,6 +100,7 @@ export function Studio() {
         Keep a brand, a course or a series together. Give each project its own
         visual identity and voice.
       </PageTitle>
+      <StudioMaterials />
       <div className="studio-toolbar">
         <div className="mode-tabs" aria-label="Creative project status">
           <button
@@ -337,6 +328,9 @@ function ProjectEditor({ project }: { project?: CreativeProject }) {
           : "The shared brief for your materials. Save a clear direction; refine each story separately."}
       </PageTitle>
       <ErrorNotice error={save.error ?? archive.error} />
+      {project && (
+        <StudioMaterials projectId={project.id} readOnly={readOnly} />
+      )}
       <div className="studio-editor-layout">
         <form onSubmit={submit} className="studio-editor">
           <fieldset disabled={busy || readOnly}>
