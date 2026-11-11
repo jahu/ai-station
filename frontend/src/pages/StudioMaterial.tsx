@@ -43,6 +43,7 @@ import {
 import StudioShotMedia from "./StudioShotMedia";
 import StudioSoundtrack from "./StudioSoundtrack";
 import StudioExport from "./StudioExport";
+import StudioProduction from "./StudioProduction";
 import "./Studio.css";
 import "./StudioMaterial.css";
 
@@ -346,8 +347,9 @@ export default function StudioMaterial() {
           )}
           <p className="studio-direction-note">
             The storyboard keeps your editorial intent. Generate images and
-            footage beside each saved shot; every take stays in Library.
-            Soundtrack production and final editing are the next steps.
+            footage beside each saved shot; every take stays in Library. Produce
+            the whole film above, or refine individual shots, sound and export
+            below.
           </p>
           {!!activity.data?.length && (
             <details className="studio-direction-history">
@@ -572,6 +574,17 @@ function StoryboardEditor({
         </div>
         <blockquote>{board.hook}</blockquote>
       </div>
+      <StudioProduction
+        materialId={material.id}
+        revision={revision}
+        selectedTakes={takes}
+        disabled={readOnly || dirty || save.isPending}
+        onVersion={(id) =>
+          api<StudioRevision>(
+            `${materialBase}/${material.id}/revisions/${id}`,
+          ).then(onSaved)
+        }
+      />
       <fieldset className="studio-shots" disabled={readOnly || save.isPending}>
         {board.scenes.map((shot, index) => {
           const from = board.scenes

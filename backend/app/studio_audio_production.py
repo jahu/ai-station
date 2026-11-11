@@ -71,6 +71,7 @@ class Voice(NarrationDelivery):
 class ProduceAudio(Fields):
     client_request_id: UUID
     revision_id: UUID
+    reuse_from_run_id: UUID | None = None
     voice: Voice | None = None
     music_model_id: UUID | None = None
     music_caption: str | None = Field(default=None, min_length=1, max_length=512)
@@ -78,8 +79,7 @@ class ProduceAudio(Fields):
     duck: float = Field(default=0.28, ge=0.05, le=1.0, allow_inf_nan=False, strict=True)
 
 
-@router.post("/{material_id}/audio/produce", status_code=202)
-def produce(material_id: UUID, body: ProduceAudio, session: DB):
+def create_audio_production(session, material_id, body):
     row = get_material(session, material_id, lock=True, active=True)
     revision = get_revision(session, row, body.revision_id)
     plan = Storyboard.model_validate(revision.storyboard)
@@ -98,7 +98,7 @@ def produce(material_id: UUID, body: ProduceAudio, session: DB):
     if prior:
         if prior.parameters.get("request_sha256") != fingerprint:
             raise HTTPException(409, "This audio production receipt belongs to another request")
-        return run_dict(prior)
+        return prior
     active = session.scalar(
         select(Run.id)
         .where(
@@ -124,6 +124,7 @@ def produce(material_id: UUID, body: ProduceAudio, session: DB):
                 raise ValueError("Choose a narrator recording of 0.1–60 seconds within 20 MiB")
         except (ValueError, OSError) as exc:
             raise HTTPException(422, str(exc)) from exc
+    voices, music, reused = reusable_audio(session, body, plan) if body.reuse_from_run_id else ({}, None, {})
     task = create_task(
         session, title="Produce sound · " + row.title, prompt=revision.brief, capability="studio.audio"
     )
@@ -145,7 +146,9 @@ def produce(material_id: UUID, body: ProduceAudio, session: DB):
             "request": body.model_dump(mode="json"),
             "music_caption": score,
             "reference_snapshot": reference,
-            "voice_artifacts": {},
+            "voice_artifacts": voices,
+            "reused_music_artifact_id": music,
+            "reused_audio_sources": reused,
             "pending": None,
             "execution_deadline_at": (utcnow() + timedelta(hours=4)).isoformat(),
         },
@@ -153,11 +156,78 @@ def produce(material_id: UUID, body: ProduceAudio, session: DB):
     )
     run.parameters = {**run.parameters, "studio_audio_root_id": run.id}
     task.metadata_json = {**task.metadata_json, "studio_audio_root_id": run.id}
+    return run
+
+
+@router.post("/{material_id}/audio/produce", status_code=202)
+def produce(material_id: UUID, body: ProduceAudio, session: DB):
+    run = create_audio_production(session, material_id, body)
     session.commit()
     return run_dict(run)
 
 
-def completed_audio(session, stage, root, pending):
+def reusable_audio(session, body, plan):
+    previous = session.get(Run, str(body.reuse_from_run_id))
+    if not (
+        previous
+        and previous.executor_type == "studio_audio_step"
+        and previous.parameters.get("studio_audio_root_id") == previous.id
+        and previous.parameters.get("studio_revision_id") == str(body.revision_id)
+        and previous.parameters.get("revision_sha256") == digest(plan.model_dump(mode="json"))
+    ):
+        raise HTTPException(404, "Choose an owned audio production of this saved script")
+    if previous.parameters.get("reference_snapshot"):
+        reference = previous.parameters["reference_snapshot"]
+        if audio_source(session, reference["artifact_id"]) != reference:
+            raise HTTPException(409, "The original narrator reference changed")
+    old = ProduceAudio.model_validate(previous.parameters["request"])
+    excluded = {"client_request_id", "reuse_from_run_id"}
+    if old.model_dump(mode="json", exclude=excluded) != body.model_dump(mode="json", exclude=excluded):
+        raise HTTPException(409, "Audio reuse requires the same narrator, score and mix settings")
+    stages = list(
+        session.scalars(select(Run).where(Run.task_id == previous.task_id).order_by(Run.created_at, Run.id))
+    )
+    if any(r.status not in {"succeeded", "failed", "interrupted", "canceled"} for r in stages):
+        raise HTTPException(409, "Stop the previous sound production before continuing it")
+    voices, music, sources = {}, None, {}
+    for stage in stages:
+        if stage.executor_type != "studio_audio_step":
+            continue
+        candidates = dict(stage.parameters.get("voice_artifacts", {}))
+        pending = stage.parameters.get("pending")
+        if pending and pending["kind"] in {"voice", "music"}:
+            try:
+                identity = completed_audio(session, stage, previous, pending, verify=False)
+                if pending["kind"] == "voice":
+                    candidates[str(pending["scene"])] = identity
+                else:
+                    music = identity
+            except (ValueError, OSError):
+                pass
+        for scene, identity in candidates.items():
+            try:
+                source = audio_source(session, identity)
+                item = session.get(Artifact, identity)
+                origin = session.get(Run, item.run_id) if item.run_id else None
+                if (
+                    not origin
+                    or origin.status != "succeeded"
+                    or item.metadata_json.get("partial")
+                    or item.metadata_json.get("internal_media")
+                ):
+                    continue
+                voices[scene] = identity
+                sources[identity] = source
+            except (ValueError, OSError):
+                continue
+    if music and set(voices) == {str(i) for i, s in enumerate(plan.scenes) if s.narration}:
+        sources[music] = audio_source(session, music)
+    else:
+        music = None
+    return voices, music, sources
+
+
+def completed_audio(session, stage, root, pending, *, verify=True):
     child = session.get(Run, pending["run_id"])
     if (
         child is None
@@ -190,7 +260,7 @@ def completed_audio(session, stage, root, pending):
     ]
     if len(outputs) != 1:
         raise ValueError("Audio production requires exactly one complete owned PCM result")
-    audio_source(session, outputs[0].id, verify=True)
+    audio_source(session, outputs[0].id, verify=verify)
     return outputs[0].id
 
 
@@ -274,9 +344,13 @@ class StudioAudioStepExecutor:
             != root.parameters["reference_snapshot"]
         ):
             raise ValueError("The selected narrator reference changed before production")
+        if run.id == root.id:
+            for identity, frozen in root.parameters.get("reused_audio_sources", {}).items():
+                if audio_source(session, identity, verify=True) != frozen:
+                    raise ValueError("A reused sound source changed before continuation")
         voices = dict(run.parameters["voice_artifacts"])
         pending = run.parameters.get("pending")
-        music = None
+        music = root.parameters.get("reused_music_artifact_id")
         voice_reference = run.parameters.get("voice_reference_id")
         if pending:
             result = completed_audio(session, run, root, pending)
@@ -398,10 +472,14 @@ def recover_enqueue_step(session, run):
         or run.process_group_id
     ):
         return False
-    root = session.get(Run, run.parameters.get("studio_audio_root_id", ""))
+    key = {
+        "studio_audio_step": "studio_audio_root_id",
+        "studio_production_step": "studio_production_root_id",
+    }.get(run.executor_type)
+    root = session.get(Run, run.parameters.get(key, "")) if key else None
     if (
         root is None
-        or root.executor_type != "studio_audio_step"
+        or root.executor_type != run.executor_type
         or root.task_id != run.task_id
         or root.owner_id != run.owner_id
     ):

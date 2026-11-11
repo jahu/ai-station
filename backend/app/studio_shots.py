@@ -38,7 +38,7 @@ def shot_prompt(revision, shot):
     return "\n\n".join(parts)
 
 
-def enqueue_shot(session, material_id, body):
+def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
     row = get_material(session, material_id, lock=True, active=True)
     revision = get_revision(session, row, body.revision_id)
     plan = Storyboard.model_validate(revision.storyboard)
@@ -118,7 +118,7 @@ def enqueue_shot(session, material_id, body):
         seconds = math.ceil(shot.duration_frames / 30 + shot.media_start_seconds)
         if seconds > 60:
             raise HTTPException(422, "Split footage longer than sixty seconds into separate storyboard shots")
-        profile = profile_for(session, body.video_model_id)
+        profile = profile_for(session, body.video_model_id, observed_video_profile)
         if not profile.get("available"):
             raise HTTPException(409, profile.get("reason", "Prepare local video before generating footage"))
         if len(references) > 1:

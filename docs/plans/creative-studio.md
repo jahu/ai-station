@@ -177,7 +177,30 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 - Existing local renderer activation is exposed in the export workspace through
   private queued setup Runs, with actual Unix-socket/worker activation verified.
   This does not install a missing renderer or qualify new generated films.
-- Remaining: fresh renderer installation, full-material automation with reuse,
+- Whole-material production now coordinates measured sound, individual shots
+  and export using durable dependencies and owned child Tasks. Stop forwards to
+  those children, and continuation reuses complete takes/sound and spoken cues.
+  Fake generators qualify the chain, not real complete-film quality.
+- Remaining: fresh renderer installation, full-material production qualification,
   actual native portrait-footage qualification,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.
+
+### Complete-material production
+
+A single queued production coordinates existing audio, shot and export Tasks.
+Narration and its measured edit precede generated footage, so video covers actual
+speech rather than an estimated script length. Existing video Tasks retain their
+own segment plans; Studio records immutable owned child-task links and forwards
+whole-production Stop only along those verified links. Completed reusable sources
+are never canceled. SQL-only coordination steps use durable dependencies, claim
+fences and transactional publication; no inference executes in a handler.
+
+Freeze the source revision, explicit takes, actual existing take observations and
+model choices. A new attempt may reuse verified complete results from a finished
+owned production with the identical request. Missing, replaced or trashed sources
+are not success. Earlier completed audio/visual artifacts remain inspectable after
+a failed attempt. Final status requires the actual complete exported MP4, not a
+successful planning step. Private API/worker tests must cover measured timing,
+multiple independent video Tasks, reuse, Stop, ownership and stale claims before
+newly generated professional-film qualification and deployment.

@@ -90,6 +90,7 @@ from app.station_update_install import StationUpdateExecutor
 from app.station_updates import StationUpdateCheckExecutor
 from app.studio_audio_production import StudioAudioStepExecutor, StudioVoiceReferenceExecutor
 from app.studio_director import StudioDirector
+from app.studio_production import StudioProductionExecutor
 from app.studio_render import StudioRenderExecutor
 from app.studio_soundtrack import StudioSoundtrackExecutor
 from app.summary_executor import SummaryExecutor
@@ -343,6 +344,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    StudioProductionExecutor.name: StudioProductionExecutor(),
     "assistant_controller": AssistantControllerExecutor(),
     "assistant_decision": AssistantDecisionExecutor(),
     "assistant_web": AssistantWebExecutor(),
