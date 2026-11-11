@@ -29,6 +29,7 @@ from app.paths import safe_join
 from app.permissions import require
 from app.runs import create_run, create_task, run_dict, transition
 from app.state import RunStatus
+from app.studio_mastering import PROFILE as MASTERING_PROFILE
 from app.studio_materials import DB, digest, get_material, get_revision
 from app.studio_pcm import timed_storyboard
 from app.studio_schema import Fields, NarrationDelivery, Storyboard
@@ -145,6 +146,7 @@ def create_audio_production(session, material_id, body):
             "request_sha256": fingerprint,
             "request": body.model_dump(mode="json"),
             "music_caption": score,
+            "mastering_profile": MASTERING_PROFILE,
             "reference_snapshot": reference,
             "voice_artifacts": voices,
             "reused_music_artifact_id": music,
@@ -439,6 +441,7 @@ class StudioAudioStepExecutor:
                 ),
                 task=run.task,
                 parent_run_id=run.id,
+                default_mastering=root.parameters.get("mastering_profile"),
             )
             run.task.metadata_json = {**run.task.metadata_json, "studio_mix_run_id": child.id}
             run.metadata_json = {**run.metadata_json, "mix_run_id": child.id}

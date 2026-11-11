@@ -213,7 +213,8 @@ export default function StudioSoundtrack({
       </header>
       <p className="studio-direction-note">
         Complete spoken passages set the timing. Shots can grow to fit the
-        voice; words are never cut to meet a guessed duration.
+        voice; words are never cut to meet a guessed duration. New soundtracks
+        have measured volume and peak protection for sharing.
       </p>
       {chosen?.soundtrack && (
         <div className="studio-soundtrack-result">
@@ -227,6 +228,17 @@ export default function StudioSoundtrack({
             src={`/api/artifacts/${chosen.soundtrack.id}/file`}
             aria-label="Finished soundtrack"
           />
+          {!!chosen.soundtrack.metadata?.mastering && (
+            <p className="studio-direction-note">
+              {(
+                chosen.soundtrack.metadata.mastering as {
+                  target_reached?: boolean;
+                }
+              ).target_reached
+                ? "Volume balanced for sharing."
+                : "Volume protection applied; measured details are available in Library."}
+            </p>
+          )}
           <div>
             <Link to={`/library/${chosen.soundtrack.id}`}>
               Open in Library ↗
@@ -385,19 +397,21 @@ export default function StudioSoundtrack({
                 onChange={setMusicModel}
                 disabled={disabled || !!active}
               />
-              <label>
-                Background music · {Math.round(gain * 100)}%
-                <input
-                  aria-label="Background music level"
-                  type="range"
-                  min=".01"
-                  max="1"
-                  step=".01"
-                  value={gain}
-                  onChange={(e) => setGain(Number(e.target.value))}
-                />
-                <small>Automatically lowers under the narrator.</small>
-              </label>
+              {voice && (
+                <label>
+                  Background music · {Math.round(gain * 100)}%
+                  <input
+                    aria-label="Background music level"
+                    type="range"
+                    min=".01"
+                    max="1"
+                    step=".01"
+                    value={gain}
+                    onChange={(e) => setGain(Number(e.target.value))}
+                  />
+                  <small>Automatically lowers under the narrator.</small>
+                </label>
+              )}
             </>
           )}
         </fieldset>

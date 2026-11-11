@@ -498,3 +498,21 @@ def test_replaced_reference_claim_cannot_publish_or_cancel_the_new_owner(generat
             assert run.worker_id == "replacement" and run.status == "running"
             assert not list(session.scalars(select(Artifact).where(Artifact.run_id == run.id)))
             assert not list((get_settings().data_dir / "runs" / run.id).glob("voice-reference-*"))
+
+
+def test_legacy_audio_coordination_keeps_original_mix_policy(generators):
+    with TestClient(app) as client:
+        row, revision = draft(client, audio="voice_music")
+        queued = submit(client, row, revision).json()
+        with session_factory()() as db:
+            root = db.get(Run, queued["id"])
+            assert root.parameters["mastering_profile"] == "studio-lufs16-v1"
+            root.parameters = {k: v for k, v in root.parameters.items() if k != "mastering_profile"}
+            db.commit()
+            for _ in range(20):
+                if tick(db, "legacy-audio-policy", executors=generators[2]) is None:
+                    break
+            mixed = db.scalar(select(Run).where(Run.executor_type == "studio_soundtrack"))
+            assert mixed and mixed.status == "succeeded", mixed.error_message if mixed else "missing mix"
+            assert mixed.parameters.get("mastering_profile") is None
+            assert "mastering" not in mixed.metadata_json["mix"]

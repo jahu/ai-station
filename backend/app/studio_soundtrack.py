@@ -22,6 +22,7 @@ from app.paths import safe_join
 from app.permissions import require
 from app.runs import create_run, create_task, run_dict, transition
 from app.state import RunStatus
+from app.studio_mastering import PROFILE, MasteringProfile, master_wave
 from app.studio_materials import DB, digest, get_material, get_revision, publish_revision
 from app.studio_pcm import mix, timed_storyboard
 from app.studio_render import Binding
@@ -38,6 +39,7 @@ class MixRequest(Fields):
     music_artifact_id: UUID | None = None
     music_gain: float = Field(default=0.22, ge=0.01, le=1.0, allow_inf_nan=False, strict=True)
     duck: float = Field(default=0.28, ge=0.05, le=1.0, allow_inf_nan=False, strict=True)
+    mastering_profile: MasteringProfile | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def unique(self):
@@ -134,7 +136,9 @@ def frozen_inputs(session, run, revision, body):
     return plan, voices, music
 
 
-def create_soundtrack_run(session, material_id, body, *, task=None, parent_run_id=None):
+def create_soundtrack_run(
+    session, material_id, body, *, task=None, parent_run_id=None, default_mastering=PROFILE
+):
     row = get_material(session, material_id, lock=True, active=True)
     revision = get_revision(session, row, body.revision_id)
     fingerprint = digest(body.model_dump(mode="json", exclude={"client_request_id"}))
@@ -176,6 +180,9 @@ def create_soundtrack_run(session, material_id, body, *, task=None, parent_run_i
         parameters={
             "studio_material_id": row.id,
             "studio_revision_id": revision.id,
+            "mastering_profile": body.mastering_profile
+            if body.mastering_profile is not None
+            else default_mastering,
             "request": body.model_dump(mode="json"),
             "request_sha256": fingerprint,
             "revision_sha256": digest(revision.storyboard),
@@ -280,6 +287,19 @@ class StudioSoundtrackExecutor:
                     duck=body.duck,
                     check=check,
                 )
+                selected_mastering = run.parameters.get("mastering_profile")
+                if selected_mastering not in {None, "none", PROFILE}:
+                    raise ValueError("Choose a qualified Studio mastering profile")
+                if selected_mastering == PROFILE:
+                    mastered = Path(temporary) / "mastered.wav"
+                    measured = master_wave(output, mastered, check)
+                    report = {
+                        **report,
+                        "premaster_peak_after": report["peak_after"],
+                        "peak_after": measured["after"]["sample_peak"],
+                        "mastering": measured,
+                    }
+                    output = mastered
                 check(True)
                 # Recheck bytes after decoding, then serialize publication with Stop.
                 frozen_inputs(session, run, revision, body)

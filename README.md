@@ -127,7 +127,10 @@ The conversation bridge adds semantic project/format/audio selection and queues
 that same full production from a prompt, with a Studio link and final film in
 chat. Account isolation, all four audio policies, Stop and queue recovery are
 checked with fake media; actual conversational film quality remains in
-qualification.
+qualification. New soundtrack finishing on develop measures and balances
+publishing volume, protects peaks and retains exact narration timing; earlier
+soundtracks keep their original audio. Complete generated-film quality remains
+under review.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the
