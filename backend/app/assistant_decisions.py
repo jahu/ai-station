@@ -334,7 +334,7 @@ class AssistantDecisionExecutor:
 
     def execute(self, session, run):
         from app.assistant_controller import missing_outcomes, sources
-        from app.assistant_controller_tools import TOOLS, catalog, wrapper_parameters
+        from app.assistant_controller_tools import TOOLS, bind_page_arguments, catalog, wrapper_parameters
         from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, planning_messages, validate_plan
         from app.models import Run
 
@@ -390,6 +390,17 @@ class AssistantDecisionExecutor:
                 )
                 if value.tool not in context["tools"]:
                     raise ValueError("Select an available tool")
+                root = session.get(Run, run.parent_run_id)
+                if (
+                    root is None
+                    or root.executor_type != "assistant_controller"
+                    or root.owner_id != run.owner_id
+                    or root.task_id != run.task_id
+                    or root.metadata_json.get("decision_run_id") != run.id
+                ):
+                    raise ValueError("Decision has no valid originating controller")
+                if value.tool == "web.read":
+                    value.arguments = bind_page_arguments(value.arguments, sources(root))
                 arguments = TOOLS[value.tool].arguments.model_validate(value.arguments).model_dump()
                 for observed in context["observations"]:
                     if observed["tool"] != value.tool:
@@ -418,15 +429,6 @@ class AssistantDecisionExecutor:
                     raise ValueError(
                         "Use selected_web_query exactly; private instructions are not a public query"
                     )
-                root = session.get(Run, run.parent_run_id)
-                if (
-                    root is None
-                    or root.executor_type != "assistant_controller"
-                    or root.owner_id != run.owner_id
-                    or root.task_id != run.task_id
-                    or root.metadata_json.get("decision_run_id") != run.id
-                ):
-                    raise ValueError("Decision has no valid originating controller")
                 if value.tool == "web.read":
                     if any(alias not in sources(root) for alias in value.arguments["sources"]):
                         raise ValueError("Choose a supplied public source alias")
@@ -560,6 +562,22 @@ class AssistantDecisionExecutor:
                     break
                 except ValueError as exc:
                     correction = str(exc)[:1800]
+                    # Keep rejection count inspectable without persisting a raw
+                    # framework response/private scratchpad in public activity.
+                    asyncio.run(
+                        database_step(
+                            session,
+                            run,
+                            claim,
+                            deadline,
+                            lambda: append_event(
+                                session,
+                                run.id,
+                                "assistant.decision.rejected",
+                                {"attempt": attempt + 1, "retrying": not bool(attempt)},
+                            ),
+                        )
+                    )
                     if attempt:
                         value = invalid_decision_fallback(run.parameters["decision_context"])
                         break
