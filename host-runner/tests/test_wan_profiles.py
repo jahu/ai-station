@@ -56,3 +56,11 @@ def test_unqualified_geometry_or_steps_reject_before_scope_or_model_import(monke
 def test_unrecognized_profile_cannot_select_execution_settings(profile):
     with pytest.raises(ValueError, match="Unsupported fixed Wan memory profile"):
         prepare_job({"memory_profile": profile})
+
+
+def test_portrait_retains_the_same_fixed_precision_and_kernel_memory_scope(monkeypatch):
+    seen = []
+    monkeypatch.setattr(memory_scope, "require_scope", lambda *args: seen.append(args))
+    body = bounded(width=704, height=1280)
+    assert prepare_job(body) == "fp8_e4m3fn"
+    assert seen == [(body["run_id"], 11264)]

@@ -18,6 +18,7 @@ function mount(
   entry = "/video",
   available = true,
   models: { id: string; name: string; available: boolean }[] = [],
+  portrait = false,
 ) {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
@@ -32,7 +33,15 @@ function mount(
                 ? {
                     configuration_source: "managed",
                     recommended_memory_profile: "bounded_11g",
-                    memory_profiles: [{ id: "bounded_11g", available: true }],
+                    memory_profiles: [
+                      {
+                        id: "bounded_11g",
+                        available: true,
+                        resolutions: portrait
+                          ? [{ width: 704, height: 1280 }]
+                          : [],
+                      },
+                    ],
                   }
                 : {}),
             }
@@ -316,5 +325,40 @@ it("preselects an installed video model and freezes it in a longer film request"
     width: 1280,
     height: 704,
     duration_seconds: 10,
+  });
+});
+
+it("keeps an installed model selected while generating native portrait footage", async () => {
+  const id = "5fe6a7d4-78d4-4bcf-873a-123456789abc";
+  const fetch = mount(
+    `/video?model=${id}`,
+    true,
+    [{ id, name: "Installed Wan", available: true }],
+    true,
+  );
+  await screen.findByLabelText("Video model");
+  await waitFor(() =>
+    expect(
+      (screen.getByLabelText("Format") as HTMLSelectElement).disabled,
+    ).toBe(false),
+  );
+  fireEvent.change(screen.getByLabelText("Format"), {
+    target: { value: "704x1280" },
+  });
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "A vertical cinematic lighthouse shot" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() =>
+    expect(fetch.mock.calls.some(([path]) => path === "/api/video/runs")).toBe(
+      true,
+    ),
+  );
+  const call = fetch.mock.calls.find(([path]) => path === "/api/video/runs")!;
+  expect(JSON.parse(String(call[1]?.body))).toMatchObject({
+    model_id: id,
+    memory_profile: "bounded_11g",
+    width: 704,
+    height: 1280,
   });
 });

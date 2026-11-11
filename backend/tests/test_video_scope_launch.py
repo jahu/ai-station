@@ -38,12 +38,15 @@ def test_disabled_profile_rejects_before_creating_a_work_directory(bridge):
     assert not (root / "runs" / str(body.run_id)).exists()
 
 
-def test_bounded_native_launch_persists_scope_choice_and_keeps_process_manager_ownership(bridge, monkeypatch):
+@pytest.mark.parametrize("dimensions", [(1280, 704), (704, 1280)])
+def test_bounded_native_launch_persists_scope_choice_and_keeps_process_manager_ownership(
+    bridge, monkeypatch, dimensions
+):
     monkeypatch.setenv("AI_STATION_WAN_BOUNDED_PROFILE", "true")
     monkeypatch.setattr(memory_scope, "available", lambda: True)
     monkeypatch.setattr(memory_scope.shutil, "which", lambda name: "/usr/bin/systemd-run")
     clear_settings_cache()
-    body = request(memory_profile="bounded_11g")
+    body = request(memory_profile="bounded_11g", width=dimensions[0], height=dimensions[1])
 
     class Manager:
         def start(self, **kwargs):
@@ -56,6 +59,7 @@ def test_bounded_native_launch_persists_scope_choice_and_keeps_process_manager_o
             assert "AI_STATION_LLM_API_KEY" not in kwargs["env"]
             config = json.loads(kwargs["cwd"].joinpath("request.json").read_text())
             assert config["request"]["memory_profile"] == "bounded_11g"
+            assert (config["request"]["width"], config["request"]["height"]) == dimensions
             assert "weight_dtype" not in config["request"]
             return kwargs
 

@@ -278,3 +278,22 @@ transactions before awaiting the provider, and retain the ordinary heartbeat.
 Unknown database errors remain errors. Historical interrupted Runs stay unchanged.
 Regression checks cover transient SQLite codes, binding and publication without
 duplicate inference/revisions, and Stop or claim replacement during backoff.
+
+## Native portrait footage candidate (2026-11-11)
+
+The Studio canvas supports portrait, but the bounded/managed Wan recipe currently
+forces landscape footage. Native portrait must generate 704×1280, not crop a
+1280×704 scene into a narrow strip. Admit only the transposed existing geometry
+with the same pixel/frame/step bounds, 11 GiB memory scope and process ownership.
+Advertise supported resolutions in native memory-profile metadata; a control
+plane connected to an older Runner must reject unsupported portrait generation
+before dispatch. Keep legacy landscape receipts and defaults unchanged.
+
+Studio uses its frozen aspect for generated shots. Video workspace format choice
+must remain editable for an engine that advertises portrait; unsupported square
+choices cannot silently enter the bounded profile. Continuation keeps the exact
+width/height and existing checkpoint validation. Qualification needs API/native
+validation, managed and configured profiles, continuation/Stop/recovery checks,
+format UI and a real owned portrait generation with complete decoding and visual
+review. Equal pixel count is a budget bound, not proof of actual quality or GPU
+inference success. No model downloads or changes to external runtimes are needed.

@@ -17,7 +17,12 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-function mount(available: boolean, saved = false, recommended = "default") {
+function mount(
+  available: boolean,
+  saved = false,
+  recommended = "default",
+  portrait = false,
+) {
   const writes: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
@@ -29,7 +34,13 @@ function mount(available: boolean, saved = false, recommended = "default") {
           url.endsWith("/capabilities")
             ? {
                 available: true,
-                memory_profiles: [{ id: "bounded_11g", available }],
+                memory_profiles: [
+                  {
+                    id: "bounded_11g",
+                    available,
+                    resolutions: portrait ? [{ width: 704, height: 1280 }] : [],
+                  },
+                ],
                 recommended_memory_profile: recommended,
               }
             : url.endsWith("/hardware")
@@ -159,4 +170,27 @@ it("lets a new format override an automatic landscape recommendation", async () 
     (screen.getByLabelText("Video generation profile") as HTMLSelectElement)
       .value,
   ).toBe("default");
+});
+
+it("retains the native portrait format when the bounded engine advertises support", async () => {
+  const writes = mount(true, false, "bounded_11g", true);
+  await screen.findByLabelText("Video generation profile");
+  const format = screen.getByLabelText("Format") as HTMLSelectElement;
+  fireEvent.change(format, { target: { value: "704x1280" } });
+  fireEvent.change(screen.getByLabelText("Video generation profile"), {
+    target: { value: "bounded_11g" },
+  });
+  expect(format.disabled).toBe(false);
+  expect(format.value).toBe("704x1280");
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "A vertical view of a coastal lighthouse" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    width: 704,
+    height: 1280,
+    memory_profile: "bounded_11g",
+    steps: 20,
+  });
 });
