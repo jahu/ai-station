@@ -113,3 +113,30 @@ storage. That storage was removed afterward; no production account or file was
 used in that test. This qualifies response backpressure inside the actual image,
 not a physical slow-network experiment. The live GPU-wait conversation above
 is separate real-hardware evidence. Historical failed Runs remain inspectable.
+
+## Decision preparation contention — 2026-11-11
+
+A conversation inferred its text/research intent, then its decision Run was
+interrupted with `Lease expired and the owned process is not running`. Worker
+logs showed transient SQLite contention; the worker container had neither
+restarted nor been OOM-killed. The model had completed the intent inference.
+
+Managed-runtime lookup and provider binding ran before the decision's guarded
+persistence/stream loop. A busy `BEGIN IMMEDIATE` there escaped to the worker
+slot's generic contention handler, which deliberately preserves a durable claim
+instead of blindly re-executing side effects. That abandoned decision later
+expired. The lease message describes recovery, not a GPU/model crash.
+
+Preparation now uses the same rollback-aware, deadline/claim/cancellation guard
+as decision publication. Binding returns an unstarted asynchronous generator;
+the short database transaction is committed before provider I/O. Only failed
+DB-only preparation retries. A completed intent, actual completion or dispatched
+tool is not replayed, and provider/credential changes remain normal failures.
+
+The original implementation reproduces the failure against a real competing
+SQLite writer. The repaired case also verifies an independent lease writer can
+commit during streaming. Raw LlamaIndex ReAct tests inject busy/locked failures
+after intent and observe one action/reply, while cancellation during binding
+backoff dispatches no provider request. Affected backend/runner validation passed
+117 tests plus full Ruff/format checks. This evidence uses temporary databases
+and fake inference; live-model deployment qualification is recorded separately.

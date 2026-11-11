@@ -253,41 +253,49 @@ async def infer(session, run, messages, *, json_output=True):
     deadline = datetime.fromisoformat(run.parameters["execution_deadline_at"])
     claim = run.worker_id, run.claimed_at
     messages = deepcopy(messages)
-    endpoint = run.parameters.get("endpoint", "")
-    instance = (
-        session.get(RuntimeInstance, endpoint.removeprefix("llamacpp:"))
-        if endpoint.startswith("llamacpp:")
-        else None
-    )
-    context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
-    output_tokens = min(2048, max(512, context_size // 4))
-    context = json.loads(messages[1]["content"]) if json_output else {}
-    # Keep the original goal, declared outcomes, status and aliases intact.
-    # Older large excerpts stay inspectable in their Runs; they need not be
-    # recopied verbatim on every round. This is a bound, not a token guarantee.
-    budget = min(48000, max(9000, 3 * (context_size - output_tokens) - len(SYSTEM)))
-    for observed in context.get("observations", []):
-        if len(json.dumps(context, ensure_ascii=False)) <= budget:
-            break
-        observed.update(
-            tool_data_excerpt=observed.get("tool_data_excerpt", "")[:500],
-            responses=[text[:500] for text in observed.get("responses", [])[-1:]],
-            summaries=[text[:200] for text in observed.get("summaries", [])[-1:]],
-            context_excerpt_truncated=True,
+
+    def prepare():
+        endpoint = run.parameters.get("endpoint", "")
+        instance = (
+            session.get(RuntimeInstance, endpoint.removeprefix("llamacpp:"))
+            if endpoint.startswith("llamacpp:")
+            else None
         )
-    if json_output:
-        messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
-    stream = completion_stream(
-        session,
-        {
-            **run.parameters,
-            "messages": messages,
-            "json_output": json_output,
-            "require_complete": True,
-            "temperature": 0.2,
-            "max_tokens": output_tokens,
-        },
-    )
+        context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
+        output_tokens = min(2048, max(512, context_size // 4))
+        context = json.loads(messages[1]["content"]) if json_output else {}
+        # Keep the original goal, declared outcomes, status and aliases intact.
+        # Older large excerpts stay inspectable in their Runs; they need not be
+        # recopied verbatim on every round. This is a bound, not a token guarantee.
+        budget = min(48000, max(9000, 3 * (context_size - output_tokens) - len(SYSTEM)))
+        for observed in context.get("observations", []):
+            if len(json.dumps(context, ensure_ascii=False)) <= budget:
+                break
+            observed.update(
+                tool_data_excerpt=observed.get("tool_data_excerpt", "")[:500],
+                responses=[text[:500] for text in observed.get("responses", [])[-1:]],
+                summaries=[text[:200] for text in observed.get("summaries", [])[-1:]],
+                context_excerpt_truncated=True,
+            )
+        if json_output:
+            messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+        return completion_stream(
+            session,
+            {
+                **run.parameters,
+                "messages": messages,
+                "json_output": json_output,
+                "require_complete": True,
+                "temperature": 0.2,
+                "max_tokens": output_tokens,
+            },
+        )
+
+    # Binding reads the managed runtime/provider registry before any network
+    # request. Retry this short DB-only phase under the same claim/cancel fence
+    # as publication; a transient BEGIN IMMEDIATE must not abandon inference.
+    # The returned asynchronous generator has not started provider I/O yet.
+    stream = await database_step(session, run, claim, deadline, prepare)
     pending, text = None, ""
     try:
         async with asyncio.timeout(max(0, min(120, (deadline - utcnow()).total_seconds()))):
