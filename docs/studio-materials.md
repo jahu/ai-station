@@ -81,6 +81,23 @@ Private actual browser/API checks exercised generation enqueue/Stop, existing
 approved SFW fixture previews/take comparison and desktop/mobile layout. This is
 not a claim that new image/video inference was performed in those UI checks.
 
-Speech/music synthesis/mixing, export UI and Chat project inference remain in development. Final publication-quality acceptance requires
+A queued soundtrack assembly API now measures completed owned PCM cues before
+editing. It preserves every spoken sample, extends scenes where necessary and
+saves the measured edit as a new immutable revision. The score must cover that
+whole edit; short music is rejected, never looped invisibly. A streaming local
+worker mix applies smooth cue-level music ducking, opening/closing fades and one
+global peak adjustment. Two disk-backed streaming passes avoid source-sized
+arrays and per-block pumping. Output is exact 48-kHz stereo PCM, with source
+lineage, measured timing and mix settings in Library. No external tool/network,
+GPU, executable filter string or extra native privilege is involved.
+
+Mixing checks sources again before publication and fences results by worker
+claim and Task Stop. A failed/canceled mix keeps earlier revisions and deletes
+its private scratch files. Synthetic PCM integration tests cover resampling,
+complete narration, voice/music policy, peak control, ducking, privacy and Stop;
+they do not qualify generated voices or subjective final soundtrack quality.
+
+Automatic speech/music generation, soundtrack/export UI and Chat project inference
+remain in development. Final publication-quality acceptance requires
 a complete newly generated voiced/scored reel and educational film with full
 playback/visual review, not just a valid storyboard or fixture export.

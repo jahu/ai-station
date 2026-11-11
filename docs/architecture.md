@@ -1750,3 +1750,12 @@ unless explicitly overridden. Immutable shot/revision/source coordinates follow
 every child Run and output; source bytes are rechecked before dispatch and
 publication. A shot's Stop cancels its entire Task and leaves other materials
 alone. Editorial plans and actual generated takes remain distinct in the UI.
+
+The Studio soundtrack assembler is an ordinary CPU worker Run over completed
+owned PCM, like existing waveform/voice finishing operations. Header/hash
+snapshots and measured utterance durations precede editing; an immutable derived
+revision records extended timing. A bounded streaming resampler and disk-backed
+two-pass bus provide exact 48-kHz stereo output, music ducking/fades and one
+global peak adjustment. Publication verifies sources and the worker claim under
+Task Stop serialization. No host paths, native launch or external inference are
+introduced by this assembler; speech/music generation remains separate children.

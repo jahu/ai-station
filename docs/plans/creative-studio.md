@@ -161,7 +161,10 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 - Saved-shot production now reuses actual image and segmented-video Tasks/Runs,
   with model defaults/overrides, frozen references, earlier takes and whole-shot
   Stop; the storyboard previews actual Library outputs on desktop/mobile.
-- Remaining: guided renderer preparation, full-material automation/audio child Runs,
+- Completed-PCM soundtrack assembly now extends timing for complete narration,
+  ducks/fades a covering score and publishes canonical PCM plus an immutable
+  measured edit; synthetic integration tests are not generated-audio acceptance.
+- Remaining: guided renderer preparation, full-material automation/audio generation child Runs,
   timing/mix and render/export UI,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.
