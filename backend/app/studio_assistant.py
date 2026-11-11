@@ -331,6 +331,11 @@ class AssistantStudioExecutor:
                         "options": params["options"],
                         "project": params["project_snapshot"].get("name"),
                         "artifact_id": output.id,
+                        "requested_duration_seconds": params["options"]["duration_seconds"],
+                        "actual_duration_seconds": output.metadata_json["frames"] / 30
+                        if isinstance(output.metadata_json.get("frames"), int)
+                        and output.metadata_json.get("fps") == 30
+                        else None,
                     },
                 }
                 run.summary = "Complete Studio film is ready"

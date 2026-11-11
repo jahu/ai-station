@@ -27,6 +27,8 @@ function setup({
   measured = true,
   finished = false,
   selectedTake = "take-old",
+  shared = false,
+  sharedTrim = 0,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const revision: StudioRevision = {
@@ -69,6 +71,14 @@ function setup({
       ],
     },
   };
+  if (shared)
+    revision.storyboard.scenes.push({
+      ...revision.storyboard.scenes[0],
+      visual_kind: "reuse",
+      reuse_scene: 0,
+      duration_frames: 120,
+      media_start_seconds: sharedTrim,
+    });
   const root = {
     id: "export-one",
     task_id: "export-task",
@@ -224,4 +234,26 @@ it("keeps completed MP4 playback and download available on an archived material"
     ).disabled,
   ).toBe(true);
   expect(screen.getByText(/Restore this material/)).toBeTruthy();
+});
+
+it("exports shared visuals with just the original source binding", async () => {
+  const requests = setup({ shared: true });
+  const button = await screen.findByRole("button", { name: "Export film" });
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(button);
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body.bindings).toEqual([
+    { scene: 0, artifact_id: "take-old" },
+  ]);
+});
+it("blocks a clip that covers its original scene but not a later shared trim window", async () => {
+  const requests = setup({ video: true, shared: true, sharedTrim: 5 });
+  await screen.findByText(/longer footage/);
+  expect(
+    (screen.getByRole("button", { name: "Export film" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  expect(requests).toHaveLength(0);
 });

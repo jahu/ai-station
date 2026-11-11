@@ -120,8 +120,8 @@ activate a compatible engine already installed on the station, with private
 setup history and Stop; fresh-engine installation is still in development.
 A complete-material coordinator now queues sound, measured timing, missing shots
 and export, with whole-production Stop and continuation that reuses complete
-media and spoken cues. Newly generated film/voice quality, fresh installation and
-automatic project selection remain in development. This is not a feature
+media and spoken cues. Generated film/voice quality and fresh installation
+remain in qualification. This is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 The conversation bridge adds semantic project/format/audio selection and queues
 that same full production from a prompt, with a Studio link and final film in
@@ -130,7 +130,11 @@ checked with fake media; actual conversational film quality remains in
 qualification. New soundtrack finishing on develop measures and balances
 publishing volume, protects peaks and retains exact narration timing; earlier
 soundtracks keep their original audio. Complete generated-film quality remains
-under review.
+under review. Storyboards on develop can explicitly share one image or clip
+across scenes while keeping separate captions, motion and timing. The director
+fits new plans to the requested duration; manual edits remain explicit and
+measured speech may extend the film rather than cutting words. Real prompt
+qualification of these source/timing constraints is still pending.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the

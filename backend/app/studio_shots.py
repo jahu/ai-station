@@ -16,6 +16,7 @@ from app.state import TERMINAL
 from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
 from app.studio_render import router
 from app.studio_schema import Fields, Storyboard
+from app.studio_storyboard import source_end_seconds
 
 
 class ShotRequest(Fields):
@@ -46,7 +47,10 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
         raise HTTPException(422, "Choose a shot in this saved storyboard")
     shot = plan.scenes[body.scene]
     if shot.visual_kind not in {"image", "video"}:
-        raise HTTPException(422, "Library and editorial shots do not need a generated replacement")
+        raise HTTPException(
+            422,
+            "Generate the original source scene; shared, Library and editorial scenes do not need a new take",
+        )
     if (shot.visual_kind == "image" and body.video_model_id) or (
         shot.visual_kind == "video" and body.image_model
     ):
@@ -115,7 +119,7 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
 
         if len(prompt) > 2000:
             raise HTTPException(422, "Keep this shot's combined visual direction within 2000 characters")
-        seconds = math.ceil(shot.duration_frames / 30 + shot.media_start_seconds)
+        seconds = math.ceil(source_end_seconds(plan, body.scene))
         if seconds > 60:
             raise HTTPException(422, "Split footage longer than sixty seconds into separate storyboard shots")
         profile = profile_for(session, body.video_model_id, observed_video_profile)

@@ -14,7 +14,8 @@ export interface StudioMaterial {
 export interface StudioShot {
   purpose: string;
   duration_frames: number;
-  visual_kind: "image" | "video" | "library" | "graphics";
+  visual_kind: "image" | "video" | "library" | "graphics" | "reuse";
+  reuse_scene?: number | null;
   visual_brief: string;
   framing: string;
   source_artifact_id: string | null;
@@ -68,3 +69,47 @@ export const audioNames = {
   music: "Music",
   silent: "No audio",
 };
+
+export function visualOrigin(scenes: StudioShot[], index: number): number {
+  for (let n = 0; n < scenes.length; n++) {
+    const shot = scenes[index];
+    if (shot?.visual_kind !== "reuse") return index;
+    const next = shot.reuse_scene;
+    if (next == null || next < 0 || next >= index) return index;
+    index = next;
+  }
+  return index;
+}
+
+export function sourceEndSeconds(scenes: StudioShot[], index: number): number {
+  const origin = visualOrigin(scenes, index);
+  return Math.max(
+    ...scenes
+      .filter((_, i) => visualOrigin(scenes, i) === origin)
+      .map((shot) => shot.duration_frames / 30 + shot.media_start_seconds),
+  );
+}
+
+export function movedScenes(
+  scenes: StudioShot[],
+  index: number,
+  delta: number,
+): StudioShot[] | null {
+  const target = index + delta;
+  if (target < 0 || target >= scenes.length) return null;
+  const order = scenes.map((_, i) => i);
+  [order[index], order[target]] = [order[target], order[index]];
+  const next = order.map((old) => {
+    const shot = scenes[old];
+    return shot.visual_kind === "reuse"
+      ? { ...shot, reuse_scene: order.indexOf(shot.reuse_scene!) }
+      : shot;
+  });
+  return next.some(
+    (s, i) =>
+      s.visual_kind === "reuse" &&
+      (s.reuse_scene == null || s.reuse_scene >= i),
+  )
+    ? null
+    : next;
+}

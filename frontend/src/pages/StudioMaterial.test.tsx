@@ -72,9 +72,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function fixture(path = "/studio/materials/material-one", empty = false) {
+function fixture(
+  path = "/studio/materials/material-one",
+  empty = false,
+  twoShots = false,
+) {
   let current = structuredClone(material);
   let versions = empty ? [] : [structuredClone(revision)];
+  if (twoShots && versions.length)
+    versions[0].storyboard.scenes.push({
+      ...versions[0].storyboard.scenes[0],
+      purpose: "A second beat",
+    });
   const activity: Record<string, unknown>[] = [];
   const requests: {
     path: string;
@@ -391,4 +400,37 @@ it("opens a saved version by its exact link even outside the first history page"
       }) as HTMLSelectElement
     ).value,
   ).toBe("revision-old");
+});
+
+it("saves an explicit shared source and prevents moving it before its source", async () => {
+  const requests = fixture(undefined, false, true);
+  await screen.findByText("A second beat");
+  fireEvent.click(screen.getAllByText("Edit this shot")[1]);
+  fireEvent.change(screen.getByLabelText("Shot 2 visual source"), {
+    target: { value: "0" },
+  });
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Move shot 2 up",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Move shot 1 down",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Save as new version" }));
+  await screen.findByText("Version 2 saved");
+  expect(requests[0].body).toMatchObject({
+    storyboard: {
+      scenes: [
+        { visual_kind: "video" },
+        { visual_kind: "reuse", reuse_scene: 0, source_artifact_id: null },
+      ],
+    },
+  });
 });

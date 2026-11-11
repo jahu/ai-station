@@ -135,3 +135,23 @@ def test_new_music_direction_must_fit_the_actual_generator_without_truncation(lo
         assert (
             browser.get(url + "/revisions").json()[0]["storyboard"]["music_brief"] == board()["music_brief"]
         )
+
+
+def test_director_fits_requested_duration_and_preserves_explicit_shared_visuals(local_model):
+    from test_studio_storyboard import shared, visual
+
+    _, responses = local_model
+    responses[:] = [
+        json.dumps(board("silent", scenes=[visual(240), shared(0, 240, title="A new explanation")]))
+    ]
+    with TestClient(app) as browser:
+        created = material(browser, options={"duration_seconds": 8, "audio": "silent"})
+        url = "/api/studio/materials/" + created["id"]
+        queued = browser.post(url + "/plan", json=request()).json()
+        step()
+        run = browser.get("/api/runs/" + queued["id"]).json()
+        assert run["status"] == "succeeded", run["error_message"]
+        plan = browser.get(url + "/revisions").json()[0]["storyboard"]
+        assert [s["duration_frames"] for s in plan["scenes"]] == [120, 120]
+        assert plan["scenes"][1]["reuse_scene"] == 0
+        assert plan["scenes"][1]["title"] == "A new explanation"

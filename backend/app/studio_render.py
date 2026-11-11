@@ -25,6 +25,7 @@ from app.serialize import artifact_dict
 from app.studio_director import router
 from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
 from app.studio_schema import Fields, Storyboard
+from app.studio_storyboard import visual_origin
 from app.timelines import verify_bytes
 
 PERMISSIONS = ["filesystem_read", "workspace_write"]
@@ -113,10 +114,20 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
     selected = {b.scene: str(b.artifact_id) for b in bindings}
     if any(i >= len(plan.scenes) for i in selected):
         raise ValueError("A binding refers to a scene outside this saved version")
-    sources, scenes = {}, []
+    sources, scenes, resolved = {}, [], {}
     for index, shot in enumerate(plan.scenes):
         identity = selected.get(index)
-        if shot.visual_kind == "library":
+        origin = plan.scenes[visual_origin(plan, index)]
+        if shot.visual_kind == "reuse":
+            shared = resolved.get(shot.reuse_scene)
+            if not shared:
+                raise ValueError(f"Choose the original visual for shot {index + 1} before exporting")
+            if identity and identity != shared:
+                raise ValueError(
+                    "A shared scene must keep its original source; detach it in a new storyboard version to replace it"
+                )
+            identity = shared
+        elif shot.visual_kind == "library":
             if identity and identity != str(shot.source_artifact_id):
                 raise ValueError("Save a new storyboard version to replace its selected Library source")
             identity = str(shot.source_artifact_id)
@@ -126,12 +137,13 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
         elif not identity:
             raise ValueError(f"Generate or select the actual media for shot {index + 1} before exporting")
         if identity:
-            source = source_snapshot(session, identity, verify=verify)
-            if shot.visual_kind in {"image", "video"} and source["kind"] != shot.visual_kind:
+            source = sources.get(identity) or source_snapshot(session, identity, verify=verify)
+            if origin.visual_kind in {"image", "video"} and source["kind"] != origin.visual_kind:
                 raise ValueError(
-                    f"Shot {index + 1} requires actual {shot.visual_kind}; do not silently substitute another medium"
+                    f"Shot {index + 1} requires actual {origin.visual_kind}; do not silently substitute another medium"
                 )
             sources[identity] = Source.model_validate(source).model_dump(mode="json")
+        resolved[index] = identity
         values = {
             key: getattr(shot, key)
             for key in (

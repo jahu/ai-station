@@ -19,7 +19,8 @@ class NarrationDelivery(Fields):
 class Shot(Fields):
     purpose: str = Field(min_length=1, max_length=500)
     duration_frames: StrictInt = Field(ge=30, le=2700)
-    visual_kind: Literal["image", "video", "library", "graphics"]
+    visual_kind: Literal["image", "video", "library", "graphics", "reuse"]
+    reuse_scene: StrictInt | None = Field(default=None, ge=0, le=59, exclude_if=lambda value: value is None)
     visual_brief: str = Field(default="", max_length=2400)
     framing: str = Field(default="", max_length=500)
     source_artifact_id: UUID | None = None
@@ -36,6 +37,10 @@ class Shot(Fields):
 
     @model_validator(mode="after")
     def usable(self):
+        if (self.visual_kind == "reuse") != (self.reuse_scene is not None):
+            raise ValueError("A shared visual needs its earlier source scene; other kinds cannot select one")
+        if self.visual_kind == "reuse" and self.reference_artifact_ids:
+            raise ValueError("A shared scene uses its original visual, not new generation references")
         if self.visual_kind == "library" and self.source_artifact_id is None:
             raise ValueError("A Library shot needs its selected source")
         if self.visual_kind != "library" and self.source_artifact_id is not None:
@@ -71,6 +76,16 @@ class Storyboard(Fields):
 
     @model_validator(mode="after")
     def complete(self):
+        for index, shot in enumerate(self.scenes):
+            if shot.visual_kind == "reuse":
+                if shot.reuse_scene >= index:
+                    raise ValueError(
+                        "A shared visual must reference an earlier scene, never itself or a future scene"
+                    )
+                if self.scenes[shot.reuse_scene].visual_kind == "graphics":
+                    raise ValueError(
+                        "Share an image, video or Library visual, not an editorial graphics scene"
+                    )
         if self.frames > 18000:
             raise ValueError("Keep one material within ten minutes")
         voice = self.audio in {"voice", "voice_music"}

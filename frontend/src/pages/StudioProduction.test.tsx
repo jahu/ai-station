@@ -22,6 +22,7 @@ function setup({
   disabled = false,
   loseAck = false,
   checking = false,
+  finished = false,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   let lost = false;
@@ -40,13 +41,17 @@ function setup({
         },
       },
     },
-    status: failed ? "failed" : "running",
+    status: finished ? "succeeded" : failed ? "failed" : "running",
     runs: [],
-    output: null,
+    output: finished
+      ? { id: "finished-film", original_filename: "film.mp4" }
+      : null,
+    requested_duration_seconds: 8,
+    actual_duration_seconds: finished ? 8.5 : null,
     failed_run: failed ? { error_message: "The render failed" } : null,
     measured_revision_id: "measured",
   };
-  let history = active || failed ? [row] : [];
+  let history = active || failed || finished ? [row] : [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
@@ -158,4 +163,12 @@ it("automatically enables production when initial native verification completes"
   expect(button.disabled).toBe(true);
   await waitFor(() => expect(button.disabled).toBe(false), { timeout: 3000 });
   expect(screen.queryByText("Checking local film export…")).toBeNull();
+});
+
+it("reports measured finished timing separately from the original request", async () => {
+  setup({ finished: true });
+  await screen.findByText(/8.5s finished.*8s requested/);
+  expect(screen.getByLabelText("Produced film").getAttribute("src")).toBe(
+    "/api/artifacts/finished-film/file",
+  );
 });

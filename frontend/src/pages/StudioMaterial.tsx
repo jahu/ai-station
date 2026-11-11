@@ -33,6 +33,8 @@ import { useCreativeEntry } from "../components/creative/useCreativeEntry";
 import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
 import {
   audioNames,
+  visualOrigin,
+  movedScenes,
   formatNames,
   materialBase,
   type Storyboard,
@@ -534,12 +536,29 @@ function StoryboardEditor({
     });
   }
   function move(index: number, delta: number) {
-    const scenes = [...board.scenes];
-    [scenes[index], scenes[index + delta]] = [
-      scenes[index + delta],
-      scenes[index],
-    ];
-    edit({ ...board, scenes });
+    const scenes = movedScenes(board.scenes, index, delta);
+    if (scenes) edit({ ...board, scenes });
+  }
+  function chooseSource(index: number, value: string) {
+    const shot = board.scenes[index];
+    if (value === "own") {
+      if (shot.visual_kind !== "reuse") return;
+      const original = board.scenes[visualOrigin(board.scenes, index)];
+      change(index, {
+        visual_kind: original.visual_kind,
+        reuse_scene: undefined,
+        visual_brief: original.visual_brief,
+        source_artifact_id: original.source_artifact_id,
+        reference_artifact_ids: [...original.reference_artifact_ids],
+      });
+    } else {
+      change(index, {
+        visual_kind: "reuse",
+        reuse_scene: Number(value),
+        source_artifact_id: null,
+        reference_artifact_ids: [],
+      });
+    }
   }
   const save = useMutation({
     mutationFn: (body: unknown) =>
@@ -570,6 +589,9 @@ function StoryboardEditor({
         <div>
           <span>{board.scenes.length} shots</span>
           <span>{(frames / 30).toFixed(1)}s planned</span>
+          {Math.abs(frames - revision.options.duration_seconds * 30) > 1 && (
+            <span>{revision.options.duration_seconds}s requested</span>
+          )}
           <span>{audioNames[board.audio]}</span>
         </div>
         <blockquote>{board.hook}</blockquote>
@@ -601,16 +623,23 @@ function StoryboardEditor({
                   <strong>{shot.purpose}</strong>
                   <small>
                     {(from / 30).toFixed(1)}–{(end / 30).toFixed(1)}s ·{" "}
-                    {shot.visual_kind === "library"
-                      ? "Library source"
-                      : `Planned ${shot.visual_kind}`}
+                    {shot.visual_kind === "reuse"
+                      ? `Shared visual · shot ${(shot.reuse_scene ?? 0) + 1}`
+                      : shot.visual_kind === "library"
+                        ? "Library source"
+                        : `Planned ${shot.visual_kind}`}
                   </small>
                 </div>
                 <div className="studio-shot-order">
                   <Button
                     variant="ghost"
                     type="button"
-                    disabled={!index || readOnly || save.isPending}
+                    disabled={
+                      !movedScenes(board.scenes, index, -1) ||
+                      readOnly ||
+                      save.isPending
+                    }
+                    title="Shared scenes must follow their visual source"
                     aria-label={`Move shot ${index + 1} up`}
                     onClick={() => move(index, -1)}
                   >
@@ -620,7 +649,7 @@ function StoryboardEditor({
                     variant="ghost"
                     type="button"
                     disabled={
-                      index === board.scenes.length - 1 ||
+                      !movedScenes(board.scenes, index, 1) ||
                       readOnly ||
                       save.isPending
                     }
@@ -654,7 +683,9 @@ function StoryboardEditor({
                 materialId={material.id}
                 revision={revision}
                 scene={index}
-                selectedArtifactId={takes[index]}
+                selectedArtifactId={
+                  takes[visualOrigin(revision.storyboard.scenes, index)]
+                }
                 onSelect={(id) =>
                   setTakes((value) => ({ ...value, [index]: id }))
                 }
@@ -685,6 +716,34 @@ function StoryboardEditor({
                     onChange={(e) => change(index, { purpose: e.target.value })}
                   />
                 </label>
+                {shot.visual_kind !== "graphics" && (
+                  <label>
+                    Visual source
+                    <select
+                      aria-label={`Shot ${index + 1} visual source`}
+                      value={
+                        shot.visual_kind === "reuse"
+                          ? String(shot.reuse_scene)
+                          : "own"
+                      }
+                      onChange={(e) => chooseSource(index, e.target.value)}
+                    >
+                      <option value="own">Own visual</option>
+                      {board.scenes.slice(0, index).map(
+                        (candidate, i) =>
+                          candidate.visual_kind !== "graphics" && (
+                            <option key={i} value={String(i)}>
+                              Same visual as shot {i + 1} · {candidate.purpose}
+                            </option>
+                          ),
+                      )}
+                    </select>
+                    <small>
+                      Share the exact image or clip, with separate text, timing
+                      and motion.
+                    </small>
+                  </label>
+                )}
                 <label>
                   Visual direction
                   <textarea

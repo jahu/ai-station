@@ -63,9 +63,26 @@ function setup({
   active = false,
   disabled = false,
   lost = false,
+  shared = false,
+  library = false,
 } = {}) {
   const board = structuredClone(revision);
   board.storyboard.scenes[0].visual_kind = video ? "video" : "image";
+  if (library) {
+    board.storyboard.scenes[0].visual_kind = "library";
+    board.storyboard.scenes[0].source_artifact_id = "library-one";
+    board.sources["library-one"] = {
+      artifact_id: "library-one",
+      kind: video ? "video" : "image",
+    };
+  }
+  if (shared)
+    board.storyboard.scenes.push({
+      ...board.storyboard.scenes[0],
+      visual_kind: "reuse",
+      reuse_scene: 0,
+      source_artifact_id: null,
+    });
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const run = {
     id: "run-one",
@@ -128,7 +145,7 @@ function setup({
       <StudioShotMedia
         materialId="material-one"
         revision={board}
-        scene={0}
+        scene={shared ? 1 : 0}
         disabled={disabled}
         selectedArtifactId={picked}
         onSelect={setPicked}
@@ -222,4 +239,23 @@ it("requires saved edits before launching a generation", async () => {
       })) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
+});
+
+it("shows the source take for a shared scene without a duplicate generation action", async () => {
+  setup({ shared: true, completed: true });
+  const image = await screen.findByAltText("Shared visual for shot 2");
+  expect(image.getAttribute("src")).toBe("/api/artifacts/film-one/file");
+  expect(screen.getByText(/exact visual from shot 1/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Generate/ })).toBeNull();
+});
+it("previews a shared Library video without requiring a generation Run", async () => {
+  setup({ shared: true, library: true, video: true });
+  const video = await screen.findByLabelText("Shot 2 shared footage");
+  expect(video.getAttribute("src")).toBe("/api/artifacts/library-one/file");
+  expect(
+    screen
+      .getByRole("link", { name: /Open shared source/ })
+      .getAttribute("href"),
+  ).toBe("/library/library-one");
+  expect(screen.queryByRole("button", { name: /Generate/ })).toBeNull();
 });

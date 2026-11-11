@@ -13,6 +13,7 @@ import { randomId } from "../lib/random-id";
 import {
   audioNames,
   materialBase,
+  sourceEndSeconds,
   type StudioRevision,
 } from "./studio-material";
 import {
@@ -104,7 +105,7 @@ export default function StudioExport({
     if (
       shot.visual_kind === "video" &&
       Number.isFinite(duration) &&
-      duration + 1 / 120 < shot.duration_frames / 30 + shot.media_start_seconds
+      duration + 1 / 120 < sourceEndSeconds(revision.storyboard.scenes, scene)
     )
       short.push(scene + 1);
   });
