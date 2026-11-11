@@ -21,6 +21,7 @@ def web(monkeypatch):
         return {
             "query": query,
             "provider": "fixture",
+            "partial": False,
             "sources": [{"id": 1, "title": "Reference", "url": URL, "snippet": "A short reference"}],
         }
 
@@ -59,6 +60,7 @@ def test_search_page_read_and_streaming_answer_accept_an_exact_observed_url(reac
             "chat.reply",
         ]
         assert state["controller_steps"][1]["arguments"]["sources"] == ["step:1:source:1"]
+        assert all(s["observation"]["status"] == "succeeded" for s in state["controller_steps"])
         assert fetched == [URL] and searched == ["public reference"]
         final = react_model["calls"][-1]["messages"]
         assert any("Distinctive verified reference" in m["content"] for m in final if m["role"] == "user")
@@ -123,3 +125,97 @@ def test_exact_url_binding_does_not_relax_typed_argument_limits(raw):
 
     with pytest.raises(ValueError):
         bind_page_arguments(raw, {"step:1:source:1": URL})
+
+
+@pytest.mark.parametrize("section", [None, "sources"])
+def test_followup_can_read_pages_from_a_verified_previous_search_artifact(react_model, web, section):  # noqa: F811
+    fetched, searched = web
+    react_model["immediate"] = [{"kind": "text", "description": "Explain the researched subject"}]
+    react_model["actions"] = [
+        action("web_search", query="public reference"),
+        action("chat_reply", instruction="Summarize the search"),
+    ]
+    with TestClient(app) as client:
+        first = submit(client, "Research the subject", web_search={"enabled": True})
+        drain()
+        assert root_state(first)["controller_outcome"] == "replied"
+        react_model["actions"] = [
+            action("artifact_read", artifacts=["previous:json:1"], section=section),
+            action("web_read", sources=[URL]),
+            action("chat_reply", instruction="Answer using the complete page"),
+        ]
+        reply = client.post(
+            f"/api/chat/conversations/{first['conversation_id']}/messages",
+            json={
+                "content": "Read the original source and explain the details",
+                "web_search": {"enabled": True},
+            },
+        )
+        assert reply.status_code == 202, reply.text
+        result = {"run": reply.json()}
+        drain()
+        state = root_state(result)
+        assert state["controller_outcome"] == "replied", state
+        assert [s["tool"] for s in state["controller_steps"]] == [
+            "artifact.read",
+            "web.read",
+            "chat.reply",
+        ], state["controller_steps"][0]["observation"]
+        assert state["controller_steps"][1]["arguments"]["sources"] == ["step:1:source:1"]
+        assert all(s["observation"]["status"] == "succeeded" for s in state["controller_steps"])
+        assert fetched == [URL] and searched == ["public reference"]
+
+
+@pytest.mark.parametrize(
+    "tamper", ["unprovenanced", "unfinished", "wrong_receipt", "changed_sources", "network_off"]
+)
+def test_followup_sources_require_real_provenance_and_current_web_permission(react_model, web, tamper):  # noqa: F811
+    from app.models import Artifact, Run
+
+    fetched, _ = web
+    react_model["immediate"] = [{"kind": "text", "description": "Explain the researched subject"}]
+    react_model["actions"] = [
+        action("web_search", query="public reference"),
+        action("chat_reply", instruction="Summarize the search"),
+    ]
+    with TestClient(app) as client:
+        first = submit(client, "Research the subject", web_search={"enabled": True})
+        drain()
+        assert root_state(first)["controller_outcome"] == "replied"
+        with session_factory()() as session:
+            origin = session.scalar(select(Run).where(Run.executor_type == "assistant_web"))
+            artifact = session.scalar(select(Artifact).where(Artifact.run_id == origin.id))
+            if tamper == "unprovenanced":
+                artifact.run_id = None
+            elif tamper == "unfinished":
+                origin.status = "failed"
+            elif tamper == "wrong_receipt":
+                origin.metadata_json = {
+                    **origin.metadata_json,
+                    "web_search": {**origin.metadata_json["web_search"], "artifact_id": "not-this-artifact"},
+                }
+            elif tamper == "changed_sources":
+                origin.metadata_json = {
+                    **origin.metadata_json,
+                    "web_search": {**origin.metadata_json["web_search"], "sources": []},
+                }
+            session.commit()
+        react_model["actions"] = [
+            action("artifact_read", artifacts=["previous:json:1"]),
+            action("web_read", sources=[URL]),
+            action("web_read", sources=[URL]),
+        ]
+        reply = client.post(
+            f"/api/chat/conversations/{first['conversation_id']}/messages",
+            json={
+                "content": "Explain the original source",
+                "web_search": {"enabled": tamper != "network_off"},
+            },
+        )
+        assert reply.status_code == 202, reply.text
+        drain()
+        state = root_state({"run": reply.json()})
+        assert state["controller_outcome"] == "clarify" and not fetched
+        assert [s["tool"] for s in state["controller_steps"]] == ["artifact.read"]
+        if tamper != "network_off":
+            assert state["controller_steps"][0]["observation"]["tool_data"][0]["sources"] == []
