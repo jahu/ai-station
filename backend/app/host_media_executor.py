@@ -56,7 +56,10 @@ class HostMediaExecutor:
         deadline = datetime.fromisoformat(raw)
         if deadline.tzinfo is None:
             raise ValueError("Execution deadlines require an explicit time zone")
-        return {"deadline_at": deadline.timestamp()}
+        # A multi-stage workflow may last longer than one native invocation.
+        # Native journals freeze the first accepted deadline; retries cannot
+        # renew it. Keep the existing four-hour process admission boundary.
+        return {"deadline_at": min(deadline.timestamp(), time.time() + 4 * 3600)}
 
     def execute(self, session: Session, run: Run) -> str:
         require(run.effective_permissions, "filesystem_read")

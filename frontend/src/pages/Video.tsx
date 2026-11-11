@@ -546,7 +546,16 @@ function SceneForm({
                     <option value={49}>2 seconds</option>
                     <option value={81}>3.4 seconds</option>
                     {duration.endsWith("s") &&
-                      !["10s", "15s", "30s", "60s"].includes(duration) && (
+                      ![
+                        "10s",
+                        "15s",
+                        "30s",
+                        "60s",
+                        "90s",
+                        "120s",
+                        "180s",
+                        "300s",
+                      ].includes(duration) && (
                         <option value={duration}>
                           {duration.slice(0, -1)} seconds
                         </option>
@@ -555,6 +564,10 @@ function SceneForm({
                     <option value="15s">15 seconds</option>
                     <option value="30s">30 seconds</option>
                     <option value="60s">1 minute</option>
+                    <option value="90s">1.5 minutes</option>
+                    <option value="120s">2 minutes</option>
+                    <option value="180s">3 minutes</option>
+                    <option value="300s">5 minutes</option>
                   </select>
                 )}
               </label>

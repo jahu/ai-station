@@ -14,7 +14,6 @@ from app.avatar_schema import FullAvatarSettings
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.dependencies import depend_on
-from app.execution_limits import MAX_AGENT_RUNTIME
 from app.generation_progress import active_progress
 from app.host_media_executor import HostMediaExecutor
 from app.media_plan import duration_frames, timeline
@@ -57,14 +56,17 @@ def job(session, task_id):
     return task
 
 
+MAX_MEDIA_WORKFLOW_RUNTIME = 24 * 3600
+
+
 def execution_budget(execution_deadline_at):
     if execution_deadline_at is None:
         return {}
     from datetime import datetime
 
     deadline = datetime.fromisoformat(execution_deadline_at)
-    if deadline.tzinfo is None or not 0 < (deadline - utcnow()).total_seconds() <= MAX_AGENT_RUNTIME:
-        raise ValueError("Media expiry must be within the next four hours with an explicit time zone")
+    if deadline.tzinfo is None or not 0 < (deadline - utcnow()).total_seconds() <= MAX_MEDIA_WORKFLOW_RUNTIME:
+        raise ValueError("Media expiry must be within the next twenty-four hours with an explicit time zone")
     return {"execution_deadline_at": execution_deadline_at}
 
 

@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+import pytest
 from app.api import app
 from app.db import session_factory
 from app.models import Run
@@ -71,18 +72,21 @@ def test_shared_library_source_resolves_without_a_fake_generated_take(ready):
         assert [s["media"] for s in result.json()["parameters"]["composition"]["scenes"]] == [source, source]
 
 
-def test_generated_clip_budget_covers_later_shared_scene_trim(monkeypatch):
+@pytest.mark.parametrize("length,offset,seconds", [(120, 4.0, 8), (2700, 30.0, 120)])
+def test_generated_clip_budget_covers_later_shared_scene_trim(monkeypatch, length, offset, seconds):
     monkeypatch.setattr(
         "app.video_models.profile_for", lambda *args: {"available": True, "memory_estimate_mib": 16384}
     )
     with TestClient(app) as api:
-        row, revision = shared_plan(api, [visual(60, kind="video"), shared(0, 120, media_start_seconds=4.0)])
+        row, revision = shared_plan(
+            api, [visual(60, kind="video"), shared(0, length, media_start_seconds=offset)]
+        )
         result = api.post(
             f"/api/studio/materials/{row['id']}/shots",
             json={"client_request_id": str(uuid4()), "revision_id": revision["id"], "scene": 0},
         )
         assert result.status_code == 202, result.text
-        assert result.json()["parameters"]["timeline"]["target_frames"] >= 8 * 24
+        assert result.json()["parameters"]["timeline"]["target_frames"] >= seconds * 24
         assert (
             result.json()["parameters"]["width"],
             result.json()["parameters"]["height"],

@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, 
 
 from app.media_translation_text import TranslationOptions
 
+MAX_VIDEO_SECONDS = 300
+
 
 class VideoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -51,7 +53,7 @@ class VideoScene(BaseModel):
 
 
 class LongVideoSettings(VideoRequest):
-    duration_seconds: StrictInt = Field(default=15, ge=1, le=60)
+    duration_seconds: StrictInt = Field(default=15, ge=1, le=MAX_VIDEO_SECONDS)
     composition_mode: Literal["continuous", "shots"] = "continuous"
     scenes: list[VideoScene] | None = Field(default=None, min_length=1, max_length=20)
 

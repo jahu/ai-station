@@ -40,6 +40,7 @@ from app.runs import create_run, create_task, run_dict, transition
 from app.schedule_time import ScheduleTimezone
 from app.serialize import artifact_dict, iso
 from app.state import TERMINAL, RunStatus
+from app.video_schema import MAX_VIDEO_SECONDS
 from app.web_search import SearchOptions
 
 Action = Literal[
@@ -148,7 +149,7 @@ class ContinuationScope(BaseModel):
 
 class VideoScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    duration_seconds: StrictInt = Field(ge=1, le=60)
+    duration_seconds: StrictInt = Field(ge=1, le=MAX_VIDEO_SECONDS)
     composition_mode: Literal["continuous", "shots"] = "continuous"
     memory_profile: Literal["default", "bounded_11g"] | None = None
 
@@ -171,8 +172,8 @@ def video_scope(params):
     if not found:
         return None
     value = float(found[1].replace(",", ".")) * (60 if found[2].lower().startswith("min") else 1)
-    if not value.is_integer() or not 1 <= value <= 60:
-        raise ValueError("Choose a whole video duration between 1 and 60 seconds")
+    if not value.is_integer() or not 1 <= value <= MAX_VIDEO_SECONDS:
+        raise ValueError(f"Choose a whole video duration between 1 and {MAX_VIDEO_SECONDS} seconds")
     return VideoScope(duration_seconds=int(value))
 
 
@@ -2069,19 +2070,29 @@ def task_results(session, message, run):
     ):
         extra = list(
             session.scalars(
-                select(Run).where(Run.task_id == child.task_id).order_by(Run.created_at, Run.id).limit(40)
+                select(Run)
+                .where(Run.task_id == child.task_id)
+                .order_by(Run.created_at.desc(), Run.id.desc())
+                .limit(40)
             )
         )
+        extra.reverse()
+        if child.id not in {step.id for step in extra}:
+            extra.insert(0, child)
         known = {step.id for step in steps}
         steps.extend(step for step in extra if step.id not in known)
     artifacts = list(
         session.scalars(
             select(Artifact)
-            .where(Artifact.run_id.in_([step.id for step in steps]))
-            .order_by(Artifact.created_at)
+            .where(
+                Artifact.run_id.in_([step.id for step in steps]),
+                Artifact.metadata_json["internal_media"].as_boolean().is_not(True),
+            )
+            .order_by(Artifact.created_at.desc(), Artifact.id.desc())
             .limit(40)
         )
     )
+    artifacts.reverse()
     by_id = {step.id: step for step in steps}
     superseded = set()
     from app.media_retry_projection import projection as media_projection

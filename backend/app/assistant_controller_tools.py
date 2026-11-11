@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.models import Artifact, Message, Run
 from app.state import TERMINAL
 from app.studio_assistant_contract import StudioCall
+from app.video_schema import MAX_VIDEO_SECONDS
 
 
 class Instruction(BaseModel):
@@ -170,7 +171,7 @@ TOOLS = {
     ),
     "image.upscale": Tool("Enlarge one existing image. Does not implement a new scene.", ImageOperation),
     "video.generate": Tool(
-        "Create local video from a prompt and optionally one image. Supply explicit duration_seconds, at most 60.",
+        "Create local video from a prompt and optionally one image. Supply explicit duration_seconds, at most 300.",
         Media,
     ),
     "avatar.animate": Tool(
@@ -395,7 +396,11 @@ def observation(session, root, step):
     artifacts = list(
         session.scalars(
             select(Artifact)
-            .where(Artifact.run_id.in_(ids), Artifact.trashed_at.is_(None))
+            .where(
+                Artifact.run_id.in_(ids),
+                Artifact.trashed_at.is_(None),
+                Artifact.metadata_json["internal_media"].as_boolean().is_not(True),
+            )
             .order_by(Artifact.created_at, Artifact.id)
             .limit(65)
         )
@@ -633,8 +638,8 @@ def wrapper_parameters(session, root, name, raw):
         ):
             params[field] = None if field != "upscale_result" else False
     if name == "video.generate":
-        if args.duration_seconds is None or args.duration_seconds > 60:
-            raise ValueError("Choose an explicit video duration from 1 to 60 seconds")
+        if args.duration_seconds is None or args.duration_seconds > MAX_VIDEO_SECONDS:
+            raise ValueError(f"Choose an explicit video duration from 1 to {MAX_VIDEO_SECONDS} seconds")
         params["media"] = {"duration_seconds": args.duration_seconds}
     if name in {"project.create", "project.create_code"}:
         from app.project_setup import ProjectName

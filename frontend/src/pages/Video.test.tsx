@@ -362,3 +362,25 @@ it("keeps an installed model selected while generating native portrait footage",
     height: 1280,
   });
 });
+
+it("queues a five-minute film with a duration instead of short-clip frames", async () => {
+  const fetch = mount();
+  fireEvent.change(await screen.findByLabelText("Scene and motion"), {
+    target: { value: "A long coastal study" },
+  });
+  fireEvent.change(screen.getByLabelText("Duration"), {
+    target: { value: "300s" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([path]) => path === "/api/media/jobs/video"),
+    ).toBe(true),
+  );
+  const call = fetch.mock.calls.find(
+    ([path]) => path === "/api/media/jobs/video",
+  )!;
+  const body = JSON.parse(String(call[1]?.body));
+  expect(body.duration_seconds).toBe(300);
+  expect(body).not.toHaveProperty("frames");
+});

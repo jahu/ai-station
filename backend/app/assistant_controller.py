@@ -3,7 +3,7 @@
 import asyncio
 import hashlib
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -315,7 +315,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "reference_text": user.content[len(body.content) :][:24000],
             "web_search": body.web_search.model_dump(),
             **{name: request.get(name) for name in ("coding", "data", "effects")},
-            "execution_deadline_at": (utcnow() + timedelta(hours=4)).isoformat(),
+            "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         metadata={"controller_steps": [], "controller_phase": "decide"},
     )
@@ -560,7 +560,10 @@ def dispatch(session, root, decision):
             executor, permissions = "assistant_web", ["network_read"]
     else:
         params = wrapper_parameters(session, root, name, decision.arguments)
-        params["execution_deadline_at"] = root.parameters["execution_deadline_at"]
+        deadline = datetime.fromisoformat(root.parameters["execution_deadline_at"])
+        if name != "video.generate":
+            deadline = min(deadline, utcnow() + timedelta(hours=4))
+        params["execution_deadline_at"] = deadline.isoformat()
         executor = "assistant_tool_setup"
         permissions = chat_permissions(snapshot, list(TOOLS[name].permissions))
     child = create_run(
