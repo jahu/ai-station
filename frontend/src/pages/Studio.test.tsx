@@ -187,9 +187,7 @@ it("archives without deletion and can restore the same identity", async () => {
   const { mutations } = fixture("/studio/project-one");
   fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
   await screen.findByRole("button", { name: "Restore project" });
-  expect(
-    screen.getByLabelText("Project name").matches(":disabled"),
-  ).toBe(true);
+  expect(screen.getByLabelText("Project name").matches(":disabled")).toBe(true);
   expect(screen.queryByRole("button", { name: "Save identity" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Restore project" }));
   await waitFor(() =>
