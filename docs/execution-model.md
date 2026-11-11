@@ -41,6 +41,11 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Decision runtime/provider preparation retries transient database contention under
+its original claim, Stop and deadline. Its unstarted completion stream leaves
+the DB transaction before network I/O; inference and tool execution are never
+replayed by this retry. See [decision preparation repair](plans/runtime-sqlite-contention.md#decision-preparation-contention--2026-11-11).
+
 [Owned media lease recovery](plans/media-lease-recovery.md) retries only rolled-back
 SQLite persistence and resumes matching native process inspection/collection after
 a lost worker. It never replays generation. Claims, resource locks, original
