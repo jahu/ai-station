@@ -184,3 +184,42 @@ def test_creative_deadline_is_finite_and_cannot_be_injected_into_public_video_se
         LongVideoRequest(
             client_request_id=uuid4(), prompt="A film", duration_seconds=300, execution_deadline_at=expires
         )
+
+
+def test_long_workflow_keeps_the_individual_native_process_ceiling(monkeypatch):
+    from datetime import timedelta
+    from types import SimpleNamespace
+
+    from app.host_media_executor import HostMediaExecutor
+
+    now = utcnow()
+    monkeypatch.setattr("app.host_media_executor.time.time", lambda: now.timestamp())
+    run = SimpleNamespace(parameters={"execution_deadline_at": (now + timedelta(hours=24)).isoformat()})
+    assert HostMediaExecutor.native_budget(run) == {"deadline_at": now.timestamp() + 4 * 3600}
+    run.parameters = {"execution_deadline_at": (now + timedelta(minutes=3)).isoformat()}
+    assert HostMediaExecutor.native_budget(run) == {"deadline_at": now.timestamp() + 180}
+
+
+@pytest.mark.parametrize("tool,hours", [("system.inspect", 4), ("video.generate", 24)])
+def test_long_controller_keeps_ordinary_tool_budgets_and_expands_only_video(react_model, tool, hours):
+    from app.assistant_controller import dispatch
+    from app.assistant_decisions import Decision
+
+    with TestClient(app) as api:
+        queued = submit(api, "A creative workflow")
+        with session_factory()() as db:
+            root = db.get(Run, queued["run"]["id"])
+            root.status = "running"
+            args = {"instruction": "A creative workflow"}
+            if tool == "video.generate":
+                args["duration_seconds"] = 300
+            dispatch(
+                db,
+                root,
+                Decision(kind="tool", reason="Create the requested result", tool=tool, arguments=args),
+            )
+            child = db.get(Run, root.metadata_json["controller_steps"][0]["run_id"])
+            remaining = (
+                datetime.fromisoformat(child.parameters["execution_deadline_at"]) - utcnow()
+            ).total_seconds()
+            assert (hours * 3600) - 30 < remaining <= hours * 3600
