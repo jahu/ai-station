@@ -15,14 +15,16 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
+from alembic.script import ScriptDirectory
 from app.config import get_settings
-from app.db import session_factory
+from app.db import alembic_config, session_factory
 from app.models import Agent, Run
 from app.runs import create_run, create_task
 from station_recovery import cli, host, operation, storage
 
 inspect_backup = storage.inspect_backup
 RecoveryError = storage.RecoveryError
+HEAD = ScriptDirectory.from_config(alembic_config()).get_current_head()
 
 
 @pytest.fixture
@@ -50,7 +52,7 @@ def test_inspection_is_read_only_and_reports_uncertain_work_without_credentials(
     original = path.read_bytes()
     files = sorted(p.relative_to(root) for p in root.rglob("*"))
     result = inspect_backup(root, bid)
-    assert result["schema_revision"] == "0045"
+    assert result["schema_revision"] == HEAD
     assert result["counts"]["tasks"] == result["counts"]["runs"] == 1
     assert result["agents_to_pause"] == result["runs_requiring_inspection"] == 1
     assert result["sha256"] == hashlib.sha256(original).hexdigest()
@@ -359,10 +361,10 @@ def test_migration_receives_only_the_private_connection_and_supports_known_ances
     before = path.read_bytes()
     inspected = inspect_backup(root, bid)
     assert inspected["schema_revision"] == "0032"
-    assert inspected["target_schema_revision"] == "0045" and inspected["migration_required"]
+    assert inspected["target_schema_revision"] == HEAD and inspected["migration_required"]
     storage.migrate_copy(stage)
     with closing(sqlite3.connect(stage)) as connection:
-        assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == ("0045",)
+        assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (HEAD,)
         assert connection.execute("SELECT count(*) FROM tasks").fetchone() == (0,)
     assert path.read_bytes() == before
     with session_factory()() as session:

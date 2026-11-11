@@ -1,0 +1,459 @@
+.studio {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.studio-toolbar {
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 24px;
+}
+.studio-toolbar > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio-toolbar .mode-tabs {
+  margin: 0;
+}
+.studio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
+  gap: 22px;
+  margin-bottom: 24px;
+}
+.studio-project {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.18s,
+    transform 0.18s;
+}
+.studio-project:hover {
+  border-color: #667957;
+  transform: translateY(-2px);
+}
+.studio-project:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+.studio-project-cover {
+  height: 190px;
+  padding: 26px;
+  position: relative;
+  overflow: hidden;
+}
+.studio-project-mark {
+  font-size: 76px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.08em;
+  opacity: 0.9;
+}
+.studio-cover-kind {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  position: absolute;
+  bottom: 22px;
+  left: 26px;
+}
+.studio-cover-line {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  right: -48px;
+  top: -32px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.2;
+}
+.studio-cover-line::after {
+  content: "";
+  position: absolute;
+  inset: 24px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.studio-project-body {
+  padding: 22px;
+  background: var(--surface, #15191a);
+}
+.studio-project-title {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  justify-content: space-between;
+}
+.studio-project-title h2 {
+  font-size: 18px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.studio-project-title svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.studio-project-body > p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  min-height: 42px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 12px 0 22px;
+}
+.studio-project-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.studio-project-footer > span:last-child {
+  font-size: 11px;
+  color: var(--muted);
+}
+.studio-swatches {
+  display: flex;
+  gap: 5px;
+}
+.studio-swatches i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #ffffff30;
+}
+.studio-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 64px 24px;
+}
+.studio-empty > svg {
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+.studio-empty h2 {
+  font-size: 24px;
+  font-weight: 500;
+  margin: 0;
+}
+.studio-empty p {
+  color: var(--muted);
+  max-width: 480px;
+  line-height: 1.8;
+  font-size: 14px;
+  margin: 16px 0 26px;
+}
+.studio-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 22px;
+  text-decoration: none;
+}
+.studio-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 28px;
+  align-items: start;
+}
+.studio-editor {
+  min-width: 0;
+}
+.studio-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.studio-section {
+  padding: 26px;
+  margin-bottom: 18px;
+}
+.studio-section h2 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 550;
+}
+.studio-section-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.studio-section-label > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.studio-section label {
+  display: grid;
+  gap: 9px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.studio-section label:last-child {
+  margin-bottom: 0;
+}
+.studio-section input:not([type="color"]),
+.studio-section select,
+.studio-section textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.studio-section textarea {
+  resize: vertical;
+  line-height: 1.65;
+}
+.studio-section small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+.studio-palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.studio-palette label {
+  width: 72px;
+  gap: 6px;
+  text-align: center;
+}
+.studio-palette input[type="color"] {
+  padding: 0;
+  width: 72px;
+  height: 56px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.studio-palette label > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.studio-palette label > button {
+  font-size: 10px;
+  padding: 2px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+}
+.studio-palette label > button:hover {
+  color: var(--text);
+}
+.studio-palette > button {
+  align-self: center;
+}
+.studio-section summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.studio-section summary small {
+  display: block;
+  margin-top: 6px;
+  padding-left: 15px;
+}
+.studio-defaults {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+  padding-top: 26px;
+}
+.studio-save {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0 24px;
+}
+.studio-save p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.studio-inspector {
+  position: sticky;
+  top: 24px;
+  min-width: 0;
+}
+.studio-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  aspect-ratio: 4/5;
+  padding: 34px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #ffffff18;
+}
+.studio-preview-label {
+  position: absolute;
+  top: 26px;
+  left: 34px;
+  letter-spacing: 0.15em;
+  font:
+    9px system-ui,
+    sans-serif;
+  opacity: 0.6;
+}
+.studio-preview-rule {
+  width: 40px;
+  height: 3px;
+  background: var(--studio-accent);
+  margin-bottom: 26px;
+}
+.studio-preview h2 {
+  font-size: 38px;
+  line-height: 1.12;
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  margin: 0 0 20px;
+  overflow-wrap: anywhere;
+}
+.studio-preview > p {
+  font-size: 13px;
+  line-height: 1.7;
+  opacity: 0.72;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.studio-preview-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 32px;
+  color: var(--studio-accent);
+  font:
+    10px system-ui,
+    sans-serif;
+}
+.studio-preview-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  padding: 0 6px;
+  margin: 12px 0 28px;
+}
+.studio-materials h2 + p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.studio-materials nav {
+  display: grid;
+  margin: 20px 0;
+}
+.studio-materials nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  text-decoration: none;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.studio-materials nav a span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.studio-materials nav small {
+  display: block;
+  margin-top: 5px;
+}
+.studio-materials .empty {
+  padding: 26px 0;
+}
+.studio-materials .empty h3 {
+  font-size: 13px;
+}
+.studio-materials .empty p {
+  font-size: 12px;
+}
+.studio-asset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-project {
+    transition: none;
+  }
+  .studio-project:hover {
+    transform: none;
+  }
+}
+@media (max-width: 900px) {
+  .studio-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio-inspector {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+  }
+  .studio-preview {
+    aspect-ratio: 1;
+  }
+  .studio-preview-note {
+    grid-column: 1;
+  }
+  .studio-materials {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+}
+@media (max-width: 560px) {
+  .studio-toolbar > span {
+    display: none;
+  }
+  .studio-section {
+    padding: 20px;
+  }
+  .studio-inspector {
+    display: block;
+  }
+  .studio-preview {
+    aspect-ratio: 4/3;
+  }
+  .studio-preview h2 {
+    font-size: 32px;
+  }
+  .studio-defaults {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .studio-save {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .studio-save button {
+    width: 100%;
+  }
+}

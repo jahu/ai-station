@@ -97,6 +97,22 @@ class AccountEvent(Base):
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
 
 
+class CreativeProject(Owned, Base):
+    __tablename__ = "creative_projects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str] = mapped_column(Text, default="")
+    aliases: Mapped[list] = mapped_column(JSON, default=list)
+    identity: Mapped[dict] = mapped_column(JSON, default=dict)
+    defaults: Mapped[dict] = mapped_column(JSON, default=dict)
+    logo_artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
 class CreativeSession(Owned, Base):
     __tablename__ = "creative_sessions"
     __table_args__ = (
@@ -109,6 +125,9 @@ class CreativeSession(Owned, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     capability: Mapped[str] = mapped_column(String(20), index=True)
     title: Mapped[str] = mapped_column(String(160))
+    creative_project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("creative_projects.id"), nullable=True, index=True
+    )
     draft: Mapped[dict] = mapped_column(JSON, default=dict)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

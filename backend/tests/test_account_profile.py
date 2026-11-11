@@ -43,6 +43,7 @@ def seed(session):
         m.Connector(key="legacy", name="Legacy connector"),
         m.ChatProvider(key="legacy", name="Legacy provider"),
         m.CreativeSession(capability="images", title="Legacy creative workspace"),
+        m.CreativeProject(name="Legacy creative identity"),
     ]
     session.add_all(rows)
     session.add(

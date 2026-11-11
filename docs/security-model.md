@@ -639,6 +639,14 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Creative projects use the same private-root account policy as creative sessions.
+Membership and logo references must belong to the same owner; administrator
+inspection remains read-only. Names/domains in aliases are planning context,
+not permission to fetch a URL. Identity text cannot supply HTML, JavaScript,
+commands, dependencies or host paths. A generation freezes the selected project
+version alongside the normal Task/Run history; archival blocks new work without
+deleting or replaying existing generations. See [Creative Studio](plans/creative-studio.md).
+
 Grouped film translation binds every consumer's source/configuration and applies
 only allowlisted descriptive fields. Lyrics and speech are excluded. Agent film
 translation is frozen after publication of its reviewed input provenance. Retry
