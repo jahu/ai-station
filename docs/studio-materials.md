@@ -181,3 +181,22 @@ Desktop/mobile browser checks cover the real account/API and unavailable-export
 state. These checks do not qualify a newly generated professional film, portrait
 video quality, fresh renderer installation or a production rollout. The complete
 Creative Studio delivery goal remains active.
+
+
+## Unified assistant production
+
+A complete edited reel, presentation or film can be selected semantically by the
+existing LlamaIndex ReAct assistant as `studio_material`. The captured intent
+contains the creative-project alias (or standalone/clarify), format/aspect,
+duration and audio policy. The owner-scoped catalog remains local; no new mode
+switch or word-matching router is used. `studio.produce` accepts editorial text,
+title and exact supplied media aliases and queues the same local director and
+full-production workflow as Studio. The assistant waits for a complete final MP4,
+with a link to the material for storyboard/production review. Stop forwards only
+to its verified owned planning/production Tasks. Intermediate images, narration
+cues and video segments are retained in Library/history but are not substituted
+for the requested final film in the conversation.
+
+This bridge is in qualification: synthetic workflow checks establish lifecycle,
+privacy and result publication; they do not qualify actual generated quality,
+portrait footage or fresh renderer installation.

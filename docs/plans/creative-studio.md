@@ -204,3 +204,34 @@ a failed attempt. Final status requires the actual complete exported MP4, not a
 successful planning step. Private API/worker tests must cover measured timing,
 multiple independent video Tasks, reuse, Stop, ownership and stale claims before
 newly generated professional-film qualification and deployment.
+
+
+## Conversation production bridge (in development, 2026-11-11)
+
+The existing LlamaIndex ReAct controller interprets a complete edited material as
+`studio_material`, distinct from a raw clip, a written script or a Git project.
+Its frozen intent selects an owner-scoped creative-project alias or standalone
+material, format/aspect, duration and narration/music/silence. Ambiguous brands
+require clarification. Local planning receives only a bounded current-account
+catalog; external providers receive no private creative-project catalog or
+Studio execution affordance. Follow-ups retain stable aliases, not row positions.
+
+One composed `studio.produce` tool uses the same material, local director and
+whole-film production services as Studio. The call supplies editorial instruction,
+title and captured media aliases; it cannot replace the frozen project/options
+or grant paths, commands, credentials or model-installation permissions. The
+project identity snapshot survives later edits, while access and archive status
+remain checked. HTTP only captures intent/enqueues ordinary Runs.
+
+The durable wrapper publishes a planning Task, then the ordinary full-production
+Task. Waiting releases the worker slot; recovery replays only atomic queue
+publication. Stop follows a closed owner-bound registry and existing production
+cancellation, retaining shared runtime consumers. The controller observes one
+composed leaf and only its complete final MP4, not hundreds of internal cues or
+segments. A storyboard or raw clip cannot fulfill the Studio outcome; different
+requested brands/options are accounted for by their original outcome index.
+
+Qualification requires real ReAct/worker fake-media tests for privacy, frozen
+identity, all four audio policies, final-output barriers, Stop and stale-lease
+recovery; then actual local-model direction and complete-film visual/audio QA.
+A passing synthetic film does not prove generated quality or complete this goal.

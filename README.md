@@ -123,6 +123,11 @@ and export, with whole-production Stop and continuation that reuses complete
 media and spoken cues. Newly generated film/voice quality, fresh installation and
 automatic project selection remain in development. This is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
+The conversation bridge adds semantic project/format/audio selection and queues
+that same full production from a prompt, with a Studio link and final film in
+chat. Account isolation, all four audio policies, Stop and queue recovery are
+checked with fake media; actual conversational film quality remains in
+qualification.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the

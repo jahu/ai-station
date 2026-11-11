@@ -169,14 +169,13 @@ def publish_revision(
     return saved
 
 
-@router.post("", status_code=201)
-def create(body: Create, session: DB):
+def create_material(session, body: Create):
     fingerprint = digest(body.model_dump(mode="json", exclude={"client_request_id"}))
     prior = session.get(StudioMaterial, str(body.client_request_id))
     if prior:
         if prior.request_sha256 != fingerprint:
             raise HTTPException(409, "This creation receipt belongs to another material")
-        return material_dict(prior)
+        return prior
     project = (
         get_project(session, body.creative_project_id, active=True) if body.creative_project_id else None
     )
@@ -190,7 +189,14 @@ def create(body: Create, session: DB):
         request_sha256=fingerprint,
     )
     session.add(row)
+    session.flush()
+    return row
+
+
+@router.post("", status_code=201)
+def create(body: Create, session: DB):
     try:
+        row = create_material(session, body)
         session.commit()
     except IntegrityError as exc:
         session.rollback()

@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.models import Artifact, Message, Run
 from app.state import TERMINAL
+from app.studio_assistant_contract import StudioCall
 
 
 class Instruction(BaseModel):
@@ -130,6 +131,11 @@ class Tool:
 
 
 TOOLS = {
+    "studio.produce": Tool(
+        "Create a complete edited reel, presentation or educational film: storyboard, actual generated footage/images, requested narration/music and final MP4. Uses the frozen studio_material outcome and creative-project identity; no settings are duplicated in the call. outcome_index selects the original outcome when several materials were requested. references are supplied image/video aliases only. This is not a raw video clip or a software/Git project.",
+        StudioCall,
+        permissions=("filesystem_read", "workspace_write"),
+    ),
     "artifact.read": Tool(
         "Read bounded owned text/JSON/small PDF artifacts. Optional section selects a top-level JSON key. Images require image.describe; spreadsheets require reviewed data tools.",
         ArtifactRead,
@@ -220,6 +226,11 @@ def available_tools(params):
     """Capability authority comes from the selected scope, never model output."""
     selected = {}
     for name, spec in TOOLS.items():
+        if name == "studio.produce" and (
+            params.get("controller_studio_policy") != "studio-v1"
+            or params.get("controller_provider", {}).get("location") != "local"
+        ):
+            continue
         if spec.network and not params.get("web_search", {}).get("enabled"):
             continue
         if name == "coding.local" and not params.get("coding"):
@@ -253,6 +264,11 @@ def subtree(session, root, anchor_id):
         rows.append(row)
         if len(visited) > 256:
             raise ValueError("Controller tool graph exceeds its inspection bound")
+        # The composed Studio tool owns a bounded, separately validated Task
+        # registry. Its final export is the observation, never hundreds of
+        # internal audio cues, images or intermediate video segments.
+        if row.executor_type == "assistant_studio":
+            continue
         frontier.extend(
             session.scalars(select(Run).where(Run.parent_run_id == row.id).order_by(Run.created_at, Run.id))
         )
@@ -367,6 +383,10 @@ def image_contract(context):
 
 
 def observation(session, root, step):
+    if step["tool"] == "studio.produce":
+        from app.studio_assistant import observed_result
+
+        return observed_result(session, root, step)
     rows = subtree(session, root, step["run_id"])
     active = [row for row in rows if row.status not in TERMINAL]
     if active:
