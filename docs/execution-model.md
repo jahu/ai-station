@@ -514,3 +514,20 @@ consumer must not retain SQLite's writer reservation. This applies to private,
 account-coordination and administrator-inspection sessions. SSE still performs
 its own short, authorized batch reads; native file responses retain their
 explicit release before delivery. Worker/session lifetimes are unchanged.
+
+
+### Observed VRAM and waiting budgets (develop follow-up, 2026-11-11)
+
+Verified single-file Q8 GGUF loads compare available VRAM on each selected device
+with their fitted weights, KV context, persistent state and CUDA workspace. The
+normal desktop allocation is not itself proof of GPU contention: a blanket 90%
+free-device requirement could defer an otherwise fitting 9B model forever.
+Unknown geometry and complete bundles retain the existing conservative admission;
+owned GPU reservations and native startup/OOM validation remain authoritative.
+No external process is stopped to satisfy admission.
+
+Worker ticks enforce execution deadlines for queued and waiting-for-tool Runs,
+even when prerequisites/backoff prevent claiming and no heartbeat exists. The
+bounded sweep rechecks under the Task lock and uses normal audited cancellation,
+including shared-runtime protections. Expired instructions are never silently
+replayed. Actual deadline cancellation and a newly requested retry remain distinct.
