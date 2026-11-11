@@ -9,7 +9,7 @@ import { Button } from "../components/ui/button";
 import { creativeJson } from "../components/creative/creative-project";
 import { randomId } from "../lib/random-id";
 import { materialBase, type StudioRevision } from "./studio-material";
-import { terminal } from "./studio-production";
+import { terminal, useStudioRenderer } from "./studio-production";
 
 type Production = {
   root_run: Run;
@@ -50,12 +50,7 @@ export default function StudioProduction({
         ? 1500
         : false,
   });
-  const renderer = useQuery({
-    queryKey: ["studio-renderer"],
-    queryFn: () =>
-      api<{ available: boolean }>(`${materialBase}/renderer/capabilities`),
-    staleTime: 30000,
-  });
+  const renderer = useStudioRenderer();
   const current = values.data?.find(
     (p) =>
       p.root_run.parameters.studio_revision_id === revision.id ||
@@ -250,8 +245,9 @@ export default function StudioProduction({
       )}
       {!renderer.isPending && !renderer.data?.available && (
         <p className="studio-direction-note">
-          Prepare film export below before starting. This avoids generating
-          media for an unavailable exporter.
+          {renderer.data?.readiness === "checking"
+            ? "Checking local film export…"
+            : "Prepare film export below before starting. This avoids generating media for an unavailable exporter."}
         </p>
       )}
       {current && (

@@ -80,3 +80,11 @@ unchanged selection on replay were checked; no new render or inference was
 executed during activation. Fresh installation on a machine without this image
 remains unavailable until its owned installation/cancellation lifecycle is qualified.
 This activation is not generated-film visual/audio quality acceptance.
+
+Readiness keeps the last successful observation while rechecking the same
+selection in the background. Periodic refresh must not turn a verified engine
+unavailable at the end of a long generation. Initial or changed selections still
+require a completed check; failed revalidation clears the cached result. Native
+dispatch independently rechecks the actual image, daemon and frozen observation
+before launch. The workspace polls only transient `checking` state, so initial
+verification enables export without a manual page refresh.

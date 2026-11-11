@@ -23,3 +23,17 @@ export function useShotProduction(materialId: string, revisionId: string) {
       q.state.data?.runs?.some((r) => !terminal.has(r.status)) ? 1500 : false,
   });
 }
+
+export function useStudioRenderer() {
+  return useQuery({
+    queryKey: ["studio-renderer"],
+    queryFn: ({ signal }) =>
+      api<{ available: boolean; reason?: string; readiness?: string }>(
+        `${materialBase}/renderer/capabilities`,
+        { signal },
+      ),
+    staleTime: 30000,
+    refetchInterval: (q) =>
+      q.state.data?.readiness === "checking" ? 1000 : false,
+  });
+}

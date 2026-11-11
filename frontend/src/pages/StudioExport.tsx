@@ -17,6 +17,7 @@ import {
 } from "./studio-material";
 import {
   useShotProduction,
+  useStudioRenderer,
   terminal,
   type ShotProduction,
 } from "./studio-production";
@@ -53,14 +54,7 @@ export default function StudioExport({
     refetchInterval: (q) =>
       q.state.data?.runs.some((r) => !terminal.has(r.status)) ? 1500 : false,
   });
-  const renderer = useQuery({
-    queryKey: ["studio-renderer"],
-    queryFn: () =>
-      api<{ available: boolean; reason?: string }>(
-        `${materialBase}/renderer/capabilities`,
-      ),
-    staleTime: 30000,
-  });
+  const renderer = useStudioRenderer();
   const silent = revision.storyboard.audio === "silent";
   const audio = useQuery({
     queryKey: ["studio-audio-productions", user?.id, materialId, revision.id],
@@ -298,14 +292,16 @@ export default function StudioExport({
             {renderer.data?.reason ||
               "Prepare local film export to finish this story."}
           </p>
-          <Button
-            type="button"
-            variant="secondary"
-            aria-expanded={setupOpen}
-            onClick={() => setSetupOpen((open) => !open)}
-          >
-            {setupOpen ? "Hide export setup" : "Set up film export"}
-          </Button>
+          {renderer.data?.readiness !== "checking" && (
+            <Button
+              type="button"
+              variant="secondary"
+              aria-expanded={setupOpen}
+              onClick={() => setSetupOpen((open) => !open)}
+            >
+              {setupOpen ? "Hide export setup" : "Set up film export"}
+            </Button>
+          )}
           {setupOpen && <StudioRendererSetup />}
         </div>
       )}

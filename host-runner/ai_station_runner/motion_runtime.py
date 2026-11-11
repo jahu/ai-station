@@ -22,10 +22,11 @@ from ai_station_runner.security import resolve_child
 _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="motion-readiness")
 _lock = threading.Lock()
 _probe = None
+_last_ready = None
 
 
 def capabilities():
-    global _probe
+    global _probe, _last_ready
     base = {
         "name": "Hyperframes · CPU",
         "ram_mib": RAM_MIB,
@@ -51,17 +52,35 @@ def capabilities():
                 pass
         key = (str(settings.host_data_dir()), settings.motion_image, selection)
         with _lock:
+            if _probe is None or _probe[0] != key:
+                _last_ready = None
+            elif _probe[1].done():
+                try:
+                    _last_ready = (key, _probe[1].result())
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    _last_ready = None
             if _probe is None or _probe[0] != key or (_probe[1].done() and time.monotonic() - _probe[2] > 30):
                 _probe = (key, _pool.submit(image, settings), time.monotonic())
             task = _probe[1]
-        if not task.done():
-            return {
-                **base,
-                "available": False,
-                "readiness": "checking",
-                "reason": "Checking the isolated motion renderer",
-            }
-        installed = task.result()
+            if task.done():
+                try:
+                    installed = task.result()
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    _last_ready = None
+                    raise
+                _last_ready = (key, installed)
+            elif _last_ready is not None and _last_ready[0] == key:
+                # Keep the last verified observation while refreshing this exact
+                # selection. Native start independently rechecks image/daemon
+                # and the frozen observation before any process is launched.
+                installed = _last_ready[1]
+            else:
+                return {
+                    **base,
+                    "available": False,
+                    "readiness": "checking",
+                    "reason": "Checking the isolated motion renderer",
+                }
         return {**base, "available": True, "readiness": "ready", "observation": observation(installed)}
     except (OSError, ValueError, subprocess.SubprocessError):
         return {
