@@ -55,6 +55,9 @@ def tick(
     if waiting_for_first_admin(session):
         session.commit()
         return None
+    from app.station_update_install import recover_gate
+
+    recover_gate(session, runner or RunnerClient(), worker_id)
     recover_stale(session, runner)
     session.commit()
     run = claim_next(session, worker_id)
@@ -162,6 +165,8 @@ def _execute_claimed(session, run, worker_id, executors):
             "publication_reconcile",
             "github_read",
             "sqlite_backup",
+            "station_update_check",
+            "station_update",
             "private_access",
             "runtime_observation",
             "station_snapshot",

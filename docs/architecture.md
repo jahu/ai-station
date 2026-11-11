@@ -1690,3 +1690,24 @@ between bounded processing steps and before publication. Native model outputs
 remain intact. Library repair creates an owned Task/Run and separate derived
 artifact. MP4 processing copies encoded video packets and checks their timestamps;
 already processed canonical speech is inherited by avatars without double processing.
+
+[Desktop automatic updates](plans/desktop-auto-update.md) extend the existing
+trusted installation layer. Administrator-owned maintenance Runs freeze the
+official release observation; an independent native owner performs bounded,
+verified package preparation and the existing preserving offline image update.
+The Runner bridges finite messages to the supervisor's private socket and never
+accepts shell commands, destinations or arbitrary publisher URLs. A short global
+idle gate participates in atomic claiming while preserving queued Runs. Recovery
+inspects the same native operation rather than redispatching installation. Native
+Linux and dedicated Windows/WSL application are qualified through preserving
+package/restart/recovery exercises. This does not enable the Mac installer or
+change external runtimes.
+
+The [Windows handoff](plans/windows-auto-update-handoff.md) transfers
+only the approved installer over finite ordinary-guest WSL stdin/stdout operations.
+A separate SID-private native owner independently checks the official publisher,
+waits for normal Stop and UI-lease release, runs the per-user installer silently
+and verifies its retained publisher registration. The existing preserving guest
+transaction retains the original old/target pair and database backup proof.
+Automatic target startup and actual native/guest health precede Run completion.
+Neither a Windows-drive mount nor WSL interop is enabled.

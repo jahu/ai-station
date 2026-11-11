@@ -1,5 +1,5 @@
 {
-  "version": 56,
+  "version": 57,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6572,9 +6572,75 @@
         "docs/plans/speech-volume-leveling.md",
         "Task → Run → Events → Artifacts"
       ]
+    },
+    {
+      "area": "Aktualizacja aplikacji",
+      "priority": "P1",
+      "resources": "CPU; internet do oficjalnego GitHub; bez modeli i płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "DESKTOP-AUTO-UPDATE"
+      ],
+      "id": "UPDATE-101",
+      "title": "Wersja i sprawdzanie aktualizacji",
+      "prerequisites": [
+        "Zainstalowany klient 0.5 lub nowszy. Konto administratora oraz zwykłego użytkownika."
+      ],
+      "steps": [
+        "Sprawdź wersję w stopce menu i w Settings → Updates.",
+        "Jako administrator kliknij Check again; porównaj wynik z oficjalnym GitHub Releases.",
+        "Powtórz podgląd jako zwykły użytkownik."
+      ],
+      "expected": [
+        "Wersja odpowiada działającej aplikacji. Brak nowszego release daje uczciwy komunikat. Sprawdzenie niczego nie instaluje. Zwykły użytkownik nie uzyskuje prawa instalacji."
+      ]
+    },
+    {
+      "area": "Aktualizacja aplikacji",
+      "priority": "P0",
+      "resources": "CPU; internet do oficjalnego GitHub; bez modeli i płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "DESKTOP-AUTO-UPDATE"
+      ],
+      "id": "UPDATE-102",
+      "title": "Aktualizacja jednym kliknięciem zachowuje dane",
+      "prerequisites": [
+        "Jednorazowa instalacja QA klienta 0.5 lub nowszego; dostępna nowsza zgodna oficjalna wersja. Jeśli jej jeszcze nie opublikowano, oznacz Zablokowany.",
+        "Utwórz neutralną rozmowę, plik w Library i agenta; wykonaj kopię zapasową. Zakończ aktywne zadania."
+      ],
+      "steps": [
+        "W Settings → Updates sprawdź nową wersję, rozmiar i opis, następnie kliknij Update and restart tylko raz.",
+        "Poczekaj na pobranie, restart i ponowne połączenie; nie otwieraj osobnego instalatora.",
+        "Sprawdź nową wersję, zaloguj się tym samym kontem i sprawdź rozmowę, plik, agenta oraz wynik Run aktualizacji."
+      ],
+      "expected": [
+        "Aktualizacja kończy się bez osobnego kreatora instalacji. Nowa wersja działa, dane i konto pozostały, ten sam Run kończy się powodzeniem."
+      ]
+    },
+    {
+      "area": "Aktualizacja aplikacji",
+      "priority": "P1",
+      "resources": "CPU; internet do oficjalnego GitHub; bez modeli i płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "DESKTOP-AUTO-UPDATE"
+      ],
+      "id": "UPDATE-103",
+      "title": "Anulowanie pobierania pozostawia obecną wersję",
+      "prerequisites": [
+        "Jednorazowa instalacja QA z dostępną nowszą oficjalną wersją. Używaj wyłącznie danych testowych."
+      ],
+      "steps": [
+        "Rozpocznij aktualizację i podczas pobierania użyj Cancel, zanim rozpocznie się instalacja.",
+        "Sprawdź wersję i dostęp do zapisanej rozmowy oraz Run. Jeśli pobieranie skończyło się zbyt szybko, oznacz Nie dotyczy; nie przerywaj instalacji siłą."
+      ],
+      "expected": [
+        "Anulowanie przed aktywacją zachowuje działającą wersję i dane. Run ma stan anulowany, nie zostaje uruchomiony instalator."
+      ]
     }
   ],
-  "scope_notice": "Wydanie 0.2: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
+  "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
   "deferred_cases": [
     {
       "id": "SETUP-155",

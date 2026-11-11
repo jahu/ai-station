@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import ChatProviders from "./ChatProviders";
 import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
+import StationUpdates from "./StationUpdates";
 import OperatorAccess from "./OperatorAccess";
 import GenerationSettings from "./GenerationSettings";
 import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
@@ -22,6 +23,7 @@ const sections = [
   ["integrations", "Integrations"],
   ["access", "Access"],
   ["maintenance", "Maintenance"],
+  ["updates", "Updates"],
 ] as const;
 type Preferences = {
   version: number;
@@ -39,7 +41,7 @@ export default function Settings() {
     account.mode === "accounts"
       ? [
           ...sections.filter(
-            ([key]) => !["access", "maintenance"].includes(key),
+            ([key]) => !["access", "maintenance", "updates"].includes(key),
           ),
           ["security", "Account"],
           ...(account.user?.is_admin
@@ -47,6 +49,7 @@ export default function Settings() {
                 ["users", "Users"],
                 ["access", "Private access"],
                 ["maintenance", "Maintenance"],
+                ["updates", "Updates"],
               ] as const)
             : []),
         ]
@@ -82,6 +85,7 @@ export default function Settings() {
             <OperatorAccess />
           ))}
         {section === "maintenance" && <Maintenance />}
+        {section === "updates" && <StationUpdates />}
       </div>
     </>
   );

@@ -1,44 +1,7 @@
 # Native installation orchestration. Not an HTTP/tool/agent execution surface.
 Set-StrictMode -Version 2.0
 $ErrorActionPreference='Stop'
-foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest','GuestUpdate','DesktopPort','DesktopProcess')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
-
-function Read-StationPublishedManifest {
-    param([string]$PackageFolder)
-    Assert-StationNoReparsePath $PackageFolder
-    $path=[IO.Path]::Combine($PackageFolder,'windows-guest-manifest.json')
-    Assert-StationNoReparsePath $path
-    if ([IO.FileInfo]::new($path).Length -gt 16384) { throw 'The guest manifest exceeds its expected size.' }
-    $manifest=[IO.File]::ReadAllText($path,[Text.UTF8Encoding]::new($false,$true)) | ConvertFrom-Json -ErrorAction Stop
-    Assert-StationGuestManifest $manifest
-    return $manifest
-}
-
-function Read-StationInstallRecord {
-    param($Lease)
-    $record=Read-StationStateFile $Lease
-    if ($null -eq $record) { return $null }
-    if ($record.RecordSchema -ne 1 -or (($record.PSObject.Properties.Name | Sort-Object) -join '|') -cne 'Manifest|RecordSchema|State') { throw 'The private installation receipt is invalid.' }
-    Assert-StationInstallState $record.State $Lease.Root
-    Assert-StationGuestManifest $record.Manifest
-    if ($record.State.PackageSha256 -cne $record.Manifest.package_sha256) { throw 'The saved package identities disagree.' }
-    return $record
-}
-
-function Start-StationWslProcess {
-    param([string]$Executable,[string[]]$Arguments,[string]$Directory,[switch]$KeepInput)
-    # Only callers inside this module provide the typed planner's fixed operations.
-    $info=[Diagnostics.ProcessStartInfo]::new()
-    $info.FileName=$Executable; $info.Arguments=Format-StationWslArguments $Arguments; $info.WorkingDirectory=$Directory
-    $info.UseShellExecute=$false; $info.CreateNoWindow=$true
-    $info.RedirectStandardInput=$true; $info.RedirectStandardOutput=$true; $info.RedirectStandardError=$true
-    $info.StandardOutputEncoding=[Text.UTF8Encoding]::new($false,$true)
-    $info.StandardErrorEncoding=[Text.UTF8Encoding]::new($false,$true)
-    $info.EnvironmentVariables['WSLENV']='' # Do not carry Windows secrets or shell/loader overrides into the guest.
-    $process=[Diagnostics.Process]::Start($info)
-    if (-not $KeepInput) { $process.StandardInput.Close() } # Only the fixed offline update receives bytes.
-    return $process
-}
+foreach ($name in @('InstallState','InstallFiles','NativeWsl','PrivateStore','GuestManifest','GuestUpdate','DesktopPort','DesktopProcess','NativeGuest','UpdateBridge')) { Import-Module (Join-Path $PSScriptRoot ($name+'.psm1')) }
 
 function Confirm-StationGuest {
     param($Lease,$Record,[string]$Executable,
@@ -86,7 +49,7 @@ function Read-StationGuestUpdateProgram {
 }
 
 function Invoke-StationGuestUpdate {
-    param($Lease,$Record,$Manifest,[string]$PackageFolder,[string]$Executable,[Threading.CancellationToken]$CancellationToken)
+    param($Lease,$Record,$Manifest,[string]$PackageFolder,[string]$Executable,[Threading.CancellationToken]$CancellationToken,$AutomaticUpdate=$null,[ref]$UpdateOutcome)
     $CancellationToken.ThrowIfCancellationRequested()
     Assert-StationNoReparsePath $Record.State.Directory
     $inventory=@(Get-StationWslRegistrations)
@@ -94,14 +57,15 @@ function Invoke-StationGuestUpdate {
     if ($ownership.Kind -cne 'VerifyGuest' -or $Record.State.Phase -cne 'ready') { throw 'Inspect the existing installation before updating. No second import was started.' }
     $program=Read-StationGuestUpdateProgram
     $stable=Test-StationFixedGuestFile $Lease $Record $Executable '/var/lib/ai-station-updates/python/bin/python3' -ExecutableFile -RootUser
-    $plan=Get-StationGuestUpdatePlan $Record.State $Lease.Root $Record.Manifest $Manifest $program -StablePython:$stable
+    $plan=Get-StationGuestUpdatePlan $Record.State $Lease.Root $Record.Manifest $Manifest $program -StablePython:$stable -AutomaticUpdate $AutomaticUpdate
     $packagePath=[IO.Path]::Combine($PackageFolder,'station.deb')
     Assert-StationNoReparsePath $packagePath
     $archive=Open-StationVerifiedArchive $packagePath $Manifest.package_sha256 $Manifest.package_bytes
     try {
         $CancellationToken.ThrowIfCancellationRequested()
         $process=Start-StationWslProcess $Executable $plan.Arguments $Lease.Root -KeepInput
-        [void](Send-StationGuestUpdate $process $archive $plan.Header -CancellationToken $CancellationToken)
+        $proof=Send-StationGuestUpdate $process $archive $plan.Header -CancellationToken $CancellationToken
+        if($null -ne $UpdateOutcome){$UpdateOutcome.Value=$proof}
         $CancellationToken.ThrowIfCancellationRequested()
         $candidate=$Record | ConvertTo-Json -Depth 8 | ConvertFrom-Json
         $candidate.Manifest=$Manifest
@@ -139,15 +103,18 @@ function Test-StationGuestUpdatePending {
 
 function Invoke-StationSetup {
     param([Parameter(Mandatory=$true)][string]$PackageFolder,
-          [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,[switch]$AllowUpdate)
+          [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,[switch]$AllowUpdate,$AutomaticUpdate=$null,$OriginalUpdateRecord=$null)
     $CancellationToken.ThrowIfCancellationRequested()
     Assert-StationWindowsHost
     Assert-StationWindowsPreparationReady
     $PackageFolder=ConvertTo-StationWindowsPath $PackageFolder
     $executable=Get-StationWslExecutable
     $CancellationToken.ThrowIfCancellationRequested()
+    # Launch errors (including programming/import errors) are not evidence of
+    # an old WSL version and must not be replaced with misleading setup advice.
+    $versionProcess=Start-StationWslProcess $executable @('--version') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))
     try {
-        $version=Wait-StationWslProcess (Start-StationWslProcess $executable @('--version') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -KeepOutput $true -CancellationToken $CancellationToken
+        $version=Wait-StationWslProcess $versionProcess -KeepOutput $true -CancellationToken $CancellationToken
     } catch {
         $CancellationToken.ThrowIfCancellationRequested()
         # Legacy inbox WSL lacks --version. Its raw localized output may contain
@@ -160,15 +127,21 @@ function Invoke-StationSetup {
     Wait-StationWslProcess (Start-StationWslProcess $executable @('--status') ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData))) -CancellationToken $CancellationToken
     $manifest=Read-StationPublishedManifest $PackageFolder
     $lease=New-StationPrivateStore
-    $archive=$null
+    $archive=$null;$updateProof=$null
     try {
         $CancellationToken.ThrowIfCancellationRequested()
         $record=Read-StationInstallRecord $lease
-        if ($null -eq $record) {
+        if($null -ne $OriginalUpdateRecord){
+            if($null -eq $AutomaticUpdate -or -not $AllowUpdate -or $null -eq $record){throw 'The original automatic update requires its existing installation.'}
+            Assert-StationInstallState $OriginalUpdateRecord.State $lease.Root
+            Assert-StationGuestManifest $OriginalUpdateRecord.Manifest
+            if($OriginalUpdateRecord.RecordSchema -ne 1 -or $OriginalUpdateRecord.State.PackageSha256 -cne $OriginalUpdateRecord.Manifest.package_sha256 -or $record.State.InstallId -cne $OriginalUpdateRecord.State.InstallId -or $record.State.RegistrationId -ine $OriginalUpdateRecord.State.RegistrationId -or $record.State.Directory -ine $OriginalUpdateRecord.State.Directory -or $record.State.Distribution -cne $OriginalUpdateRecord.State.Distribution -or $record.Manifest.package_sha256 -cnotin @($OriginalUpdateRecord.Manifest.package_sha256,$manifest.package_sha256)){throw 'The original automatic installation identity changed.'}
+            $record=Invoke-StationGuestUpdate $lease $OriginalUpdateRecord $manifest $PackageFolder $executable $CancellationToken -AutomaticUpdate $AutomaticUpdate -UpdateOutcome ([ref]$updateProof)
+        } elseif ($null -eq $record) {
             $record=[pscustomobject]@{RecordSchema=1;State=(New-StationInstallState $lease.Root $manifest.package_sha256);Manifest=$manifest}
         } elseif ($record.Manifest.rootfs_sha256 -cne $manifest.rootfs_sha256) {
             if (-not $AllowUpdate) { throw 'An update is available. Choose Update AI Station; saved work must be stopped normally first.' }
-            $record=Invoke-StationGuestUpdate $lease $record $manifest $PackageFolder $executable $CancellationToken
+            $record=Invoke-StationGuestUpdate $lease $record $manifest $PackageFolder $executable $CancellationToken -AutomaticUpdate $AutomaticUpdate -UpdateOutcome ([ref]$updateProof)
         }
         Assert-StationNoReparsePath $record.State.Directory
         $plan=Get-StationImportPlan $record.State $lease.Root ([IO.Path]::Combine($PackageFolder,'ai-station-wsl-rootfs.tar.gz')) -Inventory @(Get-StationWslRegistrations) -ExistingDisk ([IO.Directory]::Exists($record.State.Directory))
@@ -187,7 +160,7 @@ function Invoke-StationSetup {
             Wait-StationWslProcess (Start-StationWslProcess $executable $plan.Arguments $lease.Root) -CancellationToken $CancellationToken
         }
         Confirm-StationGuest $lease $record $executable -CancellationToken $CancellationToken
-        return [pscustomobject]@{Status='ready';Distribution=$record.State.Distribution;Root=$lease.Root}
+        return [pscustomobject]@{Status='ready';Distribution=$record.State.Distribution;Root=$lease.Root;UpdateProof=$updateProof}
     } finally { if ($null -ne $archive) { $archive.Stream.Dispose() }; $lease.Stream.Dispose() }
 }
 
@@ -213,6 +186,7 @@ function Invoke-StationDesktop {
             try { $storageReady=[bool](Update-StationPhysicalStorage $lease $record $executable) } catch { $storageReady=$false }
         }
         if ($Action -ieq 'start') {
+            if(-not $update -and $manifest.package.Version -cmatch '\A(0|[1-9][0-9]{0,4})(\.(0|[1-9][0-9]{0,4})){2}\z'){[void](Connect-StationUpdateOwner $lease $record (ConvertTo-StationWindowsPath $PackageFolder))}
             $statusArgs=Get-StationLifecyclePlan $record.State $lease.Root 'status'
             $status=(Wait-StationWslProcess (Start-StationWslProcess $executable $statusArgs $lease.Root) -KeepOutput $true) | ConvertFrom-Json -ErrorAction Stop
             if ($status.running -isnot [bool]) { throw 'The guest returned an invalid lifecycle status.' }
@@ -227,6 +201,15 @@ function Invoke-StationDesktop {
             $body | Add-Member -NotePropertyName 'update_available' -NotePropertyValue $update
             $body | Add-Member -NotePropertyName 'update_pending' -NotePropertyValue $pending
             $body | Add-Member -NotePropertyName 'physical_storage_available' -NotePropertyValue $storageReady
+            if($body.running -and -not $update -and -not $pending -and $manifest.package.Version -cmatch '\A(0|[1-9][0-9]{0,4})(\.(0|[1-9][0-9]{0,4})){2}\z'){
+                if(Connect-StationUpdateOwner $lease $record (ConvertTo-StationWindowsPath $PackageFolder)){
+                    $polled=Invoke-StationUpdateGuestControl $lease $record 'update-poll' ([pscustomobject]@{channel_id=(Get-StationUpdateChannel $lease)})
+                    if($null -ne $polled.pending -and $polled.pending.phase -ceq 'apply_requested'){
+                        Import-Module (Join-Path $PSScriptRoot 'AutomaticUpdate.psm1')
+                        [void](Start-StationAutomaticUpdate $lease $record $polled.pending (ConvertTo-StationWindowsPath $PackageFolder))
+                    }
+                }
+            }
             return ($body | ConvertTo-Json -Compress)
         }
         return $result

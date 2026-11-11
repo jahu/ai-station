@@ -60,6 +60,7 @@ import { Projects, NewProject, ProjectDetail } from "./pages/Projects";
 import type { OperatorStatus } from "./pages/OperatorLogin";
 import { useAccount } from "./account-context";
 import { clearPrivateBrowserState } from "./lib/account-storage";
+import StationVersion from "./components/StationVersion";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -291,6 +292,7 @@ export default function App() {
             </div>
             <span className="tiny-tag">LOCAL</span>
           </div>
+          <StationVersion />
         </div>
       </aside>
       {isChat && navigationOpen && (

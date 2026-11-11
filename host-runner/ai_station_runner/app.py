@@ -87,6 +87,7 @@ from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.speech_prepare import router as speech_setup_router
 from ai_station_runner.speech_runtime_schema import CheckpointSelection as SpeechCheckpointSelection
 from ai_station_runner.station_image import inspect_station_image
+from ai_station_runner.station_updates import router as station_updates_router
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
 from ai_station_runner.timeline_contract import TimelineRequest
@@ -759,6 +760,7 @@ app.router.routes = [
 
 # This router contains only the two validated local-model operations.
 app.include_router(local_model_router)
+app.include_router(station_updates_router)
 
 
 app.include_router(llama_router)

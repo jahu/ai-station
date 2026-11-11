@@ -27,7 +27,7 @@ try {
  if ($manifest.PSObject.Properties.Name -notcontains 'package_bytes') { throw 'Build the complete update-capable guest payload.' }
  $updatePackage=Open-StationVerifiedArchive (Join-Path $GuestPackage 'station.deb') $manifest.package_sha256 $manifest.package_bytes
  [void][IO.Directory]::CreateDirectory($stage)
- $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','GuestUpdate.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','Setup.psm1','WindowsSetup.ps1','WindowsSupport.psm1','Prepare-Windows.ps1','Uninstall-Check.ps1')
+ $files=@('InstallState.psm1','InstallFiles.psm1','PrivateStore.psm1','NativeWsl.psm1','GuestManifest.psm1','GuestUpdate.psm1','DesktopPort.psm1','DesktopLink.psm1','DesktopResult.psm1','DesktopProcess.psm1','ReleaseChannel.psm1','NativeGuest.psm1','UpdateBridge.psm1','AutomaticUpdate.psm1','Apply-Update.ps1','Setup.psm1','WindowsSetup.ps1','WindowsSupport.psm1','Prepare-Windows.ps1','Uninstall-Check.ps1')
  foreach ($name in $files) {
   # A BOM keeps built-in Windows PowerShell 5.1 source decoding unambiguous.
   $text=[IO.File]::ReadAllText((Join-Path $source $name),[Text.UTF8Encoding]::new($false,$true))
@@ -41,8 +41,9 @@ try {
  try { $updatePackage.Stream.CopyTo($target);$target.Flush($true) } finally { $target.Dispose() }
  [IO.File]::Copy((Join-Path $source 'guest_update.py'),(Join-Path $stage 'guest_update.py'),$false)
  foreach ($name in @('LICENSE','NOTICE','COMMERCIAL.md')) { [IO.File]::Copy((Join-Path $repo $name),(Join-Path $stage $name),$false) }
+ [IO.File]::Copy((Join-Path $PSScriptRoot 'AIStation.ico'),(Join-Path $stage 'AIStation.ico'),$false)
  $parameters=[CodeDom.Compiler.CompilerParameters]::new()
- $parameters.CompilerOptions='/platform:x64 /target:winexe';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
+ $parameters.CompilerOptions='/platform:x64 /target:winexe /win32icon:"'+(Join-Path $PSScriptRoot 'AIStation.ico')+'"';$parameters.GenerateExecutable=$true;$parameters.GenerateInMemory=$false
  $parameters.OutputAssembly=Join-Path $stage 'AIStation.exe'
  [void]$parameters.ReferencedAssemblies.Add('System.dll');[void]$parameters.ReferencedAssemblies.Add('System.Core.dll')
  # Compile without loading application types into this PowerShell session.
@@ -67,13 +68,14 @@ try {
  [IO.File]::WriteAllText((Join-Path $stage 'windows-host-manifest.json'),($record|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false,$true))
  [IO.Directory]::Move($stage,$Output)
  if ($InnoCompiler) {
-  $version=(Get-FileHash -LiteralPath (Join-Path $Output 'windows-host-manifest.json') -Algorithm SHA256).Hash.ToLowerInvariant().Substring(0,16)
+  $publisherHash=(Get-FileHash -LiteralPath (Join-Path $Output 'windows-host-manifest.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+  $version=$publisherHash.Substring(0,16)
   $versionArgs=@()
   if ($manifest.package.Version -cmatch '\A(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})\.(0|[1-9][0-9]{0,4})\z') {
    foreach ($part in $manifest.package.Version.Split('.')) { if ([int]$part -gt 65535) { throw 'The stable installer version exceeds its numeric bound.' } }
    $versionArgs=@('/DInstallerVersion='+$manifest.package.Version)
   }
-  & $InnoCompiler ('/DPayload='+[IO.Path]::GetFullPath($Output)) ('/DVersionId='+$version) @versionArgs (Join-Path $PSScriptRoot 'ai-station.iss')
+  & $InnoCompiler ('/DPayload='+[IO.Path]::GetFullPath($Output)) ('/DVersionId='+$version) ('/DPublisherHash='+$publisherHash) @versionArgs (Join-Path $PSScriptRoot 'ai-station.iss')
   if ($LASTEXITCODE -ne 0) { throw 'The native installer compiler failed; the private payload was retained for inspection.' }
  }
 } finally {

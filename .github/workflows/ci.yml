@@ -38,13 +38,13 @@ jobs:
         shell: powershell
         run: |
           if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Use native Windows PowerShell 5.1 for these contracts.' }
-          & ./packaging/windows/tests/WindowsCompatibility.Tests.ps1
-          & ./packaging/windows/tests/WindowsSupport.Tests.ps1
-          & ./packaging/windows/tests/WslExecutable.Tests.ps1
-          & ./packaging/windows/tests/StartupFailure.Tests.ps1
-          & ./packaging/windows/tests/DesktopProcess.Tests.ps1
-          & ./packaging/windows/tests/UpdateCoordinator.Tests.ps1
-          & ./packaging/windows/tests/GuestUpdate.Tests.ps1
+          $tests = @('WindowsCompatibility', 'WindowsSupport', 'WslExecutable', 'StartupFailure', 'DesktopProcess', 'InstallFiles', 'UpdateCoordinator', 'GuestUpdate', 'NativeGuest', 'ReleaseChannel', 'UpdateBridge', 'AutomaticUpdate', 'NativeUpdateCompletion', 'NativeUpdateButtons', 'NativeStopRequest')
+          foreach ($test in $tests) {
+            # Fake native seams stay inside their own process; one contract must
+            # never inherit another contract's replaced module functions.
+            & (Join-Path $PSHOME 'powershell.exe') -NoLogo -NoProfile -STA -NonInteractive -ExecutionPolicy Bypass -File "./packaging/windows/tests/$test.Tests.ps1"
+            if ($LASTEXITCODE -ne 0) { throw "Native contract failed: $test" }
+          }
   frontend:
     if: inputs.operation == 'checks'
     runs-on: ubuntu-latest

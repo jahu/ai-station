@@ -260,11 +260,20 @@ def identity(value):
     return result
 
 
+BRIDGE_MIGRATION_QUALIFIED = True
+BRIDGE_PREVIOUS = "caff909648082ea5db41292510596f670f40a5d3eb854b537e97b59a20dd2b0a"
+BRIDGE_TARGET = "76961bbe83179cb2415615a7245d87238c554a116ba66a783539bc9ca9fc6af3"
+
+
 def plan(previous, target):
     previous, target = identity(previous), identity(target)
     if previous["base"] != target["base"] or previous["sources"]["wsl.conf"] != target["sources"]["wsl.conf"]:
         raise ValueError("This update requires a different guest OS recipe; preserve the existing distro")
-    if previous["sources"]["guest_control.py"] != target["sources"]["guest_control.py"]:
+    if previous["sources"]["guest_control.py"] != target["sources"]["guest_control.py"] and not (
+        BRIDGE_MIGRATION_QUALIFIED
+        and previous["sources"]["guest_control.py"] == BRIDGE_PREVIOUS
+        and target["sources"]["guest_control.py"] == BRIDGE_TARGET
+    ):
         raise ValueError("A bridge protocol update requires its separately qualified migration")
     old, new = previous["sources"]["guest.Dockerfile"], target["sources"]["guest.Dockerfile"]
     gpu = target["package"].get("X-AI-Station-WSL-GPU-Recipe")
@@ -421,7 +430,49 @@ def check_package(path, target, previous):
         raise ValueError("Automatic package downgrades or unordered replacements are not allowed")
 
 
-def backup_database(root, uid, operation):
+def automatic_update_proof(root, value, expected_version):
+    """Ask the ordinary account to validate only its latched native operation."""
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"channel_id", "run_id", "fingerprint"}
+        or any(not isinstance(value[k], str) for k in value)
+        or len(canonical_json(value)) > 1024
+    ):
+        raise ValueError("Invalid automatic update continuation")
+    response = subprocess.run(
+        [
+            "/usr/sbin/runuser",
+            "--user",
+            "station",
+            "--",
+            str(APP / "python/bin/python3"),
+            "-IB",
+            str(BRIDGE),
+            "update-authorize",
+        ],
+        input=canonical_json(value) + b"\n",
+        capture_output=True,
+        timeout=30,
+        check=True,
+        env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8"},
+    )
+    if len(response.stdout) > 4096:
+        raise ValueError("The native continuation proof exceeds its bound")
+    proof = json.loads(response.stdout, object_pairs_hook=strict_object)
+    if (
+        not isinstance(proof, dict)
+        or set(proof) != {"run_id", "namespace_sha256", "data_root", "target_version"}
+        or proof["run_id"] != value["run_id"]
+        or proof["data_root"] != str(root / "data")
+        or proof["target_version"] != expected_version
+        or not isinstance(proof["namespace_sha256"], str)
+        or not re.fullmatch(r"[a-f0-9]{64}", proof["namespace_sha256"])
+    ):
+        raise ValueError("The native continuation belongs to different application data")
+    return proof["run_id"]
+
+
+def backup_database(root, uid, operation, *, automatic_update=None, target_version=None):
     path = root / "data/db/ai-station.sqlite"
     if root.exists() or root.is_symlink():
         for folder in [HOME / ".local", HOME / ".local/share", root]:
@@ -434,6 +485,8 @@ def backup_database(root, uid, operation):
     if path.parent.exists() or path.parent.is_symlink():
         directory(path.parent, uid)
     if not path.exists() and not path.is_symlink():
+        if automatic_update is not None:
+            raise ValueError("The approved automatic update database is missing")
         return False
     # Earlier container versions create db/ as 0755 and SQLite as 0644. The
     # verified private desktop/data ancestors prevent traversal by other users;
@@ -444,9 +497,19 @@ def backup_database(root, uid, operation):
     with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as source:
         if source.execute("PRAGMA integrity_check").fetchone() != ("ok",):
             raise ValueError("Inspect the saved database before updating")
-        active = source.execute(
-            "SELECT count(*) FROM runs WHERE status NOT IN (?,?,?,?)", TERMINAL
-        ).fetchone()[0]
+        if automatic_update is not None:
+            update_run_id = automatic_update_proof(root, automatic_update, target_version)
+            # The approved maintenance gate prevents queued work from being
+            # claimed. Preserve those rows and the original update itself;
+            # never exempt another running/claimed/waiting-for-tool operation.
+            active = source.execute(
+                "SELECT count(*) FROM runs WHERE id<>? AND status NOT IN (?,?,?,?,?,?)",
+                (update_run_id, *TERMINAL, "queued", "waiting_for_approval"),
+            ).fetchone()[0]
+        else:
+            active = source.execute(
+                "SELECT count(*) FROM runs WHERE status NOT IN (?,?,?,?)", TERMINAL
+            ).fetchone()[0]
         if active:
             raise RuntimeError("Saved work is still active; finish or stop it before updating")
         if backup.exists() or backup.is_symlink():
@@ -483,7 +546,53 @@ def installed(target):
     )
 
 
-def update(source, previous, target, size, uid):
+def install_bridge(target):
+    """Publish only the exact reviewed additive bridge from verified app bytes.
+
+    Dpkg updates application files, not the rootfs-only /usr/libexec bridge.
+    Both old and new identities are pinned; foreign files are never adopted.
+    """
+    wanted = target["sources"]["guest_control.py"]
+    if wanted != BRIDGE_TARGET:
+        return  # Existing releases with an unchanged legacy bridge keep its contract.
+    directory(BRIDGE.parent, 0)
+    info = regular(BRIDGE, 0)
+    if info.st_size > 16384:
+        raise ValueError("The existing guest bridge exceeds its source bound")
+    current = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
+    if current == wanted:
+        if info.st_mode & 0o111 != 0o111:
+            raise ValueError("The installed guest bridge is not executable")
+        return
+    if not BRIDGE_MIGRATION_QUALIFIED or current != BRIDGE_PREVIOUS:
+        raise ValueError("The guest bridge is not the exact qualified previous source")
+    source = APP / "packaging/windows/guest_control.py"
+    for parent in [APP, APP / "packaging", source.parent]:
+        directory(parent, 0)
+    if regular(source, 0).st_size > 16384:
+        raise ValueError("The packaged guest bridge exceeds its source bound")
+    payload = source.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != wanted:
+        raise ValueError("The packaged guest bridge differs from the accepted target")
+    descriptor, name = tempfile.mkstemp(prefix=".wsl-control-", dir=BRIDGE.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
+            output.flush()
+            os.fchmod(output.fileno(), 0o755)
+            os.fsync(output.fileno())
+        os.replace(temporary, BRIDGE)
+        descriptor = os.open(BRIDGE.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def update(source, previous, target, size, uid, *, automatic_update=None):
     accepted = plan(previous, target)
     previous, target = accepted["previous"], accepted["target"]
     directory(STORE.parent, 0)
@@ -524,12 +633,23 @@ def update(source, previous, target, size, uid):
         receive(source, stage, target["package_sha256"], size)
         try:
             check_package(stage, target, previous)
-            backed_up = backup_database(root, uid, operation)
+            backed_up = (
+                backup_database(root, uid, operation)
+                if automatic_update is None
+                else backup_database(
+                    root,
+                    uid,
+                    operation,
+                    automatic_update=automatic_update,
+                    target_version=target["package"]["Version"],
+                )
+            )
             atomic_json(journal, {"operation": operation, "phase": "installing", **accepted})
             atomic_json(PENDING_MARKER, {"operation": operation})
             if current != target:
                 run("/usr/bin/dpkg", "--install", str(stage))
             installed(target)
+            install_bridge(target)
             if target["package"].get("X-AI-Station-WSL-GPU-Recipe") == GPU_RECIPE:
                 prepared = json.loads(
                     run(
@@ -573,10 +693,22 @@ def main():
     if len(header) > 16384 or not header.endswith(b"\n"):
         raise ValueError("Invalid bounded update header")
     value = json.loads(header, object_pairs_hook=strict_object)
-    if not isinstance(value, dict) or set(value) != {"previous", "target", "package_bytes"}:
+    if not isinstance(value, dict) or set(value) not in (
+        {"previous", "target", "package_bytes"},
+        {"previous", "target", "package_bytes", "automatic_update"},
+    ):
         raise ValueError("Invalid update request")
     print(
-        json.dumps(update(source, value["previous"], value["target"], value["package_bytes"], uid)),
+        json.dumps(
+            update(
+                source,
+                value["previous"],
+                value["target"],
+                value["package_bytes"],
+                uid,
+                automatic_update=value.get("automatic_update"),
+            )
+        ),
         flush=True,
     )
 

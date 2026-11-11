@@ -73,6 +73,36 @@ def data_digest(path):
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
+def transaction_result(raw, action, identity):
+    value = json.loads(raw)
+    if (
+        not isinstance(value, dict)
+        or set(value)
+        != {
+            "operation_id",
+            "phase",
+            "schema_before",
+            "schema_after",
+            "backup_relative",
+            "backup_verified",
+        }
+        or value["operation_id"] != identity
+        or value["phase"] not in ("preparing", "prepared", "publishing", "applied", "aborted")
+        or action != "status"
+        and value["phase"] != {"prepare": "prepared", "publish": "applied", "abort": "aborted"}[action]
+        or value["backup_relative"] != f"desktop-upgrades/{identity}/original.sqlite"
+        or type(value["backup_verified"]) is not bool
+        or action in ("prepare", "publish")
+        and not value["backup_verified"]
+        or any(
+            not isinstance(value[k], str) or not re.fullmatch(r"[A-Za-z0-9_]{1,64}", value[k])
+            for k in ("schema_before", "schema_after")
+        )
+    ):
+        raise ValueError("The offline upgrade returned an invalid transaction receipt")
+    return value
+
+
 class UpgradeImage:
     """Caller holds the consented native handoff for this entire transaction."""
 
@@ -363,33 +393,7 @@ class UpgradeImage:
         return value
 
     def result(self, raw, action):
-        value = json.loads(raw)
-        if (
-            not isinstance(value, dict)
-            or set(value)
-            != {
-                "operation_id",
-                "phase",
-                "schema_before",
-                "schema_after",
-                "backup_relative",
-                "backup_verified",
-            }
-            or value["operation_id"] != self.identity
-            or value["phase"] not in ("preparing", "prepared", "publishing", "applied", "aborted")
-            or action != "status"
-            and value["phase"] != {"prepare": "prepared", "publish": "applied", "abort": "aborted"}[action]
-            or value["backup_relative"] != f"desktop-upgrades/{self.identity}/original.sqlite"
-            or type(value["backup_verified"]) is not bool
-            or action in ("prepare", "publish")
-            and not value["backup_verified"]
-            or any(
-                not isinstance(value[k], str) or not re.fullmatch(r"[A-Za-z0-9_]{1,64}", value[k])
-                for k in ("schema_before", "schema_after")
-            )
-        ):
-            raise ValueError("The offline upgrade returned an invalid transaction receipt")
-        return value
+        return transaction_result(raw, action, self.identity)
 
     def mark_pending(self):
         path = self.runtime / FENCE

@@ -60,8 +60,9 @@ def same_user(connection):
 
 
 class DesktopControl:
-    def __init__(self, root, *, package=None):
+    def __init__(self, root, *, package=None, updates=None):
         self.package = package_identity(package) if package is not None else None
+        self.updates = updates
         self.path = root / CONTROL_FILE
         self.instance_id = uuid4().hex
         self.ready = threading.Event()
@@ -117,11 +118,24 @@ class DesktopControl:
                     if not same_user(connection):
                         continue
                     with connection.makefile("rb") as source:
-                        line = source.readline(129)
-                    if len(line) > 128 or not line.endswith(b"\n"):
+                        line = source.readline(4097 if self.updates is not None else 129)
+                    if len(line) > (4096 if self.updates is not None else 128) or not line.endswith(b"\n"):
                         continue
                     value = json.loads(line)
-                    if value == {"action": "status"}:
+                    if (
+                        self.updates is not None
+                        and isinstance(value, dict)
+                        and str(value.get("action", "")).startswith("updates.")
+                    ):
+                        from ai_station_runner.desktop_update_channel import command
+
+                        try:
+                            response = self.updates.handle(command(value))
+                        except (OSError, ValueError, RuntimeError) as exc:
+                            response = {"error": str(exc)[:300]}
+                    elif len(line) > 128:
+                        response = {"error": "Invalid desktop control request"}
+                    elif value == {"action": "status"}:
                         response = self.status()
                     elif value == {"action": "identity"} and self.package is not None:
                         response = {"instance_id": self.instance_id, "package": self.package}

@@ -1907,3 +1907,41 @@ between bounded processing steps and before publication. Native model outputs
 remain intact. Library repair creates an owned Task/Run and separate derived
 artifact. MP4 processing copies encoded video packets and checks their timestamps;
 already processed canonical speech is inherited by avatars without double processing.
+
+The [automatic desktop update candidate](plans/desktop-auto-update.md) admits
+only stable official GitHub releases with exact asset IDs, lengths and server
+SHA256 digests. Metadata checks are administrator-owned Runs; native preparation
+refetches the approved release identity. TLS and hashes are not publisher signing.
+Quarantine, retained code and native journals stay outside mounted application
+data. The native owner independently reads the exact standalone administrator Run,
+current worker claim and idle dispatch gate before Stop. Private Unix peer checks
+and finite bridge messages add no shell, Docker socket mount, arbitrary process
+signal or agent installation permission. Native Linux and dedicated Windows/WSL
+apply adapters passed preserving package/restart/recovery qualification; other
+platforms remain unavailable.
+
+Interrupted activation has a separate local native recovery action. An explicit
+OS-owner approval may finish the same already-approved update after its worker
+or application account is unavailable. It still requires the private activation
+marker, exact request/target/namespace, original Docker connection, idle dispatch
+gate and original coordinator evidence. This is trusted installer authority,
+not an application account permission: neither the HTTP nor Runner/socket schema
+offers Resume or a role/lease-bypass flag. Confirmed publication or abort must
+match the native version receipt before startup fencing is cleared.
+
+
+The Windows update adapter adds only fixed ordinary-guest control actions,
+not a Windows command bridge. A native SID-private journal freezes the original
+Run, installation record, publisher fingerprint and target installer identity.
+Native publisher reobservation and bounded binary transfer/hash verification
+precede normal shutdown. Inno dispatch intent is durable before process creation;
+lost acknowledgement permits inspection of the exact registered target, never
+a second installer launch. The retained manifest and original distribution
+registration are checked before the existing root-owned WSL update. Its native
+continuation exemption covers only the original idle-gated maintenance Run and
+queued work, never another active workload. This exemption is absent from Runner
+and HTTP input. Windows admission and the exact old/new bridge migration were
+enabled only after native package qualification. Readiness observation validates
+the owned registration without taking the installation lease needed by startup.
+An expired matching native binding permits lifecycle/readiness wiring, while new
+capabilities and prepare/apply requests still require fresh native presence.

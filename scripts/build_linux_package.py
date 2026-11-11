@@ -1,6 +1,7 @@
 """Build a private Linux desktop bundle/deb; no models or workstation config."""
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -31,6 +32,17 @@ SOURCE = (
     "scripts/desktop_control.py",
     "scripts/desktop_versions.py",
     "scripts/desktop_update_owner.py",
+    "scripts/desktop_release_download.py",
+    "scripts/desktop_linux_update.py",
+    "scripts/desktop_auto_update.py",
+    "scripts/desktop_windows_updates.py",
+    "scripts/desktop_update_authority.py",
+    "scripts/desktop_update_recovery.py",
+    "scripts/desktop_upgrade_image.py",
+    "scripts/desktop_bridge.py",
+    "scripts/macos_transport_probe.py",
+    "scripts/macos_desktop_docker.py",
+    "scripts/macos_database_storage.py",
     "scripts/desktop_docker_access.py",
     "scripts/desktop_gpu.py",
     "scripts/linux_gpu_probe.py",
@@ -102,7 +114,18 @@ def release_source(version, head):
         for part in ("backend", "host-runner")
     ]
     versions.append(json.loads((ROOT / "frontend/package.json").read_text())["version"])
-    if versions != [version] * 3:
+    for name in ("backend/app/__init__.py", "host-runner/ai_station_runner/__init__.py"):
+        # Inspect literals without importing application code or running setup.
+        declarations = [
+            node.value
+            for node in ast.parse((ROOT / name).read_text()).body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets)
+        ]
+        if len(declarations) != 1 or not isinstance(declarations[0], ast.Constant):
+            raise ValueError("Align literal runtime versions before stable packaging")
+        versions.append(declarations[0].value)
+    if versions != [version] * 5:
         raise ValueError("Align backend, Host Runner and frontend versions before stable packaging")
     observed = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = subprocess.check_output(
@@ -161,6 +184,10 @@ def build(
         if windows_gpu or linux_gpu:
             shutil.copy2(ROOT / "scripts/windows_gpu_install.py", bundle / "scripts/windows_gpu_install.py")
             prepare_windows_gpu(bundle / "windows-gpu", cache=gpu_cache)
+        if windows_gpu:
+            bridge = bundle / "packaging/windows/guest_control.py"
+            bridge.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / "packaging/windows/guest_control.py", bridge)
         if linux_gpu:
             shutil.copy2(ROOT / "scripts/linux_gpu_install.py", bundle / "scripts/linux_gpu_install.py")
             for name in ("gpu_access.py", "org.ai-station.gpu-access.policy"):
@@ -239,6 +266,9 @@ def build(
                 shutil.rmtree(cache)
         metadata = {
             "schema": 1,
+            "platform": "Linux",
+            "architecture": "x86_64",
+            "version": release_version or ("0.0.0+" + identity[:16]),
             "desktop_protocol": DESKTOP_PROTOCOL,
             "bundle_id": identity,
             "source_head": head,

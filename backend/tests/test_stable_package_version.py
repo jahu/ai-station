@@ -15,6 +15,9 @@ def source(tmp_path, monkeypatch):
         folder = tmp_path / part
         folder.mkdir()
         (folder / "pyproject.toml").write_text('[project]\nname="fixture"\nversion="0.1.0"\n')
+        package = folder / ("app" if part == "backend" else "ai_station_runner")
+        package.mkdir()
+        (package / "__init__.py").write_text('__version__ = "0.1.0"\n')
     (tmp_path / "frontend").mkdir()
     (tmp_path / "frontend/package.json").write_text(json.dumps({"version": "0.1.0"}))
     commands = [
@@ -82,6 +85,23 @@ def test_invalid_stable_build_refuses_before_download_or_process_dispatch(source
     acquire.assert_not_called()
     dispatch.assert_not_called()
     assert not (root / "output").exists()
+
+
+@pytest.mark.parametrize("change", ["backend", "runner", "dynamic", "duplicate"])
+def test_stable_package_rejects_clean_but_inconsistent_runtime_versions(source, change):
+    root, _ = source
+    name = "host-runner/ai_station_runner/__init__.py" if change == "runner" else "backend/app/__init__.py"
+    marker = root / "must-not-execute"
+    contents = {
+        "dynamic": f'__version__ = __import__("pathlib").Path({str(marker)!r}).touch()\n',
+        "duplicate": '__version__ = "0.1.0"\n__version__ = "0.0.1"\n',
+    }.get(change, '__version__ = "0.0.1"\n')
+    (root / name).write_text(contents)
+    subprocess.run(["git", "-C", str(root), "commit", "-am", "Inconsistent runtime", "--quiet"], check=True)
+    head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+    with pytest.raises(ValueError, match="Align"):
+        builder.release_source("0.1.0", head)
+    assert not marker.exists()
 
 
 @pytest.mark.skipif(not shutil.which("dpkg"), reason="Actual Debian version ordering requires dpkg")

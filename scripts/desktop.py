@@ -468,6 +468,8 @@ def supervise(
         if container_gpu_status not in {"ready", "cpu"}:
             raise ValueError("Unexpected native graphics readiness")
         env["AI_STATION_CONTAINER_GPU_READY"] = "true" if container_gpu_status == "ready" else "false"
+    if control is not None and getattr(control, "updates", None) is not None:
+        env["AI_STATION_DESKTOP_CONTROL_SOCKET"] = str(control.path)
     docker_handoff = []
     if engine is not None and engine.identity is not None:
         # The child re-discovers and compares both coordinates before any engine
@@ -758,6 +760,11 @@ def main():
     )
     parser.add_argument("--background", action="store_true", help="Run without a native status window")
     parser.add_argument(
+        "--resume-update",
+        action="store_true",
+        help="Explicitly continue this native Linux installation's interrupted update",
+    )
+    parser.add_argument(
         "--install-update", type=Path, help="Install a selected native Mac application bundle"
     )
     parser.add_argument("--manage-backups", action="store_true", help="Open native Mac backup and restore")
@@ -780,6 +787,7 @@ def main():
             or args.host_port is not None
             or args.install_update
             or args.manage_backups
+            or args.resume_update
         ):
             parser.error("--package-check must be used on its own")
         value = manifest(ROOT)
@@ -799,6 +807,15 @@ def main():
         or not 8765 <= args.host_port < 8865
     ):
         parser.error("--host-port requires console background startup and a port between 8765 and 8864")
+    if args.resume_update and (
+        platform.system() != "Linux"
+        or args.status
+        or args.stop
+        or args.install_update
+        or args.manage_backups
+        or args.host_port is not None
+    ):
+        parser.error("--resume-update requires native Linux update recovery on its own")
     os.umask(0o077)
     if args.manage_backups and (
         platform.system() != "Darwin"
@@ -832,6 +849,37 @@ def main():
             raise RuntimeError("The Linux desktop package requires Zenity; console mode is also available")
     value = manifest(ROOT)
     root = state_root()
+    linux_updates = False
+    if platform.system() == "Linux":
+        from desktop_linux_update import active_payload as linux_active_payload
+        from desktop_linux_update import enabled as linux_updates_enabled
+
+        linux_updates = linux_updates_enabled(value)
+        if args.resume_update and not linux_updates:
+            raise ValueError("Native update recovery requires a supported installed Linux desktop client")
+        if linux_updates and not (args.status or args.stop):
+            from desktop_update_recovery import completed as update_completed
+            from desktop_update_recovery import pending as pending_update
+            from desktop_update_recovery import resume as resume_update
+
+            pending_installation = pending_update(root)
+            if pending_installation is not None and not update_completed(root, pending_installation):
+                if pending_installation["active"]:
+                    message = "AI Station is being updated. It will reopen automatically; the updater was not launched again."
+                    if args.console:
+                        print(message, flush=True)
+                    else:
+                        dialog("--info", "--text=" + message)
+                    return
+                selected = resume_update(root, console=args.console, approved=args.resume_update)
+                if selected is not None:
+                    reexecute(selected, args)
+                return
+            if args.resume_update and pending_installation is None:
+                raise ValueError("No interrupted native update was found")
+            active = linux_active_payload(root, value)
+            if active is not None and active.resolve() != ROOT.resolve():
+                reexecute(active, args)
     if platform.system() == "Darwin" and not (args.status or args.stop):
         from desktop_update import active_payload, install_update, pending
 
@@ -939,10 +987,25 @@ def main():
             if installed.resolve() != ROOT.resolve():
                 progress.close()
                 reexecute(installed, args)
+            native_updates = None
+            windows_updates = False
+            if linux_updates:
+                from desktop_auto_update import DesktopUpdates
+
+                native_updates = DesktopUpdates(root, installed, value)
+            elif platform.system() == "Linux":
+                from desktop_windows_updates import WindowsUpdates
+                from desktop_windows_updates import enabled as windows_updates_enabled
+
+                windows_updates = windows_updates_enabled(root, value)
+                if windows_updates:
+                    native_updates = WindowsUpdates(root, installed, value)
             with (
                 (root / "desktop.log").open("a", encoding="utf-8") as log,
                 DesktopControl(
-                    control_directory(root), package=value if platform.system() == "Darwin" else None
+                    control_directory(root),
+                    package=value if platform.system() == "Darwin" or linux_updates else None,
+                    updates=native_updates,
                 ) as control,
             ):
                 progress.stage("Preparing the bundled application image…")
@@ -999,6 +1062,17 @@ def main():
                         from desktop_versions import ready
 
                         ready(root, value, config, control.instance_id)
+                    elif linux_updates:
+                        from desktop_linux_update import ready as linux_ready
+
+                        linux_ready(root, value, config, control.instance_id)
+                        from desktop_update_recovery import acknowledge_ready
+
+                        acknowledge_ready(root, value)
+                    elif windows_updates:
+                        from desktop_windows_updates import ready as windows_ready
+
+                        windows_ready(root, value, config, control.instance_id)
                     publish_ready(root, url, instance_id=instance_id)
 
                 supervise(

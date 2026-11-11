@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Install AI Station on Windows or Ubuntu. Follow the first-run steps, create your account, and choose local AI models that fit your computer."
+    />
+    <meta name="theme-color" content="#101310" />
+    {{CANONICAL_META}}
+    <title>Install {{NAME}} — Your own AI. Made simple.</title>
+    <link rel="icon" href="../assets/station.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../assets/style.css" />
+    <link rel="stylesheet" href="../assets/install.css" />
+  </head>
+  <body class="installation-guide">
+    <a class="skip-link" href="#main">Skip to installation guide</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="../" aria-label="{{NAME}} home"
+          ><img
+            src="../assets/station.svg"
+            width="32"
+            height="32"
+            alt=""
+          /><span>{{NAME}}</span></a
+        >
+        <a class="guide-home" href="../">← Back to the overview</a>
+      </div>
+    </header>
+    <main id="main" class="shell guide-main">
+      <section class="guide-intro" aria-labelledby="guide-title">
+        <p class="eyebrow">GETTING STARTED · v{{VERSION}}</p>
+        <h1 id="guide-title">From download<br />to your own AI.</h1>
+        <p class="guide-lead">
+          Install the app, make the station yours, then choose what you want to
+          create. You don't need to install Python, Node or a separate model
+          server.
+        </p>
+        <nav class="guide-choices" aria-label="Installation steps">
+          <a href="#windows"
+            ><span>01</span> Windows 10 &amp; 11 <b aria-hidden="true">↓</b></a
+          >
+          <a href="#ubuntu"
+            ><span>02</span> Ubuntu <b aria-hidden="true">↓</b></a
+          >
+          <a href="#first-start"
+            ><span>03</span> Your first start <b aria-hidden="true">↓</b></a
+          >
+          <a href="#help"
+            ><span>04</span> Need a hand? <b aria-hidden="true">↓</b></a
+          >
+        </nav>
+        <p class="guide-note">
+          An early release, built with your feedback. macOS is not supported
+          yet. Read the
+          <a href="{{RELEASE_NOTES_URL}}"
+            >release notes and current test coverage</a
+          >
+          before installing.
+        </p>
+      </section>
+      <section
+        id="windows"
+        class="guide-section"
+        aria-labelledby="windows-title"
+      >
+        <div class="guide-section-title">
+          <p class="eyebrow">01 / WINDOWS</p>
+          <h2 id="windows-title">
+            One installer.<br />Your private workspace.
+          </h2>
+          <a class="button primary" href="{{WINDOWS_DOWNLOAD_URL}}"
+            >Download for Windows <span aria-hidden="true">↓</span></a
+          >
+        </div>
+        <div class="guide-steps">
+          <div class="guide-prerequisite">
+            <h3>Before you start</h3>
+            <p>
+              Use 64-bit Windows 11, or Windows 10 21H2/22H2 with KB5020030 or a
+              newer cumulative update. CPU virtualization must be enabled.
+              Windows 10 installation, login and worker execution have CPU-only
+              qualification; physical Windows GPU testing remains pending.
+            </p>
+          </div>
+          <ol>
+            <li>
+              <h3>Open the official installer</h3>
+              <p>
+                Download the <code>Setup.exe</code> above and open it. AI
+                Station installs for your Windows user. You don't need Docker
+                Desktop or your own Ubuntu installation.
+              </p>
+              <p class="guide-warning">
+                <strong>The installer is currently unsigned.</strong> Windows
+                may show an unknown publisher, and some security policies block
+                unsigned apps. Check that your file came from the official
+                release. Compare it with
+                <a href="{{RELEASE_URL}}">SHA256SUMS on GitHub</a> if you want
+                to verify the download. Do not disable Windows security
+                protections.
+              </p>
+            </li>
+            <li>
+              <h3>Let setup check Windows support</h3>
+              <p>
+                Open AI Station after installation and follow its primary setup
+                action. It prepares a dedicated private Linux environment using
+                WSL2. If Windows Update or Windows support is required, follow
+                the app's instructions. Approve the genuine Windows permission
+                prompt only when you choose to install that support.
+              </p>
+            </li>
+            <li>
+              <h3>Restart only when Windows asks</h3>
+              <p>
+                If Windows requests a restart, save your work and restart the
+                computer. Reopen AI Station from Start afterward and continue
+                setup. Existing WSL distributions and their files are kept
+                separate.
+              </p>
+            </li>
+            <li>
+              <h3>Start creating</h3>
+              <p>
+                When the station is ready, it opens your browser. Continue with
+                <a href="#first-start">your account and first model</a> below.
+                Keep the desktop app running while you use the station.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section id="ubuntu" class="guide-section" aria-labelledby="ubuntu-title">
+        <div class="guide-section-title">
+          <p class="eyebrow">02 / UBUNTU</p>
+          <h2 id="ubuntu-title">A local app.<br />A familiar browser.</h2>
+          <a class="button primary" href="{{LINUX_DOWNLOAD_URL}}"
+            >Download for Ubuntu <span aria-hidden="true">↓</span></a
+          >
+        </div>
+        <div class="guide-steps">
+          <div class="guide-prerequisite">
+            <h3>Before you start</h3>
+            <p>
+              The Linux desktop package targets Ubuntu 24.04 on an x86-64 PC. It
+              needs Docker Engine, Docker Compose and Zenity. Use your existing
+              Docker setup; AI Station does not replace unrelated services or
+              GPU drivers. A GPU is optional for starting the app, but model
+              requirements vary.
+            </p>
+          </div>
+          <ol>
+            <li>
+              <h3>Install the desktop package</h3>
+              <p>
+                Download the <code>.deb</code> above. Open it with your Ubuntu
+                package installer and choose Install.
+              </p>
+              <details class="guide-terminal">
+                <summary>No package installer opens?</summary>
+                <p>
+                  Open a terminal in the folder containing your download, then
+                  run:
+                </p>
+                <pre><code>sudo apt install ./AI-Station-{{VERSION}}-linux-amd64.deb</code></pre>
+                <p>
+                  This installs the desktop package. Docker Engine and Compose
+                  must already be available; AI Station does not install or
+                  replace them silently.
+                </p>
+              </details>
+              <p>
+                <a href="{{TECHNICAL_SETUP_URL}}"
+                  >Linux prerequisites and technical setup ↗</a
+                >
+              </p>
+            </li>
+            <li>
+              <h3>Open AI Station from Applications</h3>
+              <p>
+                The desktop launcher prepares its private workspace and starts
+                the app. If Docker access needs attention, follow the specific
+                explanation shown by setup. Do not change permissions on the
+                Docker socket or run the whole station as root.
+              </p>
+            </li>
+            <li>
+              <h3>Continue in your browser</h3>
+              <p>
+                The app opens its local address automatically, normally
+                <code>http://127.0.0.1:8765</code>. If that port is already
+                used, the desktop app chooses another free local port. Use the
+                link it opens.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section
+        id="first-start"
+        class="guide-section guide-first-start"
+        aria-labelledby="first-start-title"
+      >
+        <div class="guide-section-title">
+          <p class="eyebrow">03 / MAKE IT YOURS</p>
+          <h2 id="first-start-title">
+            Your account.<br />Your models. Your rules.
+          </h2>
+        </div>
+        <div class="guide-steps">
+          <ol>
+            <li>
+              <h3>Create your administrator account</h3>
+              <p>
+                Choose a username and a unique password of at least 12
+                characters. This account manages the station; you can add other
+                users afterward. Open setup through the desktop launcher so the
+                private first-run link is available.
+              </p>
+            </li>
+          </ol>
+          <figure class="guide-capture">
+            <a
+              href="../assets/install/first-account.png"
+              aria-label="Open the full account setup screenshot"
+              ><img
+                src="../assets/install/first-account.png"
+                width="1360"
+                height="980"
+                loading="lazy"
+                alt="AI Station first-run page with username, password, confirmation and Create your account button."
+            /></a>
+            <figcaption>
+              The actual first-account screen in a clean Linux QA installation.
+              No personal conversations, files or setup tokens are shown.
+            </figcaption>
+          </figure>
+          <ol start="2">
+            <li>
+              <h3>Choose what you want to do</h3>
+              <p>
+                Follow the in-app setup for local chat or another capability.
+                The model catalog shows download sizes, licenses and hardware
+                advice before transfer. Start with a recommended model that fits
+                your machine. Larger does not always mean better for your
+                hardware.
+              </p>
+            </li>
+            <li>
+              <h3>Download a model, then send your first message</h3>
+              <p>
+                Model files can be large. Wait for the app to finish the
+                download and setup, then select the ready model in Chat. Ask a
+                question. The same conversation can use available tools; Images,
+                Video, Audio, Avatars and Agents remain available as dedicated
+                workspaces.
+              </p>
+              <p>
+                Local inference stays on your machine. Optional web tools
+                contact websites, and cloud providers contact their selected
+                service when you enable them. A model download needs internet
+                access; local generation does not require cloud tokens.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section
+        id="updates"
+        class="guide-section"
+        aria-labelledby="updates-title"
+      >
+        <div class="guide-section-title">
+          <p class="eyebrow">KEEP YOUR WORK</p>
+          <h2 id="updates-title">Stop, reopen,<br />or update.</h2>
+        </div>
+        <div class="guide-steps guide-prose">
+          <h3>Close the tab, keep the station working</h3>
+          <p>
+            Closing your browser tab does not shut down the app. Use the desktop
+            controls to stop AI Station when you want to release its resources.
+            Reopen it from Start or Applications next time.
+          </p>
+          <h3>Updating an existing installation</h3>
+          <p>
+            From version 0.5, open <strong>Settings → Updates</strong>, review
+            the newer release and choose <strong>Update and restart</strong>.
+            Downloads are verified before the station stops. The desktop app
+            keeps your saved work, updates and reopens automatically. Finish
+            active jobs first; updating does not cancel them for you.
+          </p>
+          <p>
+            <strong>Using version 0.4 or older?</strong> Install the new official
+            desktop client once, using its preserving update flow. Keep the same
+            installation and data location. Later compatible releases can use the
+            in-app action. Uninstalling or deleting your data is not an update
+            step. Source checkouts keep their normal Git development workflow.
+          </p>
+          <h3>Your data stays yours</h3>
+          <p>
+            Accounts, conversations, agents and generated files belong to the
+            station's persistent data folder. Use the app's backup controls
+            before major changes. An installed app's private configuration
+            identifies its data; don't move or replace that folder while the
+            station is running.
+          </p>
+        </div>
+      </section>
+      <section id="help" class="guide-help" aria-labelledby="help-title">
+        <p class="eyebrow">04 / IF SOMETHING GETS IN THE WAY</p>
+        <h2 id="help-title">Let's get you unstuck.</h2>
+        <div class="guide-faq">
+          <details>
+            <summary>Windows says WSL or virtualization is unavailable</summary>
+            <p>
+              Complete Windows Update, follow the Windows support step in AI
+              Station, and restart only when asked. If virtualization is
+              disabled in firmware, use your PC manufacturer's instructions.
+              Reopen the app afterward; don't delete another WSL distribution to
+              fix setup.
+            </p>
+          </details>
+          <details>
+            <summary>My browser cannot reach the station</summary>
+            <p>
+              Open the desktop app and check that it is running. Use its Open
+              action rather than an old bookmark. The default address is local
+              to the computer running the app. Phone or remote access needs the
+              station's separate authenticated access setup; installing the app
+              does not expose it publicly.
+            </p>
+          </details>
+          <details>
+            <summary>I don't see a ready model</summary>
+            <p>
+              Finish model download and runtime setup inside the app. Check that
+              the selected model fits your available hardware and that its
+              status is ready. An installed model and a running model are
+              different states. Diagnostics can help identify a missing
+              component.
+            </p>
+          </details>
+          <details>
+            <summary>Setup or an update failed</summary>
+            <p>
+              Keep the explanation shown by the desktop app and check
+              <a href="{{RELEASE_NOTES_URL}}">known issues</a>. Do not delete
+              your data or reinstall GPU drivers as a generic fix. If a native
+              update requires inspection, keep its retained files and use its
+              recovery controls.
+            </p>
+          </details>
+        </div>
+        <p class="guide-feedback">
+          First time installing? Your experience is valuable.
+          <a href="{{ISSUES_URL}}"
+            >Tell us what worked, what was confusing, or what failed ↗</a
+          >. Include your OS, app version and the visible error. Remove
+          passwords, setup links and personal data from reports.
+        </p>
+      </section>
+    </main>
+    <footer class="shell guide-footer">
+      <a href="../">{{NAME}}</a><span>Your own AI. Made simple.</span
+      ><a href="{{REPO}}">Source &amp; releases ↗</a>
+    </footer>
+  </body>
+</html>

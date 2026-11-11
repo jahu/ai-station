@@ -5,6 +5,9 @@
 #ifndef VersionId
   #error Retained source version is required
 #endif
+#ifndef PublisherHash
+  #error Full native publisher identity is required
+#endif
 #ifndef InstallerVersion
   #define InstallerVersion "0.1.2"
 #endif
@@ -21,7 +24,10 @@ PrivilegesRequired=lowest
 ; Windows 10 21H2/LTSC 2021 and later; keep native preflight in sync.
 MinVersion=10.0.19044
 DisableProgramGroupPage=yes
+DisableDirPage=yes
+DisableReadyPage=yes
 LicenseFile={#Payload}\LICENSE
+SetupIconFile={#Payload}\AIStation.ico
 OutputBaseFilename=AI-Station-{#VersionId}-Setup
 OutputDir={#Payload}.installer
 Compression=lzma2
@@ -31,9 +37,15 @@ CloseApplications=no
 RestartApplications=no
 UninstallDisplayName=AI Station
 UninstallDisplayIcon={app}\versions\{#VersionId}\AIStation.exe
+[Messages]
+WelcomeLabel2=Your own AI. Made simple.%n%nInstall AI Station, then follow its guided setup. You will choose your AI models inside the app. Your conversations and creations stay on this computer.
+FinishedLabel=AI Station is installed.%n%nOpen the app to finish setup and choose models that fit your computer.
 [Files]
 Source: "{#Payload}\*"; Excludes: "ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#Payload}\ai-station-wsl-rootfs.tar.gz"; DestDir: "{app}\versions\{#VersionId}"; Flags: ignoreversion nocompression
+[Registry]
+Root: HKCU; Subkey: "Software\AI Station\Desktop"; ValueType: string; ValueName: "CurrentPayloadSHA256"; ValueData: "{#PublisherHash}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\AI Station\Desktop"; ValueType: string; ValueName: "InstallRoot"; ValueData: "{app}"
 [Icons]
 Name: "{userprograms}\AI Station"; Filename: "{app}\versions\{#VersionId}\AIStation.exe"
 [Run]
