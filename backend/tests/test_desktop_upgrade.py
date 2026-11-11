@@ -15,6 +15,7 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
+from alembic.script import ScriptDirectory
 from app import db as database
 from app import desktop_upgrade as upgrade
 from app.accounts import authenticate, bootstrap_admin, login
@@ -27,6 +28,7 @@ from launch import ensure_recovery_finished
 from sqlalchemy import URL, create_engine
 
 PREVIOUS, TARGET = "a" * 64, "b" * 64
+HEAD = ScriptDirectory.from_config(alembic_config()).get_current_head()
 
 
 def installer_permissions(root):
@@ -53,7 +55,12 @@ def rows(path):
                 values = [(*row, None) for row in values]
             if name == "run_dependencies" and "require_success" not in columns:
                 values = [(*row, 1) for row in values]
+            if name == "creative_sessions" and "creative_project_id" not in columns:
+                values = [(*row, None) for row in values]
             result[name] = sorted(values, key=repr)
+        # 0046 introduces an empty collection; retain and compare its contents
+        # normally once populated, while preserving older table inventories.
+        result.setdefault("creative_projects", [])
         return result
 
 
@@ -182,7 +189,7 @@ def test_database_local_migration_resumes_publication_without_rewriting_its_back
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0045",)] and before == after
+    assert after.pop("alembic_version") == [(HEAD,)] and before == after
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == frozen
 
 
@@ -489,7 +496,7 @@ def test_interrupted_publication_resumes_same_operation_without_recopied_backup(
     assert upgrade.publish(root, identity)["phase"] == "applied"
     after = rows(root / "db/ai-station.sqlite")
     assert before.pop("alembic_version") == [("0041",)]
-    assert after.pop("alembic_version") == [("0045",)]
+    assert after.pop("alembic_version") == [(HEAD,)]
     assert after == before
     assert (backup.read_bytes(), backup.stat().st_mtime_ns) == backup_identity
 

@@ -5,6 +5,14 @@ feature is already available. Existing media generation and editing remain in
 place. Do not replace this goal with a template-only demo or mark it complete
 after the project registry or a successful synthetic render.
 
+Owner quality clarification, 2026-11-11: materials must be professionally
+art-directed social content, with dynamic images, actual video and purposeful
+motion, not a sequence of text on colored backgrounds. Static shots remain
+valid when they serve the brief. A simple typography render qualifies only the
+rendering component; it cannot qualify the product or close this goal. Design
+for a strong hook, retention, platform-appropriate rhythm and shareability;
+never promise virality or fabricate engagement metrics.
+
 ## Experience
 
 **Studio** is a creative workspace for repeatable publication-quality materials.
@@ -64,6 +72,27 @@ never cut words to satisfy an earlier guessed duration. Mix music below speech,
 avoid clipping, and expose voice/music controls. Reuse existing voice leveling
 and timeline audio primitives where appropriate. Avatar and generated-footage
 insertion must retain source provenance, aspect fitting and actual timing.
+
+The creative planner must act as a director/editor, not just a copywriter. Its
+structured storyboard describes the hook, narrative beats, shot type, asset
+brief/source, on-screen action, camera/framing, timing, transition purpose,
+narration, captions, music and sound accents. Generate coherent original images
+and actual footage through the existing adapters; reuse approved Library assets
+where appropriate. Preserve brand and subject continuity through shared source
+references. Distinguish intentional image motion/parallax from generated video
+and disclose the actual source in the inspector. Add composition controls for
+image movement, video trim and placement, overlays and transitions; do not
+mistake a changing headline for a dynamic visual scene. Avoid an arbitrary quota
+of video shots: choices should serve the brief, subject, desired pacing and
+actual hardware budget. Keep planned visuals, generated media and final edit
+inspectable and editable; retain successes when one generation fails.
+
+Default quality targets publication, not the cheapest passing template. Full
+material QA includes narrative coherence, a clear opening, variation in shot
+scale/composition, temporal continuity, transition frames, text safe areas and
+legibility, voice cadence, sound design and a coherent ending/CTA where useful.
+Use representative complete branded reels and educational films for visual and
+audible acceptance, not a screenshot of one title or a silent six-second test.
 
 ## Delivery sequence
 
