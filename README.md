@@ -118,8 +118,10 @@ image/video fixtures. Export the selected takes and complete soundtrack from the
 workspace, review earlier MP4s and download the result. The export panel can
 activate a compatible engine already installed on the station, with private
 setup history and Stop; fresh-engine installation is still in development.
-Complete-material automation, newly generated film/voice quality and automatic
-project selection remain in development. This is not a feature
+A complete-material coordinator now queues sound, measured timing, missing shots
+and export, with whole-production Stop and continuation that reuses complete
+media and spoken cues. Newly generated film/voice quality, fresh installation and
+automatic project selection remain in development. This is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 
 **One-click desktop updates.** Your app version stays

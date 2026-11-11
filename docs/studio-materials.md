@@ -152,3 +152,32 @@ Full-material automation, guided renderer preparation and Chat project inference
 remain in development. Final publication-quality acceptance requires a complete newly
 generated voiced/scored reel and educational film with full playback/visual
 review, not just a valid storyboard or fixture export.
+
+## Whole-film production
+
+The saved storyboard now has a **Produce film** action. A normal queued
+production creates sound and a measured edit before generating footage, then
+exports completed selected takes and the full soundtrack. Individual shot,
+soundtrack and export controls remain available. The material's original version,
+source observations and chosen model settings are retained for inspection.
+
+`POST /api/studio/materials/{id}/produce` accepts a submission UUID, saved revision,
+optional selected takes and local generator choices. It performs metadata/readiness
+inspection and queues work; inference runs only in existing workers/Host Runner
+executors. `GET /{id}/productions` reports the complete owned Task graph and actual
+finished MP4. A successful coordination Run alone is not a completed film.
+
+**Stop production** follows verified owned child Tasks, including video segment
+plans. **Continue · reuse completed media** starts a new attempt of the frozen
+request and preserves complete sound and takes. If speech failed partway through,
+completed spoken cues can be reused with the same narrator; modified or unavailable
+sources cannot silently enter the next generation. A short implicit video take
+can be replaced by longer footage for the measured narration. An explicitly
+selected short take needs review instead of silent looping, padding or substitution.
+
+Qualification uses temporary databases and fake image/speech/music/video/export
+executors, with the actual PCM mixer and ordinary queue/dependency services.
+Desktop/mobile browser checks cover the real account/API and unavailable-export
+state. These checks do not qualify a newly generated professional film, portrait
+video quality, fresh renderer installation or a production rollout. The complete
+Creative Studio delivery goal remains active.

@@ -86,7 +86,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
-        if run.executor_type == "studio_audio_step":
+        if run.executor_type in {"studio_audio_step", "studio_production_step"}:
             from app.studio_audio_production import recover_enqueue_step
 
             if recover_enqueue_step(session, run):

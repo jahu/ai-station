@@ -1787,3 +1787,12 @@ and setup permissions over the private socket. Native metadata publication binds
 the actual image, packaged recipe and local daemon; native rendering retains its
 separate resource, source, Stop and cleanup contract. This increment does not
 install a missing renderer. See [renderer activation](hyperframes-renderer.md#activating-an-existing-local-engine).
+
+Whole-material Studio production uses short durable `studio_production_step`
+Runs and dependencies. The existing audio, segmented-video and render Tasks keep
+their own execution/recovery contracts. A verified registry binds each newly
+created child Task to its originating owned coordinator; Task-wide Stop follows
+only those links. Narration produces measured timing before footage publication.
+Continuation freezes the same editorial/model request and rechecks reusable
+completed sound/visual sources; it does not replay successful inference merely
+because a later export failed. No new execution service or schema is introduced.

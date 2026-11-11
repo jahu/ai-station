@@ -2009,3 +2009,13 @@ revocation, Stop and stale-worker recovery follow the existing runtime preparati
 contract. Missing images remain unavailable; activation does not pull/build images,
 load a model, signal a container or remove shared preparation. Native inspection
 rejects changed daemon/image/recipe coordinates and symlink selection parents.
+
+Studio's whole-film publisher queues only existing typed capabilities. Its owned
+child registry binds the root intent, owner, parent Run, child Task and native
+capability root. Stop follows that provenance rather than caller-selected Task
+IDs, and never cancels reused completed sources. Recovery replays only
+transactional SQL publication with no native dispatch/PID; claim replacement
+rolls back queued children. Continuation checks saved script/settings, ownership,
+completed source identity and hash before consuming earlier narration or media.
+A complete MP4 artifact is required for production success; completion of a
+planning Run alone does not qualify the film or its quality.
