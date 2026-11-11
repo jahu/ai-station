@@ -148,6 +148,10 @@ class HostMediaExecutor:
         from app.vision_inputs import verify_media_inputs
 
         verify_media_inputs(session, run)
+        if "studio_shot" in run.parameters:
+            from app.studio_shots import verify_shot_sources
+
+            verify_shot_sources(session, run)
         self.validate_inputs(session, run)
         from app.generation_progress import begin_timing
 
@@ -365,6 +369,10 @@ class HostMediaExecutor:
             elif info["exit_code"] != 0:
                 mark_failed(session, run, "ExitCode", info.get("stderr_tail") or f"Exit {info['exit_code']}")
             else:
+                if "studio_shot" in run.parameters:
+                    from app.studio_shots import verify_shot_sources
+
+                    verify_shot_sources(session, run)
                 artifact = adopt_existing(
                     session,
                     relative_path=publication_output,

@@ -57,7 +57,30 @@ audio, adopted into the private Library with verified cleanup. Fake tests also
 cover ownership, changed sources, lost replies and uncertain cleanup. This is
 integration evidence, not a professional complete reel or generated narration.
 
-Shot generation, speech/music synthesis/mixing, export UI and Chat project
-inference remain in development. Final publication-quality acceptance requires
+Saved image/video shots now enqueue their existing generators from the storyboard.
+Each take has its own ordinary Task and inspectable Runs, with frozen revision,
+identity, direction and reference observations. Images use the account's
+per-operation default or an explicit compatible model; reference shots use
+Recompose. Generated footage uses the existing real continuation/assembly graph
+for the full requested coverage, not a still or repeated short clip. A retry of
+the same receipt keeps its identity/seed; a new take changes supported seeds.
+Concurrent duplicate active work is refused. Stop applies to all stages of that
+shot, preserving other materials and earlier takes.
+
+The storyboard shows actual image/video previews, take comparison, Library links,
+progress and model choices on desktop/mobile. Unsaved edits cannot launch media
+against the saved version. Archived materials retain their results. Existing
+video runtime limits remain explicit: at most sixty seconds per generated shot,
+one optional first-frame reference and native widescreen footage. The final
+portrait composition does not imply native portrait inference. Full-image
+prompts retain the supplied generic subject/framing/brand direction, without
+person-specific presets. Runtime video prompts have their existing 2000-character
+budget; over-budget directions are rejected rather than silently truncated.
+
+Private actual browser/API checks exercised generation enqueue/Stop, existing
+approved SFW fixture previews/take comparison and desktop/mobile layout. This is
+not a claim that new image/video inference was performed in those UI checks.
+
+Speech/music synthesis/mixing, export UI and Chat project inference remain in development. Final publication-quality acceptance requires
 a complete newly generated voiced/scored reel and educational film with full
 playback/visual review, not just a valid storyboard or fixture export.

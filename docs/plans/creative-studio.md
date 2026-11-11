@@ -158,7 +158,10 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 - Typed saved-material export now connects API, worker, private native socket,
   isolated full-HD render and Library. Actual fixture qualification includes
   image/video/audio and cleanup; this does not qualify generated reel quality.
-- Remaining: guided renderer preparation, actual visual/audio child Runs,
+- Saved-shot production now reuses actual image and segmented-video Tasks/Runs,
+  with model defaults/overrides, frozen references, earlier takes and whole-shot
+  Stop; the storyboard previews actual Library outputs on desktop/mobile.
+- Remaining: guided renderer preparation, full-material automation/audio child Runs,
   timing/mix and render/export UI,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.
