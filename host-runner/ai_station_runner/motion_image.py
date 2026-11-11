@@ -57,7 +57,15 @@ def image(settings):
         re.fullmatch(r"ai-station-motion:[A-Za-z0-9_.-]+", configured) or IMAGE_ID.fullmatch(configured)
     ):
         raise ValueError("Configure the fixed AI Station motion renderer")
-    bound = connection()
+    return inspect_image(configured)
+
+
+def inspect_image(configured, *, bound=None):
+    if not isinstance(configured, str) or not (
+        re.fullmatch(r"ai-station-motion:[A-Za-z0-9_.-]+", configured) or IMAGE_ID.fullmatch(configured)
+    ):
+        raise ValueError("Use the fixed AI Station motion image identity")
+    bound = connection() if bound is None else bound
     raw = docker(["image", "inspect", configured, "--format", "{{json .}}"], bound=bound, missing_ok=True)
     value = json.loads(raw) if raw else {}
     if not isinstance(value, dict):
@@ -66,6 +74,10 @@ def image(settings):
     labels = config.get("Labels") or {}
     if (
         not IMAGE_ID.fullmatch(value.get("Id", ""))
+        or value.get("Os") != "linux"
+        or value.get("Architecture") != "amd64"
+        or IMAGE_ID.fullmatch(configured)
+        and value.get("Id") != configured
         or config.get("Entrypoint") != ENTRYPOINT
         or config.get("Cmd") not in (None, [])
         or config.get("User") != "1000:1000"

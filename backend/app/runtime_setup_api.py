@@ -16,6 +16,8 @@ from app.fish_setup_client import FishSetupClient
 from app.image_setup_client import ImageSetupClient
 from app.model_setup import DB, Resume, administrator, fingerprint
 from app.models import Run, Task
+from app.motion_setup_client import PROFILE as MOTION_PROFILE
+from app.motion_setup_client import MotionSetupClient
 from app.music_setup_client import MusicSetupClient
 from app.native_llama_setup_client import NativeLlamaSetupClient
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -36,6 +38,7 @@ VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 NATIVE_LLAMA_PROFILES = {"llamacpp-native-darwin-arm64-b12032-v2", "llamacpp-native-darwin-x86_64-b12032-v2"}
 Profile = Literal[
+    "hyperframes-cpu-linux-amd64-v1",
     "llamacpp-cuda-linux-amd64-v1",
     "llamacpp-cpu-linux-amd64-v1",
     "chatterbox-v3-linux-x86-64-python312-v1",
@@ -61,7 +64,9 @@ class Prepare(BaseModel):
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
     try:
         client = (
-            NativeLlamaSetupClient(timeout=30)
+            MotionSetupClient(timeout=30)
+            if profile == MOTION_PROFILE
+            else NativeLlamaSetupClient(timeout=30)
             if profile in NATIVE_LLAMA_PROFILES
             else FishSetupClient(timeout=30)
             if profile == FISH_PROFILE
@@ -138,7 +143,9 @@ def attempt(session, task, saved, previous=None):
         task,
         run_type="runtime",
         capability="runtime.prepare",
-        executor_type="native_llama_setup"
+        executor_type="motion_setup"
+        if saved["recipe"]["profile"] == MOTION_PROFILE
+        else "native_llama_setup"
         if native_llama
         else "fish_setup"
         if fish

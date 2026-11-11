@@ -55,3 +55,28 @@ observation and supervisor termination followed by container recovery. These
 are component tests, not approval of a professional complete reel or a Windows
 installer. Product acceptance additionally needs generated visuals, direction,
 narration/music mixing, editing, assistant routing and full playback review.
+
+## Activating an existing local engine
+
+Studio's export panel offers **Set up film export** when native rendering is
+unavailable. An administrator reviews the component licenses and activates a
+compatible image already present on the station. This queues an ordinary private
+`motion_setup` Run through `/api/setup/runtimes` and the fixed native
+`/v1/setup/motion` profile. Members can see shared readiness, not another
+operator's setup history. No new model or renderer image is downloaded here.
+
+The Runner checks the packaged recipe, Linux/amd64 image, fixed entrypoint/user,
+and local Docker daemon. It journals the immutable request before publishing an
+atomic native selection. A lost acknowledgement is reobserved without rewriting
+selection; early Stop fences activation and late Stop keeps the shared engine.
+Changed image/recipe/daemon observations cannot publish readiness. Worker recovery
+and administrator revocation reuse the existing setup lifecycle. Readiness notices
+selection changes immediately, including a previously cached missing-engine result.
+
+Qualification: 15 native activation tests and 8 worker/account tests, plus actual
+API enqueue → worker → private Unix socket → native activation of the already
+qualified `ai-station-motion:local-v4` image. Actual readiness, receipt replay and
+unchanged selection on replay were checked; no new render or inference was
+executed during activation. Fresh installation on a machine without this image
+remains unavailable until its owned installation/cancellation lifecycle is qualified.
+This activation is not generated-film visual/audio quality acceptance.

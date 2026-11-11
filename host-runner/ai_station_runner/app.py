@@ -59,6 +59,7 @@ from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.media_compose import ComposeRequest, start_composition
 from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.motion_contract import MotionRequest
+from ai_station_runner.motion_setup import router as motion_setup_router
 from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
@@ -770,6 +771,7 @@ app.include_router(station_updates_router)
 
 app.include_router(llama_router)
 app.include_router(runtime_setup_router)
+app.include_router(motion_setup_router)
 app.include_router(speech_setup_router)
 app.include_router(image_setup_router)
 app.include_router(music_setup_router)

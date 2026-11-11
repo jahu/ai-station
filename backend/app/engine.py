@@ -162,6 +162,7 @@ def _execute_claimed(session, run, worker_id, executors):
             "effects_setup",
             "fish_setup",
             "native_llama_setup",
+            "motion_setup",
             "cursor_proposal",
             "codex_proposal",
             "github_publication",

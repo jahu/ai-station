@@ -42,7 +42,14 @@ def capabilities():
         if not available():
             raise ValueError("Motion rendering needs an owned user memory scope")
         settings = get_settings()
-        key = (str(settings.host_data_dir()), settings.motion_image)
+        selection = None
+        if not settings.motion_image:
+            try:
+                info = (settings.host_data_dir() / "runtime/motion/selection.json").lstat()
+                selection = (info.st_ino, info.st_size, info.st_mtime_ns)
+            except FileNotFoundError:
+                pass
+        key = (str(settings.host_data_dir()), settings.motion_image, selection)
         with _lock:
             if _probe is None or _probe[0] != key or (_probe[1].done() and time.monotonic() - _probe[2] > 30):
                 _probe = (key, _pool.submit(image, settings), time.monotonic())

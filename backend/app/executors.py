@@ -63,6 +63,7 @@ from app.model_download_job import DownloadExecutor
 from app.model_hub import ModelHubExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
+from app.motion_setup_job import MotionSetupExecutor
 from app.music import MusicExecutor
 from app.music_setup_job import MusicSetupExecutor
 from app.native_llama_setup_job import NativeLlamaSetupExecutor
@@ -358,6 +359,7 @@ EXECUTORS = {
     "native_llama_setup": NativeLlamaSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
+    MotionSetupExecutor.name: MotionSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),
     "media_translation_apply": TranslationApplyExecutor(),
     "artifact_purge": ArtifactPurgeExecutor(),

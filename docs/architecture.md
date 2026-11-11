@@ -1779,3 +1779,11 @@ Runs; generic owned Run cancellation supplies Stop. Playback/download needs no
 running inference/renderer, while new exports require actual native readiness and
 complete saved inputs. This adds presentation and metadata inspection, not an
 execution adapter or additional host authority.
+
+Studio export can adopt an existing compatible local renderer through the ordinary
+administrator-owned runtime preparation lifecycle (`motion_setup`). The control
+plane passes only a fixed profile, manifest fingerprint, Run identity, deadline
+and setup permissions over the private socket. Native metadata publication binds
+the actual image, packaged recipe and local daemon; native rendering retains its
+separate resource, source, Stop and cleanup contract. This increment does not
+install a missing renderer. See [renderer activation](hyperframes-renderer.md#activating-an-existing-local-engine).
