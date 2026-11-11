@@ -92,6 +92,8 @@ function fixture(path = "/studio/materials/material-one", empty = false) {
         });
       if (!init?.method || init.method === "GET") {
         if (url.pathname.endsWith("/activity")) return json(activity);
+        if (url.pathname.endsWith("/production"))
+          return json({ runs: [], artifacts: [] });
         if (url.pathname.endsWith("/revisions/revision-old"))
           return json({
             ...revision,
@@ -159,6 +161,7 @@ function fixture(path = "/studio/materials/material-one", empty = false) {
       if (url.pathname.endsWith("/plan")) {
         activity.push({
           id: "plan-new",
+          executor_type: "studio_director",
           task_id: "task-new",
           status: "queued",
           created_at: material.created_at,

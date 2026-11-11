@@ -1743,3 +1743,10 @@ sources, reserve the combined 4352-MiB native/container budget and publish the
 verified output into the existing Library. Missing native dispatch records are
 fenced before release; uncertain cleanup retains resources. The Docker image
 shares only the pure composition contract, without native execution modules.
+
+Saved-shot production reuses `create_image_run` or the existing segmented-video
+Task graph; it adds no inference adapter. Account image defaults remain authoritative
+unless explicitly overridden. Immutable shot/revision/source coordinates follow
+every child Run and output; source bytes are rechecked before dispatch and
+publication. A shot's Stop cancels its entire Task and leaves other materials
+alone. Editorial plans and actual generated takes remain distinct in the UI.

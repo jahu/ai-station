@@ -40,6 +40,7 @@ import {
   type StudioRevision,
   type StudioShot,
 } from "./studio-material";
+import StudioShotMedia from "./StudioShotMedia";
 import "./Studio.css";
 import "./StudioMaterial.css";
 
@@ -99,7 +100,9 @@ export default function StudioMaterial() {
       queryKey: ["studio-material", user?.id, id],
     });
   }, [cache, user?.id, id, finished]);
-  const active = activity.data?.find((r) => !terminal.has(r.status));
+  const active = activity.data?.find(
+    (r) => r.executor_type === "studio_director" && !terminal.has(r.status),
+  );
   const completedPlan = activity.data?.find(
     (r) => r.id === query.get("planning_run") && r.status === "succeeded",
   );
@@ -222,7 +225,7 @@ export default function StudioMaterial() {
       {activity.data?.[0]?.status === "failed" && (
         <div className="notice" role="alert">
           {activity.data[0].error_message}
-          <Link to={`/runs/${activity.data[0].id}`}>Inspect planning Run</Link>
+          <Link to={`/runs/${activity.data[0].id}`}>Inspect Run</Link>
         </div>
       )}
       <div className="studio-direction-layout">
@@ -340,12 +343,13 @@ export default function StudioMaterial() {
             </p>
           )}
           <p className="studio-direction-note">
-            A storyboard is an editable plan. Images, footage and audio have not
-            been generated at this stage.
+            The storyboard keeps your editorial intent. Generate images and
+            footage beside each saved shot; every take stays in Library.
+            Soundtrack production and final editing are the next steps.
           </p>
           {!!activity.data?.length && (
             <details className="studio-direction-history">
-              <summary>Planning history · {activity.data.length}</summary>
+              <summary>Activity history · {activity.data.length}</summary>
               {activity.data.map((run) => (
                 <Link key={run.id} to={`/runs/${run.id}`}>
                   <span>{new Date(run.created_at).toLocaleString()}</span>
@@ -630,6 +634,12 @@ function StoryboardEditor({
                   </div>
                 </div>
               )}
+              <StudioShotMedia
+                materialId={material.id}
+                revision={revision}
+                scene={index}
+                disabled={readOnly || dirty || save.isPending}
+              />
               {(shot.title || shot.eyebrow) && (
                 <div className="studio-shot-overlay">
                   <small>ON SCREEN</small>

@@ -105,7 +105,9 @@ result, and updates that keep your accounts, models and saved work.
 brand, course or series, with a shared visual identity and editorial brief.
 The first increment adds private projects, editable identities and grouping of
 existing creative workspaces. Materials now have versioned briefs, scripts and
-shot plans with a local director and an editable storyboard on develop. An
+shot plans with a local director and an editable storyboard on develop. Generate
+individual images or full video shots there, compare takes and open their Library
+results without losing earlier work. An
 isolated Hyperframes renderer and the API/worker export bridge are qualified
 with actual image/video fixtures; the full material workflow, audio orchestration and automatic
 project selection are still being implemented; this is not a feature

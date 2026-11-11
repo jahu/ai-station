@@ -1,0 +1,234 @@
+"""Saved-shot production reuses ordinary image/segmented-video Tasks and receipts."""
+
+import math
+from datetime import timedelta
+from uuid import UUID
+
+from fastapi import HTTPException
+from pydantic import Field, StrictInt
+from sqlalchemy import select
+
+from app.db import utcnow
+from app.models import Artifact, Run
+from app.runs import create_task, run_dict
+from app.serialize import artifact_dict
+from app.state import TERMINAL
+from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
+from app.studio_render import router
+from app.studio_schema import Fields, Storyboard
+
+
+class ShotRequest(Fields):
+    client_request_id: UUID
+    revision_id: UUID
+    scene: StrictInt = Field(ge=0, le=59)
+    image_model: str | None = Field(default=None, min_length=1, max_length=100)
+    video_model_id: UUID | None = None
+
+
+def shot_prompt(revision, shot):
+    """Keep direction visual, generic and frozen; no narration or caption leakage."""
+    identity = revision.project_snapshot.get("identity") or {}
+    parts = [shot.visual_brief]
+    if shot.framing:
+        parts.append("Camera and framing: " + shot.framing)
+    if identity.get("visual_direction"):
+        parts.append("Shared visual direction: " + identity["visual_direction"])
+    parts.append("Keep visible subjects, lighting and materials coherent. No captions, labels or lettering.")
+    return "\n\n".join(parts)
+
+
+def enqueue_shot(session, material_id, body):
+    row = get_material(session, material_id, lock=True, active=True)
+    revision = get_revision(session, row, body.revision_id)
+    plan = Storyboard.model_validate(revision.storyboard)
+    if body.scene >= len(plan.scenes):
+        raise HTTPException(422, "Choose a shot in this saved storyboard")
+    shot = plan.scenes[body.scene]
+    if shot.visual_kind not in {"image", "video"}:
+        raise HTTPException(422, "Library and editorial shots do not need a generated replacement")
+    if (shot.visual_kind == "image" and body.video_model_id) or (
+        shot.visual_kind == "video" and body.image_model
+    ):
+        raise HTTPException(422, "Choose the model for this shot's medium")
+    fingerprint = digest(body.model_dump(mode="json", exclude={"client_request_id"}))
+    key = "studio-shot:" + str(body.client_request_id)
+    prior = session.scalar(
+        select(Run).where(
+            Run.operation_key == key, Run.parameters["studio_material_id"].as_string() == row.id
+        )
+    )
+    if prior:
+        if prior.parameters.get("studio_shot_request_sha256") != fingerprint:
+            raise HTTPException(409, "This generation receipt belongs to another shot or model")
+        return prior
+    active = session.scalar(
+        select(Run.id)
+        .where(
+            Run.parameters["studio_material_id"].as_string() == row.id,
+            Run.parameters["studio_revision_id"].as_string() == revision.id,
+            Run.parameters["studio_scene"].as_integer() == body.scene,
+            Run.status.not_in(TERMINAL),
+        )
+        .limit(1)
+    )
+    if active:
+        raise HTTPException(409, "This shot is already being generated. Its existing Run remains available.")
+    references = [source_snapshot(session, i) for i in shot.reference_artifact_ids]
+    if any(source["kind"] != "image" for source in references):
+        raise HTTPException(422, "Generated shot references must be images")
+    prompt = shot_prompt(revision, shot)
+    deadline = (utcnow() + timedelta(hours=4)).isoformat()
+    task = create_task(
+        session, title=f"Shot {body.scene + 1} · {row.title}", prompt=prompt, capability="studio.shot"
+    )
+    if shot.visual_kind == "image":
+        from app.image_models import choice, defaults
+        from app.image_schema import ImageRequest
+        from app.images import create_image_run
+
+        mode = "recompose" if references else "t2i"
+        selected = choice(session, body.image_model or defaults(session)["choices"][mode])
+        selection = {"backend": selected["backend"]}
+        if selected["definition_id"]:
+            selection["model_id"] = selected["definition_id"]
+        if selected["backend"] in {"krea2", "juggernaut"}:
+            selection["seed"] = body.client_request_id.int % 2**31
+        width, height = {"portrait": (864, 1536), "landscape": (1536, 864), "square": (1024, 1024)}[
+            revision.options["aspect"]
+        ]
+        request = ImageRequest.model_validate(
+            {
+                "mode": mode,
+                "prompt": prompt,
+                "prompt_style": "instruction" if references else "prompt",
+                "input_artifact_ids": shot.reference_artifact_ids,
+                "width": width,
+                "height": height,
+                **selection,
+            }
+        )
+        main = create_image_run(session, request, task=task)
+    else:
+        from app.media_jobs import LongVideoRequest, publish_video
+        from app.video_models import profile_for
+
+        if len(prompt) > 2000:
+            raise HTTPException(422, "Keep this shot's combined visual direction within 2000 characters")
+        seconds = math.ceil(shot.duration_frames / 30 + shot.media_start_seconds)
+        if seconds > 60:
+            raise HTTPException(422, "Split footage longer than sixty seconds into separate storyboard shots")
+        profile = profile_for(session, body.video_model_id)
+        if not profile.get("available"):
+            raise HTTPException(409, profile.get("reason", "Prepare local video before generating footage"))
+        if len(references) > 1:
+            raise HTTPException(422, "A video shot accepts one first-frame reference; save its exact choice")
+        request = LongVideoRequest(
+            client_request_id=body.client_request_id,
+            prompt=prompt,
+            duration_seconds=max(1, seconds),
+            composition_mode="continuous",
+            seed=body.client_request_id.int % 2**31,
+            model_id=body.video_model_id,
+            image_artifact_id=shot.reference_artifact_ids[0] if references else None,
+            memory_profile=profile.get("recommended_memory_profile", "default"),
+        )
+        publish_video(session, request, task=task, observed_profile=profile, execution_deadline_at=deadline)
+        main = session.get(Run, task.metadata_json["media_plan"]["compose_run_id"])
+    main.operation_key = key
+    shared = {
+        "studio_material_id": row.id,
+        "studio_revision_id": revision.id,
+        "studio_scene": body.scene,
+        "studio_primary_run_id": main.id,
+        "studio_shot_request_sha256": fingerprint,
+        "studio_storyboard_sha256": digest(revision.storyboard),
+        "project_snapshot": revision.project_snapshot,
+        "studio_shot": shot.model_dump(mode="json"),
+        "studio_source_observations": references,
+        "execution_deadline_at": deadline,
+    }
+    for child in session.scalars(select(Run).where(Run.task_id == task.id)):
+        child.parameters = {**child.parameters, **shared}
+    return main
+
+
+@router.post("/{material_id}/shots", status_code=202)
+def generate_shot(material_id: UUID, body: ShotRequest, session: DB):
+    try:
+        run = enqueue_shot(session, material_id, body)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+    session.commit()
+    return run_dict(run)
+
+
+@router.get("/{material_id}/revisions/{revision_id}/production")
+def production(material_id: UUID, revision_id: UUID, session: DB):
+    row = get_material(session, material_id)
+    revision = get_revision(session, row, revision_id)
+    runs = list(
+        session.scalars(
+            select(Run)
+            .where(
+                Run.parameters["studio_material_id"].as_string() == row.id,
+                Run.parameters["studio_revision_id"].as_string() == revision.id,
+                Run.parameters["studio_scene"].as_integer().is_not(None),
+            )
+            .order_by(Run.created_at.desc(), Run.id.desc())
+            .limit(1000)
+        )
+    )
+    outputs = list(
+        session.scalars(
+            select(Artifact)
+            .where(
+                Artifact.run_id.in_([r.id for r in runs]),
+                Artifact.trashed_at.is_(None),
+                Artifact.purged_at.is_(None),
+                Artifact.purge_run_id.is_(None),
+            )
+            .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+        )
+    )
+    successful = {r.id for r in runs if r.status == "succeeded"}
+    return {
+        "runs": [run_dict(r) for r in runs],
+        "artifacts": [
+            artifact_dict(a)
+            for a in outputs
+            if a.run_id in successful
+            and a.artifact_type in {"image", "video"}
+            and not a.metadata_json.get("partial")
+            and not a.metadata_json.get("internal_media")
+        ],
+    }
+
+
+def verify_shot_sources(session, run):
+    if "studio_shot" not in run.parameters:
+        return
+    row = get_material(session, run.parameters["studio_material_id"])
+    revision = get_revision(session, row, run.parameters["studio_revision_id"])
+    if digest(revision.storyboard) != run.parameters["studio_storyboard_sha256"]:
+        raise ValueError("The saved shot changed")
+    for frozen in run.parameters["studio_source_observations"]:
+        if source_snapshot(session, frozen["artifact_id"], verify=True) != frozen:
+            raise ValueError("A Studio shot reference changed")
+
+
+@router.post("/{material_id}/shots/{run_id}/stop")
+def stop_shot(material_id: UUID, run_id: UUID, session: DB):
+    from app.task_control import cancel_task
+
+    row = get_material(session, material_id)
+    run = session.get(Run, str(run_id))
+    if (
+        run is None
+        or run.parameters.get("studio_material_id") != row.id
+        or "studio_shot" not in run.parameters
+    ):
+        raise HTTPException(404, "Studio shot Run not found")
+    result = cancel_task(session, run.task)
+    session.commit()
+    return result
