@@ -1807,3 +1807,13 @@ uses a closed owned child-Task registry for Stop, and projects only the complete
 rendered MP4 into the conversation. SQL-only publication may recover without
 replaying inference. Individual raw clips and storyboards do not fulfill the
 material outcome; original outcome indices separate multiple brand requests.
+
+
+New Studio soundtrack coordination pins a fixed publishing-volume profile. The
+same CPU mix Run measures canonical PCM with packaged libav EBU R128 metadata,
+applies bounded global gain plus oversampled peak limiting, remeasures the output
+and verifies unchanged sample coverage and source hashes before publication.
+Stop/lease checks remain active for every streaming pass. Old requests and queued
+coordinators preserve their original policy; there is no new execution boundary,
+media service, model download or arbitrary filter argument. The observed
+before/after report distinguishes target loudness from attained loudness.

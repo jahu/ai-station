@@ -210,3 +210,34 @@ When a cold native renderer reports `checking`, the conversation keeps its
 completed storyboard and waits using durable admission backoff without a worker
 slot. Verification has a two-minute bound; unavailable engines still fail for
 inspection, and no media execution is repeated during this metadata wait.
+
+
+## Publishing volume (development)
+
+New soundtrack Runs freeze the `studio-lufs16-v1` finishing profile. The packaged
+PyAV/libav EBU R128 meter measures the complete canonical stereo PCM, applies one
+bounded whole-file gain toward -16 LUFS, and protects peaks using a 4× oversampled
+limiter. The finished PCM is measured again: the stored report includes actual
+before/after loudness, a conservative true-peak bound, gain, target attainment
+and exact sample coverage. It does not substitute target values for observations.
+Gain is capped at 18 dB; gated audio is not amplified and digital silence stays
+zero. The PCM true-peak ceiling is -1.5 dBFS, with a -2 dB limiter setting to leave
+resampling/encoding margin. [EBU filter semantics](https://ffmpeg.org/ffmpeg-filters.html#ebur128).
+
+All passes stream bounded blocks through existing CPU worker code, check Stop
+and the claim, and publish only after source revalidation. No model, shell,
+network operation or native capability is added. Music stays ducked under speech;
+music-only output is finished as a complete score instead of remaining at the
+low background-bed volume. Each new audio coordinator pins the selected policy;
+historical queued coordinators and mixes without that coordinate keep their
+original behavior. Existing submission receipts and published files are unchanged.
+An explicit typed `mastering_profile: "none"` on the manual mix API retains original
+volume. Inspector/Library metadata retains the measured result; the sound panel
+claims balanced volume only when the target was actually attained.
+
+Actual-model qualification has also identified two remaining editorial gates:
+planned reuse of one image across scenes must share one generated source, and
+silent/music-only scene timings must honor the requested complete duration.
+Repeatedly generating a described "same image" or accepting a longer storyboard
+is not proof of visual continuity or correct timing. These remain active work,
+separate from DSP qualification.

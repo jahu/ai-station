@@ -56,7 +56,13 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-function setup({ finished = false, available = true, disabled = false } = {}) {
+function setup({
+  finished = false,
+  available = true,
+  disabled = false,
+  mastered = false,
+  musicOnly = false,
+} = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const onMeasured = vi.fn(async () => {});
   const root = {
@@ -73,7 +79,10 @@ function setup({ finished = false, available = true, disabled = false } = {}) {
           runs: [],
           active_run_ids: [],
           failed_run: null,
-          soundtrack: { id: "soundtrack-one" },
+          soundtrack: {
+            id: "soundtrack-one",
+            metadata: mastered ? { mastering: { target_reached: true } } : {},
+          },
           measured_revision_id: "revision-two",
         },
       ]
@@ -139,7 +148,21 @@ function setup({ finished = false, available = true, disabled = false } = {}) {
       <MemoryRouter>
         <StudioSoundtrack
           materialId="material-one"
-          revision={revision}
+          revision={
+            musicOnly
+              ? {
+                  ...revision,
+                  storyboard: {
+                    ...revision.storyboard,
+                    audio: "music",
+                    scenes: revision.storyboard.scenes.map((s) => ({
+                      ...s,
+                      narration: "",
+                    })),
+                  },
+                }
+              : revision
+          }
           disabled={disabled}
           onMeasured={onMeasured}
         />
@@ -203,4 +226,18 @@ it("unsaved scene edits cannot be replaced by a measured version", async () => {
   expect((button as HTMLButtonElement).disabled).toBe(true);
   fireEvent.click(button);
   expect(onMeasured).not.toHaveBeenCalled();
+});
+
+it("explains the measured finished volume and hides narration balance for a music-only film", async () => {
+  setup({ finished: true, mastered: true, musicOnly: true });
+  await screen.findByLabelText("Finished soundtrack");
+  expect(screen.getByText("Volume balanced for sharing.")).toBeTruthy();
+  expect(screen.queryByLabelText("Background music level")).toBeNull();
+});
+
+it("does not claim an older soundtrack has been mastered", async () => {
+  setup({ finished: true });
+  await screen.findByLabelText("Finished soundtrack");
+  expect(screen.queryByText("Volume balanced for sharing.")).toBeNull();
+  expect(screen.getByLabelText("Background music level")).toBeTruthy();
 });

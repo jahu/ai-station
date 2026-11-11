@@ -71,7 +71,9 @@ def test_measured_narration_extends_the_edit_and_mix_publishes_exact_canonical_p
             ) == (72 * 1600, 48000, 2, 2)
             pcm = np.frombuffer(reader.readframes(reader.getnframes()), dtype="<i2").reshape(-1, 2)
             # The complete final spoken second survives; the music-only tail is quieter.
-            assert np.max(np.abs(pcm[int(2.1 * 48000) : int(2.15 * 48000)])) > 10000
+            spoken_tail = np.max(np.abs(pcm[int(2.1 * 48000) : int(2.15 * 48000)]))
+            score_tail = np.max(np.abs(pcm[int(2.3 * 48000) : int(2.35 * 48000)]))
+            assert spoken_tail > 8 * score_tail > 0
             assert np.max(np.abs(pcm)) < 32767
         versions = client.get(f"/api/studio/materials/{row['id']}/revisions").json()
         assert len(versions) == 2 and versions[0]["parent_revision_id"] == revision["id"]
@@ -229,6 +231,7 @@ def test_mix_has_one_global_peak_limit_when_voice_and_score_sum_above_full_scale
             tone(client, 3, amplitude=30000),
             music_gain=1.0,
             duck=1.0,
+            mastering_profile="none",
         ).json()
         with session_factory()() as session:
             tick(session, "peak-limit-mix")
@@ -268,3 +271,73 @@ def test_music_is_ducked_during_the_cue_and_recovers_between_cues():
         during = np.sqrt(np.mean(pcm[24000:28800] ** 2))
         between = np.sqrt(np.mean(pcm[96000:100800] ** 2))
         assert during / between == pytest.approx(0.28, abs=0.005)
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_explicit_original_volume_and_historical_queued_requests_retain_unmastered_behavior(legacy):
+    with TestClient(app) as client:
+        row, revision = draft(client, audio="voice")
+        voice = tone(client, 1, amplitude=20000)
+        nonce = str(uuid4())
+        extra = {} if legacy else {"mastering_profile": "none"}
+        response = submit(client, row, revision, voice, client_request_id=nonce, **extra)
+        assert response.status_code == 202, response.text
+        identity = response.json()["id"]
+        with session_factory()() as db:
+            run = db.get(Run, identity)
+            if legacy:
+                # Exact historical serialized request: no new field or policy.
+                assert "mastering_profile" not in run.parameters["request"]
+                run.parameters = {k: v for k, v in run.parameters.items() if k != "mastering_profile"}
+                db.commit()
+            tick(db, "legacy-soundtrack")
+        replay = submit(client, row, revision, voice, client_request_id=nonce, **extra)
+        assert replay.status_code == 202 and replay.json()["id"] == identity
+        done = client.get("/api/runs/" + identity).json()
+        assert done["status"] == "succeeded", done["error_message"]
+        assert "mastering" not in done["metadata"]["mix"]
+        # Existing equal-power mono-to-stereo upmix retains its original gain.
+        assert done["metadata"]["mix"]["peak_after"] == pytest.approx(20000 / (32768 * 2**0.5), abs=0.0001)
+
+
+def test_new_mix_freezes_mastering_policy_and_retains_measured_evidence():
+    from app.studio_mastering import PROFILE
+
+    with TestClient(app) as client:
+        row, revision = draft(client, audio="voice")
+        queued = submit(client, row, revision, tone(client, 1, amplitude=2000)).json()
+        assert queued["parameters"]["mastering_profile"] == PROFILE
+        with session_factory()() as db:
+            tick(db, "mastered-soundtrack")
+        done = client.get("/api/runs/" + queued["id"]).json()
+        assert done["status"] == "succeeded", done["error_message"]
+        report = done["metadata"]["mix"]["mastering"]
+        assert report["profile"] == PROFILE and report["target_reached"]
+        assert report["after"]["integrated_lufs"] == pytest.approx(-16, abs=0.5)
+        assert report["after"]["true_peak_upper_dbfs"] <= -1.5
+        assert report["samples"] == done["metadata"]["mix"]["samples"]
+
+
+def test_stop_during_mastering_publishes_no_partial_soundtrack(monkeypatch):
+    from app import studio_soundtrack
+    from app.runs import request_cancel
+    from sqlalchemy import select
+
+    def stopped_master(*args, **kwargs):
+        check = args[2]
+        with session_factory()() as db:
+            run = db.scalar(select(Run).where(Run.executor_type == "studio_soundtrack"))
+            request_cancel(db, run)
+            db.commit()
+        check(True)
+        raise AssertionError("Stop must leave the mastering stage")
+
+    monkeypatch.setattr(studio_soundtrack, "master_wave", stopped_master)
+    with TestClient(app) as client:
+        row, revision = draft(client, audio="voice")
+        queued = submit(client, row, revision, tone(client, 1)).json()
+        with session_factory()() as db:
+            tick(db, "master-stop")
+        assert client.get("/api/runs/" + queued["id"]).json()["status"] == "canceled"
+        assert client.get("/api/artifacts?run_id=" + queued["id"]).json() == []
+        assert len(client.get(f"/api/studio/materials/{row['id']}/revisions").json()) == 1
