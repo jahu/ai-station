@@ -938,6 +938,42 @@ class AssistantWebExecutor:
         return "done"
 
 
+def verified_search_sources(session, run, item, value):
+    """Carry source coordinates only from an owned, byte-verified search result.
+
+    The artifact reader calls this after its frozen size/hash/file check. A JSON
+    attachment or source_tool label alone cannot introduce network destinations.
+    """
+    from app.http_fetch import public_url
+
+    artifact = session.get(Artifact, item["snapshot"]["id"])
+    origin = session.get(Run, artifact.run_id) if artifact and artifact.run_id else None
+    if (
+        artifact is None
+        or artifact.owner_id != run.owner_id
+        or origin is None
+        or origin.owner_id != run.owner_id
+        or origin.conversation_id != run.conversation_id
+        or origin.status != "succeeded"
+        or not isinstance(value, dict)
+    ):
+        return []
+    observed = origin.metadata_json.get("web_search")
+    if (
+        not isinstance(observed, dict)
+        or observed.get("artifact_id") != artifact.id
+        or not isinstance(value.get("sources"), list)
+        or len(value["sources"]) > 5
+        or value["sources"] != observed.get("sources")
+    ):
+        return []
+    return [
+        {"url": source["url"]}
+        for source in value["sources"]
+        if isinstance(source, dict) and public_url(source.get("url"))
+    ]
+
+
 class AssistantArtifactExecutor:
     name = "assistant_artifact"
 
@@ -950,7 +986,7 @@ class AssistantArtifactExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
-        results = []
+        results, public_sources = [], []
         for item in run.parameters["inputs"]:
             mime = item["mime_type"]
             if not (mime.startswith("text/") or mime in {"application/json", "application/pdf"}):
@@ -970,6 +1006,8 @@ class AssistantArtifactExecutor:
             if mime == "application/json":
                 value = json.loads(text)
                 keys = list(value)[:100] if isinstance(value, dict) else []
+                if section in {None, "sources"}:
+                    public_sources.extend(verified_search_sources(session, run, item, value))
                 if section is not None:
                     if not isinstance(value, dict) or section not in value:
                         raise ValueError("Choose an existing top-level JSON section")
@@ -989,7 +1027,10 @@ class AssistantArtifactExecutor:
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
         else:
-            run.metadata_json = {**run.metadata_json, "controller_tool_result": {"artifacts": results}}
+            run.metadata_json = {
+                **run.metadata_json,
+                "controller_tool_result": {"artifacts": results, "sources": public_sources},
+            }
             append_event(session, run.id, "artifact.read", {"aliases": [item["alias"] for item in results]})
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
         return "done"
