@@ -1720,3 +1720,13 @@ and verifies its retained publisher registration. The existing preserving guest
 transaction retains the original old/target pair and database backup proof.
 Automatic target startup and actual native/guest health precede Run completion.
 Neither a Windows-drive mount nor WSL interop is enabled.
+
+### Studio motion renderer
+
+The [Hyperframes renderer](hyperframes-renderer.md) uses the native Runner's
+owned process lifecycle and one fixed, network-disabled CPU container. It
+compiles typed scenes into trusted local HTML/GSAP, combines frozen image/video
+assets and an already-mixed soundtrack, and verifies full-HD exports. It is a
+rendering component; the Studio material planner, audio orchestration and Chat
+integration remain subsequent increments. The control plane receives no Docker
+socket or new execution privileges.

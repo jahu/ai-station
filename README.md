@@ -104,8 +104,9 @@ result, and updates that keep your accounts, models and saved work.
 **In development: Creative Studio.** Organize reels, presentations and films by
 brand, course or series, with a shared visual identity and editorial brief.
 The first increment adds private projects, editable identities and grouping of
-existing creative workspaces. Hyperframes production, audio orchestration and
-automatic project selection are still being implemented; this is not a feature
+existing creative workspaces. An isolated Hyperframes renderer is qualified as
+a component; the full material workflow, audio orchestration and automatic
+project selection are still being implemented; this is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 
 **One-click desktop updates.** Your app version stays
