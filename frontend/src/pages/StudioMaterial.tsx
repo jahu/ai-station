@@ -41,6 +41,7 @@ import {
   type StudioShot,
 } from "./studio-material";
 import StudioShotMedia from "./StudioShotMedia";
+import StudioSoundtrack from "./StudioSoundtrack";
 import "./Studio.css";
 import "./StudioMaterial.css";
 
@@ -750,11 +751,12 @@ function StoryboardEditor({
                 required
                 rows={3}
                 value={board.music_brief}
-                maxLength={2000}
+                maxLength={512}
                 onChange={(e) =>
                   edit({ ...board, music_brief: e.target.value })
                 }
               />
+              <small>{board.music_brief.length} / 512 characters</small>
             </label>
           )}
           {board.audio === "silent" && (
@@ -762,6 +764,16 @@ function StoryboardEditor({
           )}
         </section>
       </fieldset>
+      <StudioSoundtrack
+        materialId={material.id}
+        revision={revision}
+        disabled={readOnly || dirty || save.isPending}
+        onMeasured={(id) =>
+          api<StudioRevision>(
+            `${materialBase}/${material.id}/revisions/${id}`,
+          ).then(onSaved)
+        }
+      />
       <ErrorNotice error={save.error} />
       <div className="studio-story-save">
         <span>

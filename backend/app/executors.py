@@ -87,6 +87,7 @@ from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.station_update_install import StationUpdateExecutor
 from app.station_updates import StationUpdateCheckExecutor
+from app.studio_audio_production import StudioAudioStepExecutor, StudioVoiceReferenceExecutor
 from app.studio_director import StudioDirector
 from app.studio_render import StudioRenderExecutor
 from app.studio_soundtrack import StudioSoundtrackExecutor
@@ -398,6 +399,8 @@ EXECUTORS = {
     StudioDirector.name: StudioDirector(),
     StudioRenderExecutor.name: StudioRenderExecutor(),
     StudioSoundtrackExecutor.name: StudioSoundtrackExecutor(),
+    StudioAudioStepExecutor.name: StudioAudioStepExecutor(),
+    StudioVoiceReferenceExecutor.name: StudioVoiceReferenceExecutor(),
     AvatarPlannerExecutor.name: AvatarPlannerExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),

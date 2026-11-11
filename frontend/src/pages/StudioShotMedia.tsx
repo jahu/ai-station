@@ -74,6 +74,17 @@ export default function StudioShotMedia({
     runs.some((r) => r.id === a.run_id),
   );
   const source = takes.find((a) => a.id === selected) ?? takes[0];
+  const sourceDuration = Number(
+    source?.metadata?.duration_seconds ??
+      Number(source?.metadata?.frames) / Number(source?.metadata?.fps),
+  );
+  const requiredDuration = shot.duration_frames / 30 + shot.media_start_seconds;
+  const needsLonger =
+    video &&
+    source &&
+    Number.isFinite(sourceDuration) &&
+    sourceDuration + 1 / 120 < requiredDuration;
+
   const failed = runs.find(
     (r) =>
       r.task_id === runs[0]?.task_id &&
@@ -166,6 +177,13 @@ export default function StudioShotMedia({
             <Link to={`/library/${source.id}`}>Open in Library ↗</Link>
           </div>
         </div>
+      )}
+      {needsLonger && (
+        <p className="notice" role="status">
+          This clip covers {sourceDuration.toFixed(1)}s; the measured edit needs{" "}
+          {requiredDuration.toFixed(1)}s. Generate a longer take before
+          exporting.
+        </p>
       )}
       {playbackError && (
         <p className="studio-direction-note" role="status">

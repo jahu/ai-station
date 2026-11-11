@@ -134,8 +134,7 @@ def frozen_inputs(session, run, revision, body):
     return plan, voices, music
 
 
-@router.post("/{material_id}/soundtrack", status_code=202)
-def soundtrack(material_id: UUID, body: MixRequest, session: DB):
+def create_soundtrack_run(session, material_id, body, *, task=None, parent_run_id=None):
     row = get_material(session, material_id, lock=True, active=True)
     revision = get_revision(session, row, body.revision_id)
     fingerprint = digest(body.model_dump(mode="json", exclude={"client_request_id"}))
@@ -148,12 +147,18 @@ def soundtrack(material_id: UUID, body: MixRequest, session: DB):
     if prior:
         if prior.parameters.get("request_sha256") != fingerprint:
             raise HTTPException(409, "This mix receipt belongs to another request")
-        return run_dict(prior)
+        return prior
     try:
         plan, voices, music = inputs(session, revision, body)
     except (ValueError, OSError, wave.Error, EOFError) as exc:
         raise HTTPException(422, str(exc)) from exc
-    task = create_task(
+    if parent_run_id:
+        parent = session.get(Run, parent_run_id)
+        if parent is None or task is None or parent.task_id != task.id:
+            raise ValueError("Choose an owned parent in the soundtrack Task")
+        require(parent.effective_permissions, "filesystem_read")
+        require(parent.effective_permissions, "workspace_write")
+    task = task or create_task(
         session, title="Soundtrack · " + row.title, prompt=revision.brief, capability="studio.soundtrack"
     )
     run = create_run(
@@ -164,6 +169,7 @@ def soundtrack(material_id: UUID, body: MixRequest, session: DB):
         executor_type="studio_soundtrack",
         execution_target="container",
         operation_key=key,
+        parent_run_id=parent_run_id,
         retry_class="safe",
         requested_gpu="none",
         permissions=["filesystem_read", "workspace_write"],
@@ -183,6 +189,12 @@ def soundtrack(material_id: UUID, body: MixRequest, session: DB):
             ),
         },
     )
+    return run
+
+
+@router.post("/{material_id}/soundtrack", status_code=202)
+def soundtrack(material_id: UUID, body: MixRequest, session: DB):
+    run = create_soundtrack_run(session, material_id, body)
     session.commit()
     return run_dict(run)
 

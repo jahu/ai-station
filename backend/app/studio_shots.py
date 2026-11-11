@@ -163,6 +163,38 @@ def generate_shot(material_id: UUID, body: ShotRequest, session: DB):
     return run_dict(run)
 
 
+def visual_versions(session, row, revision):
+    """Measured-audio edits retain their actual takes; a rewritten shot does not."""
+    ids = {revision.id}
+    current = revision
+    for _ in range(10):
+        origin = session.get(Run, current.source_run_id) if current.source_run_id else None
+        if (
+            not origin
+            or origin.executor_type != "studio_soundtrack"
+            or not current.parent_revision_id
+            or origin.metadata_json.get("studio_revision_id") != current.id
+            or origin.parameters.get("studio_revision_id") != current.parent_revision_id
+        ):
+            break
+        parent = get_revision(session, row, current.parent_revision_id)
+        left = Storyboard.model_validate(current.storyboard).model_dump(mode="json")
+        right = Storyboard.model_validate(parent.storyboard).model_dump(mode="json")
+        for plan in (left, right):
+            for shot in plan["scenes"]:
+                shot.pop("duration_frames")
+        if (
+            left != right
+            or current.project_snapshot != parent.project_snapshot
+            or current.options != parent.options
+            or parent.id in ids
+        ):
+            break
+        ids.add(parent.id)
+        current = parent
+    return ids
+
+
 @router.get("/{material_id}/revisions/{revision_id}/production")
 def production(material_id: UUID, revision_id: UUID, session: DB):
     row = get_material(session, material_id)
@@ -172,7 +204,7 @@ def production(material_id: UUID, revision_id: UUID, session: DB):
             select(Run)
             .where(
                 Run.parameters["studio_material_id"].as_string() == row.id,
-                Run.parameters["studio_revision_id"].as_string() == revision.id,
+                Run.parameters["studio_revision_id"].as_string().in_(visual_versions(session, row, revision)),
                 Run.parameters["studio_scene"].as_integer().is_not(None),
             )
             .order_by(Run.created_at.desc(), Run.id.desc())

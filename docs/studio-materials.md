@@ -97,7 +97,41 @@ its private scratch files. Synthetic PCM integration tests cover resampling,
 complete narration, voice/music policy, peak control, ducking, privacy and Stop;
 they do not qualify generated voices or subjective final soundtrack quality.
 
-Automatic speech/music generation, soundtrack/export UI and Chat project inference
-remain in development. Final publication-quality acceptance requires
-a complete newly generated voiced/scored reel and educational film with full
-playback/visual review, not just a valid storyboard or fixture export.
+The saved storyboard now starts a durable speech → measured score → final mix
+production. Each spoken cue uses the existing local speech executor; the first
+generated narrator becomes the reference for later cues, or the chosen Library
+recording remains authoritative. Structured director delivery selects the declared
+local expression/pace controls. Music follows the single saved Music direction,
+with optional runtime/level choices. It is generated only after actual utterance
+measurement, and the final mix retains all completed narration. No model inference
+runs in the enqueue-only coordinator or HTTP request.
+
+A first passage longer than the existing sixty-second voice-reference limit is
+kept in full. A separate CPU Run prepares a lossless fifteen-second reference for
+later speech, with frozen source/parent lineage, bounded streaming buffers and
+Stop/claim fences. The complete original cue remains the narration source. A
+selected Library narrator must already satisfy the existing 0.1–60s/20-MiB speech
+contract, checked before queueing. This is voice consistency, not word truncation
+or an additional voice model.
+
+Only SQL-only coordinator publication may safely requeue after an expired lease;
+actual voice/music/reference generation retains its ordinary execution/recovery
+contract. Whole-production Stop preserves completed cues. The UI shows real
+progress, take comparison, playable results, model/reference choices and an
+explicit action to apply the immutable measured edit. That timing-only revision
+retains its verified actual visual takes; rewritten storyboards do not inherit
+unrelated footage. Short existing footage is flagged for a longer take. Failed
+production retains completed artifacts but does not yet resume them in a new
+production request.
+
+Fake-generator/real-PCM integration covers the complete durable chain, private
+status, Stop, SQL-only recovery, narrator continuity, long-cue reference sampling
+and unchanged full narration. Actual browser/API checks play a calibration WAV,
+apply measured timing while retaining both existing approved visual fixtures, and
+inspect desktop/mobile settings with no overflow. These checks performed no new
+speech/music inference and do not qualify subjective audio quality.
+
+Full-material automation, export UI and Chat project inference remain in
+development. Final publication-quality acceptance requires a complete newly
+generated voiced/scored reel and educational film with full playback/visual
+review, not just a valid storyboard or fixture export.

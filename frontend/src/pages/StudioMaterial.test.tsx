@@ -92,6 +92,26 @@ function fixture(path = "/studio/materials/material-one", empty = false) {
         });
       if (!init?.method || init.method === "GET") {
         if (url.pathname.endsWith("/activity")) return json(activity);
+        if (url.pathname.endsWith("/audio/productions")) return json([]);
+        if (url.pathname.endsWith("/audio/capabilities"))
+          return json({
+            available: true,
+            languages: ["pl", "en"],
+            engines: {
+              fish_s2_pro: {
+                available: true,
+                readiness: "ready",
+                voice_sources: ["model", "reference"],
+              },
+            },
+          });
+        if (url.pathname.endsWith("/audio/music/capabilities"))
+          return json({ available: true });
+        if (
+          url.pathname.endsWith("/audio/models") ||
+          url.pathname.endsWith("/audio/music/models")
+        )
+          return json({ items: [] });
         if (url.pathname.endsWith("/production"))
           return json({ runs: [], artifacts: [] });
         if (url.pathname.endsWith("/revisions/revision-old"))

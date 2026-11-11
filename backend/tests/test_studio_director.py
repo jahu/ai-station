@@ -118,3 +118,20 @@ def test_stop_during_stream_does_not_publish_a_partial_revision(local_model, mon
         with session_factory()() as session:
             assert session.scalar(select(StudioRevision)) is None
         assert browser.get(url + "/revisions").json() == []
+
+
+def test_new_music_direction_must_fit_the_actual_generator_without_truncation(local_model):
+    calls, responses = local_model
+    oversized = {**board(), "music_brief": "x" * 513}
+    responses[:] = [json.dumps(oversized), json.dumps(board())]
+    with TestClient(app) as browser:
+        created = material(browser)
+        url = "/api/studio/materials/" + created["id"]
+        queued = browser.post(url + "/plan", json=request()).json()
+        step()
+        done = browser.get("/api/runs/" + queued["id"]).json()
+        assert done["status"] == "succeeded", done["error_message"]
+        assert len(calls) == 2 and "512 characters" in calls[1]["messages"][-1]["content"]
+        assert (
+            browser.get(url + "/revisions").json()[0]["storyboard"]["music_brief"] == board()["music_brief"]
+        )

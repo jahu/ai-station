@@ -1759,3 +1759,14 @@ two-pass bus provide exact 48-kHz stereo output, music ducking/fades and one
 global peak adjustment. Publication verifies sources and the worker claim under
 Task Stop serialization. No host paths, native launch or external inference are
 introduced by this assembler; speech/music generation remains separate children.
+
+
+Studio sound production composes existing speech and music executors through
+short transactional `studio_audio_step` Runs. Native generators remain distinct
+children with their own resource, cancellation and recovery contracts. Measured
+complete narration determines score duration before the existing CPU mix; a long
+first passage may produce a separate bounded lossless reference for consistent
+later speech. An expired SQL-only queue-publisher lease can be requeued only
+without dispatch/PID evidence and under the same owner/Task Stop fence. This does
+not replay media generation. Saved and measured versions, actual takes and
+playable soundtrack results remain inspectable through the ordinary API/Library.
