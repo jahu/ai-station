@@ -154,7 +154,10 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 - Native isolated renderer merged to develop in #715; see
   [its contract and qualification scope](../hyperframes-renderer.md).
 - Private materials, immutable revisions, local director/storyboards and their
-  editor are the current increment; see [material semantics](../studio-materials.md).
+  editor merged in #716; see [material semantics](../studio-materials.md).
+- Typed saved-material export now connects API, worker, private native socket,
+  isolated full-HD render and Library. Actual fixture qualification includes
+  image/video/audio and cleanup; this does not qualify generated reel quality.
 - Remaining: guided renderer preparation, actual visual/audio child Runs,
   timing/mix and render/export UI,
   assistant tools/project inference, avatar insertion and complete branded

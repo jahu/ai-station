@@ -18,10 +18,12 @@ LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 COPY LICENSE NOTICE COMMERCIAL.md /app/legal/
 COPY --from=dependencies /opt/venv /opt/venv
 COPY backend/ /app/backend/
-# Only pure metadata/admission modules are shared; no native Runner API or launcher.
+# Only pure metadata/admission and composition contracts are shared; no native API or launcher.
 COPY host-runner/ai_station_runner/torch_state_data.py \
      host-runner/ai_station_runner/torch_state_zip.py \
-     host-runner/ai_station_runner/station_release_metadata.py /app/backend/ai_station_runner/
+     host-runner/ai_station_runner/station_release_metadata.py \
+     host-runner/ai_station_runner/motion_contract.py \
+     host-runner/ai_station_runner/media_inputs.py /app/backend/ai_station_runner/
 COPY scripts/desktop_connection.py scripts/desktop_link.py scripts/desktop_control.py scripts/desktop_versions.py /app/desktop/
 COPY scripts/station_recovery/__init__.py scripts/station_recovery/storage.py scripts/station_recovery/accounts.py /app/desktop/station_recovery/
 COPY --from=frontend /build/dist /app/frontend/

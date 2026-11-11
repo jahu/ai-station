@@ -1974,3 +1974,10 @@ one schema correction and an absolute deadline; its structured output grants
 no execution, URL, package or filesystem authority. Sources are verified before
 inference, publication stays serialized with Stop, and prior versions survive
 failed or canceled planning. See [material boundaries](studio-materials.md).
+
+Typed material export rechecks the immutable storyboard and all source hashes,
+requires actual video for planned video shots and exact complete PCM audio
+coverage, and validates the native provenance report before publication. A
+changed source cannot silently replace a frozen binding. Recovery retains RAM
+when native ownership/cleanup cannot be confirmed and fences missing dispatches
+before release. A lost launch reply is never permission to launch again.
