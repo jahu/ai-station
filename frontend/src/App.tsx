@@ -61,6 +61,7 @@ import type { OperatorStatus } from "./pages/OperatorLogin";
 import { useAccount } from "./account-context";
 import { clearPrivateBrowserState } from "./lib/account-storage";
 import StationVersion from "./components/StationVersion";
+import { Studio, StudioProject } from "./pages/Studio";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -73,6 +74,7 @@ const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
     label: "CREATE",
     items: [
+      ["/studio", "Studio", Sparkles],
       ["/images", "Images", Image],
       ["/video", "Video", Film],
       ["/audio", "Audio", AudioLines],
@@ -374,6 +376,9 @@ export default function App() {
             <Route path="/" element={<Chat assistant />} />
             <Route path="/home" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
+            <Route path="/studio" element={<Studio />} />
+            <Route path="/studio/new" element={<StudioProject create />} />
+            <Route path="/studio/:id" element={<StudioProject />} />
             <Route
               path="/preview/:sourceRunId/:artifactId"
               element={<SitePreview />}

@@ -557,6 +557,15 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Creative Studio development follows [the creative production contract](plans/creative-studio.md).
+CreativeProject is an account-owned brand/editorial identity, separate from the
+Git Project registry. Existing CreativeSessions may belong to it; historical
+generation Tasks/Runs retain the exact project version as immutable context.
+Saving identity or membership grants no execution, network or filesystem tools.
+The initial registry does not itself render reels or apply editorial text to
+legacy image/video prompts. Structured material planning and the qualified
+Hyperframes executor are the subsequent delivery gates.
+
 Entry-point revision (2026-10-25): one assistant conversation replaces
 the user-facing Chat/Work switch. The orchestrator selects direct response or
 existing capabilities while scoped permissions and approvals remain explicit.

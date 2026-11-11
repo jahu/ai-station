@@ -35,6 +35,7 @@ def bounded(value):
 class Create(Fields):
     capability: Capability
     title: str = Field(default="New creation", min_length=1, max_length=160)
+    creative_project_id: UUID | None = None
 
 
 class Update(Fields):
@@ -69,6 +70,7 @@ def session_dict(row):
             "id",
             "capability",
             "title",
+            "creative_project_id",
             "draft",
             "version",
             "created_at",
@@ -91,7 +93,15 @@ def get_session(session, identity, *, lock=False):
 
 @router.post("", status_code=201)
 def create(body: Create, session: DB):
-    row = CreativeSession(capability=body.capability, title=body.title)
+    if body.creative_project_id:
+        from app.creative_projects import get_project
+
+        get_project(session, body.creative_project_id, active=True)
+    row = CreativeSession(
+        capability=body.capability,
+        title=body.title,
+        creative_project_id=str(body.creative_project_id) if body.creative_project_id else None,
+    )
     session.add(row)
     session.commit()
     return session_dict(row)
@@ -101,6 +111,7 @@ def create(body: Create, session: DB):
 def list_sessions(
     session: DB,
     capability: Capability | None = None,
+    creative_project_id: UUID | None = None,
     archived: bool = False,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -110,6 +121,11 @@ def list_sessions(
     )
     if capability:
         query = query.where(CreativeSession.capability == capability)
+    if creative_project_id:
+        from app.creative_projects import get_project
+
+        get_project(session, creative_project_id)
+        query = query.where(CreativeSession.creative_project_id == str(creative_project_id))
     return [
         session_dict(row)
         for row in session.scalars(
@@ -319,6 +335,11 @@ def generate(session_id: UUID, body: Generate, session: DB):
         if not capabilities()["available"]:
             raise HTTPException(409, "Local video needs setup before queuing an animated result")
     try:
+        context = None
+        if row.creative_project_id:
+            from app.creative_projects import snapshot
+
+            context = snapshot(session, row.creative_project_id)
         run = create_run(session, request)
     except IntegrityError as exc:
         session.rollback()
@@ -345,6 +366,16 @@ def generate(session_id: UUID, body: Generate, session: DB):
     session.flush()
     from app.events import append_event
 
+    if context is not None:
+        task = session.get(Task, run.task_id)
+        task.metadata_json = {**task.metadata_json, "creative_project": context}
+        run.metadata_json = {**run.metadata_json, "creative_project": context}
+        append_event(
+            session,
+            run.id,
+            "creative.project.bound",
+            {"creative_project_id": context["id"], "version": context["version"]},
+        )
     append_event(
         session,
         run.id,

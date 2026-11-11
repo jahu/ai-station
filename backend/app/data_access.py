@@ -53,6 +53,7 @@ ROOTS = (
     m.Connector,
     m.ChatProvider,
     m.CreativeSession,
+    m.CreativeProject,
 )
 SHARED = (m.ModelFile, m.ModelDefinition, m.Runtime, m.RuntimeInstance, m.TelemetrySample)
 ADMIN = (m.Setting, m.StationNode, m.WorkerRow)
@@ -92,6 +93,8 @@ PARENTS = {
     m.EmailDelivery: (("run_id", m.Run), ("connector_id", m.Connector)),
 }
 REFERENCES = {
+    m.CreativeProject: (("logo_artifact_id", m.Artifact),),
+    m.CreativeSession: (("creative_project_id", m.CreativeProject),),
     m.TimelineRevision: (("parent_revision_id", m.TimelineRevision),),
     m.Task: (("project_id", m.Project), ("conversation_id", m.Conversation), ("agent_id", m.Agent)),
     m.Run: (

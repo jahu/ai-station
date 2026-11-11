@@ -101,6 +101,13 @@ Release 0.5 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
 [0.5.0 release notes and qualification status](docs/releases/0.5.0.md).
 
+**In development: Creative Studio.** Organize reels, presentations and films by
+brand, course or series, with a shared visual identity and editorial brief.
+The first increment adds private projects, editable identities and grouping of
+existing creative workspaces. Hyperframes production, audio orchestration and
+automatic project selection are still being implemented; this is not a feature
+of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
+
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the
 new release and choose **Update and restart**. AI Station downloads and verifies
