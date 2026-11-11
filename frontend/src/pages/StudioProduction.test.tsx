@@ -21,9 +21,11 @@ function setup({
   available = true,
   disabled = false,
   loseAck = false,
+  checking = false,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   let lost = false;
+  let checks = 0;
   const row = {
     root_run: {
       id: "production-one",
@@ -64,7 +66,17 @@ function setup({
         ];
         return json(row.root_run);
       }
-      return json(path.endsWith("/productions") ? history : { available });
+      if (path.endsWith("/productions")) return json(history);
+      checks += 1;
+      return json({
+        available: checking ? checks > 1 : available,
+        readiness:
+          checking && checks === 1
+            ? "checking"
+            : available
+              ? "ready"
+              : "unavailable",
+      });
     }),
   );
   const cache = new QueryClient({
@@ -135,4 +147,15 @@ it("blocks expensive production when export is unavailable or edits are unsaved"
       .disabled,
   ).toBe(true);
   expect(requests).toHaveLength(0);
+});
+
+it("automatically enables production when initial native verification completes", async () => {
+  setup({ checking: true });
+  await screen.findByText("Checking local film export…");
+  const button = screen.getByRole("button", {
+    name: "Produce film",
+  }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  await waitFor(() => expect(button.disabled).toBe(false), { timeout: 3000 });
+  expect(screen.queryByText("Checking local film export…")).toBeNull();
 });
