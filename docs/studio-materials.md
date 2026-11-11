@@ -131,7 +131,24 @@ apply measured timing while retaining both existing approved visual fixtures, an
 inspect desktop/mobile settings with no overflow. These checks performed no new
 speech/music inference and do not qualify subjective audio quality.
 
-Full-material automation, export UI and Chat project inference remain in
-development. Final publication-quality acceptance requires a complete newly
+The export workspace shares selected takes with shot previews and freezes those
+exact choices in the existing typed render request. Missing footage, short known
+clips, missing measured audio, unsaved edits, active generation and unavailable
+renderer readiness gate submission. It never silently replaces a selected deleted
+take or substitutes an image for video. An advanced option accepts an owned final
+WAV; the server still enforces exact complete 48-kHz stereo coverage. The private
+export history exposes only live complete MP4s from successful render Runs.
+Earlier versions, playback, authenticated downloads and Run inspection remain
+available even when a new export cannot run. Stop uses existing owned Run
+cancellation. No new executor or native privilege is added by this UI.
+
+Private actual browser qualification plays the previously qualified six-second
+1080×1920 composition with calibration audio, tests authenticated range/download
+and inspects desktop/mobile layout and expanded options. Its real unavailable
+renderer remains unavailable. This is UI/fixture evidence, not new model
+inference, a fresh render, or professional-film acceptance.
+
+Full-material automation, guided renderer preparation and Chat project inference
+remain in development. Final publication-quality acceptance requires a complete newly
 generated voiced/scored reel and educational film with full playback/visual
 review, not just a valid storyboard or fixture export.

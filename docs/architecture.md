@@ -1770,3 +1770,12 @@ later speech. An expired SQL-only queue-publisher lease can be requeued only
 without dispatch/PID evidence and under the same owner/Task Stop fence. This does
 not replay media generation. Saved and measured versions, actual takes and
 playable soundtrack results remain inspectable through the ordinary API/Library.
+
+
+The Studio export workspace shares the chosen image/video takes with its shot
+previews and uses the existing immutable render request. A private, bounded
+material/revision history returns only complete live MP4s from successful render
+Runs; generic owned Run cancellation supplies Stop. Playback/download needs no
+running inference/renderer, while new exports require actual native readiness and
+complete saved inputs. This adds presentation and metadata inspection, not an
+execution adapter or additional host authority.

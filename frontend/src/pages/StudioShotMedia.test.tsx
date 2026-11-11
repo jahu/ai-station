@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -121,6 +122,19 @@ function setup({
       return json({});
     }),
   );
+  function ControlledShot() {
+    const [picked, setPicked] = useState("");
+    return (
+      <StudioShotMedia
+        materialId="material-one"
+        revision={board}
+        scene={0}
+        disabled={disabled}
+        selectedArtifactId={picked}
+        onSelect={setPicked}
+      />
+    );
+  }
   render(
     <QueryClientProvider
       client={
@@ -133,12 +147,7 @@ function setup({
       }
     >
       <MemoryRouter>
-        <StudioShotMedia
-          materialId="material-one"
-          revision={board}
-          scene={0}
-          disabled={disabled}
-        />
+        <ControlledShot />
       </MemoryRouter>
     </QueryClientProvider>,
   );
