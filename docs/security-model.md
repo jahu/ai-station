@@ -2000,3 +2000,12 @@ verification before publication. Internal short voice references never replace
 complete narration. Recovery's SQL-only publication exemption requires its fixed
 executor/marker, matching owner/Task root, absent process/dispatch evidence and an
 expired unchanged claim; it grants no replay authority to actual generators.
+
+Existing Studio renderer activation exposes no caller-selected Docker command,
+image name, URL or path. Its fixed native profile inspects only compatible local
+images and atomically selects a verified image under application-owned storage.
+Setup identity, administrator authority, account-private history and receipts,
+revocation, Stop and stale-worker recovery follow the existing runtime preparation
+contract. Missing images remain unavailable; activation does not pull/build images,
+load a model, signal a container or remove shared preparation. Native inspection
+rejects changed daemon/image/recipe coordinates and symlink selection parents.

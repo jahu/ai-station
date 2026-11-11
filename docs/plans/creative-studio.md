@@ -174,7 +174,10 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
   complete measured audio and shows actual MP4s, earlier versions, download,
   progress and Stop. Private source/type/ownership tests and fixture playback
   qualify the UI; missing native readiness is displayed as unavailable.
-- Remaining: guided renderer preparation, full-material automation with reuse,
+- Existing local renderer activation is exposed in the export workspace through
+  private queued setup Runs, with actual Unix-socket/worker activation verified.
+  This does not install a missing renderer or qualify new generated films.
+- Remaining: fresh renderer installation, full-material automation with reuse,
   actual native portrait-footage qualification,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.

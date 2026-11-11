@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import StudioRendererSetup from "./StudioRendererSetup";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clapperboard, Download, Film, Square } from "lucide-react";
@@ -34,6 +35,7 @@ export default function StudioExport({
   readOnly: boolean;
 }) {
   const { user } = useAccount();
+  const [setupOpen, setSetupOpen] = useState(false);
   const cache = useQueryClient();
   const shots = useShotProduction(materialId, revision.id);
   const [selected, setSelected] = useState("");
@@ -291,18 +293,21 @@ export default function StudioExport({
         </p>
       )}
       {!renderer.data?.available && !renderer.isPending && (
-        <p className="studio-direction-note">
-          {renderer.data?.reason ||
-            "The isolated Studio renderer needs preparation."}{" "}
+        <div>
+          <p className="studio-direction-note">
+            {renderer.data?.reason ||
+              "Prepare local film export to finish this story."}
+          </p>
           <Button
             type="button"
-            variant="ghost"
-            disabled={renderer.isFetching}
-            onClick={() => void renderer.refetch()}
+            variant="secondary"
+            aria-expanded={setupOpen}
+            onClick={() => setSetupOpen((open) => !open)}
           >
-            Check renderer
+            {setupOpen ? "Hide export setup" : "Set up film export"}
           </Button>
-        </p>
+          {setupOpen && <StudioRendererSetup />}
+        </div>
       )}
       {readOnly && (
         <p className="studio-direction-note">
