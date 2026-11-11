@@ -297,3 +297,23 @@ validation, managed and configured profiles, continuation/Stop/recovery checks,
 format UI and a real owned portrait generation with complete decoding and visual
 review. Equal pixel count is a budget bound, not proof of actual quality or GPU
 inference success. No model downloads or changes to external runtimes are needed.
+
+
+### Actual portrait qualification — 2026-11-12
+
+The ordinary owned media queue generated a four-second 704×1280 lighthouse film
+through two native Wan windows (81 and 17 frames), twenty sampling steps each,
+and the existing single-frame APG continuation. The final file contains exactly
+96 frames at 24 fps. Both raw windows and the composed MP4 passed complete
+decoding, canonical ownership/content checks and native process completion.
+Actual systemd scopes for both windows confirmed 11 GiB RAM and zero swap.
+Sampled frames before and after the join retained the full vertical composition
+and coherent lighthouse geometry. Media and inspection records remain private.
+This qualification covers the short two-window flow; long-film quality, fresh
+engine installation and avatar postproduction remain delivery requirements.
+
+The actual conversation checks also now pass for two different project styles:
+an eight-second widescreen silent presentation and an eight-second portrait
+music reel. Each uses one real generated image shared across multiple scenes;
+both full files decoded and retained the selected brand, aspect and audio policy.
+The earlier interrupted planning and timing/source failures remain recorded.
