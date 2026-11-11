@@ -1796,3 +1796,14 @@ only those links. Narration produces measured timing before footage publication.
 Continuation freezes the same editorial/model request and rechecks reusable
 completed sound/visual sources; it does not replay successful inference merely
 because a later export failed. No new execution service or schema is introduced.
+
+
+The conversation Studio bridge uses the existing LlamaIndex ReAct interpretation
+and dispatch, with a frozen `studio_material` outcome. A local owner-scoped brand
+catalog supplies aliases and immutable identity/default snapshots; it is not
+sent to external providers. The composed `assistant_studio` tool queues the same
+local director and whole-film services. It releases its worker while waiting,
+uses a closed owned child-Task registry for Stop, and projects only the complete
+rendered MP4 into the conversation. SQL-only publication may recover without
+replaying inference. Individual raw clips and storyboards do not fulfill the
+material outcome; original outcome indices separate multiple brand requests.

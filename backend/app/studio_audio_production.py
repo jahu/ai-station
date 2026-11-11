@@ -476,7 +476,16 @@ def recover_enqueue_step(session, run):
         "studio_audio_step": "studio_audio_root_id",
         "studio_production_step": "studio_production_root_id",
     }.get(run.executor_type)
-    root = session.get(Run, run.parameters.get(key, "")) if key else None
+    if run.executor_type == "assistant_studio":
+        from app.assistant_controller import verify_wrapper
+
+        try:
+            verify_wrapper(session, run)
+        except ValueError:
+            return False
+        root = run
+    else:
+        root = session.get(Run, run.parameters.get(key, "")) if key else None
     if (
         root is None
         or root.executor_type != run.executor_type

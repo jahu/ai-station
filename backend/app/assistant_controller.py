@@ -34,6 +34,7 @@ MAX_STEPS = 16
 
 def missing_outcomes(observations, outcomes):
     counts = {}
+    studio_counts = {}
     media = {
         "image.generate": "image",
         "image.edit": "image",
@@ -49,6 +50,10 @@ def missing_outcomes(observations, outcomes):
         if item.get("status") != "succeeded":
             continue
         name = item["tool"]
+        if name == "studio.produce" and "video" in item.get("produced_types", []):
+            index = item.get("studio_outcome_index")
+            if isinstance(index, int) and not isinstance(index, bool):
+                studio_counts[index] = studio_counts.get(index, 0) + 1
         kind = media.get(name)
         types = item.get("produced_types", [])
         if kind and ("video" if kind == "avatar" else kind) in types:
@@ -77,7 +82,12 @@ def missing_outcomes(observations, outcomes):
     counts["avatar"] = reserved
     counts["video"] = counts.get("video", 0) + avatars - reserved
     pending = []
-    for item in outcomes:
+    for index, item in enumerate(outcomes):
+        if item["kind"] == "studio_material":
+            completed = min(item["count"], studio_counts.get(index, 0))
+            if completed < item["count"]:
+                pending.append({**item, "remaining": item["count"] - completed, "outcome_index": index})
+            continue
         completed = min(item["count"], counts.get(item["kind"], 0))
         counts[item["kind"]] = counts.get(item["kind"], 0) - completed
         if completed < item["count"]:
@@ -269,6 +279,9 @@ def enqueue(session, conversation, body, *, commit=True):
             for aid in body.image_artifact_ids
         ],
     }
+    from app.studio_assistant_contract import project_catalog
+
+    creative_catalog = project_catalog(session, owner_id=conversation.owner_id, location=snapshot["location"])
     task = create_task(
         session,
         title=body.content[:80],
@@ -290,6 +303,8 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
             "controller_image_policy": "configured-default-v2",
+            "controller_studio_policy": "studio-v1",
+            "controller_creative_projects": creative_catalog,
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},
             "controller_provider": snapshot,
@@ -428,6 +443,11 @@ def decision_context(session, root):
                     "errors": observed["errors"],
                     "agent_ids": observed["agent_ids"],
                     "produced_types": observed["produced_types"],
+                    **(
+                        {"studio_outcome_index": observed["studio_outcome_index"]}
+                        if "studio_outcome_index" in observed
+                        else {}
+                    ),
                     "tool_data_excerpt": json.dumps(observed["tool_data"], ensure_ascii=False)[:6000],
                 }
             )
@@ -436,7 +456,10 @@ def decision_context(session, root):
         TOOLS[name].arguments.__name__: TOOLS[name].arguments.model_json_schema() for name in available
     }
     entries = public_catalog(catalog(session, root))
+    from app.studio_assistant_contract import public_projects
+
     return {
+        "creative_projects": public_projects(root.parameters.get("controller_creative_projects", {})),
         "instruction": root.parameters["content"],
         "current_time": utcnow().isoformat(),
         "recent_context": root.parameters.get("planner_context", []),
@@ -510,7 +533,12 @@ def dispatch(session, root, decision):
                 "Use the selected public search query exactly; do not send private instructions instead"
             )
     snapshot = root.parameters["controller_provider"]
-    if name in {"web.search", "web.read", "artifact.read"}:
+    if name == "studio.produce":
+        from app.studio_assistant import request_parameters
+
+        params = request_parameters(session, root, decision.arguments)
+        executor, permissions = "assistant_studio", list(TOOLS[name].permissions)
+    elif name in {"web.search", "web.read", "artifact.read"}:
         params = {
             "tool": name,
             "arguments": args.model_dump(),
@@ -547,6 +575,7 @@ def dispatch(session, root, decision):
         permissions=permissions,
         retry_class="inspect",
         parent_run_id=root.id,
+        metadata={"studio_enqueue_only": True} if name == "studio.produce" else None,
     )
     fingerprint = hashlib.sha256(json.dumps(params, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     step = {
@@ -668,6 +697,16 @@ def controller_results(session, root):
             else None
         )
         result = task_results(session, source, wrapper) if source else {}
+        if step["tool"] == "studio.produce":
+            from app.serialize import artifact_dict
+            from app.studio_assistant import final_output
+
+            output = final_output(session, anchor) if anchor.status == "succeeded" else None
+            result = {
+                "steps": [],
+                "artifacts": [artifact_dict(output)] if output is not None else [],
+                "studio_material_id": anchor.metadata_json.get("studio_material_id"),
+            }
         for artifact in result.get("artifacts", []):
             if artifact["id"] not in seen:
                 artifacts.append(artifact)

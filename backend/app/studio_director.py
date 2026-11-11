@@ -46,8 +46,7 @@ Respect options.format, options.aspect and options.audio. Target total duration_
 Each scene needs a narrative purpose, an actual shot brief or Library source, and purposeful image motion when useful. Use full_bleed/split for visual scenes and editorial layouts for intentional graphics. An existing reference preserves its appropriate invariants without freezing every pose, view or composition. Changes in a follow-up must implement the feedback while retaining the desired brand/story continuity. Do not claim any generation/render/publishing or source inspection has happened. This is an editable storyboard only."""
 
 
-@router.post("/{material_id}/plan", status_code=202)
-def plan(material_id: UUID, body: PlanRequest, session: DB):
+def create_plan(session, material_id, body: PlanRequest, *, frozen=None, provider_snapshot=None):
     row = get_material(session, material_id, lock=True, active=True)
     fingerprint = digest(body.model_dump(mode="json", exclude={"client_request_id", "expected_version"}))
     key = "studio-plan:" + str(body.client_request_id)
@@ -59,7 +58,7 @@ def plan(material_id: UUID, body: PlanRequest, session: DB):
     if prior:
         if prior.parameters.get("request_sha256") != fingerprint:
             raise HTTPException(409, "This planning receipt belongs to another request")
-        return run_dict(prior)
+        return prior
     if row.version != body.expected_version:
         raise HTTPException(409, "This material changed. Reload before planning.")
     parent = get_revision(session, row, body.parent_revision_id)
@@ -72,7 +71,11 @@ def plan(material_id: UUID, body: PlanRequest, session: DB):
             sources[identity] = source_snapshot(session, identity)
     if len(sources) > 12 or sum(s["size_bytes"] for s in sources.values()) > 2 * 1024**3:
         raise HTTPException(422, "Choose at most twelve references within two GiB")
-    provider = snapshot_provider(session, Conversation(provider=BUILTIN_KEY, model=body.model))
+    provider = (
+        provider_snapshot
+        if provider_snapshot is not None
+        else snapshot_provider(session, Conversation(provider=BUILTIN_KEY, model=body.model))
+    )
     if provider.get("location") != "local":
         raise HTTPException(409, "Choose a local model for Studio direction")
     from app.runs import create_task
@@ -96,7 +99,7 @@ def plan(material_id: UUID, body: PlanRequest, session: DB):
             "studio_material_id": row.id,
             "client_request_id": str(body.client_request_id),
             "request_sha256": fingerprint,
-            "frozen": context(session, row),
+            "frozen": frozen if frozen is not None else context(session, row),
             "parent_revision_id": parent.id if parent else None,
             "prior_storyboard": parent.storyboard if parent else None,
             "feedback": body.feedback,
@@ -104,6 +107,12 @@ def plan(material_id: UUID, body: PlanRequest, session: DB):
         },
     )
     prepare_consumer(session, run)
+    return run
+
+
+@router.post("/{material_id}/plan", status_code=202)
+def plan(material_id: UUID, body: PlanRequest, session: DB):
+    run = create_plan(session, material_id, body)
     session.commit()
     return run_dict(run)
 
@@ -126,7 +135,7 @@ class StudioDirector:
         try:
             require(run.effective_permissions, "filesystem_read")
             require(run.effective_permissions, "workspace_write")
-            if run.parameters.get("location") != "local" or run.parameters.get("provider") != BUILTIN_KEY:
+            if run.parameters.get("location") != "local":
                 raise ValueError("Studio direction uses the selected local provider")
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             sources = run.parameters["sources"]
