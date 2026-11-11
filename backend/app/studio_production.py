@@ -21,6 +21,7 @@ from app.studio_render import Binding, RenderRequest, create_render
 from app.studio_schema import Fields, Storyboard
 from app.studio_shots import ShotRequest, enqueue_shot, production
 from app.studio_soundtrack import audio_source, router
+from app.studio_storyboard import source_end_seconds
 from app.task_control import cancel_task, lock_task
 
 NAME = "studio_production_step"
@@ -484,13 +485,10 @@ class StudioProductionExecutor:
             seconds = metadata.get("duration_seconds")
             if seconds is None and metadata.get("frames") and metadata.get("fps"):
                 seconds = metadata["frames"] / metadata["fps"]
-            if (
-                isinstance(seconds, (int, float))
-                and seconds + 1 / 120 < shot.duration_frames / 30 + shot.media_start_seconds
-            ):
+            if isinstance(seconds, (int, float)) and seconds + 1 / 120 < source_end_seconds(plan, int(scene)):
                 if any(b.scene == int(scene) for b in body.bindings):
                     raise ValueError(
-                        f"The selected take for shot {int(scene) + 1} is too short for the measured speech; choose a longer take or clear that selection"
+                        f"The selected take for shot {int(scene) + 1} is too short for its scene windows; choose a longer take or clear that selection"
                     )
                 del state["bindings"][scene]
         root.metadata_json = {**root.metadata_json, "production_state": state}
@@ -638,6 +636,20 @@ def history(material_id: UUID, session: DB):
                 "status": status,
                 "runs": [run_dict(r) for r in runs],
                 "output": artifact_dict(output) if output else None,
+                "requested_duration_seconds": get_revision(
+                    session, row, root.parameters["studio_revision_id"]
+                ).options["duration_seconds"],
+                "planned_duration_seconds": Storyboard.model_validate(
+                    get_revision(
+                        session, row, root.metadata_json["production_state"]["revision_id"]
+                    ).storyboard
+                ).frames
+                / 30,
+                "actual_duration_seconds": output.metadata_json["frames"] / 30
+                if output
+                and isinstance(output.metadata_json.get("frames"), int)
+                and output.metadata_json.get("fps") == 30
+                else None,
                 "measured_revision_id": root.metadata_json["production_state"]["revision_id"],
                 "failed_run": run_dict(failed) if failed else None,
             }

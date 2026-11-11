@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   Square,
 } from "lucide-react";
-import { api, type Run } from "../api";
+import { api, type Run, type Artifact } from "../api";
 import { useAccount } from "../account-context";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -16,7 +16,12 @@ import { creativeJson } from "../components/creative/creative-project";
 import VideoModelChoice from "../components/media/VideoModelChoice";
 import { randomId } from "../lib/random-id";
 import type { ImageModelCatalog } from "./image-models";
-import { materialBase, type StudioRevision } from "./studio-material";
+import {
+  materialBase,
+  visualOrigin,
+  sourceEndSeconds,
+  type StudioRevision,
+} from "./studio-material";
 
 import {
   useShotProduction,
@@ -48,14 +53,17 @@ export default function StudioShotMedia({
   const [videoModel, setVideoModel] = useState("");
   const receipt = useRef<{ key: string; id: string } | null>(null);
   const shot = revision.storyboard.scenes[scene];
-  const video = shot.visual_kind === "video";
+  const origin = visualOrigin(revision.storyboard.scenes, scene);
+  const original = revision.storyboard.scenes[origin];
+  const shared = shot.visual_kind === "reuse";
+  const video = original.visual_kind === "video";
   const models = useQuery({
     queryKey: ["image-models"],
-    enabled: settings && !video,
+    enabled: settings && !video && !shared,
     queryFn: () => api<ImageModelCatalog>("/images/models"),
   });
   const runs = (production.data?.runs ?? []).filter(
-    (r) => r.parameters.studio_scene === scene,
+    (r) => r.parameters.studio_scene === origin,
   );
   const active =
     runs.find((r) =>
@@ -64,16 +72,24 @@ export default function StudioShotMedia({
       ),
     ) ?? runs.find((r) => !terminal.has(r.status));
   const takes = (production.data?.artifacts ?? []).filter(
-    (a) => a.type === shot.visual_kind && runs.some((r) => r.id === a.run_id),
+    (a) =>
+      a.type === original.visual_kind && runs.some((r) => r.id === a.run_id),
   );
-  const source = selectedArtifactId
-    ? takes.find((a) => a.id === selectedArtifactId)
-    : takes[0];
+  const source: Pick<Artifact, "id" | "type" | "metadata"> | undefined =
+    original.visual_kind === "library" && original.source_artifact_id
+      ? {
+          id: original.source_artifact_id,
+          type: revision.sources[original.source_artifact_id]?.kind ?? "image",
+          metadata: {},
+        }
+      : selectedArtifactId
+        ? takes.find((a) => a.id === selectedArtifactId)
+        : takes[0];
   const sourceDuration = Number(
     source?.metadata?.duration_seconds ??
       Number(source?.metadata?.frames) / Number(source?.metadata?.fps),
   );
-  const requiredDuration = shot.duration_frames / 30 + shot.media_start_seconds;
+  const requiredDuration = sourceEndSeconds(revision.storyboard.scenes, origin);
   const needsLonger =
     video &&
     source &&
@@ -138,6 +154,42 @@ export default function StudioShotMedia({
       ),
     onSuccess: refresh,
   });
+  if (shared)
+    return (
+      <section
+        className="studio-shot-production"
+        aria-label={`Shot ${scene + 1} shared media`}
+      >
+        <p className="studio-direction-note">
+          Uses the exact visual from shot {origin + 1}. Choose or generate its
+          take there; this scene keeps its own text, timing and movement.
+        </p>
+        {active && <Badge status={active.status} />}
+        <ErrorNotice error={production.error} />
+        {source && (
+          <div className="studio-generated-preview">
+            {source.type === "video" ? (
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                src={`/api/artifacts/${source.id}/file`}
+                aria-label={`Shot ${scene + 1} shared footage`}
+              />
+            ) : (
+              <img
+                src={`/api/artifacts/${source.id}/file`}
+                loading="lazy"
+                alt={`Shared visual for shot ${scene + 1}`}
+              />
+            )}
+            <Link to={`/library/${source.id}`}>
+              Open shared source in Library ↗
+            </Link>
+          </div>
+        )}
+      </section>
+    );
   if (!video && shot.visual_kind !== "image") return null;
   return (
     <section

@@ -18,6 +18,8 @@ type Production = {
   output: Artifact | null;
   failed_run: Run | null;
   measured_revision_id: string;
+  requested_duration_seconds?: number;
+  actual_duration_seconds?: number | null;
 };
 export default function StudioProduction({
   materialId,
@@ -174,6 +176,18 @@ export default function StudioProduction({
       )}
       {current?.output && (
         <div className="studio-export-result">
+          {current.actual_duration_seconds != null && (
+            <p className="studio-direction-note">
+              {current.actual_duration_seconds.toFixed(1)}s finished
+              {current.requested_duration_seconds != null &&
+              Math.abs(
+                current.actual_duration_seconds -
+                  current.requested_duration_seconds,
+              ) > 0.1
+                ? ` · ${current.requested_duration_seconds}s requested. Saved scene and complete speech timing is preserved.`
+                : ""}
+            </p>
+          )}
           <video
             controls
             playsInline

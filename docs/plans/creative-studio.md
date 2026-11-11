@@ -235,3 +235,26 @@ Qualification requires real ReAct/worker fake-media tests for privacy, frozen
 identity, all four audio policies, final-output barriers, Stop and stale-lease
 recovery; then actual local-model direction and complete-film visual/audio QA.
 A passing synthetic film does not prove generated quality or complete this goal.
+
+
+## Shared planned visuals and requested timing (2026-11-11)
+
+Real assistant qualification selected correct brands/aspects/audio and delivered
+MP4s, but a request for one source image across an eight-second material produced
+multiple independent images and twelve/sixteen-second films. These are failed
+prompt constraints despite successful Runs. Add an explicit typed earlier-scene
+visual reference: later beats share the selected/generated source while retaining
+their own framing, text, narration, motion and video trim. The reference must
+resolve backward to real image/video/Library media, never graphics, future IDs,
+paths or model-generated artifact identities. Unique source shots alone generate
+takes; render bindings resolve the same frozen artifact for all uses. Video
+coverage includes every use. Editing/moving scenes must retain reference identity
+or reject the operation before it can silently select another source.
+
+Fit newly directed timing to the requested total frame budget deterministically,
+using scene timing as relative beat weights and preserving the one-second minimum
+and ninety-second per-scene bound. Insufficient time requires a corrected plan,
+not dropping beats. Manually saved timings stay explicit. Measured narration may
+extend the edit later without cutting words; show requested and actual durations.
+A model's prose describing "the same picture" is not source reuse, and arithmetic
+mistakes must not change the user's selected output length.

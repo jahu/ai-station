@@ -348,3 +348,47 @@ def test_coordinator_cannot_be_cloned_into_another_task(movie):
                 StudioProductionExecutor().execute(db, orphan)
             assert children(db, root) == []
             db.rollback()
+
+
+def test_shared_visual_production_generates_one_source_for_three_distinct_beats(movie):
+    from app.models import Artifact
+    from test_studio_storyboard import shared, visual
+
+    with TestClient(app) as api:
+        row, revision = draft(api)
+        board = {
+            **revision["storyboard"],
+            "scenes": [
+                visual(80),
+                shared(0, 80, title="A closer view", media_motion="push_in"),
+                shared(1, 80, title="Another idea", media_motion="pan_right"),
+            ],
+        }
+        saved = api.post(
+            f"/api/studio/materials/{row['id']}/revisions",
+            json={
+                "client_request_id": str(uuid4()),
+                "expected_version": 2,
+                "parent_revision_id": revision["id"],
+                "storyboard": board,
+            },
+        )
+        assert saved.status_code == 201, saved.text
+        requested = produce(api, row, saved.json())
+        assert requested.status_code == 202, requested.text
+        advance(movie)
+        result = details(api, row)
+        assert result["status"] == "succeeded", result
+        assert result["planned_duration_seconds"] == 8
+        assert result["requested_duration_seconds"] == saved.json()["options"]["duration_seconds"]
+        with session_factory()() as db:
+            generated = list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
+            assert len(generated) == 1
+            source = db.scalar(select(Artifact).where(Artifact.run_id == generated[0].id))
+            rendered = db.scalar(select(Run).where(Run.executor_type == "motion_render"))
+            composition = rendered.parameters["composition"]
+            assert [s["media"] for s in composition["scenes"]] == [source.id] * 3
+            assert sum(s["duration_frames"] for s in composition["scenes"]) == 240
+            assert composition["scenes"][1]["title"] == "A closer view"
+            assert composition["scenes"][2]["media_motion"] == "pan_right"
+            assert len(rendered.parameters["sources"]) == 1
