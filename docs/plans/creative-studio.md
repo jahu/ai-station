@@ -258,3 +258,23 @@ not dropping beats. Manually saved timings stay explicit. Measured narration may
 extend the edit later without cutting words; show requested and actual durations.
 A model's prose describing "the same picture" is not source reuse, and arithmetic
 mistakes must not change the user's selected output length.
+
+## Director contention repair (2026-11-11)
+
+A real Studio assistant qualification interrupted its director with “Lease
+expired and the owned process is not running”. The worker remained alive and
+logged SQLite contention. A short database error escaped the director, abandoned
+its in-memory inference and ended the heartbeat; later recovery correctly found
+no native process for this container-side planner and interrupted the stale Run.
+Extending leases or replaying whole media generation would hide the failure.
+
+Reuse the controller's tested claim-fenced database retry primitive as a shared
+Run helper. The director retries only database phases: initialization, provider
+binding before network I/O, stream cancellation polls, audit writes and final
+revision publication. Keep the same in-flight stream and parsed storyboard;
+never repeat inference or generated media on a database retry. Capture original
+claim/deadline once, recheck cancellation/ownership after every rollback, release
+transactions before awaiting the provider, and retain the ordinary heartbeat.
+Unknown database errors remain errors. Historical interrupted Runs stay unchanged.
+Regression checks cover transient SQLite codes, binding and publication without
+duplicate inference/revisions, and Stop or claim replacement during backoff.

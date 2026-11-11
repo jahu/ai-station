@@ -5,7 +5,8 @@ import json
 import tempfile
 from contextlib import suppress
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, timedelta
+from functools import partial
 from pathlib import Path
 from uuid import UUID
 
@@ -22,6 +23,7 @@ from app.llama import prepare_consumer
 from app.models import Conversation, Run, StudioRevision, Task
 from app.permissions import require
 from app.providers import ProviderError
+from app.run_transactions import RunStopped, database_step
 from app.runs import create_run, mark_failed, run_dict, transition
 from app.state import TERMINAL, RunStatus
 from app.studio_materials import (
@@ -130,10 +132,33 @@ class StudioDirector:
             session.commit()
         return run.status in TERMINAL
 
+    async def database(self, session, run, action, *, claim, deadline):
+        def checked():
+            if self.stopped(session, run):
+                raise RunStopped()
+            return action()
+
+        return await database_step(
+            session,
+            run,
+            claim,
+            deadline,
+            checked,
+        )
+
     def execute(self, session, run):
-        if self.stopped(session, run):
-            return "done"
-        try:
+        return asyncio.run(self.execute_async(session, run))
+
+    async def execute_async(self, session, run):
+        database = partial(
+            self.database,
+            session,
+            run,
+            claim=(run.worker_id, run.claimed_at),
+            deadline=datetime.fromisoformat(run.parameters["execution_deadline_at"]),
+        )
+
+        def initialize():
             require(run.effective_permissions, "filesystem_read")
             require(run.effective_permissions, "workspace_write")
             if run.parameters.get("location") != "local":
@@ -144,76 +169,83 @@ class StudioDirector:
                 if source_snapshot(session, identity, verify=True) != frozen_source:
                     raise ValueError("A selected reference changed before planning")
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
-            session.commit()
-            storyboard = asyncio.run(self.prepare(session, run))
-            if self.stopped(session, run):
-                return "done"
-            # Serialize publication with Task Stop and material edits. A newer
-            # plan never overwrites an older version; every result is appended.
-            from app.task_control import lock_task
 
-            lock_task(session, session.get(Task, run.task_id))
-            row = get_material(session, run.parameters["studio_material_id"], lock=True, active=True)
-            if self.stopped(session, run):
-                return "done"
-            saved = session.scalar(select(StudioRevision).where(StudioRevision.source_run_id == run.id))
-            if saved is None:
-                parent = get_revision(session, row, run.parameters["parent_revision_id"])
-                saved = publish_revision(
-                    session,
-                    row,
-                    storyboard,
-                    client_request_id=run.parameters["client_request_id"],
-                    request_sha256=run.parameters["request_sha256"],
-                    frozen=run.parameters["frozen"],
-                    parent=parent,
-                    source_run_id=run.id,
-                )
-                payload = {
-                    "revision_id": saved.id,
-                    "material_id": row.id,
-                    "storyboard": saved.storyboard,
-                    "project_snapshot": saved.project_snapshot,
-                    "options": saved.options,
-                    "brief": saved.brief,
-                }
-                with tempfile.NamedTemporaryFile(suffix=".json") as output:
-                    output.write(json.dumps(payload, ensure_ascii=False, indent=2).encode())
-                    output.flush()
-                    register_file(
+        try:
+            await database(initialize)
+            storyboard = await self.prepare(session, run, database)
+
+            def publish():
+                # Serialize publication with Task Stop and material edits. A newer
+                # plan never overwrites an older version; every result is appended.
+                from app.task_control import lock_task
+
+                lock_task(session, session.get(Task, run.task_id))
+                row = get_material(session, run.parameters["studio_material_id"], lock=True, active=True)
+                if self.stopped(session, run):
+                    return "done"
+                saved = session.scalar(select(StudioRevision).where(StudioRevision.source_run_id == run.id))
+                if saved is None:
+                    parent = get_revision(session, row, run.parameters["parent_revision_id"])
+                    saved = publish_revision(
                         session,
-                        source=Path(output.name),
-                        artifact_type="json",
-                        mime_type="application/json",
-                        original_filename="studio-storyboard.json",
-                        run_id=run.id,
-                        parent_artifact_ids=list(saved.sources),
-                        metadata={
-                            "studio_material_id": row.id,
-                            "studio_revision_id": saved.id,
-                            "source": "local_studio_director",
-                        },
+                        row,
+                        storyboard,
+                        client_request_id=run.parameters["client_request_id"],
+                        request_sha256=run.parameters["request_sha256"],
+                        frozen=run.parameters["frozen"],
+                        parent=parent,
+                        source_run_id=run.id,
                     )
-            run.metadata_json = {**run.metadata_json, "studio_revision_id": saved.id}
-            append_event(
-                session,
-                run.id,
-                "studio.storyboard.created",
-                {
-                    "material_id": row.id,
-                    "revision_id": saved.id,
-                    "scene_count": len(saved.storyboard["scenes"]),
-                },
-            )
-            transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
-            session.commit()
+                    payload = {
+                        "revision_id": saved.id,
+                        "material_id": row.id,
+                        "storyboard": saved.storyboard,
+                        "project_snapshot": saved.project_snapshot,
+                        "options": saved.options,
+                        "brief": saved.brief,
+                    }
+                    with tempfile.NamedTemporaryFile(suffix=".json") as output:
+                        output.write(json.dumps(payload, ensure_ascii=False, indent=2).encode())
+                        output.flush()
+                        register_file(
+                            session,
+                            source=Path(output.name),
+                            artifact_type="json",
+                            mime_type="application/json",
+                            original_filename="studio-storyboard.json",
+                            run_id=run.id,
+                            parent_artifact_ids=list(saved.sources),
+                            metadata={
+                                "studio_material_id": row.id,
+                                "studio_revision_id": saved.id,
+                                "source": "local_studio_director",
+                            },
+                        )
+                run.metadata_json = {**run.metadata_json, "studio_revision_id": saved.id}
+                append_event(
+                    session,
+                    run.id,
+                    "studio.storyboard.created",
+                    {
+                        "material_id": row.id,
+                        "revision_id": saved.id,
+                        "scene_count": len(saved.storyboard["scenes"]),
+                    },
+                )
+                transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+
+            await database(publish)
+        except RunStopped:
+            pass
         except (ValueError, OSError, ProviderError, HTTPException) as exc:
-            if not self.stopped(session, run):
-                mark_failed(session, run, "StudioPlanningFailed", str(exc)[:2000])
-                session.commit()
+            error = str(exc)[:2000]
+            try:
+                await database(lambda: mark_failed(session, run, "StudioPlanningFailed", error))
+            except RunStopped:
+                pass
         return "done"
 
-    async def prepare(self, session, run):
+    async def prepare(self, session, run, database):
         params = run.parameters
         messages = [
             {"role": "system", "content": INSTRUCTIONS},
@@ -234,11 +266,17 @@ class StudioDirector:
             },
         ]
         for attempt in range(2):
-            run.parameters = {**run.parameters, "messages": deepcopy(messages), "director_schema_version": 1}
-            session.commit()
-            text = await self.consume(session, run, messages)
-            if self.stopped(session, run):
-                return None
+
+            def record_messages():
+                run.parameters = {
+                    **run.parameters,
+                    "messages": deepcopy(messages),
+                    "director_schema_version": 1,
+                }
+
+            await database(record_messages)
+            text = await self.consume(session, run, messages, database)
+            await database(lambda: None)
             try:
                 storyboard = Storyboard.model_validate_json(text)
                 if storyboard.audio != params["frozen"]["options"]["audio"]:
@@ -253,16 +291,18 @@ class StudioDirector:
                         raise ValueError("Generated-shot references must be images")
                 fitted = fit_timing(storyboard, params["frozen"]["options"]["duration_seconds"])
                 if fitted.frames != storyboard.frames:
-                    append_event(
-                        session,
-                        run.id,
-                        "studio.storyboard.timing_fitted",
-                        {
-                            "planned_frames": storyboard.frames,
-                            "requested_frames": fitted.frames,
-                            "fps": 30,
-                            "preserved_scene_count": len(storyboard.scenes),
-                        },
+                    await database(
+                        lambda: append_event(
+                            session,
+                            run.id,
+                            "studio.storyboard.timing_fitted",
+                            {
+                                "planned_frames": storyboard.frames,
+                                "requested_frames": fitted.frames,
+                                "fps": 30,
+                                "preserved_scene_count": len(storyboard.scenes),
+                            },
+                        ),
                     )
                 return fitted
             except ValueError as exc:
@@ -270,8 +310,11 @@ class StudioDirector:
                     raise ValueError(
                         "The selected local model could not produce a valid storyboard; inspect the planning Run and revise the brief or model."
                     ) from exc
-                append_event(session, run.id, "studio.storyboard.correction_requested", {"attempt": 2})
-                session.commit()
+                await database(
+                    lambda: append_event(
+                        session, run.id, "studio.storyboard.correction_requested", {"attempt": 2}
+                    ),
+                )
                 messages += [
                     {"role": "assistant", "content": text[:48000]},
                     {
@@ -282,24 +325,24 @@ class StudioDirector:
                 ]
         raise ValueError("No storyboard was produced")
 
-    async def consume(self, session, run, messages):
-        stream = completion_stream(
-            session,
-            {
-                **run.parameters,
-                "messages": messages,
-                "temperature": 0.55,
-                "max_tokens": 8192,
-                "json_output": True,
-                "require_complete": True,
-            },
+    async def consume(self, session, run, messages, database):
+        stream = await database(
+            lambda: completion_stream(
+                session,
+                {
+                    **run.parameters,
+                    "messages": messages,
+                    "temperature": 0.55,
+                    "max_tokens": 8192,
+                    "json_output": True,
+                    "require_complete": True,
+                },
+            ),
         )
         pending, text = None, ""
         try:
             while True:
-                if self.stopped(session, run):
-                    return ""
-                session.commit()
+                await database(lambda: None)
                 if pending is None:
                     pending = asyncio.create_task(anext(stream))
                 ready, _ = await asyncio.wait([pending], timeout=0.25)
