@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from ai_station_runner.motion_assets import request_digest
 from ai_station_runner.motion_contract import MotionRequest
@@ -29,13 +29,21 @@ def directory(root, run_id):
 
 
 def save(path, value):
-    temporary = path.with_suffix(".tmp")
-    with temporary.open("w") as handle:
-        os.chmod(temporary, 0o600)
-        json.dump(value, handle)
-        handle.flush()
-        os.fsync(handle.fileno())
-    temporary.replace(path)
+    temporary = path.with_name(path.name + "." + uuid4().hex + ".tmp")
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            json.dump(value, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(path)
+        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def load(root, run_id):

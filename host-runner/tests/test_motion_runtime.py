@@ -336,3 +336,14 @@ def test_dead_process_cleanup_removes_only_its_staging_after_confirmation(tmp_pa
     with pytest.raises(ValueError, match="staging ownership"):
         owner.cleanup(tmp_path, str(body.run_id))
     assert (outside / "keep").read_text() == "owned elsewhere"
+
+
+def test_atomic_receipts_do_not_follow_predictable_temporary_symlinks(tmp_path):
+    outside = tmp_path / "untouched"
+    outside.write_text("preserve")
+    target = tmp_path / "request.json"
+    target.with_suffix(".tmp").symlink_to(outside)
+    owner.save(target, {"verified": True})
+    assert json.loads(target.read_text()) == {"verified": True}
+    assert target.stat().st_mode & 0o777 == 0o600
+    assert outside.read_text() == "preserve"
