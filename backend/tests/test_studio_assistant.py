@@ -340,3 +340,49 @@ def test_stop_rejects_a_forged_child_task_registry(accounts, director, movie):
             cancel_task(db, root.task)
         assert other.status == "queued" and not task.metadata_json.get("stop_requested_at")
         db.rollback()
+
+
+@pytest.mark.parametrize("stuck", [False, True])
+def test_cold_renderer_check_waits_durably_without_replanning_or_duplicating_production(
+    accounts, director, movie, monkeypatch, stuck
+):
+    from app.resources import RESOURCE_WAIT_KEY
+    from app.studio_render import RAM_MIB
+
+    _, alice, _ = accounts
+    status = {"available": False, "readiness": "checking", "reason": "Checking the isolated renderer"}
+    monkeypatch.setattr("app.studio_render.capabilities", lambda: dict(status))
+    result = submit(alice, "Make a complete film")
+    advance(movie)
+    with owned(alice) as db:
+        wrapper = db.scalar(select(Run).where(Run.executor_type == "assistant_studio"))
+        assert wrapper.status == "waiting_for_tool"
+        assert wrapper.worker_id is None and wrapper.lease_expires_at is None
+        assert wrapper.metadata_json.get(RESOURCE_WAIT_KEY)
+        assert len(child_tasks(db, wrapper)) == 1
+        assert len(director["plans"]) == 1
+        if stuck:
+            wrapper.metadata_json = {
+                **wrapper.metadata_json,
+                "studio_renderer_check_started_at": (utcnow() - timedelta(minutes=3)).isoformat(),
+                RESOURCE_WAIT_KEY: (utcnow() - timedelta(seconds=1)).isoformat(),
+            }
+        else:
+            status.update(available=True, ram_mib=RAM_MIB, observation="a" * 64)
+            wrapper.metadata_json = {
+                **wrapper.metadata_json,
+                RESOURCE_WAIT_KEY: (utcnow() - timedelta(seconds=1)).isoformat(),
+            }
+        db.commit()
+        identity = wrapper.id
+    advance(movie)
+    with owned(alice) as db:
+        wrapper = db.get(Run, identity)
+        assert len(director["plans"]) == 1
+        if stuck:
+            assert wrapper.status == "failed" and "verification did not finish" in wrapper.error_message
+            assert len(child_tasks(db, wrapper)) == 1
+        else:
+            assert wrapper.status == "succeeded", wrapper.error_message
+            assert len(child_tasks(db, wrapper)) == 2
+            assert db.get(Run, result["run"]["id"]).status == "succeeded"

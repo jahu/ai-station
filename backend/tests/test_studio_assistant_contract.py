@@ -166,3 +166,42 @@ def test_unicode_brand_context_stays_within_the_model_prompt_budget(accounts):
         catalog = project_catalog(db, owner_id=owner, location="local")
         assert 0 < len(catalog) <= 20
         assert len(json.dumps(public_projects(catalog), ensure_ascii=False).encode()) <= 24000
+
+
+@pytest.mark.parametrize("label", ["brand:known", "a learning brand", "  LEARN.EXAMPLE  "])
+def test_interpretation_canonicalizes_exact_advertised_labels_not_keywords(label):
+    from app.assistant_intents import validate_plan
+
+    context = {
+        "creative_projects": {"brand:known": {"name": "A learning brand", "aliases": ["learn.example"]}},
+        "inputs_and_results": [],
+    }
+    result = validate_plan(
+        json.dumps(
+            {
+                "reason": "Create the requested film",
+                "immediate": [
+                    {
+                        "kind": "studio_material",
+                        "description": "An educational film",
+                        "studio": {"project": label, "project_resolution": "selected"},
+                    }
+                ],
+                "automations": [],
+            }
+        ),
+        context,
+    )
+    assert result.outcomes[0].studio.project == "brand:known"
+
+
+@pytest.mark.parametrize("label", ["unknown.example", "learning", "brand:foreign", "shared.example"])
+def test_unknown_partial_or_ambiguous_project_labels_grant_no_scope(label):
+    from app.studio_assistant_contract import resolve_project_alias
+
+    catalog = {
+        "brand:first": {"name": "A learning brand", "aliases": ["shared.example"]},
+        "brand:second": {"name": "Another brand", "aliases": ["shared.example"]},
+    }
+    with pytest.raises(ValueError, match="unambiguous"):
+        resolve_project_alias(label, catalog)

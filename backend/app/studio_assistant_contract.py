@@ -84,6 +84,28 @@ def public_projects(catalog):
     return {alias: value["public"] for alias, value in catalog.items()}
 
 
+def resolve_project_alias(project, catalog):
+    """Bind a model-selected captured name/domain, never infer intent from words.
+
+    The catalog advertises both opaque keys and human-facing project aliases.
+    Exact unambiguous advertised labels denote that same frozen resource; no
+    substring/fuzzy/domain discovery or new project authority is introduced.
+    """
+    if project in catalog:
+        return project
+    label = project.strip().casefold()
+    matches = [
+        alias
+        for alias, entry in catalog.items()
+        if label in {str(v).strip().casefold() for v in [entry["name"], *entry.get("aliases", [])]}
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "Choose one unambiguous supplied creative-project alias; clarify an unknown or shared name"
+        )
+    return matches[0]
+
+
 def selected_context(session, catalog, intent):
     """Only a server-captured alias selects a brand; overrides come from frozen intent."""
     if intent.project_resolution == "clarify":

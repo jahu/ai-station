@@ -200,3 +200,13 @@ for the requested final film in the conversation.
 This bridge is in qualification: synthetic workflow checks establish lifecycle,
 privacy and result publication; they do not qualify actual generated quality,
 portrait footage or fresh renderer installation.
+
+
+Captured project names and domains are exact resource aliases as well as opaque
+catalog keys. After semantic model selection, the server canonicalizes a unique
+advertised name/domain to its frozen key; unknown, partial and shared labels
+require clarification. This is resource binding, not a keyword intent router.
+When a cold native renderer reports `checking`, the conversation keeps its
+completed storyboard and waits using durable admission backoff without a worker
+slot. Verification has a two-minute bound; unavailable engines still fail for
+inspection, and no media execution is repeated during this metadata wait.
