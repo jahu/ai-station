@@ -151,9 +151,11 @@ moving `latest` during a render or reuse unrelated project runtime ownership.
 ## Delivery progress
 
 - Project registry and identity workspace merged to develop in #713/#714.
-- Native isolated renderer is the next reviewed increment; see
+- Native isolated renderer merged to develop in #715; see
   [its contract and qualification scope](../hyperframes-renderer.md).
-- Remaining: guided renderer preparation, durable materials/revisions, local
-  director/storyboard, actual visual/audio child Runs, editing/export UI,
+- Private materials, immutable revisions, local director/storyboards and their
+  editor are the current increment; see [material semantics](../studio-materials.md).
+- Remaining: guided renderer preparation, actual visual/audio child Runs,
+  timing/mix and render/export UI,
   assistant tools/project inference, avatar insertion and complete branded
   publication-quality acceptance. The overall goal remains active.

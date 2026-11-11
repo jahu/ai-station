@@ -264,6 +264,12 @@ def test_all_private_root_families_are_filtered(users):
                     m.ChatProvider(key="same-personal-provider", name="Private provider"),
                     m.CreativeSession(capability="images", title="Private creative workspace"),
                     m.CreativeProject(name="Private creative identity"),
+                    m.StudioMaterial(
+                        title="A private material",
+                        brief="A generic visual story",
+                        options={},
+                        request_sha256="a" * 64,
+                    ),
                 ]
             )
             current.commit()

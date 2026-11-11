@@ -1730,3 +1730,9 @@ assets and an already-mixed soundtrack, and verifies full-HD exports. It is a
 rendering component; the Studio material planner, audio orchestration and Chat
 integration remain subsequent increments. The control plane receives no Docker
 socket or new execution privileges.
+
+Studio [materials and editorial versions](studio-materials.md) persist independently
+of software repositories. Owner-scoped planning Runs use the existing local
+provider/model lifecycle and save immutable brief/identity/source snapshots.
+Typed storyboards separate planned visual and audio work from actual completed
+child Runs; the editor never presents a plan as rendered media.

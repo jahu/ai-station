@@ -44,6 +44,9 @@ def seed(session):
         m.ChatProvider(key="legacy", name="Legacy provider"),
         m.CreativeSession(capability="images", title="Legacy creative workspace"),
         m.CreativeProject(name="Legacy creative identity"),
+        m.StudioMaterial(
+            title="A private material", brief="A generic visual story", options={}, request_sha256="a" * 64
+        ),
     ]
     session.add_all(rows)
     session.add(

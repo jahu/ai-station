@@ -61,6 +61,8 @@ def rows(path):
         # 0046 introduces an empty collection; retain and compare its contents
         # normally once populated, while preserving older table inventories.
         result.setdefault("creative_projects", [])
+        result.setdefault("studio_materials", [])
+        result.setdefault("studio_revisions", [])
         return result
 
 

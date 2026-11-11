@@ -62,6 +62,8 @@ import { useAccount } from "./account-context";
 import { clearPrivateBrowserState } from "./lib/account-storage";
 import StationVersion from "./components/StationVersion";
 import { Studio, StudioProject } from "./pages/Studio";
+import StudioMaterialCreate from "./pages/StudioMaterialCreate";
+import StudioMaterial from "./pages/StudioMaterial";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -377,6 +379,11 @@ export default function App() {
             <Route path="/home" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/studio" element={<Studio />} />
+            <Route
+              path="/studio/materials/new"
+              element={<StudioMaterialCreate />}
+            />
+            <Route path="/studio/materials/:id" element={<StudioMaterial />} />
             <Route path="/studio/new" element={<StudioProject create />} />
             <Route path="/studio/:id" element={<StudioProject />} />
             <Route

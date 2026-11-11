@@ -1966,3 +1966,11 @@ swap; the supervisor has its own 256-MiB zero-swap bound. Stop/recovery verify
 container identity, labels, executable, daemon and isolation before removing
 that exact container. Cancellation is fenced before dispatch; unknown creation
 acknowledgements never authorize replay or optimistic resource release.
+
+Studio materials are private roots; their revisions inherit ownership through
+material and optional source Run. Project, parent version and Library references
+must be owned and live. Local director planning has bounded streaming, Stop,
+one schema correction and an absolute deadline; its structured output grants
+no execution, URL, package or filesystem authority. Sources are verified before
+inference, publication stays serialized with Stop, and prior versions survive
+failed or canceled planning. See [material boundaries](studio-materials.md).
