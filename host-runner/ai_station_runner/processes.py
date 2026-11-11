@@ -266,7 +266,8 @@ class ProcessManager:
                 if timer is not None:
                     timer.cancel()
             if (
-                record["executor"] in {"browser", "python", "site_preview", "site_preview_action"}
+                record["executor"]
+                in {"browser", "python", "site_preview", "site_preview_action", "motion_render"}
                 and not alive
                 and not completion_pending
             ):
@@ -274,7 +275,11 @@ class ProcessManager:
                 from ai_station_runner.python_runs import stop_container
 
                 try:
-                    if record["executor"] in {"site_preview", "site_preview_action"}:
+                    if record["executor"] == "motion_render":
+                        from ai_station_runner.motion_owner import cleanup as cleanup_motion
+
+                        confirmed = cleanup_motion(self.data_dir, run_id)
+                    elif record["executor"] in {"site_preview", "site_preview_action"}:
                         from ai_station_runner.site_preview_runs import (
                             cancel_action,
                         )
@@ -302,7 +307,8 @@ class ProcessManager:
                 "stderr_tail": _read(resolve_child(self.data_dir, record["stderr_log"]), 4000),
             }
             if (
-                record["executor"] in {"browser", "python", "site_preview", "site_preview_action"}
+                record["executor"]
+                in {"browser", "python", "site_preview", "site_preview_action", "motion_render"}
                 and not alive
                 and not completion_pending
             ):
@@ -331,7 +337,11 @@ class ProcessManager:
     def cancel(self, run_id: str) -> dict:
         with self._lock:
             record = self.inspect(run_id)
-            if record["executor"] == "browser":
+            if record["executor"] == "motion_render":
+                from ai_station_runner.motion_owner import stop as stop_motion
+
+                stop_motion(self.data_dir, run_id, cancel=True)
+            elif record["executor"] == "browser":
                 from ai_station_runner.browser_runs import cancel_browser
 
                 cancel_browser(run_id)

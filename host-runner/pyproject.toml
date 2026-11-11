@@ -24,7 +24,7 @@ where = ["."]
 include = ["ai_station_runner*"]
 
 [tool.setuptools.package-data]
-ai_station_runner = ["recipes/*.json", "image_deadline.sh"]
+ai_station_runner = ["recipes/*.json", "image_deadline.sh", "motion_qc.mjs", "recipes/hyperframes/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

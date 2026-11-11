@@ -147,3 +147,13 @@ Official Hyperframes [CLI](https://hyperframes.app/docs/5-packages/cli) and
 supports local frame-seeking render and HTML media tracks. Pin and inspect the
 actual installed version before choosing command flags; do not install from a
 moving `latest` during a render or reuse unrelated project runtime ownership.
+
+## Delivery progress
+
+- Project registry and identity workspace merged to develop in #713/#714.
+- Native isolated renderer is the next reviewed increment; see
+  [its contract and qualification scope](../hyperframes-renderer.md).
+- Remaining: guided renderer preparation, durable materials/revisions, local
+  director/storyboard, actual visual/audio child Runs, editing/export UI,
+  assistant tools/project inference, avatar insertion and complete branded
+  publication-quality acceptance. The overall goal remains active.

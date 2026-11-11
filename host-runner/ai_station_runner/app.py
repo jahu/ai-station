@@ -58,6 +58,7 @@ from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding
 from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.media_compose import ComposeRequest, start_composition
 from ai_station_runner.model_verify import VerifyModel, verify_model
+from ai_station_runner.motion_contract import MotionRequest
 from ai_station_runner.music import MusicRequest
 from ai_station_runner.music import capabilities as music_capabilities
 from ai_station_runner.music import start as start_music
@@ -184,6 +185,10 @@ class CodingBody(RequestBody):
     workspace_relative: str
     prompt: str
     model: str = ""
+
+
+class MotionCancel(RequestBody):
+    permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(min_length=2, max_length=2)
 
 
 class CancelBody(RequestBody):
@@ -835,6 +840,39 @@ def effects_run(body: EffectsRequest):
     except (PermissionError, PathBoundaryError) as exc:
         raise HTTPException(403, str(exc)) from exc
     except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/motion/capabilities")
+def motion_capabilities():
+    from ai_station_runner.motion_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/motion/{run_id}/cancel")
+def fence_motion(run_id: UUID, body: MotionCancel):
+    from ai_station_runner.motion_owner import stop
+
+    if set(body.permissions) != {"filesystem_read", "workspace_write"}:
+        raise HTTPException(403, "Motion cancellation requires artifact read/write permissions")
+    try:
+        return {"cleanup_confirmed": stop(manager().data_dir, str(run_id), cancel=True)}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/motion")
+def motion_run(body: MotionRequest):
+    from ai_station_runner.motion_runtime import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except (PermissionError, PathBoundaryError) as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError, ProcessNotOwned) as exc:
         raise HTTPException(409, str(exc)) from exc
 
 

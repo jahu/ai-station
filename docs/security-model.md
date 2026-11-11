@@ -1953,3 +1953,16 @@ enabled only after native package qualification. Readiness observation validates
 the owned registration without taking the installation lease needed by startup.
 An expired matching native binding permits lifecycle/readiness wiring, while new
 capabilities and prepare/apply requests still require fresh native presence.
+
+### Typed Studio motion composition
+
+The [Studio renderer](hyperframes-renderer.md) accepts only bounded editorial
+fields and existing artifact identities. It never accepts executable markup,
+URLs, commands or caller-selected mounts. The native supervisor verifies source
+hashes, launches the immutable fixed image on a bound local Unix Docker daemon,
+and mounts only its derived staging directory. A network-none, CPU-only,
+non-root, read-only container limits rendering to four CPUs/4096 MiB with no
+swap; the supervisor has its own 256-MiB zero-swap bound. Stop/recovery verify
+container identity, labels, executable, daemon and isolation before removing
+that exact container. Cancellation is fenced before dispatch; unknown creation
+acknowledgements never authorize replay or optimistic resource release.
