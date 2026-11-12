@@ -334,7 +334,7 @@ def agent_image_result(session, message, control):
     if (
         producer is None
         or producer.status != "succeeded"
-        or producer.executor_type != "photo_pipe"
+        or producer.executor_type not in {"photo_pipe", "image_edit"}
         or producer.agent_id != root.agent_id
         or producer.task_id != root.task_id
         or root.task.agent_id != root.agent_id
@@ -355,6 +355,14 @@ def agent_image_result(session, message, control):
             .limit(3)
         )
     )
+    if producer.executor_type == "image_edit":
+        from app.image_edits import accepted_artifacts
+
+        try:
+            images = accepted_artifacts(session, producer)
+        except ValueError as exc:
+            raise HTTPException(422, error) from exc
+        producer = session.get(Run, images[0].run_id)
     if (
         len(images) != 1
         or images[0].trashed_at

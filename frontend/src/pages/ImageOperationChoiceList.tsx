@@ -6,7 +6,6 @@ export type ImageOperation = "t2i" | "img2img" | "recompose" | "upscale";
 const OPERATIONS = [
   { key: "t2i" as const, title: "Generate" },
   { key: "img2img" as const, title: "Edit" },
-  { key: "recompose" as const, title: "Recompose" },
   { key: "upscale" as const, title: "Upscale" },
 ];
 
@@ -24,7 +23,7 @@ export function ImageOperationChoiceList({
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     items,
     (item) => item.key,
-    { initialKey: value },
+    { initialKey: value === "recompose" ? "img2img" : value },
   );
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown(event);
@@ -41,8 +40,7 @@ export function ImageOperationChoiceList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Choose Generate, Edit, Recompose or Upscale. Arrow keys move between
-        operations.
+        Choose Generate, Edit or Upscale. Arrow keys move between operations.
       </p>
       <div
         ref={listRef}
@@ -55,7 +53,9 @@ export function ImageOperationChoiceList({
             key={item.key}
             type="button"
             aria-label={`Operation ${item.key}`}
-            aria-pressed={value === item.key}
+            aria-pressed={
+              (value === "recompose" ? "img2img" : value) === item.key
+            }
             disabled={disabled}
             {...itemProps(i, item.key)}
             onClick={() => onChange(item.key)}

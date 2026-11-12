@@ -5,7 +5,7 @@ from uuid import UUID
 from app.models import Run
 from app.state import TERMINAL
 
-EXECUTORS = {"photo_pipe", "wan_video", "ace_step_music"}
+EXECUTORS = {"photo_pipe", "image_edit", "wan_video", "ace_step_music"}
 
 
 def current_attempt(session, source):
@@ -57,6 +57,20 @@ def projection(session, steps):
         rows.append(current)
         for previous in chain[:-1]:
             retired.add(previous.id)
+            if previous.executor_type == "image_edit":
+                frontier = {previous.id}
+                chain_ids = {item.id for item in chain}
+                while frontier:
+                    children = {
+                        item.id
+                        for item in steps
+                        if item.parent_run_id in frontier
+                        and item.id not in chain_ids
+                        and item.id not in retired
+                        and item.status in TERMINAL
+                    }
+                    retired.update(children)
+                    frontier = children
             receipt = previous.metadata_json.get("prompt_translation", {})
             prep = (
                 session.get(Run, receipt["preparation_run_id"]) if receipt.get("preparation_run_id") else None

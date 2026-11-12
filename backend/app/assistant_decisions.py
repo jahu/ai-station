@@ -286,7 +286,8 @@ async def infer(session, run, messages, *, json_output=True):
             else None
         )
         context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
-        output_tokens = min(2048, max(512, context_size // 4))
+        output_limit = 4096 if run.executor_type == "image_edit_reason" else 2048
+        output_tokens = min(output_limit, max(512, context_size // 4))
         context = json.loads(messages[1]["content"]) if json_output else {}
         # Keep the original goal, declared outcomes, status and aliases intact.
         # Older large excerpts stay inspectable in their Runs; they need not be

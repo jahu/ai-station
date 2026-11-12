@@ -33,7 +33,7 @@ it("offers every action in a compact control and explains the selected action", 
   fireEvent.change(action, { target: { value: "image.edit" } });
   expect(action.value).toBe("image.edit");
   expect(
-    screen.getByText("Modify one image while preserving the original."),
+    screen.getByText("Describe changes using one or several reference images."),
   ).toBeTruthy();
 });
 

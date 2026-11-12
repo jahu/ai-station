@@ -106,6 +106,12 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         if controls:
             raise ValueError("Reference controls require a current frozen image model catalog")
         return {}
+    verified = bool(
+        root.parameters.get("controller_verified_edits")
+        and mode in {"img2img", "recompose"}
+        and not inherit_source
+    )
+    default_mode = "img2img" if verified else mode
     inherited = source_profile(session, artifact_ids)
     selected = getattr(args, "image_model", None)
     if selected is None and (
@@ -122,7 +128,7 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
             else catalog["defaults"]["choices"][mode]
         )
     if selected is None:
-        selected = catalog["defaults"]["choices"][mode]
+        selected = catalog["defaults"]["choices"][default_mode]
     item = catalog["models"].get(selected)
     if item is None or mode not in item["modes"]:
         raise ValueError("Choose an available compatible image_model alias from image_models")
@@ -131,7 +137,8 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         mode,
         controls,
         required=root.parameters.get("controller_image_policy") == "configured-default-v2"
-        and not inherit_source,
+        and not inherit_source
+        and not verified,
     )
     if len(artifact_ids) > item["maximum_references"]:
         raise ValueError(
@@ -163,6 +170,9 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
                 if key in PROFILE_FIELDS and not (key == "seed" and item["backend"] == "qwen")
             }
         )
+    if verified:
+        for key in ("width", "height", "reference_layout"):
+            values.pop(key, None)
     if controls:
         values.update(controls)
     return values

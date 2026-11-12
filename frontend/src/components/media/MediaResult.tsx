@@ -222,7 +222,7 @@ export default function MediaResult({
                   : step.capability === "image.edit"
                     ? "Edit"
                     : step.capability === "image.recompose"
-                      ? "Recompose"
+                      ? "Edit"
                       : step.capability === "audio.speech"
                         ? "Speech"
                         : step.capability === "video.generate"
@@ -313,7 +313,6 @@ export default function MediaResult({
               {(
                 [
                   ["img2img", "Edit"],
-                  ["recompose", "Recompose"],
                   ["upscale", "Upscale"],
                 ] as const
               ).map(([mode, label]) => (
@@ -378,7 +377,9 @@ export default function MediaResult({
               </div>
               <h3>
                 {busy
-                  ? statusText
+                  ? typeof run?.metadata?.edit_phase === "string"
+                    ? run.metadata.edit_phase
+                    : statusText
                   : run && run.status !== "succeeded"
                     ? "Generation did not complete"
                     : run

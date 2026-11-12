@@ -63,6 +63,67 @@ def _enqueue_inspection(session, parent, *, page_scope=None):
     from app.page_vision import scope_for_images
 
     page_scope = page_scope if page_scope is not None else scope_for_images(session, parent, ids)
+    runtime, model, projector, load = prepare_runtime(session, parent)
+    snapshot = snapshot_provider(session, SimpleNamespace(provider=BUILTIN_KEY, model="llamacpp:" + model.id))
+    conversation = session.get(Conversation, parent.conversation_id)
+    child = create_run(
+        session,
+        parent.task,
+        run_type="chat",
+        capability="chat.vision",
+        executor_type="chat",
+        execution_target="container",
+        permissions=["filesystem_read"],
+        parent_run_id=parent.id,
+        parameters={
+            **snapshot,
+            "endpoint": runtime.endpoint,
+            "model": "llamacpp:" + model.id,
+            "temperature": 0.1,
+            "max_tokens": min(conversation.max_tokens, 2048),
+            "messages": [{"role": "user", "content": parent.parameters["content"]}],
+            "vision_artifact_ids": ids,
+            "vision_inputs": inputs,
+            "vision_model_name": model.filename,
+            **({"page_read": page_scope} if page_scope else {}),
+        },
+    )
+    if load:
+        depend_on(session, child, load)
+    elif runtime.status != "ready":
+        from app.models import Run
+
+        depend_on(session, child, session.get(Run, runtime.metadata_json["load_run_id"]))
+    session.add(
+        Message(
+            conversation_id=parent.conversation_id,
+            role="assistant",
+            content="",
+            run_id=child.id,
+            metadata_json={
+                "partial": True,
+                "vision_model": model.filename,
+                "images": parent.parameters.get("images", []),
+            },
+        )
+    )
+    append_event(
+        session,
+        child.id,
+        "vision.model_selected",
+        {
+            "model_file_id": model.id,
+            "projector_file_id": projector.id,
+            "model": model.filename,
+            "location": "local",
+            "image_ids": ids,
+        },
+    )
+    return child
+
+
+def prepare_runtime(session, parent):
+    """Select an installed owned local vision consumer; never installs a model."""
     files = list(
         session.scalars(
             select(ModelFile)
@@ -126,62 +187,7 @@ def _enqueue_inspection(session, parent, *, page_scope=None):
             depend_on(session, load, stop)
         load.parent_run_id = parent.id
         runtime = next(item for item in instances(session) if item.id == load.parameters["instance_id"])
-    snapshot = snapshot_provider(session, SimpleNamespace(provider=BUILTIN_KEY, model="llamacpp:" + model.id))
-    conversation = session.get(Conversation, parent.conversation_id)
-    child = create_run(
-        session,
-        parent.task,
-        run_type="chat",
-        capability="chat.vision",
-        executor_type="chat",
-        execution_target="container",
-        permissions=["filesystem_read"],
-        parent_run_id=parent.id,
-        parameters={
-            **snapshot,
-            "endpoint": runtime.endpoint,
-            "model": "llamacpp:" + model.id,
-            "temperature": 0.1,
-            "max_tokens": min(conversation.max_tokens, 2048),
-            "messages": [{"role": "user", "content": parent.parameters["content"]}],
-            "vision_artifact_ids": ids,
-            "vision_inputs": inputs,
-            "vision_model_name": model.filename,
-            **({"page_read": page_scope} if page_scope else {}),
-        },
-    )
-    if load:
-        depend_on(session, child, load)
-    elif runtime.status != "ready":
-        from app.models import Run
-
-        depend_on(session, child, session.get(Run, runtime.metadata_json["load_run_id"]))
-    session.add(
-        Message(
-            conversation_id=parent.conversation_id,
-            role="assistant",
-            content="",
-            run_id=child.id,
-            metadata_json={
-                "partial": True,
-                "vision_model": model.filename,
-                "images": parent.parameters.get("images", []),
-            },
-        )
-    )
-    append_event(
-        session,
-        child.id,
-        "vision.model_selected",
-        {
-            "model_file_id": model.id,
-            "projector_file_id": projector.id,
-            "model": model.filename,
-            "location": "local",
-            "image_ids": ids,
-        },
-    )
-    return child
+    return runtime, model, projector, load
 
 
 def inline_image(row):

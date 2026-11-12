@@ -566,9 +566,8 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
   expect(
     screen.getByRole("link", { name: "Edit result" }).getAttribute("href"),
   ).toBe("/images?mode=img2img&input=result");
-  expect(
-    screen.getByRole("link", { name: "Recompose result" }).getAttribute("href"),
-  ).toBe("/images?mode=recompose&input=result");
+
+  expect(screen.queryByRole("link", { name: "Recompose result" })).toBeNull();
   expect(
     screen.getByRole("link", { name: "Upscale result" }).getAttribute("href"),
   ).toBe("/images?mode=upscale&input=result");
@@ -2141,7 +2140,7 @@ it("shows ordered observed tool results and inspection links in one activity pan
   });
   const panel = screen.getByRole("region", { name: "Task activity" });
   expect(within(panel).getByText("Web · Search")).toBeTruthy();
-  expect(within(panel).getByText("Image · Recompose")).toBeTruthy();
+  expect(within(panel).getByText("Image · Edit")).toBeTruthy();
   expect(
     within(panel)
       .getByRole("link", { name: "Design source" })

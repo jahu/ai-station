@@ -63,6 +63,10 @@ def verified_result(session, source, root, definition, *, media_metadata_only=Fa
             .order_by(Artifact.id)
         )
     )
+    if source.executor_type == "image_edit":
+        from app.image_edits import accepted_artifacts
+
+        artifacts = accepted_artifacts(session, source)
     if any(item.metadata_json.get("partial") is True for item in artifacts):
         raise ValueError("Partial artifacts cannot be delivered as a completed result")
     family, report, report_artifact, review = None, None, None, None

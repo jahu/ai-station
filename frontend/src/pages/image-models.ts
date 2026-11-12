@@ -59,7 +59,7 @@ export function imageSettings(
     width: krea ? 768 : 832,
     height: krea ? 1024 : 1216,
     steps: krea ? 8 : mode === "t2i" ? 35 : 30,
-    cfg: krea ? 1 : mode === "recompose" ? 6 : 5,
+    cfg: krea ? 1 : mode === "t2i" ? 5 : 6,
     seed: 42,
     max_side: krea ? 1024 : 1216,
     reference_strength: mode === "img2img" ? 4 : 2,

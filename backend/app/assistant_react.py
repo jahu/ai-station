@@ -154,8 +154,13 @@ async def take_action(context, invoke, correction=None):
             ),
         )
     )
+    policy = (
+        POLICY.replace("image_edit or image_recompose", "image_edit")
+        if context.get("verified_image_edit")
+        else POLICY
+    )
     agent = ReActAgent(
-        name="station", llm=StationLLM(invoke), tools=tools, streaming=False, system_prompt=POLICY
+        name="station", llm=StationLLM(invoke), tools=tools, streaming=False, system_prompt=policy
     )
     ctx = Context(agent)
     reasoning = []

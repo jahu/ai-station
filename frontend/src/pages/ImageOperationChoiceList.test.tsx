@@ -31,9 +31,7 @@ it("moves through image operations without queueing a Run", () => {
   render(<Host />);
   const generate = screen.getByLabelText("Operation t2i");
   expect(generate.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/Choose Generate, Edit, Recompose or Upscale/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Choose Generate, Edit or Upscale/)).toBeTruthy();
   expect(generate.getAttribute("aria-pressed")).toBe("true");
   const list = generate.closest(".image-operation-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
@@ -62,5 +60,13 @@ it("does not submit the form when Enter selects a focused operation", () => {
   });
   expect(
     screen.getByLabelText("Operation t2i").getAttribute("aria-pressed"),
+  ).toBe("true");
+});
+
+it("opens historical Recompose as the single Edit operation", () => {
+  render(<ImageOperationChoiceList value="recompose" onChange={() => {}} />);
+  expect(screen.queryByLabelText("Operation recompose")).toBeNull();
+  expect(
+    screen.getByLabelText("Operation img2img").getAttribute("aria-pressed"),
   ).toBe("true");
 });

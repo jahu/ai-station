@@ -1,3 +1,15 @@
+Verified Edit adds no execution authority: a fixed coordinator may request the
+existing owned local vision consumer and native photo executor, with the original
+source snapshots and selected model binding rechecked before use/publication.
+Closed local plans cannot choose arbitrary files, models, commands or permissions.
+Reference/criterion indices are bounded; references are inspected in groups of
+four and each review uses at most three originals plus its candidate. Exact
+pixel identity overrides model opinion. Rejected/pending candidates are retained
+for audit but excluded from conversation fulfillment and final agent delivery.
+Pure local inference/coordinator recovery is bounded and idempotent; native photo
+recovery remains unchanged. Retrying refuses an unresolved owned photo dispatch.
+The HTTP operation only queues; no hidden user conversation is created for vision.
+
 Accounts without personal image defaults inherit only the closed revision/model-ID
 projection of the retained station image-default setting. Model definitions are
 shared; no administrator UserSetting or other station setting is exposed. Personal

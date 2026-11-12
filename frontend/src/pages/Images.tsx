@@ -43,7 +43,7 @@ import {
 const modes = {
   t2i: "Generate",
   img2img: "Edit",
-  recompose: "Recompose",
+  recompose: "Edit",
   upscale: "Upscale",
 };
 type Mode = ImageOperation;
@@ -179,6 +179,13 @@ function ImageForm({
       restored.input_artifact_ids ??
       (initialInput ? [initialInput] : [])) as string[],
   );
+  const sources = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["artifact", id],
+      queryFn: () => api<Artifact>(`/artifacts/${id}`),
+    })),
+  });
+  const source = sources[0]?.data;
   const restoredChoice =
     initial.model_selection === "auto"
       ? "auto"
@@ -263,10 +270,28 @@ function ImageForm({
       )
       .map((key) => [key, initial[key]]),
   ) as Partial<ImageSettings>;
+  const sourceWidth = source?.metadata.width;
+  const sourceHeight = source?.metadata.height;
+  const sourceScale =
+    sourceWidth && sourceHeight
+      ? Math.max(
+          Math.min(
+            1,
+            (krea ? 1024 : 1216) / Math.max(sourceWidth, sourceHeight),
+          ),
+          256 / Math.min(sourceWidth, sourceHeight),
+        )
+      : 1;
   const settings = {
     ...imageSettings(selectedModel, mode),
     ...(mode === startingMode && choiceId === restoredChoice
       ? restoredSettings
+      : {}),
+    ...(editing && sourceWidth && sourceHeight
+      ? {
+          width: Math.round((sourceWidth * sourceScale) / 32) * 32,
+          height: Math.round((sourceHeight * sourceScale) / 32) * 32,
+        }
       : {}),
     ...overrides[settingsKey],
   };
@@ -291,25 +316,16 @@ function ImageForm({
       (mode === "t2i" && initial.prompt_style === "pipeline"),
     ),
   );
-  const [classicEdit, setClassicEdit] = useState(
-    Boolean(
-      restored.classicEdit ??
-      (mode !== "t2i" && initial.prompt_style === "pipeline"),
-    ),
-  );
   useCreativeDraft({
     formState: {
       mode,
       choices: selectedModel ? { ...choices, [mode]: choiceId } : choices,
-      overrides: selectedModel
-        ? { ...overrides, [settingsKey]: settings }
-        : overrides,
+      overrides,
       prompt,
       negative,
       gpu,
       upscaleResult,
       portraitStyling,
-      classicEdit,
       ids,
       translation,
     },
@@ -337,22 +353,15 @@ function ImageForm({
       void cache.invalidateQueries({ queryKey: ["image-models"] });
     },
   });
-  const maximumSources =
-    mode === "recompose"
-      ? automatic
-        ? 8
-        : (selectedModel?.maximum_references ?? 8)
-      : 1;
+  const maximumSources = editing
+    ? automatic
+      ? 8
+      : (selectedModel?.maximum_references ?? 8)
+    : 1;
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
   const workflow = useImageWorkflow(run.data);
   const activeRun = workflow.data?.steps.at(-1) ?? run.data;
-  const sources = useQueries({
-    queries: ids.map((id) => ({
-      queryKey: ["artifact", id],
-      queryFn: () => api<Artifact>(`/artifacts/${id}`),
-    })),
-  });
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
       const results: Artifact[] = [];
@@ -394,7 +403,14 @@ function ImageForm({
   }
   const create = useMutation({
     mutationFn: async () => {
-      if (!selectedModel?.available || !selectedModel.modes.includes(mode))
+      if (
+        !selectedModel?.available ||
+        !(editing
+          ? selectedModel.modes.some(
+              (item) => item === "img2img" || item === "recompose",
+            )
+          : selectedModel.modes.includes(mode))
+      )
         throw new Error("Choose an available model for this operation.");
       const parameters: Record<string, unknown> = {
         mode,
@@ -409,6 +425,7 @@ function ImageForm({
         upscale_result: mode !== "upscale" && upscaleResult,
       };
       if (
+        !editing &&
         mode !== "upscale" &&
         (translation.mode !== "inherit" ||
           translation.enhance ||
@@ -429,24 +446,45 @@ function ImageForm({
         Object.assign(parameters, { prompt, width, height, steps, cfg });
       if (mode === "t2i")
         parameters.prompt_style = portraitStyling ? "pipeline" : "prompt";
-      if (mode === "img2img" || mode === "recompose")
-        parameters.prompt_style =
-          !automatic && classicEdit ? "pipeline" : "instruction";
       if (mode === "img2img")
         Object.assign(parameters, {
           edit_prompt: prompt,
           max_side: maxSide,
           steps,
         });
+      if (editing) {
+        parameters.mode = "img2img";
+        parameters.verify_changes = true;
+        parameters.edit_prompt = prompt;
+        parameters.prompt = prompt;
+        parameters.max_side = maxSide;
+        parameters.cfg = cfg;
+        parameters.steps = steps;
+        parameters.width = width;
+        parameters.height = height;
+        parameters.prompt_style = "instruction";
+        // An ordinary edit follows source geometry. Custom dimensions are
+        // sent only after an explicit advanced-setting change.
+        if (!(
+          "width" in (overrides[settingsKey] ?? {}) ||
+          "height" in (overrides[settingsKey] ?? {})
+        )) {
+          delete parameters.width;
+          delete parameters.height;
+        }
+      }
       if ((mode === "t2i" && backend === "juggernaut") || kreaControls)
         Object.assign(parameters, { seed, negative });
-      if (kreaControls && mode !== "t2i")
-        Object.assign(parameters, {
-          cfg,
-          reference_strength: settings.reference_strength,
-          reference_layout: settings.reference_layout,
-          grounding_px: settings.grounding_px,
-        });
+      if (kreaControls && editing) {
+        for (const key of [
+          "reference_strength",
+          "reference_layout",
+          "grounding_px",
+        ] as const) {
+          if (key in (overrides[settingsKey] ?? {}))
+            parameters[key] = settings[key];
+        }
+      }
       if (creative) {
         const turn = await creative.generate(parameters, {
           feedback: creative.draft._creative_parent_turn_id ? prompt : "",
@@ -473,7 +511,6 @@ function ImageForm({
       });
     },
   });
-  const source = sources[0]?.data;
   const busy =
     create.isPending ||
     mediaBusy(activeRun) ||
@@ -508,7 +545,11 @@ function ImageForm({
     !capabilities.data.backends.includes(selectedModel.backend);
   const unavailable =
     !selectedModel?.available ||
-    !selectedModel.modes.includes(mode) ||
+    !(editing
+      ? selectedModel.modes.some(
+          (item) => item === "img2img" || item === "recompose",
+        )
+      : selectedModel.modes.includes(mode)) ||
     needsImageSetup ||
     unsupportedBackend ||
     (automatic && (recommendation.isFetching || previewPrompt !== prompt));
@@ -555,7 +596,9 @@ function ImageForm({
         onChange={(key) => {
           setMode(key);
           setIds((current) =>
-            key === "recompose" ? current : current.slice(0, 1),
+            key === "img2img" || key === "recompose"
+              ? current
+              : current.slice(0, 1),
           );
           setLocalError(null);
           create.reset();
@@ -614,7 +657,14 @@ function ImageForm({
                     <option value="auto">Auto · match this edit</option>
                   )}
                   {catalog.data?.items
-                    .filter((model) => model.modes.includes(mode))
+                    .filter((model) =>
+                      editing
+                        ? model.modes.some(
+                            (item) =>
+                              item === "img2img" || item === "recompose",
+                          )
+                        : model.modes.includes(mode),
+                    )
                     .map((model) => (
                       <option
                         key={model.id}
@@ -753,15 +803,11 @@ function ImageForm({
                   GPU.
                 </p>
               )}
-              {mode === "img2img" && (
+              {editing && (
                 <p className="muted">
-                  Change what you describe while keeping the rest of the image.
-                </p>
-              )}
-              {mode === "recompose" && (
-                <p className="muted">
-                  Preserves identity while allowing pose, clothing, scene and
-                  composition to change.
+                  Add one or more references and describe what should change. AI
+                  Station plans the edit and checks the result against your
+                  request.
                 </p>
               )}
               {mode === "upscale" && (
@@ -790,7 +836,7 @@ function ImageForm({
                       aria-label="Upload source images"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      multiple={mode === "recompose"}
+                      multiple={editing}
                       disabled={upload.isPending}
                       onChange={(e) => {
                         addFiles(Array.from(e.target.files ?? []));
@@ -828,7 +874,7 @@ function ImageForm({
                     busy={upload.isPending}
                     onChange={setIds}
                   />
-                  {krea && mode === "recompose" && (
+                  {krea && editing && (
                     <p className="muted">
                       Up to two references: scene or appearance first, subject
                       second.{" "}
@@ -855,18 +901,16 @@ function ImageForm({
               )}
               {mode !== "upscale" && (
                 <label>
-                  {mode === "img2img" ? "Edit instruction" : "Prompt"}
+                  {editing ? "Edit instruction" : "Prompt"}
                   <textarea
-                    aria-label={
-                      mode === "img2img" ? "Edit instruction" : "Prompt"
-                    }
+                    aria-label={editing ? "Edit instruction" : "Prompt"}
                     required
                     maxLength={10000}
                     rows={6}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder={
-                      mode === "img2img"
+                      editing
                         ? "Describe what to change…"
                         : "Describe the scene, subject, light, and mood…"
                     }
@@ -886,7 +930,7 @@ function ImageForm({
                   />
                 </label>
               )}
-              {mode !== "upscale" && (
+              {!editing && mode !== "upscale" && (
                 <PromptTranslationControl
                   value={translation}
                   onChange={setTranslation}
@@ -965,27 +1009,7 @@ function ImageForm({
                   </span>
                 </label>
               )}
-              {!automatic &&
-                backend === "qwen" &&
-                (mode === "img2img" || mode === "recompose") && (
-                  <label className="image-workflow-option">
-                    <input
-                      type="checkbox"
-                      aria-label="Use classic identity template"
-                      checked={classicEdit}
-                      disabled={busy}
-                      onChange={(event) => setClassicEdit(event.target.checked)}
-                    />
-                    <span>
-                      Use classic identity template
-                      <small>
-                        Off follows your edit directly. On adds the original
-                        identity and photo-detail instructions.
-                      </small>
-                    </span>
-                  </label>
-                )}
-              {(mode === "t2i" || mode === "recompose") && (
+              {(mode === "t2i" || editing) && (
                 <>
                   <div className="field-pair">
                     <label>
@@ -1104,9 +1128,7 @@ function ImageForm({
                       }
                     >
                       <option value="aligned">Preserve original layout</option>
-                      <option value="beside">
-                        Allow a new pose and layout
-                      </option>
+                      <option value="beside">Allow a new composition</option>
                     </select>
                   </label>
                   <label>
@@ -1122,21 +1144,6 @@ function ImageForm({
                       }
                     />
                   </label>
-                  {mode === "img2img" && (
-                    <label>
-                      CFG
-                      <input
-                        type="number"
-                        min={1}
-                        max={10}
-                        step={0.1}
-                        value={cfg}
-                        onChange={(event) =>
-                          setSetting("cfg", event.target.valueAsNumber)
-                        }
-                      />
-                    </label>
-                  )}
                 </details>
               )}
               {selectedModel?.file && (

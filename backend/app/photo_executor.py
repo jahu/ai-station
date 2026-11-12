@@ -181,6 +181,14 @@ class PhotoPipeExecutor(HostMediaExecutor):
         return super().reserve_devices(session, run, indexes)
 
     def on_success(self, session, run, artifact):
+        if run.metadata_json.get("image_edit_root_id"):
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "image_edit_review": {
+                    "root_id": run.metadata_json["image_edit_root_id"],
+                    "status": "pending",
+                },
+            }
         if run.metadata_json.get("image_model_selection"):
             artifact.metadata_json = {
                 **artifact.metadata_json,

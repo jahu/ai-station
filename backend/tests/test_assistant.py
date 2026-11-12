@@ -47,12 +47,13 @@ def test_two_references_dispatch_real_image_contract_and_project_results(monkeyp
         assert step() == planner["id"]
         detail = client.get(route).json()
         child = detail["active_run"]
-        assert child["executor_type"] == "photo_pipe"
+        assert child["executor_type"] == "image_edit"
         assert child["parent_run_id"] == planner["id"]
         assert child["task_id"] == planner["task_id"]
         assert child["conversation_id"] == cid
         assert child["parameters"]["mode"] == "recompose"
-        assert child["parameters"]["parent_artifact_ids"] == images
+        assert child["parameters"]["input_artifact_ids"] == images
+        assert child["parameters"]["verify_changes"] is True
         assert detail["messages"][-1]["task_status"] == "queued"
         # Existing image executor's real runner contract is covered in test_images.
         with session_factory()() as session:
@@ -1129,8 +1130,8 @@ def test_natural_generation_from_selected_references_uses_recompose_without_drop
         with session_factory()() as session:
             root = session.get(Run, response.json()["id"])
             child = session.get(Run, root.metadata_json["child_run_id"])
-            assert child.executor_type == "photo_pipe" and child.parameters["mode"] == "recompose"
-            assert child.parameters["parent_artifact_ids"] == references
+            assert child.executor_type == "image_edit" and child.parameters["mode"] == "recompose"
+            assert child.parameters["input_artifact_ids"] == references
             assert child.parent_run_id == root.id and child.task_id == root.task_id
             assert "endpoint" not in root.parameters
 

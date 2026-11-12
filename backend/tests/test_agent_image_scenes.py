@@ -87,11 +87,13 @@ def test_recurring_scenes_use_completed_history_retry_duplicates_and_keep_review
             assert images[0].parameters["prompt"] == ImageVariation(**A).image_prompt()
             assert images[1].parameters["prompt"] == ImageVariation(**B).image_prompt()
             assert all(
-                row.parameters["seed"] is None
+                type(row.parameters["seed"]) is int
+                and 0 <= row.parameters["seed"] <= 4294967295
                 and row.requested_resources["gpu"] == "7"
                 and row.parameters["prompt_style"] == "instruction"
                 for row in images
             )
+            assert images[0].parameters["seed"] != images[1].parameters["seed"]
             failed = list(
                 db.scalars(
                     select(Run).where(Run.task_id == roots[-1]["task_id"], Run.executor_type == "agent_media")

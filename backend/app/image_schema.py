@@ -25,6 +25,7 @@ class ImageRequest(BaseModel):
     _selection: dict | None = PrivateAttr(default=None)
 
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
+    verify_changes: StrictBool = False
     backend: Literal["qwen", "juggernaut", "krea2"] = "qwen"
     model_id: UUID | None = None
     reference_strength: float | None = Field(default=None, ge=0, le=8, allow_inf_nan=False)
@@ -49,6 +50,8 @@ class ImageRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_existing_image_identity(self, handler):
         values = handler(self)
+        if not self.verify_changes:
+            values.pop("verify_changes", None)
         for key in (
             "model_id",
             "reference_strength",
@@ -78,6 +81,8 @@ class ImageRequest(BaseModel):
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
         self._explicit_fields = set(self.model_fields_set)
+        if self.verify_changes and self.mode not in {"img2img", "recompose"}:
+            raise ValueError("Change verification applies only to Edit")
         if self.model_selection is not None and (
             self.mode not in {"img2img", "recompose"}
             or self.model_id is not None
@@ -107,7 +112,11 @@ class ImageRequest(BaseModel):
         count = len(self.input_artifact_ids)
         if self.mode == "t2i" and count:
             raise ValueError("Generate does not accept source images")
-        if self.mode in {"img2img", "upscale"} and count != 1:
+        if (
+            self.mode in {"img2img", "upscale"}
+            and count != 1
+            and not (self.mode == "img2img" and self.verify_changes and count > 0)
+        ):
             raise ValueError("Edit and Upscale require exactly one source image")
         if self.mode == "recompose" and count < 1:
             raise ValueError("Recompose requires at least one reference image")

@@ -49,13 +49,19 @@ tool. Reference images survive follow-up questions, and an image result can beco
 the input of a recurring-agent draft for your review. When a required choice is
 unclear, the assistant can ask a focused question and continue with the existing
 references. Separate requested pictures are separate generated results.
-Existing image agents expose compatible installed models for Generate, Edit and
-Recompose directly beside the image operation. Accounts without personal image
+Images and image agents have one **Edit** operation for one or several references.
+Describe the changes and what should stay consistent; the selected installed
+model stays visible beside the operation. Accounts without personal image
 defaults inherit the station's configured generators; personal choices take
 precedence. New requests keep a snapshot of the selected model.
 New automatic Qwen image requests also freeze a fresh seed, rather than replaying
 the reference image's generation noise. Explicit seeds and saved retries remain
 reproducible. [Reference-seed diagnosis](docs/plans/qwen-reference-seeds.md).
+New edits inspect the references, prepare concrete changes and compare the actual
+result against the request. Unchanged pixels are rejected. A missed change gets
+at most one correction; an uncertain or unsuccessful final check remains an
+inspectable failure, rather than an accepted image. This uses an installed local
+vision model, with no cloud fallback. [Verified editing](docs/plans/unified-image-editing.md).
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
 The [website-task and stream recovery repair](docs/plans/assistant-website-recovery.md)
 tracks working-deliverable planning, structured tool failures and claim-fenced
@@ -280,7 +286,7 @@ or [help develop the platform](CONTRIBUTING.md).
 | You want to… | AI Station gives you… |
 | --- | --- |
 | **Talk and think** | Streaming conversations, local model selection, optional reasoning controls, attachments, web search and page reading. |
-| **Make and transform images** | Generate, Edit, Recompose and Upscale; ordered references, prompts, parameters and reusable results. |
+| **Make and transform images** | Generate, Edit and Upscale; ordered references, prompts, parameters and reusable results. |
 | **Create video and avatars** | Local video generation, multi-shot films, resumable segments and portraits animated against a recording or generated speech. |
 | **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
 | **Put agents to work** | [Recurring image variations](docs/plans/agent-image-scenes.md), natural-language drafts, in-chat image model selection and approval, reviewed tools and permissions, schedules, history, in-app notices and confirmed single or bulk deletion. |
@@ -396,14 +402,16 @@ hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB
 | **Local LLM generation** | RVN 27B Q4_K_M; llama.cpp; both GPUs; 46,080-token context allocation; Q8 KV cache; 467 prompt / 345 generated tokens | **16.9 generated tokens/s**; prompt processing **380.2 tokens/s**, measured separately. |
 | **Generate an image** | LUSTIFY v10 Turbo Q4_0; 768×1024; 8 steps; CFG 1; two-GPU profile | **1 min 40 s** |
 | **Edit an image** | Same model/size/steps; one reference, aligned layout | **2 min 27 s** |
-| **Recompose an image** | Same model/size/steps; one reference, beside layout | **2 min 29 s** |
-| **Recompose with two references** | Same model/size/steps; ordered scene and person references | **3 min 10 s** |
+| **Edit · new composition** | Same model/size/steps; one reference, beside layout | **2 min 29 s** |
+| **Edit · two references** | Same model/size/steps; ordered scene and person references | **3 min 10 s** |
 | **Generate two video shots in parallel** | Wan2.2 5B; 2 × 2-second shots; 1280×704; 20 steps; separate GPUs | **7 min 58 s** for the full four-second film and composition. |
 | **Generate a continuous one-minute film** | Wan2.2 5B; 1280×704; 24 fps; 20 steps; 18 sequential windows; bounded host RAM | **3 h 16 min** for the complete 1,440-frame workflow. |
 | **Create a one-minute speaking avatar** | EchoMimic V3; 384 px; 8 steps; 24 windows; one GPU; 60-second recording | **48 min 18 s**, including fresh source-speech preparation and composition. |
 | **Create a whole-recording avatar with more detail** | Sonic; native 512×768; 25 steps; both GPUs; complete 40.08-second recording | **2 h 27 min 18 s** end to end; 1,002 frames at 25 fps. Owner confirms substantially improved quality; not native HD. |
 
-These are recorded observations, not a cross-project benchmark or a speed promise.
+Image timings above are historical photo Runs, before the new local inspection,
+planning and verification stages. Verified Edit adds that processing/model-loading
+time. These are recorded observations, not a cross-project benchmark or a speed promise.
 The LLM row is one captured completion; allocated context is not prompt length.
 Media times include their recorded Run/workflow boundaries, not diffusion-only
 kernel speed. Historical long-video and Echo avatar results retain their observed
@@ -506,7 +514,7 @@ wire up a separate environment.
 
 On supported Linux NVIDIA workstations with two 12-GiB GPUs, **Set up images**
 reviews the Qwen/RealESRGAN sources and licenses, prepares the engine and all
-companions, and opens the saved Images workspace for Generate, Edit, Recompose
+companions, and opens the saved Images workspace for Generate, Edit
 and Upscale. Stop/Resume and download verification use normal private Runs;
 existing configured image integrations keep priority.
 [Image setup and measured qualification](docs/plans/managed-image-setup.md).

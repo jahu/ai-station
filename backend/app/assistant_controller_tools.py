@@ -244,6 +244,8 @@ def available_tools(params):
     """Capability authority comes from the selected scope, never model output."""
     selected = {}
     for name, spec in TOOLS.items():
+        if name == "image.recompose" and params.get("controller_verified_edits"):
+            continue
         if (
             name in {"web.image_search", "web.image_import"}
             and params.get("controller_web_image_policy") != "public-images-v1"
@@ -267,7 +269,14 @@ def available_tools(params):
             and params.get("controller_provider", {}).get("location") != "local"
         ):
             continue
-        selected[name] = {"description": spec.description, "arguments_type": spec.arguments.__name__}
+        selected[name] = {
+            "description": (
+                "Edit one image using one or several ordered reference images. The instruction defines any requested changes and features to preserve; actual pixels are inspected and the changes are checked before a result is accepted. One call creates one image."
+                if name == "image.edit" and params.get("controller_verified_edits")
+                else spec.description
+            ),
+            "arguments_type": spec.arguments.__name__,
+        }
     return selected
 
 
@@ -447,6 +456,9 @@ def observation(session, root, step):
     )
     if len(artifacts) > 64:
         raise ValueError("Controller tool produced too many artifacts")
+    from app.image_edits import published_artifacts
+
+    artifacts = published_artifacts(artifacts)
     wrapper = next((row for row in rows if row.executor_type == "orchestrator"), None)
     superseded = set()
     if wrapper is not None:
@@ -629,12 +641,16 @@ def wrapper_parameters(session, root, name, raw):
         agent_scope = capture(session, root, args, entries)
         images = []
     audio = resolve(entries, [args.audio], "audio")[0] if getattr(args, "audio", None) else None
-    if name in {"image.edit", "image.upscale"} and len(images) != 1:
+    if (
+        name == "image.upscale"
+        or name == "image.edit"
+        and not root.parameters.get("controller_verified_edits")
+    ) and len(images) != 1:
         raise ValueError("This tool requires exactly one image reference")
-    if name == "image.recompose" and not images:
-        raise ValueError("Recompose requires at least one image reference")
+    if name in {"image.edit", "image.recompose"} and not images:
+        raise ValueError("Edit requires at least one image reference")
     if name == "image.generate" and images:
-        raise ValueError("Generate uses text only; choose Recompose for references")
+        raise ValueError("Generate uses text only; choose Edit for references")
     if name == "image.describe" and not 1 <= len(images) <= 4:
         raise ValueError("Image inspection requires one to four images")
     if name in {"avatar.animate", "audio.speech", "audio.analyze", "audio.transcribe"} and not audio:
@@ -667,6 +683,8 @@ def wrapper_parameters(session, root, name, raw):
             "image.recompose": "recompose",
             "image.upscale": "upscale",
         }[name]
+        if name == "image.edit" and root.parameters.get("controller_verified_edits"):
+            mode = "recompose"
         params["controller_image_request"] = request_profile(session, root, args, mode, images)
     from app.vision_inputs import freeze
 

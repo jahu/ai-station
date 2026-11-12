@@ -11,7 +11,8 @@ IMAGE_MODES = {"image.generate": "t2i", "image.edit": "img2img", "image.recompos
 def image_options(context, name):
     if not isinstance(name, str):
         return None
-    mode = IMAGE_MODES.get(name)
+    verified = name == "image.edit" and context.get("verified_image_edit")
+    mode = "recompose" if verified else IMAGE_MODES.get(name)
     inherited = name == "agent.create"
     if inherited:
         goal = next(
@@ -34,7 +35,7 @@ def image_options(context, name):
     if not mode or not catalog.get("models"):
         return None
     choices = {key: value for key, value in catalog["models"].items() if mode in value.get("modes", [])}
-    default = (catalog.get("defaults", {}).get("choices") or {}).get(mode)
+    default = (catalog.get("defaults", {}).get("choices") or {}).get("img2img" if verified else mode)
     return {"mode": mode, "models": choices, "default": default, "inherited": inherited}
 
 
@@ -63,7 +64,11 @@ def parameter_schema(context, name, base):
     if options is None or not CONTROL_FIELDS.intersection(schema.get("properties", {})):
         return schema
     current = context.get("image_contract_version") == "configured-default-v2"
-    required = current and not options["inherited"]
+    required = (
+        current
+        and not options["inherited"]
+        and not (name == "image.edit" and context.get("verified_image_edit"))
+    )
     choices = options["models"]
     if not choices:
         return schema

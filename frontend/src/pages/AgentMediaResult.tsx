@@ -160,13 +160,15 @@ function AgentMediaOutput({ runs }: { runs: Run[] }) {
       run.executor_type === "media_compose" ||
       run.executor_type === "avatar_media_plan",
   );
-  const output = current.find(
-    (run) =>
-      run.executor_type === "photo_pipe" ||
-      run.executor_type === "ace_step_music" ||
-      run.executor_type === "fish_speech" ||
-      run.executor_type === "chatterbox",
-  );
+  const output =
+    current.find((run) => run.executor_type === "image_edit") ??
+    current.find(
+      (run) =>
+        run.executor_type === "photo_pipe" ||
+        run.executor_type === "ace_step_music" ||
+        run.executor_type === "fish_speech" ||
+        run.executor_type === "chatterbox",
+    );
   const preparation = current.find(
     (run) => run.executor_type === "agent_media",
   );
@@ -184,7 +186,12 @@ function AgentMediaOutput({ runs }: { runs: Run[] }) {
   if (output)
     return (
       <MediaResult
-        kind={output.executor_type === "photo_pipe" ? "image" : "audio"}
+        kind={
+          output.executor_type === "photo_pipe" ||
+          output.executor_type === "image_edit"
+            ? "image"
+            : "audio"
+        }
         audioMode={
           output.executor_type === "ace_step_music" ? "music" : "speech"
         }
@@ -193,7 +200,8 @@ function AgentMediaOutput({ runs }: { runs: Run[] }) {
         allowRetry={false}
         error={output.error_message ? new Error(output.error_message) : null}
         steps={
-          output.executor_type === "photo_pipe"
+          output.executor_type === "photo_pipe" ||
+          output.executor_type === "image_edit"
             ? current
                 .filter((run) => run.executor_type === "photo_pipe")
                 .reverse()
