@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import session_scope
 from app.models import ModelDefinition, ModelFile
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+from app.runtime_readiness import reject_checking
 
 router = APIRouter(prefix="/api/audio/music/models", tags=["music"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
@@ -84,6 +85,7 @@ def profile_for(session, identity, observed=None, *, recheck=False):
         raise HTTPException(409, "Connect the Host Runner to inspect the selected music model") from None
     except RunnerError as exc:
         raise HTTPException(409, exc.detail) from None
+    reject_checking(report, "audio.music")
     if not report.get("available") or report.get("managed_runtime") != model["binding"]["managed_runtime"]:
         raise HTTPException(
             409, report.get("reason") or "The selected music model's fixed engine is unavailable"

@@ -28,6 +28,7 @@ from app.music import MusicRequest, create_music_run
 from app.paths import safe_join
 from app.permissions import require
 from app.runs import create_run, create_task, run_dict, transition
+from app.runtime_readiness import CapabilityChecking
 from app.state import RunStatus
 from app.studio_mastering import PROFILE as MASTERING_PROFILE
 from app.studio_materials import DB, digest, get_material, get_revision
@@ -316,6 +317,54 @@ class StudioAudioStepExecutor:
     name = "studio_audio_step"
 
     def execute(self, session, run):
+        claim = (run.worker_id, run.claimed_at)
+        try:
+            return self.publish(session, run)
+        except CapabilityChecking as exc:
+            # These publishers validate readiness before creating any child.
+            # Roll back the publication transaction, then reacquire the Task
+            # fence: Stop or stale-claim recovery may have won in the meantime.
+            session.rollback()
+            lock_task(session, run.task)
+            session.refresh(run)
+            if (run.worker_id, run.claimed_at) != claim or run.status not in {"running", "cancel_requested"}:
+                return "done"
+            if run.status == "cancel_requested" or run.task.metadata_json.get("stop_requested_at"):
+                transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+                session.commit()
+                return "done"
+            now = utcnow()
+            key = "studio_audio_verification"
+            previous = run.metadata_json.get(key, {})
+            started = previous.get("started_at") if previous.get("capability") == exc.capability else None
+            if started and now - datetime.fromisoformat(started) >= timedelta(minutes=5):
+                raise ValueError(
+                    "Audio model verification did not finish; inspect model readiness before continuing"
+                ) from exc
+            run.metadata_json = {
+                **run.metadata_json,
+                key: {"capability": exc.capability, "started_at": started or now.isoformat()},
+            }
+            from app.resources import defer_resource_run
+
+            defer_resource_run(run)
+            transition(
+                session,
+                run,
+                RunStatus.INTERRUPTED,
+                event_type="studio.audio.verifying",
+                payload={"capability": exc.capability, "reason": exc.detail},
+            )
+            run.worker_id = None
+            run.lease_expires_at = None
+            run.finished_at = None
+            transition(
+                session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"queue_only": True}
+            )
+            session.commit()
+            return "done"
+
+    def publish(self, session, run):
         for permission in PERMISSIONS:
             require(run.effective_permissions, permission)
         claim = (run.worker_id, run.claimed_at)

@@ -467,7 +467,34 @@ remain separate gates. No private QA film was published to the repository/site.
 
 The [first-use renderer workflow](studio-renderer-setup.md) also completed actual
 installation and Stop through the ordinary API/worker/UDS setup path; its new
-engine passed a full-HD export. This closes the missing installation path once
-its preserving deployment passes. Actual simultaneous worker/Runner crash recovery
-retained the same Run and original helper and completed without duplicate stages. The
-whole Creative Studio publication-quality objective stays active.
+engine passed a full-HD export. Its preserving deployment passed with the existing
+station data, search service and port bindings retained. This closes the missing
+renderer installation path. Actual simultaneous worker/Runner crash recovery
+retained the same Run and original helper and completed without duplicate stages.
+The whole Creative Studio publication-quality objective stays active.
+
+
+### Cold audio verification repair — 2026-11-12
+
+The actual 75-second educational-film request selected the intended brand project,
+landscape format and narration/music through the local assistant. Its director
+saved the storyboard, but production failed before speech dispatch: Fish returned
+`available=false, readiness=checking` while verifying installed files after a
+Runner restart, and the coordinator treated the ordinary HTTP 409 as permanent.
+This is a readiness-publication race, not evidence of a failed speech inference.
+
+Speech/music publishers now distinguish explicit pending native verification with
+a typed HTTP-409-compatible exception. The existing audio coordinator rolls back
+that publication attempt, reacquires the Task/claim fence, and defers the same Run
+using ordinary durable resource backoff. It starts no replacement planning or
+native workload while waiting. Completed cues remain attached; unknown, missing
+or changed configurations still fail. Verification is bounded to five minutes per
+stage and remains subject to Task Stop, worker recovery and the production's
+original deadline. No schema, public endpoint or execution boundary changes.
+
+Qualification requires pending-to-ready publication without duplicated cues or
+score, backoff, timeout, permanent-unavailable failure and concurrent Stop/claim
+fences, plus relevant speech/music and production regression suites. After reviewed
+deployment, continue the saved real storyboard through ordinary production reuse
+and inspect the complete longer film; the original failure remains in history.
+The final publication-quality objective remains active.
