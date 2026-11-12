@@ -166,14 +166,19 @@ expression and narrator continuity across the complete film. This supersedes the
 Shared same-seed speech calls and a fixed generated-voice anchor apply beyond
 Studio; supplied recordings retain their verified voice reference.
 
-An audit found that the conversation bridge still creates a new material for
-every production request. [Source-aware conversation revisions](studio-conversation-revisions.md)
-are now in progress: verified source capture and parented/brand-copy planning
-have temporary-account tests; completed-media reuse, full lifecycle qualification
-and a real ordinary conversation follow-up are still pending. Do not advertise
-that development branch as delivered. Complete publication-quality review and
-the requirement-by-requirement acceptance audit remain separate from component
-checks. Private test media are not approved for website/repository publication.
+The conversation bridge now supports [source-aware revisions](studio-conversation-revisions.md).
+Temporary-account tests cover parented edits, linked brand copies, exact source/
+audio/presenter reuse, stale/foreign/archived/trashed authority and Stop isolation.
+Actual local-model follow-ups changed only a headline in the existing 16-second
+portrait film, then created a separate 1920×1080 copy under the other brand.
+Both retained every actual shot/trim and the exact score, with no new media
+inference. Full decode, duration, source/audio checks and sampled scene/transition
+review passed. Original materials and revisions remained intact.
+
+See [the completion audit](studio-completion-audit.md) for the delivered scope and
+verification boundaries. Private test media are not approved for public website
+or repository publication. The published installer version remains unchanged;
+this work is available in the deployed development preview.
 
 ## Delivery progress
 

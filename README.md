@@ -171,10 +171,11 @@ generated image across scenes. Both final MP4s passed full decoding and the
 requested duration/source checks; complete publication-quality review continues.
 Full-film narration review now also covers a 75-second educational edit: the
 owner accepted its pace, expression and voice continuity throughout. Independent
-transcription retained all 179 original words. Conversation-based revisions are
-in qualification: keeping the original media, soundtrack and editable version
-history for caption/identity changes, with explicit new production for changed
-spoken content or imagery.
+transcription retained all 179 original words. Conversation-based revisions now keep the original media, soundtrack and editable
+version history for caption/identity changes, with explicit new production for
+changed spoken content or imagery. Real local-model follow-ups changed a film’s
+headline and created a separately branded widescreen copy, retaining the original
+shots/music and material history.
 The bounded Wan engine also supports native portrait footage, preserving vertical
 composition. A real four-second 704×1280 film passed two-window generation,
 continuation and complete decoding. Each inference process used an enforced

@@ -81,9 +81,21 @@ turn, preventing paraphrased whole-workflow retries. Stop never adopts/cancels o
 source Tasks. New result cards carry their actual revision ID; historical cards
 keep the legacy link fallback.
 
-Qualification is in progress on the feature branch. Native/export qualification
-and preserving deployment remain required; synthetic tests are not evidence of
-a real revised film. No renderer, speech model or database schema change is needed.
+Qualification completed on the reviewed implementation and alias-correction
+commits: 482 Studio/assistant regression tests, followed by 38 relevant tests for
+the alias correction; global Python lint/format; frontend lint/typecheck,
+42 action-result tests and production build; production/development Compose;
+the final application image and offline ephemeral migration/API/accounts/compiled
+UI probes. The unscoped whole-repository suite was interrupted, not passed;
+these successful relevant checks are the documented local equivalent.
+
+Actual ordinary local-model conversation turns delivered a 16-second parented
+headline edit and a separately branded widescreen copy. Full MP4 decoding,
+480-frame duration, identical actual sources/trims/score, preserved original
+history and sampled scene/transition review passed for both. The copy used the
+other project's saved palette/type and a new material. The preserving preview
+rollout retained data, schema, settings, socket, ports and search, with a SQLite
+backup. No renderer, speech model or database schema change was needed.
 
 The first real-model follow-up correctly selected the captured source but also
 repeated that same alias in `source_inputs`. Both semantic attempts were rejected
