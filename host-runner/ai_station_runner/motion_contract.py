@@ -56,10 +56,37 @@ class Scene(Fields):
         return self
 
 
-class Presenter(Fields):
+MAX_PRESENTER_CLIPS = 32
+
+
+class PresenterClip(Fields):
     media: UUID
+    duration_frames: StrictInt = Field(ge=1, le=1800)
+    media_start_seconds: float = Field(default=0.0, ge=0, le=600, allow_inf_nan=False, strict=True)
+
+
+class Presenter(Fields):
+    media: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
     placement: Literal["auto", "right", "bottom"] = "auto"
     media_start_seconds: float = Field(default=0.0, ge=0, le=600, allow_inf_nan=False, strict=True)
+    clips: list[PresenterClip] | None = Field(
+        default=None, min_length=1, max_length=MAX_PRESENTER_CLIPS, exclude_if=lambda value: value is None
+    )
+
+    @model_validator(mode="after")
+    def selected(self):
+        if bool(self.media) == bool(self.clips):
+            raise ValueError("Choose one presenter video or one complete presenter sequence")
+        if self.clips and self.media_start_seconds != 0:
+            raise ValueError("A presenter sequence uses each clip's own source offset")
+        return self
+
+    def segments(self, frames):
+        return (
+            [(p.media, p.duration_frames, p.media_start_seconds) for p in self.clips]
+            if self.clips
+            else [(self.media, frames, self.media_start_seconds)]
+        )
 
 
 class Composition(Fields):
@@ -76,6 +103,12 @@ class Composition(Fields):
             raise ValueError("Choose a full-HD portrait, landscape or square canvas")
         if self.frames > 30 * 600:
             raise ValueError("Keep one material within ten minutes")
+        if (
+            self.presenter
+            and self.presenter.clips
+            and sum(p.duration_frames for p in self.presenter.clips) != self.frames
+        ):
+            raise ValueError("The presenter sequence must cover the complete film exactly")
         return self
 
     @property
@@ -97,7 +130,7 @@ class MotionRequest(Fields):
     run_id: UUID
     deadline_at: float = Field(gt=0, strict=True, allow_inf_nan=False)
     composition: Composition
-    sources: list[Source] = Field(default_factory=list, max_length=62)
+    sources: list[Source] = Field(default_factory=list, max_length=60 + MAX_PRESENTER_CLIPS + 1)
     audio_artifact_id: UUID | None = None
     observation: str = Field(pattern=r"^[a-f0-9]{64}$")
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(min_length=2, max_length=2)
@@ -109,7 +142,9 @@ class MotionRequest(Fields):
         sources = {s.artifact_id: s for s in self.sources}
         wanted = {scene.media for scene in self.composition.scenes if scene.media}
         if self.composition.presenter:
-            wanted.add(self.composition.presenter.media)
+            wanted.update(
+                media for media, _, _ in self.composition.presenter.segments(self.composition.frames)
+            )
         if self.audio_artifact_id:
             wanted.add(self.audio_artifact_id)
         if len(sources) != len(self.sources) or set(sources) != wanted:
@@ -119,7 +154,10 @@ class MotionRequest(Fields):
                 raise ValueError("Scene visuals require an inspected image or video")
         if self.audio_artifact_id and sources[self.audio_artifact_id].kind != "audio":
             raise ValueError("The final mix must be inspected audio")
-        if self.composition.presenter and sources[self.composition.presenter.media].kind != "video":
+        if self.composition.presenter and any(
+            sources[media].kind != "video"
+            for media, _, _ in self.composition.presenter.segments(self.composition.frames)
+        ):
             raise ValueError("A presenter requires complete inspected video")
         if sum(source.size_bytes for source in self.sources) > 2 * 1024**3:
             raise ValueError("Keep one material's source assets within two GiB")

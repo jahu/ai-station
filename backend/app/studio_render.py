@@ -176,10 +176,11 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
         sources[source["artifact_id"]] = source
     if presenter:
         presenter = Presenter.model_validate(presenter)
-        source = source_snapshot(session, presenter.media, verify=verify, complete=True)
-        if source["kind"] != "video":
-            raise ValueError("Choose a complete MP4 presenter clip from your Library")
-        sources[source["artifact_id"]] = Source.model_validate(source).model_dump(mode="json")
+        for media, _, _ in presenter.segments(plan.frames):
+            source = source_snapshot(session, media, verify=verify, complete=True)
+            if source["kind"] != "video":
+                raise ValueError("Choose a complete MP4 presenter clip from your Library")
+            sources[source["artifact_id"]] = Source.model_validate(source).model_dump(mode="json")
     identity = revision.project_snapshot.get("identity") or {}
     dimensions = {"portrait": (1080, 1920), "landscape": (1920, 1080), "square": (1080, 1080)}
     width, height = dimensions[revision.options["aspect"]]
@@ -235,6 +236,12 @@ def create_render(session, material_id, body, *, task=None, parent_run_id=None, 
     except (ValueError, OSError, wave.Error, EOFError) as exc:
         raise HTTPException(422, str(exc)) from exc
     ready = capabilities() if observed_profile is None else observed_profile
+    if body.presenter and body.presenter.clips:
+        maximum = ready.get("max_presenter_clips")
+        if type(maximum) is not int or maximum < len(body.presenter.clips):
+            raise HTTPException(
+                409, "Prepare the current Studio renderer before exporting a presenter sequence"
+            )
     if (
         not ready.get("available")
         or ready.get("ram_mib") != RAM_MIB
@@ -437,6 +444,13 @@ class StudioRenderExecutor(HostMediaExecutor):
             and any(
                 (report.get("presenter") or {}).get(key) is not True
                 for key in ("reserved", "bounded", "muted")
+            )
+            or request.composition.presenter
+            and request.composition.presenter.clips
+            and (
+                (report.get("presenter") or {}).get("contiguous") is not True
+                or (report.get("presenter") or {}).get("clip_count")
+                != len(request.composition.presenter.clips)
             )
         ):
             raise ValueError("The Studio export does not match its frozen request")

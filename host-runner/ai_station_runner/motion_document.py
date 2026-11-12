@@ -7,7 +7,7 @@ not provided by a model. Executable animation code and CSS are fixed here.
 import html
 import json
 
-from ai_station_runner.motion_contract import Composition
+from ai_station_runner.motion_contract import MAX_PRESENTER_CLIPS, Composition
 
 
 def luminance(color):
@@ -45,7 +45,9 @@ def element(tag, value, cls):
 def owned_asset(assets, identity, *, video=False):
     path = assets.get(str(identity))
     suffixes = (".mp4",) if video else (".png", ".jpg", ".webp", ".mp4")
-    if path not in {f"assets/media-{n}{suffix}" for n in range(61) for suffix in suffixes}:
+    if path not in {
+        f"assets/media-{n}{suffix}" for n in range(60 + MAX_PRESENTER_CLIPS) for suffix in suffixes
+    }:
         raise ValueError("Scene media is not a frozen owned asset")
     return path
 
@@ -54,7 +56,6 @@ def presenter_layer(composition, assets):
     presenter = composition.presenter
     if presenter is None:
         return "", "", ""
-    path = owned_asset(assets, presenter.media, video=True)
     width, height = composition.width, composition.height
     placement = presenter.placement
     if placement == "auto":
@@ -72,15 +73,23 @@ def presenter_layer(composition, assets):
     css = f"""
 .story-stage{{position:absolute;width:{width}px;height:{height}px;left:{left}px;top:{top}px;transform:scale({scale});transform-origin:top left;overflow:hidden}}
 .presenter-frame{{position:absolute;left:{px}px;top:{py}px;width:{pw}px;height:{ph}px;border:2px solid var(--accent);border-radius:24px;overflow:hidden;background:var(--bg)}}
-.presenter-frame video{{display:block;width:100%;height:100%;object-fit:contain}}
+.presenter-frame video{{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}}
 """
-    video = (
-        '<aside class="presenter-frame" aria-label="Presenter">'
-        f'<video id="presenter" class="clip" src="{path}" data-start="0" '
-        f'data-duration="{composition.frames / 30}" data-media-start="{presenter.media_start_seconds}" '
-        'data-volume="0" muted playsinline></video></aside>'
-    )
-    return css, '<div class="story-stage">', "</div>" + video
+    clips, start = [], 0
+    for index, (media, frames, offset) in enumerate(presenter.segments(composition.frames)):
+        path = owned_asset(assets, media, video=True)
+        identity = f"presenter-{index}" if presenter.clips else "presenter"
+        start_seconds = str(start / 30) if start else "0"
+        clips.append(
+            f'<video id="{identity}" class="clip" src="{path}" data-start="{start_seconds}" '
+            f'data-duration="{frames / 30}" data-media-start="{offset}" '
+            'data-volume="0" muted playsinline></video>'
+        )
+        # Hyperframes owns timed clip visibility and seeking. GSAP may animate
+        # editorial wrappers, never override visibility on these clip elements.
+        start += frames
+    frame = '<aside class="presenter-frame" aria-label="Presenter">' + "".join(clips) + "</aside>"
+    return css, '<div class="story-stage">', "</div>" + frame
 
 
 def document(composition: Composition, assets=None, *, audio=False):

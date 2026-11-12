@@ -114,3 +114,26 @@ native ownership/cleanup and zero-swap limits were verified. A separate disposab
 account/API/worker/native test published the presenter film with all four source
 artifacts in its lineage. These checks generated no new model output and do not
 qualify automatic narration-aligned avatar production or a publication-ready reel.
+
+
+## Timed presenter sequences
+
+The typed composition API can also bind a sequence of at most 32 completed
+presenter clips. Their integer durations must cover the complete film exactly;
+each clip has its own bounded source trim. Editorial starts retain full numeric
+precision and stay on the film's 30-fps timeline, independently of 25-fps source
+rounding. The renderer validates the real media coverage before rendering.
+Hyperframes owns clip visibility/seeking; GSAP animates only editorial content.
+Clips share the reserved presenter region and keep their audio muted.
+
+The API requires the native `max_presenter_clips` capability before queueing a
+sequence. Every source remains owner/hash bound and checked again before
+publication. Combined source count can reach 93 (60 story visuals, 32 presenter
+clips and one mix), still within two GiB. Optional sequence fields are omitted
+from old single-clip request serialization.
+
+A real six-second CPU render qualified a join at editorial frame 61 with a
+2.04-second offset into the next 25-fps source, complete decoding, strict lint,
+reserved layout and single-audio verification. Existing approved footage was
+reused; no avatar was synthesized for this component check. Automatic presenter
+production and its editor/assistant controls remain separate delivery work.
