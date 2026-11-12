@@ -44,7 +44,7 @@ def test_valid_schema_still_checks_source_windows_after_timing_fit():
     identity = str(uuid4())
     raw = board()
     raw["scenes"][0].update(visual_kind="library", source_artifact_id=identity)
-    with pytest.raises(ValueError, match="fitted window ends at 30s"):
+    with pytest.raises(ValueError, match="Available clip windows cannot cover"):
         validate_storyboard(
             json.dumps(raw),
             {"audio": "voice_music", "duration_seconds": 30},
