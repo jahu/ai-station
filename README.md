@@ -148,31 +148,30 @@ preserves the soundtrack and fits the story beside or above the presenter.
 The conversation can select the supplied portrait for this same workflow.
 An actual 17.2-second film now includes a newly generated Sonic presenter and
 the exact original soundtrack. Complete decoding, timing and source/audio
-identity checks passed; longer-film and audiovisual quality review continue.
+identity checks and sampled presenter-frame review passed.
 A complete-material coordinator now queues sound, measured timing, missing shots
 and export, with whole-production Stop and continuation that reuses complete
-media and spoken cues. Broader generated film/voice quality remains in
-qualification. This is not a feature
-of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
+media and spoken cues. The current implementation and real-output checks are
+recorded in the [completion audit](docs/plans/studio-completion-audit.md). This is
+not a feature of the published 0.5.0 installers.
 The conversation bridge adds semantic project/format/audio selection and queues
 that same full production from a prompt, with a Studio link and final film in
 chat. Account isolation, all four audio policies, Stop and queue recovery are
-checked with fake media; actual conversational film quality remains in
-qualification. New soundtrack finishing on develop measures and balances
+checked with fake media, alongside the real local-model exports below.
+New soundtrack finishing on develop measures and balances
 publishing volume, protects peaks and retains exact narration timing; earlier
-soundtracks keep their original audio. Complete generated-film quality remains
-under review. Storyboards on develop can explicitly share one image or clip
+soundtracks keep their original audio. Storyboards on develop can explicitly share one image or clip
 across scenes while keeping separate captions, motion and timing. The director
 fits new plans to the requested duration; manual edits remain explicit and
 measured speech may extend the film rather than cutting words.
 Real local-model checks now cover two distinct brands: an eight-second
 widescreen silent presentation and a portrait music reel, each sharing one
 generated image across scenes. Both final MP4s passed full decoding and the
-requested duration/source checks; complete publication-quality review continues.
+requested duration/source checks and sampled visual review.
 Full-film narration review now also covers a 75-second educational edit: the
 owner accepted its pace, expression and voice continuity throughout. Independent
-transcription retained all 179 original words. Conversation-based revisions now keep the original media, soundtrack and editable
-version history for caption/identity changes, with explicit new production for
+transcription retained all 179 original words. Conversation-based revisions now
+keep the original media, soundtrack and editable version history for caption/identity changes, with explicit new production for
 changed spoken content or imagery. Real local-model follow-ups changed a film’s
 headline and created a separately branded widescreen copy, retaining the original
 shots/music and material history.
