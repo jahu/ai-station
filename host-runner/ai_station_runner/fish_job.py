@@ -20,7 +20,7 @@ from ai_station_runner.fish_contract import (
 )
 from ai_station_runner.memory_scope import require_scope
 from ai_station_runner.security import resolve_child
-from ai_station_runner.speech_chunks import text_chunks
+from ai_station_runner.speech_chunks import reset_speech_seed, text_chunks
 
 
 class GpuMemoryUnavailable(ValueError):
@@ -130,7 +130,7 @@ def render(request, *, runtime, models, work, reference):
 
         codes = []
         model_text = (prefix + " " + chunk).strip()
-        torch.manual_seed(42)
+        reset_speech_seed()
         with torch.inference_mode():
             for response in generate_long(
                 model=model,

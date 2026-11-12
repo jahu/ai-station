@@ -105,3 +105,13 @@ unchanged supplied references, and no use of incomplete audio. Repeat the same
 warm-only input after rollout, inspect the native continuity report and complete
 transcript, then let listening determine whether timbre continuity improved.
 No forbidden-emotion word list, tag substitution or subject-specific rule.
+
+
+The same seed reset is shared by app-owned Fish, prepared Chatterbox and the
+configured Chatterbox CLI, covering both recording/model voice and all callers
+(Chat, agents, Studio, avatar narration). Reset Python, NumPy and Torch before
+each model call. External operator-written CLIs are not rewritten: their seed
+behavior cannot be guaranteed if they override the RNG themselves. The station's
+configured app-owned Chatterbox script must be pinned to the qualified source on
+idle rollout, rather than retaining an older checkout's script path. No user
+recording or existing model/cache is changed.

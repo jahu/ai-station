@@ -53,7 +53,9 @@ Portraits can now use a voice reference and typed Polish speech through a sequen
 
 For multi-chunk model-generated speech on develop, later chunks use the complete
 first chunk's acoustic codes and matching text as a fixed voice reference.
-Every chunk in the Run uses the same seed, including recording-based speech.
+All app-owned Fish and Chatterbox entry points reset Python, NumPy and Torch
+to the same seed for every model call, including recording-based speech. This
+applies to speech requested by Chat, Studio, agents and avatar narration.
 Recording-based speech retains the user's verified recording and transcript.
 The native report records `voice_continuity` (`single_chunk`,
 `first_generated_chunk`, or `provided_reference`). This preserves the existing
