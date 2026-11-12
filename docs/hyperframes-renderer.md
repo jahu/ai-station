@@ -34,6 +34,21 @@ presenter sequencing, bounded CPU memory and confirmed cleanup. This CPU fixture
 is not a newly generated professional film. Live recipe activation must wait
 for existing station productions to finish; their frozen renderer remains intact.
 
+The next complete portrait reel exposed a related issue: even a two-word title
+still shaded most of the source canvas. Full-bleed copy backgrounds now measure
+the actual fitted text after local fonts load, include its existing safe-area
+offset, and fade above that region. They retain an opaque reading surface below
+the copy rather than applying a fixed whole-frame wash. Copy-free scenes keep
+the previous clear-source/footer behavior. No content classification, generated
+CSS, scene mutation or extra frame-time work is introduced.
+
+Actual full-HD browser checks measured a 376-pixel caption background on a
+1,080-pixel landscape canvas and 532 pixels on a 1,920-pixel portrait canvas.
+The upper source pixels remained exact; longer title/body/list copy expanded its
+background to 714 and 987 pixels respectively without overflow. This is renderer
+geometry and pixel evidence, not a claim of generated-film publication acceptance.
+It requires a new matching native recipe before live use.
+
 Hyperframes 0.9.26, GSAP 3.15.0 and Fontsource 5.3.0 are lockfile-pinned. Local
 fonts include extended Latin; the image preserves their licenses. The fixed
 image contains Node 22, Chromium, FFmpeg and the trusted compiler. Rendering
