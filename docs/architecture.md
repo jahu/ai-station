@@ -1870,3 +1870,11 @@ sources and an exact-compatible soundtrack/presenter through normal production
 and render validation. A different brand creates a copy. The original Tasks stay
 historical inputs, outside the new Stop registry. See
 [the revision contract](plans/studio-conversation-revisions.md).
+
+The conversation's public-image flow composes ordinary typed search/import Runs
+with existing image executors. Canonical imported references, provenance and
+thumbnails belong in Artifact storage and are visible in chat/Library. An explicit
+web reference contract requires import before transformation; it does not treat
+an original downloaded image as the completed edit. Clipboard attachment events
+reuse the existing browser attachment pipeline. See
+[the 0.6.1 contract](plans/chat-web-images-and-clipboard.md).

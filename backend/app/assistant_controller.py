@@ -311,6 +311,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
             "controller_image_policy": "configured-default-v2",
+            "controller_web_image_policy": "public-images-v1",
             "controller_studio_policy": "studio-v1",
             "controller_studio_timing_policy": "fit",
             "controller_studio_revision_policy": "source-v1",
@@ -544,7 +545,7 @@ def dispatch(session, root, decision):
     if name not in available_tools(root.parameters):
         raise ValueError("The proposed tool is unavailable in this request scope")
     args = TOOLS[name].arguments.model_validate(decision.arguments)
-    if name == "web.search":
+    if name in {"web.search", "web.image_search"}:
         selected_query = (root.parameters.get("web_search") or {}).get("query", "").strip()
         if selected_query and args.query != selected_query:
             raise ValueError(
@@ -556,14 +557,14 @@ def dispatch(session, root, decision):
 
         params = request_parameters(session, root, decision.arguments)
         executor, permissions = "assistant_studio", list(TOOLS[name].permissions)
-    elif name in {"web.search", "web.read", "artifact.read"}:
+    elif name in {"web.search", "web.read", "web.image_search", "web.image_import", "artifact.read"}:
         params = {
             "tool": name,
             "arguments": args.model_dump(),
             "execution_deadline_at": root.parameters["execution_deadline_at"],
             "controller_parent_id": root.id,
         }
-        if name == "web.read":
+        if name in {"web.read", "web.image_import"}:
             links = sources(root)
             if any(alias not in links for alias in args.sources):
                 raise ValueError("Read only supplied source aliases")
@@ -575,7 +576,7 @@ def dispatch(session, root, decision):
             params["inputs"] = [entries[alias] for alias in args.artifacts]
             executor, permissions = "assistant_artifact", ["filesystem_read"]
         else:
-            executor, permissions = "assistant_web", ["network_read"]
+            executor, permissions = "assistant_web", list(TOOLS[name].permissions or ("network_read",))
     else:
         params = wrapper_parameters(session, root, name, decision.arguments)
         deadline = datetime.fromisoformat(root.parameters["execution_deadline_at"])
@@ -658,7 +659,7 @@ def verify_wrapper(session, run):
     if run.executor_type in {"assistant_web", "assistant_artifact"}:
         if run.parameters.get("tool") != step["tool"] or run.parameters.get("arguments") != step["arguments"]:
             raise ValueError("Controller read arguments changed before execution")
-        if step["tool"] == "web.read":
+        if step["tool"] in {"web.read", "web.image_import"}:
             if run.parameters.get("urls") != [sources(root)[alias] for alias in step["arguments"]["sources"]]:
                 raise ValueError("Controller public sources changed")
         if step["tool"] == "artifact.read":
@@ -718,6 +719,22 @@ def controller_results(session, root):
             else None
         )
         result = task_results(session, source, wrapper) if source else {}
+        if step["tool"] == "web.image_import":
+            from app.serialize import artifact_dict
+
+            imported = session.scalars(
+                select(Artifact)
+                .where(
+                    Artifact.run_id == anchor.id,
+                    Artifact.owner_id == root.owner_id,
+                    Artifact.artifact_type == "image",
+                    Artifact.trashed_at.is_(None),
+                    Artifact.purged_at.is_(None),
+                    Artifact.purge_run_id.is_(None),
+                )
+                .order_by(Artifact.created_at, Artifact.id)
+            )
+            result = {"steps": [], "artifacts": [artifact_dict(item) for item in imported]}
         if step["tool"] == "studio.produce":
             from app.serialize import artifact_dict
             from app.studio_assistant import final_output
@@ -745,7 +762,7 @@ def controller_results(session, root):
         data = anchor.metadata_json.get("controller_tool_result") or {}
         links = (
             data.get("sources", [])
-            if step["tool"] == "web.search"
+            if step["tool"] in {"web.search", "web.image_search", "web.image_import"}
             else [
                 {"url": page["url"], "title": page.get("title") or page["url"]}
                 for page in data.get("pages", [])
@@ -987,11 +1004,16 @@ class AssistantWebExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
-        result = (
-            asyncio.run(execute_search(session, run, run.parameters["arguments"]["query"]))
-            if run.parameters["tool"] == "web.search"
-            else asyncio.run(execute_fetch(session, run, run.parameters["urls"]))
-        )
+        if run.parameters["tool"] in {"web.image_search", "web.image_import"}:
+            from app.web_images import execute_images
+
+            result = asyncio.run(execute_images(session, run))
+        else:
+            result = (
+                asyncio.run(execute_search(session, run, run.parameters["arguments"]["query"]))
+                if run.parameters["tool"] == "web.search"
+                else asyncio.run(execute_fetch(session, run, run.parameters["urls"]))
+            )
         session.refresh(run)
         if result is None or run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")

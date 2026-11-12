@@ -10,6 +10,7 @@ type Selection =
   | { kind: "audio"; id: string };
 export function useConversationAttachmentUpload(
   onSelected: (selection: Selection) => void,
+  existingImageCount = 0,
 ) {
   const cache = useQueryClient();
   return useMutation({
@@ -36,11 +37,16 @@ export function useConversationAttachmentUpload(
                 },
               }),
             )
-          : uploadImageFiles(files, cache, (artifacts) =>
-              onSelected({
-                kind,
-                ids: artifacts.map((artifact) => artifact.id),
-              }),
+          : uploadImageFiles(
+              files,
+              cache,
+              (artifacts) =>
+                onSelected({
+                  kind,
+                  ids: artifacts.map((artifact) => artifact.id),
+                }),
+              4,
+              existingImageCount,
             ),
   });
 }

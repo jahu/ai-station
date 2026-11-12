@@ -38,6 +38,11 @@ The conversation is your starting point: describe what you want, and AI Station
 coordinates the tools behind it. Dedicated workspaces are there when you want
 more control.
 
+Paste a screenshot or supported document directly into the message box. Review
+or remove attachments before sending. With Web enabled, the assistant can find
+an actual image online, save the original to your private Library and pass it
+to the image tools for editing; the original and result stay visible in chat.
+
 The conversation uses a ReAct orchestrator: it chooses an
 available tool, observes its actual result and can pass that result to the next
 tool. Reference images survive follow-up questions, and an image result can become

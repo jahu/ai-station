@@ -1232,13 +1232,15 @@ function ConversationView({
           : {
               ...emptyOptions,
               action: options.action === "chat" ? "chat" : "auto",
-              image_artifact_ids: selection.ids,
+              image_artifact_ids: [
+                ...new Set([...options.image_artifact_ids, ...selection.ids]),
+              ],
             },
     );
     setWebEnabled(false);
     setWebQuery("");
     web.setRenderPages(false);
-  });
+  }, options.image_artifact_ids.length);
   const pageVisionWebPreference = useRef<boolean | null>(null);
   const contextReady =
     !continuing ||
@@ -1857,9 +1859,10 @@ function ConversationView({
                   attachments.length > 0) && (
                   <TextAttachments
                     uploadErrorsHandled
+                    imageOnly={options.image_artifact_ids.length > 0}
                     attachments={attachments}
                     onChange={setAttachments}
-                    busy={busy || options.image_artifact_ids.length > 0}
+                    busy={busy}
                     onReading={setReadingAttachment}
                     onDataFiles={
                       !continuing &&
@@ -1875,7 +1878,10 @@ function ConversationView({
                     }
                     onImageFiles={
                       !continuing &&
-                      acceptsLocalAttachments(options) &&
+                      acceptsLocalAttachments({
+                        ...options,
+                        image_artifact_ids: [],
+                      }) &&
                       !webQuery.trim() &&
                       !web.renderPages
                         ? (files) =>
