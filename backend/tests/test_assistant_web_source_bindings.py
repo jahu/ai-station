@@ -6,7 +6,7 @@ from app.db import session_factory
 from app.models import RunEvent
 from fastapi.testclient import TestClient
 from sqlalchemy import select
-from test_assistant_controller import drain, root_state, submit
+from test_assistant_controller import drain, failed_root_state, root_state, submit
 from test_assistant_react_workflow import action, react_model  # noqa: F401
 
 URL = "https://docs.python.org/3/tutorial/controlflow.html?reference=" + "x" * 120
@@ -82,8 +82,7 @@ def test_unknown_urls_never_gain_source_authority(react_model, web, target):  # 
     with TestClient(app) as client:
         queued = submit(client, "Research the subject", web_search={"enabled": True})
         drain()
-        state = root_state(queued)
-        assert state["controller_outcome"] == "clarify"
+        state = failed_root_state(queued)
         assert [s["tool"] for s in state["controller_steps"]] == ["web.search"]
         assert fetched == []
 
@@ -108,7 +107,11 @@ def test_url_and_alias_cannot_bypass_completed_read_deduplication(react_model, w
             rejected = list(
                 session.scalars(select(RunEvent).where(RunEvent.event_type == "assistant.decision.rejected"))
             )
-            assert [r.payload for r in rejected] == [{"attempt": 1, "retrying": True}]
+            assert len(rejected) == 1
+            assert rejected[0].payload["attempt"] == 1 and rejected[0].payload["retrying"] is True
+            assert rejected[0].payload["tool"] == "web.read"
+            assert rejected[0].payload["validation"]
+            assert "rejected_action" not in rejected[0].payload
 
 
 @pytest.mark.parametrize(
@@ -214,8 +217,8 @@ def test_followup_sources_require_real_provenance_and_current_web_permission(rea
         )
         assert reply.status_code == 202, reply.text
         drain()
-        state = root_state({"run": reply.json()})
-        assert state["controller_outcome"] == "clarify" and not fetched
+        state = failed_root_state({"run": reply.json()})
+        assert not fetched
         assert [s["tool"] for s in state["controller_steps"]] == ["artifact.read"]
         if tamper != "network_off":
             assert state["controller_steps"][0]["observation"]["tool_data"][0]["sources"] == []

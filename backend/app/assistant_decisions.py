@@ -262,10 +262,10 @@ def invalid_decision_fallback(context):
             response="Your requested results are ready. You can inspect the outputs and completed steps below.",
             evidence=evidence,
         )
-    return Decision(
-        kind="clarify",
-        reason="Unable to choose a valid next action",
-        response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
+    raise ProviderError(
+        "The planner could not prepare a valid tool action after correction. "
+        "No additional tool was executed; completed results remain available. "
+        "Inspect the decision Run for validation details."
     )
 
 
@@ -616,6 +616,7 @@ class AssistantDecisionExecutor:
             ]
             correction, text = None, ""
             for attempt in range(2):
+                proposed = None
                 try:
                     if react:
                         from app.assistant_react import take_action
@@ -629,26 +630,39 @@ class AssistantDecisionExecutor:
                         text = json.dumps(proposed, ensure_ascii=False)
                     else:
                         text = asyncio.run(infer(session, run, messages))
+                        proposed = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip()))
                     value = asyncio.run(database_step(session, run, claim, deadline, lambda: validate(text)))
                     break
                 except ValueError as exc:
-                    correction = str(exc)[:1800]
-                    # Keep rejection count inspectable without persisting a raw
-                    # framework response/private scratchpad in public activity.
-                    asyncio.run(
-                        database_step(
+                    from app.assistant_action_contracts import repair_context
+                    from app.assistant_intents import validation_diagnostic
+
+                    detail = validation_diagnostic(exc)
+                    correction = repair_context(run.parameters["decision_context"], proposed, detail)
+
+                    def record_rejection():
+                        # Only the normalized proposal/diagnostic is retained in
+                        # this private owned Run. No framework Thought/scratchpad.
+                        run.parameters = {
+                            **run.parameters,
+                            "decision_attempts": [
+                                *run.parameters.get("decision_attempts", [])[-1:],
+                                {"attempt": attempt + 1, **correction},
+                            ],
+                        }
+                        append_event(
                             session,
-                            run,
-                            claim,
-                            deadline,
-                            lambda: append_event(
-                                session,
-                                run.id,
-                                "assistant.decision.rejected",
-                                {"attempt": attempt + 1, "retrying": not bool(attempt)},
-                            ),
+                            run.id,
+                            "assistant.decision.rejected",
+                            {
+                                "attempt": attempt + 1,
+                                "retrying": not bool(attempt),
+                                "tool": proposed.get("tool") if isinstance(proposed, dict) else None,
+                                "validation": detail,
+                            },
                         )
-                    )
+
+                    asyncio.run(database_step(session, run, claim, deadline, record_rejection))
                     if attempt:
                         value = invalid_decision_fallback(run.parameters["decision_context"])
                         break

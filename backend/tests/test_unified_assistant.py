@@ -189,7 +189,7 @@ def test_planner_cannot_grant_agent_authority_from_an_unrelated_task(fake):
         finish_work()
         with session_factory()() as db:
             actual = db.get(Run, result["run"]["id"])
-            assert actual.status == "succeeded" and actual.metadata_json["controller_outcome"] == "clarify"
+            assert actual.status == "failed" and "Controller decision failed" in actual.error_message
             assert not list(db.scalars(select(Agent)))
 
 
