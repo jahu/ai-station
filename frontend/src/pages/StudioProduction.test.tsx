@@ -23,6 +23,8 @@ function setup({
   loseAck = false,
   checking = false,
   finished = false,
+  avatarAvailable = true,
+  supported = true,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   let lost = false;
@@ -72,9 +74,35 @@ function setup({
         return json(row.root_run);
       }
       if (path.endsWith("/productions")) return json(history);
+      if (path.includes("/artifacts?"))
+        return json([
+          {
+            id: "portrait",
+            type: "image",
+            mime_type: "image/webp",
+            original_filename: "presenter.webp",
+            metadata: {},
+          },
+        ]);
+      if (path.endsWith("/artifacts/portrait"))
+        return json({
+          id: "portrait",
+          original_filename: "presenter.webp",
+          metadata: {},
+        });
+      if (path.endsWith("/avatars/models"))
+        return json({
+          items: [{ id: "local-model", name: "Local Sonic", available: true }],
+        });
+      if (path.includes("/avatars/") && path.endsWith("capabilities"))
+        return json({
+          available: avatarAvailable,
+          reason: avatarAvailable ? "" : "Avatar model needs preparation",
+        });
       checks += 1;
       return json({
         available: checking ? checks > 1 : available,
+        max_presenter_clips: supported ? 32 : undefined,
         readiness:
           checking && checks === 1
             ? "checking"
@@ -92,7 +120,12 @@ function setup({
       <MemoryRouter>
         <StudioProduction
           materialId="material"
-          revision={{ id: "original" } as StudioRevision}
+          revision={
+            {
+              id: "original",
+              storyboard: { audio: "voice_music" },
+            } as StudioRevision
+          }
           disabled={disabled}
           selectedTakes={{ 2: "chosen-take" }}
           onVersion={vi.fn()}
@@ -171,4 +204,58 @@ it("reports measured finished timing separately from the original request", asyn
   expect(screen.getByLabelText("Produced film").getAttribute("src")).toBe(
     "/api/artifacts/finished-film/file",
   );
+});
+
+it("selects a WebP presenter, position and installed model for the complete film", async () => {
+  const requests = setup();
+  fireEvent.click(screen.getByText("Create a speaking presenter"));
+  expect(
+    (screen.getByLabelText("Upload presenter portrait") as HTMLInputElement)
+      .accept,
+  ).toContain("image/webp");
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Choose presenter.webp/ }),
+  );
+  expect(screen.getByAltText("Presenter portrait preview")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Presenter position"), {
+    target: { value: "right" },
+  });
+  await screen.findByRole("option", { name: "Local Sonic" });
+  fireEvent.change(screen.getByLabelText("Avatar model"), {
+    target: { value: "local-model" },
+  });
+  const button = screen.getByRole("button", {
+    name: "Produce film",
+  }) as HTMLButtonElement;
+  await waitFor(() => expect(button.disabled).toBe(false));
+  fireEvent.click(button);
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body.presenter).toEqual({
+    image_artifact_id: "portrait",
+    placement: "right",
+    model_id: "local-model",
+  });
+});
+
+it("blocks an unavailable avatar and allows removing the portrait to produce normally", async () => {
+  const requests = setup({ avatarAvailable: false });
+  fireEvent.click(screen.getByText("Create a speaking presenter"));
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Choose presenter.webp/ }),
+  );
+  await screen.findByText(/Avatar model needs preparation/);
+  const button = screen.getByRole("button", {
+    name: "Produce film",
+  }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  expect(requests).toHaveLength(0);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove presenter portrait" }),
+  );
+  await waitFor(() => expect(button.disabled).toBe(false));
+  fireEvent.click(button);
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body).not.toHaveProperty("presenter");
 });

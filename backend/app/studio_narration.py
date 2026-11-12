@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import UUID, uuid5
 
 from fastapi import HTTPException
+from pydantic import Field
 from sqlalchemy import select
 
 from app.artifacts import register_file
@@ -39,6 +40,7 @@ PERMISSIONS = ["filesystem_read", "workspace_write"]
 class NarrationRequest(Fields):
     client_request_id: UUID
     revision_id: UUID
+    portrait_artifact_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def inputs(session, revision, *, verify=False):
@@ -87,13 +89,21 @@ def create_narration(session, material_id, body):
         )
     )
     if prior:
-        if prior.parameters["studio_revision_id"] != revision.id:
+        if prior.parameters["studio_revision_id"] != revision.id or (
+            prior.parameters.get("portrait") or {}
+        ).get("artifact_id") != (str(body.portrait_artifact_id) if body.portrait_artifact_id else None):
             raise HTTPException(409, "This narration receipt belongs to another saved edit")
         return prior
     try:
         plan, voices, soundtrack = inputs(session, revision)
+        from app.studio_presenter_sources import portrait_snapshot
+
+        portrait = (
+            portrait_snapshot(session, body.portrait_artifact_id) if body.portrait_artifact_id else None
+        )
     except (ValueError, OSError, wave.Error, EOFError) as exc:
         raise HTTPException(422, str(exc)) from exc
+    narration_parents = {soundtrack["artifact_id"], *(v["artifact_id"] for v in voices.values())}
     task = create_task(
         session,
         title="Prepare presenter narration · " + material.title,
@@ -119,9 +129,11 @@ def create_narration(session, material_id, body):
             "revision_sha256": digest(plan.model_dump(mode="json")),
             "voices": {str(i): source for i, source in voices.items()},
             "soundtrack": soundtrack,
+            **({"portrait": portrait} if portrait else {}),
             "parent_artifact_ids": sorted(
-                {soundtrack["artifact_id"], *(v["artifact_id"] for v in voices.values())}
+                narration_parents | ({portrait["artifact_id"]} if portrait else set())
             ),
+            "narration_parent_artifact_ids": sorted(narration_parents),
             "execution_deadline_at": (utcnow() + timedelta(minutes=20)).isoformat(),
         },
     )
@@ -175,6 +187,12 @@ def frozen_inputs(session, run):
     material = get_material(session, run.parameters["studio_material_id"])
     revision = get_revision(session, material, run.parameters["studio_revision_id"])
     plan, voices, soundtrack = inputs(session, revision, verify=True)
+    if run.parameters.get("portrait"):
+        from app.studio_presenter_sources import portrait_snapshot
+
+        frozen = run.parameters["portrait"]
+        if portrait_snapshot(session, frozen["artifact_id"], verify=True) != frozen:
+            raise ValueError("The frozen presenter portrait changed")
     if (
         run.parameters["profile"] != PROFILE
         or digest(plan.model_dump(mode="json")) != run.parameters["revision_sha256"]
@@ -285,6 +303,13 @@ class StudioNarrationExecutor:
                 stem = folder / "narration.wav"
                 report = mix(plan, voices, None, open_source, folder / "bus.f32", stem, check=check)
                 parts = split(stem, plan, folder, check=check)
+                portrait_path = None
+                if run.parameters.get("portrait"):
+                    from app.studio_presenter_sources import normalize_portrait
+
+                    check(True)
+                    portrait_path = folder / "presenter.png"
+                    normalize_portrait(run.parameters["portrait"], portrait_path)
                 check(True)
 
                 def publish():
@@ -314,7 +339,9 @@ class StudioNarrationExecutor:
                         original_filename="narration.wav",
                         run_id=run.id,
                         artifact_id=str(uuid5(UUID(run.id), "stem")),
-                        parent_artifact_ids=run.parameters["parent_artifact_ids"],
+                        parent_artifact_ids=run.parameters.get(
+                            "narration_parent_artifact_ids", run.parameters["parent_artifact_ids"]
+                        ),
                         metadata={**common, **report, "studio_role": "narration_stem"},
                     )
                     artifact.title = material.title + " · clean narration"
@@ -346,6 +373,19 @@ class StudioNarrationExecutor:
                         "parts": result,
                         "samples": plan.frames * 1600,
                     }
+                    if portrait_path:
+                        picture = register_file(
+                            session,
+                            source=portrait_path,
+                            artifact_type="image",
+                            mime_type="image/png",
+                            original_filename="presenter.png",
+                            run_id=run.id,
+                            artifact_id=str(uuid5(UUID(run.id), "portrait")),
+                            parent_artifact_ids=[run.parameters["portrait"]["artifact_id"]],
+                            metadata={**common, "studio_role": "presenter_portrait"},
+                        )
+                        run.metadata_json = {**run.metadata_json, "portrait_artifact_id": picture.id}
                     transition(
                         session,
                         run,

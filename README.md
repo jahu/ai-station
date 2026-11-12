@@ -120,8 +120,13 @@ activate a compatible engine already installed on the station, with private
 setup history and Stop; fresh-engine installation is still in development.
 The export panel on develop can also add a completed avatar/presenter clip from
 Library, with space beside or below the story. It keeps the film soundtrack and
-requires enough footage for the complete edit. Automatically generating that
-presenter from the film's narration is the next postproduction step.
+requires enough footage for the complete edit. The production panel on develop
+also offers **Create a speaking presenter**: choose a portrait and an installed
+avatar model to generate the presenter from the film's actual narration. It
+preserves the soundtrack and fits the story beside or above the presenter.
+The conversation can select the supplied portrait for this same workflow.
+Automatic presenter coordination is covered by fake-executor tests; complete
+generated presenter-film quality is still being qualified.
 A complete-material coordinator now queues sound, measured timing, missing shots
 and export, with whole-production Stop and continuation that reuses complete
 media and spoken cues. Generated film/voice quality and fresh installation

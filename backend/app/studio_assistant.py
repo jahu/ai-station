@@ -50,15 +50,25 @@ def request_parameters(session, root, raw):
     required = [
         a for a in outcome.get("source_inputs", []) if entries.get(a, {}).get("type") in {"image", "video"}
     ]
-    if not set(required).issubset(args.references):
+    supplied = set(args.references) | ({args.presenter_reference} if args.presenter_reference else set())
+    if not set(required).issubset(supplied):
         raise ValueError("Preserve the requested supplied Studio media references")
     references = reference_ids(session, owner_id=root.owner_id, entries=entries, aliases=args.references)
+    presenter = None
+    if args.presenter_reference:
+        if entries.get(args.presenter_reference, {}).get("type") != "image":
+            raise ValueError("Choose a supplied image alias for the presenter")
+        image = reference_ids(
+            session, owner_id=root.owner_id, entries=entries, aliases=[args.presenter_reference]
+        )[0]
+        presenter = {"image_artifact_id": image, "placement": args.presenter_placement or "auto"}
     return {
         "controller_parent_id": root.id,
         "instruction": args.instruction,
         "title": args.title,
         "outcome_index": index,
         "reference_artifact_ids": references,
+        **({"presenter": presenter} if presenter else {}),
         **chosen,
         "model": root.parameters["controller_request"]["model"],
         "execution_deadline_at": root.parameters["execution_deadline_at"],
@@ -315,6 +325,7 @@ class AssistantStudioExecutor:
                     Produce(
                         client_request_id=uuid5(UUID(run.id), "production"),
                         revision_id=revision.id,
+                        presenter=run.parameters.get("presenter"),
                     ),
                 )
                 attach(session, run, production, "production")

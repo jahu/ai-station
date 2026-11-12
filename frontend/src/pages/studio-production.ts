@@ -28,10 +28,12 @@ export function useStudioRenderer() {
   return useQuery({
     queryKey: ["studio-renderer"],
     queryFn: ({ signal }) =>
-      api<{ available: boolean; reason?: string; readiness?: string }>(
-        `${materialBase}/renderer/capabilities`,
-        { signal },
-      ),
+      api<{
+        available: boolean;
+        reason?: string;
+        readiness?: string;
+        max_presenter_clips?: number;
+      }>(`${materialBase}/renderer/capabilities`, { signal }),
     staleTime: 30000,
     refetchInterval: (q) =>
       q.state.data?.readiness === "checking" ? 1000 : false,

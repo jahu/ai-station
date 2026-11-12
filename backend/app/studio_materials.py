@@ -94,7 +94,7 @@ def context(session, row):
     }
 
 
-def source_snapshot(session, identity, *, verify=False, complete=False):
+def source_snapshot(session, identity, *, verify=False, complete=False, internal_role=None):
     from app.config import get_settings
     from app.timelines import verify_bytes
 
@@ -102,10 +102,13 @@ def source_snapshot(session, identity, *, verify=False, complete=False):
     if item is None or item.trashed_at or item.purged_at or item.purge_run_id:
         raise ValueError("Choose available media from your Library")
     if complete:
+        from app.studio_presenter_sources import complete_internal_part
+
         origin = session.get(Run, item.run_id) if item.run_id else None
         if (
             item.metadata_json.get("partial")
             or item.metadata_json.get("internal_media")
+            and not (internal_role == "presenter_part" and complete_internal_part(session, item))
             or origin
             and origin.status != "succeeded"
         ):

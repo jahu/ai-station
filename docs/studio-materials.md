@@ -182,6 +182,28 @@ state. These checks do not qualify a newly generated professional film, portrait
 video quality, fresh renderer installation or a production rollout. The complete
 Creative Studio delivery goal remains active.
 
+### Generate a speaking presenter
+
+In the material's production panel, open **Create a speaking presenter**. Upload
+or choose a clear portrait, choose an installed avatar model and leave placement
+on Automatic, or place the presenter beside/below the story. Use narration or
+narration with music in the saved story settings. Production becomes available
+when both the avatar model and current Studio renderer report readiness.
+
+Studio uses the film's actual measured speech, including pauses. It generates
+the presenter in bounded parts for longer films, keeps the story visible and
+retains the original soundtrack exactly once. There is no need to create a
+separate voiceover or avatar first. The original portrait is preserved; normalized
+inputs and generated parts remain inspectable in Runs, while the finished film
+appears in Library. Continuation keeps complete unchanged parts. Stop applies
+to the whole owned production.
+
+In the conversation, attach a portrait and explicitly ask for a speaking
+presenter in the reel, lesson or presentation. The semantic assistant can pass
+that supplied image to the same workflow without treating it as story footage.
+This development workflow is under real generated-film qualification; it is not
+part of the published 0.5.0 installer.
+
 
 ## Unified assistant production
 

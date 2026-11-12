@@ -1,4 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import StudioPresenterGeneration, {
+  type PresenterGeneration,
+} from "./StudioPresenterGeneration";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Clapperboard, Download, Square } from "lucide-react";
@@ -35,6 +38,9 @@ export default function StudioProduction({
   onVersion: (id: string) => Promise<unknown>;
 }) {
   const { user } = useAccount();
+  const [presenter, setPresenter] = useState<PresenterGeneration | null>(null);
+  const [presenterReady, setPresenterReady] = useState(true);
+  const [presenterBusy, setPresenterBusy] = useState(false);
   const cache = useQueryClient();
   const key = ["studio-material-productions", user?.id, materialId];
   const values = useQuery({
@@ -62,6 +68,12 @@ export default function StudioProduction({
     (p) =>
       !terminal.has(p.status) || p.runs.some((r) => !terminal.has(r.status)),
   );
+  const hasPresenter =
+    !!presenter ||
+    !!(
+      current?.root_run.parameters.request as
+        Record<string, unknown> | undefined
+    )?.presenter;
   const receipt = useRef<{ fingerprint: string; id: string } | null>(null);
   function refresh() {
     void cache.invalidateQueries({ queryKey: key });
@@ -107,6 +119,7 @@ export default function StudioProduction({
           scene: Number(scene),
           artifact_id,
         })),
+        ...(presenter ? { presenter } : {}),
       };
       const fingerprint = JSON.stringify(body);
       if (receipt.current?.fingerprint !== fingerprint)
@@ -152,9 +165,23 @@ export default function StudioProduction({
           <span>02</span> Visuals & footage
         </li>
         <li>
-          <span>03</span> Final film
+          <span>03</span> {hasPresenter ? "Speaking presenter" : "Final film"}
         </li>
+        {hasPresenter && (
+          <li>
+            <span>04</span> Final film
+          </li>
+        )}
       </ol>
+      <StudioPresenterGeneration
+        value={presenter}
+        onChange={setPresenter}
+        onReady={setPresenterReady}
+        onBusy={setPresenterBusy}
+        disabled={disabled || !!active || action.isPending}
+        supported={(renderer.data?.max_presenter_clips ?? 0) >= 32}
+        narrated={["voice", "voice_music"].includes(revision.storyboard.audio)}
+      />
       {active && (
         <div className="studio-export-progress" role="status">
           <div>
@@ -220,7 +247,13 @@ export default function StudioProduction({
         <div className="studio-film-actions">
           <Button
             type="button"
-            disabled={disabled || action.isPending || !renderer.data?.available}
+            disabled={
+              disabled ||
+              action.isPending ||
+              !renderer.data?.available ||
+              !presenterReady ||
+              presenterBusy
+            }
             onClick={() => action.mutate("produce")}
           >
             <Clapperboard size={15} />{" "}
