@@ -642,3 +642,32 @@ keeps the precise diagnostic. ReAct scratchpad thoughts are not captured by this
 intent-only evidence. Existing claim, deadline, Stop and account fences apply to
 every evidence write and publication. Actual successful interpretation and the
 complete longer film still require a fresh ordinary request after deployment.
+
+### Nonverbal generated visuals — actual qualification finding, 2026-11-12
+
+The next actual request successfully corrected semantic interpretation (an
+oversized description) and revised only its narration from 230 to 179 words.
+All six visual scenes, sources and other fields were preserved; complete speech,
+music and mastering then succeeded. Measured narration extended the requested
+75-second edit to 95.633 seconds. Report that actual duration, not the earlier
+storyboard estimate. The finished film and its publication quality are still open.
+
+The first new photograph had no palette bars or hexadecimal labels and a coherent
+editorial composition, but contained pseudo-text on its display. Its actual
+visual brief explicitly requested an interface showing a text prompt. The previous
+director rule prohibited generated titles; the general no-lettering suffix then
+conflicted with that specific requested writing. This is an instruction-boundary
+quality defect, not evidence that a particular subject needs special-case code.
+
+Director guidance now separates all writing from generated visuals, including
+incidental/tiny/illegible interface or document copy. All intended wording belongs
+in the renderer's existing scene text fields. Generated surfaces are described
+through nonverbal shapes/materials/light. The shared image/video shot suffix
+reinforces the same policy. No subject matching, prose deletion, image repainting,
+new tool, changed source or inference parameter is introduced. Existing ordinary
+Images requests and approved Library sources retain their original semantics.
+
+This prompt-direction change remains a candidate until actual planning and new
+visual generation verify the separation. Preserve useful completed film assets;
+do not rerun or stop the whole production merely to repair one image. A good
+composition or absence of one former defect cannot establish publication quality.

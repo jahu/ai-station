@@ -37,7 +37,9 @@ def shot_prompt(revision, shot):
         parts.append("Camera and framing: " + shot.framing)
     if identity.get("visual_direction"):
         parts.append("Shared visual direction: " + identity["visual_direction"])
-    parts.append("Keep visible subjects, lighting and materials coherent. No captions, labels or lettering.")
+    parts.append(
+        "Keep visible subjects, lighting and materials coherent. Keep every generated visual surface unlettered; use nonverbal shapes and material detail. No writing, captions, labels, lettering or pseudo-text, even tiny or blurred. Typography is added separately by the renderer."
+    )
     parts.append(
         "Apply color directions only to actual objects, materials, backgrounds and lighting. No palette charts, color sample bars, swatches or visible color codes."
     )
