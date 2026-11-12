@@ -113,6 +113,9 @@ def validate_intent(text, context):
         if item.kind == "studio_material" and item.studio.source_material is not None:
             if item.studio.source_material not in context.get("studio_materials", {}):
                 raise ValueError("Choose a captured Studio source_material alias from this conversation")
+            from app.studio_assistant_contract import intent_options
+
+            intent_options(context["studio_materials"][item.studio.source_material]["options"], item.studio)
         if item.kind == "studio_material" and item.studio.project is not None:
             from app.studio_assistant_contract import resolve_project_alias
 
@@ -140,7 +143,7 @@ For image outcomes, explicitly declare reference_mode: independent for new pictu
 For agent_draft, set agent_media_kind to the future media output (image, video, avatar, music, effects or speech), or null for non-media agents. This freezes its intended modality for draft preparation, without executing that future work. Different agent modalities may use separate ordered agent_draft outcomes.
 Example of nested goals: "Research seasonal colors, make an illustration, make another version from that result, then prepare a weekly agent that produces music" has outcomes [{"kind":"image","count":2,"description":"Two illustrations, the second based on the first","reference_mode":"sequential","source_inputs":[]},{"kind":"agent_draft","count":1,"description":"A weekly music agent","agent_media_kind":"music"}]. Supporting research is not an extra requested report; the future agent's music is not a requested audio artifact now. Creating an agent means its definition, never drawing a picture of an agent. Only a separately requested written report adds text.
 
-For a revision of an existing film, use studio.source_material with one exact studio_materials alias. Use project_resolution=inherit to retain that saved material's project, identity and options, overriding only fields explicitly changed by the current request. A different requested brand selects that creative_projects alias and creates a linked copy, preserving the original. Never invent a source alias or put a material alias in media references. Clear an obsolete spoken-word target only when the user's revision authorizes it: clear_narration_words=true; otherwise retain the source's bounds, or replace them with an explicitly requested narration_words range. A new independent material leaves source_material absent.
+For a revision of an existing film, use studio.source_material with one exact studio_materials alias. Use project_resolution=inherit to retain that saved material's project, identity and options, overriding only fields explicitly changed by the current request. A different requested brand selects that creative_projects alias and creates a linked copy, preserving the original. Never invent a source alias or put a material alias in media references. Clear an obsolete spoken-word target only when the user's revision authorizes it: clear_narration_words=true; otherwise retain the source's bounds, or replace them with an explicitly requested narration_words range. A new independent material leaves source_material absent. Set refresh_visuals=true only when the requested revision needs new/replaced generated imagery or footage; caption, timing and identity-only changes preserve completed sources. Set refresh_audio=true only for requested changes to spoken words, narrator/performance or music. Caption/identity-only revisions retain the complete original soundtrack. A material alias belongs in studio.source_material, not media references.
 """
 
 

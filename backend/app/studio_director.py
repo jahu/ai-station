@@ -36,9 +36,8 @@ from app.studio_materials import (
     router,
     source_snapshot,
 )
-from app.studio_plan_validation import validate_storyboard
+from app.studio_plan_validation import fit_plan, validate_storyboard
 from app.studio_schema import PlanRequest, Storyboard
-from app.studio_storyboard import fit_source_timing
 
 INSTRUCTIONS = """You are the director and editor of a publication-quality original reel, presentation or educational film.
 Return only one complete JSON object matching storyboard_schema. No Markdown or executable code.
@@ -47,7 +46,7 @@ Build a coherent story with a concrete opening hook, purposeful beats, varied fr
 Use actual generated images and generated video as appropriate to the story; visual_brief describes the concrete subject, scene, camera, lighting, action and continuity requirements. Do not replace visual storytelling with long captions on colored backgrounds. Intentional static images/diagrams can be appropriate; no arbitrary quota of footage is required. Do not assume the subject is a person, product or particular business.
 visual_kind image/video means a NEW unique planned generation, not completed footage. To use the SAME generated or Library image/video across different beats, declare later scenes as visual_kind=reuse with reuse_scene equal to the earlier zero-based scene index. Do not repeat an image/video generation with prose such as "same photograph": that would make a different source. A reuse scene retains its own title, narration, layout, framing, motion and trim but shares the actual original visual. References must go backward, never to graphics or future scenes. library may reference only artifact_id from source_catalog. References may use only catalog images. Catalog video duration_seconds is an inspected available window, not a suggestion to loop, freeze or stretch that clip. Fit its beat and spoken line inside the available source and allocate longer explanations to other shots. Graphics are deliberate editorial information, not a substitute for requested footage. Camera/framing must be concrete and consistent across related shots. Text is composited by the renderer. Keep generated visual_brief and framing nonverbal: never ask an image/video model to draw writing, including interface prompts/messages, document copy, labels or titles, even if tiny, blurred or illegible. Describe information through unlettered surfaces, abstract shapes, materials and light. Put all intended wording in the scene title, eyebrow, body or points for the renderer instead. In visual_brief and framing, describe colors as actual object/material/lighting properties in natural visual language, not hexadecimal design tokens, labeled swatches, sample bars or palette charts. Exact brand colors stay in the compositor's identity, not rendered lettering in generated footage. Keep on-screen copy short and readable. Choose media_fit deliberately: contain preserves complete diagrams, interfaces, artwork and important edge content in the renderer panel; cover is for intentional photographic cropping with a crop-safe focal subject. A landscape source can appear in a near-square split/title panel, so do not assume its entire canvas remains visible under cover.
 Respect options.format, options.aspect and options.audio. If options.narration_words is supplied, preserve its explicit minimum/maximum for the total actual spoken script, counting whitespace-delimited words/numbers across all scenes. Captions, acting direction and music notes do not count. Do not invent a word limit when none was requested. Target total duration_frames close to options.duration_seconds * 30; each scene is 30fps and must allow its actual words to be spoken. Later audio measurement may extend it; do not suggest cutting words, looping short video or silently dropping audio. narration contains only exact spoken words, in the requested language. Use optional narration_segments for expressive phrase-level performance: each has text (exact spoken words) and a short plain natural-language style hint such as "curious and engaging" or "warm and reassuring". Joining their text in order must reproduce narration exactly, with whitespace normalization only. Include every word once; never add spoken text through a hint. Keep text plus inline [style] hints within 1000 characters per shot. Vary delivery meaningfully at narrative turns; avoid one flat emotion or exaggerated acting throughout. voice_direction is an overall editorial note, not a model instruction. Choose narration_delivery.direction=natural to use phrase hints; an explicit non-natural whole-take direction overrides them. Default narration_delivery.pace to natural: slow/fast perform audio time-stretching and are only for an explicit requested rate change. A restrained visual identity, calm brand or educational topic is not a request to slow the narrator. Prefer conversational rhythm and purposeful emphasis, not uniformly slow narration. These are local delivery choices, never commands. Music is a specific coherent instrumental score direction within 512 characters when music is selected; do not put narration or sound effects in visual_brief. For music-only or silent material leave every narration empty.
-Each scene needs a narrative purpose, an actual shot brief or Library source, and purposeful image motion when useful. Use full_bleed/split for visual scenes and editorial layouts for intentional graphics. An existing reference preserves its appropriate invariants without freezing every pose, view or composition. Changes in a follow-up must implement the feedback while retaining the desired brand/story continuity. Do not claim any generation/render/publishing or source inspection has happened. This is an editable storyboard only."""
+For a revision, prior_visuals identifies the actual completed source for each previous zero-based scene. Select those Library artifact IDs to preserve existing footage/images; image/video means NEW generation. When existing_visuals_only is true, no new image/video generation is authorized. When preserved_audio is supplied, preserve all its audio fields and each scene timing exactly; a caption/identity edit must not rewrite or regenerate the narrator/music. Preserve other unchanged details and actual scene timings unless the feedback changes them; fit_duration=false uses your proposed edit length instead of the old creation target. Each scene needs a narrative purpose, an actual shot brief or Library source, and purposeful image motion when useful. Use full_bleed/split for visual scenes and editorial layouts for intentional graphics. An existing reference preserves its appropriate invariants without freezing every pose, view or composition. Changes in a follow-up must implement the feedback while retaining the desired brand/story continuity. Do not claim any generation/render/publishing or source inspection has happened. This is an editable storyboard only."""
 
 
 def create_plan(session, material_id, body: PlanRequest, *, frozen=None, provider_snapshot=None):
@@ -193,7 +192,10 @@ class StudioDirector:
                         storyboard,
                         client_request_id=run.parameters["client_request_id"],
                         request_sha256=run.parameters["request_sha256"],
-                        frozen=run.parameters["frozen"],
+                        frozen={
+                            key: run.parameters["frozen"][key]
+                            for key in ("brief", "options", "project_snapshot")
+                        },
                         parent=parent,
                         source_run_id=run.id,
                     )
@@ -314,7 +316,13 @@ class StudioDirector:
             try:
                 try:
                     storyboard = validate_storyboard(
-                        text, params["frozen"]["options"], params["sources"], catalog
+                        text,
+                        params["frozen"]["options"],
+                        params["sources"],
+                        catalog,
+                        fit_duration=params["frozen"].get("fit_duration", True),
+                        existing_visuals_only=params["frozen"].get("existing_visuals_only", False),
+                        preserved_audio=params["frozen"].get("preserved_audio"),
                     )
                 except ValueError as original:
                     try:
@@ -324,6 +332,9 @@ class StudioDirector:
                             params["sources"],
                             catalog,
                             check_words=False,
+                            fit_duration=params["frozen"].get("fit_duration", True),
+                            existing_visuals_only=params["frozen"].get("existing_visuals_only", False),
+                            preserved_audio=params["frozen"].get("preserved_audio"),
                         )
                     except ValueError:
                         raise original
@@ -340,8 +351,11 @@ class StudioDirector:
                         lambda messages, **kwargs: self.consume(session, run, messages, database, **kwargs),
                         str(original),
                     )
-                fitted = fit_source_timing(
-                    storyboard, params["frozen"]["options"]["duration_seconds"], catalog
+                fitted = fit_plan(
+                    storyboard,
+                    params["frozen"]["options"],
+                    catalog,
+                    fit_duration=params["frozen"].get("fit_duration", True),
                 )
                 if [s.duration_frames for s in fitted.scenes] != [
                     s.duration_frames for s in storyboard.scenes

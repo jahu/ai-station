@@ -2166,6 +2166,7 @@ it("opens a conversation Studio material during production and plays only the fi
         sources: [],
         result: {
           studio_material_id: "material-1",
+          studio_revision_id: "revision-1",
           steps: [],
           artifacts: [
             {
@@ -2189,7 +2190,7 @@ it("opens a conversation Studio material during production and plays only the fi
   const mounted = mountResults(result);
   expect(
     screen.getByRole("link", { name: "Open in Studio" }).getAttribute("href"),
-  ).toBe("/studio/materials/material-1");
+  ).toBe("/studio/materials/material-1?revision=revision-1");
   expect(
     screen.getByLabelText("Generated Studio film").getAttribute("src"),
   ).toBe("/api/artifacts/final-film/file");

@@ -26,6 +26,8 @@ class StudioIntent(Fields):
     project_resolution: Literal["standalone", "selected", "clarify", "inherit"] = "standalone"
     source_material: Alias | None = Field(default=None, exclude_if=lambda v: v is None)
     clear_narration_words: StrictBool = Field(default=False, exclude_if=lambda v: not v)
+    refresh_visuals: StrictBool = Field(default=False, exclude_if=lambda v: not v)
+    refresh_audio: StrictBool = Field(default=False, exclude_if=lambda v: not v)
     format: Literal["reel", "presentation", "film"] | None = None
     aspect: Literal["portrait", "landscape", "square"] | None = None
     audio: Literal["voice_music", "voice", "music", "silent"] | None = None
@@ -34,6 +36,8 @@ class StudioIntent(Fields):
 
     @model_validator(mode="after")
     def resolved(self):
+        if (self.refresh_visuals or self.refresh_audio) and not self.source_material:
+            raise ValueError("Choose a source material before requesting revised visuals")
         if self.project_resolution == "inherit" and not self.source_material:
             raise ValueError("Choose a captured source material before inheriting its project")
         if self.clear_narration_words and (not self.source_material or self.narration_words is not None):
@@ -151,6 +155,15 @@ def selected_context(session, catalog, intent, *, source=None):
         if frozen
         else Defaults().model_dump()
     )
+    return {
+        "creative_project_id": frozen["id"] if frozen else None,
+        "project_snapshot": deepcopy(frozen) if frozen else {},
+        "options": intent_options(base, intent),
+    }
+
+
+def intent_options(base, intent):
+    base = deepcopy(base)
     if intent.clear_narration_words:
         base.pop("narration_words", None)
     for key in ("format", "aspect", "audio", "duration_seconds"):
@@ -158,11 +171,7 @@ def selected_context(session, catalog, intent, *, source=None):
             base[key] = value
     if intent.narration_words is not None:
         base["narration_words"] = intent.narration_words.model_dump()
-    return {
-        "creative_project_id": frozen["id"] if frozen else None,
-        "project_snapshot": deepcopy(frozen) if frozen else {},
-        "options": StudioOptions.model_validate(base).model_dump(),
-    }
+    return StudioOptions.model_validate(base).model_dump()
 
 
 def reference_ids(session, *, owner_id, entries, aliases):

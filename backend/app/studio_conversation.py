@@ -16,6 +16,29 @@ MAX_MATERIALS = 6
 MAX_WRAPPERS = 24
 
 
+def prior_visuals(session, revision, render):
+    """Actual completed story sources, not the edited MP4 used as new B-roll."""
+    from app.studio_materials import source_snapshot
+    from app.studio_schema import Storyboard
+    from app.studio_storyboard import visual_origin
+
+    plan = Storyboard.model_validate(revision.storyboard)
+    selected = {item["scene"]: item["artifact_id"] for item in render.parameters["bindings"]}
+    result = []
+    for index in range(len(plan.scenes)):
+        origin = visual_origin(plan, index)
+        shot = plan.scenes[origin]
+        identity = selected.get(origin) or (
+            str(shot.source_artifact_id) if shot.visual_kind == "library" else None
+        )
+        if identity:
+            source = source_snapshot(session, identity, complete=True)
+            if source != render.parameters["sources"].get(identity):
+                raise ValueError("The original visual source changed")
+            result.append({"scene": index, "artifact_id": identity, "source": source})
+    return result
+
+
 def revision_fingerprint(revision):
     return digest(
         {
@@ -90,7 +113,7 @@ def public_materials(catalog):
     return {alias: deepcopy(entry["public"]) for alias, entry in catalog.items()}
 
 
-def source_material(session, captured, *, owner_id, conversation_id):
+def source_material(session, captured, *, owner_id, conversation_id, check_version=True):
     """Revalidate the frozen parent before any revision-side queue publication."""
     from app.studio_assistant import final_output
 
@@ -106,7 +129,7 @@ def source_material(session, captured, *, owner_id, conversation_id):
     material = get_material(session, captured["material_id"], lock=True, active=True)
     if material.owner_id != owner_id:
         raise ValueError("The source material owner changed")
-    if material.version != captured["material_version"]:
+    if check_version and material.version != captured["material_version"]:
         raise ValueError("The source material changed. Reload before revising it")
     revision = get_revision(session, material, captured["revision_id"])
     if (

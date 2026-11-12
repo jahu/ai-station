@@ -1860,3 +1860,13 @@ Stop/lease checks remain active for every streaming pass. Old requests and queue
 coordinators preserve their original policy; there is no new execution boundary,
 media service, model download or arbitrary filter argument. The observed
 before/after report distinguishes target loudness from attained loudness.
+
+Studio conversation revisions retain the same execution boundary. A bounded,
+local-only catalog captures completed same-account, same-conversation material
+versions and immutable export/revision provenance. Semantic intent selects an
+opaque captured alias; the normal Studio wrapper revalidates it before enqueueing
+a parented director plan. Caption/identity edits reuse actual completed Library
+sources and an exact-compatible soundtrack/presenter through normal production
+and render validation. A different brand creates a copy. The original Tasks stay
+historical inputs, outside the new Stop registry. See
+[the revision contract](plans/studio-conversation-revisions.md).

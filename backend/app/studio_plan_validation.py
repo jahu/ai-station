@@ -10,7 +10,21 @@ from app.studio_schema import Storyboard, spoken_word_count, validate_spoken_wor
 from app.studio_storyboard import fit_source_timing, visual_origin
 
 
-def validate_storyboard(text, options, sources, catalog, *, check_words=True):
+def fit_plan(plan, options, catalog, *, fit_duration=True):
+    return fit_source_timing(plan, options["duration_seconds"], catalog) if fit_duration else plan
+
+
+def validate_storyboard(
+    text,
+    options,
+    sources,
+    catalog,
+    *,
+    check_words=True,
+    fit_duration=True,
+    existing_visuals_only=False,
+    preserved_audio=None,
+):
     raw = json.loads(text)
     errors, measurements = [], {}
     scenes = raw.get("scenes") if isinstance(raw, dict) else None
@@ -47,6 +61,17 @@ def validate_storyboard(text, options, sources, catalog, *, check_words=True):
         if len(failures) > 10:
             errors.append(f"{len(failures) - 10} additional schema errors; recheck the complete schema")
     if plan:
+        if preserved_audio is not None:
+            from app.studio_revision_reuse import storyboard_audio_contract
+
+            if storyboard_audio_contract(plan) != preserved_audio:
+                errors.append(
+                    "Preserve the original complete soundtrack: keep prior scene timings, spoken words, phrase directions, narration delivery and music_brief exactly. Only the requested visual/caption/identity edit is authorized."
+                )
+        if existing_visuals_only and any(s.visual_kind in {"image", "video"} for s in plan.scenes):
+            errors.append(
+                "Preserve the completed visuals: select their actual Library IDs from prior_visuals/source_catalog, or reuse an earlier scene. Do not request fresh image/video generation for this edit."
+            )
         for index, shot in enumerate(plan.scenes):
             ids = [i for i in [shot.source_artifact_id, *shot.reference_artifact_ids] if i]
             if any(str(i) not in sources for i in ids):
@@ -54,7 +79,7 @@ def validate_storyboard(text, options, sources, catalog, *, check_words=True):
             elif any(sources[str(i)]["kind"] != "image" for i in shot.reference_artifact_ids):
                 errors.append(f"Scene {index + 1}: generated-shot references must be images")
         try:
-            fitted = fit_source_timing(plan, options["duration_seconds"], catalog)
+            fitted = fit_plan(plan, options, catalog, fit_duration=fit_duration)
         except ValueError as exc:
             errors.append(str(exc))
         else:

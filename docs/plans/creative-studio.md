@@ -743,3 +743,17 @@ checks against an isolated real accounts/API instance confirmed whole-visual
 fitting, motion/layout persistence, original-revision/source preservation and no
 new generation Run. The mobile composition controls have no horizontal overflow.
 This editor qualification does not establish a film's publication quality.
+
+
+## Narration acceptance and conversation revisions — 2026-11-12
+
+The owner accepted the complete 75-second educational film's narration:
+“Narracja jest dobra w całym filmie.” This closes full-film narration pace,
+expression and continuity review; it is not blanket visual/publication approval.
+The private acceptance receipt retains the actual film and source checks.
+
+The next execution gap is follow-up editing: preserve the editable source version
+and reuse its completed media instead of starting a new unrelated production.
+See [conversation revision contract](studio-conversation-revisions.md) for source
+scope, explicit replacement, exact audio/presenter reuse and qualification gates.
+Do not regenerate or retune the accepted narration merely to exercise this path.

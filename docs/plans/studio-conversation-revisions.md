@@ -21,11 +21,12 @@ it must not move or overwrite the original project/material. Recheck owner,
 archive state, captured version and parent fingerprint before initial dispatch.
 The normal local director receives the actual previous storyboard and feedback.
 
-Reuse completed visual takes only when their generation intent matches the new
-shot and the verified clip window covers the new edit. Composition/caption edits
-do not by themselves require new image inference. Ambiguous matches are not a
-license to guess. Changed visuals use existing generators. Preserve source
-hashes, original references, aspect fitting and native inspection.
+Supply actual completed visual-source IDs and their previous scene mapping to the
+director. For an ordinary edit it must choose those Library sources or explicitly
+share them across scenes, rather than generate copies from similar prose. The
+semantic intent permits new imagery only when the user requests it. Verify the
+original render's source descriptors, canonical owned paths and clip windows.
+The exported composite MP4 is not a substitute for its original shots.
 
 Reuse narration and score only through explicit frozen provenance and unchanged
 audio contracts. Changed words, performance, narrator or score cannot reuse an
@@ -60,13 +61,26 @@ replacement/removal. Planning can append a parented revision or seed a linked
 copy under another brand. The same normal director/whole-production wrapper
 produces the result in temporary-account tests; this is not native qualification.
 
-Next, supply the director with actual prior visual-source mappings, so preserving
-shots means selecting real Library sources instead of requesting fresh copies.
-Keep source and native bounds closed. A revision without an explicitly changed
-total duration should fit its proposed edit, not blindly refit the old creation
-target; legacy planning keeps its existing behavior. Preserve a complete mix
-only when its audio contract and timeline are unchanged, and preserve the
-existing presenter in that case. An explicit new voice/score/script must not
-reuse incompatible audio. Test Stop, stale source, restart and idempotency at
-the whole-controller level before enabling/releasing the workflow. No new native
-renderer or speech model is needed.
+The implementation now supplies actual prior visual-source mappings. A revision
+without an explicitly changed total duration keeps its proposed frame counts;
+legacy planning still fits the original requested total. The ordinary caption or
+identity edit preserves the audio contract, including words, expression hints,
+scene timings and score direction. Requested audio changes are explicit semantic
+intent; they cannot silently reuse incompatible audio. Whole-production requests
+can name a completed owned export as the source of a complete mix/presenter,
+with exact contract, hashes, timing and source checks. This optional field is
+excluded from older request receipts when absent. Existing strict same-version
+retry behavior remains intact.
+
+A generated presenter can carry forward its portrait settings for changed speech;
+an unchanged mix/timeline reuses the completed presenter clips. A manually supplied
+presenter without a generation portrait requires a new selected portrait when
+its speech changes. Never silently remove the presenter or reuse wrong lip-sync.
+Stale source authority is a terminal observation for that outcome in the current
+turn, preventing paraphrased whole-workflow retries. Stop never adopts/cancels old
+source Tasks. New result cards carry their actual revision ID; historical cards
+keep the legacy link fallback.
+
+Qualification is in progress on the feature branch. Native/export qualification
+and preserving deployment remain required; synthetic tests are not evidence of
+a real revised film. No renderer, speech model or database schema change is needed.

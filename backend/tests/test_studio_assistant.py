@@ -62,6 +62,14 @@ def director(monkeypatch):
             audio = context["options"]["audio"]
             if state.get("revise_from_parent") and context.get("prior_storyboard"):
                 revised = deepcopy(context["prior_storyboard"])
+                for visual in context.get("prior_visuals", []):
+                    shot = revised["scenes"][visual["scene"]]
+                    shot.update(
+                        visual_kind="library",
+                        source_artifact_id=visual["artifact_id"],
+                        reuse_scene=None,
+                        reference_artifact_ids=[],
+                    )
                 revised["title"] = "A revised prism film"
                 revised["scenes"][0]["title"] = "Look at it differently"
                 yield json.dumps(revised)

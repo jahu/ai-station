@@ -727,6 +727,9 @@ def controller_results(session, root):
                 "steps": [],
                 "artifacts": [artifact_dict(output)] if output is not None else [],
                 "studio_material_id": anchor.metadata_json.get("studio_material_id"),
+                "studio_revision_id": anchor.metadata_json.get("controller_tool_result", {}).get(
+                    "revision_id"
+                ),
             }
         for artifact in result.get("artifacts", []):
             if artifact["id"] not in seen:

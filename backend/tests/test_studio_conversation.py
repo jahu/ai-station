@@ -19,7 +19,8 @@ from test_studio_render import ready as ready
 
 
 @pytest.fixture
-def completed(accounts, director, movie):
+def completed(accounts, director, movie, request):
+    director["studio"]["audio"] = getattr(request, "param", "silent")
     _, alice, bob = accounts
     result = submit(alice, "Make a complete film explaining a prism")
     advance(movie)
@@ -85,14 +86,16 @@ def test_changed_or_unavailable_parent_cannot_authorize_new_publication(complete
             assert material_catalog(db, owner_id=owner, conversation_id=conversation, location="local") == {}
 
 
+@pytest.mark.parametrize("completed", ["silent", "voice_music"], indirect=True)
 @pytest.mark.parametrize("different_brand", [False, True])
 def test_followup_plans_a_parented_revision_or_linked_brand_copy_without_overwriting_history(
-    completed, director, movie, different_brand
+    completed, director, movie, generators, different_brand
 ):
     from sqlalchemy import select
 
     alice, _, _, conversation, catalog = completed
     alias, frozen = next(iter(catalog.items()))
+    generated_before = (len(generators[0]), len(generators[1]))
     director["revise_from_parent"] = True
     studio = {"source_material": alias, "project_resolution": "inherit"}
     brand = None
@@ -118,7 +121,10 @@ def test_followup_plans_a_parented_revision_or_linked_brand_copy_without_overwri
     with owned(alice) as db:
         root = db.get(Run, result["run"]["id"])
         assert root.status == "succeeded", root.error_message
+        assert len(list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))) == 1
         wrapper = db.get(Run, root.metadata_json["controller_steps"][0]["run_id"])
+        assert wrapper.status == "succeeded", (wrapper.error_message, director["plans"][-1])
+        assert (len(generators[0]), len(generators[1])) == generated_before
         assert wrapper.metadata_json["studio_source_material_id"] == frozen["material_id"]
         target = db.get(StudioMaterial, wrapper.metadata_json["studio_material_id"])
         assert (target.id != frozen["material_id"]) == different_brand
@@ -151,3 +157,76 @@ def test_external_provider_receives_no_catalog_and_performs_no_private_query():
         )
         == {}
     )
+
+
+def followup(alice, conversation):
+    with owned(alice) as db:
+        version = db.get(Conversation, conversation).settings_version
+    return submit(
+        alice,
+        "Change only this film's first caption",
+        conversation_id=conversation,
+        selection=None,
+        expected_settings_version=version,
+    )["run"]["id"]
+
+
+def reach_wrapper(identity, movie):
+    from app.db import control_session_factory
+    from app.engine import tick
+
+    for i in range(30):
+        with control_session_factory()() as db:
+            tick(db, f"revision-dispatch-{i}", executors=movie)
+            steps = db.get(Run, identity).metadata_json.get("controller_steps", [])
+            if steps:
+                return steps[0]["run_id"]
+    pytest.fail("The revision did not dispatch its Studio wrapper")
+
+
+@pytest.mark.parametrize("after_dispatch", [False, True])
+def test_stale_source_closes_outcome_without_recreating_whole_workflow(
+    completed, director, movie, after_dispatch
+):
+    from sqlalchemy import select
+
+    alice, _, _, conversation, catalog = completed
+    alias, frozen = next(iter(catalog.items()))
+    director["studio"] = {"source_material": alias, "project_resolution": "inherit"}
+    identity = followup(alice, conversation)
+    if after_dispatch:
+        reach_wrapper(identity, movie)
+    with owned(alice) as db:
+        db.get(StudioMaterial, frozen["material_id"]).version += 1
+        db.commit()
+    advance(movie)
+    with owned(alice) as db:
+        root = db.get(Run, identity)
+        assert root.status == "succeeded", root.error_message
+        steps = root.metadata_json["controller_steps"]
+        assert len(steps) == 1
+        wrapper = db.get(Run, steps[0]["run_id"])
+        assert wrapper.status == "failed" and wrapper.error_type == "StudioSourceUnavailable"
+        assert "changed" in wrapper.error_message
+        assert steps[0]["observation"]["studio_attempt_exhausted"] is True
+        assert len(list(db.scalars(select(StudioRevision)))) == 1
+        assert db.get(Run, frozen["export_run_id"]).status == "succeeded"
+
+
+def test_stopping_revision_never_cancels_completed_source_tasks(completed, director, movie):
+    from app.task_control import cancel_task
+
+    alice, _, _, conversation, catalog = completed
+    alias, frozen = next(iter(catalog.items()))
+    director["studio"] = {"source_material": alias, "project_resolution": "inherit"}
+    identity = followup(alice, conversation)
+    wrapper_id = reach_wrapper(identity, movie)
+    with owned(alice) as db:
+        cancel_task(db, db.get(Run, identity).task)
+        db.commit()
+    advance(movie)
+    with owned(alice) as db:
+        assert db.get(Run, identity).status == db.get(Run, wrapper_id).status == "canceled"
+        assert db.get(Run, frozen["export_run_id"]).status == "succeeded"
+        assert db.get(Run, frozen["wrapper_id"]).status == "succeeded"
+        assert db.get(Artifact, frozen["export_artifact_id"]).trashed_at is None
