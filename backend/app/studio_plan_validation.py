@@ -7,7 +7,7 @@ from collections import Counter
 from pydantic import ValidationError
 
 from app.studio_schema import Storyboard, spoken_word_count, validate_spoken_word_count
-from app.studio_storyboard import fit_timing, visual_origin
+from app.studio_storyboard import fit_source_timing, visual_origin
 
 
 def validate_storyboard(text, options, sources, catalog, *, check_words=True):
@@ -54,7 +54,7 @@ def validate_storyboard(text, options, sources, catalog, *, check_words=True):
             elif any(sources[str(i)]["kind"] != "image" for i in shot.reference_artifact_ids):
                 errors.append(f"Scene {index + 1}: generated-shot references must be images")
         try:
-            fitted = fit_timing(plan, options["duration_seconds"])
+            fitted = fit_source_timing(plan, options["duration_seconds"], catalog)
         except ValueError as exc:
             errors.append(str(exc))
         else:
