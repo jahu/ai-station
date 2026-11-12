@@ -623,3 +623,22 @@ preservation, exact/one-sided word ranges, one focused correction, Stop during
 editing, preservation of prior revisions, no duplicate whole-workflow retries,
 and independent outcomes. The actual longer production and publication-quality
 acceptance remain open until verified after deployment.
+
+### Semantic interpretation correction evidence — 2026-11-12
+
+The next actual film request failed before Studio dispatch: both bounded semantic
+intent candidates were rejected. No storyboard/media existed for that turn. The
+old generic error retained neither candidate nor validation details, so its exact
+schema/alias defect cannot be reconstructed from that Run. Do not describe this
+as a demonstrated narration-edit failure or claim a known specific model defect.
+
+The interpreter now retains at most two bounded structured candidates in the
+same private owned planning Run. Rejection events expose only bounded schema
+paths/messages, excluding Pydantic input values. The one correction includes the
+actual rejected candidate followed by its measured error and the unchanged
+current instruction, after reference history. It cannot silently repair intent,
+change permissions, freeze an invalid outcome or dispatch a tool. A final failure
+keeps the precise diagnostic. ReAct scratchpad thoughts are not captured by this
+intent-only evidence. Existing claim, deadline, Stop and account fences apply to
+every evidence write and publication. Actual successful interpretation and the
+complete longer film still require a fresh ordinary request after deployment.

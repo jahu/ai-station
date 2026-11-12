@@ -187,3 +187,16 @@ def planning_messages(context):
             ),
         },
     ]
+
+
+def validation_diagnostic(error):
+    """Bounded schema paths/messages; never echo candidate inputs in activity."""
+    from pydantic import ValidationError
+
+    if isinstance(error, ValidationError):
+        errors = error.errors(include_url=False, include_input=False)
+        lines = [(".".join(str(p) for p in item["loc"]) + ": " + item["msg"])[:250] for item in errors[:6]]
+        if len(errors) > 6:
+            lines.append(f"{len(errors) - 6} additional schema defects")
+        return "; ".join(lines)[:1800]
+    return str(error)[:1800]
