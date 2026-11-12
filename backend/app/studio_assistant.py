@@ -77,6 +77,11 @@ def request_parameters(session, root, raw):
         **({"presenter": presenter} if presenter else {}),
         **chosen,
         "model": root.parameters["controller_request"]["model"],
+        **(
+            {"timing_policy": "fit"}
+            if root.parameters.get("controller_studio_timing_policy") == "fit"
+            else {}
+        ),
         "execution_deadline_at": root.parameters["execution_deadline_at"],
     }
 
@@ -342,6 +347,7 @@ class AssistantStudioExecutor:
                         client_request_id=uuid5(UUID(run.id), "production"),
                         revision_id=revision.id,
                         presenter=run.parameters.get("presenter"),
+                        timing_policy=run.parameters.get("timing_policy"),
                     ),
                 )
                 attach(session, run, production, "production")

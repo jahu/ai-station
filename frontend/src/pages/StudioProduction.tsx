@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import StudioPresenterGeneration, {
   type PresenterGeneration,
 } from "./StudioPresenterGeneration";
+import StudioTimingChoice, { type TimingPolicy } from "./StudioTimingChoice";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Clapperboard, Download, Square } from "lucide-react";
@@ -41,6 +42,7 @@ export default function StudioProduction({
   const [presenter, setPresenter] = useState<PresenterGeneration | null>(null);
   const [presenterReady, setPresenterReady] = useState(true);
   const [presenterBusy, setPresenterBusy] = useState(false);
+  const [timingPolicy, setTimingPolicy] = useState<TimingPolicy>();
   const cache = useQueryClient();
   const key = ["studio-material-productions", user?.id, materialId];
   const values = useQuery({
@@ -120,6 +122,7 @@ export default function StudioProduction({
           artifact_id,
         })),
         ...(presenter ? { presenter } : {}),
+        ...(timingPolicy ? { timing_policy: timingPolicy } : {}),
       };
       const fingerprint = JSON.stringify(body);
       if (receipt.current?.fingerprint !== fingerprint)
@@ -173,6 +176,17 @@ export default function StudioProduction({
           </li>
         )}
       </ol>
+      {["voice", "voice_music"].includes(revision.storyboard.audio) && (
+        <details className="studio-soundtrack-settings">
+          <summary>Timing options</summary>
+          <fieldset disabled={disabled || !!active || action.isPending}>
+            <StudioTimingChoice
+              value={timingPolicy}
+              onChange={setTimingPolicy}
+            />
+          </fieldset>
+        </details>
+      )}
       <StudioPresenterGeneration
         value={presenter}
         onChange={setPresenter}

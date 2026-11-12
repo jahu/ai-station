@@ -61,6 +61,9 @@ def apply_edit(plan, text, options):
         if bool(line.text.strip()) != bool(plan.scenes[line.scene].narration.strip()):
             raise ValueError("Keep narrated scenes narrated and intentionally silent scenes silent")
         values["scenes"][line.scene]["narration"] = line.text
+        if line.text != plan.scenes[line.scene].narration:
+            # Acting hints refer to exact phrases, never silently retain stale ones.
+            values["scenes"][line.scene].pop("narration_segments", None)
     updated = Storyboard.model_validate(values)
     validate_narration_words(updated, options)
     return updated

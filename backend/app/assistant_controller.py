@@ -304,6 +304,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_protocol": PROTOCOL,
             "controller_image_policy": "configured-default-v2",
             "controller_studio_policy": "studio-v1",
+            "controller_studio_timing_policy": "fit",
             "controller_creative_projects": creative_catalog,
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},

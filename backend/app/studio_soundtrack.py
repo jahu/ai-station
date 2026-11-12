@@ -26,7 +26,7 @@ from app.studio_mastering import PROFILE, MasteringProfile, master_wave
 from app.studio_materials import DB, digest, get_material, get_revision, publish_revision
 from app.studio_pcm import mix, timed_storyboard
 from app.studio_render import Binding
-from app.studio_schema import Fields, Storyboard
+from app.studio_schema import Fields, Storyboard, TimingPolicy
 from app.studio_shots import router
 from app.task_control import lock_task
 from app.timelines import verify_bytes
@@ -40,6 +40,7 @@ class MixRequest(Fields):
     music_gain: float = Field(default=0.22, ge=0.01, le=1.0, allow_inf_nan=False, strict=True)
     duck: float = Field(default=0.28, ge=0.05, le=1.0, allow_inf_nan=False, strict=True)
     mastering_profile: MasteringProfile | None = Field(default=None, exclude_if=lambda value: value is None)
+    timing_policy: TimingPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def unique(self):
@@ -116,7 +117,7 @@ def inputs(session, revision, body, *, verify=False):
         raise ValueError("The mix must preserve this version's requested music policy")
     voices = {b.scene: audio_source(session, b.artifact_id, verify=verify) for b in body.narration}
     music = audio_source(session, body.music_artifact_id, verify=verify) if has_music else None
-    plan = timed_storyboard(plan, voices)
+    plan = timed_storyboard(plan, voices, policy=body.timing_policy, sources=revision.sources)
     if music and music["samples"] * 30 < plan.frames * music["sample_rate"]:
         raise ValueError("The complete score must cover the measured edit; generate a longer score")
     if sum(v["size_bytes"] for v in voices.values()) + (music["size_bytes"] if music else 0) > 1024**3:

@@ -127,10 +127,18 @@ def owned(api):
 
 
 @pytest.mark.parametrize("audio", ["silent", "music", "voice", "voice_music"])
-def test_real_react_composes_final_film_and_preserves_audio_policy(accounts, director, movie, audio):
+@pytest.mark.parametrize("legacy", [False, True])
+def test_real_react_composes_final_film_and_preserves_audio_policy(accounts, director, movie, audio, legacy):
     _, alice, bob = accounts
     director["studio"]["audio"] = audio
     result = submit(alice, "Make a complete film explaining a prism")
+    if legacy:
+        with owned(alice) as db:
+            root = db.get(Run, result["run"]["id"])
+            root.parameters = {
+                k: v for k, v in root.parameters.items() if k != "controller_studio_timing_policy"
+            }
+            db.commit()
     advance(movie)
     with owned(alice) as db:
         root = db.get(Run, result["run"]["id"])
@@ -144,6 +152,9 @@ def test_real_react_composes_final_film_and_preserves_audio_policy(accounts, dir
         wrapper = db.get(Run, step["run_id"])
         assert len(subtree(db, root, wrapper.id)) == 1
         assert len(child_tasks(db, wrapper)) == 2
+        assert wrapper.parameters.get("timing_policy") == (None if legacy else "fit")
+        produced = next(primary for kind, primary in child_tasks(db, wrapper) if kind == "production")
+        assert produced.parameters["request"].get("timing_policy") == (None if legacy else "fit")
         public = controller_results(db, root)
         assert len(public["artifacts"]) == 1 and public["artifacts"][0]["type"] == "video"
         assert not any(a["type"] in {"audio", "image", "json"} for a in public["artifacts"])

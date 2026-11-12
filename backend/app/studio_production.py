@@ -19,7 +19,7 @@ from app.studio_audio_production import ProduceAudio, Voice, create_audio_produc
 from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
 from app.studio_presenter import GeneratePresenter
 from app.studio_render import Binding, RenderRequest, create_render
-from app.studio_schema import Fields, Storyboard
+from app.studio_schema import Fields, Storyboard, TimingPolicy
 from app.studio_shots import ShotRequest, enqueue_shot, production
 from app.studio_soundtrack import audio_source, router
 from app.studio_storyboard import source_end_seconds
@@ -40,6 +40,7 @@ class Produce(Fields):
     video_model_id: UUID | None = None
     reuse_from_run_id: UUID | None = None
     presenter: GeneratePresenter | None = Field(default=None, exclude_if=lambda value: value is None)
+    timing_policy: TimingPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def root_run(session, identity, material_id=None):
@@ -513,6 +514,7 @@ class StudioProductionExecutor:
                     reuse_from_run_id=state.get("audio_reuse_id"),
                     voice=body.voice,
                     music_model_id=body.music_model_id,
+                    timing_policy=body.timing_policy,
                 ),
             )
             attach(session, run, root, child)

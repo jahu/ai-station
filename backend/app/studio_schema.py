@@ -8,6 +8,8 @@ from pydantic import Field, StrictInt, model_validator
 from app.creative_projects import Defaults
 from app.creative_sessions import Fields
 
+TimingPolicy = Literal["preserve", "fit"]
+
 
 class NarrationWords(Fields):
     minimum: StrictInt | None = Field(default=None, ge=1, le=3000, exclude_if=lambda v: v is None)
@@ -66,6 +68,21 @@ class NarrationDelivery(Fields):
     pace: Literal["natural", "slow", "fast"] = "natural"
 
 
+class NarrationSegment(Fields):
+    text: str = Field(min_length=1, max_length=1000)
+    style: str = Field(default="", max_length=120)
+
+    @model_validator(mode="after")
+    def plain_hint(self):
+        if any(c in self.style for c in "[]\r\n") or not self.text.strip():
+            raise ValueError("Use a plain expression hint and actual spoken words")
+        return self
+
+
+def expressive_narration(segments):
+    return " ".join((f"[{s.style.strip()}] " if s.style.strip() else "") + s.text.strip() for s in segments)
+
+
 class Shot(Fields):
     purpose: str = Field(min_length=1, max_length=500)
     duration_frames: StrictInt = Field(ge=30, le=2700)
@@ -81,12 +98,21 @@ class Shot(Fields):
     body: str = Field(default="", max_length=420)
     points: list[str] = Field(default_factory=list, max_length=5)
     narration: str = Field(default="", max_length=1000)
+    narration_segments: list[NarrationSegment] | None = Field(
+        default=None, min_length=1, max_length=12, exclude_if=lambda value: value is None
+    )
     media_motion: Literal["auto", "hold", "push_in", "pull_out", "pan_left", "pan_right", "rise"] = "auto"
     media_fit: Literal["contain", "cover"] = "cover"
     media_start_seconds: float = Field(default=0.0, ge=0, le=600, allow_inf_nan=False, strict=True)
 
     @model_validator(mode="after")
     def usable(self):
+        if self.narration_segments is not None:
+            words = " ".join(s.text for s in self.narration_segments)
+            if " ".join(words.split()) != " ".join(self.narration.split()):
+                raise ValueError("Expression segments must preserve every spoken word, in order")
+            if len(expressive_narration(self.narration_segments)) > 1000:
+                raise ValueError("Keep spoken words and expression hints within 1000 characters per shot")
         if (self.visual_kind == "reuse") != (self.reuse_scene is not None):
             raise ValueError("A shared visual needs its earlier source scene; other kinds cannot select one")
         if self.visual_kind == "reuse" and self.reference_artifact_ids:
