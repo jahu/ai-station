@@ -52,6 +52,7 @@ def edit_runtime(vision_runtime, monkeypatch):
                         "preserve": ["rectangular shape"],
                         "changes": {"color": "blue instead of the original red"},
                     },
+                    "reference_layout": state.get("plan_layout"),
                     "base_reference_index": 0,
                     "criteria": [
                         {
@@ -61,7 +62,7 @@ def edit_runtime(vision_runtime, monkeypatch):
                         },
                         {
                             "kind": "preserve",
-                            "expected": "The rectangular shape is retained",
+                            "expected": state.get("preserve_expected", "The rectangular shape is retained"),
                             "reference_indices": [0],
                         },
                     ],
@@ -76,7 +77,9 @@ def edit_runtime(vision_runtime, monkeypatch):
                     "checks": [
                         {
                             "criterion_index": int(i),
-                            "verdict": state["verdict"] if c["kind"] == "change" else "passed",
+                            "verdict": state["verdict"]
+                            if c["kind"] == "change"
+                            else state.get("preserve_verdict", "passed"),
                             "evidence": "Observed candidate compared with the original reference.",
                         }
                         for i, c in payload["criteria"].items()
@@ -405,6 +408,7 @@ def test_current_react_chat_uses_verified_edit_and_cannot_bypass_its_attempt_bou
 
 def test_original_goal_check_can_reject_even_if_generated_criteria_pass(edit_runtime):
     edit_runtime["request_verdict"] = "failed"
+    edit_runtime["preserve_verdict"] = "not_required"
     with TestClient(app) as client:
         root, _ = submit(client)
         drain(edit_runtime)
@@ -501,3 +505,49 @@ def test_image_agent_publishes_only_verified_result_and_uses_accepted_file_for_d
                 media_metadata_only=True,
             )
             assert accepted[0] in json.dumps(report)
+
+
+def test_generated_qwen_layout_hint_is_omitted_without_changing_brief_or_repeating_render(edit_runtime):
+    edit_runtime["plan_layout"] = "aligned"
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "succeeded", result.get("error_message")
+        assert edit_runtime["photos"] == 1
+        with session_factory()() as session:
+            plan = session.get(Run, result["metadata"]["edit_plan_run"])
+            assert plan.metadata_json["edit_result"]["reference_layout"] is None
+            assert plan.metadata_json["edit_result"]["visual"]["changes"] == {
+                "color": "blue instead of the original red"
+            }
+            from app.models import RunEvent
+
+            assert session.scalar(
+                select(RunEvent).where(
+                    RunEvent.run_id == plan.id, RunEvent.event_type == "image.edit.plan.control_omitted"
+                )
+            )
+
+
+def test_incidental_preservation_cannot_block_a_verified_user_goal(edit_runtime):
+    edit_runtime["preserve_verdict"] = "not_required"
+    edit_runtime["preserve_expected"] = "Retain an incidental texture that the user never asked to keep"
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "succeeded", result.get("error_message")
+        assert edit_runtime["photos"] == 1
+
+
+def test_not_required_cannot_bypass_a_requested_change(edit_runtime):
+    edit_runtime["verdict"] = "not_required"
+    edit_runtime["request_verdict"] = "passed"
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "failed"
+        assert not result["metadata"].get("accepted_artifact_ids")
+        assert edit_runtime["photos"] == 1

@@ -432,7 +432,12 @@ class ImageEditExecutor:
             checks
         ) != len(plan.criteria):
             raise ValueError("The edit review omitted or duplicated criteria")
-        passed = all(check.verdict == "passed" for check in checks) and all(
+        if any(
+            check.verdict == "not_required" and plan.criteria[check.criterion_index].kind != "preserve"
+            for check in checks
+        ):
+            raise ValueError("A requested change cannot be waived by the review")
+        passed = all(check.verdict in {"passed", "not_required"} for check in checks) and all(
             review.request_verdict == "passed" for review in reviews
         )
         review_tag(artifact, root, "accepted" if passed else "rejected")
@@ -512,6 +517,14 @@ class ImageEditReasonExecutor:
         stage, payload = run.parameters["stage"], run.parameters["payload"]
         schema = {"inspect": SourceInspection, "plan": EditPlan, "review": EditReview}[stage]
         system = {"inspect": INSPECT, "plan": PLAN, "review": REVIEW}[stage]
+        output_schema = schema.model_json_schema()
+        if stage == "plan" and payload["backend"] != "krea2":
+            output_schema["properties"]["reference_layout"] = {
+                "type": "null",
+                "default": None,
+                "description": "This model has no reference-layout control; omit or use null.",
+            }
+        omitted_control = False
         session.commit()
         try:
             checked_sources(session, run.parameters["source_inputs"])
@@ -540,7 +553,7 @@ class ImageEditReasonExecutor:
                         "role": "user",
                         "content": system
                         + "\n"
-                        + json.dumps({"schema": schema.model_json_schema(), **payload}, ensure_ascii=False),
+                        + json.dumps({"schema": output_schema, **payload}, ensure_ascii=False),
                     }
                 ]
                 if run.parameters["vision_artifact_ids"]:
@@ -572,6 +585,22 @@ class ImageEditReasonExecutor:
                             )
                         ):
                             raise ValueError("Edit plan uses an unavailable reference")
+                        if stage == "review" and any(
+                            c.verdict == "not_required"
+                            and payload["criteria"][str(c.criterion_index)]["kind"] != "preserve"
+                            for c in parsed.checks
+                        ):
+                            raise ValueError("A requested change cannot be marked not_required")
+                        if (
+                            stage == "plan"
+                            and payload["backend"] != "krea2"
+                            and parsed.reference_layout is not None
+                        ):
+                            # A generated optional control is not user authority.
+                            # Omit this non-applicable engine hint; never change
+                            # the visual brief or dispatch an unsupported field.
+                            parsed.reference_layout = None
+                            omitted_control = True
                         break
                     except (ValueError, IndexError) as error:
                         if format_attempt:
@@ -591,6 +620,17 @@ class ImageEditReasonExecutor:
                         )
 
             def publish():
+                if omitted_control:
+                    append_event(
+                        session,
+                        run.id,
+                        "image.edit.plan.control_omitted",
+                        {
+                            "field": "reference_layout",
+                            "backend": payload["backend"],
+                            "reason": "not supported by the selected model",
+                        },
+                    )
                 checked_sources(session, run.parameters["source_inputs"])
                 if run.parameters["vision_inputs"]:
                     verify(session, run.parameters["vision_inputs"], read_bytes=True)

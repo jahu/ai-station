@@ -97,3 +97,14 @@ exposed incidental original properties copied into the proposed preservation
 list. Generic planning guidance now distinguishes source observations from
 user-required invariants and requires all final-plan fields to agree. Private inputs/evidence remain
 outside Git and are not public website/README assets.
+
+
+The real plan-only follow-up exposed a generated layout hint on Qwen, which has
+no such control. The closed plan schema now advertises null for that optional
+hint; if emitted anyway, its omission is audited before rendering, preserving
+the selected model and visual brief. Explicit user controls retain normal API
+validation. Proposed preservation checks also cannot create new user obligations:
+review may mark an incidental, unrequested preservation check `not_required`,
+with evidence. It cannot waive a change criterion, and independent verification
+of the original request must still pass. Follow-up tests cover both boundaries,
+including a false-goal verdict despite dispensable preservation criteria.
