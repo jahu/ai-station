@@ -201,3 +201,15 @@ code; subsequent changes only record this qualification. A full repository pytes
 invocation was interrupted in favor of those focused equivalent checks and is not
 counted as a full-suite pass. Earlier native follow-up results above apply to the
 unchanged native code, rather than a newly repeated native test run.
+
+### Qwen follow-up: distinguish successful edits from noise replay
+
+Same-day administrator Qwen edits were subsequently checked and visually confirmed
+to perform substantial changes with the same model components and legacy engine.
+The earlier failed restaging examples therefore do not establish a general Qwen
+quality defect. A controlled change of only the effective seed removes the severe
+texture artifacts in the failed case. The original external Qwen pipeline leaves
+sd-cli at seed 42, which can replay the source's generation noise. The
+[seed forwarding/inheritance repair](qwen-reference-seeds.md) records the separate
+root cause and its actual qualification. The account-default fix above remains a
+distinct configuration regression; selecting Krea does not repair Qwen itself.
