@@ -193,3 +193,11 @@ known issue; changing its engine alone did not repair it.
 The term "SDK" in the engine investigation above means the private native runtime
 bundle (`sd-cli` plus its matching libraries), not an additional model or a change
 to host drivers. Private prompts, source images and QA results remain outside Git.
+
+Final reviewed application code: Ruff lint/format and all 117 tests across the
+13 affected account-image, image-model, controller, intent and ReAct modules pass.
+The production Docker image was built and deployed with that same application
+code; subsequent changes only record this qualification. A full repository pytest
+invocation was interrupted in favor of those focused equivalent checks and is not
+counted as a full-suite pass. Earlier native follow-up results above apply to the
+unchanged native code, rather than a newly repeated native test run.
