@@ -66,7 +66,7 @@ from ai_station_runner.music import start as start_music
 from ai_station_runner.music_prepare import router as music_setup_router
 from ai_station_runner.music_runtime_schema import CheckpointSelection as MusicCheckpointSelection
 from ai_station_runner.native_llama_prepare import router as native_llama_setup_router
-from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
+from ai_station_runner.photo import PhotoCommandError, build_photo_argv, configured_sd_cli, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.project_plan import ProjectPlanRequest, inspect_project_plan
 from ai_station_runner.project_setup import ProjectSetup, setup_report, start_setup
@@ -462,6 +462,11 @@ def photo_capabilities():
     configured = bool(
         python and script and python.is_file() and os.access(python, os.X_OK) and script.is_file()
     )
+    if configured and settings.sd_cli:
+        try:
+            configured_sd_cli(settings.sd_cli)
+        except PhotoCommandError:
+            configured = False
     return {
         "available": configured and bool(collect(_data()).get("gpus")),
         "configuration_present": configured,
@@ -550,6 +555,7 @@ def start_photo(body: PhotoBody):
             inputs=inputs,
             prompt_style=body.prompt_style,
             model_snapshot=body.model_file.model_dump() if body.model_file else None,
+            sd_cli=settings.sd_cli,
         )
     except PhotoCommandError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

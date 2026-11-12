@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -40,6 +41,7 @@ def build_photo_argv(
     inputs: list[str],
     prompt_style: str = "pipeline",
     model_snapshot: dict | None = None,
+    sd_cli: str = "",
 ) -> list[str]:
     if model_snapshot is not None and (backend != "qwen" or mode == "upscale"):
         raise PhotoCommandError("Selected checkpoints require a compatible Qwen image operation")
@@ -83,7 +85,7 @@ def build_photo_argv(
         ]
         if negative:
             argv += ["--negative", negative]
-        return _wrap(argv, prompt_style, model_snapshot)
+        return _wrap(argv, prompt_style, model_snapshot, sd_cli)
     if mode == "img2img":
         if len(inputs) != 1:
             raise PhotoCommandError("Edit requires exactly one input image")
@@ -104,7 +106,7 @@ def build_photo_argv(
             "--out",
             output,
         ]
-        return _wrap(edit, prompt_style, model_snapshot)
+        return _wrap(edit, prompt_style, model_snapshot, sd_cli)
     if mode == "recompose":
         if not inputs:
             raise PhotoCommandError("Recompose requires at least one reference")
@@ -129,7 +131,7 @@ def build_photo_argv(
         ]
         for ref in inputs:
             argv += ["--reference", ref]
-        return _wrap(argv, prompt_style, model_snapshot)
+        return _wrap(argv, prompt_style, model_snapshot, sd_cli)
     if mode == "upscale":
         if len(inputs) != 1:
             raise PhotoCommandError("Upscale requires exactly one input image")
@@ -151,7 +153,32 @@ def _profile(argv):
     return [argv[0], str(Path(__file__).with_name("photo_job.py")), *argv[1:]]
 
 
-def _wrap(argv, style, model):
+def configured_sd_cli(value):
+    """Native operator configuration only; never a field of a photo request."""
+    if not value or value.startswith("-") or "\x00" in value:
+        raise PhotoCommandError("Configured sd-cli must be an executable file")
+    try:
+        path = Path(value).expanduser().resolve(strict=True)
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise ValueError("not executable")
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise PhotoCommandError("Configured sd-cli must be an executable file") from exc
+    return str(path)
+
+
+def _wrap(argv, style, model, sd_cli=""):
+    if sd_cli:
+        runtime = configured_sd_cli(sd_cli)
+        return [
+            argv[0],
+            str(Path(__file__).with_name("photo_job.py")),
+            "--station-sd-cli",
+            runtime,
+            *(["--station-model-json", json.dumps(model, separators=(",", ":"))] if model else []),
+            "--station-profile",
+            style,
+            *argv[1:],
+        ]
     if model is None:
         return _profile(argv) if style != "pipeline" else argv
     return [

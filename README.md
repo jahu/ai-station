@@ -729,6 +729,10 @@ or machine.
 [Release verification](docs/releases/0.6.1.md#verification) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
+For an existing native photo pipeline, `AI_STATION_SD_CLI` can select its local
+image engine without changing the original script. Leave it empty to retain the
+script's engine; an invalid configured executable refuses generation.
+
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
 also explains how to add executors, capabilities, providers, tools and connectors.
 

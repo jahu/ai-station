@@ -92,3 +92,16 @@ engine on the same files/brief before qualifying a native adapter change. Keep t
 original external script/binary untouched, respect explicitly configured native
 execution settings, and preserve model/owner/reference/Stop contracts. Do not
 substitute Krea silently or add person-specific prompting templates to hide it.
+
+### Native configured engine follow-up
+
+`AI_STATION_SD_CLI` currently affects diagnostics but the photo adapter ignores
+it; the imported original script chooses its own binary. Honor this existing
+native-only operator setting for Generate/Edit/Recompose through the owned import
+wrapper. With no override, retain existing argv/profile behavior. A configured
+missing/non-executable binary must refuse instead of silently using another
+engine. Preserve the selected checkpoint, prompt profile and all source argv.
+Expose no new HTTP request field or model-authored executable coordinate. Keep
+original script/binary bytes intact and cancellation/recovery in the existing
+owned process group. Qualify the pinned application-owned SDK separately before
+switching the local native configuration, then repeat the normal conversation.

@@ -1,3 +1,10 @@
+The existing native photo integration honors an optional operator-configured
+`AI_STATION_SD_CLI` through its owned import wrapper. The original script and
+model files remain external resources; a client cannot choose an executable.
+Unset configuration preserves the original engine and invalid explicit
+configuration refuses rather than falling back. Ordinary Run/process ownership,
+source/checkpoint validation, Stop and restart inspection remain authoritative.
+
 The [model-aware action repair](plans/model-aware-orchestrator-actions.md) keeps
 complete closed tool schemas and derives image controls from the frozen selected
 model/mode. Bounded rejected proposals remain private to the decision Run; safe
