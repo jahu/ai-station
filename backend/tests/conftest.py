@@ -104,10 +104,20 @@ def legacy_schema(tmp_path):
 
 
 @pytest.fixture
-def legacy_controller_protocol(monkeypatch):
+def legacy_controller_protocol(monkeypatch, historical_image_edit_protocol):
     """Exercise persisted pre-LlamaIndex decisions with their original wire protocol.
 
     New protocol qualification has its own raw ReAct fixtures and end-to-end tests.
     This fixture never alters provider behavior or parses a new-protocol response.
     """
     monkeypatch.setattr("app.assistant_controller.PROTOCOL", None)
+
+
+@pytest.fixture
+def historical_image_edit_protocol(monkeypatch):
+    """Wire-protocol replays keep the frozen pre-visual-edit contract.
+
+    Current verified Edit + raw ReAct execution is qualified independently in
+    test_verified_image_edit with actual durable coordinator/vision/photo stages.
+    """
+    monkeypatch.setattr("app.assistant_controller.VERIFIED_EDITS", False)

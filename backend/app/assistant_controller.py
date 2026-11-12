@@ -23,12 +23,13 @@ from app.db import utcnow
 from app.dependencies import depend_on
 from app.events import append_event
 from app.models import Artifact, Conversation, Message, Run
-from app.runs import create_run, create_task, transition
+from app.runs import create_run, create_task, mark_failed, transition
 from app.state import TERMINAL, RunStatus
 from app.task_control import lock_task
 
 VERSION = "react-v1"
 PROTOCOL = "llamaindex-react-v1"
+VERIFIED_EDITS = True
 MAX_STEPS = 16
 
 
@@ -311,6 +312,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
             "controller_image_policy": "configured-default-v2",
+            "controller_verified_edits": VERIFIED_EDITS,
             "controller_web_image_policy": "public-images-v1",
             "controller_studio_policy": "studio-v1",
             "controller_studio_timing_policy": "fit",
@@ -495,6 +497,7 @@ def decision_context(session, root):
         "reference_context": reference_context(entries),
         "image_models": root.parameters.get("controller_image_catalog", {}),
         "image_contract_version": root.parameters.get("controller_image_policy"),
+        "verified_image_edit": root.parameters.get("controller_verified_edits", False),
         "image_model_policy": (
             "Honor an explicit image_model; otherwise use the configured per-operation default. Reference images select content, not the generator. A recurring draft bound to a newly produced result retains its compatible result model."
             if root.parameters.get("controller_image_policy") == "configured-default-v2"
@@ -851,6 +854,7 @@ class AssistantToolSetupExecutor:
             **child.parameters,
             "controller_parent_id": root.id,
             "execution_deadline_at": root.parameters["execution_deadline_at"],
+            "verify_image_changes": root.parameters.get("controller_verified_edits", False),
             **{
                 key: params[key]
                 for key in ("controller_agent_scope", "controller_image_request")
@@ -956,6 +960,17 @@ class AssistantControllerExecutor:
                 "assistant.tool.observed",
                 {"index": step["index"], "tool": step["tool"], "status": result["status"]},
             )
+            failed_edits = [
+                item
+                for item in subtree(session, run, step["run_id"])
+                if item.executor_type == "image_edit" and item.status == "failed"
+            ]
+            if failed_edits:
+                message = message_for(session, run)
+                message.content = failed_edits[0].error_message
+                message.metadata_json = {**message.metadata_json, "partial": False, "routing_only": False}
+                mark_failed(session, run, "ImageEditNotVerified", message.content)
+                return "done"
             if step["tool"] == "chat.reply" and result["status"] == "succeeded":
                 message = message_for(session, run)
                 message.content = "Completed." if len(steps) > 1 else ""

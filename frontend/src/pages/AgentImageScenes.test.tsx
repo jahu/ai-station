@@ -68,18 +68,18 @@ it("explains why small edits preserve composition and switches to reviewed new-s
       <Editor />
     </Frame>,
   );
-  expect(screen.getByText("Want a new composition or setting?")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  expect(screen.queryByText("Want a new composition or setting?")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Image operation"), {
+    target: { value: "recompose" },
+  });
   const scope = saved();
-  expect(scope.kind === "image" && scope.vary_scenes).toBe(true);
+  expect(scope.kind === "image" && scope.request.verify_changes).toBe(true);
   expect(scope.request).toMatchObject({
     mode: "recompose",
     prompt_style: "instruction",
     input_artifact_ids: [""],
   });
-  expect(
-    screen.getByRole("checkbox", { name: /Vary results between runs/ }),
-  ).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Edit" })).toBeTruthy();
   expect(screen.queryByText("Want a new composition or setting?")).toBeNull();
   expect(
     (screen.getByLabelText("Media creative direction") as HTMLTextAreaElement)
@@ -98,7 +98,9 @@ it("turns off planning when the user chooses an exact prompt and retains the ide
       <Editor />
     </Frame>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  fireEvent.change(screen.getByLabelText("Image operation"), {
+    target: { value: "recompose" },
+  });
   fireEvent.change(screen.getByLabelText("Media description policy"), {
     target: { value: "fixed" },
   });
@@ -204,12 +206,14 @@ it("keeps the selected Krea editor when switching to variations and exposes comp
       }) as HTMLSelectElement
     ).value,
   ).toBe("aligned");
-  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  fireEvent.change(screen.getByLabelText("Image operation"), {
+    target: { value: "recompose" },
+  });
   expect(saved().request).toMatchObject({
     mode: "recompose",
     backend: "krea2",
     model_id: modelId,
-    reference_layout: "beside",
+    reference_layout: "aligned",
     input_artifact_ids: [""],
   });
   fireEvent.change(
@@ -270,7 +274,9 @@ it("keeps an installed Qwen model when an existing edit agent switches to Recomp
       <Editor start={start} />
     </Frame>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Use variations" }));
+  fireEvent.change(screen.getByLabelText("Image operation"), {
+    target: { value: "recompose" },
+  });
   expect(saved().request).toMatchObject({
     mode: "recompose",
     backend: "qwen",

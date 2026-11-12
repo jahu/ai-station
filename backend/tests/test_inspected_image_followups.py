@@ -264,4 +264,5 @@ def test_queued_edit_rechecks_pixels_before_native_execution(vision_runtime, mon
             else:
                 assert len(children) == 1
                 assert children[0].status == "failed", children[0].error_message
-                assert children[0].parameters["inspected_image_inputs"][0]["artifact_id"] == ids[0]
+                assert children[0].executor_type == "image_edit"
+                assert children[0].parameters["source_inputs"][0]["artifact_id"] == ids[0]

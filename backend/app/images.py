@@ -67,7 +67,16 @@ def image_capabilities(session: DB, model_id: UUID | None = None):
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
 
-    return workflow_steps(session, run_id, {"photo_pipe", "wan_video"})
+    result = workflow_steps(session, run_id, {"photo_pipe", "wan_video", "image_edit"})
+    root = session.get(Run, str(run_id))
+    if root.executor_type == "image_edit" and len(result["steps"]) == 1 and root.status == "succeeded":
+        from app.image_edits import child
+
+        accepted = child(session, root, root.metadata_json["accepted_run_id"])
+        if accepted.executor_type != "photo_pipe" or accepted.status != "succeeded":
+            raise HTTPException(409, "The accepted edit needs inspection")
+        result["steps"].append(run_dict(accepted))
+    return result
 
 
 class ImageRetry(BaseModel):
@@ -82,6 +91,12 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
     original = session.get(Run, str(run_id))
     if original is None:
         raise HTTPException(404, "Run not found")
+    if original.executor_type == "image_edit":
+        from app.image_edits import retry_edit
+
+        retry = retry_edit(session, original, body)
+        session.commit()
+        return run_dict(retry)
     if original.executor_type != "photo_pipe" or original.status not in {"failed", "canceled", "interrupted"}:
         raise HTTPException(409, "Only finished unsuccessful image runs can be retried")
     identity = {"id": str(body.client_request_id), "translation": body.translation}
@@ -221,6 +236,10 @@ def enqueue_image(body: ImageRequest, session: DB):
 
 
 def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=None):
+    if body.verify_changes:
+        from app.image_edits import enqueue_edit
+
+        return enqueue_edit(session, body, task=task, parent_run_id=parent_run_id)
     body, model_snapshot = resolve_request(session, body)
     parents = [get_artifact(session, item) for item in body.input_artifact_ids]
     for parent in parents:

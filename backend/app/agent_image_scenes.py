@@ -152,7 +152,7 @@ def recent_scenes(session, run):
             or child.parent_run_id != prior.id
             or child.agent_id != run.agent_id
             or child.owner_id != run.owner_id
-            or child.capability != "image.recompose"
+            or child.capability not in {"image.recompose", "image.edit"}
             or child.status != "succeeded"
             or reference_identity(prior) != reference_identity(run)
         ):

@@ -144,6 +144,7 @@ export function ArtifactCards({
                       : ""}
                   </span>
                   <small>{time(a.created_at)}</small>
+                  {editReviewLabel(a) && <small>{editReviewLabel(a)}</small>}
                 </div>
               </Link>
               <LibraryActions artifact={a} tabIndex={current ? 0 : -1} />
@@ -544,6 +545,9 @@ export function ArtifactDetail() {
             </section>
             <aside className="panel content-panel">
               <h2>Artifact details</h2>
+              {editReviewLabel(a) && (
+                <p className="notice">{editReviewLabel(a)}</p>
+              )}
               {a.notes && (
                 <div className="library-notes">
                   <h3>Your notes</h3>
@@ -563,7 +567,6 @@ export function ArtifactDetail() {
                 <div className="artifact-actions">
                   {[
                     ["img2img", "Edit"],
-                    ["recompose", "Recompose"],
                     ["upscale", "Upscale"],
                   ].map(([mode, label]) => (
                     <Button key={mode} asChild variant="secondary">
@@ -660,4 +663,15 @@ export function ArtifactDetail() {
       )}
     </>
   );
+}
+
+function editReviewLabel(artifact: Artifact): string | null {
+  const review = artifact.metadata.image_edit_review as
+    { status?: string } | undefined;
+  if (review?.status === "pending")
+    return "Edit attempt · awaiting verification";
+  if (review?.status === "rejected")
+    return "Edit attempt · changes not verified";
+  if (review?.status === "accepted") return "Edit · changes verified";
+  return null;
 }

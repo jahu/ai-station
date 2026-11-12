@@ -1,5 +1,37 @@
 # Image workflows
 
+## One Edit operation
+
+Images, Library reuse, conversation actions and agent settings expose **Edit**
+for one or several references. Old `img2img`/`recompose` API operations and saved
+links remain supported; they are adapter details. The instruction defines what
+changes and what should remain consistent, for any subject or medium.
+
+New workspace/conversation edits and newly reviewed reference-agent drafts use
+`verify_changes: true`. The HTTP request freezes sources, model and controls,
+then queues a durable coordinator. Local vision inspects actual references;
+a closed subject-neutral plan names concrete changes and comparison criteria.
+A normal photo Run generates the candidate. Pixel comparison rejects identical
+decoded images even if their PNG metadata differs. Local vision then checks the
+actual candidate against the original sources and original goal. A failed change
+may cause one corrected plan/render, using the same originals. An uncertain
+review or unsuccessful second attempt ends with `ImageEditNotVerified`.
+
+Only the accepted candidate becomes the final chat/agent/workspace result.
+Attempts retain their own photo Runs/files and pending/rejected/accepted Library
+labels; JSON plans/reviews are inspectable Run artifacts. No second artifact row
+owns the same file. Stop includes the owned stages; an explicit Retry creates a
+new bounded workflow without reopening a stopped Task. Recovery only replays
+pure local coordination/inference, never a native image job blindly.
+
+Source geometry is the default. Explicit size, model and advanced controls remain
+authoritative. There is no person-specific pose/expression prompt template or
+silent generator substitution. Editing requires an installed owned vision GGUF
+and its mmproj companion; the ordinary model loader/resource admission may load
+it automatically, but the workflow never downloads a model or uses a cloud model.
+Saved historical requests remain readable and retain their original execution
+contract. [Execution plan and qualification](plans/unified-image-editing.md).
+
 ## Reproducible Qwen seeds
 
 New Qwen Generate/Edit/Recompose requests without an explicit seed freeze a fresh
@@ -15,8 +47,7 @@ see [diagnosis and qualification](plans/qwen-reference-seeds.md).
 
 ## Automatic model choice for edits
 
-In development builds, **Auto · match this edit** is available in Edit and
-Recompose. The preview shows the chosen model and why. Direct English/Polish
+In development builds, **Auto · match this edit** is available in Edit. The preview shows the chosen model and why. Direct English/Polish
 pose/orientation and object-removal instructions recommend the configured Qwen
 path; other edits retain your personal default. A configured Qwen checkpoint is
 preserved. Too many references for the default model select Qwen's larger bound.
@@ -124,9 +155,9 @@ execution.
 
 New Chat/Work edits and the Images workspace select `prompt_style: "instruction"`
 for Edit and Recompose. The model receives the submitted edit without the legacy
-identity/portrait paragraphs. The Images **Use classic identity template** checkbox
-restores the original behavior; raw image API callers and previously queued Runs
-retain their existing `pipeline` default. Generate and Upscale are unchanged.
+identity/portrait paragraphs. Historical image API callers and previously queued Runs
+retain their existing `pipeline` default; the unified Edit uses instruction-only
+planning and pixel verification. Generate and Upscale are unchanged.
 
 The fixed native wrapper clears only the relevant constants in its own imported
 pipeline module: `IDENTITY_PREFIX` for Edit, and `RECOMPOSE_PREFIX_SINGLE`,

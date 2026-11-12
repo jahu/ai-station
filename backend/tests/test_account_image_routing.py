@@ -1,5 +1,6 @@
 """Model matching reads personal defaults and cannot authorize foreign inputs."""
 
+import pytest
 from app.db import control_session_factory
 from test_account_private_api import accounts as accounts
 from test_account_private_api import private_app as private_app
@@ -25,7 +26,8 @@ def test_auto_preview_is_personal_and_does_not_enqueue_work(accounts):
     assert alice.get("/api/runs").json() == bob.get("/api/runs").json() == []
 
 
-def test_auto_does_not_grant_another_accounts_source_artifact(accounts):
+@pytest.mark.parametrize("verified", [False, True])
+def test_auto_does_not_grant_another_accounts_source_artifact(accounts, verified):
     _, alice, bob = accounts
     image, _ = upload(alice, "green")
     result = bob.post(
@@ -33,6 +35,7 @@ def test_auto_does_not_grant_another_accounts_source_artifact(accounts):
         json={
             "mode": "img2img",
             "edit_prompt": "Remove the book",
+            **({"verify_changes": True} if verified else {}),
             "input_artifact_ids": [image],
             "model_selection": "auto",
         },

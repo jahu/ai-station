@@ -1,3 +1,12 @@
+New image edits use one public operation and a durable `image_edit` coordinator.
+Its `image_edit_reason` children inspect original pixels, plan closed criteria and
+review candidate pixels using the existing owned local vision runtime. Ordinary
+photo Runs retain native execution and file ownership; the coordinator points to
+one accepted child artifact. At most two photo attempts run from the same frozen
+references/model. New conversation controllers expose only `image.edit`; old
+frozen controllers, API operations, URLs and definitions remain readable.
+See [unified editing](plans/unified-image-editing.md).
+
 The existing native photo integration honors an optional operator-configured
 `AI_STATION_SD_CLI` through its owned import wrapper. The original script and
 model files remain external resources; a client cannot choose an executable.

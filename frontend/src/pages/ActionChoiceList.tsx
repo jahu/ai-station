@@ -31,12 +31,7 @@ const ACTIONS = [
   {
     key: "image.edit",
     title: "Edit image",
-    detail: "Modify one image while preserving the original.",
-  },
-  {
-    key: "image.recompose",
-    title: "Recompose references",
-    detail: "Combine references into a new composition.",
+    detail: "Describe changes using one or several reference images.",
   },
   {
     key: "image.upscale",

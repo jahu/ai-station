@@ -5,6 +5,7 @@ import {
 } from "../components/media/AvatarWholeProfile";
 
 export type ImageMediaRequest = {
+  verify_changes?: boolean;
   mode: "t2i" | "img2img" | "recompose" | "upscale";
   backend?: "qwen" | "juggernaut" | "krea2";
   prompt?: string;
@@ -391,9 +392,12 @@ export function agentMediaIssue(
     const ids = p.input_artifact_ids ?? [];
     if (p.mode !== "t2i" && (!ids.length || ids.some((id) => !id)))
       return "Choose the source images from Library or upload them.";
-    if (["img2img", "upscale"].includes(p.mode) && ids.length !== 1)
+    if (
+      (p.mode === "upscale" || (p.mode === "img2img" && !p.verify_changes)) &&
+      ids.length !== 1
+    )
       return "Choose one source image.";
-    if (p.mode === "recompose" && ids.length > 8)
+    if (["recompose", "img2img"].includes(p.mode) && ids.length > 8)
       return "Choose at most eight reference images.";
   }
   return null;

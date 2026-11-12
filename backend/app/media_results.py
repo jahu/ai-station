@@ -2,6 +2,12 @@
 
 
 def final_media_executor(media):
+    if (
+        media.get("kind") == "image"
+        and (media.get("request") or {}).get("verify_changes")
+        and not (media.get("request") or {}).get("upscale_result")
+    ):
+        return "image_edit"
     if media.get("kind") == "speech" and (media.get("request") or {}).get("engine") == "fish_s2_pro":
         return "fish_speech"
     if (

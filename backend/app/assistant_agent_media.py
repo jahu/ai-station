@@ -157,6 +157,7 @@ def image_definition(source, model):
         {
             **source["profile"],
             "mode": mode,
+            **({"verify_changes": True} if source["images"] else {}),
             "prompt_style": "instruction" if source["images"] else "prompt",
             "prompt": plan.goal,
             "edit_prompt": "",

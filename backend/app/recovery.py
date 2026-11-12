@@ -86,6 +86,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
+        if run.executor_type in {"image_edit", "image_edit_reason"}:
+            from app.image_edits import recover_control
+
+            recover_control(session, run)
+            session.commit()
+            touched.append(run.id)
+            continue
         if run.executor_type in {"studio_audio_step", "studio_production_step", "assistant_studio"}:
             from app.studio_audio_production import recover_enqueue_step
 

@@ -471,6 +471,8 @@ export function AssistantResults({
                   {{
                     "web.image_search": "Find images online",
                     "web.image_import": "Save image references",
+                    "image.edit": "Image · Edit",
+                    "image.recompose": "Image · Edit",
                   }[step.tool] ??
                     step.tool
                       .split(".")
@@ -889,7 +891,6 @@ export function AssistantResults({
                   {(
                     [
                       ["img2img", "Edit"],
-                      ["recompose", "Recompose"],
                       ["upscale", "Upscale"],
                     ] as const
                   ).map(([mode, label]) => (
