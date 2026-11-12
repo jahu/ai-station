@@ -261,9 +261,14 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         excluded = {42}  # Legacy external pipeline/sd-cli default.
         for parent in parents:
             source = session.get(Run, parent.run_id) if parent.run_id else None
-            value = source.parameters.get("seed") if source else parent.metadata_json.get("seed")
-            if type(value) is int:
-                excluded.add(value)
+            values = [parent.metadata_json.get("seed")]
+            if source:
+                values.append(source.parameters.get("seed"))
+                # Older managed Runs froze their actual seed in the native
+                # command receipt rather than top-level parameters.
+                runtime = source.parameters.get("managed_image_runtime") or {}
+                values.append((runtime.get("command") or {}).get("seed"))
+            excluded.update(value for value in values if type(value) is int)
         seed = secrets.randbits(32)
         while seed in excluded:
             seed = (seed + 1) % (2**32)

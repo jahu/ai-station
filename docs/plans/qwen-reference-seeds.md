@@ -62,3 +62,18 @@ Persisted automatic seeds, source collision avoidance, follow-up inheritance and
 retry seed reuse are checked. The first local failures were a missing test import
 and old stdout/parser expectations after wrapping; those were corrected before
 the successful complete relevant-family run. No test failure is waived.
+
+The final ordinary conversation also completed all 14 Runs with two independent
+Qwen outputs and no rejected decisions. Actual images were inspected: a clean
+front/three-quarter view and a clean right profile, retaining visible reference
+features without the prior back relocation. The frontal result remains close to
+the original; two completed files are not proof that every requested change was
+performed. The seed replay defect is repaired. A separate user-requested unified
+Edit workflow must assess actual change effectiveness instead of declaring visual
+success from native exit status alone.
+
+After the planning guidance, all 73 affected controller/ReAct tests passed. The
+final historical-managed-source seed fallback additionally passed all 85 affected
+image/model/account/profile tests. The native adapter is unchanged from the
+complete Host Runner verification above. Older managed source receipts also
+contribute their recorded actual seed to collision avoidance.
