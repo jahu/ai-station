@@ -697,3 +697,22 @@ and source-fitting probes. These are measured planning and visual-generation
 results, not a claim that the new plan has already been fully produced or that
 every future image is guaranteed free of lettering. The original complete film,
 soundtrack and successful footage remain preserved for focused postproduction.
+
+### Editable composition — 2026-11-12
+
+The saved-shot editor now exposes the renderer's existing layout, `media_fit`,
+`media_motion` and video `media_start_seconds` fields. Whole-visual fitting with
+no added movement preserves informational edge content; the UI explains that
+zooming/panning can still crop and that the whole scene must fit in its source
+clip. Video controls also work for shared and Library sources. Graphics do not
+offer inapplicable media controls or a full-bleed layout. No new source, inference
+parameter, execution permission or backend contract is introduced.
+
+Edits retain the existing unsaved-change/export guards and save as a new
+immutable revision. Original sources, shared-source references, narration and
+timings remain unless explicitly edited. Local frontend qualification covers
+46 Studio cases, lint, typecheck and production build. Compiled desktop/mobile
+checks against an isolated real accounts/API instance confirmed whole-visual
+fitting, motion/layout persistence, original-revision/source preservation and no
+new generation Run. The mobile composition controls have no horizontal overflow.
+This editor qualification does not establish a film's publication quality.

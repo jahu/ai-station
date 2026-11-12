@@ -48,6 +48,7 @@ import StudioShotMedia from "./StudioShotMedia";
 import StudioSoundtrack from "./StudioSoundtrack";
 import StudioExport from "./StudioExport";
 import StudioProduction from "./StudioProduction";
+import StudioShotComposition from "./StudioShotComposition";
 import "./Studio.css";
 import "./StudioMaterial.css";
 
@@ -662,6 +663,11 @@ function StoryboardEditor({
             .slice(0, index)
             .reduce((sum, item) => sum + item.duration_frames, 0);
           const end = from + shot.duration_frames;
+          const origin = board.scenes[visualOrigin(board.scenes, index)];
+          const video =
+            origin.visual_kind === "video" ||
+            (origin.source_artifact_id != null &&
+              revision.sources[origin.source_artifact_id]?.kind === "video");
           return (
             <article className="studio-shot" key={index}>
               <header>
@@ -813,6 +819,13 @@ function StoryboardEditor({
                     onChange={(e) => change(index, { framing: e.target.value })}
                   />
                 </label>
+                <StudioShotComposition
+                  shot={shot}
+                  index={index}
+                  hasMedia={shot.visual_kind !== "graphics"}
+                  video={video}
+                  onChange={(value) => change(index, value)}
+                />
                 <label>
                   On-screen title
                   <input

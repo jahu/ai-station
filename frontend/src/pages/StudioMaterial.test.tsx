@@ -382,6 +382,51 @@ it("archives without deleting the storyboard and offers restore", async () => {
   expect(screen.getByText("Reveal the hidden spectrum")).toBeTruthy();
 });
 
+it("saves composition and clip trims as a new version without regenerating sources", async () => {
+  const requests = fixture(undefined, false, true);
+  await screen.findByText("Reveal the hidden spectrum");
+  fireEvent.change(screen.getByLabelText("Shot 2 visual source"), {
+    target: { value: "0" },
+  });
+  fireEvent.change(screen.getByLabelText("Shot 2 layout"), {
+    target: { value: "split" },
+  });
+  fireEvent.change(screen.getByLabelText("Shot 2 media fit"), {
+    target: { value: "contain" },
+  });
+  fireEvent.change(screen.getByLabelText("Shot 2 visual movement"), {
+    target: { value: "hold" },
+  });
+  fireEvent.change(screen.getByLabelText("Shot 2 clip start"), {
+    target: { value: "1.25" },
+  });
+  expect(requests).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "Save as new version" }));
+  await screen.findByText("Version 2 saved");
+  expect(requests).toHaveLength(1);
+  expect(requests[0]).toMatchObject({
+    path: "/api/studio/materials/material-one/revisions",
+    body: {
+      parent_revision_id: "revision-one",
+      expected_version: 2,
+      storyboard: {
+        scenes: [
+          revision.storyboard.scenes[0],
+          {
+            visual_kind: "reuse",
+            reuse_scene: 0,
+            duration_frames: 120,
+            layout: "split",
+            media_fit: "contain",
+            media_motion: "hold",
+            media_start_seconds: 1.25,
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("opens the completed requested version instead of leaving the previous take selected", async () => {
   const requests = fixture();
   const button = await screen.findByRole("button", {

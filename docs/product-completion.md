@@ -28,8 +28,19 @@ and a successfully rendered result from the newly installed image. Simultaneous
 worker/Runner crash recovery passed with the same Run and original helper;
 preserving deployment is tracked in its plan.
 
-This is development work beyond the published 0.5.0 installers. Complete longer
-educational-film and audiovisual publication-quality acceptance remain open.
+An actual six-scene educational film now combines four generated images, two
+real clips, complete narration and a music score in a 95.633-second full-HD
+export. Complete decode, source hashes, audio correlation and local transcription
+checks passed. Sampled review found pseudo-writing and cropped illustrations;
+the original film is retained while focused postproduction addresses them.
+The generic visual-direction repair passed a fresh unprefilled 176-word,
+75-second plan and one real image with a clean display. These are different
+artifacts: the new plan is not a second completely produced 75-second film.
+Manual composition controls save layout, media fitting, movement and clip start
+as a new immutable version; source files and earlier versions remain unchanged.
+
+This is development work beyond the published 0.5.0 installers. Complete
+audiovisual publication-quality acceptance remains open.
 [Current scope and evidence](plans/creative-studio.md) ·
 [Renderer preparation](plans/studio-renderer-setup.md).
 
