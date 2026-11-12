@@ -1982,14 +1982,23 @@ changed source cannot silently replace a frozen binding. Recovery retains RAM
 when native ownership/cleanup cannot be confirmed and fences missing dispatches
 before release. A lost launch reply is never permission to launch again.
 
-The optional presenter input is another owned completed MP4, never markup, a URL
-or a layout program. Only automatic/right/bottom placement and a bounded source
+The optional presenter input is an owned completed MP4 or a sequence of at most
+32 such clips, never markup, a URL or a layout program. Only automatic/right/bottom placement and a bounded source
 offset are accepted. The source must remain live and unchanged through dispatch
 and publication; partial/internal results and unfinished originating Runs are
 refused. Actual decoded duration must cover the complete film. Its audio is
 muted, the final soundtrack stays singular, and Chromium verifies reserved
 nonoverlapping space within the canvas. Source count and the combined two-GiB
 budget include this layer. Existing cancellation/ownership fences remain shared.
+
+Sequence intervals are strict integer editorial frames, contiguous and exactly
+cover the saved film. Native codec checks inspect each clip's real source window;
+its 25-fps duration cannot move a 30-fps editorial boundary. A sequence requires
+an explicitly advertised compatible renderer, freezes every source and remains
+within the two-GiB combined budget (up to 60 story visuals, 32 presenter clips and
+one mix). Hyperframes exclusively controls clip visibility/seeking; GSAP never
+overrides timed clip visibility. Unused sequence fields stay absent from legacy
+single-presenter requests and request digests.
 
 Clean presenter narration accepts only a material and its exact saved measured
 revision; callers cannot inject cue paths, replacement speech, execution budgets

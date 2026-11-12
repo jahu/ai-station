@@ -12,7 +12,7 @@ from pathlib import Path
 from ai_station_runner.config import get_settings
 from ai_station_runner.memory_scope import available, scope_environment, scope_prefix
 from ai_station_runner.motion_assets import request_digest
-from ai_station_runner.motion_contract import RAM_MIB, SUPERVISOR_RAM_MIB
+from ai_station_runner.motion_contract import MAX_PRESENTER_CLIPS, RAM_MIB, SUPERVISOR_RAM_MIB
 from ai_station_runner.motion_image import image
 from ai_station_runner.motion_installation import observation
 from ai_station_runner.motion_owner import directory, load, save
@@ -31,6 +31,7 @@ def capabilities():
         "name": "Hyperframes · CPU",
         "ram_mib": RAM_MIB,
         "max_seconds": 600,
+        "max_presenter_clips": MAX_PRESENTER_CLIPS,
         "fps": 30,
         "canvases": [
             {"width": 1080, "height": 1920},

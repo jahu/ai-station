@@ -407,5 +407,21 @@ private disposable database copy and no new inference; the copied database was
 removed afterward. Temporary-database tests additionally cover more than 120
 seconds, a tiny padded tail, account isolation, changed sources, Stop/claim loss,
 expiry, SQLite publication contention and safe pure-CPU recovery. Automatic Sonic
-coordination, sequence rendering, editor/assistant selection and the full real
+coordination, editor/assistant selection and the full real
 presenter-film acceptance remain outstanding; this is not avatar qualification.
+
+The renderer now also accepts a typed contiguous presenter sequence: up to 32
+complete video sources on exact 30-fps editorial intervals. Each source retains
+its own trim; 25-fps avatar frame rounding never shifts later intervals. The new
+capability is explicitly advertised, so an older ready engine cannot accept an
+unsupported sequence. Legacy single-clip serialization stays unchanged.
+
+Actual CPU qualification used two intervals across a fractional 25/30-fps join
+inside a six-second portrait film, with approved existing presenter footage and
+calibration audio. Complete decoding, strict Hyperframes lint, reserved layout,
+continuous interval coverage, single soundtrack and owned cleanup passed. Initial
+qualification caught insufficient time-string precision and an impermissible
+GSAP clip-visibility override; both were corrected without relaxing checks.
+This proves the composition primitive, not new Sonic generation, long-avatar
+continuity or complete narration-aligned film quality. Automatic coordination
+and editor/assistant integration remain the next delivery stage.
