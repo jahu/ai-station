@@ -1,3 +1,10 @@
+The photo adapter may honor the native operator's existing `AI_STATION_SD_CLI`
+setting through its owned import wrapper. The configured executable is checked
+before launch and import; clients cannot supply it in a photo request. Original
+pipeline files remain unchanged, selected checkpoint fingerprints and source paths
+retain their checks, and the existing managed process group owns cancellation and
+recovery. A missing configured executable refuses rather than falling back.
+
 Windows preserving updates accept ordinary owned XDG parents (`~/.local` and
 `~/.local/share`) with read/execute access such as 0755. Symlink parents,
 unexpected owners and group/world-writable directories remain rejected. The

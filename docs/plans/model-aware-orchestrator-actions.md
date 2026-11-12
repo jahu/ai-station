@@ -92,3 +92,42 @@ engine on the same files/brief before qualifying a native adapter change. Keep t
 original external script/binary untouched, respect explicitly configured native
 execution settings, and preserve model/owner/reference/Stop contracts. Do not
 substitute Krea silently or add person-specific prompting templates to hide it.
+
+### Native configured engine follow-up
+
+`AI_STATION_SD_CLI` currently affects diagnostics but the photo adapter ignores
+it; the imported original script chooses its own binary. Honor this existing
+native-only operator setting for Generate/Edit/Recompose through the owned import
+wrapper. With no override, retain existing argv/profile behavior. A configured
+missing/non-executable binary must refuse instead of silently using another
+engine. Preserve the selected checkpoint, prompt profile and all source argv.
+Expose no new HTTP request field or model-authored executable coordinate. Keep
+original script/binary bytes intact and cancellation/recovery in the existing
+owned process group. Verify the pinned application-owned SDK identity and native load before preserving
+rollout, then qualify its actual CUDA rendering and repeat the normal conversation.
+
+Native follow-up verification: 2801 runner/backend image cases passed, with eight
+opt-in/platform skips, plus Ruff, Docker build and preserving Compose preflight.
+The configured SDK dispatched a real ordinary image Run on CUDA. Its sampled
+steps were approximately 2.6 s versus 11.3 s in the CFG-1 legacy-engine comparison;
+this is a specific sampling observation, not a general wall-time benchmark.
+The initial standalone SDK probe was stopped when missing private CUDA libraries
+caused CPU fallback. The completed private SDK bundles only libraries from the
+already pinned image, requires the allocated logical CUDA device and leaves the
+host driver and external pipeline untouched.
+
+Rendering quality remains unresolved: the newer engine still produced a near-copy
+with processed texture. A VAE tensor-cast probe produced identical pixels and was
+reverted; it is not evidence of repaired quality. Diffusion, text encoder and
+vision projector hashes match the guided recipe. The configured BF16 VAE is a
+different file representation from its original-publisher F32 VAE; that difference
+alone does not establish corruption or incompatibility. No model or sampling
+preset has been silently substituted.
+
+Next isolate the visual brief contract from model fidelity: preserve only requested
+invariants, express requested changes relative to the references, and keep multiple
+variants concrete and distinct. Reuse the existing subject-neutral ImageVariation
+contract/compiler from agent_image_scenes where useful, rather than fixed person
+or camera templates. Then repeat the ordinary two-output conversation and inspect
+both actual views. A successfully created image file is not proof that the visual
+change succeeded; full visual acceptance and goal completion remain pending.
