@@ -182,6 +182,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"recovery": True})
             touched.append(run.id)
             continue
+        if run.executor_type == "studio_narration":
+            from app.studio_narration import recover_narration
+
+            if recover_narration(session, run):
+                session.commit()
+                touched.append(run.id)
+                continue
         info = _inspect(runner, run.id)
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:

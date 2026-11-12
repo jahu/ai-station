@@ -1752,6 +1752,17 @@ publication. An unused layer is omitted from serialization so old request hashes
 remain valid. Automatic narration-aligned avatar generation remains a separate
 postproduction step; this editor slice selects existing Library footage.
 
+The queued `studio_narration` CPU step prepares the next postproduction boundary:
+one clean stem and contiguous speech parts from a successful measured soundtrack's
+frozen cues. It reuses the exact scene/cue PCM edit, without synthesizing speech
+or including the music bus. Sources, hashes, ownership and the measured revision
+are rechecked before publication. Intermediate artifacts retain lineage and are
+inspectable through Runs. Parts respect the existing sixty-second Sonic input
+bound while preserving the complete film timeline. Only this pure local PCM
+step can requeue computation after worker loss; native avatar execution retains
+its independent inspection-only recovery. Automatic presenter coordination and
+its editor/assistant controls are not advertised by this primitive alone.
+
 Saved-shot production reuses `create_image_run` or the existing segmented-video
 Task graph; it adds no inference adapter. Account image defaults remain authoritative
 unless explicitly overridden. Immutable shot/revision/source coordinates follow

@@ -370,3 +370,42 @@ short/invalid clips, whole-timeline alignment, readable portrait/landscape layou
 audio kept once, Stop/recovery and a real complete generated film with presenter.
 The short Library-layer slice alone does not finish automatic avatar delivery or
 the overall publication-quality objective.
+
+
+### Clean narration and long presenter timeline
+
+A presenter workflow must consume the approved measured narration cues, not
+transcribe/regenerate the script or feed the music mix into lip synchronization.
+Queue a bounded CPU narration-preparation Run anchored to a successful soundtrack
+and its exact measured revision. Reuse the existing streaming PCM edit so the
+200-ms cue lead-ins, complete utterances and scene pauses match the final mix.
+Preserve the original mastered soundtrack as the only final audio.
+
+Publish a clean 48-kHz stereo stem and contiguous owned speech parts of at most
+sixty seconds, the current single-Run Sonic input bound. Prefer existing scene
+boundaries in the latter half of a part; otherwise retain exact contiguous audio.
+Keep all source samples. Only a final shorter-than-0.68-second part may receive
+silent input padding for the native minimum; its actual editorial interval stays
+unchanged. Do not impose a sixty-second film limit. The complete native render
+budget still allows ten minutes. All intermediate artifacts retain provenance
+and remain inspectable through Runs without crowding the user's final results.
+
+The subsequent coordinator queues one existing Sonic whole-recording Run per
+part, with the same frozen presenter/model and closed child ownership. A typed
+presenter sequence uses each complete result on its own exact editorial interval;
+25-fps source rounding cannot shift the 30-fps story. Do not restart the face at
+ordinary scene changes. Stop/recovery/continuation must preserve completed parts
+and never replay an uncertain native launch. Expose automatic presenter selection
+in the production editor and semantic assistant only after that complete
+coordination path is qualified. Real generated-film acceptance remains required.
+
+The clean-narration primitive is now implemented as an ordinary CPU Run. Actual
+qualification used the existing four-cue 17.2-second generated film: its clean
+stem retained exactly 825,600 stereo samples at 48 kHz, with complete source/hash
+verification and exact reconstruction from its speech parts. The test used a
+private disposable database copy and no new inference; the copied database was
+removed afterward. Temporary-database tests additionally cover more than 120
+seconds, a tiny padded tail, account isolation, changed sources, Stop/claim loss,
+expiry, SQLite publication contention and safe pure-CPU recovery. Automatic Sonic
+coordination, sequence rendering, editor/assistant selection and the full real
+presenter-film acceptance remain outstanding; this is not avatar qualification.

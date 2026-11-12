@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app import __version__
+from app import studio_narration as studio_narration  # noqa: F401
 from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
