@@ -93,3 +93,12 @@ plain-text paste and a removable PDF file event also passed against the actual
 disposable API. Site widths 390/768/1024/1440 showed no horizontal overflow or
 browser exceptions. Internal evidence is kept in ignored application QA storage;
 operator workbook answers remain untested.
+
+
+The final 0.6.1 candidate also includes PR #760's two CSS declarations for the
+collapsed navigation: suppress the gap beside hidden text and the Home marker.
+Actual compiled-browser measurements confirm every main/footer icon center,
+expanded label spacing and mobile layout; the new CSS was verified in the live
+HTTP response. Frontend lint, typecheck and production build passed. Release
+packages are regenerated from the matching source rather than retaining the
+pre-correction frontend in the downloadable installers.
