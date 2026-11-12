@@ -91,6 +91,7 @@ from app.station_updates import StationUpdateCheckExecutor
 from app.studio_assistant import AssistantStudioExecutor
 from app.studio_audio_production import StudioAudioStepExecutor, StudioVoiceReferenceExecutor
 from app.studio_director import StudioDirector
+from app.studio_narration import StudioNarrationExecutor
 from app.studio_production import StudioProductionExecutor
 from app.studio_render import StudioRenderExecutor
 from app.studio_soundtrack import StudioSoundtrackExecutor
@@ -405,6 +406,7 @@ EXECUTORS = {
     StudioDirector.name: StudioDirector(),
     StudioRenderExecutor.name: StudioRenderExecutor(),
     StudioSoundtrackExecutor.name: StudioSoundtrackExecutor(),
+    StudioNarrationExecutor.name: StudioNarrationExecutor(),
     StudioAudioStepExecutor.name: StudioAudioStepExecutor(),
     StudioVoiceReferenceExecutor.name: StudioVoiceReferenceExecutor(),
     AvatarPlannerExecutor.name: AvatarPlannerExecutor(),

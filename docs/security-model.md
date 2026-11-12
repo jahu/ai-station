@@ -1991,6 +1991,18 @@ muted, the final soundtrack stays singular, and Chromium verifies reserved
 nonoverlapping space within the canvas. Source count and the combined two-GiB
 budget include this layer. Existing cancellation/ownership fences remain shared.
 
+Clean presenter narration accepts only a material and its exact saved measured
+revision; callers cannot inject cue paths, replacement speech, execution budgets
+or model commands. The successful originating mix and every complete cue remain
+owner scoped, canonical and content bound. The CPU worker freezes the mix/cue
+observations, preserves complete speech, and publishes only under its original
+claim and Task Stop fence. Short SQLite busy/locked retries retain computed PCM
+and stable output identities. Pure CPU recovery never queries or dispatches the
+Runner and never opts a native model into replay. Speech parts are contiguous
+and bounded to sixty seconds, including any explicitly recorded silent minimum
+padding; their editorial intervals never include that padding. These internal
+artifacts do not grant an agent permission to generate avatars or publish media.
+
 The Studio CPU soundtrack assembler accepts only private live WAV Artifact IDs,
 finite mix levels and exact saved revision coordinates. Canonical regular files
 have bounded headers, durations and bytes; hashes are rechecked before/after

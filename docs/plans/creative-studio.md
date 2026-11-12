@@ -398,3 +398,14 @@ ordinary scene changes. Stop/recovery/continuation must preserve completed parts
 and never replay an uncertain native launch. Expose automatic presenter selection
 in the production editor and semantic assistant only after that complete
 coordination path is qualified. Real generated-film acceptance remains required.
+
+The clean-narration primitive is now implemented as an ordinary CPU Run. Actual
+qualification used the existing four-cue 17.2-second generated film: its clean
+stem retained exactly 825,600 stereo samples at 48 kHz, with complete source/hash
+verification and exact reconstruction from its speech parts. The test used a
+private disposable database copy and no new inference; the copied database was
+removed afterward. Temporary-database tests additionally cover more than 120
+seconds, a tiny padded tail, account isolation, changed sources, Stop/claim loss,
+expiry, SQLite publication contention and safe pure-CPU recovery. Automatic Sonic
+coordination, sequence rendering, editor/assistant selection and the full real
+presenter-film acceptance remain outstanding; this is not avatar qualification.
