@@ -642,3 +642,58 @@ keeps the precise diagnostic. ReAct scratchpad thoughts are not captured by this
 intent-only evidence. Existing claim, deadline, Stop and account fences apply to
 every evidence write and publication. Actual successful interpretation and the
 complete longer film still require a fresh ordinary request after deployment.
+
+### Nonverbal generated visuals — actual qualification finding, 2026-11-12
+
+The next actual request successfully corrected semantic interpretation (an
+oversized description) and revised only its narration from 230 to 179 words.
+All six visual scenes, sources and other fields were preserved; complete speech,
+music and mastering then succeeded. Measured narration extended the requested
+75-second edit to 95.633 seconds. Report that actual duration, not the earlier
+storyboard estimate. The finished film and its publication quality are still open.
+
+The first new photograph had no palette bars or hexadecimal labels and a coherent
+editorial composition, but contained pseudo-text on its display. Its actual
+visual brief explicitly requested an interface showing a text prompt. The previous
+director rule prohibited generated titles; the general no-lettering suffix then
+conflicted with that specific requested writing. This is an instruction-boundary
+quality defect, not evidence that a particular subject needs special-case code.
+
+Director guidance now separates all writing from generated visuals, including
+incidental/tiny/illegible interface or document copy. All intended wording belongs
+in the renderer's existing scene text fields. Generated surfaces are described
+through nonverbal shapes/materials/light. The shared image/video shot suffix
+reinforces the same policy. No subject matching, prose deletion, image repainting,
+new tool, changed source or inference parameter is introduced. Existing ordinary
+Images requests and approved Library sources retain their original semantics.
+
+This prompt-direction change remains a candidate until actual planning and new
+visual generation verify the separation. Preserve useful completed film assets;
+do not rerun or stop the whole production merely to repair one image. A good
+composition or absence of one former defect cannot establish publication quality.
+
+The completed 95.633-second film passed all 2,869 decoded full-HD frames and
+single-track audio correlation checks. A local CPU transcript had three word
+edits across 179 expected words. These checks do not constitute full subjective
+publication acceptance. Sampled final layouts also exposed cropped edge pictograms
+and the baked-in label of an illustration in a near-square panel. The existing
+`media_fit` choice remains authoritative: director guidance now explicitly chooses
+`contain` for complete informational/edge content and reserves `cover` for
+intentional crop-safe photography. There is no runtime content classifier or
+forced change to existing revisions; real layout/generation qualification remains
+required. Preserve the complete baseline film for comparison.
+
+Actual candidate qualification now passes ordinary local planning with the same
+original brief, selected model and inspected six-second source, without a
+prefilled storyboard or correction feedback. It produced six scenes, 176 spoken
+words and exactly 2,250 frames. Source-aware fitting retained the six-second
+Library shot and four-second generated-video beat; elastic stills absorbed the
+remaining time. Three complete informational illustrations selected `contain`.
+The first new photograph was generated through the ordinary saved-shot/image
+workflow with the same installed LUSTIFY definition. Inspection found a coherent
+blue/cream workstation photograph with a clean dark display and no former
+pseudo-writing. The exact deployed candidate passed its packaged API/migration
+and source-fitting probes. These are measured planning and visual-generation
+results, not a claim that the new plan has already been fully produced or that
+every future image is guaranteed free of lettering. The original complete film,
+soundtrack and successful footage remain preserved for focused postproduction.
