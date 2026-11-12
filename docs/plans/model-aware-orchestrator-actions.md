@@ -168,3 +168,28 @@ creative details may be chosen; genuinely material missing preferences use ask_u
 Preserve only requested invariants and do not merge separate variants into a
 composite unless requested. This is subject-neutral model guidance, not a keyword
 filter, pose list, output crop or post-hoc replacement. Repeat the full real case.
+
+### Final ordinary-worker qualification
+
+The deployed account-default and concrete-brief changes completed the original
+request through the ordinary account-scoped conversation and workers: all 14 Runs
+succeeded, with two separate Krea Recompose Runs and two distinct image artifacts.
+Both artifacts retain the same original source as their sole parent; the second
+does not accidentally edit the first. There were no rejected controller decisions.
+The native Runner confirms both owned photo processes exited. No test supplied
+invented plans, observations or rendered results.
+
+Both actual files were visually inspected. Each contains one depiction, without
+the earlier composite or Qwen texture problem; recognizable reference features
+remain. Framing and view differ, but the changes are conservative. This qualifies
+the repaired dispatch, output count, provenance and inherited model selection,
+not a guarantee of exact identity or arbitrary camera control. The planner still
+occasionally expresses examples as alternatives despite the concrete-brief
+guidance, so that guidance is not described as a deterministic visual validator.
+Do not convert this limitation into subject-specific templates or silently switch
+an explicitly selected model. Historical Qwen restaging quality remains a separate
+known issue; changing its engine alone did not repair it.
+
+The term "SDK" in the engine investigation above means the private native runtime
+bundle (`sd-cli` plus its matching libraries), not an additional model or a change
+to host drivers. Private prompts, source images and QA results remain outside Git.
