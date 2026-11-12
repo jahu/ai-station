@@ -64,5 +64,32 @@ A compiled Chromium UI connected to a disposable real API accepted native
 Ctrl+V twice in both new and existing conversations, retaining two separate
 image references; no message was sent. The site and composer were inspected at
 desktop/mobile widths with no horizontal overflow or browser exceptions. This
-does not yet qualify a complete real-model search-to-edited-image conversation;
-that remains a separate acceptance gate before release preparation.
+browser check is separate from the real-model qualification below.
+
+
+## Ordinary real-model chain — passed
+
+After reviewed PR #757 was squash-merged into develop, the source was deployed
+while the station was idle, retaining the database, accounts, model settings,
+ports and private native socket. The same pinned SearxNG image uses its enabled
+image engines without a public port. Earlier queued work was not replayed.
+
+One ordinary prompt asked for a real online photograph of a blue ceramic mug
+and an edited garden/table setting. The configured local llama.cpp model chose
+`web.image_search` → `web.image_import` → `image.edit` by itself; no decisions,
+outcomes, URL, source alias or tool arguments were prefilled. All steps succeeded.
+The configured Krea2 reference backend produced the edit. The actual original
+and result decoded successfully, had distinct file hashes and retained the
+source-to-result parent-artifact relationship. Visual inspection confirmed the
+recognizable blue mug on a wooden table in a garden, with the original retained.
+These private QA images are not website/release media.
+
+Final verification includes 623 relevant backend regressions, 19 focused image
+security/controller tests, 1,249 frontend tests and final focused attachment/
+entry-point (45) and result (43) tests. Python lint/format, frontend lint/typecheck/
+build, both Compose configurations, Docker and the static website build passed.
+Native Chromium Ctrl+V retained two references in each conversation entry path;
+plain-text paste and a removable PDF file event also passed against the actual
+disposable API. Site widths 390/768/1024/1440 showed no horizontal overflow or
+browser exceptions. Internal evidence is kept in ignored application QA storage;
+operator workbook answers remain untested.
