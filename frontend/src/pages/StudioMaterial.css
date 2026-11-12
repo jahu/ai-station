@@ -422,6 +422,33 @@
   font-size: 12px;
   margin: 18px 0;
 }
+.studio-shot-composition {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+}
+.studio-shot-composition legend {
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.studio-shot-composition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px 16px;
+}
+.studio-shot-composition-grid label {
+  margin: 0;
+  min-width: 0;
+}
+.studio-shot-composition p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
 .studio-sound-direction {
   padding: 26px;
   margin-bottom: 20px;

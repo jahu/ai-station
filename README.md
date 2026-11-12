@@ -73,6 +73,9 @@ the director checks the actual script before media generation, and the editor
 shows its word count. A word-limit-only planning failure can revise the spoken
 lines without regenerating a valid visual plan; exhausted corrections cannot
 blindly recreate the same material in one conversation turn. [Current scope and evidence](docs/plans/creative-studio.md).
+Scene editing also exposes layout, whole-visual versus cropped fitting, visual
+movement and video start time. Save a new version and export with existing media;
+correcting a crop does not require regenerating the source.
 
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled
