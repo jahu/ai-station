@@ -130,7 +130,7 @@ def document(composition: Composition, assets=None, *, audio=False):
             + (f'<div class="metrics">{metrics}</div>' if metrics else "")
         )
         scenes.append(
-            f'<section id="{sid}" class="scene layout-{scene.layout}{" has-media" if media else ""}" data-scene-start="{start / 30}" data-scene-duration="{scene.duration_frames / 30}" style="z-index:{index}">'
+            f'<section id="{sid}" class="scene layout-{scene.layout}{" has-media" if media else ""}{" has-copy" if content else ""}" data-scene-start="{start / 30}" data-scene-duration="{scene.duration_frames / 30}" style="z-index:{index}">'
             + '<div class="scene-inner"><span class="accent-rule"></span><div class="scene-copy">'
             + content
             + "</div>"
@@ -209,9 +209,11 @@ body{{font-family:'{family}','Inter Variable',sans-serif;color:var(--ink);-webki
 .scene-media{{width:100%;height:100%;display:block}}
 .layout-full_bleed .scene-inner{{display:block;inset:0}}
 .layout-full_bleed .media-frame{{position:absolute;inset:0;max-height:none;border-radius:0;z-index:0}}
-.layout-full_bleed .media-frame::after{{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 0%,{palette["background"]}EF 24%,{palette["background"]}A0 52%,transparent 82%)}}
+.layout-full_bleed.has-copy .media-frame::after{{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 0%,{palette["background"]}EF 24%,{palette["background"]}A0 52%,transparent 82%)}}
 .layout-full_bleed .scene-copy{{position:absolute;z-index:2;left:{88 if portrait else 128}px;right:{110 if portrait else 128}px;bottom:{340 if portrait else 180}px;max-height:65%}}
 .layout-full_bleed footer{{z-index:3}}
+.layout-full_bleed:not(.has-copy) footer{{opacity:1}}
+.layout-full_bleed:not(.has-copy) footer span{{background:var(--bg);padding:6px 10px;border-radius:6px}}
 footer{{position:absolute;left:{88 if portrait else 128}px;right:{110 if portrait else 128}px;bottom:{215 if portrait else 70}px;display:flex;justify-content:space-between;gap:40px;font:20px 'Inter Variable',sans-serif;color:var(--ink);opacity:.65}}
 footer span:first-child{{max-width:75%;overflow-wrap:anywhere}}
 """
