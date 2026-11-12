@@ -20,7 +20,7 @@ from ai_station_runner.fish_contract import (
 )
 from ai_station_runner.memory_scope import require_scope
 from ai_station_runner.security import resolve_child
-from ai_station_runner.speech_chunks import text_chunks
+from ai_station_runner.speech_chunks import reset_speech_seed, text_chunks
 
 
 class GpuMemoryUnavailable(ValueError):
@@ -107,11 +107,13 @@ def render(request, *, runtime, models, work, reference):
     ):
         raise ValueError("Fish model weights must stay on the allocated GPUs")
     reference_tokens = encode_audio(str(reference), codec, "cuda:1").cpu() if reference is not None else None
+    reference_text = request.reference_text
     end_id = model.tokenizer.get_token_id(IM_END_TOKEN)
     parts = []
     # Model directions shape delivery. Pace tags are stochastic (the real
     # [fast] trial was slower than neutral), so apply the selected rate to the
-    # complete PCM instead. The same seed/direction keeps the underlying voice.
+    # complete PCM instead. A seed alone cannot preserve speaker identity between
+    # independent calls: anchor later chunks to the same complete first take.
     prefix = DIRECTIONS[request.direction]
     chunks = text_chunks(request.text)
     for index, chunk in enumerate(chunks):
@@ -127,19 +129,20 @@ def render(request, *, runtime, models, work, reference):
             return token
 
         codes = []
-        torch.manual_seed(42 + index)
+        model_text = (prefix + " " + chunk).strip()
+        reset_speech_seed()
         with torch.inference_mode():
             for response in generate_long(
                 model=model,
                 device="cuda:0",
                 decode_one_token=checked_decode,
-                text=(prefix + " " + chunk).strip(),
+                text=model_text,
                 max_new_tokens=1024,
                 top_p=0.7,
                 top_k=30,
                 temperature=0.7,
                 compile=False,
-                prompt_text=[request.reference_text] if reference_tokens is not None else None,
+                prompt_text=[reference_text] if reference_tokens is not None else None,
                 prompt_tokens=[reference_tokens] if reference_tokens is not None else None,
                 chunk_length=1000,
             ):
@@ -150,7 +153,8 @@ def render(request, *, runtime, models, work, reference):
                     ended = False
             if not codes:
                 raise ValueError("The speech model returned no complete audio")
-            audio = decode_to_audio(torch.cat(codes, dim=1).to("cuda:1"), codec).float().cpu().numpy()
+            audio_codes = torch.cat(codes, dim=1)
+            audio = decode_to_audio(audio_codes.to("cuda:1"), codec).float().cpu().numpy()
         rendered_samples = len(audio)
         if audio.ndim != 1 or not np.isfinite(audio).all() or not 0.1 <= len(audio) / codec.sample_rate <= 90:
             raise ValueError("Speech returned invalid or unbounded PCM")
@@ -163,6 +167,11 @@ def render(request, *, runtime, models, work, reference):
         if path.exists() or path.is_symlink():
             raise ValueError("Inspect existing speech parts")
         sf.write(path, audio, codec.sample_rate, subtype="PCM_16")
+        if reference_tokens is None and len(chunks) > 1:
+            # Reuse bounded VQ codes directly, not re-encoded/stretched PCM. Keep
+            # this first anchor for every later chunk to avoid cumulative drift.
+            reference_tokens = audio_codes.cpu()
+            reference_text = model_text
         parts.append(
             {
                 "path": path.name,
@@ -176,6 +185,11 @@ def render(request, *, runtime, models, work, reference):
     return {
         "parts": parts,
         "sample_rate": codec.sample_rate,
+        "voice_continuity": "provided_reference"
+        if reference is not None
+        else "first_generated_chunk"
+        if len(chunks) > 1
+        else "single_chunk",
         "pace_processing": {
             "method": "none" if request.pace == "natural" else "phase_vocoder",
             "rate": PACE_RATES[request.pace],

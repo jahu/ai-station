@@ -47,7 +47,7 @@ def main():
     ):
         parser.error("The speech environment has not completed preparation")
     from ai_station_runner.memory_scope import require_scope
-    from ai_station_runner.speech_chunks import text_chunks
+    from ai_station_runner.speech_chunks import reset_speech_seed, text_chunks
 
     require_scope(str(args.run_id), 11264)
     os.environ.update(
@@ -79,6 +79,7 @@ def main():
     chunks = text_chunks(args.text)
     for index, text in enumerate(chunks):
         print(f"speech.chunk.started {index + 1}/{len(chunks)}", flush=True)
+        reset_speech_seed()
         audio = (
             model.generate(
                 text,

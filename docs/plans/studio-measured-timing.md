@@ -70,3 +70,48 @@ rendered 12.910 seconds, compared with 16.312 for the original calm/slow cue.
 It used a newly sampled voice, so this does not isolate voice identity or prove
 subjective quality. Independently transcribe the sample, retain both takes, and
 review listening quality before calling the full film publication-ready.
+
+
+## Voice continuity across bounded Fish calls
+
+Owner listening confirmed improved pace/expression in the short sample but an
+abrupt timbre/loudness change at the final phrase. The control with only
+`[warm and upbeat]` changed to `[warm]` was retained separately. Inspection found
+a second independent cause: the 220-character splitter starts a new model call
+at that phrase. Previously model-generated voice mode supplied no reference to
+any call and used seed 42 + chunk index. Changing a tag alone cannot establish
+speaker identity across those independent generations.
+
+For model-generated narration, retain the first complete, validated chunk's VQ
+codes and exact model text as the voice reference for every later chunk in that
+same owned Run. Use the same seed for every chunk, as explicitly required by the
+owner after listening confirmed a female-to-male change in the warm-only control.
+A constant seed alone is insufficient to establish identity for different text;
+the acoustic anchor provides the actual speaker reference.
+Reuse the fixed first anchor rather than chaining the latest
+output, to avoid cumulative drift. Use the SDK's existing prompt_text and
+prompt_tokens contract; no model file, SDK installation, credentials, GPU
+allocation, download or public endpoint changes. Provided recording mode keeps
+its original encoded reference and verified transcript for every chunk. Single
+chunks keep their original inference inputs. EOS, PCM validation, deadlines,
+private process ownership, output limits and Stop remain in force. Record the
+reference strategy in the native report. The implementation observation changes,
+so idle rollout and a fresh queued comparison follow review/local qualification;
+never apply new native code to an active old-observation Run.
+
+Qualify the actual render loop with fake model/codec modules: no reference on
+the first model-voice call, one matching first anchor for all later calls,
+unchanged supplied references, and no use of incomplete audio. Repeat the same
+warm-only input after rollout, inspect the native continuity report and complete
+transcript, then let listening determine whether timbre continuity improved.
+No forbidden-emotion word list, tag substitution or subject-specific rule.
+
+
+The same seed reset is shared by app-owned Fish, prepared Chatterbox and the
+configured Chatterbox CLI, covering both recording/model voice and all callers
+(Chat, agents, Studio, avatar narration). Reset Python, NumPy and Torch before
+each model call. External operator-written CLIs are not rewritten: their seed
+behavior cannot be guaranteed if they override the RNG themselves. The station's
+configured app-owned Chatterbox script must be pinned to the qualified source on
+idle rollout, rather than retaining an older checkout's script path. No user
+recording or existing model/cache is changed.

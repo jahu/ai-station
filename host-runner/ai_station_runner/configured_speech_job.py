@@ -48,6 +48,13 @@ def main():
     if not torch.cuda.is_available():
         raise RuntimeError("Configured speech requires its allocated CUDA GPU")
     model = ChatterboxMultilingualTTS.from_pretrained(device="cuda", t3_model="v3")
+    if __package__:
+        from .speech_chunks import reset_speech_seed
+    else:
+        # Direct CLI invocation resolves the trusted sibling helper.
+        from speech_chunks import reset_speech_seed
+
+    reset_speech_seed()
     audio = (
         model.generate(
             args.text,

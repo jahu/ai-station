@@ -5,6 +5,18 @@ import re
 MAX_CHARS = 220
 
 
+def reset_speech_seed():
+    """One seed for each model call, independent of workflow or chunk index."""
+    import random
+
+    import numpy as np
+    import torch
+
+    random.seed(42)
+    np.random.seed(42)
+    torch.manual_seed(42)
+
+
 def text_chunks(text: str) -> list[str]:
     if not text.strip() or len(text) > 1000:
         raise ValueError("Speech text must contain 1–1000 characters")
