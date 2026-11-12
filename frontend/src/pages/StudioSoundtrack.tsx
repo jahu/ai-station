@@ -125,7 +125,6 @@ export default function StudioSoundtrack({
       const body = reuse
         ? {
             ...(reuse.root_run.parameters.request as Record<string, unknown>),
-            revision_id: revision.id,
             timing_policy: timingPolicy,
             reuse_from_run_id: reuse.root_run.id,
           }
@@ -170,7 +169,7 @@ export default function StudioSoundtrack({
         }),
       );
     },
-    onSuccess: (run) => {
+    onSuccess: (run, reuse) => {
       receipt.current = null;
       setSelected(run.id);
       cache.setQueryData<Production[]>(key, (previous) => [
@@ -186,6 +185,10 @@ export default function StudioSoundtrack({
         ...(previous ?? []),
       ]);
       refresh();
+      const origin = reuse?.root_run.parameters.request as
+        { revision_id: string } | undefined;
+      if (origin && origin.revision_id !== revision.id)
+        apply.mutate(origin.revision_id);
     },
   });
   const stop = useMutation({
@@ -513,8 +516,9 @@ export default function StudioSoundtrack({
       </div>
       {canRemixTiming && (
         <p className="studio-direction-note">
-          Reuse this take's narrator and mix settings. Speech is kept; a new
-          score is only created if the existing one is too short.
+          Reuse this take's original saved plan, narrator and mix settings.
+          Speech is kept; a new score is only created if the existing one is too
+          short.
         </p>
       )}
     </section>

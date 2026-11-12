@@ -62,6 +62,7 @@ function setup({
   disabled = false,
   mastered = false,
   musicOnly = false,
+  measured = false,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const onMeasured = vi.fn(async () => {});
@@ -168,7 +169,9 @@ function setup({
                     })),
                   },
                 }
-              : revision
+              : measured
+                ? { ...revision, id: "revision-two" }
+                : revision
           }
           disabled={disabled}
           onMeasured={onMeasured}
@@ -230,6 +233,27 @@ it("changes timing using a complete take even when model readiness is unavailabl
     music_gain: 0.22,
   });
 });
+it("remixes an already measured take from its original plan and follows the queued work", async () => {
+  const { requests, onMeasured } = setup({
+    finished: true,
+    available: false,
+    measured: true,
+  });
+  await screen.findByLabelText("Finished soundtrack");
+  fireEvent.change(screen.getByLabelText("Narration timing"), {
+    target: { value: "fit" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply timing to this take" }),
+  );
+  await waitFor(() => expect(onMeasured).toHaveBeenCalledWith("revision-one"));
+  expect(requests[0].body).toMatchObject({
+    revision_id: "revision-one",
+    timing_policy: "fit",
+    reuse_from_run_id: "audio-root",
+  });
+});
+
 it("shows actual missing setup and prevents an unavailable model submission", async () => {
   setup({ available: false });
   await screen.findByText(/Prepare a local speech model/);
