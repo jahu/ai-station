@@ -15,6 +15,25 @@ are untimed; each video owns its absolute source/timeline timing. Generated
 markup must pass Hyperframes strict lint and actual Chromium layout checks.
 Model text cannot supply HTML, CSS, JavaScript, commands, packages or URLs.
 
+Full-bleed media receives a readability gradient only when the scene actually
+has editorial copy (title, eyebrow, body, points or metrics). A copy-free shot
+keeps the original source colors across the frame; its small brand/page footer
+uses local opaque backgrounds for contrast. This fixes the unwanted background
+wash observed in complete-film footage, without changing source files, timing,
+audio, motion or execution boundaries. The native compiler recipe changes, so
+an older prepared image does not inherit readiness. Actual candidate-renderer
+qualification and preserving activation are required before deployment.
+
+Candidate qualification passed 248 native/worker/export/presenter/preparation
+checks and global Python lint/format. Actual Chromium/GSAP pixel checks at both
+full-HD aspects retained the exact solid-source color on copy-free scenes,
+preserved the gradient for titled scenes and found no layout overflow. An
+isolated real accounts/API/worker/Unix-socket export with the candidate image
+also passed 180 portrait frames, source lineage, a single calibration soundtrack,
+presenter sequencing, bounded CPU memory and confirmed cleanup. This CPU fixture
+is not a newly generated professional film. Live recipe activation must wait
+for existing station productions to finish; their frozen renderer remains intact.
+
 Hyperframes 0.9.26, GSAP 3.15.0 and Fontsource 5.3.0 are lockfile-pinned. Local
 fonts include extended Latin; the image preserves their licenses. The fixed
 image contains Node 22, Chromium, FFmpeg and the trusted compiler. Rendering
