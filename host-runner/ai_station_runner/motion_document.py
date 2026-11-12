@@ -209,7 +209,7 @@ body{{font-family:'{family}','Inter Variable',sans-serif;color:var(--ink);-webki
 .scene-media{{width:100%;height:100%;display:block}}
 .layout-full_bleed .scene-inner{{display:block;inset:0}}
 .layout-full_bleed .media-frame{{position:absolute;inset:0;max-height:none;border-radius:0;z-index:0}}
-.layout-full_bleed.has-copy .media-frame::after{{content:'';position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 0%,{palette["background"]}EF 24%,{palette["background"]}A0 52%,transparent 82%)}}
+.layout-full_bleed.has-copy .media-frame::after{{content:'';position:absolute;inset:auto 0 0;height:var(--copy-shade-height,100%);background:linear-gradient(to top,var(--bg) calc(100% - 80px),transparent 100%)}}
 .layout-full_bleed .scene-copy{{position:absolute;z-index:2;left:{88 if portrait else 128}px;right:{110 if portrait else 128}px;bottom:{340 if portrait else 180}px;max-height:65%}}
 .layout-full_bleed footer{{z-index:3}}
 .layout-full_bleed:not(.has-copy) footer{{opacity:1}}
@@ -229,6 +229,11 @@ for (const node of document.querySelectorAll('.scene')) {
   while ((inner.scrollHeight > inner.clientHeight + 2 || copy.scrollHeight > copy.clientHeight + 2 || copy.scrollWidth > copy.clientWidth + 2) && scale > 0.64) {
     scale -= 0.02;
     for (const [el,size] of measured) el.style.fontSize = (size * scale) + 'px';
+  }
+  if (node.classList.contains('layout-full_bleed') && node.classList.contains('has-copy')) {
+    const bottom = parseFloat(getComputedStyle(copy).bottom);
+    const shade = Math.min(node.clientHeight, Math.ceil(copy.scrollHeight + bottom + 80));
+    node.style.setProperty('--copy-shade-height', shade + 'px');
   }
   window.__stationLayout.push({scene:node.id,scale,overflow:inner.scrollHeight > inner.clientHeight + 2 || copy.scrollHeight > copy.clientHeight + 2 || copy.scrollWidth > copy.clientWidth + 2});
 }
