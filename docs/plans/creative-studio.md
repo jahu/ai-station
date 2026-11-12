@@ -671,3 +671,14 @@ This prompt-direction change remains a candidate until actual planning and new
 visual generation verify the separation. Preserve useful completed film assets;
 do not rerun or stop the whole production merely to repair one image. A good
 composition or absence of one former defect cannot establish publication quality.
+
+The completed 95.633-second film passed all 2,869 decoded full-HD frames and
+single-track audio correlation checks. A local CPU transcript had three word
+edits across 179 expected words. These checks do not constitute full subjective
+publication acceptance. Sampled final layouts also exposed cropped edge pictograms
+and the baked-in label of an illustration in a near-square panel. The existing
+`media_fit` choice remains authoritative: director guidance now explicitly chooses
+`contain` for complete informational/edge content and reserves `cover` for
+intentional crop-safe photography. There is no runtime content classifier or
+forced change to existing revisions; real layout/generation qualification remains
+required. Preserve the complete baseline film for comparison.
