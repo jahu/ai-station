@@ -63,6 +63,13 @@ a completed Run alone is not treated as answer-quality evidence.
 > NVIDIA tests and human evaluation of the new voice/film samples follow release.
 > [Exact qualification and known issues](docs/releases/0.5.0.md).
 
+**Creative Studio on develop:** brand projects, storyboards and complete productions
+combine generated visuals/video, narration and music into MP4 exports. Optional
+portrait presenters share the original soundtrack; first-use CPU renderer setup
+has passed real installation, Stop and crash recovery. A short generated-presenter
+film passed technical checks; longer-film and publication-quality qualification
+are still in progress. [Current scope and evidence](docs/plans/creative-studio.md).
+
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled
 for new results, or turn it off for the original dynamics. For existing WAVs and
