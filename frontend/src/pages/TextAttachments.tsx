@@ -1,7 +1,16 @@
 import { isImageFile } from "./image-upload";
 import { isRecordingFile } from "./recording-upload";
 import { isDataFile } from "./data-upload";
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import { ComposerAttachmentTarget } from "./composer-attachment-target";
 import { Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
@@ -133,6 +142,7 @@ export default function TextAttachments({
   onImageFiles,
   onRecordingFiles,
   uploadErrorsHandled = false,
+  imageOnly = false,
 }: {
   attachments: TextAttachment[];
   onChange: (items: TextAttachment[]) => void;
@@ -142,10 +152,169 @@ export default function TextAttachments({
   onImageFiles?: (files: File[]) => Promise<unknown>;
   onRecordingFiles?: (files: File[]) => Promise<unknown>;
   uploadErrorsHandled?: boolean;
+  imageOnly?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<Error | null>(null);
   const [reading, setReading] = useState(false);
+  const target = useContext(ComposerAttachmentTarget);
+  const adding = useRef(false);
+  const addFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return;
+      if (busy || adding.current) {
+        setError(
+          new Error(
+            "Wait for the current operation to finish before attaching files.",
+          ),
+        );
+        return;
+      }
+      adding.current = true;
+
+      setError(null);
+      setReading(true);
+      onReading(true);
+      let delegated = false;
+      try {
+        if (imageOnly && !files.every(isImageFile))
+          throw new Error(
+            "Choose images separately from other files. Your existing images are unchanged.",
+          );
+        if (files.some(isRecordingFile)) {
+          if (files.length !== 1 || attachments.length)
+            throw new Error(
+              "Choose one recording separately from other attachments. Your existing files are unchanged.",
+            );
+          if (!onRecordingFiles)
+            throw new Error(
+              "Choose Transcribe or Analyze recording in a general conversation to use audio.",
+            );
+          delegated = true;
+          await onRecordingFiles(files);
+          return;
+        }
+        if (files.some(isDataFile)) {
+          if (!files.every(isDataFile) || attachments.length)
+            throw new Error(
+              "Choose CSV/Excel/JSON separately from text, PDF or image attachments. Your existing files are unchanged.",
+            );
+          if (!onDataFiles)
+            throw new Error(
+              "Choose Files & data in a general conversation to analyse these files locally.",
+            );
+          delegated = true;
+          await onDataFiles(files);
+          return;
+        }
+        if (onImageFiles && files.some(isImageFile)) {
+          if (!files.every(isImageFile) || attachments.length)
+            throw new Error(
+              "Choose images separately from data, text or PDF attachments. Your existing files are unchanged.",
+            );
+          delegated = true;
+          await onImageFiles(files);
+          return;
+        }
+        if (attachments.length + files.length > 4)
+          throw new Error("Attach up to four files.");
+        const added = await Promise.all(
+          files.map(async (file) => {
+            const kind = kindOf(file);
+            if (kind === "pdf") {
+              if (file.size > 1024 * 1024)
+                throw new Error(`${file.name} exceeds 1 MiB.`);
+              return {
+                name: file.name,
+                kind,
+                content: toBase64(await file.arrayBuffer()),
+              };
+            }
+            if (kind === "image") {
+              if (file.size > 2 * 1024 * 1024)
+                throw new Error(`${file.name} exceeds 2 MiB.`);
+              if (
+                !/image\/(png|jpeg|webp)/.test(file.type) &&
+                !/\.(png|jpe?g|webp)$/i.test(file.name)
+              )
+                throw new Error(`${file.name} is not a supported image.`);
+              return {
+                name: file.name,
+                kind,
+                content: toBase64(await file.arrayBuffer()),
+              };
+            }
+            if (file.size > 16000)
+              throw new Error(`${file.name} exceeds 16 KB.`);
+            const content = new TextDecoder("utf-8", {
+              fatal: true,
+            }).decode(await file.arrayBuffer());
+            if (content.includes("\0"))
+              throw new Error(`${file.name} is not a supported text file.`);
+            return { name: file.name, kind: "text" as const, content };
+          }),
+        );
+        const next = [...attachments, ...added];
+        if (new Set(next.map((item) => item.name)).size !== next.length)
+          throw new Error("Choose files with unique names.");
+        const textBytes = next
+          .filter((item) => (item.kind ?? "text") === "text")
+          .reduce(
+            (size, item) =>
+              size + new TextEncoder().encode(item.content).length,
+            0,
+          );
+        if (textBytes > 24000)
+          throw new Error("Combined text attachments exceed 24 KB.");
+        onChange(next);
+      } catch (cause) {
+        if (!delegated || !uploadErrorsHandled)
+          setError(
+            cause instanceof Error
+              ? cause
+              : new Error("Could not read the selected files."),
+          );
+      } finally {
+        adding.current = false;
+        setReading(false);
+        onReading(false);
+      }
+    },
+    [
+      attachments,
+      busy,
+      onChange,
+      onReading,
+      onDataFiles,
+      onImageFiles,
+      onRecordingFiles,
+      uploadErrorsHandled,
+      imageOnly,
+    ],
+  );
+  useEffect(() => {
+    const form = target?.closest("form");
+    if (!form) return;
+    const paste = (event: ClipboardEvent) => {
+      if (event.target !== form.querySelector("textarea")) return;
+      const data = event.clipboardData;
+      if (!data) return;
+      const files = Array.from(data.files ?? []);
+      if (!files.length) {
+        for (const item of Array.from(data.items ?? [])) {
+          if (item.kind === "file") {
+            const file = item.getAsFile();
+            if (file) files.push(file);
+          }
+        }
+      }
+      if (!files.length) return; // Preserve ordinary text/HTML paste, without permissions APIs.
+      event.preventDefault();
+      void addFiles(files);
+    };
+    form.addEventListener("paste", paste);
+    return () => form.removeEventListener("paste", paste);
+  }, [target, addFiles]);
   return (
     <div className="chat-text-attachments">
       <Button
@@ -157,9 +326,11 @@ export default function TextAttachments({
         <Paperclip size={15} />{" "}
         {reading
           ? "Reading files…"
-          : onDataFiles || onImageFiles || onRecordingFiles
-            ? "Attach files"
-            : "Attach text, PDF, or image"}
+          : imageOnly
+            ? "Attach more images"
+            : onDataFiles || onImageFiles || onRecordingFiles
+              ? "Attach files"
+              : "Attach text, PDF, or image"}
       </Button>
       <input
         ref={input}
@@ -168,116 +339,17 @@ export default function TextAttachments({
         type="file"
         multiple
         accept={
-          ".pdf,image/png,image/jpeg,image/webp,text/*,.md,.py,.json,.txt,.html,.css,.js,.ts,.tsx" +
-          (onDataFiles ? ",.csv,.xlsx" : "") +
-          (onRecordingFiles ? ",.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" : "")
+          imageOnly
+            ? "image/png,image/jpeg,image/webp"
+            : ".pdf,image/png,image/jpeg,image/webp,text/*,.md,.py,.json,.txt,.html,.css,.js,.ts,.tsx" +
+              (onDataFiles ? ",.csv,.xlsx" : "") +
+              (onRecordingFiles ? ",.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" : "")
         }
         disabled={busy || reading}
-        onChange={async (event) => {
+        onChange={(event) => {
           const files = Array.from(event.target.files ?? []);
           event.target.value = "";
-          setError(null);
-          setReading(true);
-          onReading(true);
-          let delegated = false;
-          try {
-            if (files.some(isRecordingFile)) {
-              if (files.length !== 1 || attachments.length)
-                throw new Error(
-                  "Choose one recording separately from other attachments. Your existing files are unchanged.",
-                );
-              if (!onRecordingFiles)
-                throw new Error(
-                  "Choose Transcribe or Analyze recording in a general conversation to use audio.",
-                );
-              delegated = true;
-              await onRecordingFiles(files);
-              return;
-            }
-            if (files.some(isDataFile)) {
-              if (!files.every(isDataFile) || attachments.length)
-                throw new Error(
-                  "Choose CSV/Excel/JSON separately from text, PDF or image attachments. Your existing files are unchanged.",
-                );
-              if (!onDataFiles)
-                throw new Error(
-                  "Choose Files & data in a general conversation to analyse these files locally.",
-                );
-              delegated = true;
-              await onDataFiles(files);
-              return;
-            }
-            if (onImageFiles && files.some(isImageFile)) {
-              if (!files.every(isImageFile) || attachments.length)
-                throw new Error(
-                  "Choose images separately from data, text or PDF attachments. Your existing files are unchanged.",
-                );
-              delegated = true;
-              await onImageFiles(files);
-              return;
-            }
-            if (attachments.length + files.length > 4)
-              throw new Error("Attach up to four files.");
-            const added = await Promise.all(
-              files.map(async (file) => {
-                const kind = kindOf(file);
-                if (kind === "pdf") {
-                  if (file.size > 1024 * 1024)
-                    throw new Error(`${file.name} exceeds 1 MiB.`);
-                  return {
-                    name: file.name,
-                    kind,
-                    content: toBase64(await file.arrayBuffer()),
-                  };
-                }
-                if (kind === "image") {
-                  if (file.size > 2 * 1024 * 1024)
-                    throw new Error(`${file.name} exceeds 2 MiB.`);
-                  if (
-                    !/image\/(png|jpeg|webp)/.test(file.type) &&
-                    !/\.(png|jpe?g|webp)$/i.test(file.name)
-                  )
-                    throw new Error(`${file.name} is not a supported image.`);
-                  return {
-                    name: file.name,
-                    kind,
-                    content: toBase64(await file.arrayBuffer()),
-                  };
-                }
-                if (file.size > 16000)
-                  throw new Error(`${file.name} exceeds 16 KB.`);
-                const content = new TextDecoder("utf-8", {
-                  fatal: true,
-                }).decode(await file.arrayBuffer());
-                if (content.includes("\0"))
-                  throw new Error(`${file.name} is not a supported text file.`);
-                return { name: file.name, kind: "text" as const, content };
-              }),
-            );
-            const next = [...attachments, ...added];
-            if (new Set(next.map((item) => item.name)).size !== next.length)
-              throw new Error("Choose files with unique names.");
-            const textBytes = next
-              .filter((item) => (item.kind ?? "text") === "text")
-              .reduce(
-                (size, item) =>
-                  size + new TextEncoder().encode(item.content).length,
-                0,
-              );
-            if (textBytes > 24000)
-              throw new Error("Combined text attachments exceed 24 KB.");
-            onChange(next);
-          } catch (cause) {
-            if (!delegated || !uploadErrorsHandled)
-              setError(
-                cause instanceof Error
-                  ? cause
-                  : new Error("Could not read the selected files."),
-              );
-          } finally {
-            setReading(false);
-            onReading(false);
-          }
+          void addFiles(files);
         }}
       />
       <details className="chat-attachment-help">

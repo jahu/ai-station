@@ -228,3 +228,97 @@ it("isolates selected-input surfaces between two composers", () => {
   expect(first.closest("details")).toBeNull();
   expect(second.closest("details")).toBeNull();
 });
+
+function PasteComposer({
+  onImages,
+  onData,
+  busy = false,
+}: {
+  onImages?: (files: File[]) => Promise<unknown>;
+  onData?: (files: File[]) => Promise<unknown>;
+  busy?: boolean;
+}) {
+  const [value, setValue] = useState("");
+  const [attachments, setAttachments] = useState<TextAttachment[]>([]);
+  return (
+    <ConversationComposer
+      id="paste-test"
+      value={value}
+      onChange={setValue}
+      onSend={() => {}}
+      canSend
+      busy={busy}
+      placeholder="Ask…"
+      tools={
+        <>
+          <input aria-label="Other field" />
+          <TextAttachments
+            attachments={attachments}
+            onChange={setAttachments}
+            busy={busy}
+            onReading={() => {}}
+            onImageFiles={onImages}
+            onDataFiles={onData}
+          />
+        </>
+      }
+    />
+  );
+}
+
+it("pastes screenshot files into the normal image upload without reading the clipboard API", async () => {
+  const add = vi.fn(async () => {});
+  render(<PasteComposer onImages={add} />);
+  const image = new File(["fake-test-image"], "screenshot.png", {
+    type: "image/png",
+  });
+  expect(
+    fireEvent.paste(screen.getByRole("textbox", { name: "Message" }), {
+      clipboardData: { files: [image] },
+    }),
+  ).toBe(false);
+  expect(add).toHaveBeenCalledWith([image]);
+});
+
+it("pastes a PDF into visible removable attachments and leaves plain text paste alone", async () => {
+  render(<PasteComposer />);
+  const document = new File(["%PDF test fixture"], "notes.pdf", {
+    type: "application/pdf",
+  });
+  Object.defineProperty(document, "arrayBuffer", {
+    value: async () => new TextEncoder().encode("%PDF").buffer,
+  });
+  fireEvent.paste(screen.getByRole("textbox", { name: "Message" }), {
+    clipboardData: { files: [document] },
+  });
+  await screen.findByRole("button", { name: "Remove notes.pdf" });
+  expect(
+    fireEvent.paste(screen.getByRole("textbox", { name: "Message" }), {
+      clipboardData: { files: [], items: [], getData: () => "Normal text" },
+    }),
+  ).toBe(true);
+});
+
+it("handles file clipboard items, ignores other form fields, and blocks repeated/busy pastes", async () => {
+  const add = vi.fn(() => new Promise<void>(() => {}));
+  render(<PasteComposer onImages={add} />);
+  const image = new File(["test"], "paste.png", { type: "image/png" });
+  const data = { files: [], items: [{ kind: "file", getAsFile: () => image }] };
+  expect(
+    fireEvent.paste(
+      screen.getByRole("textbox", { name: "Other field", hidden: true }),
+      { clipboardData: data },
+    ),
+  ).toBe(true);
+  expect(add).not.toHaveBeenCalled();
+  fireEvent.paste(screen.getByRole("textbox", { name: "Message" }), {
+    clipboardData: data,
+  });
+  fireEvent.paste(screen.getByRole("textbox", { name: "Message" }), {
+    clipboardData: data,
+  });
+  expect(add).toHaveBeenCalledTimes(1);
+  await screen.findByText(
+    "Wait for the current operation to finish before attaching files.",
+  );
+});

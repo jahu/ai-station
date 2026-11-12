@@ -97,3 +97,17 @@ def test_planning_describes_working_deliverables_and_available_affordances():
     assert "working deliverables" in PLANNING_SYSTEM and "design proposal" in PLANNING_SYSTEM
     assert "project/local_changes/files" in PLANNING_SYSTEM
     assert json.loads(messages[-1]["content"])["instruction"] == "Build a new version from this public source"
+
+
+def test_rich_image_descriptions_survive_both_intent_stages_without_truncation():
+    from app.assistant_decisions import Outcome
+    from app.assistant_intents import ImmediateOutcome
+
+    description = (
+        "Preserve the supplied subject, change its environment and keep the specified caption. " * 15
+    )
+    for cls in (ImmediateOutcome, Outcome):
+        parsed = cls(kind="image", description=description, reference_mode="provided")
+        assert parsed.description == description
+        with pytest.raises(ValueError):
+            cls(kind="image", description="x" * 4001, reference_mode="provided")

@@ -1,6 +1,6 @@
 use_default_settings:
   engines:
-    keep_only: [yahoo]
+    keep_only: [yahoo, bing images, duckduckgo images]
 server:
   limiter: false
   image_proxy: false
@@ -14,4 +14,8 @@ outgoing:
 engines:
   # keep_only does not enable engines disabled in SearXNG's defaults.
   - name: yahoo
+    disabled: false
+  - name: bing images
+    disabled: false
+  - name: duckduckgo images
     disabled: false

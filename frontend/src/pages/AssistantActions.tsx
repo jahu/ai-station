@@ -468,10 +468,16 @@ export function AssistantResults({
               <div className="controller-step-heading">
                 <span className="controller-step-number">{step.index}</span>
                 <strong>
-                  {step.tool
-                    .split(".")
-                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                    .join(" · ")}
+                  {{
+                    "web.image_search": "Find images online",
+                    "web.image_import": "Save image references",
+                  }[step.tool] ??
+                    step.tool
+                      .split(".")
+                      .map(
+                        (part) => part.charAt(0).toUpperCase() + part.slice(1),
+                      )
+                      .join(" · ")}
                 </strong>
                 <Badge status={step.status} />
                 <Link to={`/runs/${step.run_id}`} tabIndex={active ? 0 : -1}>
@@ -790,6 +796,10 @@ export function AssistantResults({
           )
           .map((artifact) => (
             <div key={artifact.id}>
+              {artifact.type === "image" &&
+                artifact.metadata?.reference_only === true && (
+                  <p className="muted">Reference image · saved to Library</p>
+                )}
               {artifact.type === "image" && (
                 <a
                   href={`/api/artifacts/${artifact.id}/file`}
@@ -798,7 +808,11 @@ export function AssistantResults({
                 >
                   <img
                     src={`/api/artifacts/${artifact.id}/file`}
-                    alt={artifact.original_filename || "Generated image"}
+                    alt={
+                      artifact.metadata?.reference_only === true
+                        ? "Imported image reference"
+                        : artifact.original_filename || "Generated image"
+                    }
                   />
                 </a>
               )}

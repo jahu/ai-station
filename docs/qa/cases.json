@@ -1,5 +1,5 @@
 {
-  "version": 58,
+  "version": 59,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -6824,6 +6824,98 @@
       "requirements": [
         "docs/plans/creative-studio.md",
         "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "CHAT-105",
+      "area": "Rozmowa",
+      "title": "Wklejanie obrazów i dokumentów do rozmowy",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe i neutralne dane QA. Testy obrazów wymagają działającego lokalnego modelu językowego i modelu obrazu."
+      ],
+      "steps": [
+        "Otwórz nową rozmowę, skopiuj neutralny screenshot i wklej Ctrl+V w pole wiadomości. Wklej drugi obraz.",
+        "Sprawdź podgląd i usuwanie referencji. Powtórz w istniejącej rozmowie. Osobno wklej wspierany plik tekstowy lub PDF oraz zwykły tekst."
+      ],
+      "expected": [
+        "Obrazy są widoczne jako osobne załączniki; poprzednie nie znikają. Nic nie jest automatycznie wysyłane.",
+        "Zwykły tekst pozostaje tekstem. Błędne pliki i limit czterech obrazów dają czytelny błąd bez utraty załączników."
+      ],
+      "resources": "Bez inferencji; tylko neutralne lokalne pliki.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/chat-web-images-and-clipboard.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "CHAT-106",
+      "area": "Rozmowa",
+      "title": "Bogaty opis zmiany obrazu bez błędu limitu intencji",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe i neutralne dane QA. Testy obrazów wymagają działającego lokalnego modelu językowego i modelu obrazu."
+      ],
+      "steps": [
+        "Dołącz neutralne zdjęcie przedmiotu i opisz zmianę otoczenia, materiałów, oświetlenia, kompozycji i podpisu w rozbudowanym poleceniu (ponad 1000 znaków).",
+        "Wyślij i sprawdź historię wykonania."
+      ],
+      "expected": [
+        "Interpretacja nie kończy się błędem limitu 500 znaków. Oryginalne polecenie pozostaje w rozmowie.",
+        "Narzędzie używa dostarczonej referencji i pełnych szczegółów polecenia; jakość obrazu oceń osobno."
+      ],
+      "resources": "Lokalny LLM i jeden render obrazu na GPU.",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/chat-web-images-and-clipboard.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "CHAT-107",
+      "area": "Rozmowa",
+      "title": "Wyszukanie obrazu w sieci i edycja rzeczywistej referencji",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe i neutralne dane QA. Testy obrazów wymagają działającego lokalnego modelu językowego i modelu obrazu."
+      ],
+      "steps": [
+        "Włącz Web i poproś: znajdź fotografię niebieskiego kubka, zapisz oryginał i umieść ten sam kubek w ogrodzie.",
+        "Sprawdź kroki, źródło oraz oryginał i wynik w rozmowie oraz Library."
+      ],
+      "expected": [
+        "Kroki obejmują realne wyszukiwanie obrazów, pobranie do Library i edycję/recompose z pobraną referencją.",
+        "Oryginał jest oznaczony jako referencja i nie zastępuje zamówionej edycji. Link źródłowy jest dostępny."
+      ],
+      "resources": "Publiczny internet, lokalny LLM i jeden render na GPU; własność materiałów sprawdź przed publikacją.",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/chat-web-images-and-clipboard.md",
+        "Task → Run → Events → Artifacts"
+      ]
+    },
+    {
+      "id": "CHAT-108",
+      "area": "Rozmowa",
+      "title": "Stop i uprawnienie Web w pobieraniu obrazu",
+      "priority": "P1",
+      "prerequisites": [
+        "Konto testowe i neutralne dane QA. Testy obrazów wymagają działającego lokalnego modelu językowego i modelu obrazu."
+      ],
+      "steps": [
+        "Wyłącz Web i poproś o znalezienie i zmianę zdjęcia z internetu; obejrzyj dostępne narzędzia.",
+        "W nowej próbie włącz Web i wybierz Stop w trakcie wyszukiwania lub pobierania, przed uruchomieniem edycji."
+      ],
+      "expected": [
+        "Przy wyłączonym Web nie dochodzi do ukrytego wyszukiwania ani pobierania.",
+        "Stop nie uruchamia później edycji ani nie publikuje nowego obrazu po anulowaniu. Wcześniej zakończone wyniki pozostają do wglądu."
+      ],
+      "resources": "Publiczny internet i krótka praca lokalnego LLM; nie czekaj na render.",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/chat-web-images-and-clipboard.md",
+        "Task → Run → Events → Artifacts"
       ]
     }
   ],
