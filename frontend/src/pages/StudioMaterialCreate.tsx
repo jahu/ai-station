@@ -19,6 +19,7 @@ import {
   formatNames,
   materialBase,
   type StudioMaterial,
+  type StudioOptions,
 } from "./studio-material";
 import "./Studio.css";
 import "./StudioMaterial.css";
@@ -43,7 +44,7 @@ function CreateForm({ project }: { project?: CreativeProject }) {
   const navigate = useNavigate();
   const [brief, setBrief] = useState("");
   const [title, setTitle] = useState("");
-  const [options, setOptions] = useState<CreativeDefaults>(
+  const [options, setOptions] = useState<StudioOptions>(
     project?.defaults ?? initialDefinition().defaults,
   );
   const receipt = useRef<{ fingerprint: string; id: string } | null>(null);
@@ -125,10 +126,19 @@ export function MaterialOptions({
   onChange,
   disabled = false,
 }: {
-  value: CreativeDefaults;
-  onChange: (value: CreativeDefaults) => void;
+  value: StudioOptions;
+  onChange: (value: StudioOptions) => void;
   disabled?: boolean;
 }) {
+  function changeWords(key: "minimum" | "maximum", text: string) {
+    const limits = { ...value.narration_words };
+    if (text === "") delete limits[key];
+    else limits[key] = Number(text);
+    onChange({
+      ...value,
+      narration_words: Object.keys(limits).length ? limits : undefined,
+    });
+  }
   return (
     <fieldset className="studio-material-options" disabled={disabled}>
       <legend>The shape of your story</legend>
@@ -183,12 +193,16 @@ export function MaterialOptions({
         Sound
         <select
           value={value.audio}
-          onChange={(e) =>
+          onChange={(e) => {
+            const audio = e.target.value as CreativeDefaults["audio"];
             onChange({
               ...value,
-              audio: e.target.value as CreativeDefaults["audio"],
-            })
-          }
+              audio,
+              narration_words: ["voice", "voice_music"].includes(audio)
+                ? value.narration_words
+                : undefined,
+            });
+          }}
         >
           {Object.entries(audioNames).map(([key, name]) => (
             <option key={key} value={key}>
@@ -197,6 +211,53 @@ export function MaterialOptions({
           ))}
         </select>
       </label>
+      {["voice", "voice_music"].includes(value.audio) && (
+        <details
+          className="studio-script-limits"
+          open={!!value.narration_words || undefined}
+        >
+          <summary>
+            Narration length <small>Optional</small>
+          </summary>
+          <p>
+            Set a spoken word target when you need one. Leave both fields empty
+            for a freely paced script.
+          </p>
+          <div className="studio-script-limits-fields">
+            <label>
+              Minimum spoken words
+              <input
+                type="number"
+                min={1}
+                max={value.narration_words?.maximum ?? 3000}
+                step={1}
+                value={value.narration_words?.minimum ?? ""}
+                onChange={(e) => changeWords("minimum", e.target.value)}
+              />
+            </label>
+            <label>
+              Maximum spoken words
+              <input
+                type="number"
+                min={value.narration_words?.minimum ?? 1}
+                max={3000}
+                step={1}
+                value={value.narration_words?.maximum ?? ""}
+                onChange={(e) => changeWords("maximum", e.target.value)}
+              />
+            </label>
+          </div>
+          {value.narration_words && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onChange({ ...value, narration_words: undefined })}
+            >
+              Clear word limits
+            </Button>
+          )}
+        </details>
+      )}
     </fieldset>
   );
 }

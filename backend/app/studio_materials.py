@@ -11,12 +11,12 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.creative_projects import Defaults, get_project, snapshot
+from app.creative_projects import get_project, snapshot
 from app.data_access import private_for_update
 from app.db import session_scope, utcnow
 from app.models import Artifact, Run, StudioMaterial, StudioRevision
 from app.paths import safe_join
-from app.studio_schema import Create, SaveRevision, Update
+from app.studio_schema import Create, SaveRevision, StudioOptions, Update, validate_narration_words
 
 DB = Annotated[Session, Depends(session_scope, scope="function")]
 router = APIRouter(prefix="/api/studio/materials", tags=["Studio materials"])
@@ -89,7 +89,7 @@ def get_revision(session, row, identity):
 def context(session, row):
     return {
         "brief": row.brief,
-        "options": Defaults.model_validate(row.options).model_dump(),
+        "options": StudioOptions.model_validate(row.options).model_dump(),
         "project_snapshot": snapshot(session, row.creative_project_id) if row.creative_project_id else {},
     }
 
@@ -156,6 +156,7 @@ def storyboard_sources(session, storyboard, *, verify=False):
 def publish_revision(
     session, row, storyboard, *, client_request_id, request_sha256, frozen, parent=None, source_run_id=None
 ):
+    validate_narration_words(storyboard, frozen["options"])
     sources = storyboard_sources(session, storyboard)
     if storyboard.audio != frozen["options"]["audio"]:
         raise ValueError("The storyboard must preserve the selected audio policy")
@@ -191,7 +192,7 @@ def create_material(session, body: Create):
     project = (
         get_project(session, body.creative_project_id, active=True) if body.creative_project_id else None
     )
-    options = body.options or Defaults.model_validate(project.defaults if project else {})
+    options = body.options or StudioOptions.model_validate(project.defaults if project else {})
     row = StudioMaterial(
         id=str(body.client_request_id),
         creative_project_id=project.id if project else None,

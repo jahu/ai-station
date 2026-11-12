@@ -33,6 +33,8 @@ import { useCreativeEntry } from "../components/creative/useCreativeEntry";
 import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
 import {
   audioNames,
+  narrationWordCount,
+  narrationWordTarget,
   visualOrigin,
   movedScenes,
   formatNames,
@@ -518,6 +520,22 @@ function StoryboardEditor({
   onReset: () => void;
   onSaved: (saved: StudioRevision) => void;
 }) {
+  const cache = useQueryClient();
+  const { user } = useAccount();
+  const clearWordLimits = useMutation({
+    mutationFn: () =>
+      api<Material>(
+        `${materialBase}/${material.id}`,
+        creativeJson("PATCH", {
+          expected_version: material.version,
+          options: { ...material.options, narration_words: null },
+        }),
+      ),
+    onSuccess: () =>
+      cache.invalidateQueries({
+        queryKey: ["studio-material", user?.id, material.id],
+      }),
+  });
   const [board, setBoard] = useState<Storyboard>(revision.storyboard);
   const [takes, setTakes] = useState<Record<number, string>>({});
   const [dirty, setDirty] = useState(false);
@@ -581,6 +599,12 @@ function StoryboardEditor({
     save.mutate({ ...body, client_request_id: receipt.current.id });
   }
   const frames = board.scenes.reduce((n, s) => n + s.duration_frames, 0);
+  const spokenWords = narrationWordCount(board);
+  const wordTarget = material.options.narration_words;
+  const scriptFits =
+    !wordTarget ||
+    ((wordTarget.minimum == null || spokenWords >= wordTarget.minimum) &&
+      (wordTarget.maximum == null || spokenWords <= wordTarget.maximum));
   return (
     <form onSubmit={submit}>
       <div className="studio-story-summary">
@@ -593,14 +617,39 @@ function StoryboardEditor({
             <span>{revision.options.duration_seconds}s requested</span>
           )}
           <span>{audioNames[board.audio]}</span>
+          {["voice", "voice_music"].includes(board.audio) && (
+            <span>{spokenWords} spoken words</span>
+          )}
+          {wordTarget && (
+            <>
+              <span>Target: {narrationWordTarget(wordTarget)}</span>
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={clearWordLimits.isPending || save.isPending}
+                  onClick={() => clearWordLimits.mutate()}
+                >
+                  Remove word limits
+                </Button>
+              )}
+            </>
+          )}
         </div>
         <blockquote>{board.hook}</blockquote>
+        {!scriptFits && (
+          <p role="alert">
+            Your script has {spokenWords} spoken words. The target is{" "}
+            {narrationWordTarget(wordTarget!)}. Revise the narration or remove
+            the word limits before saving.
+          </p>
+        )}
       </div>
       <StudioProduction
         materialId={material.id}
         revision={revision}
         selectedTakes={takes}
-        disabled={readOnly || dirty || save.isPending}
+        disabled={readOnly || dirty || save.isPending || !scriptFits}
         onVersion={(id) =>
           api<StudioRevision>(
             `${materialBase}/${material.id}/revisions/${id}`,
@@ -689,7 +738,7 @@ function StoryboardEditor({
                 onSelect={(id) =>
                   setTakes((value) => ({ ...value, [index]: id }))
                 }
-                disabled={readOnly || dirty || save.isPending}
+                disabled={readOnly || dirty || save.isPending || !scriptFits}
               />
               {(shot.title || shot.eyebrow) && (
                 <div className="studio-shot-overlay">
@@ -845,7 +894,7 @@ function StoryboardEditor({
       <StudioSoundtrack
         materialId={material.id}
         revision={revision}
-        disabled={readOnly || dirty || save.isPending}
+        disabled={readOnly || dirty || save.isPending || !scriptFits}
         onMeasured={(id) =>
           api<StudioRevision>(
             `${materialBase}/${material.id}/revisions/${id}`,
@@ -857,9 +906,9 @@ function StoryboardEditor({
         revision={revision}
         selectedTakes={takes}
         readOnly={readOnly}
-        disabled={dirty || save.isPending}
+        disabled={dirty || save.isPending || !scriptFits}
       />
-      <ErrorNotice error={save.error} />
+      <ErrorNotice error={save.error ?? clearWordLimits.error} />
       <div className="studio-story-save">
         <span>
           {dirty ? (
@@ -886,7 +935,16 @@ function StoryboardEditor({
               Discard edits
             </Button>
           )}
-          <Button disabled={!dirty || readOnly || save.isPending} type="submit">
+          <Button
+            disabled={
+              !dirty ||
+              readOnly ||
+              save.isPending ||
+              clearWordLimits.isPending ||
+              !scriptFits
+            }
+            type="submit"
+          >
             <Save size={15} />
             {save.isPending ? "Saving…" : "Save as new version"}
           </Button>

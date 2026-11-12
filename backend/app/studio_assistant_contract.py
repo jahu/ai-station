@@ -13,7 +13,7 @@ from sqlalchemy import select
 from app.creative_projects import Defaults, get_project, snapshot
 from app.models import Artifact, CreativeProject
 from app.studio_materials import source_snapshot
-from app.studio_schema import Fields
+from app.studio_schema import Fields, NarrationWords, StudioOptions
 
 Alias = Annotated[str, Field(min_length=1, max_length=100)]
 MAX_PROJECTS = 20
@@ -27,6 +27,7 @@ class StudioIntent(Fields):
     aspect: Literal["portrait", "landscape", "square"] | None = None
     audio: Literal["voice_music", "voice", "music", "silent"] | None = None
     duration_seconds: int | None = Field(default=None, ge=5, le=600, strict=True)
+    narration_words: NarrationWords | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @model_validator(mode="after")
     def resolved(self):
@@ -34,6 +35,8 @@ class StudioIntent(Fields):
             raise ValueError(
                 "Select one supplied creative-project alias or leave the project unresolved/standalone"
             )
+        if self.narration_words and self.audio in {"silent", "music"}:
+            raise ValueError("Spoken word limits require narration")
         return self
 
 
@@ -129,10 +132,12 @@ def selected_context(session, catalog, intent):
     for key in ("format", "aspect", "audio", "duration_seconds"):
         if (value := getattr(intent, key)) is not None:
             base[key] = value
+    if intent.narration_words is not None:
+        base["narration_words"] = intent.narration_words.model_dump()
     return {
         "creative_project_id": frozen["id"] if frozen else None,
         "project_snapshot": frozen or {},
-        "options": Defaults.model_validate(base).model_dump(),
+        "options": StudioOptions.model_validate(base).model_dump(),
     }
 
 

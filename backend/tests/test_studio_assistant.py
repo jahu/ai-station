@@ -396,3 +396,26 @@ def test_cold_renderer_check_waits_durably_without_replanning_or_duplicating_pro
             assert wrapper.status == "succeeded", wrapper.error_message
             assert len(child_tasks(db, wrapper)) == 2
             assert db.get(Run, result["run"]["id"]).status == "succeeded"
+
+
+def test_spoken_word_limits_survive_semantic_intent_to_complete_production(accounts, director, movie):
+    _, alice, _ = accounts
+    director["studio"].update(audio="voice", narration_words={"minimum": 6, "maximum": 6})
+    result = submit(alice, "Create a complete film with exactly six spoken words")
+    advance(movie)
+    with owned(alice) as db:
+        root = db.get(Run, result["run"]["id"])
+        assert root.status == "succeeded"
+        assert root.metadata_json["controller_outcomes"][0]["studio"]["narration_words"] == {
+            "minimum": 6,
+            "maximum": 6,
+        }
+        wrapper = db.get(Run, root.metadata_json["controller_steps"][0]["run_id"])
+        material = db.get(StudioMaterial, wrapper.metadata_json["studio_material_id"])
+        assert material.options["narration_words"] == {"minimum": 6, "maximum": 6}
+        revisions = list(db.scalars(select(StudioRevision).where(StudioRevision.material_id == material.id)))
+        assert revisions and all(
+            r.options["narration_words"] == {"minimum": 6, "maximum": 6} for r in revisions
+        )
+        assert controller_results(db, root)["artifacts"][0]["type"] == "video"
+    assert director["plans"][0]["options"]["narration_words"] == {"minimum": 6, "maximum": 6}

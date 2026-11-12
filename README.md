@@ -68,7 +68,9 @@ combine generated visuals/video, narration and music into MP4 exports. Optional
 portrait presenters share the original soundtrack; first-use CPU renderer setup
 has passed real installation, Stop and crash recovery. A short generated-presenter
 film passed technical checks; longer-film and publication-quality qualification
-are still in progress. [Current scope and evidence](docs/plans/creative-studio.md).
+are still in progress. Explicit spoken word targets are kept with the material;
+the director checks the actual script before media generation, and the editor
+shows its word count. [Current scope and evidence](docs/plans/creative-studio.md).
 
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled

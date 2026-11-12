@@ -76,9 +76,15 @@ function fixture(
   path = "/studio/materials/material-one",
   empty = false,
   twoShots = false,
+  wordLimits?: { minimum?: number; maximum?: number },
 ) {
   let current = structuredClone(material);
   let versions = empty ? [] : [structuredClone(revision)];
+  if (wordLimits) {
+    current.options.narration_words = wordLimits;
+    for (const version of versions)
+      version.options.narration_words = wordLimits;
+  }
   if (twoShots && versions.length)
     versions[0].storyboard.scenes.push({
       ...versions[0].storyboard.scenes[0],
@@ -220,6 +226,14 @@ function fixture(
       if (url.pathname.endsWith("/cancel")) {
         activity[0].status = "cancel_requested";
         return json(activity[0]);
+      }
+      if (init.method === "PATCH" && body.options) {
+        current = {
+          ...current,
+          options: body.options as Material["options"],
+          version: current.version + 1,
+        };
+        return json(current);
       }
       if (init.method === "PATCH") {
         current = {
@@ -433,4 +447,78 @@ it("saves an explicit shared source and prevents moving it before its source", a
       ],
     },
   });
+});
+
+it("offers optional spoken word limits at material creation", async () => {
+  const requests = fixture("/studio/materials/new");
+  await screen.findByRole("button", { name: "Create material" });
+  fireEvent.click(screen.getByText("Narration length"));
+  fireEvent.change(screen.getByLabelText("Minimum spoken words"), {
+    target: { value: "170" },
+  });
+  fireEvent.change(screen.getByLabelText("Maximum spoken words"), {
+    target: { value: "190" },
+  });
+  fireEvent.change(screen.getByLabelText("Your brief"), {
+    target: { value: "An educational lesson" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create material" }));
+  await screen.findByRole("heading", { name: "Your storyboard" });
+  expect(requests[0].body.options).toMatchObject({
+    narration_words: { minimum: 170, maximum: 190 },
+  });
+});
+
+it("shows actual script length and lets the user remove a target without losing edits", async () => {
+  const requests = fixture("/studio/materials/material-one", false, false, {
+    minimum: 7,
+    maximum: 9,
+  });
+  await screen.findByText("7 spoken words");
+  fireEvent.change(screen.getByLabelText("Spoken words"), {
+    target: { value: "A changed thought." },
+  });
+  expect(screen.getByText(/Your script has 3 spoken words/)).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Save as new version",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Remove word limits" }));
+  await waitFor(() =>
+    expect(screen.queryByText(/Your script has 3 spoken words/)).toBeNull(),
+  );
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Save as new version",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(false);
+  expect(
+    (screen.getByLabelText("Spoken words") as HTMLTextAreaElement).value,
+  ).toBe("A changed thought.");
+  expect(requests[0].body.options).toMatchObject({ narration_words: null });
+});
+
+it("removes spoken limits when switching to music without a narrator", async () => {
+  const requests = fixture("/studio/materials/new");
+  await screen.findByRole("button", { name: "Create material" });
+  fireEvent.click(screen.getByText("Narration length"));
+  fireEvent.change(screen.getByLabelText("Minimum spoken words"), {
+    target: { value: "100" },
+  });
+  fireEvent.change(screen.getByLabelText("Sound"), {
+    target: { value: "music" },
+  });
+  expect(screen.queryByLabelText("Minimum spoken words")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Your brief"), {
+    target: { value: "An instrumental visual story" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create material" }));
+  await screen.findByRole("heading", { name: "Your storyboard" });
+  expect(requests[0].body.options).toMatchObject({ audio: "music" });
+  expect(requests[0].body.options).not.toHaveProperty("narration_words");
 });
