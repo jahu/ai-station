@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import StudioTimingChoice, { type TimingPolicy } from "./StudioTimingChoice";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudioLines, Check, Music2, Square, X } from "lucide-react";
@@ -41,6 +42,7 @@ export default function StudioSoundtrack({
   const audio = revision.storyboard.audio;
   const voice = audio === "voice" || audio === "voice_music";
   const music = audio === "music" || audio === "voice_music";
+  const [timingPolicy, setTimingPolicy] = useState<TimingPolicy>();
   const [engine, setEngine] = useState("fish_s2_pro");
   const [modelId, setModel] = useState("");
   const [direction, setDirection] = useState(
@@ -119,34 +121,43 @@ export default function StudioSoundtrack({
     });
   }
   const generate = useMutation({
-    mutationFn: () => {
-      const body = {
-        revision_id: revision.id,
-        ...(voice
-          ? {
-              voice: {
-                engine: fish ? "fish_s2_pro" : "chatterbox",
-                reference_artifact_id: needsReference
-                  ? (reference?.id ?? null)
-                  : null,
-                ...(fish
-                  ? { direction, pace }
-                  : {
-                      language:
-                        language ||
-                        (speech.data?.languages?.includes("en") ? "en" : "pl"),
-                      ...(modelId ? { model_id: modelId } : {}),
-                    }),
-              },
-            }
-          : {}),
-        ...(music
-          ? {
-              music_gain: gain,
-              ...(musicModel ? { music_model_id: musicModel } : {}),
-            }
-          : {}),
-      };
+    mutationFn: (reuse: Production | null) => {
+      const body = reuse
+        ? {
+            ...(reuse.root_run.parameters.request as Record<string, unknown>),
+            timing_policy: timingPolicy,
+            reuse_from_run_id: reuse.root_run.id,
+          }
+        : {
+            revision_id: revision.id,
+            ...(timingPolicy ? { timing_policy: timingPolicy } : {}),
+            ...(voice
+              ? {
+                  voice: {
+                    engine: fish ? "fish_s2_pro" : "chatterbox",
+                    reference_artifact_id: needsReference
+                      ? (reference?.id ?? null)
+                      : null,
+                    ...(fish
+                      ? { direction, pace }
+                      : {
+                          language:
+                            language ||
+                            (speech.data?.languages?.includes("en")
+                              ? "en"
+                              : "pl"),
+                          ...(modelId ? { model_id: modelId } : {}),
+                        }),
+                  },
+                }
+              : {}),
+            ...(music
+              ? {
+                  music_gain: gain,
+                  ...(musicModel ? { music_model_id: musicModel } : {}),
+                }
+              : {}),
+          };
       const fingerprint = JSON.stringify(body);
       if (receipt.current?.fingerprint !== fingerprint)
         receipt.current = { fingerprint, id: randomId() };
@@ -158,7 +169,7 @@ export default function StudioSoundtrack({
         }),
       );
     },
-    onSuccess: (run) => {
+    onSuccess: (run, reuse) => {
       receipt.current = null;
       setSelected(run.id);
       cache.setQueryData<Production[]>(key, (previous) => [
@@ -174,6 +185,10 @@ export default function StudioSoundtrack({
         ...(previous ?? []),
       ]);
       refresh();
+      const origin = reuse?.root_run.parameters.request as
+        { revision_id: string } | undefined;
+      if (origin && origin.revision_id !== revision.id)
+        apply.mutate(origin.revision_id);
     },
   });
   const stop = useMutation({
@@ -193,6 +208,16 @@ export default function StudioSoundtrack({
     active?.runs.filter(
       (r) => r.capability === "audio.speech" && r.status === "succeeded",
     ).length ?? 0;
+  const previousRequest = chosen?.root_run.parameters.request as
+    Record<string, unknown> | undefined;
+  const canRemixTiming = Boolean(
+    voice &&
+    chosen?.status === "succeeded" &&
+    chosen.soundtrack &&
+    previousRequest &&
+    timingPolicy &&
+    timingPolicy !== (previousRequest.timing_policy ?? "preserve"),
+  );
   return (
     <section
       className="panel studio-soundtrack"
@@ -312,8 +337,14 @@ export default function StudioSoundtrack({
         </div>
       )}
       <details className="studio-soundtrack-settings">
-        <summary>Voice & music settings</summary>
+        <summary>Voice, music & timing</summary>
         <fieldset disabled={disabled || !!active || generate.isPending}>
+          {voice && (
+            <StudioTimingChoice
+              value={timingPolicy}
+              onChange={setTimingPolicy}
+            />
+          )}
           {voice && (
             <>
               <SpeechEngineFields
@@ -431,7 +462,7 @@ export default function StudioSoundtrack({
       )}
       {needsReference && !reference && (
         <p className="studio-direction-note">
-          Choose a narrator recording in Voice & music settings.
+          Choose a narrator recording in Voice, music & timing.
         </p>
       )}
       {music && (!caption.trim() || caption.length > 512) && (
@@ -451,26 +482,45 @@ export default function StudioSoundtrack({
           score.error
         }
       />
-      <Button
-        type="button"
-        disabled={
-          disabled ||
-          !!active ||
-          generate.isPending ||
-          !voiceReady ||
-          !scoreReady ||
-          (needsReference && !reference) ||
-          (music && (!caption.trim() || caption.length > 512))
-        }
-        onClick={() => generate.mutate()}
-      >
-        <AudioLines size={16} />
-        {generate.isPending
-          ? "Queuing…"
-          : chosen?.soundtrack
-            ? "Create another soundtrack"
-            : "Create soundtrack"}
-      </Button>
+      <div className="studio-film-actions">
+        <Button
+          type="button"
+          disabled={
+            disabled ||
+            !!active ||
+            generate.isPending ||
+            !voiceReady ||
+            !scoreReady ||
+            (needsReference && !reference) ||
+            (music && (!caption.trim() || caption.length > 512))
+          }
+          onClick={() => generate.mutate(null)}
+        >
+          <AudioLines size={16} />
+          {generate.isPending
+            ? "Queuing…"
+            : chosen?.soundtrack
+              ? "Create another soundtrack"
+              : "Create soundtrack"}
+        </Button>
+        {canRemixTiming && chosen && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={disabled || !!active || generate.isPending}
+            onClick={() => generate.mutate(chosen)}
+          >
+            Apply timing to this take
+          </Button>
+        )}
+      </div>
+      {canRemixTiming && (
+        <p className="studio-direction-note">
+          Reuse this take's original saved plan, narrator and mix settings.
+          Speech is kept; a new score is only created if the existing one is too
+          short.
+        </p>
+      )}
     </section>
   );
 }

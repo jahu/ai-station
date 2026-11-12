@@ -62,6 +62,7 @@ function setup({
   disabled = false,
   mastered = false,
   musicOnly = false,
+  measured = false,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const onMeasured = vi.fn(async () => {});
@@ -69,7 +70,14 @@ function setup({
     id: "audio-root",
     task_id: "audio-task",
     status: "succeeded",
-    parameters: { studio_audio_root_id: "audio-root" },
+    parameters: {
+      studio_audio_root_id: "audio-root",
+      request: {
+        revision_id: "revision-one",
+        voice: { engine: "fish_s2_pro" },
+        music_gain: 0.22,
+      },
+    },
   };
   let rows: unknown[] = finished
     ? [
@@ -161,7 +169,9 @@ function setup({
                     })),
                   },
                 }
-              : revision
+              : measured
+                ? { ...revision, id: "revision-two" }
+                : revision
           }
           disabled={disabled}
           onMeasured={onMeasured}
@@ -204,6 +214,46 @@ it("plays the actual completed PCM and lets the user apply measured timing", asy
   );
   await waitFor(() => expect(onMeasured).toHaveBeenCalledWith("revision-two"));
 });
+
+it("changes timing using a complete take even when model readiness is unavailable", async () => {
+  const { requests } = setup({ finished: true, available: false });
+  await screen.findByLabelText("Finished soundtrack");
+  fireEvent.change(screen.getByLabelText("Narration timing"), {
+    target: { value: "fit" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply timing to this take" }),
+  );
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body).toMatchObject({
+    revision_id: "revision-one",
+    timing_policy: "fit",
+    reuse_from_run_id: "audio-root",
+    voice: { engine: "fish_s2_pro" },
+    music_gain: 0.22,
+  });
+});
+it("remixes an already measured take from its original plan and follows the queued work", async () => {
+  const { requests, onMeasured } = setup({
+    finished: true,
+    available: false,
+    measured: true,
+  });
+  await screen.findByLabelText("Finished soundtrack");
+  fireEvent.change(screen.getByLabelText("Narration timing"), {
+    target: { value: "fit" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply timing to this take" }),
+  );
+  await waitFor(() => expect(onMeasured).toHaveBeenCalledWith("revision-one"));
+  expect(requests[0].body).toMatchObject({
+    revision_id: "revision-one",
+    timing_policy: "fit",
+    reuse_from_run_id: "audio-root",
+  });
+});
+
 it("shows actual missing setup and prevents an unavailable model submission", async () => {
   setup({ available: false });
   await screen.findByText(/Prepare a local speech model/);

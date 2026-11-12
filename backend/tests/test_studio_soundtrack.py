@@ -113,6 +113,46 @@ def test_fractional_source_duration_is_resampled_without_cutting_the_spoken_tail
         assert done["metadata"]["mix"]["samples"] == 43 * 1600
 
 
+def test_fit_policy_uses_a_covering_score_and_keeps_complete_pcm_while_shortening_a_still_hold():
+    from copy import deepcopy
+
+    with TestClient(app) as client:
+        row, original = draft(client, audio="voice_music")
+        outline = deepcopy(original["storyboard"])
+        outline["scenes"][0]["duration_frames"] = 60
+        outline["scenes"].append({**outline["scenes"][0], "narration": ""})
+        response = client.post(
+            f"/api/studio/materials/{row['id']}/revisions",
+            json={
+                "client_request_id": str(uuid4()),
+                "expected_version": 2,
+                "parent_revision_id": original["id"],
+                "storyboard": outline,
+            },
+        )
+        assert response.status_code == 201, response.text
+        revision = response.json()
+        voice, music = tone(client, 2.6), tone(client, 4, channels=2)
+        assert submit(client, row, revision, voice, music).status_code == 422  # Preserve needs five seconds.
+        queued = submit(client, row, revision, voice, music, timing_policy="fit", mastering_profile="none")
+        assert queued.status_code == 202, queued.text
+        run = queued.json()
+        assert [s["duration_frames"] for s in run["parameters"]["storyboard"]["scenes"]] == [90, 30]
+        with session_factory()() as session:
+            tick(session, "fit-complete-pcm")
+        done = client.get("/api/runs/" + run["id"]).json()
+        assert done["status"] == "succeeded", done["error_message"]
+        artifact = client.get("/api/artifacts/" + done["metadata"]["soundtrack_artifact_id"]).json()
+        assert set(artifact["parent_artifact_ids"]) == {voice, music}
+        with wave.open(str(get_settings().data_dir / artifact["relative_path"])) as reader:
+            assert reader.getnframes() == 120 * 1600
+            pcm = np.frombuffer(reader.readframes(reader.getnframes()), dtype="<i2").reshape(-1, 2)
+            assert np.max(np.abs(pcm[int(2.7 * 48000) : int(2.75 * 48000)])) > 1000
+        versions = client.get(f"/api/studio/materials/{row['id']}/revisions").json()
+        assert [s["duration_frames"] for s in versions[0]["storyboard"]["scenes"]] == [90, 30]
+        assert [s["duration_frames"] for s in versions[1]["storyboard"]["scenes"]] == [60, 60]
+
+
 def test_missing_cues_short_score_and_silent_substitution_cannot_queue():
     with TestClient(app) as client:
         row, revision = draft(client, audio="voice_music")

@@ -126,7 +126,12 @@ shot plans with a local director and an editable storyboard on develop. Generate
 individual images or full video shots there, compare takes and open their Library
 results without losing earlier work. Soundtrack production now chains local
 narration, a score sized to the actual spoken passages, and a balanced mix; listen
-to takes and apply measured timing without losing existing visuals. An isolated
+to takes and apply measured timing without losing existing visuals. New local
+director plans use conversational natural pace and editable phrase-level Fish
+expression hints, kept separate from spoken words. A whole-take direction can
+override those hints. Optional timing controls can fit flexible still-image holds
+to the planned total while retaining complete speech and planned video windows;
+existing saved plans and takes keep their original settings. An isolated
 Hyperframes renderer and the API/worker export bridge are qualified with actual
 image/video fixtures. Export the selected takes and complete soundtrack from the
 workspace, review earlier MP4s and download the result. The export panel can

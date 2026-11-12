@@ -33,7 +33,7 @@ from app.state import RunStatus
 from app.studio_mastering import PROFILE as MASTERING_PROFILE
 from app.studio_materials import DB, digest, get_material, get_revision
 from app.studio_pcm import timed_storyboard
-from app.studio_schema import Fields, NarrationDelivery, Storyboard
+from app.studio_schema import Fields, NarrationDelivery, Storyboard, TimingPolicy, expressive_narration
 from app.studio_soundtrack import MixRequest, audio_source, create_soundtrack_run, router
 from app.task_control import cancel_task, lock_task
 
@@ -56,7 +56,11 @@ class Voice(NarrationDelivery):
             raise ValueError("Speaking direction/pace require expressive speech")
         return self
 
-    def request(self, text, reference):
+    def request(self, text, reference, *, segments=None):
+        # Explicit whole-take direction wins over planned phrase directions.
+        # Chatterbox receives only spoken words; Fish supports inline hints.
+        if self.engine == "fish_s2_pro" and self.direction == "natural" and segments:
+            text = expressive_narration(segments)
         values = {"text": text, "reference_artifact_id": reference, "level_volume": True}
         if self.engine == "fish_s2_pro":
             values.update(
@@ -79,6 +83,7 @@ class ProduceAudio(Fields):
     music_caption: str | None = Field(default=None, min_length=1, max_length=512)
     music_gain: float = Field(default=0.22, ge=0.01, le=1.0, allow_inf_nan=False, strict=True)
     duck: float = Field(default=0.28, ge=0.05, le=1.0, allow_inf_nan=False, strict=True)
+    timing_policy: TimingPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def create_audio_production(session, material_id, body):
@@ -127,6 +132,17 @@ def create_audio_production(session, material_id, body):
         except (ValueError, OSError) as exc:
             raise HTTPException(422, str(exc)) from exc
     voices, music, reused = reusable_audio(session, body, plan) if body.reuse_from_run_id else ({}, None, {})
+    if music:
+        measured = timed_storyboard(
+            plan,
+            {int(i): reused[identity] for i, identity in voices.items()},
+            policy=body.timing_policy,
+            sources=revision.sources,
+        )
+        score_source = reused[music]
+        if score_source["samples"] * 30 < measured.frames * score_source["sample_rate"]:
+            del reused[music]
+            music = None
     task = create_task(
         session, title="Produce sound · " + row.title, prompt=revision.brief, capability="studio.audio"
     )
@@ -184,7 +200,7 @@ def reusable_audio(session, body, plan):
         if audio_source(session, reference["artifact_id"]) != reference:
             raise HTTPException(409, "The original narrator reference changed")
     old = ProduceAudio.model_validate(previous.parameters["request"])
-    excluded = {"client_request_id", "reuse_from_run_id"}
+    excluded = {"client_request_id", "reuse_from_run_id", "timing_policy"}
     if old.model_dump(mode="json", exclude=excluded) != body.model_dump(mode="json", exclude=excluded):
         raise HTTPException(409, "Audio reuse requires the same narrator, score and mix settings")
     stages = list(
@@ -456,13 +472,22 @@ class StudioAudioStepExecutor:
             else:
                 child = create_audio_run(
                     session,
-                    body.voice.request(plan.scenes[next_scene].narration, reference),
+                    body.voice.request(
+                        plan.scenes[next_scene].narration,
+                        reference,
+                        segments=plan.scenes[next_scene].narration_segments,
+                    ),
                     task=run.task,
                     parent_run_id=run.id,
                 )
                 continuation(session, run, root, voices, child, "voice", next_scene, voice_reference)
         elif plan.audio in {"music", "voice_music"} and music is None:
-            measured = timed_storyboard(plan, {int(i): audio_source(session, a) for i, a in voices.items()})
+            measured = timed_storyboard(
+                plan,
+                {int(i): audio_source(session, a) for i, a in voices.items()},
+                policy=body.timing_policy,
+                sources=revision.sources,
+            )
             child = create_music_run(
                 session,
                 MusicRequest(
@@ -487,6 +512,7 @@ class StudioAudioStepExecutor:
                     music_artifact_id=music,
                     music_gain=body.music_gain,
                     duck=body.duck,
+                    timing_policy=body.timing_policy,
                 ),
                 task=run.task,
                 parent_run_id=run.id,

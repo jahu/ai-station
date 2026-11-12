@@ -167,6 +167,23 @@ it("retries the frozen original request with completed-media reuse", async () =>
   });
   expect(requests[0].body.client_request_id).not.toBe("old-receipt");
 });
+
+it("freezes the explicit fit policy alongside the selected visual takes", async () => {
+  const requests = setup();
+  const button = await screen.findByRole("button", { name: "Produce film" });
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.change(screen.getByLabelText("Narration timing"), {
+    target: { value: "fit" },
+  });
+  fireEvent.click(button);
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body).toMatchObject({
+    timing_policy: "fit",
+    bindings: [{ scene: 2, artifact_id: "chosen-take" }],
+  });
+});
 it("stops the whole owned production instead of a completed planning Run", async () => {
   const requests = setup({ active: true });
   fireEvent.click(

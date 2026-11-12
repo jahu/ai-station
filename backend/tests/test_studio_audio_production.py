@@ -516,3 +516,52 @@ def test_legacy_audio_coordination_keeps_original_mix_policy(generators):
             assert mixed and mixed.status == "succeeded", mixed.error_message if mixed else "missing mix"
             assert mixed.parameters.get("mastering_profile") is None
             assert "mastering" not in mixed.metadata_json["mix"]
+
+
+@pytest.mark.parametrize(
+    "first_policy, second_policy, score_lengths", [(None, "fit", [15]), ("fit", "preserve", [10, 15])]
+)
+def test_timing_only_reuse_keeps_speech_and_replaces_only_an_insufficient_score(
+    generators, first_policy, second_policy, score_lengths
+):
+    from copy import deepcopy
+
+    speech, music, executors = generators
+    with TestClient(app) as client:
+        row, first = draft(client, audio="voice_music")
+        outline = deepcopy(first["storyboard"])
+        outline["scenes"].append({**outline["scenes"][0], "duration_frames": 180, "narration": ""})
+        saved = client.post(
+            f"/api/studio/materials/{row['id']}/revisions",
+            json={
+                "client_request_id": str(uuid4()),
+                "expected_version": 2,
+                "parent_revision_id": first["id"],
+                "storyboard": outline,
+            },
+        )
+        assert saved.status_code == 201, saved.text
+        revision = saved.json()
+        initial = submit(client, row, revision, **({"timing_policy": first_policy} if first_policy else {}))
+        assert initial.status_code == 202, initial.text
+
+        def finish(reply):
+            task_id = reply.json()["task_id"]
+            with session_factory()() as db:
+                for _ in range(30):
+                    tick(db, "timing-reuse", executors=executors)
+                    runs = list(db.scalars(select(Run).where(Run.task_id == task_id)))
+                    if all(r.status in TERMINAL for r in runs):
+                        break
+                assert all(r.status == "succeeded" for r in runs), [
+                    (r.executor_type, r.status, r.error_message) for r in runs
+                ]
+
+        finish(initial)
+        reused = submit(
+            client, row, revision, reuse_from_run_id=initial.json()["id"], timing_policy=second_policy
+        )
+        assert reused.status_code == 202, reused.text
+        finish(reused)
+        assert len(speech) == 1
+        assert [m["duration_seconds"] for m in music] == score_lengths

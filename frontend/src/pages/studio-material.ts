@@ -54,6 +54,7 @@ export interface StudioShot {
   body: string;
   points: string[];
   narration: string;
+  narration_segments?: { text: string; style: string }[] | null;
   media_motion: string;
   media_fit: "contain" | "cover";
   media_start_seconds: number;

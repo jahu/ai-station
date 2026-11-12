@@ -214,13 +214,16 @@ function fixture(
       if (url.pathname.endsWith("/revisions")) {
         const saved = {
           ...revision,
-          id: "revision-two",
-          parent_revision_id: revision.id,
-          position: 2,
+          id:
+            versions.length === 1
+              ? "revision-two"
+              : `revision-${versions.length + 1}`,
+          parent_revision_id: versions[0]?.id,
+          position: versions.length + 1,
           storyboard: body.storyboard,
         };
         versions = [saved as StudioRevision, ...versions];
-        current = { ...current, version: 3 };
+        current = { ...current, version: current.version + 1 };
         return json(saved, 201);
       }
       if (url.pathname.endsWith("/cancel")) {
@@ -368,6 +371,43 @@ it("edits one scene into a new immutable version, keeping the original visible",
     },
   });
   expect(screen.getAllByRole("option", { name: /Version/ })).toHaveLength(2);
+});
+
+it("saves expression separately and clears stale phrase hints when spoken words change", async () => {
+  const requests = fixture();
+  await screen.findByText("Reveal the hidden spectrum");
+  fireEvent.click(screen.getByText("Edit this shot"));
+  fireEvent.click(screen.getByText("Voice expression"));
+  fireEvent.change(screen.getByLabelText("Shot 1 phrase 1 expression"), {
+    target: { value: "curious, then reassuring" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save as new version" }));
+  await screen.findByText("Version 2 saved");
+  expect(requests[0].body).toMatchObject({
+    storyboard: {
+      scenes: [
+        {
+          narration: "A small change reveals a hidden pattern.",
+          narration_segments: [
+            {
+              text: "A small change reveals a hidden pattern.",
+              style: "curious, then reassuring",
+            },
+          ],
+        },
+      ],
+    },
+  });
+  fireEvent.change(screen.getByLabelText("Spoken words"), {
+    target: { value: "Look a little closer." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save as new version" }));
+  await screen.findByText("Version 3 saved");
+  const next = requests[1].body.storyboard as {
+    scenes: Record<string, unknown>[];
+  };
+  expect(next.scenes[0].narration).toBe("Look a little closer.");
+  expect(next.scenes[0]).not.toHaveProperty("narration_segments");
 });
 
 it("archives without deleting the storyboard and offers restore", async () => {

@@ -860,10 +860,49 @@ function StoryboardEditor({
                       maxLength={1000}
                       value={shot.narration}
                       onChange={(e) =>
-                        change(index, { narration: e.target.value })
+                        change(index, {
+                          narration: e.target.value,
+                          narration_segments: undefined,
+                        })
                       }
                     />
                   </label>
+                )}
+                {!!shot.narration.trim() && (
+                  <details>
+                    <summary>Voice expression</summary>
+                    <p className="studio-direction-note">
+                      Fish uses these acting hints at natural delivery. A
+                      whole-take direction overrides them. Editing spoken words
+                      clears old hints.
+                    </p>
+                    {(
+                      shot.narration_segments ?? [
+                        { text: shot.narration, style: "" },
+                      ]
+                    ).map((segment, n) => (
+                      <label key={n}>
+                        {segment.text}
+                        <input
+                          aria-label={`Shot ${index + 1} phrase ${n + 1} expression`}
+                          maxLength={120}
+                          value={segment.style}
+                          placeholder="e.g. curious, then reassuring"
+                          onChange={(e) =>
+                            change(index, {
+                              narration_segments: (
+                                shot.narration_segments ?? [
+                                  { text: shot.narration, style: "" },
+                                ]
+                              ).map((s, i) =>
+                                i === n ? { ...s, style: e.target.value } : s,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </details>
                 )}
               </details>
             </article>
@@ -873,7 +912,7 @@ function StoryboardEditor({
           <h3>Sound direction</h3>
           {["voice", "voice_music"].includes(board.audio) && (
             <label>
-              Voice direction
+              Overall voice notes
               <textarea
                 rows={2}
                 value={board.voice_direction}
@@ -882,6 +921,10 @@ function StoryboardEditor({
                   edit({ ...board, voice_direction: e.target.value })
                 }
               />
+              <small>
+                Editorial notes for planning. Phrase expression and soundtrack
+                voice settings control the recorded performance.
+              </small>
             </label>
           )}
           {["music", "voice_music"].includes(board.audio) && (

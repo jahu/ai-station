@@ -11,7 +11,11 @@ CUE = 9600  # 200 ms of breathing room before/after the complete spoken cue.
 BLOCK = 16384
 
 
-def timed_storyboard(storyboard, voices):
+def timed_storyboard(storyboard, voices, *, policy=None, sources=None):
+    if policy == "fit":
+        from app.studio_measured_timing import fit_measured
+
+        return fit_measured(storyboard, voices, sources or {})
     values = storyboard.model_dump(mode="json")
     for index, source in voices.items():
         speech_frames = math.ceil(Fraction(source["samples"] * 30, source["sample_rate"]))
