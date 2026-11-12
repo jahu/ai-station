@@ -70,7 +70,9 @@ has passed real installation, Stop and crash recovery. A short generated-present
 film passed technical checks; longer-film and publication-quality qualification
 are still in progress. Explicit spoken word targets are kept with the material;
 the director checks the actual script before media generation, and the editor
-shows its word count. [Current scope and evidence](docs/plans/creative-studio.md).
+shows its word count. A word-limit-only planning failure can revise the spoken
+lines without regenerating a valid visual plan; exhausted corrections cannot
+blindly recreate the same material in one conversation turn. [Current scope and evidence](docs/plans/creative-studio.md).
 
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled

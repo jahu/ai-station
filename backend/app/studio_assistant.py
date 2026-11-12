@@ -37,6 +37,12 @@ def request_parameters(session, root, raw):
     observations = [
         s["observation"] for s in root.metadata_json.get("controller_steps", []) if s.get("observation")
     ]
+    from app.studio_assistant_contract import exhausted_studio_outcomes
+
+    if index in exhausted_studio_outcomes(observations):
+        raise ValueError(
+            "This Studio outcome exhausted its bounded planning corrections. Preserve the failed draft and explain the actual failure; a new instruction may revise it. Do not recreate the whole workflow with a paraphrase."
+        )
     if not any(p.get("outcome_index") == index for p in missing_outcomes(observations, outcomes)):
         raise ValueError("This Studio outcome is already fulfilled")
     if root.parameters["controller_provider"].get("location") != "local":
@@ -412,4 +418,14 @@ def observed_result(session, root, step):
         "tool_data": [wrapper.metadata_json["controller_tool_result"]] if succeeded else [],
         "agent_ids": [],
         "studio_outcome_index": wrapper.parameters["outcome_index"],
+        **(
+            {"studio_attempt_exhausted": True}
+            if any(
+                kind == "plan"
+                and child.status == "failed"
+                and child.metadata_json.get("studio_planning_exhausted") is True
+                for kind, child in child_tasks(session, wrapper)
+            )
+            else {}
+        ),
     }

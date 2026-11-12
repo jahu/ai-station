@@ -590,3 +590,36 @@ The conversation wrapper also preserves the first owned underlying stage failure
 instead of replacing it with an opaque generic stage error. Owner checks precede
 that projection; no partial artifact becomes a completed film. The public API,
 permissions, database schema and valid legacy request identities do not change.
+
+### Focused narration correction and closed planning budgets — 2026-11-12
+
+The next real attempt preserved the six-scene visual structure and corrected the
+six-second Library window, but still exceeded the frozen 170–190-word script
+range. ReAct then paraphrased the same request into additional whole-workflow
+attempts; none delivered a film. This is not a media-quality qualification.
+
+Once schema, audio policy, source ownership and fitted source windows validate,
+a word-limit-only failure now enters a speech-only editor on the same owned
+planning Run. The selected local model returns indexed spoken lines, not another
+storyboard. Application code copies only narration fields. Scene order, visuals,
+references, typography, delivery, source trims and intentional silent beats stay
+unchanged. Measured global word limits remain mandatory at publication. Advisory
+per-scene pacing leaves room for short moving beats; actual TTS samples and native
+source inspection still determine whether the edit fits. No string truncation,
+filled-in facts or relaxed user requirements are used to make validation pass.
+
+There are at most two complete outline proposals and two focused script proposals
+under the original Run deadline, claim fence and Stop checks. Every request and
+response is retained for inspection. Exhaustion is a server-recorded planning
+outcome, not a model-selected retry permission: the assistant cannot create more
+materials for that same frozen outcome in the same user turn by paraphrasing it.
+Other requested materials and a subsequent user instruction remain available.
+Runtime readiness failures without an exhausted planning budget keep their normal
+recovery semantics. Missing films remain missing, with their actual failure and
+retained draft; the wrapper never substitutes a partial image or storyboard.
+
+Regression coverage must include visual immutability, strict indices, silent-beat
+preservation, exact/one-sided word ranges, one focused correction, Stop during
+editing, preservation of prior revisions, no duplicate whole-workflow retries,
+and independent outcomes. The actual longer production and publication-quality
+acceptance remain open until verified after deployment.
