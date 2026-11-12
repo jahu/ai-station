@@ -18,6 +18,7 @@ type Props = {
   uploadEndpoint?: string;
   uploadLabel?: string;
   maxAudioSeconds?: number;
+  imageTypes?: ("image/png" | "image/jpeg" | "image/webp")[];
   audioMode?: "voice" | "transcription" | "voice-recording";
   label: string;
   hint: string;
@@ -31,6 +32,7 @@ export default function MediaInput({
   uploadEndpoint,
   uploadLabel,
   maxAudioSeconds = 60,
+  imageTypes = ["image/png", "image/jpeg"],
   audioMode = "voice",
   label,
   hint,
@@ -80,7 +82,7 @@ export default function MediaInput({
         (a) =>
           a.type === kind &&
           (kind !== "image" ||
-            ["image/png", "image/jpeg"].includes(a.mime_type)) &&
+            (imageTypes as string[]).includes(a.mime_type)) &&
           (kind !== "video" ||
             (a.mime_type === "video/mp4" &&
               !!a.metadata?.frames &&
@@ -201,7 +203,7 @@ export default function MediaInput({
             }
             accept={
               kind === "image"
-                ? "image/png,image/jpeg"
+                ? imageTypes.join(",")
                 : audioMode !== "voice"
                   ? TRANSCRIPTION_AUDIO_ACCEPT
                   : "audio/wav,.wav"

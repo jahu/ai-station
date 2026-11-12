@@ -17,6 +17,7 @@ from app.serialize import artifact_dict
 from app.state import TERMINAL, RunStatus
 from app.studio_audio_production import ProduceAudio, Voice, create_audio_production
 from app.studio_materials import DB, digest, get_material, get_revision, source_snapshot
+from app.studio_presenter import GeneratePresenter
 from app.studio_render import Binding, RenderRequest, create_render
 from app.studio_schema import Fields, Storyboard
 from app.studio_shots import ShotRequest, enqueue_shot, production
@@ -38,6 +39,7 @@ class Produce(Fields):
     image_model: str | None = Field(default=None, min_length=1, max_length=100)
     video_model_id: UUID | None = None
     reuse_from_run_id: UUID | None = None
+    presenter: GeneratePresenter | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 def root_run(session, identity, material_id=None):
@@ -265,6 +267,11 @@ def create_production(session, material_id, body):
         video_profile = profile_for(session, body.video_model_id)
         if not video_profile.get("available"):
             raise HTTPException(409, video_profile.get("reason") or "Prepare video before producing footage")
+    from app.studio_presenter import capture, restore
+
+    presenter_binding = capture(session, body.presenter, plan, ready, previous) if body.presenter else None
+    if presenter_binding:
+        restore(session, previous, state)
     task = create_task(
         session,
         title="Produce film · " + row.title,
@@ -290,6 +297,7 @@ def create_production(session, material_id, body):
             "revision_sha256": digest(revision.storyboard),
             "image_choices": image_choices,
             "video_profile": video_profile,
+            **({"presenter_binding": presenter_binding} if presenter_binding else {}),
             "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         metadata={"studio_enqueue_only": True, "production_state": state, "child_tasks": []},
@@ -388,6 +396,14 @@ class StudioProductionExecutor:
                 if complete_media(session, source["artifact_id"], source["kind"], verify=True) != source:
                     raise ValueError("A selected take changed before production")
         body = Produce.model_validate(root.parameters["request"])
+        if body.presenter:
+            from app.studio_presenter_sources import portrait_snapshot
+
+            if (
+                portrait_snapshot(session, body.presenter.image_artifact_id, verify=True)
+                != root.parameters["presenter_binding"]["portrait"]
+            ):
+                raise ValueError("The selected presenter portrait changed before production")
         pending = run.parameters.get("pending")
         if pending:
             owned = {t.id for t in children(session, root)}
@@ -456,6 +472,10 @@ class StudioProductionExecutor:
                 state["bindings"][scene] = complete_media(
                     session, outputs[0].id, shot.visual_kind, verify=True
                 )
+            elif pending["kind"] in {"presenter_narration", "presenter"}:
+                from app.studio_presenter import observe
+
+                observe(session, root, state, child, pending)
             else:
                 raise ValueError("Unknown material prerequisite")
         if (
@@ -527,6 +547,17 @@ class StudioProductionExecutor:
                 attach(session, run, root, child)
                 follow(session, run, root, {"kind": "shot", "run_id": child.id, "scene": missing})
             else:
+                from app.studio_presenter import advance, render_layer
+
+                if not advance(session, run, root, state, body, revision):
+                    session.flush()
+                    session.refresh(run)
+                    if (run.worker_id, run.claimed_at) != claim or run.status != "running":
+                        session.rollback()
+                        return "done"
+                    transition(session, run, RunStatus.SUCCEEDED, event_type="studio.production.advanced")
+                    session.commit()
+                    return "done"
                 for source in state["bindings"].values():
                     if complete_media(session, source["artifact_id"], source["kind"], verify=True) != source:
                         raise ValueError("A frozen take changed before export")
@@ -541,6 +572,7 @@ class StudioProductionExecutor:
                             for i, s in state["bindings"].items()
                         ],
                         soundtrack_artifact_id=state["soundtrack_id"],
+                        presenter=render_layer(body, state),
                     ),
                 )
                 attach(session, run, root, child)

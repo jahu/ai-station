@@ -42,11 +42,17 @@ class StudioCall(Fields):
     title: str = Field(default="New material", min_length=1, max_length=160)
     references: list[Alias] = Field(default_factory=list, max_length=12)
     outcome_index: int | None = Field(default=None, ge=0, le=7, strict=True)
+    presenter_reference: Alias | None = Field(default=None, exclude_if=lambda value: value is None)
+    presenter_placement: Literal["auto", "right", "bottom"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def distinct(self):
         if len(set(self.references)) != len(self.references):
             raise ValueError("Choose each supplied media reference once")
+        if self.presenter_placement and not self.presenter_reference:
+            raise ValueError("Choose the supplied presenter image before its placement")
         return self
 
 

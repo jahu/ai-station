@@ -133,7 +133,7 @@ class Tool:
 
 TOOLS = {
     "studio.produce": Tool(
-        "Create a complete edited reel, presentation or educational film: storyboard, actual generated footage/images, requested narration/music and final MP4. Uses the frozen studio_material outcome and creative-project identity; no settings are duplicated in the call. outcome_index selects the original outcome when several materials were requested. references are supplied image/video aliases only. This is not a raw video clip or a software/Git project.",
+        "Create a complete edited reel, presentation or educational film: storyboard, actual generated footage/images, requested narration/music and final MP4. Uses the frozen studio_material outcome and creative-project identity; no settings are duplicated in the call. outcome_index selects the original outcome when several materials were requested. references are supplied image/video aliases for the story visuals. When the user requests a speaking presenter/avatar over the film, presenter_reference selects its supplied image alias separately from B-roll; it uses this film's same complete narration and requires a narrated audio policy. Optional presenter_placement is auto/right/bottom. Do not invent an image alias or add a presenter unless requested. This is not a raw video clip or a software/Git project.",
         StudioCall,
         permissions=("filesystem_read", "workspace_write"),
     ),

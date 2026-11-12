@@ -1986,7 +1986,8 @@ The optional presenter input is an owned completed MP4 or a sequence of at most
 32 such clips, never markup, a URL or a layout program. Only automatic/right/bottom placement and a bounded source
 offset are accepted. The source must remain live and unchanged through dispatch
 and publication; partial/internal results and unfinished originating Runs are
-refused. Actual decoded duration must cover the complete film. Its audio is
+refused, apart from the closed-registry completed presenter parts described below.
+Actual decoded duration must cover the complete film. Its audio is
 muted, the final soundtrack stays singular, and Chromium verifies reserved
 nonoverlapping space within the canvas. Source count and the combined two-GiB
 budget include this layer. Existing cancellation/ownership fences remain shared.
@@ -2011,6 +2012,22 @@ Runner and never opts a native model into replay. Speech parts are contiguous
 and bounded to sixty seconds, including any explicitly recorded silent minimum
 padding; their editorial intervals never include that padding. These internal
 artifacts do not grant an agent permission to generate avatars or publish media.
+
+Automatic Studio presenters require explicit typed portrait/model settings,
+narrated audio policy and the renderer's sequence capability. The portrait must
+be an owned complete image; bounded CPU decoding verifies PNG/JPEG/WebP and
+normalizes a separate internal PNG. Source observations are rechecked before
+any synthesis and before later stages. The normal whole-recording avatar API
+retains model/resource admission, private ownership and inspection-only recovery.
+Studio follows only its verified child Tasks. Continuation refuses uncertain
+native processes and reuses only unchanged successful parts.
+
+Generated presenter videos stay internal to avoid flooding final results. The
+renderer's narrow complete-part exception requires a successful `sonic_whole`
+Run, matching input identities and part index, a closed production-child registry
+and the exact adopted artifact in saved production state. A role tag alone,
+partial output, foreign artifact or another unfinished Run grants no access.
+Ordinary Library/story-media completeness checks remain unchanged.
 
 The Studio CPU soundtrack assembler accepts only private live WAV Artifact IDs,
 finite mix levels and exact saved revision coordinates. Canonical regular files

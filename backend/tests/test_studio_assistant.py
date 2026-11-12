@@ -48,6 +48,7 @@ def director(monkeypatch):
                             "kind": "studio_material",
                             "description": "An edited explanatory film",
                             "studio": state["studio"],
+                            **state.get("outcome", {}),
                         }
                     ],
                     "automations": [],
@@ -81,7 +82,16 @@ def director(monkeypatch):
             )
             context = json.loads(current.split("\n", 1)[1])
             if context.get("missing_outcomes"):
-                yield 'Thought: Produce the requested complete material.\nAction: studio_produce\nAction Input: {"instruction":"Explain a prism with an actual visual and the requested sound","title":"A prism film"}'
+                args = {
+                    "instruction": "Explain a prism with an actual visual and the requested sound",
+                    "title": "A prism film",
+                }
+                if state.get("presenter_reference"):
+                    args["presenter_reference"] = state["presenter_reference"]
+                yield (
+                    "Thought: Produce the requested complete material.\nAction: studio_produce\nAction Input: "
+                    + json.dumps(args)
+                )
             else:
                 assert "step:1:video:1" in json.dumps(messages)
                 assert context["missing_outcomes"] == []

@@ -177,7 +177,9 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
     if presenter:
         presenter = Presenter.model_validate(presenter)
         for media, _, _ in presenter.segments(plan.frames):
-            source = source_snapshot(session, media, verify=verify, complete=True)
+            source = source_snapshot(
+                session, media, verify=verify, complete=True, internal_role="presenter_part"
+            )
             if source["kind"] != "video":
                 raise ValueError("Choose a complete MP4 presenter clip from your Library")
             sources[source["artifact_id"]] = Source.model_validate(source).model_dump(mode="json")

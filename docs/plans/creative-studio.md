@@ -406,9 +406,9 @@ verification and exact reconstruction from its speech parts. The test used a
 private disposable database copy and no new inference; the copied database was
 removed afterward. Temporary-database tests additionally cover more than 120
 seconds, a tiny padded tail, account isolation, changed sources, Stop/claim loss,
-expiry, SQLite publication contention and safe pure-CPU recovery. Automatic Sonic
-coordination, editor/assistant selection and the full real
-presenter-film acceptance remain outstanding; this is not avatar qualification.
+expiry, SQLite publication contention and safe pure-CPU recovery. This is not
+avatar qualification; the automatic coordinator is described below and full
+real presenter-film acceptance remains outstanding.
 
 The renderer now also accepts a typed contiguous presenter sequence: up to 32
 complete video sources on exact 30-fps editorial intervals. Each source retains
@@ -423,5 +423,31 @@ continuous interval coverage, single soundtrack and owned cleanup passed. Initia
 qualification caught insufficient time-string precision and an impermissible
 GSAP clip-visibility override; both were corrected without relaxing checks.
 This proves the composition primitive, not new Sonic generation, long-avatar
-continuity or complete narration-aligned film quality. Automatic coordination
-and editor/assistant integration remain the next delivery stage.
+continuity or complete narration-aligned film quality.
+
+### Automatic presenter coordination (development)
+
+The existing whole-film coordinator now accepts an optional portrait, installed
+Sonic model and finite placement. It freezes source/model observations, obtains
+the measured narration through the CPU step, and normalizes a separate bounded
+PNG from a complete PNG/JPEG/WebP original. Each contiguous speech part uses one
+normal whole-recording avatar Task with the same portrait and no second voice
+normalization. The final muted sequence retains exact editorial durations and
+the original mastered soundtrack.
+
+The production editor exposes portrait preview/removal, installed model choice,
+position and actual readiness. The ReAct tool resolves an explicitly supplied
+presenter image alias separately from story footage; it shares the existing
+project/format/audio selection and returns the finished film. No person-specific
+prompt routing or separate execution engine is introduced.
+
+Temporary-database/fake-executor checks cover a complete film, a 135-second
+three-part timeline, WebP normalization without original changes, reuse after a
+failed export, Stop, stale coordinator recovery, source/account boundaries,
+forged internal provenance and refusal to replay an uncertain native process.
+UI tests cover model/portrait/placement submission and unavailable-model recovery.
+These checks qualify coordination only. Before closing this stage, build and
+probe the exact application image, review/merge, deploy preserving station data,
+activate the qualified sequence renderer and generate a complete real film with
+its measured narration and actual Sonic presenter. Longer-film visual acceptance
+and fresh renderer installation remain required for the overall goal.

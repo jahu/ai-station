@@ -1750,8 +1750,8 @@ separate region beside/below the story
 and places one muted video on the whole timeline, retaining the original mix.
 The renderer inspects actual source coverage and nonoverlapping layout before
 publication. An unused layer is omitted from serialization so old request hashes
-remain valid. Automatic narration-aligned avatar generation remains a separate
-postproduction step; this editor slice selects existing Library footage.
+remain valid. Manual export selects existing Library footage. Automatic generation
+is an optional stage of the existing whole-material production coordinator.
 
 The queued `studio_narration` CPU step prepares the next postproduction boundary:
 one clean stem and contiguous speech parts from a successful measured soundtrack's
@@ -1761,8 +1761,20 @@ are rechecked before publication. Intermediate artifacts retain lineage and are
 inspectable through Runs. Parts respect the existing sixty-second Sonic input
 bound while preserving the complete film timeline. Only this pure local PCM
 step can requeue computation after worker loss; native avatar execution retains
-its independent inspection-only recovery. Automatic presenter coordination and
-its editor/assistant controls are not advertised by this primitive alone.
+its independent inspection-only recovery.
+
+Optional production presenter settings freeze an owned portrait and the actual
+Sonic model/recipe. The CPU preparation step normalizes PNG/JPEG/WebP to the
+bounded Sonic canvas without changing the original. Each speech part queues one
+ordinary whole-recording avatar Task, using the same portrait and captured
+model, with no repeated TTS or voice finishing. The existing closed child registry
+provides Stop, claim-fenced coordination and reuse of complete parts. An uncertain
+native launch cannot be replayed. Exact editorial intervals drive the muted
+presenter sequence; the original mastered mix remains the only final audio.
+The production editor and semantic assistant share this coordinator. Presenter
+aliases are resolved separately from story footage, without a keyword router.
+Complete generated-film quality and fresh renderer installation remain separate
+qualification gates.
 
 Saved-shot production reuses `create_image_run` or the existing segmented-video
 Task graph; it adds no inference adapter. Account image defaults remain authoritative
