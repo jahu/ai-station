@@ -163,3 +163,15 @@ def reference_ids(session, *, owner_id, entries, aliases):
             raise ValueError("The supplied media reference changed")
         result.append(item.id)
     return result
+
+
+def exhausted_studio_outcomes(observations):
+    """Only server-recorded closed planning budgets, scoped to the current turn."""
+    return {
+        item["studio_outcome_index"]
+        for item in observations
+        if item.get("tool") == "studio.produce"
+        and item.get("status") == "failed"
+        and item.get("studio_attempt_exhausted") is True
+        and type(item.get("studio_outcome_index")) is int
+    }

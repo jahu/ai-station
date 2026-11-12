@@ -65,7 +65,10 @@ def test_director_repairs_only_spoken_script_before_publication(local_model, lim
     good = board()
     count = limits.get("minimum", limits.get("maximum"))
     good["scenes"][0]["narration"] = " ".join(["word"] * count)
-    responses[:] = [json.dumps(board()), json.dumps(good)]
+    responses[:] = [
+        json.dumps(board()),
+        json.dumps({"lines": [{"scene": 0, "text": good["scenes"][0]["narration"]}]}),
+    ]
     with TestClient(app) as browser:
         created = material(browser, options={"audio": "voice_music", "narration_words": limits})
         path = "/api/studio/materials/" + created["id"]
@@ -100,7 +103,7 @@ def test_unsatisfied_limits_fail_without_overwriting_previous_version(local_mode
         step()
         done = browser.get("/api/runs/" + queued["id"]).json()
         assert done["status"] == "failed" and "at least 20" in done["error_message"]
-        assert len(calls) == 2 and browser.get(path + "/revisions").json() == [saved]
+        assert len(calls) == 3 and browser.get(path + "/revisions").json() == [saved]
         assert not browser.get("/api/artifacts?run_id=" + queued["id"]).json()
 
 
@@ -113,3 +116,70 @@ def test_manual_save_cannot_mislabel_script_as_meeting_word_limits():
         )
         assert response.status_code == 422 and "at least 20" in response.text
         assert browser.get("/api/studio/materials/" + created["id"] + "/revisions").json() == []
+
+
+def test_script_repair_can_correct_once_without_regenerating_the_visual_plan(local_model):  # noqa: F811
+    calls, responses = local_model
+    original = board()
+    fixed = "One small change can reveal patterns hidden from ordinary sight."
+    responses[:] = [
+        json.dumps(original),
+        '{"lines":[]}',
+        json.dumps({"lines": [{"scene": 0, "text": fixed}]}),
+    ]
+    with TestClient(app) as browser:
+        created = material(browser, options={"narration_words": {"minimum": 10, "maximum": 10}})
+        path = "/api/studio/materials/" + created["id"]
+        queued = browser.post(path + "/plan", json=request()).json()
+        step()
+        done = browser.get("/api/runs/" + queued["id"]).json()
+        assert done["status"] == "succeeded", done["error_message"]
+        assert len(calls) == 3
+        assert all(
+            c["messages"][0]["content"].startswith("You are the Studio narration editor") for c in calls[1:]
+        )
+        assert done["parameters"]["studio_last_proposal"] == json.dumps(original)
+        assert not done["metadata"].get("studio_planning_exhausted")
+        saved = browser.get(path + "/revisions").json()
+        assert len(saved) == 1 and saved[0]["storyboard"]["scenes"][0]["narration"] == fixed
+        # Timing is fitted separately; the editor cannot change any visual field.
+        for key in ("visual_kind", "visual_brief", "purpose"):
+            assert saved[0]["storyboard"]["scenes"][0][key] == original["scenes"][0][key]
+
+
+def test_stop_during_speech_only_edit_keeps_no_partial_publication(local_model, monkeypatch):  # noqa: F811
+    from app.db import session_factory
+    from app.local_provider import LocalChatProvider
+    from app.models import Run
+    from app.runs import request_cancel
+    from sqlalchemy import select
+
+    calls = []
+
+    async def stream(self, **params):
+        calls.append(params)
+        if len(calls) == 1:
+            yield json.dumps(board())
+        else:
+            with session_factory()() as db:
+                run = db.scalar(select(Run).where(Run.executor_type == "studio_director"))
+                request_cancel(db, run)
+                db.commit()
+            yield json.dumps(
+                {
+                    "lines": [
+                        {"scene": 0, "text": "A complete ten word script cannot override the operator stop."}
+                    ]
+                }
+            )
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as browser:
+        created = material(browser, options={"narration_words": {"minimum": 10}})
+        path = "/api/studio/materials/" + created["id"]
+        queued = browser.post(path + "/plan", json=request()).json()
+        step()
+        assert len(calls) == 2
+        assert browser.get("/api/runs/" + queued["id"]).json()["status"] == "canceled"
+        assert browser.get(path + "/revisions").json() == []
+        assert browser.get("/api/artifacts?run_id=" + queued["id"]).json() == []

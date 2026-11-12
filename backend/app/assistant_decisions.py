@@ -151,8 +151,22 @@ def scoped_context(context, outcomes):
         and sum(item.get("remaining", item["count"]) for item in pending if item["kind"] == "project") == 1
         and any(item["kind"] == "local_changes" for item in pending)
     )
+    from app.studio_assistant_contract import exhausted_studio_outcomes
+
+    exhausted = exhausted_studio_outcomes(context.get("observations", []))
+    pending = [
+        {**item, "studio_planning_exhausted": True}
+        if item["kind"] == "studio_material" and item.get("outcome_index") in exhausted
+        else item
+        for item in pending
+    ]
     image_tools, _, _ = image_contract({**context, "outcomes": outcomes})
     for name, spec in context["tools"].items():
+        if name == "studio.produce" and not any(
+            item["kind"] == "studio_material" and item.get("outcome_index") not in exhausted
+            for item in pending
+        ):
+            continue
         if name == "project.create" and new_implementation:
             # An empty workspace cannot deliver code and supplies no existing
             # coding scope. Use the available composed new-project build tool.

@@ -10,7 +10,7 @@ from app.studio_schema import Storyboard, spoken_word_count, validate_spoken_wor
 from app.studio_storyboard import fit_timing, visual_origin
 
 
-def validate_storyboard(text, options, sources, catalog):
+def validate_storyboard(text, options, sources, catalog, *, check_words=True):
     raw = json.loads(text)
     errors, measurements = [], {}
     scenes = raw.get("scenes") if isinstance(raw, dict) else None
@@ -27,10 +27,11 @@ def validate_storyboard(text, options, sources, catalog):
         if all(isinstance(s.get("narration", ""), str) for s in scenes):
             count = spoken_word_count(s.get("narration", "") for s in scenes)
             measurements["spoken_words"] = count
-            try:
-                validate_spoken_word_count(count, options)
-            except ValueError as exc:
-                errors.append(str(exc))
+            if check_words:
+                try:
+                    validate_spoken_word_count(count, options)
+                except ValueError as exc:
+                    errors.append(str(exc))
         if raw.get("audio") != options["audio"]:
             errors.append("Preserve the selected audio policy")
         if raw.get("audio") in {"music", "voice_music"} and isinstance(raw.get("music_brief"), str):

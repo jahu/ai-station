@@ -448,6 +448,11 @@ def decision_context(session, root):
                         if "studio_outcome_index" in observed
                         else {}
                     ),
+                    **(
+                        {"studio_attempt_exhausted": True}
+                        if observed.get("studio_attempt_exhausted") is True
+                        else {}
+                    ),
                     "tool_data_excerpt": json.dumps(observed["tool_data"], ensure_ascii=False)[:6000],
                 }
             )

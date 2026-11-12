@@ -306,11 +306,40 @@ class StudioDirector:
 
             await database(record_messages)
             text = await self.consume(session, run, messages, database)
-            await database(lambda: None)
+
+            def record_proposal():
+                run.parameters = {**run.parameters, "studio_last_proposal": text}
+
+            await database(record_proposal)
             try:
-                storyboard = validate_storyboard(
-                    text, params["frozen"]["options"], params["sources"], catalog
-                )
+                try:
+                    storyboard = validate_storyboard(
+                        text, params["frozen"]["options"], params["sources"], catalog
+                    )
+                except ValueError as original:
+                    try:
+                        outline = validate_storyboard(
+                            text,
+                            params["frozen"]["options"],
+                            params["sources"],
+                            catalog,
+                            check_words=False,
+                        )
+                    except ValueError:
+                        raise original
+                    from app.studio_narration_edit import repair_narration
+
+                    storyboard = await repair_narration(
+                        outline,
+                        params["frozen"]["options"],
+                        params["frozen"],
+                        catalog,
+                        session,
+                        run,
+                        database,
+                        lambda messages, **kwargs: self.consume(session, run, messages, database, **kwargs),
+                        str(original),
+                    )
                 fitted = fit_timing(storyboard, params["frozen"]["options"]["duration_seconds"])
                 if fitted.frames != storyboard.frames:
                     await database(
@@ -329,6 +358,11 @@ class StudioDirector:
                 return fitted
             except ValueError as exc:
                 if attempt:
+
+                    def exhausted():
+                        run.metadata_json = {**run.metadata_json, "studio_planning_exhausted": True}
+
+                    await database(exhausted)
                     raise ValueError(
                         "The selected local model could not produce a valid storyboard after correction: "
                         + str(exc)[:1000]
@@ -352,7 +386,7 @@ class StudioDirector:
                 ]
         raise ValueError("No storyboard was produced")
 
-    async def consume(self, session, run, messages, database):
+    async def consume(self, session, run, messages, database, *, max_tokens=8192):
         stream = await database(
             lambda: completion_stream(
                 session,
@@ -360,7 +394,7 @@ class StudioDirector:
                     **run.parameters,
                     "messages": messages,
                     "temperature": 0.55,
-                    "max_tokens": 8192,
+                    "max_tokens": max_tokens,
                     "json_output": True,
                     "require_complete": True,
                 },

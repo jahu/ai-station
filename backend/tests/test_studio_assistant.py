@@ -43,7 +43,8 @@ def director(monkeypatch):
             yield json.dumps(
                 {
                     "reason": "A complete edited film",
-                    "immediate": [
+                    "immediate": state.get("immediate")
+                    or [
                         {
                             "kind": "studio_material",
                             "description": "An edited explanatory film",
@@ -74,6 +75,9 @@ def director(monkeypatch):
                     ],
                 )
             )
+        elif first.startswith("You are the Studio narration editor"):
+            state.setdefault("narration_edits", []).append(messages)
+            yield json.dumps({"lines": [{"scene": 0, "text": state.get("repair_text", "Still short.")}]})
         else:
             current = next(
                 m["content"]
@@ -81,11 +85,17 @@ def director(monkeypatch):
                 if m["content"].startswith("CURRENT REQUEST AND AVAILABLE STATE:")
             )
             context = json.loads(current.split("\n", 1)[1])
-            if context.get("missing_outcomes"):
+            state.setdefault("react_states", []).append(context)
+            if context.get("missing_outcomes") and "Tool Name: studio_produce" not in first:
+                yield "Thought: Planning exhausted its corrections; preserve the draft.\nAnswer: The local model could not meet the requested script limits; the draft and its error remain available."
+            elif context.get("missing_outcomes"):
                 args = {
                     "instruction": "Explain a prism with an actual visual and the requested sound",
                     "title": "A prism film",
                 }
+                eligible = [o for o in context["missing_outcomes"] if not o.get("studio_planning_exhausted")]
+                if eligible:
+                    args["outcome_index"] = eligible[0]["outcome_index"]
                 if state.get("presenter_reference"):
                     args["presenter_reference"] = state["presenter_reference"]
                 yield (
@@ -420,3 +430,53 @@ def test_spoken_word_limits_survive_semantic_intent_to_complete_production(accou
         )
         assert controller_results(db, root)["artifacts"][0]["type"] == "video"
     assert director["plans"][0]["options"]["narration_words"] == {"minimum": 6, "maximum": 6}
+
+
+def test_exhausted_word_repairs_do_not_create_more_materials_in_the_same_turn(accounts, director, movie):
+    _, alice, _ = accounts
+    director["studio"].update(audio="voice", narration_words={"minimum": 20, "maximum": 20})
+    result = submit(alice, "Make a complete film with exactly twenty spoken words")
+    advance(movie)
+    with owned(alice) as db:
+        root = db.get(Run, result["run"]["id"])
+        attempts = [s for s in root.metadata_json["controller_steps"] if s["tool"] == "studio.produce"]
+        assert len(attempts) == 1 and attempts[0]["observation"]["studio_attempt_exhausted"] is True
+        assert len(list(db.scalars(select(StudioMaterial)))) == 1
+        assert controller_results(db, root)["artifacts"] == []
+        assert missing_outcomes([attempts[0]["observation"]], root.metadata_json["controller_outcomes"])
+        from app.studio_assistant import request_parameters
+
+        with pytest.raises(ValueError, match="exhausted"):
+            request_parameters(db, root, {"instruction": "A different paraphrase of the same failed task"})
+    assert len(director["plans"]) == 1 and len(director["narration_edits"]) == 2
+    assert director["react_states"][-1]["missing_outcomes"][0]["studio_planning_exhausted"] is True
+
+
+def test_exhausted_plan_does_not_block_a_separately_requested_material(accounts, director, movie):
+    _, alice, _ = accounts
+    director["immediate"] = [
+        {
+            "kind": "studio_material",
+            "description": "A twenty-word film",
+            "studio": {"audio": "voice", "narration_words": {"minimum": 20, "maximum": 20}},
+        },
+        {"kind": "studio_material", "description": "A separate short film", "studio": {"audio": "voice"}},
+    ]
+    result = submit(alice, "Make two separate films, the first with twenty spoken words")
+    advance(movie)
+    with owned(alice) as db:
+        root = db.get(Run, result["run"]["id"])
+        attempts = [
+            s["observation"] for s in root.metadata_json["controller_steps"] if s["tool"] == "studio.produce"
+        ]
+        assert [(o["studio_outcome_index"], o["status"]) for o in attempts] == [
+            (0, "failed"),
+            (1, "succeeded"),
+        ]
+        assert attempts[0]["studio_attempt_exhausted"] is True
+        assert "studio_attempt_exhausted" not in attempts[1]
+        assert len(list(db.scalars(select(StudioMaterial)))) == 2
+        assert len(controller_results(db, root)["artifacts"]) == 1
+        assert [
+            o["outcome_index"] for o in missing_outcomes(attempts, root.metadata_json["controller_outcomes"])
+        ] == [0]
