@@ -2208,3 +2208,52 @@ it("opens a conversation Studio material during production and plays only the fi
   expect(screen.getByRole("link", { name: "Open in Studio" })).toBeTruthy();
   expect(screen.queryByLabelText("Generated Studio film")).toBeNull();
 });
+
+it("shows an imported reference as an owned Library image inside its tool step", () => {
+  mountResults({
+    controller_steps: [
+      {
+        index: 1,
+        tool: "web.image_import",
+        reason: "Save the chosen reference",
+        status: "succeeded",
+        run_id: "import",
+        sources: [
+          {
+            url: "https://photos.example.com/photo.jpg",
+            title: "Original source",
+          },
+        ],
+        result: {
+          steps: [],
+          artifacts: [
+            {
+              id: "reference",
+              type: "image",
+              mime_type: "image/png",
+              original_filename: "web-reference.png",
+              metadata: {
+                reference_only: true,
+                source_url: "https://photos.example.com/photo.jpg",
+              },
+              parent_artifact_ids: [],
+              size_bytes: 100,
+              created_at: "2026-11-12T12:00:00Z",
+              run_id: "import",
+            },
+          ],
+        },
+      },
+    ],
+  });
+  expect(screen.getByText("Save image references")).toBeTruthy();
+  expect(screen.getByText("Reference image · saved to Library")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("img", { name: "Imported image reference" })
+      .getAttribute("src"),
+  ).toBe("/api/artifacts/reference/file");
+  expect(
+    screen.getByRole("link", { name: "Original source" }).getAttribute("href"),
+  ).toBe("https://photos.example.com/photo.jpg");
+});

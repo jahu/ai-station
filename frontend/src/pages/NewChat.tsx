@@ -117,13 +117,15 @@ export default function NewChat({
           : {
               ...emptyOptions,
               action: options.action === "chat" ? "chat" : "auto",
-              image_artifact_ids: selection.ids,
+              image_artifact_ids: [
+                ...new Set([...options.image_artifact_ids, ...selection.ids]),
+              ],
             },
     );
     setWebEnabled(false);
     setWebQuery("");
     web.setRenderPages(false);
-  });
+  }, options.image_artifact_ids.length);
   useEffect(() => {
     if (
       workTaskId ||
@@ -410,10 +412,10 @@ export default function NewChat({
                 options.action !== "audio.analyze" &&
                 options.action !== "audio.music" &&
                 options.action !== "data.analyze" &&
-                !options.image_artifact_ids.length &&
                 !options.audio_artifact_id && (
                   <TextAttachments
                     uploadErrorsHandled
+                    imageOnly={options.image_artifact_ids.length > 0}
                     attachments={attachments}
                     onChange={setAttachments}
                     busy={send.isPending}
@@ -430,7 +432,10 @@ export default function NewChat({
                         : undefined
                     }
                     onImageFiles={
-                      acceptsLocalAttachments(options) &&
+                      acceptsLocalAttachments({
+                        ...options,
+                        image_artifact_ids: [],
+                      }) &&
                       !webQuery.trim() &&
                       !web.renderPages
                         ? (files) =>

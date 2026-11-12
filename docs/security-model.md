@@ -2091,3 +2091,10 @@ rolls back queued children. Continuation checks saved script/settings, ownership
 completed source identity and hash before consuming earlier narration or media.
 A complete MP4 artifact is required for production success; completion of a
 planning Run alone does not qualify the film or its quality.
+
+Public-image conversation tools retain explicit Web permission and captured source
+aliases. Each download pins public DNS at every redirect, sends no credentials,
+limits bytes/pixels/types, and stores decoded canonical image artifacts. Browser
+previews use authenticated local artifact routes, not untrusted remote thumbnails.
+Imported references remain distinct from the requested edited result. See
+[the chat/image contract](plans/chat-web-images-and-clipboard.md).
