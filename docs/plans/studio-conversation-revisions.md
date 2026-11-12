@@ -84,3 +84,12 @@ keep the legacy link fallback.
 Qualification is in progress on the feature branch. Native/export qualification
 and preserving deployment remain required; synthetic tests are not evidence of
 a real revised film. No renderer, speech model or database schema change is needed.
+
+The first real-model follow-up correctly selected the captured source but also
+repeated that same alias in `source_inputs`. Both semantic attempts were rejected
+as an unknown media alias; no Studio tool or inference job was dispatched. The
+interpreter now removes only a duplicate equal to the independently validated
+`studio.source_material`. Other material aliases and unknown media remain invalid.
+This is exact typed-alias normalization, not inferred authorization or a fallback
+that changes the requested film. Retain the failed observation and test a fresh
+ordinary turn after deploying the correction.

@@ -205,3 +205,36 @@ def test_unknown_partial_or_ambiguous_project_labels_grant_no_scope(label):
     }
     with pytest.raises(ValueError, match="unambiguous"):
         resolve_project_alias(label, catalog)
+
+
+@pytest.mark.parametrize("extra", [None, "material:other", "unknown:source"])
+def test_source_material_duplicate_is_canonical_but_unrelated_aliases_remain_invalid(extra):
+    from app.assistant_intents import validate_plan
+    from app.creative_projects import Defaults
+
+    aliases = ["material:captured"] + ([extra] if extra else [])
+    context = {
+        "studio_materials": {"material:captured": {"options": Defaults().model_dump()}},
+        "inputs_and_results": [],
+    }
+    raw = json.dumps(
+        {
+            "reason": "Revise this film",
+            "immediate": [
+                {
+                    "kind": "studio_material",
+                    "description": "Change its caption",
+                    "source_inputs": aliases,
+                    "studio": {"source_material": "material:captured", "project_resolution": "inherit"},
+                }
+            ],
+            "automations": [],
+        }
+    )
+    if extra:
+        with pytest.raises(ValueError, match="supplied input/source aliases"):
+            validate_plan(raw, context)
+    else:
+        outcome = validate_plan(raw, context).outcomes[0]
+        assert outcome.source_inputs == []
+        assert outcome.studio.source_material == "material:captured"

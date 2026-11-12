@@ -116,6 +116,10 @@ def validate_intent(text, context):
             from app.studio_assistant_contract import intent_options
 
             intent_options(context["studio_materials"][item.studio.source_material]["options"], item.studio)
+            # A duplicated, already validated material selector is not a media
+            # reference. Canonicalize only this exact captured alias; unrelated
+            # material aliases, unknown strings and media authority remain strict.
+            item.source_inputs = [s for s in item.source_inputs if s != item.studio.source_material]
         if item.kind == "studio_material" and item.studio.project is not None:
             from app.studio_assistant_contract import resolve_project_alias
 
