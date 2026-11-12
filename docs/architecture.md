@@ -1744,6 +1744,14 @@ verified output into the existing Library. Missing native dispatch records are
 fenced before release; uncertain cleanup retains resources. The Docker image
 shares only the pure composition contract, without native execution modules.
 
+An optional typed presenter layer freezes one completed owned video and a finite
+placement. The trusted compiler reserves a separate region beside/below the story
+and places one muted video on the whole timeline, retaining the original mix.
+The renderer inspects actual source coverage and nonoverlapping layout before
+publication. An unused layer is omitted from serialization so old request hashes
+remain valid. Automatic narration-aligned avatar generation remains a separate
+postproduction step; this editor slice selects existing Library footage.
+
 Saved-shot production reuses `create_image_run` or the existing segmented-video
 Task graph; it adds no inference adapter. Account image defaults remain authoritative
 unless explicitly overridden. Immutable shot/revision/source coordinates follow

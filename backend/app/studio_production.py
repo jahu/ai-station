@@ -90,18 +90,9 @@ def all_runs(session, root):
 
 
 def complete_media(session, identity, kind, *, verify=False):
-    source = source_snapshot(session, identity, verify=verify)
+    source = source_snapshot(session, identity, verify=verify, complete=True)
     if source["kind"] != kind:
         raise ValueError("A selected take has the wrong media type")
-    item = session.get(Artifact, str(identity))
-    origin = session.get(Run, item.run_id) if item.run_id else None
-    if (
-        item.metadata_json.get("partial")
-        or item.metadata_json.get("internal_media")
-        or origin
-        and origin.status != "succeeded"
-    ):
-        raise ValueError("Choose a complete take from a successful Run")
     return source
 
 

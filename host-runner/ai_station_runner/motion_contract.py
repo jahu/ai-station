@@ -56,12 +56,19 @@ class Scene(Fields):
         return self
 
 
+class Presenter(Fields):
+    media: UUID
+    placement: Literal["auto", "right", "bottom"] = "auto"
+    media_start_seconds: float = Field(default=0.0, ge=0, le=600, allow_inf_nan=False, strict=True)
+
+
 class Composition(Fields):
     width: Literal[1080, 1920] = 1080
     height: Literal[1080, 1920] = 1920
     fps: Literal[30] = 30
     style: Style
     scenes: list[Scene] = Field(min_length=1, max_length=60)
+    presenter: Presenter | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def bounded(self):
@@ -90,7 +97,7 @@ class MotionRequest(Fields):
     run_id: UUID
     deadline_at: float = Field(gt=0, strict=True, allow_inf_nan=False)
     composition: Composition
-    sources: list[Source] = Field(default_factory=list, max_length=61)
+    sources: list[Source] = Field(default_factory=list, max_length=62)
     audio_artifact_id: UUID | None = None
     observation: str = Field(pattern=r"^[a-f0-9]{64}$")
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(min_length=2, max_length=2)
@@ -101,6 +108,8 @@ class MotionRequest(Fields):
             raise ValueError("Motion rendering requires artifact read/write permissions")
         sources = {s.artifact_id: s for s in self.sources}
         wanted = {scene.media for scene in self.composition.scenes if scene.media}
+        if self.composition.presenter:
+            wanted.add(self.composition.presenter.media)
         if self.audio_artifact_id:
             wanted.add(self.audio_artifact_id)
         if len(sources) != len(self.sources) or set(sources) != wanted:
@@ -110,6 +119,8 @@ class MotionRequest(Fields):
                 raise ValueError("Scene visuals require an inspected image or video")
         if self.audio_artifact_id and sources[self.audio_artifact_id].kind != "audio":
             raise ValueError("The final mix must be inspected audio")
+        if self.composition.presenter and sources[self.composition.presenter.media].kind != "video":
+            raise ValueError("A presenter requires complete inspected video")
         if sum(source.size_bytes for source in self.sources) > 2 * 1024**3:
             raise ValueError("Keep one material's source assets within two GiB")
         return self

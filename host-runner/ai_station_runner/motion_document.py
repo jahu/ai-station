@@ -42,6 +42,47 @@ def element(tag, value, cls):
     return f'<{tag} class="{cls}">{text(value)}</{tag}>' if value else ""
 
 
+def owned_asset(assets, identity, *, video=False):
+    path = assets.get(str(identity))
+    suffixes = (".mp4",) if video else (".png", ".jpg", ".webp", ".mp4")
+    if path not in {f"assets/media-{n}{suffix}" for n in range(61) for suffix in suffixes}:
+        raise ValueError("Scene media is not a frozen owned asset")
+    return path
+
+
+def presenter_layer(composition, assets):
+    presenter = composition.presenter
+    if presenter is None:
+        return "", "", ""
+    path = owned_asset(assets, presenter.media, video=True)
+    width, height = composition.width, composition.height
+    placement = presenter.placement
+    if placement == "auto":
+        placement = "right" if width > height else "bottom"
+    if placement == "right":
+        scale = 0.70
+        left, top = 24, (height - height * scale) / 2
+        px, py = left + width * scale + 24, 24
+        pw, ph = width - px - 24, height - 48
+    else:
+        scale = 0.68 if height > width else 0.62
+        left, top = (width - width * scale) / 2, 24
+        px, py = 24, top + height * scale + 24
+        pw, ph = width - 48, height - py - 24
+    css = f"""
+.story-stage{{position:absolute;width:{width}px;height:{height}px;left:{left}px;top:{top}px;transform:scale({scale});transform-origin:top left;overflow:hidden}}
+.presenter-frame{{position:absolute;left:{px}px;top:{py}px;width:{pw}px;height:{ph}px;border:2px solid var(--accent);border-radius:24px;overflow:hidden;background:var(--bg)}}
+.presenter-frame video{{display:block;width:100%;height:100%;object-fit:contain}}
+"""
+    video = (
+        '<aside class="presenter-frame" aria-label="Presenter">'
+        f'<video id="presenter" class="clip" src="{path}" data-start="0" '
+        f'data-duration="{composition.frames / 30}" data-media-start="{presenter.media_start_seconds}" '
+        'data-volume="0" muted playsinline></video></aside>'
+    )
+    return css, '<div class="story-stage">', "</div>" + video
+
+
 def document(composition: Composition, assets=None, *, audio=False):
     assets = assets or {}
     portrait = composition.height > composition.width
@@ -66,12 +107,7 @@ def document(composition: Composition, assets=None, *, audio=False):
         )
         media = ""
         if scene.media:
-            key = str(scene.media)
-            if key not in assets or assets[key] not in {
-                f"assets/media-{n}{suffix}" for n in range(60) for suffix in (".png", ".jpg", ".webp", ".mp4")
-            }:
-                raise ValueError("Scene media is not a frozen owned asset")
-            path = assets[key]
+            path = owned_asset(assets, scene.media)
             if path.endswith(".mp4"):
                 media = f'<video id="media-{index}" class="clip scene-media" src="{path}" data-start="{start / 30}" data-duration="{scene.duration_frames / 30}" data-media-start="{scene.media_start_seconds}" muted playsinline style="object-fit:{scene.media_fit}"></video>'
             else:
@@ -193,6 +229,8 @@ for (const node of document.querySelectorAll('.scene')) {
         if audio
         else ""
     )
+    presenter_css, stage_start, stage_end = presenter_layer(composition, assets)
+    css += presenter_css
     js = (
         "const tl=gsap.timeline({paused:true});"
         + "".join(animation)
@@ -209,7 +247,9 @@ for (const node of document.querySelectorAll('.scene')) {
         )
         + f'<style>{css}</style><script src="assets/gsap.min.js"></script></head><body>'
         f'<div id="main" data-composition-id="main" data-start="0" data-duration="{composition.frames / 30}" data-width="{composition.width}" data-height="{composition.height}">'
+        + stage_start
         + "".join(scenes)
+        + stage_end
         + sound
         + "</div>"
         + f"<script>window.__timelines=window.__timelines||{{}};window.__stationReady=(async()=>{{const sample=[...document.querySelectorAll('.scene')].map(n=>n.textContent).join(' ');await Promise.all(['{family}','Inter Variable'].flatMap(f=>[400,700].map(w=>document.fonts.load(w+' 36px \\\"'+f+'\\\"',sample))));await document.fonts.ready;{fit}{js}}})();</script></body></html>"

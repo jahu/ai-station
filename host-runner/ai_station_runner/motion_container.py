@@ -152,6 +152,7 @@ def main():
         "has_audio": bool(sound),
         "compilation": compilation,
         "layout": qc["layout"],
+        **({"presenter": qc["presenter"]} if qc.get("presenter") else {}),
         "bounds": bounds,
     }
     (output / "report.json").write_text(json.dumps(report))

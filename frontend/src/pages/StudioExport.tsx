@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import StudioRendererSetup from "./StudioRendererSetup";
+import StudioPresenter, { type PresenterPlacement } from "./StudioPresenter";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clapperboard, Download, Film, Square } from "lucide-react";
@@ -42,6 +43,8 @@ export default function StudioExport({
   const shots = useShotProduction(materialId, revision.id);
   const [selected, setSelected] = useState("");
   const [customSound, setCustomSound] = useState<Artifact | null>(null);
+  const [presenter, setPresenter] = useState<Artifact | null>(null);
+  const [placement, setPlacement] = useState<PresenterPlacement>("auto");
   const [playbackError, setPlaybackError] = useState(false);
   const receipt = useRef<{ fingerprint: string; id: string } | null>(null);
   const key = ["studio-exports", user?.id, materialId, revision.id];
@@ -123,6 +126,14 @@ export default function StudioExport({
     landscape: "1920 × 1080",
     square: "1080 × 1080",
   }[revision.options.aspect];
+  const presenterDuration = Number(
+    presenter?.metadata.duration_seconds ??
+      Number(presenter?.metadata.frames) / Number(presenter?.metadata.fps),
+  );
+  const shortPresenter =
+    !!presenter &&
+    Number.isFinite(presenterDuration) &&
+    presenterDuration + 1 / 30 < frames / 30;
   function refresh() {
     void cache.invalidateQueries({ queryKey: key });
     void cache.invalidateQueries({
@@ -135,6 +146,15 @@ export default function StudioExport({
         revision_id: revision.id,
         bindings,
         soundtrack_artifact_id: silent ? null : soundtrack?.id,
+        ...(presenter
+          ? {
+              presenter: {
+                media: presenter.id,
+                placement,
+                media_start_seconds: 0,
+              },
+            }
+          : {}),
       };
       const fingerprint = JSON.stringify(body);
       if (receipt.current?.fingerprint !== fingerprint)
@@ -172,6 +192,7 @@ export default function StudioExport({
     !renderer.data?.available ||
     missing.length > 0 ||
     short.length > 0 ||
+    shortPresenter ||
     (!silent && !soundtrack);
   return (
     <section className="panel studio-export" aria-label="Export material">
@@ -345,6 +366,20 @@ export default function StudioExport({
             </div>
           )}
         </details>
+      )}
+      <StudioPresenter
+        clip={presenter}
+        placement={placement}
+        seconds={frames / 30}
+        busy={disabled || readOnly || !!active || render.isPending}
+        onClip={setPresenter}
+        onPlacement={setPlacement}
+      />
+      {shortPresenter && (
+        <p className="notice" role="status">
+          Choose a presenter clip that covers the entire film. It will not be
+          looped or frozen to fill missing time.
+        </p>
       )}
       <ErrorNotice
         error={

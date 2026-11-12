@@ -29,6 +29,7 @@ function setup({
   selectedTake = "take-old",
   shared = false,
   sharedTrim = 0,
+  presenterSeconds = 8,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const revision: StudioRevision = {
@@ -111,6 +112,17 @@ function setup({
         return json({ ...root, status: "queued" }, 202);
       }
       if (path.includes("/exports?")) return json(history);
+      if (path.includes("/artifacts?"))
+        return json([
+          {
+            id: "presenter-one",
+            type: "video",
+            mime_type: "video/mp4",
+            title: "My presenter",
+            original_filename: "presenter.mp4",
+            metadata: { duration_seconds: presenterSeconds },
+          },
+        ]);
       if (path.endsWith("/renderer/capabilities"))
         return json({
           available,
@@ -165,6 +177,59 @@ function setup({
   );
   return requests;
 }
+it("freezes the selected presenter and position without replacing the soundtrack", async () => {
+  const requests = setup({ sound: true });
+  fireEvent.click(screen.getByRole("button", { name: "Videos from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Choose My presenter/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+  expect(screen.getByLabelText("Selected presenter clip")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Presenter position"), {
+    target: { value: "right" },
+  });
+  const button = screen.getByRole("button", { name: "Export film" });
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(button);
+  await screen.findByRole("button", { name: "Stop export" });
+  expect(requests[0].body).toMatchObject({
+    soundtrack_artifact_id: "full-mix",
+    presenter: {
+      media: "presenter-one",
+      placement: "right",
+      media_start_seconds: 0,
+    },
+  });
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Remove presenter",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+});
+
+it("blocks short presenter footage and allows removing it without changing the story", async () => {
+  const requests = setup({ presenterSeconds: 1 });
+  fireEvent.click(screen.getByRole("button", { name: "Videos from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Choose My presenter/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+  const button = screen.getByRole("button", { name: "Export film" });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(/It will not be looped or frozen/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Remove presenter" }));
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(button);
+  await screen.findByRole("button", { name: "Stop export" });
+  expect(requests[0].body).not.toHaveProperty("presenter");
+});
+
 it("exports the actual selected take and saved version, then stops through the owned Run", async () => {
   const requests = setup();
   const button = await screen.findByRole("button", { name: "Export film" });

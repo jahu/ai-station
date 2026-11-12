@@ -2,8 +2,10 @@
 
 This increment provides the native rendering component for [Creative Studio](plans/creative-studio.md).
 The local material director and typed API/worker export bridge are now connected;
-see [materials](studio-materials.md). Soundtrack/shot generation and the end-to-end
-export UI remain in development. Existing image/video workspaces remain unchanged.
+see [materials](studio-materials.md). Soundtrack/shot generation, whole-material
+coordination and the export UI are connected on develop. Complete-film quality
+and fresh installation remain in qualification. Existing image/video workspaces
+remain unchanged.
 
 The native Runner accepts a finite composition: full-HD portrait, landscape or
 square, 30 fps, up to ten minutes, bounded editorial scenes and owned Artifact
@@ -88,3 +90,27 @@ require a completed check; failed revalidation clears the cached result. Native
 dispatch independently rechecks the actual image, daemon and frozen observation
 before launch. The workspace polls only transient `checking` state, so initial
 verification enables export without a manual page refresh.
+
+
+## Completed presenter footage
+
+The export panel can select a completed MP4 presenter from Library. A finite
+placement reserves space beside or below the story; the whole story is resized
+rather than obscured. One muted video spans the complete timeline, without
+restarting at scene boundaries. The final film retains its selected soundtrack.
+Use footage speaking the same narration, at least as long as the film. Native
+codec inspection refuses insufficient coverage instead of looping or freezing.
+
+The optional field is absent from legacy serialization. Sources retain the
+same hash/path/owner checks, combined size bound, lineage and dispatch/publication
+revalidation. A new renderer recipe/image is required before activation; merely
+upgrading the API does not qualify an older compiler for presenter exports.
+
+Actual CPU qualification on 2026-11-12 rendered six-second, two-scene films in
+portrait, landscape and square using approved existing showcase footage and a
+calibration soundtrack. The presenter stayed continuous, Chromium verified its
+reserved canvas region and audio muting, all outputs decoded completely, and
+native ownership/cleanup and zero-swap limits were verified. A separate disposable
+account/API/worker/native test published the presenter film with all four source
+artifacts in its lineage. These checks generated no new model output and do not
+qualify automatic narration-aligned avatar production or a publication-ready reel.
