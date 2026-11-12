@@ -337,3 +337,36 @@ maximum; the longer operator workflow budget does not grant agents more runtime.
 Test complete queue coverage, whole-Task Stop, receipt compatibility,
 final result projection and account isolation. Short GPU continuation evidence
 qualifies the primitive; it does not claim a real five-minute film was generated.
+
+## Presenter and avatar postproduction delivery
+
+Preserve the existing film as a versioned input. First add a typed presenter-video
+layer to the existing composition contract and renderer, with an owned Library
+video, bounded placement/size and explicit timing. Keep source hashes, ownership,
+canonical paths, duration/trim/decode budgets and parent-artifact lineage. Optional
+fields must omit their unused value so existing frozen requests remain valid.
+The presenter follows the whole film timeline rather than restarting at each
+scene. Layout reserves readable space for copy; a selected presenter must not
+silently cover titles or replace requested footage.
+
+The first editor slice selects an already completed presenter clip and retains
+the film soundtrack. Its controls explain the need for matching narration.
+Follow with ordinary queued postproduction from a captured presenter image and
+the actual measured narration: build a clean narration stem from approved cues
+and pauses, then reuse the existing Sonic whole-recording Task. Compose its timed
+video over the film with the original mastered soundtrack, retaining a single
+voice. A speech-and-music mix is not the clean narration source. Preserve complete
+spoken passages and account for 25 fps avatar versus 30 fps Studio timing.
+
+The semantic assistant must capture presenter intent and approved image/result
+aliases, retaining the project's identity. Use the existing Task/Run/Events/
+Artifacts and closed child registry for generation, Stop and recovery. No new
+command endpoint or generated HTML. Missing source/model permissions and readiness
+remain explicit. Keep the new renderer recipe and actual image verified before
+switching a live station; old completed films remain available.
+
+Qualification includes schema/hash compatibility, source ownership and changes,
+short/invalid clips, whole-timeline alignment, readable portrait/landscape layouts,
+audio kept once, Stop/recovery and a real complete generated film with presenter.
+The short Library-layer slice alone does not finish automatic avatar delivery or
+the overall publication-quality objective.

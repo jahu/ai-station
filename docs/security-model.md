@@ -1982,6 +1982,15 @@ changed source cannot silently replace a frozen binding. Recovery retains RAM
 when native ownership/cleanup cannot be confirmed and fences missing dispatches
 before release. A lost launch reply is never permission to launch again.
 
+The optional presenter input is another owned completed MP4, never markup, a URL
+or a layout program. Only automatic/right/bottom placement and a bounded source
+offset are accepted. The source must remain live and unchanged through dispatch
+and publication; partial/internal results and unfinished originating Runs are
+refused. Actual decoded duration must cover the complete film. Its audio is
+muted, the final soundtrack stays singular, and Chromium verifies reserved
+nonoverlapping space within the canvas. Source count and the combined two-GiB
+budget include this layer. Existing cancellation/ownership fences remain shared.
+
 The Studio CPU soundtrack assembler accepts only private live WAV Artifact IDs,
 finite mix levels and exact saved revision coordinates. Canonical regular files
 have bounded headers, durations and bytes; hashes are rechecked before/after

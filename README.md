@@ -118,6 +118,10 @@ image/video fixtures. Export the selected takes and complete soundtrack from the
 workspace, review earlier MP4s and download the result. The export panel can
 activate a compatible engine already installed on the station, with private
 setup history and Stop; fresh-engine installation is still in development.
+The export panel on develop can also add a completed avatar/presenter clip from
+Library, with space beside or below the story. It keeps the film soundtrack and
+requires enough footage for the complete edit. Automatically generating that
+presenter from the film's narration is the next postproduction step.
 A complete-material coordinator now queues sound, measured timing, missing shots
 and export, with whole-production Stop and continuation that reuses complete
 media and spoken cues. Generated film/voice quality and fresh installation

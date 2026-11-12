@@ -50,6 +50,13 @@ def check_source(installed, source, path, request):
         stream = streams[0]
         if not 1 <= stream.get("width", 0) * stream.get("height", 0) <= 4096**2:
             raise ValueError("Video dimensions exceed the motion profile")
+        presenter = request.composition.presenter
+        if (
+            presenter
+            and presenter.media == source.artifact_id
+            and presenter.media_start_seconds + request.composition.frames / 30 > seconds + 1 / 30
+        ):
+            raise ValueError("The presenter clip must cover the entire film without looping or freezing")
         for scene in request.composition.scenes:
             if (
                 scene.media == source.artifact_id

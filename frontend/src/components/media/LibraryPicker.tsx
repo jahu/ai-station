@@ -27,7 +27,7 @@ export default function LibraryPicker({
   busy,
   onSelect,
 }: {
-  kind: "image" | "audio" | "document";
+  kind: "image" | "video" | "audio" | "document";
   audioMode?: "voice" | "transcription";
   documentMode?: "data" | "reference";
   existing: string[];
@@ -57,7 +57,12 @@ export default function LibraryPicker({
           ? canReadDocument(a.mime_type, a.size_bytes)
           : a.metadata.data_input === true &&
             /\.(csv|xlsx|json)$/i.test(a.original_filename)
-        : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
+        : kind === "video"
+          ? a.type === "video" &&
+            a.mime_type === "video/mp4" &&
+            !a.metadata.partial &&
+            !a.metadata.internal_media
+          : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
   );
   const headingId = useId();
   const labelId = useId();
@@ -85,9 +90,11 @@ export default function LibraryPicker({
               : "Data from Library"
             : kind === "image"
               ? "Images from Library"
-              : audioMode === "transcription"
-                ? "Recordings from Library"
-                : "Voice from Library"}
+              : kind === "video"
+                ? "Videos from Library"
+                : audioMode === "transcription"
+                  ? "Recordings from Library"
+                  : "Voice from Library"}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -101,9 +108,11 @@ export default function LibraryPicker({
                   : "Choose data files"
                 : kind === "image"
                   ? "Choose image references"
-                  : audioMode === "transcription"
-                    ? "Choose a recording"
-                    : "Choose a voice recording"}
+                  : kind === "video"
+                    ? "Choose a video"
+                    : audioMode === "transcription"
+                      ? "Choose a recording"
+                      : "Choose a voice recording"}
             </Dialog.Title>
             <Dialog.Close
               className="icon-button"
@@ -119,9 +128,11 @@ export default function LibraryPicker({
                 : "Choose stored CSV, Excel or JSON inputs. Original files remain unchanged."
               : kind === "image"
                 ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
-                : audioMode === "transcription"
-                  ? "Choose audio to transcribe locally. Duration is checked by the transcription job."
-                  : "Select a PCM WAV recording for speech or portrait animation."}
+                : kind === "video"
+                  ? "Choose a completed MP4 from your Library. The original file is kept."
+                  : audioMode === "transcription"
+                    ? "Choose audio to transcribe locally. Duration is checked by the transcription job."
+                    : "Select a PCM WAV recording for speech or portrait animation."}
           </Dialog.Description>
           <label className="model-search">
             <Search size={16} />
@@ -181,8 +192,8 @@ export default function LibraryPicker({
                         )
                       }
                     >
-                      {kind === "image" ? (
-                        <ArtifactThumbnail id={a.id} kind="image" />
+                      {kind === "image" || kind === "video" ? (
+                        <ArtifactThumbnail id={a.id} kind={kind} />
                       ) : (
                         <div className="library-picker-audio">
                           {kind === "document" ? (
@@ -198,7 +209,7 @@ export default function LibraryPicker({
                           ? "Already attached"
                           : chosen >= 0
                             ? `Selected ${chosen + 1}`
-                            : kind === "image"
+                            : kind === "image" || kind === "video"
                               ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
                               : kind === "document"
                                 ? documentMode === "reference"

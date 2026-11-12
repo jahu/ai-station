@@ -9,7 +9,15 @@ from datetime import datetime, timedelta
 from pathlib import PurePosixPath
 from uuid import UUID
 
-from ai_station_runner.motion_contract import RAM_MIB, Composition, MotionRequest, Scene, Source, Style
+from ai_station_runner.motion_contract import (
+    RAM_MIB,
+    Composition,
+    MotionRequest,
+    Presenter,
+    Scene,
+    Source,
+    Style,
+)
 from fastapi import HTTPException
 from pydantic import Field, StrictInt, model_validator
 from sqlalchemy import select
@@ -41,6 +49,7 @@ class RenderRequest(Fields):
     revision_id: UUID
     bindings: list[Binding] = Field(default_factory=list, max_length=60)
     soundtrack_artifact_id: UUID | None = None
+    presenter: Presenter | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def distinct(self):
@@ -109,7 +118,7 @@ def audio_snapshot(session, identity, frames, *, verify=False):
     return value
 
 
-def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=False):
+def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=False, presenter=None):
     plan = Storyboard.model_validate(revision.storyboard)
     selected = {b.scene: str(b.artifact_id) for b in bindings}
     if any(i >= len(plan.scenes) for i in selected):
@@ -165,6 +174,12 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
     if soundtrack_id:
         source = audio_snapshot(session, soundtrack_id, plan.frames, verify=verify)
         sources[source["artifact_id"]] = source
+    if presenter:
+        presenter = Presenter.model_validate(presenter)
+        source = source_snapshot(session, presenter.media, verify=verify, complete=True)
+        if source["kind"] != "video":
+            raise ValueError("Choose a complete MP4 presenter clip from your Library")
+        sources[source["artifact_id"]] = Source.model_validate(source).model_dump(mode="json")
     identity = revision.project_snapshot.get("identity") or {}
     dimensions = {"portrait": (1080, 1920), "landscape": (1920, 1080), "square": (1080, 1080)}
     width, height = dimensions[revision.options["aspect"]]
@@ -178,6 +193,7 @@ def composition_inputs(session, revision, bindings, soundtrack_id, *, verify=Fal
             motion="dynamic" if revision.options["format"] == "reel" else "gentle",
         ),
         scenes=scenes,
+        presenter=presenter,
     )
     if sum(s["size_bytes"] for s in sources.values()) > 2 * 1024**3:
         raise ValueError("Keep one material within two GiB of source media")
@@ -214,7 +230,7 @@ def create_render(session, material_id, body, *, task=None, parent_run_id=None, 
         return prior
     try:
         composition, sources = composition_inputs(
-            session, revision, body.bindings, body.soundtrack_artifact_id
+            session, revision, body.bindings, body.soundtrack_artifact_id, presenter=body.presenter
         )
     except (ValueError, OSError, wave.Error, EOFError) as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -275,6 +291,7 @@ def create_render(session, material_id, body, *, task=None, parent_run_id=None, 
             else None,
             "composition": composition,
             "sources": sources,
+            **({"presenter": body.presenter.model_dump(mode="json")} if body.presenter else {}),
             "observation": ready["observation"],
             "execution_deadline_at": deadline.isoformat(),
             "parent_artifact_ids": sorted(sources),
@@ -359,6 +376,7 @@ class StudioRenderExecutor(HostMediaExecutor):
             [Binding.model_validate(b) for b in run.parameters["bindings"]],
             run.parameters["soundtrack_artifact_id"],
             verify=True,
+            presenter=run.parameters.get("presenter"),
         )
         if (
             composition != run.parameters["composition"]
@@ -415,5 +433,10 @@ class StudioRenderExecutor(HostMediaExecutor):
             != (request.composition.width, request.composition.height)
             or report.get("fps") != 30
             or report.get("has_audio") is not bool(request.audio_artifact_id)
+            or request.composition.presenter
+            and any(
+                (report.get("presenter") or {}).get(key) is not True
+                for key in ("reserved", "bounded", "muted")
+            )
         ):
             raise ValueError("The Studio export does not match its frozen request")

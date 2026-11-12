@@ -94,13 +94,22 @@ def context(session, row):
     }
 
 
-def source_snapshot(session, identity, *, verify=False):
+def source_snapshot(session, identity, *, verify=False, complete=False):
     from app.config import get_settings
     from app.timelines import verify_bytes
 
     item = session.get(Artifact, str(identity), populate_existing=True)
     if item is None or item.trashed_at or item.purged_at or item.purge_run_id:
         raise ValueError("Choose available media from your Library")
+    if complete:
+        origin = session.get(Run, item.run_id) if item.run_id else None
+        if (
+            item.metadata_json.get("partial")
+            or item.metadata_json.get("internal_media")
+            or origin
+            and origin.status != "succeeded"
+        ):
+            raise ValueError("Choose a complete take from a successful Run")
     allowed = {"image": {"image/png", "image/jpeg", "image/webp"}, "video": {"video/mp4"}}
     if item.mime_type not in allowed.get(item.artifact_type, set()):
         raise ValueError("Storyboard references support inspected images and MP4 footage")

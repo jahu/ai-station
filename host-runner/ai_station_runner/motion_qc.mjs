@@ -52,9 +52,21 @@ try {
   await page.setViewport({ ...canvas, deviceScaleFactor: 1 });
   const result = await page.evaluate(async () => {
     await document.fonts.ready;
-    return { layout: window.__stationLayout, fonts: [...document.fonts].filter(f => f.status !== "unloaded").map(f => ({ family: f.family, weight: f.weight, status: f.status })), text: [...document.querySelectorAll('.body,footer')].slice(0, 4).map(node => ({ content: node.textContent, font: getComputedStyle(node).font, letterSpacing: getComputedStyle(node).letterSpacing, width: node.getBoundingClientRect().width, scrollWidth: node.scrollWidth })) };
+    let presenter;
+    const frame = document.querySelector('.presenter-frame');
+    if (frame) {
+      const stage = document.querySelector('.story-stage').getBoundingClientRect();
+      const box = frame.getBoundingClientRect();
+      const canvas = document.querySelector('#main').getBoundingClientRect();
+      const video = frame.querySelector('video');
+      presenter = { reserved: stage.right <= box.left + 1 || stage.bottom <= box.top + 1,
+        bounded: box.left >= 0 && box.top >= 0 && box.right <= canvas.right + 1 && box.bottom <= canvas.bottom + 1,
+        muted: video.muted && video.dataset.volume === '0',
+        width: box.width, height: box.height };
+    }
+    return { ...(presenter ? { presenter } : {}), layout: window.__stationLayout, fonts: [...document.fonts].filter(f => f.status !== "unloaded").map(f => ({ family: f.family, weight: f.weight, status: f.status })), text: [...document.querySelectorAll('.body,footer')].slice(0, 4).map(node => ({ content: node.textContent, font: getComputedStyle(node).font, letterSpacing: getComputedStyle(node).letterSpacing, width: node.getBoundingClientRect().width, scrollWidth: node.scrollWidth })) };
   });
-  if (errors.length || blocked.length || result.fonts.some(f => f.status === "error") || !result.layout?.length || result.layout.some(item => item.overflow)) throw new Error(JSON.stringify({ reason: "Composition quality check failed", errors, blocked, ...result }));
+  if (errors.length || blocked.length || result.fonts.some(f => f.status === "error") || !result.layout?.length || result.layout.some(item => item.overflow) || (result.presenter && (!result.presenter.reserved || !result.presenter.bounded || !result.presenter.muted))) throw new Error(JSON.stringify({ reason: "Composition quality check failed", errors, blocked, ...result }));
   if (snapshots) {
     fs.mkdirSync(snapshots, { recursive: true });
     const times = await page.evaluate(() => [...document.querySelectorAll('.scene')].map(node => Number(node.dataset.sceneStart) + Math.min(1, Number(node.dataset.sceneDuration) / 2)));
