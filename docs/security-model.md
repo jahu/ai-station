@@ -1,3 +1,8 @@
+Accounts without personal image defaults inherit only the closed revision/model-ID
+projection of the retained station image-default setting. Model definitions are
+shared; no administrator UserSetting or other station setting is exposed. Personal
+overrides take precedence and new Runs freeze their effective selection.
+
 The photo adapter may honor the native operator's existing `AI_STATION_SD_CLI`
 setting through its owned import wrapper. The configured executable is checked
 before launch and import; clients cannot supply it in a photo request. Original

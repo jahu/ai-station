@@ -50,7 +50,9 @@ the input of a recurring-agent draft for your review. When a required choice is
 unclear, the assistant can ask a focused question and continue with the existing
 references. Separate requested pictures are separate generated results.
 Existing image agents expose compatible installed models for Generate, Edit and
-Recompose directly beside the image operation.
+Recompose directly beside the image operation. Accounts without personal image
+defaults inherit the station's configured generators; personal choices take
+precedence. New requests keep a snapshot of the selected model.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
 The [website-task and stream recovery repair](docs/plans/assistant-website-recovery.md)
 tracks working-deliverable planning, structured tool failures and claim-fenced

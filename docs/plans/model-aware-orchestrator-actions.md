@@ -131,3 +131,73 @@ contract/compiler from agent_image_scenes where useful, rather than fixed person
 or camera templates. Then repeat the ordinary two-output conversation and inspect
 both actual views. A successfully created image file is not proof that the visual
 change succeeded; full visual acceptance and goal completion remain pending.
+
+## Confirmed account-default regression — 2026-11-12
+
+The historical qualification report already records Qwen failing restaging with
+Polish/English briefs, lower CFG and a structured target scene. The visually
+accepted conversation used Krea/Lustify as the image engine; Qwen 9B was its chat
+planner. Repeating those sampling/language experiments was unnecessary.
+
+The original failed account has no personal image-default row. The retained
+station `image_model_defaults` setting selects the qualified installed Krea model,
+but account-scoped reads ignore it and return hard-coded Qwen defaults. This
+explains why the user's new-account path differs from the qualified path.
+
+Restore inheritance of this one station setting when no personal row exists.
+Project only revision and operation-to-shared-model IDs; never read another
+account's settings or expose arbitrary station settings. Personal defaults and
+explicit model choices retain precedence. A first personal write must start from
+the inherited revision/choices so optimistic concurrency and unchanged modes stay
+correct. Existing frozen Runs retain their original model catalog and policy;
+inheritance affects new requests only. Invalid or unavailable configured choices
+must not silently fall back to another model. No new schema, engine or download.
+
+Test two accounts, isolation of personal overrides and unrelated settings,
+first-write/stale revisions and real controller freezing/dispatch. Repeat the
+original two-picture request through the ordinary worker after preserving rollout.
+Do not assume a new prompt compiler alone fixes the already documented Qwen issue.
+
+The restored-default real conversation produced two separate successful Krea Runs
+from the same original, without rejected decisions. Its second brief, however,
+copied an invented alternative (“back or right profile”) from the inferred outcome;
+the renderer combined both depictions. Two files alone do not satisfy the requested
+single-view variants. Keep intent descriptions faithful without invented competing
+alternatives; each tool call must choose one concrete visual brief. Delegated
+creative details may be chosen; genuinely material missing preferences use ask_user.
+Preserve only requested invariants and do not merge separate variants into a
+composite unless requested. This is subject-neutral model guidance, not a keyword
+filter, pose list, output crop or post-hoc replacement. Repeat the full real case.
+
+### Final ordinary-worker qualification
+
+The deployed account-default and concrete-brief changes completed the original
+request through the ordinary account-scoped conversation and workers: all 14 Runs
+succeeded, with two separate Krea Recompose Runs and two distinct image artifacts.
+Both artifacts retain the same original source as their sole parent; the second
+does not accidentally edit the first. There were no rejected controller decisions.
+The native Runner confirms both owned photo processes exited. No test supplied
+invented plans, observations or rendered results.
+
+Both actual files were visually inspected. Each contains one depiction, without
+the earlier composite or Qwen texture problem; recognizable reference features
+remain. Framing and view differ, but the changes are conservative. This qualifies
+the repaired dispatch, output count, provenance and inherited model selection,
+not a guarantee of exact identity or arbitrary camera control. The planner still
+occasionally expresses examples as alternatives despite the concrete-brief
+guidance, so that guidance is not described as a deterministic visual validator.
+Do not convert this limitation into subject-specific templates or silently switch
+an explicitly selected model. Historical Qwen restaging quality remains a separate
+known issue; changing its engine alone did not repair it.
+
+The term "SDK" in the engine investigation above means the private native runtime
+bundle (`sd-cli` plus its matching libraries), not an additional model or a change
+to host drivers. Private prompts, source images and QA results remain outside Git.
+
+Final reviewed application code: Ruff lint/format and all 117 tests across the
+13 affected account-image, image-model, controller, intent and ReAct modules pass.
+The production Docker image was built and deployed with that same application
+code; subsequent changes only record this qualification. A full repository pytest
+invocation was interrupted in favor of those focused equivalent checks and is not
+counted as a full-suite pass. Earlier native follow-up results above apply to the
+unchanged native code, rather than a newly repeated native test run.

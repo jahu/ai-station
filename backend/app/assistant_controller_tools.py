@@ -25,6 +25,12 @@ class Images(Instruction):
 
 
 class ImageOperation(Images):
+    instruction: str = Field(
+        min_length=1,
+        max_length=10000,
+        description="One self-contained concrete visual brief for this result. Resolve delegated creative choices; do not pass alternative possibilities to the renderer or combine separate variants into a composite unless requested. Preserve only requested invariants and state the intended change relative to the references.",
+    )
+
     image_model: Alias | None = Field(
         default=None,
         description="An exact installed image_models alias. Honor the user's named model. Omit to use the configured default for this operation; a recurring draft from a newly produced result retains that compatible result model unless explicitly overridden.",

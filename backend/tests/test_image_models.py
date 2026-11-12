@@ -153,3 +153,31 @@ def test_models_registry_identifies_image_adapter_without_llama_controls(session
     assert record["image_backend"] == "krea2"
     assert record["compatibility"]["runtime"] == "ComfyUI · Krea 2"
     assert record["compatibility"]["adapter"] == "host-media"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        {"revision": True, "choices": {}},
+        {"revision": 0, "choices": {"secret": "private"}},
+        {"revision": 0, "choices": {"t2i": "private-secret-not-a-model"}},
+    ],
+)
+def test_invalid_default_coordinates_are_rejected_without_disclosing_values(value):
+    from app.image_models import _defaults_value
+
+    with pytest.raises(HTTPException) as error:
+        _defaults_value(value)
+    assert error.value.status_code == 409
+    assert "private" not in str(error.value.detail)
+
+
+def test_inherited_identifiers_use_the_same_canonical_aliases_as_the_frozen_catalog():
+    from uuid import uuid4
+
+    from app.image_models import _defaults_value
+
+    identity = uuid4()
+    value = _defaults_value({"revision": 5, "choices": {"recompose": identity.hex.upper()}})
+    assert value["choices"]["recompose"] == str(identity)
