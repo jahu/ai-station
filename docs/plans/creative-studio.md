@@ -682,3 +682,18 @@ and the baked-in label of an illustration in a near-square panel. The existing
 intentional crop-safe photography. There is no runtime content classifier or
 forced change to existing revisions; real layout/generation qualification remains
 required. Preserve the complete baseline film for comparison.
+
+Actual candidate qualification now passes ordinary local planning with the same
+original brief, selected model and inspected six-second source, without a
+prefilled storyboard or correction feedback. It produced six scenes, 176 spoken
+words and exactly 2,250 frames. Source-aware fitting retained the six-second
+Library shot and four-second generated-video beat; elastic stills absorbed the
+remaining time. Three complete informational illustrations selected `contain`.
+The first new photograph was generated through the ordinary saved-shot/image
+workflow with the same installed LUSTIFY definition. Inspection found a coherent
+blue/cream workstation photograph with a clean dark display and no former
+pseudo-writing. The exact deployed candidate passed its packaged API/migration
+and source-fitting probes. These are measured planning and visual-generation
+results, not a claim that the new plan has already been fully produced or that
+every future image is guaranteed free of lettering. The original complete film,
+soundtrack and successful footage remain preserved for focused postproduction.
