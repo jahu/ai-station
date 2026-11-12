@@ -131,3 +131,29 @@ contract/compiler from agent_image_scenes where useful, rather than fixed person
 or camera templates. Then repeat the ordinary two-output conversation and inspect
 both actual views. A successfully created image file is not proof that the visual
 change succeeded; full visual acceptance and goal completion remain pending.
+
+## Confirmed account-default regression — 2026-11-12
+
+The historical qualification report already records Qwen failing restaging with
+Polish/English briefs, lower CFG and a structured target scene. The visually
+accepted conversation used Krea/Lustify as the image engine; Qwen 9B was its chat
+planner. Repeating those sampling/language experiments was unnecessary.
+
+The original failed account has no personal image-default row. The retained
+station `image_model_defaults` setting selects the qualified installed Krea model,
+but account-scoped reads ignore it and return hard-coded Qwen defaults. This
+explains why the user's new-account path differs from the qualified path.
+
+Restore inheritance of this one station setting when no personal row exists.
+Project only revision and operation-to-shared-model IDs; never read another
+account's settings or expose arbitrary station settings. Personal defaults and
+explicit model choices retain precedence. A first personal write must start from
+the inherited revision/choices so optimistic concurrency and unchanged modes stay
+correct. Existing frozen Runs retain their original model catalog and policy;
+inheritance affects new requests only. Invalid or unavailable configured choices
+must not silently fall back to another model. No new schema, engine or download.
+
+Test two accounts, isolation of personal overrides and unrelated settings,
+first-write/stale revisions and real controller freezing/dispatch. Repeat the
+original two-picture request through the ordinary worker after preserving rollout.
+Do not assume a new prompt compiler alone fixes the already documented Qwen issue.
