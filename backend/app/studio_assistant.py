@@ -47,10 +47,27 @@ def request_parameters(session, root, raw):
         raise ValueError("This Studio outcome is already fulfilled")
     if root.parameters["controller_provider"].get("location") != "local":
         raise ValueError("Studio direction requires the selected local model")
+    intent = StudioIntent.model_validate(outcome["studio"])
+    source = None
+    captured_source = None
+    if intent.source_material:
+        from app.studio_conversation import source_material
+
+        if root.parameters.get("controller_studio_revision_policy") != "source-v1":
+            raise ValueError("This request did not capture Studio revision authority")
+        captured_source = root.parameters.get("controller_studio_materials", {}).get(intent.source_material)
+        if captured_source is None:
+            raise ValueError("Choose a captured Studio material from this conversation")
+        if len(args.instruction) > 8000:
+            raise ValueError("Keep revision feedback within 8000 characters")
+        source = source_material(
+            session, captured_source, owner_id=root.owner_id, conversation_id=root.conversation_id
+        )
     chosen = selected_context(
         session,
         root.parameters.get("controller_creative_projects", {}),
-        StudioIntent.model_validate(outcome["studio"]),
+        intent,
+        source=source,
     )
     entries = catalog(session, root)
     required = [
@@ -74,6 +91,7 @@ def request_parameters(session, root, raw):
         "title": args.title,
         "outcome_index": index,
         "reference_artifact_ids": references,
+        **({"source_material": captured_source} if captured_source else {}),
         **({"presenter": presenter} if presenter else {}),
         **chosen,
         "model": root.parameters["controller_request"]["model"],
@@ -242,7 +260,19 @@ class AssistantStudioExecutor:
             intent = StudioIntent.model_validate(
                 controller.metadata_json["controller_outcomes"][params["outcome_index"]]["studio"]
             )
-            selected_context(session, controller.parameters.get("controller_creative_projects", {}), intent)
+            source = None
+            if params.get("source_material"):
+                from app.studio_conversation import source_material
+
+                source = source_material(
+                    session,
+                    params["source_material"],
+                    owner_id=run.owner_id,
+                    conversation_id=run.conversation_id,
+                )
+            selected_context(
+                session, controller.parameters.get("controller_creative_projects", {}), intent, source=source
+            )
             aliases = next(
                 s["arguments"]["references"]
                 for s in controller.metadata_json["controller_steps"]
@@ -256,17 +286,45 @@ class AssistantStudioExecutor:
             ):
                 raise ValueError("The frozen Studio references changed")
             # One transaction publishes material, planning Task and the receipt.
-            material = create_material(
-                session,
-                Create(
-                    client_request_id=uuid5(UUID(run.id), "material"),
-                    title=params["title"],
-                    brief=params["instruction"],
-                    creative_project_id=params["creative_project_id"],
-                    options=params["options"],
-                ),
-            )
+            parent = None
+            brief = source[1].brief if source else params["instruction"]
+            if source and params["creative_project_id"] == source[0].creative_project_id:
+                material, parent, _ = source
+            else:
+                material = create_material(
+                    session,
+                    Create(
+                        client_request_id=uuid5(UUID(run.id), "material"),
+                        title=params["title"],
+                        brief=brief,
+                        creative_project_id=params["creative_project_id"],
+                        options=params["options"],
+                    ),
+                )
+                if source:
+                    from app.studio_materials import digest, publish_revision
+                    from app.studio_schema import Storyboard
+
+                    original = source[1]
+                    parent = publish_revision(
+                        session,
+                        material,
+                        Storyboard.model_validate(original.storyboard),
+                        client_request_id=uuid5(UUID(run.id), "source-copy"),
+                        request_sha256=digest(params["source_material"]),
+                        frozen={
+                            "brief": original.brief,
+                            "options": original.options,
+                            "project_snapshot": original.project_snapshot,
+                        },
+                    )
             run.metadata_json = {**run.metadata_json, "studio_material_id": material.id}
+            if source:
+                run.metadata_json = {
+                    **run.metadata_json,
+                    "studio_source_material_id": source[0].id,
+                    "studio_source_revision_id": source[1].id,
+                }
             plan = create_plan(
                 session,
                 material.id,
@@ -274,11 +332,13 @@ class AssistantStudioExecutor:
                     client_request_id=uuid5(UUID(run.id), "plan"),
                     expected_version=material.version,
                     model=params["model"],
+                    parent_revision_id=parent.id if parent else None,
+                    feedback=params["instruction"] if source else "",
                     reference_artifact_ids=params["reference_artifact_ids"],
                 ),
                 provider_snapshot=frozen_provider,
                 frozen={
-                    "brief": params["instruction"],
+                    "brief": brief,
                     "options": params["options"],
                     "project_snapshot": params["project_snapshot"],
                 },

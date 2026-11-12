@@ -1,6 +1,7 @@
 """Real ReAct/Run engine, isolated accounts and fake media; no inference qualification."""
 
 import json
+from copy import deepcopy
 from datetime import timedelta
 
 import pytest
@@ -59,6 +60,12 @@ def director(monkeypatch):
             context = json.loads(messages[1]["content"])
             state["plans"].append(context)
             audio = context["options"]["audio"]
+            if state.get("revise_from_parent") and context.get("prior_storyboard"):
+                revised = deepcopy(context["prior_storyboard"])
+                revised["title"] = "A revised prism film"
+                revised["scenes"][0]["title"] = "Look at it differently"
+                yield json.dumps(revised)
+                return
             yield json.dumps(
                 board(
                     audio,

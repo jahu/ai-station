@@ -148,6 +148,33 @@ supports local frame-seeking render and HTML media tracks. Pin and inspect the
 actual installed version before choosing command flags; do not install from a
 moving `latest` during a render or reuse unrelated project runtime ownership.
 
+## Current acceptance audit — 2026-11-12
+
+The dated sections below retain earlier failures and qualification boundaries;
+their historical “remaining” lists are not a current execution checklist.
+Fresh renderer preparation, actual Stop/restart recovery and a first-use export
+are qualified. Conversation-created portrait/music and landscape/silent outputs,
+a standalone voiced reel, a complete educational voice/music film and an
+integrated generated presenter have actual private Library evidence.
+
+The educational film has now been revoiced and exported at 1920×1080, 2250 frames
+and exactly 75 seconds, retaining all original visual sources. Independent local
+transcription recovered all 179 words without edits. The owner approved pace,
+expression and narrator continuity across the complete film. This supersedes the
+95.633-second narration-quality rejection without deleting that earlier result.
+[Performance and timing](studio-measured-timing.md) describes the generic changes.
+Shared same-seed speech calls and a fixed generated-voice anchor apply beyond
+Studio; supplied recordings retain their verified voice reference.
+
+An audit found that the conversation bridge still creates a new material for
+every production request. [Source-aware conversation revisions](studio-conversation-revisions.md)
+are now in progress: verified source capture and parented/brand-copy planning
+have temporary-account tests; completed-media reuse, full lifecycle qualification
+and a real ordinary conversation follow-up are still pending. Do not advertise
+that development branch as delivered. Complete publication-quality review and
+the requirement-by-requirement acceptance audit remain separate from component
+checks. Private test media are not approved for website/repository publication.
+
 ## Delivery progress
 
 - Project registry and identity workspace merged to develop in #713/#714.

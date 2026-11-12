@@ -5,9 +5,10 @@ These boundaries retain one frozen brand/options source and canonical media alia
 """
 
 import json
+from copy import deepcopy
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, StrictBool, model_validator
 from sqlalchemy import select
 
 from app.creative_projects import Defaults, get_project, snapshot
@@ -22,7 +23,9 @@ CONTEXT_BYTES = 24000
 
 class StudioIntent(Fields):
     project: Alias | None = None
-    project_resolution: Literal["standalone", "selected", "clarify"] = "standalone"
+    project_resolution: Literal["standalone", "selected", "clarify", "inherit"] = "standalone"
+    source_material: Alias | None = Field(default=None, exclude_if=lambda v: v is None)
+    clear_narration_words: StrictBool = Field(default=False, exclude_if=lambda v: not v)
     format: Literal["reel", "presentation", "film"] | None = None
     aspect: Literal["portrait", "landscape", "square"] | None = None
     audio: Literal["voice_music", "voice", "music", "silent"] | None = None
@@ -31,6 +34,10 @@ class StudioIntent(Fields):
 
     @model_validator(mode="after")
     def resolved(self):
+        if self.project_resolution == "inherit" and not self.source_material:
+            raise ValueError("Choose a captured source material before inheriting its project")
+        if self.clear_narration_words and (not self.source_material or self.narration_words is not None):
+            raise ValueError("Clear an existing script limit or replace it, not both")
         if (self.project_resolution == "selected") != bool(self.project):
             raise ValueError(
                 "Select one supplied creative-project alias or leave the project unresolved/standalone"
@@ -115,11 +122,20 @@ def resolve_project_alias(project, catalog):
     return matches[0]
 
 
-def selected_context(session, catalog, intent):
+def selected_context(session, catalog, intent, *, source=None):
     """Only a server-captured alias selects a brand; overrides come from frozen intent."""
     if intent.project_resolution == "clarify":
         raise ValueError("Clarify the intended creative project before producing material")
+    if intent.source_material and source is None:
+        raise ValueError("The captured source material is missing")
     frozen = None
+    if intent.project_resolution == "inherit":
+        if source is None:
+            raise ValueError("The captured source material is missing")
+        _, revision, _ = source
+        frozen = revision.project_snapshot or None
+        if frozen:
+            get_project(session, frozen["id"], active=True)
     if intent.project:
         entry = catalog.get(intent.project)
         if entry is None:
@@ -128,7 +144,15 @@ def selected_context(session, catalog, intent):
         # Recheck scope and archival authority; a historical identity snapshot
         # grants no permission to a removed, foreign or archived project.
         get_project(session, frozen["id"], active=True)
-    base = dict(frozen["defaults"]) if frozen else Defaults().model_dump()
+    base = (
+        dict(source[1].options)
+        if source is not None
+        else dict(frozen["defaults"])
+        if frozen
+        else Defaults().model_dump()
+    )
+    if intent.clear_narration_words:
+        base.pop("narration_words", None)
     for key in ("format", "aspect", "audio", "duration_seconds"):
         if (value := getattr(intent, key)) is not None:
             base[key] = value
@@ -136,7 +160,7 @@ def selected_context(session, catalog, intent):
         base["narration_words"] = intent.narration_words.model_dump()
     return {
         "creative_project_id": frozen["id"] if frozen else None,
-        "project_snapshot": frozen or {},
+        "project_snapshot": deepcopy(frozen) if frozen else {},
         "options": StudioOptions.model_validate(base).model_dump(),
     }
 

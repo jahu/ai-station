@@ -282,6 +282,14 @@ def enqueue(session, conversation, body, *, commit=True):
     from app.studio_assistant_contract import project_catalog
 
     creative_catalog = project_catalog(session, owner_id=conversation.owner_id, location=snapshot["location"])
+    from app.studio_conversation import material_catalog
+
+    studio_catalog = material_catalog(
+        session,
+        owner_id=conversation.owner_id,
+        conversation_id=conversation.id,
+        location=snapshot["location"],
+    )
     task = create_task(
         session,
         title=body.content[:80],
@@ -305,6 +313,8 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_image_policy": "configured-default-v2",
             "controller_studio_policy": "studio-v1",
             "controller_studio_timing_policy": "fit",
+            "controller_studio_revision_policy": "source-v1",
+            "controller_studio_materials": studio_catalog,
             "controller_creative_projects": creative_catalog,
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},
@@ -463,9 +473,11 @@ def decision_context(session, root):
     }
     entries = public_catalog(catalog(session, root))
     from app.studio_assistant_contract import public_projects
+    from app.studio_conversation import public_materials
 
     return {
         "creative_projects": public_projects(root.parameters.get("controller_creative_projects", {})),
+        "studio_materials": public_materials(root.parameters.get("controller_studio_materials", {})),
         "instruction": root.parameters["content"],
         "current_time": utcnow().isoformat(),
         "recent_context": root.parameters.get("planner_context", []),
