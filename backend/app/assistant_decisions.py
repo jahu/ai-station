@@ -520,23 +520,58 @@ class AssistantDecisionExecutor:
                     intent_messages = planning_messages(context)
                 for attempt in range(2):
                     text = asyncio.run(infer(session, run, intent_messages))
+
+                    def record_intent_proposal():
+                        # Structured intent candidates belong to this private
+                        # owned Run, never the ReAct scratchpad/public activity.
+                        run.parameters = {
+                            **run.parameters,
+                            "intent_attempts": [
+                                *run.parameters.get("intent_attempts", [])[-1:],
+                                {"attempt": attempt + 1, "response": text},
+                            ],
+                        }
+
+                    asyncio.run(database_step(session, run, claim, deadline, record_intent_proposal))
                     try:
                         intent = (validate_plan if react else validate_intent)(text, context)
                         break
                     except ValueError as exc:
+                        from app.assistant_intents import validation_diagnostic
+
+                        detail = validation_diagnostic(exc)
+                        asyncio.run(
+                            database_step(
+                                session,
+                                run,
+                                claim,
+                                deadline,
+                                lambda: append_event(
+                                    session,
+                                    run.id,
+                                    "assistant.intent.rejected",
+                                    {
+                                        "attempt": attempt + 1,
+                                        "retrying": not bool(attempt),
+                                        "validation": detail,
+                                    },
+                                ),
+                            )
+                        )
                         if attempt:
                             raise ProviderError(
-                                "Could not determine the requested outcomes; no tool was executed"
+                                "Could not determine the requested outcomes; no tool was executed. " + detail
                             ) from exc
                         correction = {
                             "role": "user",
                             "content": "Return a corrected outcome object matching outcome_schema. Validation: "
-                            + str(exc)[:1000],
+                            + detail,
                         }
+                        rejected = {"role": "assistant", "content": text}
                         intent_messages = (
-                            [*intent_messages[:-1], correction, intent_messages[-1]]
+                            [*intent_messages[:-1], rejected, correction, intent_messages[-1]]
                             if react
-                            else [*intent_messages[:2], correction]
+                            else [*intent_messages[:2], rejected, correction]
                         )
                 asyncio.run(database_step(session, run, claim, deadline, lambda: save_intent(intent)))
             else:
