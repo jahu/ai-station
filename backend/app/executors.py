@@ -63,6 +63,7 @@ from app.model_download_job import DownloadExecutor
 from app.model_hub import ModelHubExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
+from app.motion_setup_job import MotionSetupExecutor
 from app.music import MusicExecutor
 from app.music_setup_job import MusicSetupExecutor
 from app.native_llama_setup_job import NativeLlamaSetupExecutor
@@ -87,6 +88,13 @@ from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.station_update_install import StationUpdateExecutor
 from app.station_updates import StationUpdateCheckExecutor
+from app.studio_assistant import AssistantStudioExecutor
+from app.studio_audio_production import StudioAudioStepExecutor, StudioVoiceReferenceExecutor
+from app.studio_director import StudioDirector
+from app.studio_narration import StudioNarrationExecutor
+from app.studio_production import StudioProductionExecutor
+from app.studio_render import StudioRenderExecutor
+from app.studio_soundtrack import StudioSoundtrackExecutor
 from app.summary_executor import SummaryExecutor
 from app.timeline_waveforms import WaveformExecutor
 from app.timelines import TimelineExecutor
@@ -338,6 +346,8 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    AssistantStudioExecutor.name: AssistantStudioExecutor(),
+    StudioProductionExecutor.name: StudioProductionExecutor(),
     "assistant_controller": AssistantControllerExecutor(),
     "assistant_decision": AssistantDecisionExecutor(),
     "assistant_web": AssistantWebExecutor(),
@@ -354,6 +364,7 @@ EXECUTORS = {
     "native_llama_setup": NativeLlamaSetupExecutor(),
     "model_bundle_download": BundleDownloadExecutor(),
     "runtime_setup": RuntimeSetupExecutor(),
+    MotionSetupExecutor.name: MotionSetupExecutor(),
     "media_translate": MediaTranslationExecutor(),
     "media_translation_apply": TranslationApplyExecutor(),
     "artifact_purge": ArtifactPurgeExecutor(),
@@ -392,6 +403,12 @@ EXECUTORS = {
     "sonic_whole": WholeAvatarExecutor(),
     "wan_video": VideoExecutor(),
     CompositionExecutor.name: CompositionExecutor(),
+    StudioDirector.name: StudioDirector(),
+    StudioRenderExecutor.name: StudioRenderExecutor(),
+    StudioSoundtrackExecutor.name: StudioSoundtrackExecutor(),
+    StudioNarrationExecutor.name: StudioNarrationExecutor(),
+    StudioAudioStepExecutor.name: StudioAudioStepExecutor(),
+    StudioVoiceReferenceExecutor.name: StudioVoiceReferenceExecutor(),
     AvatarPlannerExecutor.name: AvatarPlannerExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),

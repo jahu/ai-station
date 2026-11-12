@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     browser_image: str = ""
     site_preview_image: str = ""
     python_image: str = ""
+    motion_image: str = ""
     llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
     container_gpu_ready: bool | None = None
     model_roots: str = ""

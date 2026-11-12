@@ -557,6 +557,15 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Creative Studio development follows [the creative production contract](plans/creative-studio.md).
+CreativeProject is an account-owned brand/editorial identity, separate from the
+Git Project registry. Existing CreativeSessions may belong to it; historical
+generation Tasks/Runs retain the exact project version as immutable context.
+Saving identity or membership grants no execution, network or filesystem tools.
+The initial registry does not itself render reels or apply editorial text to
+legacy image/video prompts. Structured material planning and the qualified
+Hyperframes executor are the subsequent delivery gates.
+
 Entry-point revision (2026-10-25): one assistant conversation replaces
 the user-facing Chat/Work switch. The orchestrator selects direct response or
 existing capabilities while scoped permissions and approvals remain explicit.
@@ -1711,3 +1720,153 @@ and verifies its retained publisher registration. The existing preserving guest
 transaction retains the original old/target pair and database backup proof.
 Automatic target startup and actual native/guest health precede Run completion.
 Neither a Windows-drive mount nor WSL interop is enabled.
+
+### Studio motion renderer
+
+The [Hyperframes renderer](hyperframes-renderer.md) uses the native Runner's
+owned process lifecycle and one fixed, network-disabled CPU container. It
+compiles typed scenes into trusted local HTML/GSAP, combines frozen image/video
+assets and an already-mixed soundtrack, and verifies full-HD exports. It is a
+rendering component connected to saved materials through a typed API/worker
+export bridge. Actual shot/audio orchestration and Chat integration remain
+subsequent increments. The control plane receives no Docker
+socket or new execution privileges.
+
+Studio [materials and editorial versions](studio-materials.md) persist independently
+of software repositories. Owner-scoped planning Runs use the existing local
+provider/model lifecycle and save immutable brief/identity/source snapshots.
+Typed storyboards separate planned visual and audio work from actual completed
+child Runs; the editor never presents a plan as rendered media.
+
+Studio exports freeze the saved revision and actual owned image/video/audio
+sources, reserve the combined 4352-MiB native/container budget and publish the
+verified output into the existing Library. Missing native dispatch records are
+fenced before release; uncertain cleanup retains resources. The Docker image
+shares only the pure composition contract, without native execution modules.
+
+An optional typed presenter layer freezes one completed owned video or a bounded
+contiguous sequence and a finite placement. The trusted compiler reserves a
+separate region beside/below the story
+and places one muted video on the whole timeline, retaining the original mix.
+The renderer inspects actual source coverage and nonoverlapping layout before
+publication. An unused layer is omitted from serialization so old request hashes
+remain valid. Manual export selects existing Library footage. Automatic generation
+is an optional stage of the existing whole-material production coordinator.
+
+The queued `studio_narration` CPU step prepares the next postproduction boundary:
+one clean stem and contiguous speech parts from a successful measured soundtrack's
+frozen cues. It reuses the exact scene/cue PCM edit, without synthesizing speech
+or including the music bus. Sources, hashes, ownership and the measured revision
+are rechecked before publication. Intermediate artifacts retain lineage and are
+inspectable through Runs. Parts respect the existing sixty-second Sonic input
+bound while preserving the complete film timeline. Only this pure local PCM
+step can requeue computation after worker loss; native avatar execution retains
+its independent inspection-only recovery.
+
+Optional production presenter settings freeze an owned portrait and the actual
+Sonic model/recipe. The CPU preparation step normalizes PNG/JPEG/WebP to the
+bounded Sonic canvas without changing the original. Each speech part queues one
+ordinary whole-recording avatar Task, using the same portrait and captured
+model, with no repeated TTS or voice finishing. The existing closed child registry
+provides Stop, claim-fenced coordination and reuse of complete parts. An uncertain
+native launch cannot be replayed. Exact editorial intervals drive the muted
+presenter sequence; the original mastered mix remains the only final audio.
+The production editor and semantic assistant share this coordinator. Presenter
+aliases are resolved separately from story footage, without a keyword router.
+Complete generated-film quality and fresh renderer installation remain separate
+qualification gates.
+
+Saved-shot production reuses `create_image_run` or the existing segmented-video
+Task graph; it adds no inference adapter. Account image defaults remain authoritative
+unless explicitly overridden. Immutable shot/revision/source coordinates follow
+every child Run and output; source bytes are rechecked before dispatch and
+publication. A shot's Stop cancels its entire Task and leaves other materials
+alone. Editorial plans and actual generated takes remain distinct in the UI.
+
+The Studio soundtrack assembler is an ordinary CPU worker Run over completed
+owned PCM, like existing waveform/voice finishing operations. Header/hash
+snapshots and measured utterance durations precede editing; an immutable derived
+revision records extended timing. A bounded streaming resampler and disk-backed
+two-pass bus provide exact 48-kHz stereo output, music ducking/fades and one
+global peak adjustment. Publication verifies sources and the worker claim under
+Task Stop serialization. No host paths, native launch or external inference are
+introduced by this assembler; speech/music generation remains separate children.
+
+
+Studio sound production composes existing speech and music executors through
+short transactional `studio_audio_step` Runs. Native generators remain distinct
+children with their own resource, cancellation and recovery contracts. Measured
+complete narration determines score duration before the existing CPU mix; a long
+first passage may produce a separate bounded lossless reference for consistent
+later speech. An expired SQL-only queue-publisher lease can be requeued only
+without dispatch/PID evidence and under the same owner/Task Stop fence. This does
+not replay media generation. Saved and measured versions, actual takes and
+playable soundtrack results remain inspectable through the ordinary API/Library.
+
+
+The Studio export workspace shares the chosen image/video takes with its shot
+previews and uses the existing immutable render request. A private, bounded
+material/revision history returns only complete live MP4s from successful render
+Runs; generic owned Run cancellation supplies Stop. Playback/download needs no
+running inference/renderer, while new exports require actual native readiness and
+complete saved inputs. This adds presentation and metadata inspection, not an
+execution adapter or additional host authority.
+
+Studio export can adopt an existing compatible local renderer through the ordinary
+administrator-owned runtime preparation lifecycle (`motion_setup`). The control
+plane passes only a fixed profile, manifest fingerprint, Run identity, deadline
+and setup permissions over the private socket. Native metadata publication binds
+the actual image, packaged recipe and local daemon; native rendering retains its
+separate resource, source, Stop and cleanup contract.
+
+Missing engines use the same `motion_setup` Task. A 256-MiB owned native helper
+prepares two serial two-GiB CPU containers from fixed official base digests and
+packaged source/lockfile archives. Existing setup admission reserves their combined
+2304 MiB; rendering retains its independent 4352-MiB reservation. No BuildKit job,
+host SDK/package installation or control-plane Docker access is introduced.
+The helper journals stage intent, checks the exact container/image/daemon policy,
+commits one finite renderer image and removes its owned stages. A surviving or
+completed helper is inspected after worker/Runner loss; an uncertain operation
+cannot be replayed. Native observation publishes the atomic shared selection only
+after result verification and cleanup. Existing compatible images take the
+activation fast path. [Preparation contract](plans/studio-renderer-setup.md).
+
+Whole-material Studio production uses short durable `studio_production_step`
+Runs and dependencies. The existing audio, segmented-video and render Tasks keep
+their own execution/recovery contracts. A verified registry binds each newly
+created child Task to its originating owned coordinator; Task-wide Stop follows
+only those links. Narration produces measured timing before footage publication.
+Continuation freezes the same editorial/model request and rechecks reusable
+completed sound/visual sources; it does not replay successful inference merely
+because a later export failed. No new execution service or schema is introduced.
+
+
+The conversation Studio bridge uses the existing LlamaIndex ReAct interpretation
+and dispatch, with a frozen `studio_material` outcome. A local owner-scoped brand
+catalog supplies aliases and immutable identity/default snapshots; it is not
+sent to external providers. The composed `assistant_studio` tool queues the same
+local director and whole-film services. It releases its worker while waiting,
+uses a closed owned child-Task registry for Stop, and projects only the complete
+rendered MP4 into the conversation. SQL-only publication may recover without
+replaying inference. Individual raw clips and storyboards do not fulfill the
+material outcome; original outcome indices separate multiple brand requests.
+
+
+New Studio soundtrack coordination pins a fixed publishing-volume profile. The
+same CPU mix Run measures canonical PCM with packaged libav EBU R128 metadata,
+applies bounded global gain plus oversampled peak limiting, remeasures the output
+and verifies unchanged sample coverage and source hashes before publication.
+Stop/lease checks remain active for every streaming pass. Old requests and queued
+coordinators preserve their original policy; there is no new execution boundary,
+media service, model download or arbitrary filter argument. The observed
+before/after report distinguishes target loudness from attained loudness.
+
+Studio conversation revisions retain the same execution boundary. A bounded,
+local-only catalog captures completed same-account, same-conversation material
+versions and immutable export/revision provenance. Semantic intent selects an
+opaque captured alias; the normal Studio wrapper revalidates it before enqueueing
+a parented director plan. Caption/identity edits reuse actual completed Library
+sources and an exact-compatible soundtrack/presenter through normal production
+and render validation. A different brand creates a copy. The original Tasks stay
+historical inputs, outside the new Stop registry. See
+[the revision contract](plans/studio-conversation-revisions.md).

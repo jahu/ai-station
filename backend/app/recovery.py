@@ -86,6 +86,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
+        if run.executor_type in {"studio_audio_step", "studio_production_step", "assistant_studio"}:
+            from app.studio_audio_production import recover_enqueue_step
+
+            if recover_enqueue_step(session, run):
+                session.commit()
+                touched.append(run.id)
+                continue
         from app.host_media_executor import RESUMABLE_MEDIA
 
         if (
@@ -144,6 +151,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             "effects_setup",
             "fish_setup",
             "native_llama_setup",
+            "motion_setup",
         }:
             # A readiness waiter only reads shared infrastructure observations;
             # it can resume without inspecting or dispatching any host process.
@@ -174,10 +182,31 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"recovery": True})
             touched.append(run.id)
             continue
+        if run.executor_type == "studio_narration":
+            from app.studio_narration import recover_narration
+
+            if recover_narration(session, run):
+                session.commit()
+                touched.append(run.id)
+                continue
         info = _inspect(runner, run.id)
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:
             continue  # A live worker renewed its lease while inspection ran.
+        if (
+            run.executor_type == "motion_render"
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("reachable") is True
+            and info.get("known") is not False
+        ):
+            if info.get("run_id") != run.id or info.get("executor") != "motion_render":
+                info = {"reachable": False}
+            elif (
+                not info.get("alive")
+                and not info.get("completion_pending")
+                and info.get("cleanup_confirmed") is not True
+            ):
+                info = {**info, "cleanup_confirmed": False}
         if (
             run.parameters.get("managed_image_runtime")
             and run.metadata_json.get("dispatch_attempted")
@@ -193,9 +222,22 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             except (RunnerError, RunnerUnavailable, ValueError):
                 info = {"reachable": False}
             session.refresh(run)
+        if (
+            run.executor_type == "motion_render"
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("known") is False
+            and info.get("reachable") is True
+        ):
+            from app.studio_render import fence_missing_dispatch
+
+            try:
+                info = {**fence_missing_dispatch(runner, run), "reachable": True}
+            except (RunnerError, RunnerUnavailable, ValueError):
+                info = {"reachable": False}
+            session.refresh(run)
         if info.get("reachable") is False and (
             run.execution_target == "host"
-            or run.executor_type == "python"
+            or run.executor_type in {"python", "motion_render"}
             or run.parameters.get("managed_image_runtime")
         ):
             # A dispatch can succeed before its response/pid is persisted. Keep
@@ -316,5 +358,7 @@ def _interrupt(session: Session, run: Run, reason: str) -> None:
     run.error_type = "Interrupted"
     run.error_message = reason
     transition(session, run, RunStatus.INTERRUPTED, event_type="run.interrupted", payload={"reason": reason})
-    if run.executor_type != "site_preview" or not run.metadata_json.get("cleanup_requires_inspection"):
+    if run.executor_type not in {"site_preview", "motion_render"} or not run.metadata_json.get(
+        "cleanup_requires_inspection"
+    ):
         release_run_locks(session, run.id)

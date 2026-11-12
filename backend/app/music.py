@@ -23,6 +23,7 @@ from app.music_schema import MusicSettings
 from app.paths import safe_join
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
+from app.runtime_readiness import reject_checking
 
 router = APIRouter(prefix="/api/audio/music")
 DB = Annotated[Session, Depends(session_scope, scope="function")]
@@ -95,6 +96,7 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         if body.model_id
         else (capabilities() if observed_profile is None else observed_profile)
     )
+    reject_checking(ready, "audio.music")
     if not ready.get("available") or ready.get("profile_sha256") != PROFILE_SHA256:
         raise HTTPException(409, ready.get("reason", "The approved local music preset is unavailable"))
     managed = ready.get("configuration_source") == "managed"

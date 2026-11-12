@@ -77,6 +77,20 @@ def cancel_task(session, task):
             canceled.extend(result["run_ids"])
             retained.extend(result["retained_run_ids"])
             append_event(session, controller.id, "assistant.tool.stop_forwarded", {"task_id": child_task.id})
+    # Studio is a composed leaf in the controller observation graph. Stop
+    # follows its server-published two-stage registry, not an unbounded subtree.
+    for wrapper in session.scalars(
+        select(Run).where(Run.task_id == task.id, Run.executor_type == "assistant_studio")
+    ):
+        from app.assistant_controller import verify_wrapper
+        from app.studio_assistant import child_tasks as studio_children
+
+        verify_wrapper(session, wrapper)
+        for _, primary in studio_children(session, wrapper):
+            stopped = cancel_task(session, primary.task)
+            canceled.extend(stopped["run_ids"])
+            retained.extend(stopped["retained_run_ids"])
+            append_event(session, wrapper.id, "studio.assistant.stop_forwarded", {"task_id": primary.task_id})
     if task.intent == "agent.control":
         # A Stop may arrive just after the short controller atomically published
         # its separate background workflow. Forward only to that owned execution;
@@ -115,6 +129,17 @@ def cancel_task(session, task):
             canceled.extend(stopped["run_ids"])
             retained.extend(stopped["retained_run_ids"])
             append_event(session, controller.id, "agent.control.stop_forwarded", {"task_id": child.task_id})
+    if task.intent == "studio.material.produce":
+        from app.studio_production import children, root_run
+
+        root = root_run(session, task.metadata_json.get("studio_production_root_id"))
+        if root.task_id != task.id:
+            raise ValueError("Material production Task ownership changed")
+        for child_task in children(session, root):
+            result = cancel_task(session, child_task)
+            canceled.extend(result["run_ids"])
+            retained.extend(result["retained_run_ids"])
+            append_event(session, root.id, "studio.production.stop_forwarded", {"task_id": child_task.id})
     session.flush()
     return {
         "task_id": task.id,

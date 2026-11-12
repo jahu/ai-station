@@ -9,6 +9,7 @@ export interface CreativeSession {
   id: string;
   capability: CreativeCapability;
   title: string;
+  creative_project_id?: string | null;
   draft: CreativeDraft;
   version: number;
   created_at: string;

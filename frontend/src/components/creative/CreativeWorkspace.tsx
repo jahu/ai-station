@@ -108,7 +108,7 @@ export default function CreativeWorkspace({
     return children;
   return (
     <Workspace
-      key={`${owner}:${capability}`}
+      key={`${owner}:${capability}:${search.get("project") ?? ""}`}
       capability={capability}
       owner={owner}
     >
@@ -130,14 +130,15 @@ function Workspace({
   const [archived, setArchived] = useState(false);
   const [mobileHistory, setMobileHistory] = useState(false);
   const id = search.get("session") ?? "";
+  const projectId = search.get("project") ?? "";
   const cache = useQueryClient();
-  const listKey = ["creative-sessions", owner, capability, archived];
+  const listKey = ["creative-sessions", owner, capability, archived, projectId];
   const sessions = useInfiniteQuery({
     queryKey: listKey,
     initialPageParam: 0,
     queryFn: ({ pageParam, signal }) =>
       api<CreativeSession[]>(
-        `/creative/sessions?capability=${capability}&archived=${archived}&limit=50&offset=${pageParam}`,
+        `/creative/sessions?capability=${capability}&archived=${archived}&limit=50&offset=${pageParam}${projectId ? `&creative_project_id=${encodeURIComponent(projectId)}` : ""}`,
         { signal },
       ),
     getNextPageParam: (last, pages) =>
@@ -172,7 +173,11 @@ function Workspace({
     mutationFn: () =>
       api<CreativeSession>(
         "/creative/sessions",
-        json("POST", { capability, title: `Untitled ${names[capability][1]}` }),
+        json("POST", {
+          capability,
+          title: `Untitled ${names[capability][1]}`,
+          ...(projectId ? { creative_project_id: projectId } : {}),
+        }),
       ),
     onSuccess: (row, preserveInputs) => {
       cache.setQueryData(["creative-session", owner, row.id], {

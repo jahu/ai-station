@@ -3,7 +3,7 @@
 import asyncio
 import hashlib
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -34,6 +34,7 @@ MAX_STEPS = 16
 
 def missing_outcomes(observations, outcomes):
     counts = {}
+    studio_counts = {}
     media = {
         "image.generate": "image",
         "image.edit": "image",
@@ -49,6 +50,10 @@ def missing_outcomes(observations, outcomes):
         if item.get("status") != "succeeded":
             continue
         name = item["tool"]
+        if name == "studio.produce" and "video" in item.get("produced_types", []):
+            index = item.get("studio_outcome_index")
+            if isinstance(index, int) and not isinstance(index, bool):
+                studio_counts[index] = studio_counts.get(index, 0) + 1
         kind = media.get(name)
         types = item.get("produced_types", [])
         if kind and ("video" if kind == "avatar" else kind) in types:
@@ -77,7 +82,12 @@ def missing_outcomes(observations, outcomes):
     counts["avatar"] = reserved
     counts["video"] = counts.get("video", 0) + avatars - reserved
     pending = []
-    for item in outcomes:
+    for index, item in enumerate(outcomes):
+        if item["kind"] == "studio_material":
+            completed = min(item["count"], studio_counts.get(index, 0))
+            if completed < item["count"]:
+                pending.append({**item, "remaining": item["count"] - completed, "outcome_index": index})
+            continue
         completed = min(item["count"], counts.get(item["kind"], 0))
         counts[item["kind"]] = counts.get(item["kind"], 0) - completed
         if completed < item["count"]:
@@ -269,6 +279,17 @@ def enqueue(session, conversation, body, *, commit=True):
             for aid in body.image_artifact_ids
         ],
     }
+    from app.studio_assistant_contract import project_catalog
+
+    creative_catalog = project_catalog(session, owner_id=conversation.owner_id, location=snapshot["location"])
+    from app.studio_conversation import material_catalog
+
+    studio_catalog = material_catalog(
+        session,
+        owner_id=conversation.owner_id,
+        conversation_id=conversation.id,
+        location=snapshot["location"],
+    )
     task = create_task(
         session,
         title=body.content[:80],
@@ -290,6 +311,11 @@ def enqueue(session, conversation, body, *, commit=True):
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
             "controller_image_policy": "configured-default-v2",
+            "controller_studio_policy": "studio-v1",
+            "controller_studio_timing_policy": "fit",
+            "controller_studio_revision_policy": "source-v1",
+            "controller_studio_materials": studio_catalog,
+            "controller_creative_projects": creative_catalog,
             "content": body.content,
             "controller_request": {**request, "user_message_id": user.id, "model": conversation.model},
             "controller_provider": snapshot,
@@ -300,7 +326,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "reference_text": user.content[len(body.content) :][:24000],
             "web_search": body.web_search.model_dump(),
             **{name: request.get(name) for name in ("coding", "data", "effects")},
-            "execution_deadline_at": (utcnow() + timedelta(hours=4)).isoformat(),
+            "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
         },
         metadata={"controller_steps": [], "controller_phase": "decide"},
     )
@@ -428,6 +454,16 @@ def decision_context(session, root):
                     "errors": observed["errors"],
                     "agent_ids": observed["agent_ids"],
                     "produced_types": observed["produced_types"],
+                    **(
+                        {"studio_outcome_index": observed["studio_outcome_index"]}
+                        if "studio_outcome_index" in observed
+                        else {}
+                    ),
+                    **(
+                        {"studio_attempt_exhausted": True}
+                        if observed.get("studio_attempt_exhausted") is True
+                        else {}
+                    ),
                     "tool_data_excerpt": json.dumps(observed["tool_data"], ensure_ascii=False)[:6000],
                 }
             )
@@ -436,7 +472,12 @@ def decision_context(session, root):
         TOOLS[name].arguments.__name__: TOOLS[name].arguments.model_json_schema() for name in available
     }
     entries = public_catalog(catalog(session, root))
+    from app.studio_assistant_contract import public_projects
+    from app.studio_conversation import public_materials
+
     return {
+        "creative_projects": public_projects(root.parameters.get("controller_creative_projects", {})),
+        "studio_materials": public_materials(root.parameters.get("controller_studio_materials", {})),
         "instruction": root.parameters["content"],
         "current_time": utcnow().isoformat(),
         "recent_context": root.parameters.get("planner_context", []),
@@ -510,7 +551,12 @@ def dispatch(session, root, decision):
                 "Use the selected public search query exactly; do not send private instructions instead"
             )
     snapshot = root.parameters["controller_provider"]
-    if name in {"web.search", "web.read", "artifact.read"}:
+    if name == "studio.produce":
+        from app.studio_assistant import request_parameters
+
+        params = request_parameters(session, root, decision.arguments)
+        executor, permissions = "assistant_studio", list(TOOLS[name].permissions)
+    elif name in {"web.search", "web.read", "artifact.read"}:
         params = {
             "tool": name,
             "arguments": args.model_dump(),
@@ -532,7 +578,10 @@ def dispatch(session, root, decision):
             executor, permissions = "assistant_web", ["network_read"]
     else:
         params = wrapper_parameters(session, root, name, decision.arguments)
-        params["execution_deadline_at"] = root.parameters["execution_deadline_at"]
+        deadline = datetime.fromisoformat(root.parameters["execution_deadline_at"])
+        if name != "video.generate":
+            deadline = min(deadline, utcnow() + timedelta(hours=4))
+        params["execution_deadline_at"] = deadline.isoformat()
         executor = "assistant_tool_setup"
         permissions = chat_permissions(snapshot, list(TOOLS[name].permissions))
     child = create_run(
@@ -547,6 +596,7 @@ def dispatch(session, root, decision):
         permissions=permissions,
         retry_class="inspect",
         parent_run_id=root.id,
+        metadata={"studio_enqueue_only": True} if name == "studio.produce" else None,
     )
     fingerprint = hashlib.sha256(json.dumps(params, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     step = {
@@ -668,6 +718,19 @@ def controller_results(session, root):
             else None
         )
         result = task_results(session, source, wrapper) if source else {}
+        if step["tool"] == "studio.produce":
+            from app.serialize import artifact_dict
+            from app.studio_assistant import final_output
+
+            output = final_output(session, anchor) if anchor.status == "succeeded" else None
+            result = {
+                "steps": [],
+                "artifacts": [artifact_dict(output)] if output is not None else [],
+                "studio_material_id": anchor.metadata_json.get("studio_material_id"),
+                "studio_revision_id": anchor.metadata_json.get("controller_tool_result", {}).get(
+                    "revision_id"
+                ),
+            }
         for artifact in result.get("artifacts", []):
             if artifact["id"] not in seen:
                 artifacts.append(artifact)
@@ -938,6 +1001,42 @@ class AssistantWebExecutor:
         return "done"
 
 
+def verified_search_sources(session, run, item, value):
+    """Carry source coordinates only from an owned, byte-verified search result.
+
+    The artifact reader calls this after its frozen size/hash/file check. A JSON
+    attachment or source_tool label alone cannot introduce network destinations.
+    """
+    from app.http_fetch import public_url
+
+    artifact = session.get(Artifact, item["snapshot"]["id"])
+    origin = session.get(Run, artifact.run_id) if artifact and artifact.run_id else None
+    if (
+        artifact is None
+        or artifact.owner_id != run.owner_id
+        or origin is None
+        or origin.owner_id != run.owner_id
+        or origin.conversation_id != run.conversation_id
+        or origin.status != "succeeded"
+        or not isinstance(value, dict)
+    ):
+        return []
+    observed = origin.metadata_json.get("web_search")
+    if (
+        not isinstance(observed, dict)
+        or observed.get("artifact_id") != artifact.id
+        or not isinstance(value.get("sources"), list)
+        or len(value["sources"]) > 5
+        or value["sources"] != observed.get("sources")
+    ):
+        return []
+    return [
+        {"url": source["url"]}
+        for source in value["sources"]
+        if isinstance(source, dict) and public_url(source.get("url"))
+    ]
+
+
 class AssistantArtifactExecutor:
     name = "assistant_artifact"
 
@@ -950,7 +1049,7 @@ class AssistantArtifactExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
-        results = []
+        results, public_sources = [], []
         for item in run.parameters["inputs"]:
             mime = item["mime_type"]
             if not (mime.startswith("text/") or mime in {"application/json", "application/pdf"}):
@@ -970,6 +1069,8 @@ class AssistantArtifactExecutor:
             if mime == "application/json":
                 value = json.loads(text)
                 keys = list(value)[:100] if isinstance(value, dict) else []
+                if section in {None, "sources"}:
+                    public_sources.extend(verified_search_sources(session, run, item, value))
                 if section is not None:
                     if not isinstance(value, dict) or section not in value:
                         raise ValueError("Choose an existing top-level JSON section")
@@ -989,7 +1090,10 @@ class AssistantArtifactExecutor:
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
         else:
-            run.metadata_json = {**run.metadata_json, "controller_tool_result": {"artifacts": results}}
+            run.metadata_json = {
+                **run.metadata_json,
+                "controller_tool_result": {"artifacts": results, "sources": public_sources},
+            }
             append_event(session, run.id, "artifact.read", {"aliases": [item["alias"] for item in results]})
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
         return "done"

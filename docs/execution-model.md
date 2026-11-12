@@ -41,6 +41,11 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Decision runtime/provider preparation retries transient database contention under
+its original claim, Stop and deadline. Its unstarted completion stream leaves
+the DB transaction before network I/O; inference and tool execution are never
+replayed by this retry. See [decision preparation repair](plans/runtime-sqlite-contention.md#decision-preparation-contention--2026-11-11).
+
 [Owned media lease recovery](plans/media-lease-recovery.md) retries only rolled-back
 SQLite persistence and resumes matching native process inspection/collection after
 a lost worker. It never replays generation. Claims, resource locks, original
@@ -514,3 +519,20 @@ consumer must not retain SQLite's writer reservation. This applies to private,
 account-coordination and administrator-inspection sessions. SSE still performs
 its own short, authorized batch reads; native file responses retain their
 explicit release before delivery. Worker/session lifetimes are unchanged.
+
+
+### Observed VRAM and waiting budgets (develop follow-up, 2026-11-11)
+
+Verified single-file Q8 GGUF loads compare available VRAM on each selected device
+with their fitted weights, KV context, persistent state and CUDA workspace. The
+normal desktop allocation is not itself proof of GPU contention: a blanket 90%
+free-device requirement could defer an otherwise fitting 9B model forever.
+Unknown geometry and complete bundles retain the existing conservative admission;
+owned GPU reservations and native startup/OOM validation remain authoritative.
+No external process is stopped to satisfy admission.
+
+Worker ticks enforce execution deadlines for queued and waiting-for-tool Runs,
+even when prerequisites/backoff prevent claiming and no heartbeat exists. The
+bounded sweep rechecks under the Task lock and uses normal audited cancellation,
+including shared-runtime protections. Expired instructions are never silently
+replayed. Actual deadline cancellation and a newly requested retry remain distinct.

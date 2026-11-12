@@ -3,10 +3,10 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.script import ScriptDirectory
-from app.db import alembic_config
+from app.db import alembic_config, utcnow
 from app.models import CreativeSession, CreativeTurn
 from app.runs import create_run, create_task
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import MetaData, Table, create_engine, event, text
 from sqlalchemy.orm import Session
 
 
@@ -25,13 +25,23 @@ def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_
         with Session(bind=connection) as db:
             task = create_task(db, title="Retained", prompt="Retained prompt", capability="image.generate")
             run = create_run(db, task, run_type="image", capability="image.generate", executor_type="fake")
-            workspace = CreativeSession(
-                capability="images", title="Before upgrade", draft={"formState": {"prompt": "Keep this"}}
+            # Seed the actual historical table rather than today's ORM columns.
+            # Later nullable additions must not invalidate this upgrade fixture.
+            wid = str(uuid4())
+            old_workspace = Table("creative_sessions", MetaData(), autoload_with=connection)
+            db.execute(
+                old_workspace.insert().values(
+                    id=wid,
+                    capability="images",
+                    title="Before upgrade",
+                    draft={"formState": {"prompt": "Keep this"}},
+                    version=1,
+                    created_at=utcnow(),
+                    updated_at=utcnow(),
+                )
             )
-            db.add(workspace)
-            db.flush()
             turn = CreativeTurn(
-                session_id=workspace.id,
+                session_id=wid,
                 task_id=task.id,
                 run_id=run.id,
                 client_request_id=str(uuid4()),
@@ -42,7 +52,7 @@ def test_effects_migration_preserves_legacy_sessions_turns_and_foreign_keys(tmp_
             )
             db.add(turn)
             db.flush()
-            wid, tid, rid, task_id = workspace.id, turn.id, run.id, task.id
+            tid, rid, task_id = turn.id, run.id, task.id
     # Commit the old database first: this exercises SQLite's real deferred-DROP
     # bookkeeping with populated referencing rows, not merely a fresh schema.
     with engine.begin() as connection:

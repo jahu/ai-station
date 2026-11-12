@@ -97,7 +97,26 @@ def memory_reservation(body, observed_profile):
         or selected.get("ram_mib") != 11264
     ):
         raise HTTPException(409, "The reduced-RAM video profile is unavailable; refresh Video setup")
+    validate_bounded_geometry(body, observed_profile)
     return selected["ram_mib"]
+
+
+def validate_bounded_geometry(body, profile):
+    geometry = (body.width, body.height)
+    if geometry not in {(1280, 704), (704, 1280)} or body.steps < 20:
+        raise HTTPException(
+            422, "This video profile uses landscape 1280×704 or portrait 704×1280 and at least 20 steps"
+        )
+    if geometry == (704, 1280) and not any(
+        row.get("id") == "bounded_11g"
+        and row.get("available")
+        and {"width": 704, "height": 1280} in row.get("resolutions", [])
+        for row in profile.get("memory_profiles", [])
+    ):
+        raise HTTPException(
+            409,
+            "This Host Runner does not advertise native portrait footage; update the video runtime before generating it",
+        )
 
 
 def managed_parameters(body, profile):
@@ -123,8 +142,7 @@ def managed_parameters(body, profile):
         raise HTTPException(
             409, "The managed video profile requires its frozen environment and compatible GPUs"
         )
-    if body.width != 1280 or body.height != 704 or body.steps < 20:
-        raise HTTPException(422, "This managed video profile uses 1280×704 and at least 20 steps")
+    validate_bounded_geometry(body, profile)
     if body.gpu != "auto" and int(body.gpu) not in eligible:
         raise HTTPException(422, "Choose a GPU compatible with the prepared video profile")
     return {

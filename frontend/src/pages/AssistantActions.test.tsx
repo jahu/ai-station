@@ -2153,3 +2153,58 @@ it("shows ordered observed tool results and inspection links in one activity pan
       .map((link) => link.getAttribute("href")),
   ).toEqual(["/runs/search", "/runs/image"]);
 });
+
+it("opens a conversation Studio material during production and plays only the final film", () => {
+  const result = {
+    controller_steps: [
+      {
+        index: 1,
+        tool: "studio.produce",
+        reason: "Produce the requested branded film",
+        status: "succeeded",
+        run_id: "studio-wrapper",
+        sources: [],
+        result: {
+          studio_material_id: "material-1",
+          studio_revision_id: "revision-1",
+          steps: [],
+          artifacts: [
+            {
+              id: "final-film",
+              type: "video",
+              mime_type: "video/mp4",
+              relative_path: "artifacts/final.mp4",
+              original_filename: "film.mp4",
+              title: "A complete film",
+              metadata: {},
+              parent_artifact_ids: [],
+              size_bytes: 100,
+              created_at: "2026-11-11T00:00:00Z",
+              run_id: "render-1",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const mounted = mountResults(result);
+  expect(
+    screen.getByRole("link", { name: "Open in Studio" }).getAttribute("href"),
+  ).toBe("/studio/materials/material-1?revision=revision-1");
+  expect(
+    screen.getByLabelText("Generated Studio film").getAttribute("src"),
+  ).toBe("/api/artifacts/final-film/file");
+  expect(screen.queryByLabelText("Generated speech")).toBeNull();
+  mounted.unmount();
+  mountResults({
+    controller_steps: [
+      {
+        ...result.controller_steps[0],
+        status: "running",
+        result: { studio_material_id: "material-1", steps: [], artifacts: [] },
+      },
+    ],
+  });
+  expect(screen.getByRole("link", { name: "Open in Studio" })).toBeTruthy();
+  expect(screen.queryByLabelText("Generated Studio film")).toBeNull();
+});

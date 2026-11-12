@@ -150,3 +150,52 @@ def test_recovery_reattaches_same_dispatched_operation_despite_its_own_vram(mana
         assert tick_once() == original["id"]
         assert client.get("/api/runs/" + original["id"]).json()["status"] == "succeeded"
         assert list(records) == [iid]
+
+
+@pytest.mark.parametrize("free,expected", [(10592, "succeeded"), (8000, "queued")])
+def test_verified_q8_geometry_uses_actual_free_vram_not_an_empty_card(managed, monkeypatch, free, expected):
+    from app.models import ModelFile
+
+    model_id, records = managed
+    with session_factory()() as session:
+        session.get(ModelFile, model_id).size_bytes = 7359259008
+        session.commit()
+    profile = {
+        "source": "gguf_header",
+        "architecture": "test_hybrid",
+        "trained_context": 262144,
+        "attention_layers": 8,
+        "q8_kv_bytes_per_token": 17408,
+        "state_reserve_mib": 512,
+    }
+    monkeypatch.setattr(
+        RunnerClient,
+        "verify_model",
+        lambda *_: {
+            "present": True,
+            "matches_observation": True,
+            "context_profile": profile,
+        },
+    )
+    monkeypatch.setattr(
+        RunnerClient,
+        "hardware",
+        lambda _: {
+            "gpus": [{"index": 2, "memory_total_mib": 12288, "memory_free_mib": free}],
+        },
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2], "context_size": 129280, "cache_type": "q8_0"},
+        )
+        assert response.status_code == 202, response.text
+        original = response.json()
+        assert tick_once() == original["id"]
+        final = client.get("/api/runs/" + original["id"]).json()
+        assert final["status"] == expected
+        assert final["parameters"]["context_size"] == 129280
+        assert bool(records) == (expected == "succeeded")
+        if expected == "queued":
+            observed = final["resource_wait"]["gpu_memory"][0]
+            assert observed["free_mib"] < observed["required_mib"] < 10592

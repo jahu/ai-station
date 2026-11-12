@@ -3,6 +3,7 @@
 DEFAULT = "default"
 BOUNDED = "bounded_11g"
 MEMORY_MIB = 11264
+DIMENSIONS = ((1280, 704), (704, 1280))
 
 
 def validate_profile(request):
@@ -10,12 +11,11 @@ def validate_profile(request):
     if not isinstance(profile, str) or profile not in {DEFAULT, BOUNDED}:
         raise ValueError("Unsupported fixed Wan memory profile")
     if profile == BOUNDED and (
-        request.get("width") != 1280
-        or request.get("height") != 704
+        (request.get("width"), request.get("height")) not in DIMENSIONS
         or type(request.get("steps")) is not int
         or not 20 <= request["steps"] <= 40
     ):
-        raise ValueError("The bounded Wan profile requires 1280x704 and at least 20 steps")
+        raise ValueError("The bounded Wan profile requires 1280x704 or 704x1280 and at least 20 steps")
     return profile
 
 

@@ -47,3 +47,18 @@ Real browser acceptance (2026-09-28): Audio upload and generation, decoded WAV p
 The Audio workspace keeps composition and output side by side. Voice references support drag/drop, file selection and Library reuse. The inline Library list is one keyboard sequence (arrows, Home, End, Enter attaches) with unique Choose names. Generation shows its live state, stop action and playable result in place; the Run inspector remains available for logs. The result's Run ID is preserved in the URL for reopening after navigation or refresh. GPU selection lives in Advanced settings.
 
 Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).
+
+
+### Generated Fish voice continuity
+
+For multi-chunk model-generated speech on develop, later chunks use the complete
+first chunk's acoustic codes and matching text as a fixed voice reference.
+All app-owned Fish and Chatterbox entry points reset Python, NumPy and Torch
+to the same seed for every model call, including recording-based speech. This
+applies to speech requested by Chat, Studio, agents and avatar narration.
+Recording-based speech retains the user's verified recording and transcript.
+The native report records `voice_continuity` (`single_chunk`,
+`first_generated_chunk`, or `provided_reference`). This preserves the existing
+bounded calls and permissions while avoiding independently sampled speakers at
+chunk joins. It does not guarantee identical timbre across arbitrary emotions;
+publication-quality performance still needs listening review.

@@ -18,6 +18,7 @@ from app.paths import safe_join
 from app.python_execution import read_owned_file
 from app.resources import ResourceUnknown, reserve_gpu_bundle
 from app.runs import create_run, create_task
+from app.runtime_readiness import reject_checking
 from app.voice_level_dsp import PROFILE as VOICE_LEVEL_PROFILE
 
 PROFILE = "fish_s2_bf16_dual_v1"
@@ -173,6 +174,7 @@ def _model_voice(run):
 
 def create_fish_run(session, body, source, *, task=None, parent_run_id=None):
     ready = capabilities().get("engines", {}).get("fish_s2_pro", {})
+    reject_checking(ready, "audio.speech")
     if (
         ready.get("available") is not True
         or ready.get("profile") != PROFILE

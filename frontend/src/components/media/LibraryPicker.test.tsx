@@ -6,6 +6,66 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+it("shows completed MP4 clips with video previews and excludes internal or partial outputs", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "good",
+          type: "video",
+          mime_type: "video/mp4",
+          original_filename: "presenter.mp4",
+          metadata: {},
+        },
+        {
+          id: "partial",
+          type: "video",
+          mime_type: "video/mp4",
+          original_filename: "partial.mp4",
+          metadata: { partial: true },
+        },
+        {
+          id: "internal",
+          type: "video",
+          mime_type: "video/mp4",
+          original_filename: "internal.mp4",
+          metadata: { internal_media: true },
+        },
+        {
+          id: "image",
+          type: "image",
+          mime_type: "image/png",
+          original_filename: "image.png",
+          metadata: {},
+        },
+      ],
+    })),
+  );
+  const selected = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LibraryPicker
+        kind="video"
+        existing={[]}
+        limit={1}
+        busy={false}
+        onSelect={selected}
+      />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Videos from Library" }));
+  await screen.findByRole("dialog", { name: "Choose a video" });
+  const clip = await screen.findByRole("button", { name: /^Choose presenter/ });
+  expect(clip.querySelector("video")?.muted).toBe(true);
+  expect(screen.queryByRole("button", { name: /^Choose partial/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Choose internal/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Choose image/ })).toBeNull();
+  fireEvent.click(clip);
+  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+  expect(selected.mock.calls[0][0][0].id).toBe("good");
+});
 it("excludes existing inputs and caps the remaining image selection", async () => {
   vi.stubGlobal(
     "fetch",

@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [Installation guide](https://ai-station.dev/install/) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.5.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.6.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -52,13 +52,30 @@ Website-building tasks use an isolated owned project and return a checked offlin
 build with a ZIP download and interactive preview.
 The [resource-wait reliability repair](docs/plans/runtime-sqlite-contention.md)
 tracks per-Run admission backoff and durable recovery after transient SQLite contention.
+The [web continuation repair](docs/plans/conversation-source-binding.md) binds
+exact observed source URLs to their existing aliases before typed validation;
+a completed Run alone is not treated as answer-quality evidence.
 
 > **Early access:** AI Station brings desktop installers and guided model setup for
 > Ubuntu 24.04 x86-64 and Windows 10 (21H2/22H2) or 11 x64. macOS is not supported yet.
 > Windows 10 installation, login and worker execution were tested in a CPU-only VM.
 > First local-model replies were tested separately on Windows 11; physical Windows
 > NVIDIA tests and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.5.0.md).
+> [Exact qualification and known issues](docs/releases/0.6.0.md).
+
+**Creative Studio:** brand projects, storyboards and complete productions
+combine generated visuals/video, narration and music into MP4 exports. Optional
+portrait presenters share the original soundtrack; first-use CPU renderer setup
+has passed real installation, Stop and crash recovery. A short generated-presenter
+film passed technical checks; longer-film and publication-quality qualification
+are still in progress. Explicit spoken word targets are kept with the material;
+the director checks the actual script before media generation, and the editor
+shows its word count. A word-limit-only planning failure can revise the spoken
+lines without regenerating a valid visual plan; exhausted corrections cannot
+blindly recreate the same material in one conversation turn. [Current scope and evidence](docs/plans/creative-studio.md).
+Scene editing also exposes layout, whole-visual versus cropped fitting, visual
+movement and video start time. Save a new version and export with existing media;
+correcting a crop does not require regenerating the source.
 
 **New in 0.4: a steadier voice.** Speech and avatars now balance loud and quiet
 passages locally, without another AI model. Keep **Even voice volume** enabled
@@ -99,7 +116,72 @@ choice silently. [Supported families and actual tests](docs/models.md) ·
 
 Release 0.5 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.5.0 release notes and qualification status](docs/releases/0.5.0.md).
+[0.6.0 release notes and qualification status](docs/releases/0.6.0.md).
+
+**Creative Studio.** Organize reels, presentations and films by
+brand, course or series, with a shared visual identity and editorial brief.
+The first increment adds private projects, editable identities and grouping of
+existing creative workspaces. Materials now have versioned briefs, scripts and
+shot plans with a local director and an editable storyboard on develop. Generate
+individual images or full video shots there, compare takes and open their Library
+results without losing earlier work. Soundtrack production now chains local
+narration, a score sized to the actual spoken passages, and a balanced mix; listen
+to takes and apply measured timing without losing existing visuals. New local
+director plans use conversational natural pace and editable phrase-level Fish
+expression hints, kept separate from spoken words. A whole-take direction can
+override those hints. Optional timing controls can fit flexible still-image holds
+to the planned total while retaining complete speech and planned video windows;
+existing saved plans and takes keep their original settings. An isolated
+Hyperframes renderer and the API/worker export bridge are qualified with actual
+image/video fixtures. Export the selected takes and complete soundtrack from the
+workspace, review earlier MP4s and download the result. The export panel can
+activate a compatible engine already installed on the station, with private
+setup history and Stop. When the engine is missing, guided preparation downloads
+the fixed runtime components and builds it in bounded CPU containers, keeping
+your other apps and AI models unchanged.
+The export panel can also add a completed avatar/presenter clip from
+Library, with space beside or below the story. It keeps the film soundtrack and
+requires enough footage for the complete edit. The production panel
+also offers **Create a speaking presenter**: choose a portrait and an installed
+avatar model to generate the presenter from the film's actual narration. It
+preserves the soundtrack and fits the story beside or above the presenter.
+The conversation can select the supplied portrait for this same workflow.
+An actual 17.2-second film now includes a newly generated Sonic presenter and
+the exact original soundtrack. Complete decoding, timing and source/audio
+identity checks and sampled presenter-frame review passed.
+A complete-material coordinator now queues sound, measured timing, missing shots
+and export, with whole-production Stop and continuation that reuses complete
+media and spoken cues. The current implementation and real-output checks are
+recorded in the [completion audit](docs/plans/studio-completion-audit.md). This is
+included in the 0.6.0 desktop release.
+The conversation bridge adds semantic project/format/audio selection and queues
+that same full production from a prompt, with a Studio link and final film in
+chat. Account isolation, all four audio policies, Stop and queue recovery are
+checked with fake media, alongside the real local-model exports below.
+Soundtrack finishing measures and balances
+publishing volume, protects peaks and retains exact narration timing; earlier
+soundtracks keep their original audio. Storyboards can explicitly share one image or clip
+across scenes while keeping separate captions, motion and timing. The director
+fits new plans to the requested duration; manual edits remain explicit and
+measured speech may extend the film rather than cutting words.
+Real local-model checks now cover two distinct brands: an eight-second
+widescreen silent presentation and a portrait music reel, each sharing one
+generated image across scenes. Both final MP4s passed full decoding and the
+requested duration/source checks and sampled visual review.
+Full-film narration review now also covers a 75-second educational edit: the
+owner accepted its pace, expression and voice continuity throughout. Independent
+transcription retained all 179 original words. Conversation-based revisions now
+keep the original media, soundtrack and editable version history for caption/identity changes, with explicit new production for
+changed spoken content or imagery. Real local-model follow-ups changed a film’s
+headline and created a separately branded widescreen copy, retaining the original
+shots/music and material history.
+The bounded Wan engine also supports native portrait footage, preserving vertical
+composition. A real four-second 704×1280 film passed two-window generation,
+continuation and complete decoding. Each inference process used an enforced
+11 GiB RAM limit with swap disabled. Source-video workflows on develop now
+accept up to five minutes through the same segmented queue, Stop and resume;
+long-duration queue/result handling is qualified separately from the short
+real-GPU footage checks.
 
 **One-click desktop updates.** Your app version stays
 visible in the sidebar. In **Settings → Updates**, administrators can check the
@@ -323,8 +405,8 @@ feedback; duration success alone is not a promise of perfect visual quality.
 
 Download the package for your computer from the release assets:
 
-- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.5.0-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.5.0-linux-amd64.deb`.
+- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.6.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.6.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -342,7 +424,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.5.0.md).
+[Installation, updates and known issues](docs/releases/0.6.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -380,7 +462,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.5.0.md).
+post-release QA are listed in the [release notes](docs/releases/0.6.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -637,7 +719,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.5.0.md#qualification) ·
+[Release verification](docs/releases/0.6.0.md#qualification) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)

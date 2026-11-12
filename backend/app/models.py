@@ -97,6 +97,61 @@ class AccountEvent(Base):
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
 
 
+class CreativeProject(Owned, Base):
+    __tablename__ = "creative_projects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str] = mapped_column(Text, default="")
+    aliases: Mapped[list] = mapped_column(JSON, default=list)
+    identity: Mapped[dict] = mapped_column(JSON, default=dict)
+    defaults: Mapped[dict] = mapped_column(JSON, default=dict)
+    logo_artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class StudioMaterial(Owned, Base):
+    __tablename__ = "studio_materials"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    creative_project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("creative_projects.id"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(160))
+    brief: Mapped[str] = mapped_column(Text)
+    options: Mapped[dict] = mapped_column(JSON)
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class StudioRevision(Base):
+    __tablename__ = "studio_revisions"
+    __table_args__ = (
+        UniqueConstraint("material_id", "client_request_id", name="uq_studio_revision_receipt"),
+        UniqueConstraint("material_id", "position", name="uq_studio_revision_position"),
+        CheckConstraint("position > 0", name="ck_studio_revision_position"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    material_id: Mapped[str] = mapped_column(ForeignKey("studio_materials.id"), index=True)
+    parent_revision_id: Mapped[str | None] = mapped_column(ForeignKey("studio_revisions.id"), nullable=True)
+    source_run_id: Mapped[str | None] = mapped_column(ForeignKey("runs.id"), nullable=True, unique=True)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    position: Mapped[int] = mapped_column(Integer)
+    storyboard: Mapped[dict] = mapped_column(JSON)
+    sources: Mapped[dict] = mapped_column(JSON)
+    project_snapshot: Mapped[dict] = mapped_column(JSON)
+    options: Mapped[dict] = mapped_column(JSON)
+    brief: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class CreativeSession(Owned, Base):
     __tablename__ = "creative_sessions"
     __table_args__ = (
@@ -109,6 +164,9 @@ class CreativeSession(Owned, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     capability: Mapped[str] = mapped_column(String(20), index=True)
     title: Mapped[str] = mapped_column(String(160))
+    creative_project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("creative_projects.id"), nullable=True, index=True
+    )
     draft: Mapped[dict] = mapped_column(JSON, default=dict)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

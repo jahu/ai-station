@@ -132,6 +132,8 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  studio_material_id?: string | null;
+  studio_revision_id?: string | null;
   controller_steps?: {
     index: number;
     tool: string;
@@ -477,6 +479,14 @@ export function AssistantResults({
                 </Link>
               </div>
               <p className="controller-step-reason">{step.reason}</p>
+              {step.result.studio_material_id && (
+                <Link
+                  to={`/studio/materials/${step.result.studio_material_id}${step.result.studio_revision_id ? `?revision=${encodeURIComponent(step.result.studio_revision_id)}` : ""}`}
+                  tabIndex={active ? 0 : -1}
+                >
+                  Open in Studio
+                </Link>
+              )}
               {step.sources.length > 0 && (
                 <ul className="controller-step-sources">
                   {step.sources.map((source) => (
@@ -797,7 +807,11 @@ export function AssistantResults({
                   controls
                   preload="metadata"
                   src={`/api/artifacts/${artifact.id}/file`}
-                  aria-label="Generated avatar video"
+                  aria-label={
+                    result.studio_material_id
+                      ? "Generated Studio film"
+                      : "Generated avatar video"
+                  }
                   style={{ maxWidth: "100%" }}
                 />
               )}

@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app import __version__
+from app import studio_narration as studio_narration  # noqa: F401
 from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
@@ -36,6 +37,7 @@ from app.codex_coding import router as codex_router
 from app.coding_sessions import router as coding_sessions_router
 from app.config import get_settings
 from app.connectors import router as connector_router
+from app.creative_projects import router as creative_project_router
 from app.creative_sessions import router as creative_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
@@ -86,6 +88,7 @@ from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.station_update_install import router as station_update_install_router
 from app.station_updates import router as station_updates_router
+from app.studio_production import router as studio_material_router
 from app.telemetry_store import history
 from app.timeline_waveforms import router as waveform_router
 from app.timelines import router as timeline_router
@@ -520,6 +523,8 @@ app.include_router(llama_router)
 app.include_router(browser_router)
 app.include_router(site_preview_router)
 app.include_router(creative_router)
+app.include_router(studio_material_router)
+app.include_router(creative_project_router)
 
 if get_settings().access_profile == "accounts":
     from app.account_http import install_account_access

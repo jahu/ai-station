@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from uuid import UUID
 
-APPROVED_LIMITS_MIB = frozenset({4096, 11264, 12288, 18432, 24576})
+APPROVED_LIMITS_MIB = frozenset({256, 4096, 11264, 12288, 18432, 24576})
 
 
 def available() -> bool:
@@ -57,7 +57,7 @@ def scope_prefix(run_id: str, maximum_mib: int) -> list[str]:
         "--unit=" + name,
         "--property=MemoryMax=" + str(limit) + "M",
         "--property=MemorySwapMax=0",
-        "--property=CPUQuota=400%",
+        "--property=CPUQuota=" + ("100%" if limit == 256 else "400%"),
         "--property=RuntimeMaxSec=" + str(runtime_seconds),
         "--",
     ]

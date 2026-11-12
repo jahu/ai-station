@@ -186,8 +186,17 @@ it("rejects excessive total and combined prompts in place before a request", asy
   fireEvent.change(screen.getByLabelText("Scene 2 prompt"), {
     target: { value: "An ocean" },
   });
+  for (let n = 3; n <= 6; n++) {
+    fireEvent.click(screen.getByRole("button", { name: "Add scene" }));
+    fireEvent.change(screen.getByLabelText(`Scene ${n} prompt`), {
+      target: { value: "A useful detail" },
+    });
+    fireEvent.change(screen.getByLabelText(`Scene ${n} duration`), {
+      target: { value: "60" },
+    });
+  }
   expect(
-    screen.getByText("The complete film can be up to 60 seconds."),
+    screen.getByText("The complete film can be up to 5 minutes."),
   ).toBeTruthy();
   expect(
     screen

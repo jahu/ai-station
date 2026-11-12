@@ -639,6 +639,14 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Creative projects use the same private-root account policy as creative sessions.
+Membership and logo references must belong to the same owner; administrator
+inspection remains read-only. Names/domains in aliases are planning context,
+not permission to fetch a URL. Identity text cannot supply HTML, JavaScript,
+commands, dependencies or host paths. A generation freezes the selected project
+version alongside the normal Task/Run history; archival blocks new work without
+deleting or replaying existing generations. See [Creative Studio](plans/creative-studio.md).
+
 Grouped film translation binds every consumer's source/configuration and applies
 only allowlisted descriptive fields. Lyrics and speech are excluded. Agent film
 translation is frozen after publication of its reviewed input provenance. Retry
@@ -1945,3 +1953,141 @@ enabled only after native package qualification. Readiness observation validates
 the owned registration without taking the installation lease needed by startup.
 An expired matching native binding permits lifecycle/readiness wiring, while new
 capabilities and prepare/apply requests still require fresh native presence.
+
+### Typed Studio motion composition
+
+The [Studio renderer](hyperframes-renderer.md) accepts only bounded editorial
+fields and existing artifact identities. It never accepts executable markup,
+URLs, commands or caller-selected mounts. The native supervisor verifies source
+hashes, launches the immutable fixed image on a bound local Unix Docker daemon,
+and mounts only its derived staging directory. A network-none, CPU-only,
+non-root, read-only container limits rendering to four CPUs/4096 MiB with no
+swap; the supervisor has its own 256-MiB zero-swap bound. Stop/recovery verify
+container identity, labels, executable, daemon and isolation before removing
+that exact container. Cancellation is fenced before dispatch; unknown creation
+acknowledgements never authorize replay or optimistic resource release.
+
+Studio materials are private roots; their revisions inherit ownership through
+material and optional source Run. Project, parent version and Library references
+must be owned and live. Local director planning has bounded streaming, Stop,
+one schema correction and an absolute deadline; its structured output grants
+no execution, URL, package or filesystem authority. Sources are verified before
+inference, publication stays serialized with Stop, and prior versions survive
+failed or canceled planning. See [material boundaries](studio-materials.md).
+
+Typed material export rechecks the immutable storyboard and all source hashes,
+requires actual video for planned video shots and exact complete PCM audio
+coverage, and validates the native provenance report before publication. A
+changed source cannot silently replace a frozen binding. Recovery retains RAM
+when native ownership/cleanup cannot be confirmed and fences missing dispatches
+before release. A lost launch reply is never permission to launch again.
+
+The optional presenter input is an owned completed MP4 or a sequence of at most
+32 such clips, never markup, a URL or a layout program. Only automatic/right/bottom placement and a bounded source
+offset are accepted. The source must remain live and unchanged through dispatch
+and publication; partial/internal results and unfinished originating Runs are
+refused, apart from the closed-registry completed presenter parts described below.
+Actual decoded duration must cover the complete film. Its audio is
+muted, the final soundtrack stays singular, and Chromium verifies reserved
+nonoverlapping space within the canvas. Source count and the combined two-GiB
+budget include this layer. Existing cancellation/ownership fences remain shared.
+
+Sequence intervals are strict integer editorial frames, contiguous and exactly
+cover the saved film. Native codec checks inspect each clip's real source window;
+its 25-fps duration cannot move a 30-fps editorial boundary. A sequence requires
+an explicitly advertised compatible renderer, freezes every source and remains
+within the two-GiB combined budget (up to 60 story visuals, 32 presenter clips and
+one mix). Hyperframes exclusively controls clip visibility/seeking; GSAP never
+overrides timed clip visibility. Unused sequence fields stay absent from legacy
+single-presenter requests and request digests.
+
+Clean presenter narration accepts only a material and its exact saved measured
+revision; callers cannot inject cue paths, replacement speech, execution budgets
+or model commands. The successful originating mix and every complete cue remain
+owner scoped, canonical and content bound. The CPU worker freezes the mix/cue
+observations, preserves complete speech, and publishes only under its original
+claim and Task Stop fence. Short SQLite busy/locked retries retain computed PCM
+and stable output identities. Pure CPU recovery never queries or dispatches the
+Runner and never opts a native model into replay. Speech parts are contiguous
+and bounded to sixty seconds, including any explicitly recorded silent minimum
+padding; their editorial intervals never include that padding. These internal
+artifacts do not grant an agent permission to generate avatars or publish media.
+
+Automatic Studio presenters require explicit typed portrait/model settings,
+narrated audio policy and the renderer's sequence capability. The portrait must
+be an owned complete image; bounded CPU decoding verifies PNG/JPEG/WebP and
+normalizes a separate internal PNG. Source observations are rechecked before
+any synthesis and before later stages. The normal whole-recording avatar API
+retains model/resource admission, private ownership and inspection-only recovery.
+Studio follows only its verified child Tasks. Continuation refuses uncertain
+native processes and reuses only unchanged successful parts.
+
+Generated presenter videos stay internal to avoid flooding final results. The
+renderer's narrow complete-part exception requires a successful `sonic_whole`
+Run, matching input identities and part index, a closed production-child registry
+and the exact adopted artifact in saved production state. A role tag alone,
+partial output, foreign artifact or another unfinished Run grants no access.
+Ordinary Library/story-media completeness checks remain unchanged.
+
+The Studio CPU soundtrack assembler accepts only private live WAV Artifact IDs,
+finite mix levels and exact saved revision coordinates. Canonical regular files
+have bounded headers, durations and bytes; hashes are rechecked before/after
+streaming decode. It uses no URL, shell, executable filter or host authority.
+Bounded decoder buffers and app-owned temporary disk hold the two-pass bus.
+Task Stop/claim checks gate publication; partial mixes never become revisions or
+Library artifacts. Complete narration is preserved, while requested music must
+cover the edit rather than being invisibly looped or replaced with silence.
+
+
+Studio audio coordinators enqueue only the existing typed local speech/music
+operations under private material/version ownership. Generated reference samples
+are a bounded CPU PCM derivation, with original source hash/size/Run lineage,
+regular canonical file checks, no external/network/host execution, and claim/Stop
+verification before publication. Internal short voice references never replace
+complete narration. Recovery's SQL-only publication exemption requires its fixed
+executor/marker, matching owner/Task root, absent process/dispatch evidence and an
+expired unchanged claim; it grants no replay authority to actual generators.
+
+Existing Studio renderer activation exposes no caller-selected Docker command,
+image name, URL or path. Its fixed native profile inspects only compatible local
+images and atomically selects a verified image under application-owned storage.
+Setup identity, administrator authority, account-private history and receipts,
+revocation, Stop and stale-worker recovery follow the existing runtime preparation
+contract. Existing-image activation loads no model and retains shared preparation. Native inspection
+rejects changed daemon/image/recipe coordinates and symlink selection parents.
+
+Fresh preparation uses the same finite profile, manifest and administrator-owned
+Run. It accepts no caller-selected registry, image, package, command, path or URL.
+The native helper pulls only two fixed official base digests, uses packaged npm
+lockfiles with scripts disabled, and installs the reviewed CPU renderer components
+inside owned no-mount containers. The containers have two-GiB equal RAM/swap limits,
+two CPUs, 256 PIDs, private IPC, explicit runc and no-new-privileges. SDK preparation
+drops all capabilities; the in-container package step adds only CHOWN,
+DAC_OVERRIDE, FOWNER, SETGID and SETUID. No GPU, host package changes or public port
+is introduced. The helper has a separate 256-MiB zero-swap scope and one-hour fuse.
+
+Stage ownership freezes the official base, full config, resource policy, request
+hash, name/ID and local daemon before signaling. Lost create acknowledgements
+can adopt only that exact original stage. Docker's observed optional
+`OomKillDisable` false/null normalization is accepted only by matching the entire
+prior policy under those two OOM-enabled representations; true and every other
+changed field remain rejected. Component archives stay bounded and are never
+extracted onto the host. The final commit is single-intent and deadline bounded;
+a lost reply is reconciled by exact preparation labels without another commit.
+
+Stop persists its fence before signaling the owned helper, then removes only
+verified stage IDs, without removing volumes. Dead-helper inspection must confirm
+container cleanup before releasing reserved RAM. Changed ownership or uncertain
+commit/cleanup retains inspection state and disables blind continuation. Only a
+verified result can publish selection; later manual selection is never overwritten
+by replaying an old receipt. Late Stop retains verified shared engine images.
+
+Studio's whole-film publisher queues only existing typed capabilities. Its owned
+child registry binds the root intent, owner, parent Run, child Task and native
+capability root. Stop follows that provenance rather than caller-selected Task
+IDs, and never cancels reused completed sources. Recovery replays only
+transactional SQL publication with no native dispatch/PID; claim replacement
+rolls back queued children. Continuation checks saved script/settings, ownership,
+completed source identity and hash before consuming earlier narration or media.
+A complete MP4 artifact is required for production success; completion of a
+planning Run alone does not qualify the film or its quality.

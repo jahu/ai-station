@@ -1,3 +1,4 @@
+import { boundedResolutions } from "../components/media/video-geometry";
 import CreativeWorkspace from "../components/creative/CreativeWorkspace";
 import {
   useCreative,
@@ -49,6 +50,12 @@ export default function Video({
   withCreativeSessions?: boolean;
 }) {
   const [search, setSearch] = useSearchParams();
+  function modeQuery(mode?: string) {
+    const next = new URLSearchParams(mode ? { mode } : {});
+    const project = search.get("project");
+    if (project) next.set("project", project);
+    return next;
+  }
   const currentRun = useMediaRun(search.get("run") ?? "");
   const currentJob = useMediaJob(search.get("job") ?? "");
   const busy =
@@ -78,7 +85,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={!avatar && !editing}
           className={!avatar && !editing ? "active" : ""}
-          onClick={() => setSearch(new URLSearchParams())}
+          onClick={() => setSearch(modeQuery())}
         >
           Create a scene
         </button>
@@ -87,7 +94,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={avatar}
           className={avatar ? "active" : ""}
-          onClick={() => setSearch({ mode: "avatar" })}
+          onClick={() => setSearch(modeQuery("avatar"))}
         >
           Talking avatar
         </button>
@@ -96,7 +103,7 @@ export default function Video({
           disabled={busy}
           aria-pressed={editing}
           className={editing ? "active" : ""}
-          onClick={() => setSearch({ mode: "edit" })}
+          onClick={() => setSearch(modeQuery("edit"))}
         >
           Edit a film
         </button>
@@ -230,12 +237,17 @@ function SceneForm({
       ),
   });
   const managed = capability.data?.configuration_source === "managed";
-  const resolution = managed ? "1280x704" : resolutionChoice;
+  const fixedResolutions = boundedResolutions(capability.data);
+  const fixedProfile = managed || profileChoice === "bounded_11g";
+  const resolution =
+    fixedProfile && !fixedResolutions.includes(resolutionChoice)
+      ? "1280x704"
+      : resolutionChoice;
   const steps = managed ? Math.max(20, stepsChoice) : stepsChoice;
   const memoryProfile: VideoProfile =
     (managed ? "bounded_11g" : profileChoice) ??
     (mode === "generate" &&
-    resolution === "1280x704" &&
+    fixedResolutions.includes(resolution) &&
     steps >= 20 &&
     capability.data?.memory_profiles?.some(
       (row) => row.id === "bounded_11g" && row.available,
@@ -387,8 +399,8 @@ function SceneForm({
         preview it here.
         {memoryProfile === "bounded_11g" &&
           (managed
-            ? " Installed landscape profile · 11 GiB RAM. Clips and longer films use the same saved workspace."
-            : " Reduced-RAM landscape profile selected. Change it in Advanced settings.")}
+            ? " Installed video profile · 11 GiB RAM. Clips and longer films use the same saved workspace."
+            : " Reduced-RAM video profile selected. Change it in Advanced settings.")}
       </PageTitle>
       {capability.error && (
         <div className="notice" role="alert">
@@ -493,7 +505,7 @@ function SceneForm({
                 <select
                   aria-label="Format"
                   value={resolution}
-                  disabled={managed || profileChoice === "bounded_11g"}
+                  disabled={fixedProfile && fixedResolutions.length === 1}
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -504,8 +516,15 @@ function SceneForm({
                     </option>
                   )}
                   <option value="1280x704">Landscape · 1280 × 704</option>
-                  <option value="704x1280">Portrait · 704 × 1280</option>
-                  <option value="768x768">Square · 768 × 768</option>
+                  <option
+                    value="704x1280"
+                    disabled={fixedProfile && fixedResolutions.length === 1}
+                  >
+                    Portrait · 704 × 1280
+                  </option>
+                  <option value="768x768" disabled={fixedProfile}>
+                    Square · 768 × 768
+                  </option>
                 </select>
               </label>
               <label>
@@ -527,7 +546,16 @@ function SceneForm({
                     <option value={49}>2 seconds</option>
                     <option value={81}>3.4 seconds</option>
                     {duration.endsWith("s") &&
-                      !["10s", "15s", "30s", "60s"].includes(duration) && (
+                      ![
+                        "10s",
+                        "15s",
+                        "30s",
+                        "60s",
+                        "90s",
+                        "120s",
+                        "180s",
+                        "300s",
+                      ].includes(duration) && (
                         <option value={duration}>
                           {duration.slice(0, -1)} seconds
                         </option>
@@ -536,6 +564,10 @@ function SceneForm({
                     <option value="15s">15 seconds</option>
                     <option value="30s">30 seconds</option>
                     <option value="60s">1 minute</option>
+                    <option value="90s">1.5 minutes</option>
+                    <option value="120s">2 minutes</option>
+                    <option value="180s">3 minutes</option>
+                    <option value="300s">5 minutes</option>
                   </select>
                 )}
               </label>
@@ -601,7 +633,6 @@ function SceneForm({
                 onChange={(profile) => {
                   setProfileChoice(profile);
                   if (profile === "bounded_11g") {
-                    setResolution("1280x704");
                     setSteps((current) => Math.max(20, current));
                   }
                 }}
