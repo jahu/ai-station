@@ -157,3 +157,14 @@ Test two accounts, isolation of personal overrides and unrelated settings,
 first-write/stale revisions and real controller freezing/dispatch. Repeat the
 original two-picture request through the ordinary worker after preserving rollout.
 Do not assume a new prompt compiler alone fixes the already documented Qwen issue.
+
+The restored-default real conversation produced two separate successful Krea Runs
+from the same original, without rejected decisions. Its second brief, however,
+copied an invented alternative (“back or right profile”) from the inferred outcome;
+the renderer combined both depictions. Two files alone do not satisfy the requested
+single-view variants. Keep intent descriptions faithful without invented competing
+alternatives; each tool call must choose one concrete visual brief. Delegated
+creative details may be chosen; genuinely material missing preferences use ask_user.
+Preserve only requested invariants and do not merge separate variants into a
+composite unless requested. This is subject-neutral model guidance, not a keyword
+filter, pose list, output crop or post-hoc replacement. Repeat the full real case.
