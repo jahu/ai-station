@@ -7,7 +7,7 @@ immutable recipe fingerprint, Run UUID, deadline and existing setup permissions.
 Selection is a private native receipt; render dispatch still uses its own frozen
 image/recipe/daemon observation and source/cancellation contracts.
 
-First deliver the current workstation path: find only existing images carrying
+The initial existing-image phase delivered the workstation path: find only existing images carrying
 the exact packaged recipe and required entrypoint/user/protocol, then explicitly
 activate that verified image through a queued setup Run. Honor explicit native
 configuration. Journal intent before atomic selection publication, reobserve a
@@ -16,10 +16,10 @@ preparation after a late Stop. Account privacy, administrator revocation,
 changed image/recipe/daemon, symlinks and worker/Runner restart require tests.
 Readiness must notice a changed selection without a stale cached failure.
 
-This increment must report fresh-engine installation unavailable when no matching
-local image exists. It is not the complete new-installation path or goal closure.
-The next increment must install the fixed packaged SDK/renderer dependencies in
-bounded, owned CPU preparation containers and publish only a verified result.
+The original phase reported fresh installation unavailable when no matching
+image existed. The development installer now prepares the fixed packaged
+SDK/renderer dependencies in bounded, owned CPU containers and publishes only
+a verified result through that same setup Run.
 Use pinned official sources/lockfiles, private per-Run staging, no host OS/driver
 changes, no GPU/model downloads, no Docker control in the application, and no
 unowned BuildKit jobs or broad cleanup. Stop/recovery must confirm exact owned
@@ -54,7 +54,8 @@ images, commands, environment, privileges, resources, mounts and shared namespac
 only the exact stage after a lost reply, and refuses uncertain replay. Cleanup
 rechecks the pinned base, daemon, complete inspected policy and container ID
 before any Stop/delete, without volume removal. The two modules are bound into
-the preparation manifest. They are not yet an operational fresh-install endpoint.
+the preparation manifest alongside the native lifecycle and job sources. The
+existing setup endpoint now runs this workflow when no compatible image exists.
 
 A private actual assembly experiment completed in approximately 135 seconds,
 with both temporary containers verified and removed. The resulting new image
@@ -66,8 +67,7 @@ or generated-film publication quality. No new model was downloaded or inferred.
 The experiment ran two bounded stages concurrently; the product policy runs them
 serially to keep its preparation RAM reservation predictable.
 
-Before advertising fresh setup, extend the existing owned runtime preparation
-Run, rather than add another execution system. Freeze the preparation policy,
+Fresh setup extends the existing owned runtime preparation Run. Its contract is: Freeze the preparation policy,
 source archives, official bases and renderer recipe in the accepted manifest.
 Persist daemon identity and creation intent before every stage. Reconcile lost
 acknowledgements by exact owned name/ID and full inspected policy; never blindly
@@ -84,3 +84,35 @@ checks, including 70 policy/ownership cases. An actual Docker probe additionally
 created one unstarted fixed SDK stage, repeated its adoption without another
 create, uploaded the canonical source archive and confirmed exact cleanup.
 This is narrower than a complete installer lifecycle test.
+
+
+## Integrated first-use qualification — 2026-11-12
+
+Actual HTTP enqueue → scoped worker → private Unix Runner → fixed native helper
+prepared a new engine, verified its identity, cleaned both owned stage containers
+and atomically activated it. A further actual typed render using that exact new
+image passed 1080×1920/180-frame decoding, audio, source lineage and cleanup. An
+actual Stop while a preparation container was running canceled its Run, removed
+only owned stages and left rendering unready. An actual crash of both worker and Runner during a confirmed live stage recovered
+the same Run and original native helper, completed preparation and cleaned stages
+without another installation launch.
+
+These private tests preserve the workstation's existing engines: initial matching
+image discovery is hidden only for the disposable station until its own selection
+is published. The dependency installation, containers, resource limits, commit,
+activation, Stop and rendering are actual operations. Official base images may
+be reused from the Docker cache; this is not an empty-Docker-host download claim.
+
+Real qualification caught two faults missed by synthetic Docker fixtures. Docker
+changed `OomKillDisable` from false to null after start; restoring only that field
+matched the complete original policy hash. The policy now accepts only those two
+OOM-enabled representations and rejects true or any other field change. The
+image save also exceeded the generic thirty-second HTTP timeout: a successful
+actual save took approximately 69 seconds. Commit now uses the smaller of the
+remaining deadline and ten minutes, with no second commit after an uncertain
+response. Native failure logs retain the error class without registry URLs.
+
+The product executes stages serially, reserves 2304 MiB for the two-GiB stage and
+256-MiB helper, and applies a one-hour setup deadline. The UI reports actual
+stages and explains dependency downloads; it invents no download-byte totals.
+Existing-image receipts keep their original resource/deadline behavior.

@@ -4,7 +4,7 @@ This increment provides the native rendering component for [Creative Studio](pla
 The local material director and typed API/worker export bridge are now connected;
 see [materials](studio-materials.md). Soundtrack/shot generation, whole-material
 coordination and the export UI are connected on develop. Complete-film quality
-and fresh installation remain in qualification. Existing image/video workspaces
+remains in qualification; guided fresh preparation is described below. Existing image/video workspaces
 remain unchanged.
 
 The native Runner accepts a finite composition: full-HD portrait, landscape or
@@ -31,8 +31,7 @@ belong to the Run staging disk, not a small RAM-backed `/tmp`.
 `GET /v1/motion/capabilities` is read-only. Readiness is unavailable by default;
 normal tests do not adopt development images. An operator-configured
 `AI_STATION_MOTION_IMAGE` or an application-owned prepared-image receipt must
-match the immutable image ID, fixed entrypoint and current recipe hash. Guided
-preparation and control-plane registration follow in the next increment.
+match the immutable image ID, fixed entrypoint and current recipe hash. Guided preparation uses the ordinary private setup Run described below.
 
 `POST /v1/runs/motion` freezes the request, image, local Unix Docker daemon,
 implementation observation and absolute deadline. Native process ownership
@@ -79,8 +78,8 @@ Qualification: 15 native activation tests and 8 worker/account tests, plus actua
 API enqueue → worker → private Unix socket → native activation of the already
 qualified `ai-station-motion:local-v4` image. Actual readiness, receipt replay and
 unchanged selection on replay were checked; no new render or inference was
-executed during activation. Fresh installation on a machine without this image
-remains unavailable until its owned installation/cancellation lifecycle is qualified.
+executed during that activation. Missing engines now use the guided first-use
+preparation path described below.
 This activation is not generated-film visual/audio quality acceptance.
 
 Readiness keeps the last successful observation while rechecking the same
@@ -137,3 +136,21 @@ A real six-second CPU render qualified a join at editorial frame 61 with a
 reserved layout and single-audio verification. Existing approved footage was
 reused; no avatar was synthesized for this component check. Automatic presenter
 production and its editor/assistant controls remain separate delivery work.
+
+
+## Preparing a missing engine
+
+In Studio, open the material's **Prepare film export** panel. A station
+administrator reviews the component licenses and download notice, then clicks
+**Prepare film export**. CPU preparation runs in the ordinary setup history,
+reports toolkit/video/audio/assembly/verification stages and offers Stop. It
+downloads runtime components, without AI models or changes to other host apps.
+A compatible engine already installed on the station uses activation directly.
+
+Fixed official base digests, packaged npm lockfiles and trusted source archives
+feed two bounded owned containers. The native helper verifies the final immutable
+image and stage cleanup before publishing readiness. Worker/Runner recovery
+observes the same operation; uncertain ownership or commit cannot trigger replay.
+See the [contract and exact qualification scope](plans/studio-renderer-setup.md).
+This prepares rendering infrastructure; professional long-film quality remains
+a separate acceptance gate.

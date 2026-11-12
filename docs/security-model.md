@@ -2053,9 +2053,34 @@ image name, URL or path. Its fixed native profile inspects only compatible local
 images and atomically selects a verified image under application-owned storage.
 Setup identity, administrator authority, account-private history and receipts,
 revocation, Stop and stale-worker recovery follow the existing runtime preparation
-contract. Missing images remain unavailable; activation does not pull/build images,
-load a model, signal a container or remove shared preparation. Native inspection
+contract. Existing-image activation loads no model and retains shared preparation. Native inspection
 rejects changed daemon/image/recipe coordinates and symlink selection parents.
+
+Fresh preparation uses the same finite profile, manifest and administrator-owned
+Run. It accepts no caller-selected registry, image, package, command, path or URL.
+The native helper pulls only two fixed official base digests, uses packaged npm
+lockfiles with scripts disabled, and installs the reviewed CPU renderer components
+inside owned no-mount containers. The containers have two-GiB equal RAM/swap limits,
+two CPUs, 256 PIDs, private IPC, explicit runc and no-new-privileges. SDK preparation
+drops all capabilities; the in-container package step adds only CHOWN,
+DAC_OVERRIDE, FOWNER, SETGID and SETUID. No GPU, host package changes or public port
+is introduced. The helper has a separate 256-MiB zero-swap scope and one-hour fuse.
+
+Stage ownership freezes the official base, full config, resource policy, request
+hash, name/ID and local daemon before signaling. Lost create acknowledgements
+can adopt only that exact original stage. Docker's observed optional
+`OomKillDisable` false/null normalization is accepted only by matching the entire
+prior policy under those two OOM-enabled representations; true and every other
+changed field remain rejected. Component archives stay bounded and are never
+extracted onto the host. The final commit is single-intent and deadline bounded;
+a lost reply is reconciled by exact preparation labels without another commit.
+
+Stop persists its fence before signaling the owned helper, then removes only
+verified stage IDs, without removing volumes. Dead-helper inspection must confirm
+container cleanup before releasing reserved RAM. Changed ownership or uncertain
+commit/cleanup retains inspection state and disables blind continuation. Only a
+verified result can publish selection; later manual selection is never overwritten
+by replaying an old receipt. Late Stop retains verified shared engine images.
 
 Studio's whole-film publisher queues only existing typed capabilities. Its owned
 child registry binds the root intent, owner, parent Run, child Task and native

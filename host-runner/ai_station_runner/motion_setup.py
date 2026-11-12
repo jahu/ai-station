@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -28,7 +29,12 @@ from ai_station_runner.runtime_setup import fingerprint, platform_supported
 
 PROFILE = "hyperframes-cpu-linux-amd64-v1"
 QUALIFIED = True
+FRESH_QUALIFIED = True
 router = APIRouter(prefix="/v1/setup/motion", tags=["Studio export preparation"])
+
+
+class MissingRenderer(ValueError):
+    pass
 
 
 class Selection(BaseModel):
@@ -54,7 +60,7 @@ class Cancel(Selection):
 
 
 def recipe():
-    return {
+    value = {
         "profile": PROFILE,
         "name": "Studio · Full-HD film export",
         "capability": "motion",
@@ -68,6 +74,19 @@ def recipe():
         "license_url": "https://github.com/heygen-com/hyperframes/blob/main/LICENSE",
         "preparation_mode": "existing_image",
     }
+    if FRESH_QUALIFIED:
+        from ai_station_runner.motion_prepare_plan import manifest
+
+        value.update(
+            preparation_mode="owned_containers",
+            preparation_manifest=manifest(),
+            minimum_free_bytes=8 * 1024**3,
+            preparation_ram_mib=2304,
+            maximum_preparation_seconds=3600,
+            download_size_known=False,
+            license="Hyperframes/GSAP/font licenses and bundled Node, Python, Chromium, FFmpeg and Python-package licenses; downloads runtime components, no AI models",
+        )
+    return value
 
 
 def record(identity):
@@ -118,7 +137,7 @@ def candidate():
             return inspect_image(identity, bound=bound)
         except ValueError:
             continue
-    raise ValueError(
+    raise MissingRenderer(
         "No compatible local Studio export engine; automatic fresh installation is still being implemented"
     )
 
@@ -163,12 +182,31 @@ def catalog():
             report["installation_notice"] = (
                 "The compatible engine is already on this station; activation downloads no models"
             )
+    except MissingRenderer as exc:
+        report["installation_notice"] = str(exc)
+        if FRESH_QUALIFIED and QUALIFIED and not get_settings().motion_image:
+            from ai_station_runner.motion_install import prerequisites
+
+            try:
+                prerequisites()
+                report.update(
+                    installation_available=True,
+                    installation_notice="Download and prepare the local CPU export engine. Your AI models, shots and soundtrack stay unchanged; no GPU is used.",
+                )
+            except (OSError, ValueError, HTTPException, httpx.HTTPError, subprocess.SubprocessError):
+                report["installation_notice"] = (
+                    "Check local Docker and free storage before preparing film export"
+                )
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         report["installation_notice"] = str(exc)
     return report
 
 
 def snapshot(identity, saved):
+    if saved.get("installation"):
+        from ai_station_runner.motion_install import snapshot as installed_snapshot
+
+        return installed_snapshot(identity, saved)
     result = {
         "run_id": str(identity),
         "runner_id": get_settings().runner_id,
@@ -215,8 +253,24 @@ def prepare(body: Prepare):
             raise HTTPException(409, "Renderer activation is unavailable or its recipe changed")
         if not 0 < body.deadline_at.timestamp() - time.time() <= 4 * 3600 or not available():
             raise HTTPException(422, "Use a supported bounded local renderer activation")
+        from ai_station_runner.motion_install import active
+
+        active()
         try:
             installed = candidate()
+        except MissingRenderer as exc:
+            if FRESH_QUALIFIED and not get_settings().motion_image:
+                from ai_station_runner.motion_install import start
+
+                try:
+                    return start(body, frozen)
+                except (OSError, ValueError, httpx.HTTPError) as unavailable:
+                    raise HTTPException(
+                        409, "Renderer preparation prerequisites need inspection"
+                    ) from unavailable
+            raise HTTPException(
+                409, "The compatible local export engine is unavailable; refresh setup"
+            ) from exc
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             raise HTTPException(
                 409, "The compatible local export engine is unavailable; refresh setup"
@@ -261,6 +315,12 @@ def inspect(
         saved = record(identity)
         if saved is None:
             raise HTTPException(404, "Renderer activation not found")
+        if saved.get("installation"):
+            from ai_station_runner.motion_install import snapshot as installed_snapshot
+
+            return installed_snapshot(
+                identity, saved, stdout_offset=stdout_offset, stderr_offset=stderr_offset
+            )
         return snapshot(identity, saved)
 
 
@@ -269,6 +329,10 @@ def cancel(identity: UUID, body: Cancel):
     permitted(body)
     with locked():
         saved = record(identity) or {"request_hash": None}
+        if saved.get("installation"):
+            from ai_station_runner.motion_install import cancel as cancel_installation
+
+            return cancel_installation(identity, saved)
         saved["cancel_requested"] = True
         save(identity, saved)
         return snapshot(identity, saved)

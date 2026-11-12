@@ -4,6 +4,7 @@ The caller supplies the already private native setup directory and frozen daemon
 Fresh setup remains unavailable until the complete job/Stop/recovery is integrated.
 """
 
+from copy import deepcopy
 from urllib.parse import quote
 from uuid import UUID
 
@@ -73,10 +74,19 @@ def observe(api, saved):
     )
     if value.get("Name") != "/" + saved["container_name"]:
         raise OwnershipUncertain("Renderer preparation container name changed")
-    policy = fingerprint({key: value.get(key) for key in ("Config", "HostConfig", "Mounts", "Image")})
-    if saved.get("inspected_policy") and saved["inspected_policy"] != policy:
+    policy = deepcopy({key: value.get(key) for key in ("Config", "HostConfig", "Mounts", "Image")})
+    # Docker changes this optional false pointer to null after starting a
+    # cgroup-v2 container. Both leave OOM killing enabled; true is refused by
+    # inspect_owned. Compare the COMPLETE prior hash under just these two
+    # representations, then retain one canonical hash. No other field is relaxed.
+    policy["HostConfig"]["OomKillDisable"] = None
+    equivalent = {fingerprint(policy)}
+    policy["HostConfig"]["OomKillDisable"] = False
+    canonical = fingerprint(policy)
+    equivalent.add(canonical)
+    if saved.get("inspected_policy") and saved["inspected_policy"] not in equivalent:
         raise OwnershipUncertain("Renderer preparation inspected policy changed")
-    return value, policy
+    return value, canonical
 
 
 def create(api, folder, stage, identity, request_hash, daemon_id):

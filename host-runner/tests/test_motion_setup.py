@@ -22,6 +22,7 @@ def activation(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_STATION_MOTION_IMAGE", "")
     clear_settings_cache()
     monkeypatch.setattr(native, "QUALIFIED", True)
+    monkeypatch.setattr(native, "FRESH_QUALIFIED", False)
     monkeypatch.setattr(native, "available", lambda: True)
     monkeypatch.setattr(native, "platform_supported", lambda: True)
     state = {

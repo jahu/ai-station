@@ -19,13 +19,15 @@ type Catalog = {
   installation_notice?: string;
   usable_image?: boolean;
   manifest_sha256: string;
-  recipe?: { license: string; license_url: string };
+  image?: { present?: boolean };
+  recipe?: { license: string; license_url: string; preparation_mode?: string };
 };
 type Preparation = {
   id: string;
   manifest_sha256: string;
   run: Run;
   resume_allowed: boolean;
+  progress?: { phase?: string };
 };
 
 export default function StudioRendererSetup() {
@@ -49,6 +51,17 @@ export default function StudioRendererSetup() {
   const active = history.data?.find((p) => !terminal.has(p.run.status));
   const current = active ?? history.data?.[0];
   const data = catalog.data;
+  const fresh =
+    data?.recipe?.preparation_mode === "owned_containers" &&
+    !data.image?.present;
+  const phases: Record<string, string> = {
+    bases: "Downloading runtime components",
+    sdk: "Preparing the animation toolkit",
+    runtime: "Preparing video and audio tools",
+    assembling: "Assembling the export engine",
+    verifying: "Verifying the export engine",
+  };
+  const phase = phases[current?.progress?.phase ?? ""];
   const resumable =
     current?.resume_allowed &&
     current.manifest_sha256 === data?.manifest_sha256;
@@ -75,7 +88,7 @@ export default function StudioRendererSetup() {
           creativeJson("POST", {}),
         );
       if (!data?.installation_available || accepted !== data.manifest_sha256)
-        throw new Error("Review the current export engine before activation.");
+        throw new Error("Review the current export engine before preparation.");
       const fingerprint =
         kind +
         ":" +
@@ -146,8 +159,9 @@ export default function StudioRendererSetup() {
                 }
               />
               <span>
-                Activate the compatible export engine already installed on this
-                station. No model downloads or GPU use.
+                {fresh
+                  ? "Download and prepare the local export engine using your CPU. Your other apps and AI models stay unchanged. Download size depends on cached components."
+                  : "Activate the compatible export engine already installed on this station. No model downloads or GPU use."}
               </span>
             </label>
             {data.recipe && (
@@ -168,7 +182,13 @@ export default function StudioRendererSetup() {
               disabled={action.isPending || accepted !== data.manifest_sha256}
               onClick={() => action.mutate(resumable ? "resume" : "prepare")}
             >
-              {resumable ? "Retry activation" : "Activate film export"}
+              {resumable
+                ? fresh
+                  ? "Retry preparation"
+                  : "Retry activation"
+                : fresh
+                  ? "Prepare film export"
+                  : "Activate film export"}
             </Button>
           </>
         )}
@@ -177,10 +197,11 @@ export default function StudioRendererSetup() {
           <div>
             <strong>
               {active
-                ? "Activating film export"
+                ? phase ||
+                  (fresh ? "Preparing film export" : "Activating film export")
                 : current.run.status === "succeeded"
-                  ? "Activation completed"
-                  : "Activation stopped"}
+                  ? "Film export prepared"
+                  : "Preparation stopped"}
             </strong>
             {current.run.error_message && (
               <span>{current.run.error_message}</span>
@@ -194,7 +215,8 @@ export default function StudioRendererSetup() {
               disabled={action.isPending}
               onClick={() => action.mutate("cancel")}
             >
-              <Square size={13} /> Stop activation
+              <Square size={13} />{" "}
+              {fresh || phase ? "Stop preparation" : "Stop activation"}
             </Button>
           )}
           <Link to={`/runs/${current.run.id}`}>Details & logs ↗</Link>

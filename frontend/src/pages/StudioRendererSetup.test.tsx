@@ -22,6 +22,8 @@ function setup({
   stale = false,
   active = false,
   loseAck = false,
+  fresh = false,
+  phase = "",
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   let history =
@@ -31,6 +33,7 @@ function setup({
             id: "task-one",
             manifest_sha256: stale ? "b".repeat(64) : "a".repeat(64),
             resume_allowed: failed,
+            progress: { phase },
             run: { id: "run-one", status: active ? "running" : "interrupted" },
           },
         ]
@@ -57,6 +60,7 @@ function setup({
             id: "task-one",
             manifest_sha256: "a".repeat(64),
             resume_allowed: false,
+            progress: { phase },
             run: {
               id: "run-two",
               status: path.endsWith("/cancel") ? "canceled" : "queued",
@@ -70,9 +74,11 @@ function setup({
         can_prepare: admin,
         installation_available: installed,
         usable_image: ready,
+        image: { present: !fresh },
         manifest_sha256: "a".repeat(64),
         recipe: {
           profile,
+          preparation_mode: fresh ? "owned_containers" : "existing_image",
           license: "Component licenses",
           license_url:
             "https://github.com/heygen-com/hyperframes/blob/main/LICENSE",
@@ -174,4 +180,31 @@ it("shows ready only from native readiness and no activation action", async () =
   setup({ ready: true });
   await screen.findByText("Ready on this station");
   expect(screen.queryByRole("checkbox")).toBeNull();
+});
+
+it("prepares a missing engine with explicit download consent and the same typed setup API", async () => {
+  const { requests } = setup({ fresh: true });
+  const button = await screen.findByRole("button", {
+    name: "Prepare film export",
+  });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  expect(
+    screen.getByText(/Download size depends on cached components/),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(button);
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].body.profile).toBe("hyperframes-cpu-linux-amd64-v1");
+  expect(requests[0].body.license_accepted).toBe(true);
+  expect(requests[0].body).not.toHaveProperty("command");
+});
+
+it("shows actual preparation stages and can stop a fresh installation", async () => {
+  const { requests } = setup({ fresh: true, active: true, phase: "sdk" });
+  await screen.findByText("Preparing the animation toolkit");
+  fireEvent.click(screen.getByRole("button", { name: "Stop preparation" }));
+  await waitFor(() => expect(requests).toHaveLength(1));
+  expect(requests[0].path).toBe(
+    "/api/setup/runtimes/preparations/task-one/cancel",
+  );
 });

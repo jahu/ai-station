@@ -451,3 +451,23 @@ probe the exact application image, review/merge, deploy preserving station data,
 activate the qualified sequence renderer and generate a complete real film with
 its measured narration and actual Sonic presenter. Longer-film visual acceptance
 and fresh renderer installation remain required for the overall goal.
+
+
+### Actual generated presenter baseline and first-use setup
+
+The 17.2-second, four-cue generated film now has an actual newly generated Sonic
+presenter from the supplied approved portrait. Studio reused the completed speech,
+music and visual takes, prepared 825,600 clean narration samples, then produced
+a full 516-frame/30-fps final film. Complete decode/source checks passed. Its
+one AAC audio stream correlates 0.9996 with the frozen mastered mix, with an RMS
+ratio of 0.9965, confirming that the presenter did not duplicate the soundtrack.
+Six sampled moments retained coherent identity and reserved readable story space.
+Full audiovisual review, longer-film acceptance and long-avatar part continuity
+remain separate gates. No private QA film was published to the repository/site.
+
+The [first-use renderer workflow](studio-renderer-setup.md) also completed actual
+installation and Stop through the ordinary API/worker/UDS setup path; its new
+engine passed a full-HD export. This closes the missing installation path once
+its preserving deployment passes. Actual simultaneous worker/Runner crash recovery
+retained the same Run and original helper and completed without duplicate stages. The
+whole Creative Studio publication-quality objective stays active.

@@ -136,6 +136,9 @@ class RuntimeSetupExecutor:
     ram_mib = 1024
     required_permissions = PERMISSIONS
 
+    def memory_requirement(self, run):
+        return self.ram_mib
+
     def validate(self, run):
         validate_operation(run, executor_type=self.name)
 
@@ -203,7 +206,10 @@ class RuntimeSetupExecutor:
                 hardware = runner.hardware()
                 stopped = check() or stopped
                 if not stopped and not reserve_memory(
-                    session, run, (hardware.get("memory") or {}).get("available_mib"), self.ram_mib
+                    session,
+                    run,
+                    (hardware.get("memory") or {}).get("available_mib"),
+                    self.memory_requirement(run),
                 ):
                     run.task.metadata_json = {
                         **run.task.metadata_json,
@@ -305,6 +311,8 @@ class RuntimeSetupExecutor:
                 session.commit()
                 if result.get("requires_inspection"):
                     run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+                    run.error_type = "RuntimePreparationInspectionRequired"
+                    run.error_message = "Preparation ownership or cleanup could not be confirmed. Resources remain reserved; inspect this Run before retrying."
                     transition(session, run, RunStatus.INTERRUPTED, event_type="recovery.inspection_required")
                     return "done"
                 if (

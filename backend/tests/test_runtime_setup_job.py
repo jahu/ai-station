@@ -196,6 +196,8 @@ def test_inspection_required_retains_reservations_and_disables_resume(runtime_ca
         work()
         value = api.get("/api/setup/runtimes/preparations/" + created["id"]).json()
         assert value["run"]["status"] == "interrupted" and value["resume_allowed"] is False
+        assert value["run"]["error_type"] == "RuntimePreparationInspectionRequired"
+        assert "Resources remain reserved" in value["run"]["error_message"]
         with control_session_factory()() as db:
             assert any(row.released_at is None for row in db.scalars(select(ResourceLock)))
             assert not list(db.scalars(select(Artifact)))

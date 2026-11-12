@@ -113,3 +113,26 @@ def test_changed_ownership_never_receives_a_stop_or_remove(owned, tmp_path, chan
     with pytest.raises(ValueError):
         stop_and_remove(api, *arguments(owned, tmp_path))
     assert api.calls == [("POST", "/containers/create")]
+
+
+def test_start_normalization_keeps_oom_enabled_and_preserves_all_other_policy(owned, tmp_path):
+    api = Docker(owned, tmp_path)
+    owned[0]["HostConfig"]["OomKillDisable"] = False
+    saved = create(api, *arguments(owned, tmp_path))
+    api.value["HostConfig"]["OomKillDisable"] = None
+    assert create(api, *arguments(owned, tmp_path))["inspected_policy"] == saved["inspected_policy"]
+    api.value["HostConfig"]["OomKillDisable"] = True
+    with pytest.raises(ValueError):
+        stop_and_remove(api, *arguments(owned, tmp_path))
+    assert api.calls == [("POST", "/containers/create")]
+
+
+def test_oom_normalization_never_masks_another_full_policy_change(owned, tmp_path):
+    api = Docker(owned, tmp_path)
+    owned[0]["HostConfig"]["OomKillDisable"] = False
+    create(api, *arguments(owned, tmp_path))
+    api.value["HostConfig"]["OomKillDisable"] = None
+    api.value["HostConfig"]["Dns"] = ["192.0.2.1"]
+    with pytest.raises(OwnershipUncertain):
+        stop_and_remove(api, *arguments(owned, tmp_path))
+    assert api.calls == [("POST", "/containers/create")]
