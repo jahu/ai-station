@@ -1,11 +1,39 @@
 import type { CreativeDefaults } from "../components/creative/creative-project";
 
+export interface NarrationWords {
+  minimum?: number;
+  maximum?: number;
+}
+export interface StudioOptions extends CreativeDefaults {
+  narration_words?: NarrationWords | null;
+}
+
+export function narrationWordCount(board: Storyboard): number {
+  return board.scenes.reduce(
+    (count, shot) =>
+      count +
+      shot.narration.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word))
+        .length,
+    0,
+  );
+}
+
+export function narrationWordTarget(words: NarrationWords): string {
+  if (words.minimum != null && words.maximum != null)
+    return words.minimum === words.maximum
+      ? `${words.minimum} words`
+      : `${words.minimum}–${words.maximum} words`;
+  return words.minimum != null
+    ? `at least ${words.minimum} words`
+    : `at most ${words.maximum} words`;
+}
+
 export interface StudioMaterial {
   id: string;
   title: string;
   brief: string;
   creative_project_id: string | null;
-  options: CreativeDefaults;
+  options: StudioOptions;
   version: number;
   created_at: string;
   updated_at: string;
@@ -53,7 +81,7 @@ export interface StudioRevision {
     version?: number;
     identity?: { colors: string[] };
   };
-  options: CreativeDefaults;
+  options: StudioOptions;
   brief: string;
   created_at: string;
 }

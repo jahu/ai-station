@@ -166,3 +166,39 @@ def test_new_take_changes_repeatable_seed_while_a_retried_receipt_keeps_it():
             session.commit()
         another = submit(client, row, revision, image_model="juggernaut").json()
         assert another["parameters"]["seed"] != first["parameters"]["seed"]
+
+
+@pytest.mark.parametrize(
+    "code,name", [("#FFFFFF", "white"), ("#000", "black"), ("#ff0000", "red"), ("#0000ff", "blue")]
+)
+def test_visual_colors_are_descriptors_not_printed_design_tokens(code, name):
+    from app.studio_visual_direction import visual_color_words
+
+    assert visual_color_words("A surface colored " + code) == "A surface colored " + name
+    assert visual_color_words("#news #abcdef7 identifier#abc") == "#news #abcdef7 identifier#abc"
+
+
+def test_frozen_brand_codes_never_leak_into_generated_shots():
+    from copy import deepcopy
+    from types import SimpleNamespace
+
+    from app.studio_schema import Storyboard
+    from app.studio_shots import shot_prompt
+    from test_studio_materials import board
+
+    identity = {
+        "colors": ["#1B507C", "#F5F0E6"],
+        "visual_direction": "Premium photography with blue #1B507C light and warm #F5F0E6 walls.",
+    }
+    original = deepcopy(identity)
+    shot = Storyboard.model_validate(board()).scenes[0]
+    shot.visual_brief = "An unbranded sculpture on a deep blue #1B507C surface."
+    shot.framing = "Wide composition with a #F5F0E6 background."
+    shot.title = "Do not paint this caption"
+    shot.narration = "Do not paint this speech"
+    prompt = shot_prompt(SimpleNamespace(project_snapshot={"identity": identity}), shot)
+    assert "#1B507C" not in prompt and "#F5F0E6" not in prompt
+    assert "sculpture" in prompt and "Wide composition" in prompt and "Premium photography" in prompt
+    assert "No palette charts" in prompt
+    assert shot.title not in prompt and shot.narration not in prompt
+    assert identity == original and "#1B507C" in shot.visual_brief

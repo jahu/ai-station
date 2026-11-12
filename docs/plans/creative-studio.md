@@ -498,3 +498,60 @@ fences, plus relevant speech/music and production regression suites. After revie
 deployment, continue the saved real storyboard through ordinary production reuse
 and inspect the complete longer film; the original failure remains in history.
 The final publication-quality objective remains active.
+
+
+### Explicit spoken-script length — 2026-11-12
+
+The resumed long-film qualification completed all six Fish cues, its instrumental
+score and PCM mix. The cold verification repair passed with the same coordinator
+waiting and then dispatching once. A separate editorial defect is now explicit:
+the requested 170–190 spoken words survived only in prose; the director saved a
+127-word script. The first completed cue lasts 8.59 seconds inside a 16.03-second
+scene. This does not yet establish the final edit's quality, but explains why
+count/duration fidelity needs validation before expensive generation.
+
+Optional `StudioOptions.narration_words` captures minimum and/or maximum spoken
+word limits. The assistant extracts these semantically only when requested;
+seconds and captions never create a word limit. They belong to the material and
+its immutable versions, not to brand defaults or model execution settings. Missing
+limits serialize exactly as before, preserving sparse voiceovers and legacy
+request identities. A script count includes only whitespace-delimited spoken
+words/numbers; punctuation-only tokens, titles and direction do not contribute.
+
+The director checks the actual script against frozen bounds before publication.
+Its existing one-correction pass reports the measured count and unmet bound;
+a second failure retains the old version and starts no media. Manual version
+publication uses the same validator. Material creation exposes optional bounds;
+the editor displays the live spoken count/target and lets the user explicitly
+remove the limit without discarding edits. A limit is never satisfied by truncating
+speech, inventing filler in postproduction or changing the requested duration.
+
+Qualification covers range validation, exact/one-sided limits, silent-policy
+conflicts, unchanged legacy JSON, semantic intent through complete fake production,
+model correction/failure before media, manual save, UI edits/removal and full
+existing Studio regressions. Real semantic extraction and the longer completed
+film's pacing remain actual-model/visual acceptance gates after reviewed deployment.
+
+
+### Brand direction must not become lettering
+
+The same actual long-film run produced a photograph containing palette swatches
+and printed hexadecimal labels from its shot brief. The model received literal
+CSS codes alongside the brand direction; a general no-lettering sentence did not
+prevent this. That image is evidence of an editorial failure, not an accepted
+publication sample.
+
+Studio shot preparation now translates three/six-digit CSS color literals into
+standard named visual colors and explicitly excludes palette/sample graphics.
+Hue/tone proximity selects the name; a generated photograph cannot guarantee exact
+RGB values under changing lighting. Frozen project colors remain unchanged and
+are still used exactly for composited typography/backgrounds. The director also
+receives a clear separation between physical visual color direction and numeric
+design tokens. This syntax translation applies only to Studio media prompts,
+never to user-intent routing, arbitrary ordinary Image requests, references,
+original project records or completed artifacts.
+
+Pure/publisher tests cover multiple palettes, existing saved shot direction,
+untouched source/brand records and no speech/caption leakage. Actual generation
+must still be inspected after deployment; removing a literal token alone does not
+prove absence of all unwanted lettering or establish publication quality.

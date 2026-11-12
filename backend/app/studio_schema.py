@@ -9,6 +9,49 @@ from app.creative_projects import Defaults
 from app.creative_sessions import Fields
 
 
+class NarrationWords(Fields):
+    minimum: StrictInt | None = Field(default=None, ge=1, le=3000, exclude_if=lambda v: v is None)
+    maximum: StrictInt | None = Field(default=None, ge=1, le=3000, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def ordered(self):
+        if self.minimum is None and self.maximum is None:
+            raise ValueError("Choose at least one spoken word limit")
+        if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
+            raise ValueError("Minimum spoken words cannot exceed the maximum")
+        return self
+
+
+class StudioOptions(Defaults):
+    narration_words: NarrationWords | None = Field(default=None, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def narrated(self):
+        if self.narration_words and self.audio not in {"voice", "voice_music"}:
+            raise ValueError("Spoken word limits require narration")
+        return self
+
+
+def narration_word_count(storyboard):
+    # Whitespace-delimited words/numbers; punctuation-only tokens do not count.
+    return sum(any(c.isalnum() for c in word) for s in storyboard.scenes for word in s.narration.split())
+
+
+def validate_narration_words(storyboard, options):
+    limits = StudioOptions.model_validate(options).narration_words
+    if limits is None:
+        return
+    count = narration_word_count(storyboard)
+    if limits.minimum is not None and count < limits.minimum:
+        raise ValueError(
+            f"Narration contains {count} spoken words; at least {limits.minimum} were requested. Expand the actual spoken script, not captions or acting directions."
+        )
+    if limits.maximum is not None and count > limits.maximum:
+        raise ValueError(
+            f"Narration contains {count} spoken words; at most {limits.maximum} were requested. Revise the actual spoken script without cutting audio later."
+        )
+
+
 class NarrationDelivery(Fields):
     direction: Literal[
         "natural", "whisper", "happy", "sad", "afraid", "angry", "calm", "excited", "breathy", "sighing"
@@ -103,14 +146,14 @@ class Create(Fields):
     title: str = Field(default="Untitled material", min_length=1, max_length=160)
     brief: str = Field(min_length=1, max_length=12000)
     creative_project_id: UUID | None = None
-    options: Defaults | None = None
+    options: StudioOptions | None = None
 
 
 class Update(Fields):
     expected_version: StrictInt = Field(ge=1)
     title: str | None = Field(default=None, min_length=1, max_length=160)
     brief: str | None = Field(default=None, min_length=1, max_length=12000)
-    options: Defaults | None = None
+    options: StudioOptions | None = None
     archived: bool | None = None
 
 

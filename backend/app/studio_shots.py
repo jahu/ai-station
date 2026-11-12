@@ -17,6 +17,7 @@ from app.studio_materials import DB, digest, get_material, get_revision, source_
 from app.studio_render import router
 from app.studio_schema import Fields, Storyboard
 from app.studio_storyboard import source_end_seconds
+from app.studio_visual_direction import visual_color_words
 from app.video_schema import MAX_VIDEO_SECONDS
 
 
@@ -37,7 +38,10 @@ def shot_prompt(revision, shot):
     if identity.get("visual_direction"):
         parts.append("Shared visual direction: " + identity["visual_direction"])
     parts.append("Keep visible subjects, lighting and materials coherent. No captions, labels or lettering.")
-    return "\n\n".join(parts)
+    parts.append(
+        "Apply color directions only to actual objects, materials, backgrounds and lighting. No palette charts, color sample bars, swatches or visible color codes."
+    )
+    return visual_color_words("\n\n".join(parts))
 
 
 def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
