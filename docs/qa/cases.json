@@ -1,5 +1,5 @@
 {
-  "version": 57,
+  "version": 58,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -44,7 +44,10 @@
     "docs/releases/0.1.2.md",
     "docs/library.md",
     "docs/plans/media-lease-recovery.md",
-    "docs/plans/conversation-reliability-repair.md"
+    "docs/plans/conversation-reliability-repair.md",
+    "docs/plans/creative-studio.md",
+    "docs/plans/studio-conversation-revisions.md",
+    "docs/plans/studio-completion-audit.md"
   ],
   "cases": [
     {
@@ -6637,6 +6640,190 @@
       ],
       "expected": [
         "Anulowanie przed aktywacją zachowuje działającą wersję i dane. Run ma stan anulowany, nie zostaje uruchomiony instalator."
+      ]
+    },
+    {
+      "id": "STUDIO-001",
+      "area": "Creative Studio",
+      "title": "Projekt marki i niezależna historia materiałów",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "W Studio utwórz dwie marki z różnymi kolorami i typografią.",
+        "Edytuj jedną markę, zarchiwizuj i przywróć projekt."
+      ],
+      "expected": [
+        "Marki i materiały są oddzielne; zapisane wcześniejsze wersje zachowują dawną identyfikację."
+      ],
+      "resources": "Bez inferencji",
+      "minutes": 5,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-002",
+      "area": "Creative Studio",
+      "title": "Rolka z jednego polecenia w czacie",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "Poproś w czacie o 16-sekundową rolkę dla wybranej marki, z obrazami i muzyką instrumentalną.",
+        "Otwórz wynik w Library i Studio."
+      ],
+      "expected": [
+        "Powstaje odtwarzalny MP4 właściwej marki i orientacji; widoczne są rzeczywiste media, muzyka i historia Runów."
+      ],
+      "resources": "GPU / modele obrazów i muzyki; uruchomienie świadome",
+      "minutes": 15,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-003",
+      "area": "Creative Studio",
+      "title": "Film edukacyjny z narracją i muzyką",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "Poproś o krótki panoramiczny film edukacyjny z lektorem i cichą muzyką.",
+        "Odsłuchaj całość, także miejsca podziału mowy na fragmenty."
+      ],
+      "expected": [
+        "Narracja jest kompletna, ma spójny głos i naturalne tempo; muzyka nie zagłusza słów, napisy pozostają czytelne."
+      ],
+      "resources": "GPU / lokalna mowa i muzyka; uruchomienie świadome",
+      "minutes": 20,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-004",
+      "area": "Creative Studio",
+      "title": "Kadry i rzeczywiste źródła filmu",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "W storyboardzie wybierz zapisany klip i obraz z Library.",
+        "Sprawdź przycięcie, długość scen, pionowy i panoramiczny podgląd; wyeksportuj."
+      ],
+      "expected": [
+        "Eksport wykorzystuje wybrane pliki i okna klipu; nie generuje niezamówionych kopii i nie pokazuje pustych scen."
+      ],
+      "resources": "Eksport CPU; użycie istniejących neutralnych mediów",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-005",
+      "area": "Creative Studio",
+      "title": "Mówiący prezenter w gotowym filmie",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "Dla filmu z narracją wybierz Create a speaking presenter i własny dozwolony portret.",
+        "Wyprodukuj film i sprawdź twarz, usta, dźwięk oraz układ napisów."
+      ],
+      "expected": [
+        "Prezenter towarzyszy historii, nie zasłania treści i korzysta z narracji filmu; wynik i proces można obejrzeć."
+      ],
+      "resources": "GPU / model awatara i mowy; uruchomienie świadome",
+      "minutes": 25,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-006",
+      "area": "Creative Studio",
+      "title": "Zmiana napisu bez ponownego generowania mediów",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "W rozmowie z ukończonym filmem poproś o zmianę tylko pierwszego nagłówka.",
+        "Porównaj nowy MP4, źródła scen, muzykę i historię wersji."
+      ],
+      "expected": [
+        "Nowa wersja ma zmieniony nagłówek i te same media, okna klipów, dźwięk i długość. Oryginał zostaje; brak nowych zadań generowania obrazu/wideo/dźwięku."
+      ],
+      "resources": "Lokalny LLM i eksport CPU; istniejący film",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-007",
+      "area": "Creative Studio",
+      "title": "Kopia filmu dla innej marki i proporcji",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "Po teście STUDIO-006 poproś o osobną kopię dla drugiej marki w orientacji panoramicznej, z zachowaniem mediów i muzyki.",
+        "Otwórz oba projekty i historię ich materiałów."
+      ],
+      "expected": [
+        "Powstaje oddzielny materiał z identyfikacją drugiej marki i formatem 1920×1080; oryginał i wcześniejsze wersje są nienaruszone."
+      ],
+      "resources": "Lokalny LLM i eksport CPU; dwie marki i istniejący film",
+      "minutes": 10,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
+      ]
+    },
+    {
+      "id": "STUDIO-008",
+      "area": "Creative Studio",
+      "title": "Stop i powrót do produkcji Studio",
+      "priority": "P1",
+      "prerequisites": [
+        "AI Station 0.6.0; zalogowane własne konto.",
+        "Wymagane lokalne modele przygotowane dla testów generowania; używaj neutralnych własnych plików."
+      ],
+      "steps": [
+        "Uruchom produkcję i użyj Stop podczas aktywnej fazy.",
+        "Otwórz historię ponownie po odświeżeniu; użyj dostępnej kontynuacji/ponowienia."
+      ],
+      "expected": [
+        "Stop obejmuje wyłącznie własne zadania produkcji; gotowe wcześniejsze filmy zostają. Kontynuacja nie dubluje przyjętych wyników i pokazuje rzeczywisty stan."
+      ],
+      "resources": "Zależnie od etapu CPU/GPU; neutralny materiał testowy",
+      "minutes": 15,
+      "requirements": [
+        "docs/plans/creative-studio.md",
+        "docs/plans/studio-conversation-revisions.md"
       ]
     }
   ],
