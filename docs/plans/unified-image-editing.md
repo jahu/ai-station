@@ -79,3 +79,21 @@ historical assertions were corrected and their affected modules then passed all
 random parameter IDs are incompatible with xdist collection. Final changed-code
 checks and real local qualification are recorded separately below; no synthetic
 verdict is evidence of real image-model accuracy.
+
+Reviewed implementation head `26b8f5a0` additionally passed 800 selected backend
+regressions, including the complete new workflow, current raw ReAct with one/two
+references, agent final-result delivery, account input isolation, recovery/retry
+and native image contracts. The preserved local deployment now runs that head.
+Real local qualification rejected three negative controls: identical decoded
+pixels, a different PNG retaining the old room rather than the requested garden,
+and a clean near-frontal image supplied for an explicit side-profile request.
+The latter two verdicts came from the installed local vision model reading the
+actual source/candidate images, not from a fake provider or filename comparison.
+The ordinary Qwen edit completed successfully with the actual selected model:
+the indoor room became a leafy garden while the subject, clothes and identifying
+mark stayed consistent. The accepted output was inspected locally; a model verdict
+is not a general guarantee of perfect visual perception. The qualification also
+exposed incidental original properties copied into the proposed preservation
+list. Generic planning guidance now distinguishes source observations from
+user-required invariants and requires all final-plan fields to agree. Private inputs/evidence remain
+outside Git and are not public website/README assets.
