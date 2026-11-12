@@ -156,7 +156,13 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         and inherited.get("backend") == item["backend"]
         and inherited.get("model_id") == values.get("model_id")
     ):
-        values.update({key: value for key, value in inherited.items() if key in PROFILE_FIELDS})
+        values.update(
+            {
+                key: value
+                for key, value in inherited.items()
+                if key in PROFILE_FIELDS and not (key == "seed" and item["backend"] == "qwen")
+            }
+        )
     if controls:
         values.update(controls)
     return values

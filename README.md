@@ -53,6 +53,9 @@ Existing image agents expose compatible installed models for Generate, Edit and
 Recompose directly beside the image operation. Accounts without personal image
 defaults inherit the station's configured generators; personal choices take
 precedence. New requests keep a snapshot of the selected model.
+New automatic Qwen image requests also freeze a fresh seed, rather than replaying
+the reference image's generation noise. Explicit seeds and saved retries remain
+reproducible. [Reference-seed diagnosis](docs/plans/qwen-reference-seeds.md).
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
 The [website-task and stream recovery repair](docs/plans/assistant-website-recovery.md)
 tracks working-deliverable planning, structured tool failures and claim-fenced

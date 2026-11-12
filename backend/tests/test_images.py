@@ -115,7 +115,8 @@ def test_image_vertical_slice(bridge, mode, backend, count):
             client.get(f"/api/artifacts/{artifact['id']}/thumbnail").headers["content-type"] == "image/jpeg"
         )
         events = client.get(f"/api/runs/{run['id']}/events").json()
-        assert sum(len(e["payload"]["text"]) for e in events if e["event_type"] == "stdout") == 300001
+        stdout = "".join(e["payload"]["text"] for e in events if e["event_type"] == "stdout")
+        assert "x" * 300000 + "\n" in stdout
         assert any(e["event_type"] == "stderr" and "diagnostic" in e["payload"]["text"] for e in events)
 
 
@@ -164,6 +165,7 @@ def test_failed_image_retry_keeps_task_and_lineage(bridge):
         assert retry.status_code == 202, retry.text
         assert retry.json()["task_id"] == run["task_id"]
         assert retry.json()["parent_run_id"] == run["id"]
+        assert retry.json()["parameters"]["seed"] == run["parameters"]["seed"]
         assert client.post(f"/api/images/runs/{run['id']}/retry").status_code == 409
 
 
@@ -176,7 +178,7 @@ def test_image_validation_and_storage_boundaries(bridge):
             {"mode": "t2i"},
             {"mode": "img2img", "edit_prompt": "x"},
             {"mode": "t2i", "prompt": "x", "width": 65536},
-            {"mode": "t2i", "prompt": "x", "seed": 1},
+            {"mode": "t2i", "prompt": "x", "seed": -1},
             {"mode": "recompose", "prompt": "x"},
             {"mode": "t2i", "prompt": "x", "gpu": "cpu"},
             {"mode": "upscale", "input_artifact_ids": ["../../etc/passwd"]},

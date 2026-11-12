@@ -1,6 +1,7 @@
 """Typed image intent, bounded uploads, and artifact delivery."""
 
 import io
+import secrets
 import tempfile
 import warnings
 from pathlib import Path
@@ -254,6 +255,19 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         parent_artifact_ids=[parent.id for parent in parents],
         repeats=1,
     )
+    if body.backend == "qwen" and body.mode != "upscale" and body.seed is None:
+        # Replaying a reference's initial noise can reconstruct an oversharpened
+        # near-copy in Qwen 2.1. Freeze a fresh seed once, never on each dispatch.
+        excluded = {42}  # Legacy external pipeline/sd-cli default.
+        for parent in parents:
+            source = session.get(Run, parent.run_id) if parent.run_id else None
+            value = source.parameters.get("seed") if source else parent.metadata_json.get("seed")
+            if type(value) is int:
+                excluded.add(value)
+        seed = secrets.randbits(32)
+        while seed in excluded:
+            seed = (seed + 1) % (2**32)
+        parameters["seed"] = seed
     resources = {"gpu": body.gpu}
     if model_snapshot:
         parameters["image_model"] = model_snapshot

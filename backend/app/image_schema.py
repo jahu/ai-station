@@ -131,8 +131,10 @@ class ImageRequest(BaseModel):
         if self.mode != "t2i" and self.backend not in {"qwen", "krea2"}:
             raise ValueError("Backend selection applies only to Generate")
         if not krea and (self.mode != "t2i" or self.backend != "juggernaut"):
-            if self.seed is not None or self.negative:
-                raise ValueError("Seed and negative prompt are supported only by Juggernaut")
+            if self.negative:
+                raise ValueError("Negative prompt is supported only by Juggernaut")
+            if self.mode == "upscale" and self.seed is not None:
+                raise ValueError("Upscale does not use a seed")
         if self.mode in {"t2i", "recompose"}:
             self.width = self.width or (768 if krea else 832)
             self.height = self.height or (1024 if krea else 1216)

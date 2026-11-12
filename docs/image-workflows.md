@@ -1,5 +1,18 @@
 # Image workflows
 
+## Reproducible Qwen seeds
+
+New Qwen Generate/Edit/Recompose requests without an explicit seed freeze a fresh
+seed on the ordinary Run, avoiding the legacy default and known source seeds.
+The native adapter now forwards that seed to the actual image engine; the
+external pipeline previously left Qwen at sd-cli's default 42 even when a seed
+was submitted. Conversation follow-ups retain compatible image settings without
+copying the reference's Qwen seed. Managed checkpoints use their existing typed
+seed argument. Retry keeps the saved seed; a new variation gets a new automatic
+one. Explicit seeds remain authoritative, including zero. Deliberately replaying
+the source's noise can reproduce the known Qwen 2.1 near-copy/sharpening effect;
+see [diagnosis and qualification](plans/qwen-reference-seeds.md).
+
 ## Automatic model choice for edits
 
 In development builds, **Auto · match this edit** is available in Edit and
