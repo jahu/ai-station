@@ -5812,6 +5812,7 @@ section:has(> .memory-grid) > .dashboard-note {
 .conversation-app:not(.navigation-expanded) .brand > span,
 .conversation-app:not(.navigation-expanded) .search-button,
 .conversation-app:not(.navigation-expanded) .nav-label,
+.conversation-app:not(.navigation-expanded) .nav-marker,
 .conversation-app:not(.navigation-expanded) .local-card,
 .conversation-app:not(.navigation-expanded) .coding-nav-tasks,
 .conversation-app:not(.navigation-expanded) .coding-nav-heading > button {
@@ -5822,6 +5823,7 @@ section:has(> .memory-grid) > .dashboard-note {
 .conversation-app:not(.navigation-expanded) .coding-nav-heading {
   font-size: 0;
   justify-content: center;
+  gap: 0;
   padding: 12px;
 }
 .conversation-app .sidebar svg {
