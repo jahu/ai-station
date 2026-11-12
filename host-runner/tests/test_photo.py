@@ -49,7 +49,7 @@ def test_argv_matches_actual_reference_parser(mode, backend, inputs):
         output="/data/result.png",
         inputs=inputs,
     )
-    parsed = namespace["build_parser"]().parse_args(argv[2:])
+    parsed = namespace["build_parser"]().parse_args(argv[argv.index("/photo.py") + 1 :])
     assert parsed.device == "cuda:7"
     assert parsed.out == "/data/result.png"
     if mode == "recompose":

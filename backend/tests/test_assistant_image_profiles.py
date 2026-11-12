@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from app.assistant_image_profiles import inventory, request_profile
 from app.image_models import DefaultsWrite, change_default
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.runs import create_run, create_task
 from app.state import RunStatus
 from test_image_models import registered
@@ -60,7 +60,18 @@ def test_followup_preserves_actual_source_profile_over_different_workspace_defau
     change_default(DefaultsWrite(revision=0, mode="recompose", choice=model.id), session)
     root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
     values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
-    assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6, "seed": None}
+    assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6}
+
+
+def test_new_qwen_followup_does_not_inherit_the_sources_noise_seed(session):
+    image = source(session)
+    original = session.get(Run, image.run_id)
+    original.parameters = {**original.parameters, "seed": 123}
+    session.flush()
+    root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
+    values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    assert "seed" not in values
+    assert values["steps"] == 30
 
 
 def test_changed_model_is_not_silently_replaced(session):

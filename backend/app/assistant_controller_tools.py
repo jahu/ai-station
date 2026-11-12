@@ -28,7 +28,7 @@ class ImageOperation(Images):
     instruction: str = Field(
         min_length=1,
         max_length=10000,
-        description="One self-contained concrete visual brief for this result. Resolve delegated creative choices; do not pass alternative possibilities to the renderer or combine separate variants into a composite unless requested. Preserve only requested invariants and state the intended change relative to the references.",
+        description="One self-contained concrete visual brief for this result. Resolve delegated creative choices; do not pass alternative possibilities to the renderer or combine separate variants into a composite unless requested. Preserve only requested invariants and state the intended change relative to the references. For discretionary views, keep required distinguishing features observable at their original locations on the referenced subject, without relocating or duplicating them to solve occlusion. Honor explicitly requested changes or views.",
     )
 
     image_model: Alias | None = Field(

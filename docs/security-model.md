@@ -3,6 +3,12 @@ projection of the retained station image-default setting. Model definitions are
 shared; no administrator UserSetting or other station setting is exposed. Personal
 overrides take precedence and new Runs freeze their effective selection.
 
+The native Qwen import adapter forwards one validated unsigned 32-bit seed to
+the configured sd-cli argv. Its subprocess proxy belongs only to the imported
+pipeline module; it cannot select another executable or enable a shell. New
+automatic Qwen Runs persist their seed before dispatch; this adds no HTTP/Runner
+field or execution permission and leaves voice seed continuity unchanged.
+
 The photo adapter may honor the native operator's existing `AI_STATION_SD_CLI`
 setting through its owned import wrapper. The configured executable is checked
 before launch and import; clients cannot supply it in a photo request. Original

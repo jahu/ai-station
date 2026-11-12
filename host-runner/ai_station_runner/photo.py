@@ -85,7 +85,7 @@ def build_photo_argv(
         ]
         if negative:
             argv += ["--negative", negative]
-        return _wrap(argv, prompt_style, model_snapshot, sd_cli)
+        return _wrap(argv, prompt_style, model_snapshot, sd_cli, seed if backend == "qwen" else None)
     if mode == "img2img":
         if len(inputs) != 1:
             raise PhotoCommandError("Edit requires exactly one input image")
@@ -106,7 +106,7 @@ def build_photo_argv(
             "--out",
             output,
         ]
-        return _wrap(edit, prompt_style, model_snapshot, sd_cli)
+        return _wrap(edit, prompt_style, model_snapshot, sd_cli, seed)
     if mode == "recompose":
         if not inputs:
             raise PhotoCommandError("Recompose requires at least one reference")
@@ -131,7 +131,7 @@ def build_photo_argv(
         ]
         for ref in inputs:
             argv += ["--reference", ref]
-        return _wrap(argv, prompt_style, model_snapshot, sd_cli)
+        return _wrap(argv, prompt_style, model_snapshot, sd_cli, seed)
     if mode == "upscale":
         if len(inputs) != 1:
             raise PhotoCommandError("Upscale requires exactly one input image")
@@ -166,7 +166,15 @@ def configured_sd_cli(value):
     return str(path)
 
 
-def _wrap(argv, style, model, sd_cli=""):
+def _wrap(argv, style, model, sd_cli="", seed=None):
+    if seed is not None:
+        if type(seed) is not int or not 0 <= seed <= 4294967295:
+            raise PhotoCommandError("Qwen seed must be an unsigned 32-bit integer")
+        wrapped = _wrap(argv, style, model, sd_cli)
+        job = str(Path(__file__).with_name("photo_job.py"))
+        if wrapped[1] != job:
+            wrapped = [argv[0], job, "--station-profile", style, *argv[1:]]
+        return [*wrapped[:2], "--station-seed", str(seed), *wrapped[2:]]
     if sd_cli:
         runtime = configured_sd_cli(sd_cli)
         return [
