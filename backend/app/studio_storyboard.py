@@ -28,7 +28,7 @@ def source_end_seconds(plan, index):
     )
 
 
-def fit_timing(plan, duration_seconds):
+def fit_timing(plan, duration_seconds, *, limits=None):
     """Fit directed beat weights without discarding content or trusting LLM arithmetic.
 
     Only the director calls this. Manual saved edits and measured spoken timing
@@ -40,6 +40,8 @@ def fit_timing(plan, duration_seconds):
         raise ValueError("Use fewer scenes or a longer duration: every scene needs at least one second")
     if target > count * 2700:
         raise ValueError("Split this longer material into more scenes of at most ninety seconds")
+    if limits:
+        return bounded_fit(plan, target, limits)
     if plan.frames == target:
         return plan
     remaining = target - count * 30
@@ -58,3 +60,72 @@ def fit_timing(plan, duration_seconds):
     for shot, length in zip(value["scenes"], frames, strict=True):
         shot["duration_frames"] = length
     return type(plan).model_validate(value)
+
+
+def bounded_fit(plan, target, limits):
+    """Water-fill elastic beat weights without extending an inspected clip."""
+    caps = [min(2700, limits.get(i, 2700)) for i in range(len(plan.scenes))]
+    if any(type(cap) is not int or cap < 30 for cap in caps):
+        raise ValueError("A selected clip window cannot cover the minimum one-second scene")
+    if sum(caps) < target:
+        raise ValueError(
+            "Available clip windows cannot cover the requested duration; add elastic stills/graphics or plan longer new footage"
+        )
+    if plan.frames == target and all(
+        s.duration_frames <= cap for s, cap in zip(plan.scenes, caps, strict=True)
+    ):
+        return plan
+    remaining = target - 30 * len(caps)
+    frames = [30] * len(caps)
+    free = list(range(len(caps)))
+    while free:
+        weight = sum(plan.scenes[i].duration_frames for i in free)
+        shares = {i: Fraction(remaining * plan.scenes[i].duration_frames, weight) for i in free}
+        saturated = [i for i in free if shares[i] >= caps[i] - 30]
+        if saturated:
+            for i in saturated:
+                frames[i] = caps[i]
+                remaining -= caps[i] - 30
+            free = [i for i in free if i not in saturated]
+            continue
+        for i in free:
+            frames[i] += math.floor(shares[i])
+        left = remaining - sum(math.floor(v) for v in shares.values())
+        for i in sorted(free, key=lambda i: (-(shares[i] % 1), i))[:left]:
+            frames[i] += 1
+        break
+    value = plan.model_dump(mode="json")
+    for shot, length in zip(value["scenes"], frames, strict=True):
+        shot["duration_frames"] = length
+    return type(plan).model_validate(value)
+
+
+def fit_source_timing(plan, duration_seconds, catalog):
+    """Inspected Library windows are finite; stills can absorb the edit's timing.
+
+    Avoid lengthening planned generated-video beats when elastic stills exist.
+    These descriptive bounds do not replace native source/hash inspection.
+    """
+    origins = [plan.scenes[visual_origin(plan, i)] for i in range(len(plan.scenes))]
+    elastic = any(
+        s.visual_kind in {"image", "graphics"}
+        or (s.visual_kind == "library" and catalog.get(str(s.source_artifact_id), {}).get("kind") == "image")
+        for s in origins
+    )
+    limits = {}
+    for i, (shot, origin) in enumerate(zip(plan.scenes, origins, strict=True)):
+        source = catalog.get(str(origin.source_artifact_id), {})
+        if elastic and (
+            origin.visual_kind == "video" or origin.visual_kind == "library" and source.get("kind") == "video"
+        ):
+            limits[i] = shot.duration_frames
+        duration = source.get("duration_seconds")
+        if (
+            origin.visual_kind == "library"
+            and type(duration) in (int, float)
+            and math.isfinite(duration)
+            and duration > 0
+        ):
+            available = math.floor((duration - shot.media_start_seconds) * 30 + 1e-8)
+            limits[i] = min(limits.get(i, 2700), available)
+    return fit_timing(plan, duration_seconds, limits=limits)

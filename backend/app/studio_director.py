@@ -38,7 +38,7 @@ from app.studio_materials import (
 )
 from app.studio_plan_validation import validate_storyboard
 from app.studio_schema import PlanRequest, Storyboard
-from app.studio_storyboard import fit_timing
+from app.studio_storyboard import fit_source_timing
 
 INSTRUCTIONS = """You are the director and editor of a publication-quality original reel, presentation or educational film.
 Return only one complete JSON object matching storyboard_schema. No Markdown or executable code.
@@ -340,8 +340,12 @@ class StudioDirector:
                         lambda messages, **kwargs: self.consume(session, run, messages, database, **kwargs),
                         str(original),
                     )
-                fitted = fit_timing(storyboard, params["frozen"]["options"]["duration_seconds"])
-                if fitted.frames != storyboard.frames:
+                fitted = fit_source_timing(
+                    storyboard, params["frozen"]["options"]["duration_seconds"], catalog
+                )
+                if [s.duration_frames for s in fitted.scenes] != [
+                    s.duration_frames for s in storyboard.scenes
+                ]:
                     await database(
                         lambda: append_event(
                             session,
@@ -352,6 +356,10 @@ class StudioDirector:
                                 "requested_frames": fitted.frames,
                                 "fps": 30,
                                 "preserved_scene_count": len(storyboard.scenes),
+                                "retimed_scene_count": sum(
+                                    a.duration_frames != b.duration_frames
+                                    for a, b in zip(storyboard.scenes, fitted.scenes, strict=True)
+                                ),
                             },
                         ),
                     )
