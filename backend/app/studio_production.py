@@ -39,6 +39,7 @@ class Produce(Fields):
     image_model: str | None = Field(default=None, min_length=1, max_length=100)
     video_model_id: UUID | None = None
     reuse_from_run_id: UUID | None = None
+    reuse_export_run_id: UUID | None = Field(default=None, exclude_if=lambda value: value is None)
     presenter: GeneratePresenter | None = Field(default=None, exclude_if=lambda value: value is None)
     timing_policy: TimingPolicy | None = Field(default=None, exclude_if=lambda value: value is None)
 
@@ -176,6 +177,12 @@ def create_production(session, material_id, body):
         raise HTTPException(409, ready.get("reason") or "Prepare local film export before production")
     bindings = snapshot_bindings(session, row, revision, body)
     state = {"revision_id": revision.id, "bindings": bindings, "soundtrack_id": None}
+    if body.reuse_export_run_id:
+        if body.voice is not None or body.music_model_id is not None or body.presenter is not None:
+            raise ValueError("Choose preserved export takes or new voice/music/presenter settings")
+        from app.studio_revision_reuse import capture
+
+        state.update(capture(session, body.reuse_export_run_id, revision))
     previous = None
     if body.reuse_from_run_id:
         previous = root_run(session, body.reuse_from_run_id, row.id)
@@ -485,6 +492,9 @@ class StudioProductionExecutor:
         ):
             raise ValueError("The completed soundtrack changed before film production")
         revision = get_revision(session, row, state["revision_id"])
+        from app.studio_revision_reuse import verify
+
+        verify(session, state, revision)
         plan = Storyboard.model_validate(revision.storyboard)
         for scene, source in list(state["bindings"].items()):
             shot = plan.scenes[int(scene)]

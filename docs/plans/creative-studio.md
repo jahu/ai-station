@@ -148,6 +148,38 @@ supports local frame-seeking render and HTML media tracks. Pin and inspect the
 actual installed version before choosing command flags; do not install from a
 moving `latest` during a render or reuse unrelated project runtime ownership.
 
+## Current acceptance audit — 2026-11-12
+
+The dated sections below retain earlier failures and qualification boundaries;
+their historical “remaining” lists are not a current execution checklist.
+Fresh renderer preparation, actual Stop/restart recovery and a first-use export
+are qualified. Conversation-created portrait/music and landscape/silent outputs,
+a standalone voiced reel, a complete educational voice/music film and an
+integrated generated presenter have actual private Library evidence.
+
+The educational film has now been revoiced and exported at 1920×1080, 2250 frames
+and exactly 75 seconds, retaining all original visual sources. Independent local
+transcription recovered all 179 words without edits. The owner approved pace,
+expression and narrator continuity across the complete film. This supersedes the
+95.633-second narration-quality rejection without deleting that earlier result.
+[Performance and timing](studio-measured-timing.md) describes the generic changes.
+Shared same-seed speech calls and a fixed generated-voice anchor apply beyond
+Studio; supplied recordings retain their verified voice reference.
+
+The conversation bridge now supports [source-aware revisions](studio-conversation-revisions.md).
+Temporary-account tests cover parented edits, linked brand copies, exact source/
+audio/presenter reuse, stale/foreign/archived/trashed authority and Stop isolation.
+Actual local-model follow-ups changed only a headline in the existing 16-second
+portrait film, then created a separate 1920×1080 copy under the other brand.
+Both retained every actual shot/trim and the exact score, with no new media
+inference. Full decode, duration, source/audio checks and sampled scene/transition
+review passed. Original materials and revisions remained intact.
+
+See [the completion audit](studio-completion-audit.md) for the delivered scope and
+verification boundaries. Private test media are not approved for public website
+or repository publication. The published installer version remains unchanged;
+this work is available in the deployed development preview.
+
 ## Delivery progress
 
 - Project registry and identity workspace merged to develop in #713/#714.
@@ -716,3 +748,17 @@ checks against an isolated real accounts/API instance confirmed whole-visual
 fitting, motion/layout persistence, original-revision/source preservation and no
 new generation Run. The mobile composition controls have no horizontal overflow.
 This editor qualification does not establish a film's publication quality.
+
+
+## Narration acceptance and conversation revisions — 2026-11-12
+
+The owner accepted the complete 75-second educational film's narration:
+“Narracja jest dobra w całym filmie.” This closes full-film narration pace,
+expression and continuity review; it is not blanket visual/publication approval.
+The private acceptance receipt retains the actual film and source checks.
+
+The next execution gap is follow-up editing: preserve the editable source version
+and reuse its completed media instead of starting a new unrelated production.
+See [conversation revision contract](studio-conversation-revisions.md) for source
+scope, explicit replacement, exact audio/presenter reuse and qualification gates.
+Do not regenerate or retune the accepted narration merely to exercise this path.

@@ -216,6 +216,8 @@ def advance(session, stage, root, state, body, revision):
 
 
 def render_layer(body, state):
+    if state.get("reused_presenter"):
+        return Presenter.model_validate(state["reused_presenter"])
     if body.presenter is None:
         return None
     return Presenter(

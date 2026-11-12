@@ -9,7 +9,7 @@ from pydantic import Field, StrictInt
 from app.events import append_event
 from app.providers import ProviderError
 from app.studio_schema import Fields, Storyboard, narration_word_count, validate_narration_words
-from app.studio_storyboard import fit_source_timing, visual_origin
+from app.studio_storyboard import visual_origin
 
 
 class Line(Fields):
@@ -77,7 +77,9 @@ async def repair_narration(plan, options, frozen, catalog, session, run, databas
     lower, upper = limits.get("minimum", 1), limits.get("maximum")
     upper = upper if upper is not None else lower + max(4, lower // 10)
     target = (lower + upper) // 2 if limits.get("minimum") else max(1, upper - upper // 20)
-    timed = fit_source_timing(plan, options["duration_seconds"], catalog)
+    from app.studio_plan_validation import fit_plan
+
+    timed = fit_plan(plan, options, catalog, fit_duration=frozen.get("fit_duration", True))
     hints = word_hints(timed, upper, catalog)
     identity = frozen.get("project_snapshot", {}).get("identity", {})
     messages = [

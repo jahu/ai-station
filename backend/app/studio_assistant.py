@@ -7,6 +7,7 @@ Waiting relinquishes the worker; only the complete owned MP4 fulfills the tool.
 from datetime import datetime, timedelta
 from uuid import UUID, uuid5
 
+from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.models import Artifact, Run, StudioRevision
@@ -17,6 +18,10 @@ from app.studio_assistant_contract import StudioCall, StudioIntent, reference_id
 
 NAME = "assistant_studio"
 PERMISSIONS = ("filesystem_read", "workspace_write")
+
+
+class StudioSourceUnavailable(ValueError):
+    pass
 
 
 def request_parameters(session, root, raw):
@@ -47,15 +52,51 @@ def request_parameters(session, root, raw):
         raise ValueError("This Studio outcome is already fulfilled")
     if root.parameters["controller_provider"].get("location") != "local":
         raise ValueError("Studio direction requires the selected local model")
-    chosen = selected_context(
-        session,
-        root.parameters.get("controller_creative_projects", {}),
-        StudioIntent.model_validate(outcome["studio"]),
-    )
+    intent = StudioIntent.model_validate(outcome["studio"])
+    source = None
+    captured_source = None
+    if intent.source_material:
+        from app.studio_conversation import source_material
+
+        if root.parameters.get("controller_studio_revision_policy") != "source-v1":
+            raise ValueError("This request did not capture Studio revision authority")
+        captured_source = root.parameters.get("controller_studio_materials", {}).get(intent.source_material)
+        if captured_source is None:
+            raise ValueError("Choose a captured Studio material from this conversation")
+        if len(args.instruction) > 8000:
+            raise ValueError("Keep revision feedback within 8000 characters")
+        try:
+            source = source_material(
+                session, captured_source, owner_id=root.owner_id, conversation_id=root.conversation_id
+            )
+            chosen = selected_context(
+                session, root.parameters.get("controller_creative_projects", {}), intent, source=source
+            )
+        except (ValueError, HTTPException, OSError) as exc:
+            return {
+                "controller_parent_id": root.id,
+                "outcome_index": index,
+                "studio_source_error": str(exc.detail) if isinstance(exc, HTTPException) else str(exc),
+                "execution_deadline_at": root.parameters["execution_deadline_at"],
+            }
+    else:
+        chosen = selected_context(session, root.parameters.get("controller_creative_projects", {}), intent)
     entries = catalog(session, root)
     required = [
         a for a in outcome.get("source_inputs", []) if entries.get(a, {}).get("type") in {"image", "video"}
     ]
+    if captured_source:
+        # The old exported film selects its editable material; it is not new B-roll.
+        composite = {
+            alias
+            for alias, entry in entries.items()
+            if entry.get("snapshot", {}).get("id") == captured_source["export_artifact_id"]
+        }
+        required = [alias for alias in required if alias not in composite]
+        if composite.intersection(args.references):
+            raise ValueError(
+                "Use source_material to revise this film; its completed shots are supplied automatically"
+            )
     supplied = set(args.references) | ({args.presenter_reference} if args.presenter_reference else set())
     if not set(required).issubset(supplied):
         raise ValueError("Preserve the requested supplied Studio media references")
@@ -68,13 +109,21 @@ def request_parameters(session, root, raw):
             session, owner_id=root.owner_id, entries=entries, aliases=[args.presenter_reference]
         )[0]
         presenter = {"image_artifact_id": image, "placement": args.presenter_placement or "auto"}
+    inherited_presenter = False
+    if presenter is None and source and source[2].parameters.get("presenter"):
+        old_wrapper = session.get(Run, captured_source["wrapper_id"])
+        if old_wrapper.parameters.get("presenter"):
+            presenter = old_wrapper.parameters["presenter"]
+            inherited_presenter = True
     return {
         "controller_parent_id": root.id,
         "instruction": args.instruction,
         "title": args.title,
         "outcome_index": index,
         "reference_artifact_ids": references,
+        **({"source_material": captured_source} if captured_source else {}),
         **({"presenter": presenter} if presenter else {}),
+        **({"studio_inherited_presenter": True} if inherited_presenter else {}),
         **chosen,
         "model": root.parameters["controller_request"]["model"],
         **(
@@ -218,6 +267,8 @@ class AssistantStudioExecutor:
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         params = run.parameters
         kids = child_tasks(session, run)
+        if params.get("studio_source_error"):
+            raise StudioSourceUnavailable(params["studio_source_error"])
         if not kids:
             from app.assistant_controller_tools import catalog
             from app.chat_providers import snapshot_provider
@@ -242,7 +293,29 @@ class AssistantStudioExecutor:
             intent = StudioIntent.model_validate(
                 controller.metadata_json["controller_outcomes"][params["outcome_index"]]["studio"]
             )
-            selected_context(session, controller.parameters.get("controller_creative_projects", {}), intent)
+            source = None
+            if params.get("source_material"):
+                from app.studio_conversation import source_material
+
+                try:
+                    source = source_material(
+                        session,
+                        params["source_material"],
+                        owner_id=run.owner_id,
+                        conversation_id=run.conversation_id,
+                    )
+                    selected_context(
+                        session,
+                        controller.parameters.get("controller_creative_projects", {}),
+                        intent,
+                        source=source,
+                    )
+                except (ValueError, HTTPException, OSError) as exc:
+                    raise StudioSourceUnavailable(str(exc)) from exc
+            else:
+                selected_context(
+                    session, controller.parameters.get("controller_creative_projects", {}), intent
+                )
             aliases = next(
                 s["arguments"]["references"]
                 for s in controller.metadata_json["controller_steps"]
@@ -256,17 +329,57 @@ class AssistantStudioExecutor:
             ):
                 raise ValueError("The frozen Studio references changed")
             # One transaction publishes material, planning Task and the receipt.
-            material = create_material(
-                session,
-                Create(
-                    client_request_id=uuid5(UUID(run.id), "material"),
-                    title=params["title"],
-                    brief=params["instruction"],
-                    creative_project_id=params["creative_project_id"],
-                    options=params["options"],
-                ),
+            from app.studio_revision_reuse import audio_contract
+
+            visual_inputs = []
+            if source:
+                from app.studio_conversation import prior_visuals
+
+                visual_inputs = prior_visuals(session, source[1], source[2])
+            plan_references = list(
+                dict.fromkeys([*params["reference_artifact_ids"], *(v["artifact_id"] for v in visual_inputs)])
             )
+            if len(plan_references) > 12:
+                raise ValueError("Choose a source edit with at most twelve distinct visual references")
+            parent = None
+            brief = source[1].brief if source else params["instruction"]
+            if source and params["creative_project_id"] == source[0].creative_project_id:
+                material, parent, _ = source
+            else:
+                material = create_material(
+                    session,
+                    Create(
+                        client_request_id=uuid5(UUID(run.id), "material"),
+                        title=params["title"],
+                        brief=brief,
+                        creative_project_id=params["creative_project_id"],
+                        options=params["options"],
+                    ),
+                )
+                if source:
+                    from app.studio_materials import digest, publish_revision
+                    from app.studio_schema import Storyboard
+
+                    original = source[1]
+                    parent = publish_revision(
+                        session,
+                        material,
+                        Storyboard.model_validate(original.storyboard),
+                        client_request_id=uuid5(UUID(run.id), "source-copy"),
+                        request_sha256=digest(params["source_material"]),
+                        frozen={
+                            "brief": original.brief,
+                            "options": original.options,
+                            "project_snapshot": original.project_snapshot,
+                        },
+                    )
             run.metadata_json = {**run.metadata_json, "studio_material_id": material.id}
+            if source:
+                run.metadata_json = {
+                    **run.metadata_json,
+                    "studio_source_material_id": source[0].id,
+                    "studio_source_revision_id": source[1].id,
+                }
             plan = create_plan(
                 session,
                 material.id,
@@ -274,13 +387,33 @@ class AssistantStudioExecutor:
                     client_request_id=uuid5(UUID(run.id), "plan"),
                     expected_version=material.version,
                     model=params["model"],
-                    reference_artifact_ids=params["reference_artifact_ids"],
+                    parent_revision_id=parent.id if parent else None,
+                    feedback=params["instruction"] if source else "",
+                    reference_artifact_ids=plan_references,
                 ),
                 provider_snapshot=frozen_provider,
                 frozen={
-                    "brief": params["instruction"],
+                    "brief": brief,
                     "options": params["options"],
                     "project_snapshot": params["project_snapshot"],
+                    **(
+                        {
+                            "prior_visuals": [
+                                {"scene": v["scene"], "artifact_id": v["artifact_id"]} for v in visual_inputs
+                            ],
+                            "existing_visuals_only": not intent.refresh_visuals,
+                            "fit_duration": intent.duration_seconds is not None,
+                            **(
+                                {"preserved_audio": audio_contract(source[1])}
+                                if not intent.refresh_audio
+                                and intent.duration_seconds is None
+                                and intent.audio in {None, source[1].options["audio"]}
+                                else {}
+                            ),
+                        }
+                        if source
+                        else {}
+                    ),
                 },
             )
             attach(session, run, plan, "plan")
@@ -340,13 +473,37 @@ class AssistantStudioExecutor:
                     wait_for(session, run, [])
                     session.commit()
                     return "done"
+                reuse_export = None
+                if params.get("source_material") and (
+                    not params.get("presenter") or params.get("studio_inherited_presenter")
+                ):
+                    from app.studio_conversation import source_material
+                    from app.studio_revision_reuse import audio_contract
+
+                    try:
+                        _, old_revision, old_render = source_material(
+                            session,
+                            params["source_material"],
+                            owner_id=run.owner_id,
+                            conversation_id=run.conversation_id,
+                            check_version=False,
+                        )
+                    except (ValueError, HTTPException, OSError) as exc:
+                        raise StudioSourceUnavailable(str(exc)) from exc
+                    if audio_contract(old_revision) == audio_contract(revision):
+                        reuse_export = old_render.id
+                    elif old_render.parameters.get("presenter") and not params.get("presenter"):
+                        raise ValueError(
+                            "The revised narration needs a new presenter take; choose its portrait before producing it"
+                        )
                 production = create_production(
                     session,
                     revision.material_id,
                     Produce(
                         client_request_id=uuid5(UUID(run.id), "production"),
                         revision_id=revision.id,
-                        presenter=run.parameters.get("presenter"),
+                        reuse_export_run_id=reuse_export,
+                        presenter=None if reuse_export else run.parameters.get("presenter"),
                         timing_policy=run.parameters.get("timing_policy"),
                     ),
                 )
@@ -360,6 +517,7 @@ class AssistantStudioExecutor:
                     **run.metadata_json,
                     "controller_tool_result": {
                         "material_id": run.metadata_json["studio_material_id"],
+                        "revision_id": session.get(Run, output.run_id).parameters["studio_revision_id"],
                         "outcome_index": params["outcome_index"],
                         "options": params["options"],
                         "project": params["project_snapshot"].get("name"),
@@ -426,7 +584,8 @@ def observed_result(session, root, step):
         "studio_outcome_index": wrapper.parameters["outcome_index"],
         **(
             {"studio_attempt_exhausted": True}
-            if any(
+            if wrapper.error_type == "StudioSourceUnavailable"
+            or any(
                 kind == "plan"
                 and child.status == "failed"
                 and child.metadata_json.get("studio_planning_exhausted") is True
