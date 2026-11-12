@@ -34,14 +34,21 @@ class StudioOptions(Defaults):
 
 def narration_word_count(storyboard):
     # Whitespace-delimited words/numbers; punctuation-only tokens do not count.
-    return sum(any(c.isalnum() for c in word) for s in storyboard.scenes for word in s.narration.split())
+    return spoken_word_count(s.narration for s in storyboard.scenes)
+
+
+def spoken_word_count(texts):
+    return sum(any(c.isalnum() for c in word) for text in texts for word in text.split())
 
 
 def validate_narration_words(storyboard, options):
+    validate_spoken_word_count(narration_word_count(storyboard), options)
+
+
+def validate_spoken_word_count(count, options):
     limits = StudioOptions.model_validate(options).narration_words
     if limits is None:
         return
-    count = narration_word_count(storyboard)
     if limits.minimum is not None and count < limits.minimum:
         raise ValueError(
             f"Narration contains {count} spoken words; at least {limits.minimum} were requested. Expand the actual spoken script, not captions or acting directions."

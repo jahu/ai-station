@@ -283,7 +283,17 @@ class AssistantStudioExecutor:
             wait_for(session, run, active)
         else:
             if any(r.status != "succeeded" for r in rows):
-                raise ValueError("A Studio stage did not complete; its finished results remain available")
+                failures = [r for r in rows if r.error_message]
+                failure = next((r for r in failures if r.error_type != "PrerequisiteFailed"), None)
+                failure = failure or next(iter(failures), None)
+                reason = (
+                    f"{failure.executor_type}: {failure.error_message[:1000]}"
+                    if failure
+                    else "A required Run did not finish successfully"
+                )
+                raise ValueError(
+                    f"Studio {kind} did not complete: {reason}. Finished results remain available."
+                )
             if kind == "plan":
                 revision = session.scalar(
                     select(StudioRevision).where(StudioRevision.source_run_id == primary.id)

@@ -555,3 +555,38 @@ Pure/publisher tests cover multiple palettes, existing saved shot direction,
 untouched source/brand records and no speech/caption leakage. Actual generation
 must still be inspected after deployment; removing a literal token alone does not
 prove absence of all unwanted lettering or establish publication quality.
+
+
+### Compound planning correction — 2026-11-12
+
+The real corrected request selected the right brand, landscape, voice/music and
+170–190-word limits. Its first director response nevertheless combined multiple
+independent defects: oversized framing fields, a 248-word script, five rather
+than six requested scenes, and a twenty-second Library beat for a six-second
+owned clip. The first validation stopped at the framing schema errors. The one
+remaining model correction fixed those fields but retained 248 words and failed.
+No media was dispatched for that invalid plan; a successful controller reply did
+not constitute a delivered film. The model's poor proposal remains rejected.
+
+The director now collects independent script/audio/source/schema defects into
+one bounded correction report. It includes measured scene/visual/script counts,
+compact field paths without echoing invalid input, and available Library video
+windows. A framing failure can no longer hide the spoken-word bound. A completed
+video receipt may supply a finite typed duration to the local planner; unknown or
+unverified timing stays unknown. These are descriptive observations, not native
+execution authority. Owned source hashes, reference/account boundaries and final
+native media inspection remain unchanged. The original two-attempt limit and
+valid-publication barrier remain in place.
+
+Qualification must reproduce the actual framing-plus-word-limit failure and
+repair it in the single remaining attempt; check post-fit and malformed-proposal
+source windows, policy/source errors, bad raw shapes, timing provenance and the
+existing director/production suites. Then repeat actual local-model planning
+with the preserved complete six-second clip. Inspect requested scene/visual
+counts as well as word/time bounds; the complete film and publication-quality
+acceptance are still open and must not be inferred from this diagnostic repair.
+
+The conversation wrapper also preserves the first owned underlying stage failure
+instead of replacing it with an opaque generic stage error. Owner checks precede
+that projection; no partial artifact becomes a completed film. The public API,
+permissions, database schema and valid legacy request identities do not change.

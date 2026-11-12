@@ -299,6 +299,7 @@ def test_failed_final_render_remains_unfulfilled_without_substituting_a_storyboa
         root = db.get(Run, result["run"]["id"])
         step = root.metadata_json["controller_steps"][0]
         assert step["observation"]["status"] == "failed"
+        assert "Synthetic final render failure" in step["observation"]["errors"][0]["error"]
         assert step["observation"]["artifacts"] == []
         assert missing_outcomes([step["observation"]], root.metadata_json["controller_outcomes"])
         assert controller_results(db, root)["artifacts"] == []
