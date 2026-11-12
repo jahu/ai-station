@@ -55,6 +55,7 @@ def test_owned_fixed_cpu_stage_accepts_only_its_verified_identity(owned):
         ("Config", "Labels", {"ai-station.motion.prepare.run": str(uuid4())}),
         ("HostConfig", "Memory", 0),
         ("HostConfig", "MemorySwap", -1),
+        ("HostConfig", "OomKillDisable", True),
         ("HostConfig", "CpuQuota", 0),
         ("HostConfig", "NetworkMode", "host"),
         ("HostConfig", "Privileged", True),

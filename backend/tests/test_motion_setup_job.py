@@ -170,3 +170,35 @@ def test_setup_history_and_action_remain_owner_private(accounts, runtime_catalog
     assert other.get(path).status_code == 404
     assert other.post("/api/setup/runtimes", json=body(runtime_catalog)).status_code == 403
     assert other.get("/api/setup/runtimes/preparations", params={"profile": PROFILE}).json() == []
+
+
+def test_fresh_setup_accounts_for_serial_stage_and_supervisor_memory(runtime_catalog, bridge, monkeypatch):
+    runtime_catalog["recipe"].update(
+        preparation_mode="owned_containers", preparation_ram_mib=2304, download_size_known=False
+    )
+    runtime_catalog["manifest_sha256"] = fingerprint(runtime_catalog["recipe"])
+    monkeypatch.setattr(MotionSetupClient, "hardware", lambda _: {"memory": {"available_mib": 2048}})
+    with TestClient(app) as api:
+        created = api.post("/api/setup/runtimes", json=body(runtime_catalog))
+        assert created.status_code == 202, created.text
+        identity = created.json()["run"]["id"]
+        assert created.json()["run"]["requested_resources"]["ram_mib"] == 2304
+        assert work() == identity
+        result = api.get("/api/runs/" + identity).json()
+        assert result["status"] == "queued" and not bridge["starts"]
+
+
+def test_fresh_progress_reports_real_stages_without_fabricated_download_bytes():
+    from types import SimpleNamespace
+
+    from app.motion_setup_job import MotionSetupExecutor
+
+    run = SimpleNamespace(
+        parameters={"recipe": {"preparation_mode": "owned_containers", "download_bytes": 0}}
+    )
+    executor = MotionSetupExecutor()
+    assert executor.progress(run, {"type": "motion.prepare.progress", "phase": "sdk"}) == {
+        "phase": "sdk",
+        "download_size_known": False,
+    }
+    assert executor.progress(run, {"type": "motion.prepare.progress", "phase": "made-up"}) is None

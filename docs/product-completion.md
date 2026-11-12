@@ -17,6 +17,22 @@ checks and human voice/film evaluation remain the owner's post-release tests;
 macOS and SMTP remain deferred. The original long-term product vision remains
 a roadmap, rather than a claim that every future runtime already works.
 
+## Current Creative Studio development — 2026-11-12
+
+Private creative projects, semantic assistant selection, immutable materials,
+measured narration/music, actual media production and full-HD Hyperframes export
+are connected. Automatic Sonic presenters are deployed through PR #738; a real
+17.2-second complete film passed timing, decode, source and single-soundtrack
+checks. Guided renderer preparation now has an actual first-use/Stop baseline
+and a successfully rendered result from the newly installed image. Simultaneous
+worker/Runner crash recovery passed with the same Run and original helper;
+preserving deployment is tracked in its plan.
+
+This is development work beyond the published 0.5.0 installers. Complete longer
+educational-film and audiovisual publication-quality acceptance remain open.
+[Current scope and evidence](plans/creative-studio.md) ·
+[Renderer preparation](plans/studio-renderer-setup.md).
+
 ## Historical implementation journal
 
 The dated entries below preserve earlier decisions and test evidence. Their

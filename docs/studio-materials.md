@@ -263,3 +263,19 @@ silent/music-only scene timings must honor the requested complete duration.
 Repeatedly generating a described "same image" or accepting a longer storyboard
 is not proof of visual continuity or correct timing. These remain active work,
 separate from DSP qualification.
+
+
+## First-use film export
+
+If no renderer is ready, open **Prepare film export** below the material, review
+the component licenses/download notice and prepare it once. An administrator
+can follow the actual installation stages or stop the operation. Preparation
+uses the CPU, keeps existing shots/soundtracks and downloads no AI models.
+When an existing compatible engine is available, the same panel activates it
+without downloading components. Readiness is shared; setup history stays private.
+
+The actual 17.2-second presenter-film baseline retained all 516 editorial frames
+and the original mixed soundtrack, with one audio stream, verified source hashes
+and complete decoding. Six sampled frames retained a coherent presenter identity
+and reserved story space. This does not replace longer-film and full audiovisual
+quality acceptance.

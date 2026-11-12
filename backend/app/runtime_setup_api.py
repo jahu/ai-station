@@ -138,6 +138,10 @@ def attempt(session, task, saved, previous=None):
     fish = saved["recipe"]["profile"] == FISH_PROFILE
     native_llama = saved["recipe"]["profile"] in NATIVE_LLAMA_PROFILES
     inputs = speech or image or music or video or avatar or effects or fish or native_llama
+    motion = (
+        saved["recipe"]["profile"] == MOTION_PROFILE
+        and saved["recipe"].get("preparation_mode") == "owned_containers"
+    )
     run = create_run(
         session,
         task,
@@ -168,10 +172,14 @@ def attempt(session, task, saved, previous=None):
             "profile": saved["recipe"]["profile"],
             "manifest_sha256": saved["manifest_sha256"],
             "recipe": saved["recipe"],
-            "execution_deadline_at": (utcnow() + timedelta(hours=24 if inputs else 2)).isoformat(),
+            "execution_deadline_at": (
+                utcnow() + timedelta(hours=24 if inputs else 1 if motion else 2)
+            ).isoformat(),
         },
         permissions=[*PERMISSIONS, "filesystem_read"] if inputs else PERMISSIONS,
-        requested_resources={"ram_mib": 1024 if native_llama else 4096 if inputs else 1024},
+        requested_resources={
+            "ram_mib": 2304 if motion else 1024 if native_llama else 4096 if inputs else 1024
+        },
         retry_class="inspect",
         parent_run_id=previous.id if previous else None,
     )

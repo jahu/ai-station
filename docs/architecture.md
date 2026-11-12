@@ -1817,8 +1817,19 @@ administrator-owned runtime preparation lifecycle (`motion_setup`). The control
 plane passes only a fixed profile, manifest fingerprint, Run identity, deadline
 and setup permissions over the private socket. Native metadata publication binds
 the actual image, packaged recipe and local daemon; native rendering retains its
-separate resource, source, Stop and cleanup contract. This increment does not
-install a missing renderer. See [renderer activation](hyperframes-renderer.md#activating-an-existing-local-engine).
+separate resource, source, Stop and cleanup contract.
+
+Missing engines use the same `motion_setup` Task. A 256-MiB owned native helper
+prepares two serial two-GiB CPU containers from fixed official base digests and
+packaged source/lockfile archives. Existing setup admission reserves their combined
+2304 MiB; rendering retains its independent 4352-MiB reservation. No BuildKit job,
+host SDK/package installation or control-plane Docker access is introduced.
+The helper journals stage intent, checks the exact container/image/daemon policy,
+commits one finite renderer image and removes its owned stages. A surviving or
+completed helper is inspected after worker/Runner loss; an uncertain operation
+cannot be replayed. Native observation publishes the atomic shared selection only
+after result verification and cleanup. Existing compatible images take the
+activation fast path. [Preparation contract](plans/studio-renderer-setup.md).
 
 Whole-material Studio production uses short durable `studio_production_step`
 Runs and dependencies. The existing audio, segmented-video and render Tasks keep

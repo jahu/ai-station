@@ -114,6 +114,8 @@ def inspect_owned(value, base, stage, identity, request_hash, *, container_id):
         or host.get("AutoRemove")
         or (host.get("RestartPolicy") or {}).get("Name", "no") not in {"", "no"}
         or host.get("Runtime", "runc") != "runc"
+        or host.get("OomKillDisable") is not None
+        and host.get("OomKillDisable") is not False
     ):
         raise ValueError("Renderer preparation cannot acquire host, GPU or shared namespace access")
     return value
@@ -153,7 +155,12 @@ def source_archive(stage):
 def manifest():
     policies = {
         name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-        for name in ("motion_prepare_plan.py", "motion_prepare_owner.py")
+        for name in (
+            "motion_prepare_plan.py",
+            "motion_prepare_owner.py",
+            "motion_install.py",
+            "motion_install_job.py",
+        )
     }
     return {
         "bases": dict(BASES),

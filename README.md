@@ -117,7 +117,9 @@ Hyperframes renderer and the API/worker export bridge are qualified with actual
 image/video fixtures. Export the selected takes and complete soundtrack from the
 workspace, review earlier MP4s and download the result. The export panel can
 activate a compatible engine already installed on the station, with private
-setup history and Stop; fresh-engine installation is still in development.
+setup history and Stop. When the engine is missing, guided preparation downloads
+the fixed runtime components and builds it in bounded CPU containers, keeping
+your other apps and AI models unchanged.
 The export panel on develop can also add a completed avatar/presenter clip from
 Library, with space beside or below the story. It keeps the film soundtrack and
 requires enough footage for the complete edit. The production panel on develop
@@ -125,12 +127,13 @@ also offers **Create a speaking presenter**: choose a portrait and an installed
 avatar model to generate the presenter from the film's actual narration. It
 preserves the soundtrack and fits the story beside or above the presenter.
 The conversation can select the supplied portrait for this same workflow.
-Automatic presenter coordination is covered by fake-executor tests; complete
-generated presenter-film quality is still being qualified.
+An actual 17.2-second film now includes a newly generated Sonic presenter and
+the exact original soundtrack. Complete decoding, timing and source/audio
+identity checks passed; longer-film and audiovisual quality review continue.
 A complete-material coordinator now queues sound, measured timing, missing shots
 and export, with whole-production Stop and continuation that reuses complete
-media and spoken cues. Generated film/voice quality and fresh installation
-remain in qualification. This is not a feature
+media and spoken cues. Broader generated film/voice quality remains in
+qualification. This is not a feature
 of the published 0.5.0 installers. [Delivery plan](docs/plans/creative-studio.md).
 The conversation bridge adds semantic project/format/audio selection and queues
 that same full production from a prompt, with a Studio link and final film in
