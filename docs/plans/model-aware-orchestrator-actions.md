@@ -64,3 +64,31 @@ recognition, keyword router, fixed pose list or model substitution.
   historical raw decisions were retained: the original build omitted them.
 - Relevant backend/controller/provider/permission tests and UI checks if changed;
   reviewed PR to develop, preserving deployment while idle, then runtime evidence.
+
+## Verification and separate runtime finding — 2026-11-12
+
+Local regression coverage: 614 cases passed in the broad 624-case backend run.
+Ten assertions expected the previous false-success/clarification or old minimal
+event shape; after updating those expectations, both affected modules passed all
+38 cases. The 55 relevant native image command/model-selection tests, repository
+Ruff checks and Docker build passed. Frontend code is unchanged.
+
+The actual saved-context local-model proposal succeeds on its first attempt.
+An ordinary owner-scoped conversation independently inferred two image outcomes,
+dispatched Qwen Recompose successfully, retained the original reference for the
+second separate action and produced the first real artifact. No decision was
+rejected. Pixel inspection, however, found nearly unchanged framing and a heavily
+processed texture. The second generation was stopped through ordinary Task Stop;
+the first result remains available. This is **not full visual acceptance**.
+A same-prompt/reference/checkpoint/resolution/steps/actual-seed comparison at CFG 1
+instead of 6 approximately halved sampling time but retained the visual problem.
+No global sampling defaults were changed on that evidence.
+
+The configured external sd-cli identifies itself as c92d73c. Upstream later
+[corrected Qwen 2.1's flow schedule](https://github.com/leejet/stable-diffusion.cpp/pull/2048).
+This is a runtime compatibility lead, not proof that it explains all unchanged
+framing. The existing guided image engine is pinned to e239e4b0. Next compare that
+engine on the same files/brief before qualifying a native adapter change. Keep the
+original external script/binary untouched, respect explicitly configured native
+execution settings, and preserve model/owner/reference/Stop contracts. Do not
+substitute Krea silently or add person-specific prompting templates to hide it.
