@@ -1,3 +1,11 @@
+The [model-aware action repair](plans/model-aware-orchestrator-actions.md) keeps
+complete closed tool schemas and derives image controls from the frozen selected
+model/mode. Bounded rejected proposals remain private to the decision Run; safe
+validation events support diagnosis. Exhausted technical planning fails while
+preserving completed artifacts. Genuine ambiguity uses the existing clarification
+and follow-up flow; separate requested image results require separate production
+Runs from the requested sources.
+
 The next-release [open model discovery contract](plans/open-model-discovery.md)
 extends existing model setup rather than adding an execution system. A source
 observation may retain one pinned supported language configuration for all file

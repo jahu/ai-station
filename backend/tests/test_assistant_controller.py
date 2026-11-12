@@ -112,6 +112,14 @@ def root_state(result):
         return root.metadata_json
 
 
+def failed_root_state(result):
+    with session_factory()() as db:
+        root = db.get(Run, result["run"]["id"])
+        assert root.status == "failed", root.error_message
+        assert "Controller decision failed" in root.error_message
+        return root.metadata_json
+
+
 @pytest.mark.parametrize(
     "content",
     [
@@ -275,7 +283,7 @@ def test_closed_tools_and_outcome_affordances_reject_unrequested_actions(model, 
     with TestClient(app) as api:
         result = submit(api, "Explain tools; do not run any action")
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         with session_factory()() as db:
             assert not list(db.scalars(select(Run).where(Run.run_type == "tool")))
             assert not list(db.scalars(select(Agent)))
@@ -289,7 +297,7 @@ def test_generated_result_cannot_be_replaced_with_a_guessed_uuid(model, bridge):
             api, "A version of the supplied cabinet in a new scene", image_artifact_ids=[upload(api)["id"]]
         )
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         with session_factory()() as db:
             assert not list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
 
@@ -300,8 +308,8 @@ def test_two_requested_images_cannot_finish_after_only_one(model, bridge):
     with TestClient(app) as api:
         result = submit(api, "Create two separate wardrobe images")
         drain()
-        state = root_state(result)
-        assert state["controller_outcome"] == "clarify"
+        state = failed_root_state(result)
+        assert state.get("controller_outcome") != "finish"
         assert len(state["controller_steps"]) == 1
         assert state["controller_outcomes"][0]["count"] == 2
 
@@ -313,7 +321,7 @@ def test_declared_outcomes_cannot_be_shrunk_after_a_tool(model, bridge):
     with TestClient(app) as api:
         result = submit(api, "Create two separate wardrobe images")
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
 
 
 def test_failed_tool_is_observed_before_a_different_call_and_streamed_reply(model, monkeypatch):
@@ -832,7 +840,7 @@ def test_explicit_public_query_cannot_be_replaced_with_private_instructions(mode
             web_search={"enabled": True, "query": "public furniture design"},
         )
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         assert not queries
 
 

@@ -494,6 +494,7 @@ def decision_context(session, root):
         "inputs_and_results": entries,
         "reference_context": reference_context(entries),
         "image_models": root.parameters.get("controller_image_catalog", {}),
+        "image_contract_version": root.parameters.get("controller_image_policy"),
         "image_model_policy": (
             "Honor an explicit image_model; otherwise use the configured per-operation default. Reference images select content, not the generator. A recurring draft bound to a newly produced result retains its compatible result model."
             if root.parameters.get("controller_image_policy") == "configured-default-v2"

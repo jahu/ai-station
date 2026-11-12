@@ -46,7 +46,9 @@ to the image tools for editing; the original and result stay visible in chat.
 The conversation uses a ReAct orchestrator: it chooses an
 available tool, observes its actual result and can pass that result to the next
 tool. Reference images survive follow-up questions, and an image result can become
-the input of a recurring-agent draft for your review.
+the input of a recurring-agent draft for your review. When a required choice is
+unclear, the assistant can ask a focused question and continue with the existing
+references. Separate requested pictures are separate generated results.
 Existing image agents expose compatible installed models for Generate, Edit and
 Recompose directly beside the image operation.
 [Implementation and real qualification](docs/plans/conversation-reliability-repair.md).
