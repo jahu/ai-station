@@ -1,5 +1,5 @@
 {
-  "version": 59,
+  "version": 60,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -47,7 +47,9 @@
     "docs/plans/conversation-reliability-repair.md",
     "docs/plans/creative-studio.md",
     "docs/plans/studio-conversation-revisions.md",
-    "docs/plans/studio-completion-audit.md"
+    "docs/plans/studio-completion-audit.md",
+    "docs/plans/unified-image-editing.md",
+    "docs/plans/model-aware-orchestrator-actions.md"
   ],
   "cases": [
     {
@@ -6917,6 +6919,118 @@
         "docs/plans/chat-web-images-and-clipboard.md",
         "Task → Run → Events → Artifacts"
       ]
+    },
+    {
+      "id": "IMAGE-103",
+      "area": "Obrazy",
+      "title": "Trzy osobne edycje z zachowaniem oryginalnych referencji",
+      "priority": "P1",
+      "requirements": [
+        "NR-03"
+      ],
+      "prerequisites": [
+        "Dostępny lokalny model obrazu i model vision; dwa neutralne zdjęcia tego samego przedmiotu."
+      ],
+      "steps": [
+        "Do nowej rozmowy dodaj dwa zdjęcia szafy lub innego przedmiotu. Poproś o trzy osobne obrazy tego przedmiotu w różnych ujęciach i sceneriach.",
+        "Po zakończeniu otwórz historię każdego kroku i porównaj wejścia, model, liczbę wyników oraz obrazy."
+      ],
+      "expected": [
+        "Powstają trzy osobne wyniki, a nie kolaż. Każda niezależna edycja zachowuje wybrane oryginały i ich kolejność; brak parametru w propozycji planera nie przerywa serii.",
+        "Obrazy przedstawiają żądane zmiany. Zapisz również widoczne błędy jakości lub zbyt podobne warianty; sam status sukcesu nie jest oceną operatora."
+      ],
+      "resources": "Trzy rzeczywiste edycje GPU; użyj małego rozmiaru. Bez płatnych API.",
+      "minutes": 25
+    },
+    {
+      "id": "IMAGE-104",
+      "area": "Obrazy",
+      "title": "Weryfikacja zmian i jakości całego obrazu",
+      "priority": "P1",
+      "requirements": [
+        "NR-03"
+      ],
+      "prerequisites": [
+        "Dostępny lokalny model obrazu oraz vision; neutralny obraz QA przedmiotu na jasnym tle."
+      ],
+      "steps": [
+        "W Images użyj Edit, wskaż model i poproś o zmianę koloru lub otoczenia przy zachowaniu szczegółów przedmiotu.",
+        "Obejrzyj cały wynik, również brzegi i słabiej widoczne obszary. W historii odszukaj kontrolę jakości oraz porównanie zmian.",
+        "W osobnej próbie poproś jawnie o artystyczne zanikanie fragmentu przedmiotu w jasnej mgle."
+      ],
+      "expected": [
+        "Wybrany model i źródła pozostają zachowane. Niezmieniony lub istotnie uszkodzony wynik nie jest ogłaszany jako poprawnie zweryfikowany. Wyraźny błąd może wykorzystać najwyżej jedną korektę.",
+        "Kontrola jakości jest oddzielna od zgodności z promptem. Zanikające szczegóły, duże prześwietlenie lub uszkodzenie struktury nie są ignorowane tylko dlatego, że kolor się zmienił.",
+        "Jawnie zamówiony efekt artystyczny nie jest automatycznie uznawany za błąd techniczny. Zapisz fałszywe akceptacje i odrzucenia."
+      ],
+      "resources": "Dwie edycje GPU z możliwą pojedynczą korektą każdej; bez płatnych API.",
+      "minutes": 25
+    },
+    {
+      "id": "CHAT-109",
+      "area": "Chat",
+      "title": "Kompozytor pozostaje dostępny po dodaniu obrazów",
+      "priority": "P1",
+      "requirements": [
+        "NR-07"
+      ],
+      "prerequisites": [
+        "Zalogowane konto; neutralne zdjęcia QA; desktop lub telefon."
+      ],
+      "steps": [
+        "W nowej rozmowie dodaj kilka obrazów. Przy niskim oknie lub na telefonie wpisz dłuższe polecenie.",
+        "Rozwiń ustawienia załączników i sprawdź dostęp do pola tekstowego, Web i Send. Usuń jeden obraz i wyślij proste pytanie o zdjęcia."
+      ],
+      "expected": [
+        "Pole wiadomości i przyciski pozostają osiągalne; przewijanie nie blokuje wpisywania ani wysyłania. Podglądy można usunąć i uporządkować."
+      ],
+      "resources": "Jedna krótka lokalna odpowiedź; bez generacji obrazu i płatnych API.",
+      "minutes": 5
+    },
+    {
+      "id": "CHAT-110",
+      "area": "Chat",
+      "title": "Wyniki pod odpowiedzią i zwijana historia zadania",
+      "priority": "P1",
+      "requirements": [
+        "NR-07"
+      ],
+      "prerequisites": [
+        "Istniejąca zakończona rozmowa z kilkoma wynikami; można ponownie użyć IMAGE-103."
+      ],
+      "steps": [
+        "Otwórz rozmowę po zakończeniu i po odświeżeniu. Sprawdź kolejność tekstu, galerii i Task activity.",
+        "Rozwiń i zwiń Task activity. Otwórz pełny obraz i wpis Library; sprawdź brak powielonych podglądów.",
+        "Powtórz w wąskim widoku. Przy kolejnym zadaniu sprawdź widoczny postęp i automatyczne zwinięcie po zakończeniu. W rozmowie z utworzonym agentem sprawdź dostępność jego definicji bez rozwijania historii."
+      ],
+      "expected": [
+        "Finalne pliki są pod odpowiedzią, nad domyślnie zwiniętą historią. Historia nadal zawiera kroki i Inspect; nie duplikuje obrazów ani odtwarzaczy.",
+        "Nie są promowane wejściowe referencje, wewnętrzne pliki, usunięte lub odrzucone próby. Widok nie przewija się poziomo; karty agentów pozostają widoczne."
+      ],
+      "resources": "Bez nowej generacji przy użyciu istniejącej rozmowy; opcjonalnie następne zwykłe zadanie.",
+      "minutes": 5
+    },
+    {
+      "id": "IMAGE-105",
+      "area": "Obrazy",
+      "title": "Osiem referencji i poprawny format analizy",
+      "priority": "P1",
+      "requirements": [
+        "NR-03"
+      ],
+      "prerequisites": [
+        "Lokalny model obsługujący osiem referencji i model vision; osiem neutralnych zdjęć QA przedmiotu. Nie używaj wrażliwych zdjęć."
+      ],
+      "steps": [
+        "W nowej rozmowie dodaj osiem referencji, wybierz obsługujący je model i zleć jedną małą, neutralną edycję.",
+        "Sprawdź Run analizy wejść, jego grupy, indeksy i ewentualną ograniczoną korektę formatu. Wróć do rozmowy po odświeżeniu."
+      ],
+      "expected": [
+        "Analiza nie kończy się błędem składni JSON; grupy zachowują rzeczywiste indeksy i źródła. Nie powstają fikcyjne obserwacje ani dodatkowe generacje wskutek naprawy formatu.",
+        "Rzeczywisty zestaw użytych wejść jest widoczny w historii. Problemy z dostępnością modelu lub zasobów są odróżnione od błędnego formatu."
+      ],
+      "resources": "Jedna rzeczywista edycja GPU z ośmioma referencjami; bez płatnych API.",
+      "minutes": 20
     }
   ],
   "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
