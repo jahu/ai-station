@@ -49,6 +49,8 @@ tool. Reference images survive follow-up questions, and an image result can beco
 the input of a recurring-agent draft for your review. When a required choice is
 unclear, the assistant can ask a focused question and continue with the existing
 references. Separate requested pictures are separate generated results.
+Final artifacts appear directly below the answer. Completed task activity stays
+collapsed until you open it; running work keeps its progress visible.
 Images and image agents have one **Edit** operation for one or several references.
 Describe the changes and what should stay consistent; the selected installed
 model stays visible beside the operation. Accounts without personal image

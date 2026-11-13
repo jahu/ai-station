@@ -2194,6 +2194,8 @@ it("opens a conversation Studio material during production and plays only the fi
     screen.getByLabelText("Generated Studio film").getAttribute("src"),
   ).toBe("/api/artifacts/final-film/file");
   expect(screen.queryByLabelText("Generated speech")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Task activity/ }));
+  expect(screen.getAllByLabelText("Generated Studio film")).toHaveLength(1);
   mounted.unmount();
   mountResults({
     controller_steps: [
@@ -2245,6 +2247,7 @@ it("shows an imported reference as an owned Library image inside its tool step",
       },
     ],
   });
+  fireEvent.click(screen.getByRole("button", { name: /Task activity/ }));
   expect(screen.getByText("Save image references")).toBeTruthy();
   expect(screen.getByText("Reference image · saved to Library")).toBeTruthy();
   expect(
