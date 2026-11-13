@@ -125,3 +125,32 @@ advertised as operational:
 
 This is a hardware-aware candidate rather than a promise based on model size or
 an upstream demo. No larger weights were downloaded during the first comparison.
+
+## First actual native-window comparison
+
+The normal worker/private Runner comparison is terminal. Both runs used the
+same neutral fictional-adult reference, prompt, seed 317749, 1280×704 geometry,
+20 steps, CFG 5 and existing FP8/11-GiB zero-swap profile. No private sampler/job
+override was used. Original source files, models and production storage remained
+unchanged; only the isolated qualification database was written.
+
+- 81 frames: complete decode, 664.7 seconds wall time. Sampled face/clothing/scene
+  remain coherent, but the intended turn toward the camera is not clearly
+  followed and the subject turns away later.
+- 121 frames: complete decode, 1083.1 seconds wall time. Sampled face, coat/scarf
+  and coast persist through five seconds without pronounced anatomical collapse;
+  subtle gaze/head change, smile and hair/scarf motion remain visible. Reported
+  peak RAM was 9,587,486,720 bytes under the same 11-GiB scope.
+
+All comparison-owned native/worker/Runner processes stopped. The first baseline
+reached its kernel RAM bound, so it must not be described as proving spare RAM.
+This is a single-window result, not longer-film acceptance. A separate ordinary
+publication has now queued a complete ten-second, two-window continuous film
+with the same reference/instructions and the frozen APG continuation recipe.
+Its output, actual join and ending still require visual evaluation.
+
+Evidence: `native-window-probe.private.json`, `initial-visual-review.private.json`
+and `full-film-probe.private.json` under the investigation evidence directory.
+The source candidate passes repository Ruff/format and 200 affected normal tests,
+including actual CPU composition after Stop/resume with fake inference. These
+checks do not replace the pending real whole-film quality gate.
