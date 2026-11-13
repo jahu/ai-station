@@ -7009,6 +7009,28 @@
       ],
       "resources": "Bez nowej generacji przy użyciu istniejącej rozmowy; opcjonalnie następne zwykłe zadanie.",
       "minutes": 5
+    },
+    {
+      "id": "IMAGE-105",
+      "area": "Obrazy",
+      "title": "Osiem referencji i poprawny format analizy",
+      "priority": "P1",
+      "requirements": [
+        "NR-03"
+      ],
+      "prerequisites": [
+        "Lokalny model obsługujący osiem referencji i model vision; osiem neutralnych zdjęć QA przedmiotu. Nie używaj wrażliwych zdjęć."
+      ],
+      "steps": [
+        "W nowej rozmowie dodaj osiem referencji, wybierz obsługujący je model i zleć jedną małą, neutralną edycję.",
+        "Sprawdź Run analizy wejść, jego grupy, indeksy i ewentualną ograniczoną korektę formatu. Wróć do rozmowy po odświeżeniu."
+      ],
+      "expected": [
+        "Analiza nie kończy się błędem składni JSON; grupy zachowują rzeczywiste indeksy i źródła. Nie powstają fikcyjne obserwacje ani dodatkowe generacje wskutek naprawy formatu.",
+        "Rzeczywisty zestaw użytych wejść jest widoczny w historii. Problemy z dostępnością modelu lub zasobów są odróżnione od błędnego formatu."
+      ],
+      "resources": "Jedna rzeczywista edycja GPU z ośmioma referencjami; bez płatnych API.",
+      "minutes": 20
     }
   ],
   "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
