@@ -253,3 +253,15 @@ before it may enqueue one ordinary Task/Run through its private typed Runner.
 Its fixed experimental adapter is registered only in that test worker process,
 never in the application registry. Real inference, original-anchor consistency,
 GPU/RAM fit, continuation, Stop/recovery and whole-film quality remain open gates.
+
+Broader composition-consumer checks exposed a pre-existing scope leak from the
+300-second workspace-footage extension: `AgentVideoRequest` inherited that ceiling,
+although its reviewed editor, validation message and proposal instructions still
+advertise at most sixty seconds. Restore the explicit agent ceiling; do not reduce
+the workspace/Studio source-footage limit. Tests cover the accepted sixty-second
+agent round-trip, rejected 61/300-second agent requests and unchanged 300-second
+workspace schema. All 305 selected agent/avatar/Studio/composition tests now pass,
+with repository lint/format. The initial failed test is retained in
+`fixed-fps-consumer-check.private.log`; it is repaired, not waived. The ongoing full
+run uses the earlier isolated source, so that known failing case there must be
+reconciled with the repaired-source checks rather than described as a green run.
