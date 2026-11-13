@@ -432,6 +432,45 @@ def image_contract(context):
     return {"image.generate"}, set(), set()
 
 
+def image_reference_requirements(context):
+    """Project the existing frozen provenance constraint without selecting new inputs."""
+    from app.assistant_controller import missing_outcomes
+
+    allowed, required, alternatives = image_contract(context)
+    goal = next(
+        (
+            item
+            for item in missing_outcomes(context.get("observations", []), context.get("outcomes", []))
+            if item["kind"] == "image"
+        ),
+        {},
+    )
+    ordered = list(dict.fromkeys(alias for alias in goal.get("source_inputs", []) if alias in required))
+    return {
+        "allowed_tools": sorted(allowed),
+        "required_images": ordered,
+        "one_of_images": sorted(alternatives),
+    }
+
+
+def bind_image_arguments(context, name, arguments):
+    """An omitted list may reuse unambiguous frozen inputs; explicit lists stay authoritative."""
+    if (
+        not isinstance(name, str)
+        or not isinstance(arguments, dict)
+        or name not in {"image.edit", "image.recompose", "image.upscale"}
+        or "images" in arguments
+    ):
+        return arguments
+    contract = image_reference_requirements(context)
+    if name not in contract["allowed_tools"]:
+        return arguments
+    required, alternatives = contract["required_images"], contract["one_of_images"]
+    if len(alternatives) > 1 or not (required or alternatives):
+        return arguments
+    return {**arguments, "images": list(dict.fromkeys([*required, *alternatives]))}
+
+
 def observation(session, root, step):
     if step["tool"] == "studio.produce":
         from app.studio_assistant import observed_result
@@ -623,6 +662,8 @@ def wrapper_parameters(session, root, name, raw):
                 if step.get("observation")
             ],
         }
+        raw = bind_image_arguments(contract_context, name, raw)
+        args = TOOLS[name].arguments.model_validate(raw)
         allowed, required, previous = image_contract(contract_context)
         if name not in allowed:
             raise ValueError(

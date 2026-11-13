@@ -65,6 +65,29 @@ def _controls_clause(item, mode, required, *, bind_images=False):
 
 def parameter_schema(context, name, base):
     schema = deepcopy(base.model_json_schema())
+    if (
+        isinstance(name, str)
+        and name in {"image.edit", "image.recompose", "image.upscale"}
+        and "images" in schema.get("properties", {})
+    ):
+        from app.assistant_controller_tools import image_reference_requirements
+
+        references = image_reference_requirements(context)
+        required, alternatives = references["required_images"], references["one_of_images"]
+        if name in references["allowed_tools"] and (required or alternatives):
+            schema["required"] = list(dict.fromkeys([*schema.get("required", []), "images"]))
+            images = schema["properties"]["images"]
+            images.pop("default", None)
+            images["minItems"] = max(len(required), 1)
+            images["uniqueItems"] = True
+            images["allOf"] = [{"contains": {"const": alias}} for alias in required]
+            if alternatives:
+                images["allOf"].append({"contains": {"enum": alternatives}})
+            images["description"] = (
+                "Frozen reference provenance. Include every required_images alias and at least one "
+                "one_of_images alias when present; keep original references for independent variants. "
+                + str({"required_images": required, "one_of_images": alternatives})
+            )
     options = image_options(context, name)
     if options is None or not CONTROL_FIELDS.intersection(schema.get("properties", {})):
         return schema
@@ -138,6 +161,18 @@ def repair_context(context, proposed, diagnostic):
         return result
     action = _trace_value({key: proposed[key] for key in ("kind", "tool", "arguments") if key in proposed})
     result["rejected_action"] = action
+    if isinstance(proposed.get("tool"), str) and proposed["tool"] in {
+        "image.edit",
+        "image.recompose",
+        "image.upscale",
+    }:
+        from app.assistant_controller_tools import image_reference_requirements
+
+        required = image_reference_requirements(context)
+        if required["required_images"] or required["one_of_images"]:
+            result["reference_contract"] = {
+                key: required[key] for key in ("required_images", "one_of_images")
+            }
     options = image_options(context, proposed.get("tool"))
     arguments = proposed.get("arguments")
     if options and isinstance(arguments, dict):
