@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -58,6 +60,9 @@ class Settings(BaseSettings):
     wan_text_encoder: str = ""
     wan_vae: str = ""
     wan_bounded_profile: bool = False
+    # Native qualification gate; existing installations retain the 81-frame recipe.
+    wan_native_window_frames: Literal[81, 121] = 81
+
     browser_image: str = ""
     site_preview_image: str = ""
     python_image: str = ""
@@ -75,6 +80,12 @@ class Settings(BaseSettings):
     port: int = 8765
     runner_id: str = "local"
     node_prefix: str = ""
+
+    @field_validator("wan_native_window_frames", mode="before")
+    @classmethod
+    def native_window_environment(cls, value):
+        # Environment variables are text; accept only the two exact spellings.
+        return int(value) if isinstance(value, str) and value in {"81", "121"} else value
 
     def host_data_dir(self) -> Path:
         return (self.data_host_path or self.data_dir).expanduser()

@@ -41,7 +41,7 @@ class VideoRequest(BaseModel):
             (self.width, self.height) not in {(1280, 704), (704, 1280)} or self.steps < 20
         ):
             raise ValueError("The reduced-RAM profile requires 1280x704 or 704x1280 and at least 20 steps")
-        if self.frames not in {17, 33, 49, 65, 81} or self.width * self.height > 1280 * 704:
+        if self.frames not in {17, 33, 49, 65, 81, 121} or self.width * self.height > 1280 * 704:
             raise ValueError("Video frames or dimensions exceed the profile limit")
         return self
 

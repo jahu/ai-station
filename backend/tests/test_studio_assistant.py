@@ -102,7 +102,13 @@ def director(monkeypatch):
             context = json.loads(current.split("\n", 1)[1])
             state.setdefault("react_states", []).append(context)
             if context.get("missing_outcomes") and "Tool Name: studio_produce" not in first:
-                yield "Thought: Planning exhausted its corrections; preserve the draft.\nAnswer: The local model could not meet the requested script limits; the draft and its error remain available."
+                if state.get("missing_source_question"):
+                    yield (
+                        "Thought: The prior source changed; confirm the current input.\nAction: ask_user\nAction Input: "
+                        + json.dumps({"question": state["missing_source_question"]})
+                    )
+                else:
+                    yield "Thought: Planning exhausted its corrections; preserve the draft.\nAnswer: The local model could not meet the requested script limits; the draft and its error remain available."
             elif context.get("missing_outcomes"):
                 args = {
                     "instruction": "Explain a prism with an actual visual and the requested sound",

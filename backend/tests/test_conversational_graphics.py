@@ -188,14 +188,22 @@ def test_selected_edit_does_not_require_turning_web_off(page_vision, monkeypatch
         assert not response.json()["parameters"]["web_search"]["enabled"]
         with session_factory()() as session:
             assert tick(session, "edit-dispatch")
-            photo = session.scalar(
+            edit = session.scalar(
                 select(Run).where(
+                    Run.task_id == response.json()["task_id"], Run.executor_type == "image_edit"
+                )
+            )
+            assert edit and edit.status == "queued" and edit.capability == "image.edit"
+            assert edit.parameters["verify_changes"] is True
+            assert edit.parameters["original_instruction"] == "Make the background blue"
+            assert edit.parameters["input_artifact_ids"] == [image]
+            assert [source["artifact_id"] for source in edit.parameters["source_inputs"]] == [image]
+            assert "network_read" not in edit.effective_permissions
+            assert not session.scalar(
+                select(Run.id).where(
                     Run.task_id == response.json()["task_id"], Run.executor_type == "photo_pipe"
                 )
             )
-            assert photo and photo.parameters["mode"] == "img2img"
-            assert photo.parameters["parent_artifact_ids"] == [image]
-            assert "network_read" not in photo.effective_permissions
         assert not reports and not seen and not loads
 
 

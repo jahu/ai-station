@@ -62,7 +62,7 @@ class VideoRequest(BaseModel):
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
-    frames: Literal[17, 33, 49, 65, 81] = 49
+    frames: Literal[17, 33, 49, 65, 81, 121] = 49
     steps: int = Field(default=20, ge=4, le=40)
     cfg: float = Field(default=5, ge=1, le=10, allow_inf_nan=False)
     seed: int = Field(default=43, ge=0, le=2147483647)
@@ -225,6 +225,7 @@ def capabilities(checkpoint=None, runtime=None):
             **({"guidance_observation": guidance} if guidance else {}),
             "modes": ["generate", "animate"],
             "fps": 24,
+            "native_window_frames": 81,
             "memory_estimate_mib": memory_mib,
             "profile_observation": observation,
             "memory_profiles": memory_profiles(explicit_managed=bool(checkpoint)),
@@ -248,6 +249,11 @@ def memory_profiles(*, explicit_managed=False):
         or get_settings().wan_bounded_profile
         or bool((selection(get_settings()) or {}).get("managed"))
     ) and available()
+    larger = (
+        enabled
+        and get_settings().wan_native_window_frames == 121
+        and any(fitting_gpu(g) for g in collect(get_settings().host_data_dir()).get("gpus", []))
+    )
     return [
         {
             "id": BOUNDED,
@@ -256,6 +262,7 @@ def memory_profiles(*, explicit_managed=False):
             "width": 1280,
             "height": 704,
             "minimum_steps": 20,
+            "native_windows": [{"width": 1280, "height": 704, "frames": 121}] if larger else [],
             "resolutions": [{"width": 1280, "height": 704}, {"width": 704, "height": 1280}],
             **(
                 {}
@@ -271,6 +278,10 @@ def memory_profiles(*, explicit_managed=False):
 def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
+    if body.frames > 81 and (
+        get_settings().wan_native_window_frames != 121 or body.memory_profile != BOUNDED
+    ):
+        raise HTTPException(409, "The larger native video window is not qualified on this Runner")
     from ai_station_runner.video_selection import selection
 
     if body.checkpoint:
@@ -350,8 +361,11 @@ def start_video(manager, body):
                 source.verify()
         except (OSError, ValueError, Image.DecompressionBombError) as exc:
             raise HTTPException(422, "Invalid video image input") from exc
-    if body.gpu not in {int(g["index"]) for g in collect(root).get("gpus", [])}:
+    devices = collect(root).get("gpus", [])
+    if body.gpu not in {int(g["index"]) for g in devices}:
         raise HTTPException(422, "GPU is not present")
+    if body.frames > 81 and not any(int(g["index"]) == body.gpu and fitting_gpu(g) for g in devices):
+        raise HTTPException(422, "The larger native video window requires a GPU with at least 12 GiB VRAM")
     if managed:
         from ai_station_runner.video_prepare import driver_supported
 

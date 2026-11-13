@@ -30,6 +30,7 @@ from app.video import (
     managed_native_budget,
     managed_parameters,
     memory_reservation,
+    native_window_frames,
     valid_guidance_observation,
 )
 from app.video_schema import LongVideoSettings
@@ -138,6 +139,7 @@ def publish_video(
         if continuation_strategy == "last_frame_apg_v1"
         else {}
     )
+    window_frames = native_window_frames(body, observed_profile)
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
         fps=24,
@@ -145,6 +147,7 @@ def publish_video(
         mode=body.composition_mode,
         scene_frames=[scene.duration_seconds * 24 for scene in body.scenes] if body.scenes else None,
         context_frames=1 if continuation_strategy in ("last_frame_v1", "last_frame_apg_v1") else 17,
+        window_frames=window_frames,
     )
     scene_index = 0
     scene_end = body.scenes[0].duration_seconds * 24 if body.scenes else 0

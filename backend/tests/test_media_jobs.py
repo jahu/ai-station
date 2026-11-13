@@ -124,6 +124,61 @@ def test_segmented_job_is_durable_and_finishes_only_after_real_cpu_composition(b
             assert not active_locks(session)
 
 
+def test_larger_windows_survive_stop_resume_and_compose_the_exact_full_duration(bridge, monkeypatch):
+    import av
+    from app.config import get_settings
+
+    monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", "121")
+    monkeypatch.setenv("AI_STATION_WAN_BOUNDED_PROFILE", "true")
+    from ai_station_runner import memory_scope
+
+    monkeypatch.setattr(memory_scope, "available", lambda: True)
+
+    def hardware(*_):
+        return {"gpus": [{"index": 7, "memory_total_mib": 12288}], "memory": {"available_mib": 64000}}
+
+    monkeypatch.setattr(host_app, "collect", hardware)
+    monkeypatch.setattr(host_video, "collect", hardware)
+    clear_settings_cache()
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/media/jobs/video",
+            json={
+                "client_request_id": str(uuid4()),
+                "prompt": "A cup rotates on a table",
+                "duration_seconds": 10,
+                "width": 1280,
+                "height": 704,
+                "steps": 20,
+                "memory_profile": "bounded_11g",
+            },
+        )
+        assert response.status_code == 202, response.text
+        tid = response.json()["task_id"]
+        assert response.json()["total_segments"] == 2
+        with session_factory()() as session:
+            tick(session, "first-window")
+        assert client.post("/api/media/jobs/" + tid + "/cancel").json()["status"] == "canceled"
+        resumed = client.post(
+            "/api/media/jobs/" + tid + "/resume",
+            json={"client_request_id": str(uuid4()), "expected_revision": 1},
+        )
+        assert resumed.status_code == 202, resumed.text
+        for worker in ("next-window", "compose"):
+            with session_factory()() as session:
+                tick(session, worker)
+        result = client.get("/api/media/jobs/" + tid).json()
+        assert result["status"] == "succeeded", result
+        artifact = client.get("/api/artifacts/" + result["final_artifact_id"]).json()
+        assert artifact["metadata"]["frames"] == 240
+        assert len(bridge) == 2  # The completed first window was reused.
+        with av.open(str(get_settings().data_dir / artifact["relative_path"])) as movie:
+            assert movie.streams.video[0].average_rate == 24
+            assert sum(1 for _ in movie.decode(video=0)) == 240
+        with session_factory()() as session:
+            assert not active_locks(session)
+
+
 @pytest.mark.parametrize("legacy", [False, True])
 def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge, monkeypatch, legacy):
     if legacy:

@@ -423,6 +423,11 @@ color/facial-detail limitations. The newer Sonic result received positive owner
 feedback; duration success alone is not a promise of perfect visual quality.
 [Method, exact scope and evidence](docs/benchmarks.md).
 
+Longer-film consistency remains under active qualification. The
+[current investigation](docs/plans/long-video-temporal-quality.md) records complete
+10/20-second tests and experimental recurrent-model results; these are not a
+claim that every duration, motion or model is production-ready.
+
 ## 🚀 Get started
 
 **[Try the current release →](https://github.com/jahu/ai-station/releases/latest)**

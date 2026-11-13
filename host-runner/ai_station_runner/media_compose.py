@@ -42,7 +42,7 @@ class ComposeRequest(BaseModel):
         default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
     )
     clips: list[ClipInput] = Field(min_length=1, max_length=256)
-    fps: Literal[24, 25]
+    fps: Literal[15, 24, 25]
     width: StrictInt = Field(ge=128, le=1280, multiple_of=32)
     height: StrictInt = Field(ge=128, le=1280, multiple_of=32)
     target_frames: StrictInt = Field(ge=1, le=7500)

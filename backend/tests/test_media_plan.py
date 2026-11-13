@@ -1,8 +1,11 @@
 import pytest
-from app.media_plan import audio_boundary, audio_frames, duration_frames, timeline
+from app.media_plan import MediaTimeline, audio_boundary, audio_frames, duration_frames, timeline
+from pydantic import ValidationError
 
 
-@pytest.mark.parametrize("seconds,fps", [(15, 24), (30, 24), (60, 24), ("15.25", 24), ("0.68", 25)])
+@pytest.mark.parametrize(
+    "seconds,fps", [(10, 15), (20, 15), (15, 24), (30, 24), (60, 24), ("15.25", 24), ("0.68", 25)]
+)
 def test_timeline_covers_every_requested_frame_with_valid_native_windows(seconds, fps):
     plan = timeline(frames=duration_frames(seconds, fps), fps=fps, seed=42)
     assert sum(s.output_frames for s in plan.segments) == plan.target_frames
@@ -12,6 +15,15 @@ def test_timeline_covers_every_requested_frame_with_valid_native_windows(seconds
     )
     assert plan == timeline(frames=plan.target_frames, fps=fps, seed=42)
     assert len({s.seed for s in plan.segments}) == len(plan.segments)
+
+
+@pytest.mark.parametrize("fps", [True, "15", 15.0, 14, 16, 23, 30])
+def test_frozen_timeline_accepts_only_exact_supported_integer_frame_rates(fps):
+    plan = timeline(frames=150, fps=15, seed=42)
+    with pytest.raises(ValidationError):
+        MediaTimeline.model_validate({**plan.model_dump(), "fps": fps})
+    with pytest.raises(ValueError):
+        timeline(frames=150, fps=fps, seed=42)
 
 
 def test_full_audio_timing_uses_absolute_boundaries_without_drift():
@@ -32,3 +44,28 @@ def test_continuous_timeline_counts_only_new_motion_after_the_context_window():
         segment.first_frame + segment.output_frames <= segment.generated_frames for segment in plan.segments
     )
     assert sum(segment.output_frames for segment in plan.segments) == 360
+
+
+def test_recurrent_timing_keeps_the_four_frame_prefix_and_exact_duration():
+    plan = timeline(frames=150, fps=15, seed=43, mode="continuous", context_frames=4)
+    assert [(part.first_frame, part.output_frames, part.generated_frames) for part in plan.segments] == [
+        (0, 81, 81),
+        (4, 69, 81),
+    ]
+    assert plan.target_frames / plan.fps == 10
+
+
+@pytest.mark.parametrize("seconds", [1, 5, 10, 12, 20])
+def test_fixed_window_recipe_never_shortens_native_sampling_for_a_trimmed_tail(seconds):
+    plan = timeline(
+        frames=seconds * 15, fps=15, seed=43, mode="continuous", context_frames=4, fixed_windows=True
+    )
+    assert all(part.generated_frames == 81 for part in plan.segments)
+    assert sum(part.output_frames for part in plan.segments) == seconds * 15
+    assert all(part.first_frame == 4 for part in plan.segments[1:])
+
+
+@pytest.mark.parametrize("fixed", [1, None, "true"])
+def test_fixed_window_policy_is_not_coerced(fixed):
+    with pytest.raises(ValueError):
+        timeline(frames=180, fps=15, seed=43, fixed_windows=fixed)

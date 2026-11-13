@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_serializer, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 from app.audio_schema import SpeechRequest
@@ -80,6 +80,9 @@ class AgentSpeechScope(BaseModel):
 
 
 class AgentVideoRequest(LongVideoSettings):
+    # Workspace/Studio footage has a separate larger ceiling. Preserve the
+    # reviewed agent scope advertised by its editor and proposal instructions.
+    duration_seconds: StrictInt = Field(default=15, ge=1, le=60)
     # Long settings reject explicitly supplied frames; omit the inherited default
     # from frozen snapshots so its round-trip preserves that public contract.
     # It is not a proposal input: advertising it makes models copy an invalid

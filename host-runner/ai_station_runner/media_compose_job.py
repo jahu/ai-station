@@ -34,6 +34,7 @@ def checked_frames(av, root, request):
         path = source_path(root, clip)
         count = 0
         previous = None
+        origin = None
         with av.open(str(path)) as source:
             if len(source.streams.video) != 1:
                 raise ValueError("Choose a single video stream")
@@ -50,6 +51,12 @@ def checked_frames(av, root, request):
                 timestamp = Fraction(frame.pts) * frame.time_base
                 if previous is not None and timestamp <= previous:
                     raise ValueError("Nonmonotonic video timing")
+                if origin is None:
+                    origin = timestamp
+                if abs(timestamp - origin - Fraction(count, request["fps"])) > Fraction(
+                    1, request["fps"] * 100
+                ):
+                    raise ValueError("Source frame rate differs from the frozen composition timing")
                 previous = timestamp
                 if frame.width != request["width"] or frame.height != request["height"]:
                     raise ValueError("Segment dimensions changed")
