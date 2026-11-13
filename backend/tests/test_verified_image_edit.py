@@ -183,10 +183,24 @@ def test_verified_edit_uses_real_workflow_and_only_publishes_accepted_candidate(
             )
 
 
-def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corrected(edit_runtime):
+@pytest.mark.parametrize("backend", ["qwen", "krea2"])
+@pytest.mark.parametrize("seed", [None, 42])
+def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corrected(
+    edit_runtime, backend, seed
+):
+    changes = {"backend": backend}
+    if backend == "krea2":
+        from test_image_models import registered
+
+        with session_factory()() as session:
+            model, _ = registered(session)
+            changes["model_id"] = model.id
+            session.commit()
+    if seed is not None:
+        changes["seed"] = seed
     edit_runtime["identical_first"] = True
     with TestClient(app) as client:
-        root, source = submit(client)
+        root, source = submit(client, **changes)
         drain(edit_runtime)
         result = client.get(f"/api/runs/{root['id']}").json()
         assert result["status"] == "succeeded", result.get("error_message")
@@ -199,7 +213,11 @@ def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corre
             assert first.metadata_json["image_edit_review"]["status"] == "rejected"
             photos = [session.get(Run, a["photo_run"]) for a in attempts]
             assert all(r.parameters["parent_artifact_ids"] == [source["id"]] for r in photos)
-            assert photos[0].parameters["seed"] != photos[1].parameters["seed"]
+            if seed is None:
+                assert photos[0].parameters["seed"] != photos[1].parameters["seed"]
+                assert all(r.parameters["seed"] != 42 for r in photos)
+            else:
+                assert all(r.parameters["seed"] == seed for r in photos)
 
 
 @pytest.mark.parametrize("verdict,expected_photos", [("failed", 2), ("uncertain", 1)])

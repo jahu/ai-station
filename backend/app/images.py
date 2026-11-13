@@ -274,7 +274,7 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         parent_artifact_ids=[parent.id for parent in parents],
         repeats=1,
     )
-    if body.backend == "qwen" and body.mode != "upscale" and body.seed is None:
+    if body.backend in {"qwen", "krea2"} and body.mode != "upscale" and body.seed is None:
         # Replaying a reference's initial noise can reconstruct an oversharpened
         # near-copy in Qwen 2.1. Freeze a fresh seed once, never on each dispatch.
         excluded = {42}  # Legacy external pipeline/sd-cli default.

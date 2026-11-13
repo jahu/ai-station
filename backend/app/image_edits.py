@@ -366,6 +366,14 @@ class ImageEditExecutor:
             )
             prompt = plan.visual.image_prompt()
             values.update(prompt=prompt, edit_prompt=prompt)
+            if attempts and values.get("seed") is None:
+                # A correction is a new visual attempt, not a transport retry.
+                # Freeze a distinct seed before dispatch; explicit seeds keep authority.
+                previous_attempt = next(a for a in reversed(attempts) if a.get("photo_run"))
+                previous = child(session, root, previous_attempt["photo_run"])
+                values["seed"] = (previous.parameters["seed"] + 1) % (2**32)
+                if values["seed"] == 42:
+                    values["seed"] = 43
             if plan.reference_layout is not None:
                 if values["backend"] != "krea2":
                     raise ValueError("The edit plan proposed unsupported reference controls")

@@ -108,3 +108,25 @@ review may mark an incidental, unrequested preservation check `not_required`,
 with evidence. It cannot waive a change criterion, and independent verification
 of the original request must still pass. Follow-up tests cover both boundaries,
 including a false-goal verdict despite dispensable preservation criteria.
+
+## Multi-reference Krea correction — 2026-11-13
+
+Diagnosis of an actual two-reference edit found that the native adapter always
+aligned the first reference, even when the frozen request selected `beside`.
+The upstream patch API assigns separate placement arguments to the first and
+last reference; our public control describes the whole operation. Treating the
+first arbitrary image as a layout-preserving scene silently contradicted that
+contract. Both references must receive the selected placement. No subject-type,
+pose-word or person/scene heuristic may assign a reference role.
+
+Krea also replaced an omitted seed with 42 before enqueueing, and conversation
+profiles inherited source seeds. Preserve explicit seeds, but freeze fresh image
+seeds for omitted selections across both native image backends. A bounded edit
+correction with an automatic seed must use a persisted different seed; transport
+retries of that photo Run retain it. Voice seed continuity is unrelated.
+
+Qualification requires native argument coverage with one/two distinct reference
+sentinels, automatic/explicit seed and correction regressions, and an actual
+two-reference Krea edit through the normal worker with independent image review.
+Retain selected checkpoints, source order, account isolation and the two-attempt
+limit. Failed or uncertain review must still prevent accepted-result publication.

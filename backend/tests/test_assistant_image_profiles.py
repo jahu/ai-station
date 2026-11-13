@@ -63,10 +63,14 @@ def test_followup_preserves_actual_source_profile_over_different_workspace_defau
     assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6}
 
 
-def test_new_qwen_followup_does_not_inherit_the_sources_noise_seed(session):
+@pytest.mark.parametrize("backend", ["qwen", "krea2"])
+def test_new_image_followup_does_not_inherit_the_sources_noise_seed(session, backend):
     image = source(session)
     original = session.get(Run, image.run_id)
     original.parameters = {**original.parameters, "seed": 123}
+    if backend == "krea2":
+        model, _ = registered(session)
+        original.parameters = {**original.parameters, "backend": backend, "model_id": model.id}
     session.flush()
     root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
     values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
