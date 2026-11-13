@@ -485,3 +485,45 @@ HTTPS origin. The owned Tailscale daemon's process/Run identity legitimately
 changes during native service restart; it is distinct from the persistent node
 identity. The private twenty-second SVI probe continues independently. This
 deployment does not enable SVI or claim that the full quality goal is complete.
+
+## Owned native SVI integration in progress
+
+The candidate now has a separate fixed
+`wan22-svi-pro-q4-linux-x86-64-python312-v1` recipe and offline assembler. Its
+107 inputs retain the exact existing 5B engine's Python/coherent dependencies,
+add the pinned GGUF SDK/wheel, and select six SVI model components. They exclude
+the unused TI2V 5B diffusion/VAE weights. Preparation reuses verified store
+objects, creates its own Python/source namespace, executes an offline CPU-only
+tokenizer/loader probe and publishes readiness only afterward. Opaque shared
+engine identities hide private setup Run IDs. This assembler is implemented;
+guided setup Tasks/catalog admission and an actual fresh environment preparation
+are not yet qualified or exposed.
+
+Typed native `/v1/video/svi/capabilities`, model-capabilities and `/v1/runs/svi`
+operations now exist behind the closed qualification flag. The default reports
+unavailable and refuses execution. A dispatch accepts only its opaque engine,
+original owned PNG/JPEG, optional matching owned motion tensor, prompt, derived
+seed, allocated GPU, explicit permissions and absolute deadline. It cannot choose
+a graph, executable, arbitrary resolution, steps or sampler. The native child
+rechecks the canonical request, actual 18-GiB zero-swap scope, exact Python/SDKs,
+complete six model hashes, source hashes and implementation/anchor motion
+identity before sampling. It preserves sequential experts, FP32 VAE, 15 fps,
+the trained anchor/motion conditioning and fixed CRF18 export. Nonfinite samples
+or decoded pixels cannot publish a result. The control-plane executor and model
+selection still need integration; these native endpoints do not make a new
+operational product capability.
+
+Repository lint/format and 280 affected normal tests pass, covering owned
+assembly, tamper rejection, typed dispatch, the old video profile, platform/API
+boundaries and process/deadline behavior. A real process-group test uses an
+explicitly fake engine, reattaches its same native identity after manager
+replacement, then escalates Stop against only that owned group. It is not a GPU
+inference or GPU Stop test. A child-import test denies API-server, eager Torch
+and network imports. New-job fresh-runtime inference remains pending.
+
+The earlier unregistered-core whole-suite attempt was deliberately interrupted
+when this wider native work changed the source beyond its original collection:
+1,818 passed in 2458.1 seconds before KeyboardInterrupt, with no observed test
+failures. This is not a full-suite pass or validation of the expanded head.
+Retain the earlier complete 9,957-case baseline separately; use a frozen source
+for final broad verification rather than repeatedly testing a changing checkout.

@@ -676,6 +676,14 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+The staged SVI native operations remain unavailable behind their qualification
+gate. Their closed request accepts only an opaque owned engine and bounded
+owned image/motion identities, never SDK paths, a graph or command arguments.
+The offline child independently checks its immutable inputs, original-anchor
+context, implementation identity, 18-GiB zero-swap scope and absolute deadline.
+This is a separate recipe from the existing 48-channel 5B path; old/private
+experimental checkpoints cannot be adopted under its production metadata key.
+
 Creative projects use the same private-root account policy as creative sessions.
 Membership and logo references must belong to the same owner; administrator
 inspection remains read-only. Names/domains in aliases are planning context,
