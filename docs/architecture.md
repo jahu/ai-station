@@ -1,8 +1,12 @@
 New image edits use one public operation and a durable `image_edit` coordinator.
 Its `image_edit_reason` children inspect original pixels, plan closed criteria and
 observe candidate pixels without the goal, compare explicitly labeled images,
-and audit review consistency using the existing owned local vision runtime. Ordinary
-photo Runs retain native execution and file ownership; the coordinator points to
+and audit review consistency using the existing owned local vision runtime.
+Edits also require a separate candidate/reference technical-quality assessment,
+independent of generated change criteria. Material unrequested damage blocks
+publication even when the requested semantic changes pass. Quality failure may
+use the same bounded correction; uncertainty cannot publish a success.
+Ordinary photo Runs retain native execution and file ownership; the coordinator points to
 one accepted child artifact. At most two photo attempts run from the same frozen
 references/model. New conversation controllers expose only `image.edit`; old
 frozen controllers, API operations, URLs and definitions remain readable.

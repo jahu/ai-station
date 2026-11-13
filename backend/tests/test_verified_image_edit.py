@@ -67,6 +67,24 @@ def edit_runtime(vision_runtime, monkeypatch):
                     "evidence": "Compared the proposed verdict with the independently observed visible extent.",
                 }
             )
+        elif title == "ImageQuality":
+            assert "proposed_review" not in payload and "candidate_observation" not in payload
+            labels = [part["text"] for part in content[1:] if part["type"] == "text"]
+            assert len(labels) == 2 and labels[0].startswith("ORIGINAL REFERENCE")
+            assert labels[1].startswith("CANDIDATE")
+            verdict = (
+                state["quality_verdicts"].pop(0)
+                if state.get("quality_verdicts")
+                else state.get("quality_verdict", "passed")
+            )
+            yield json.dumps(
+                {
+                    "verdict": verdict,
+                    "defects": [] if verdict != "failed" else ["Lower half fades into the background"],
+                    "evidence": "Inspected visibility and rendering integrity across the whole candidate.",
+                    "correction": "Restore foreground readability without changing the requested edit.",
+                }
+            )
         elif title == "EditPlan":
             yield json.dumps(
                 {
@@ -336,6 +354,68 @@ def test_conflicting_observation_is_rechecked_once_before_regenerating(edit_runt
         assert attempt["observation_recheck_run"] and len(attempt["recheck_audit_runs"]) == 1
 
 
+@pytest.mark.parametrize("verdict,attempts", [("failed", 2), ("uncertain", 1)])
+def test_material_quality_problem_blocks_delivery_even_when_semantic_changes_would_pass(
+    edit_runtime, verdict, attempts
+):
+    edit_runtime["quality_verdict"] = verdict
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        detail = client.get(f"/api/runs/{root['id']}").json()
+        assert detail["status"] == "failed" and detail["error_type"] == "ImageEditNotVerified"
+        assert "technical quality" in detail["error_message"]
+        assert not detail["metadata"].get("accepted_artifact_ids")
+        assert edit_runtime["photos"] == attempts and edit_runtime["reviews"] == 0
+        assert client.get(f"/api/artifacts?run_id={root['id']}").json() == []
+        assert all(
+            attempt["quality_result"]["verdict"] == verdict for attempt in detail["metadata"]["edit_attempts"]
+        )
+        with session_factory()() as session:
+            photos = list(session.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
+            artifacts = list(
+                session.scalars(select(Artifact).where(Artifact.run_id.in_([r.id for r in photos])))
+            )
+            assert len(artifacts) == attempts
+            assert all(a.metadata_json["image_edit_review"]["status"] == "rejected" for a in artifacts)
+
+
+def test_quality_correction_uses_originals_and_bounded_retry_then_normal_semantic_verification(edit_runtime):
+    edit_runtime["quality_verdicts"] = ["failed", "passed"]
+    with TestClient(app) as client:
+        root, source = submit(client)
+        drain(edit_runtime)
+        detail = client.get(f"/api/runs/{root['id']}").json()
+        assert detail["status"] == "succeeded", detail.get("error_message")
+        assert edit_runtime["photos"] == 2 and edit_runtime["reviews"] == 1
+        assert [a["quality_result"]["verdict"] for a in detail["metadata"]["edit_attempts"]] == [
+            "failed",
+            "passed",
+        ]
+        with session_factory()() as session:
+            photos = list(session.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
+            assert all(photo.parameters["parent_artifact_ids"] == [source["id"]] for photo in photos)
+            assert photos[0].parameters.get("model_id") == photos[1].parameters.get("model_id")
+            assert photos[0].parameters["backend"] == photos[1].parameters["backend"] == "qwen"
+            plans = list(
+                session.scalars(
+                    select(Run).where(Run.executor_type == "image_edit_reason").order_by(Run.created_at)
+                )
+            )
+            plans = [run for run in plans if run.parameters["stage"] == "plan"]
+            feedback = plans[1].parameters["payload"]["feedback"][0]["technical_quality"]
+            assert feedback["verdict"] == "failed" and feedback["defects"]
+            assert detail["metadata"]["accepted_run_id"] == photos[1].id
+
+
+@pytest.mark.parametrize("verdict,defects", [("passed", ["Material loss of visibility"]), ("failed", [])])
+def test_quality_contract_rejects_inconsistent_material_defect_verdicts(verdict, defects):
+    from app.image_edit_contract import ImageQuality
+
+    with pytest.raises(ValueError):
+        ImageQuality(verdict=verdict, defects=defects, evidence="Actual pixel evidence")
+
+
 def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_runtime):
     with TestClient(app) as client:
         root, _ = submit(client)
@@ -346,6 +426,30 @@ def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_ru
         drain(edit_runtime)
         assert client.get(f"/api/runs/{root['id']}").json()["status"] == "canceled"
         assert edit_runtime["photos"] == 0
+
+
+def test_stop_during_quality_check_cannot_publish_the_unchecked_candidate(edit_runtime):
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        for _ in range(30):
+            with session_factory()() as session:
+                tick(session, "quality-stop-test", executors=edit_runtime["executors"])
+                saved = session.get(Run, root["id"])
+                attempts = saved.metadata_json.get("edit_attempts", [])
+                if attempts and attempts[-1].get("quality_run"):
+                    quality_id = attempts[-1]["quality_run"]
+                    request_cancel(session, saved)
+                    session.commit()
+                    break
+        else:
+            raise AssertionError("Quality stage was not reached")
+        drain(edit_runtime)
+        detail = client.get(f"/api/runs/{root['id']}").json()
+        assert detail["status"] == "canceled" and not detail["metadata"].get("accepted_artifact_ids")
+        assert edit_runtime["photos"] == 1
+        assert client.get(f"/api/artifacts?run_id={root['id']}").json() == []
+        with session_factory()() as session:
+            assert session.get(Run, quality_id).status == "canceled"
 
 
 def test_format_repair_does_not_repeat_generation(edit_runtime):

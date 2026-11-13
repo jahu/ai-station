@@ -12,6 +12,10 @@ The HTTP operation only queues; no hidden user conversation is created for visio
 Candidate-only observations carry no desired-result instructions. Labeled visual
 review and a separate consistency veto reuse those same local reasoning children;
 neither can select a model, change references or grant execution permissions.
+The separate technical-quality assessment uses the same owned local reasoning
+executor with one frozen original and its candidate. It can veto publication or
+request the existing bounded correction; it grants no new tool, model or file
+access and cannot bypass the later semantic review.
 
 Accounts without personal image defaults inherit only the closed revision/model-ID
 projection of the retained station image-default setting. Model definitions are
