@@ -4,6 +4,7 @@
 class MotionArtifacts:
     motion_role = "wan_motion"
     motion_filename = "wan-motion.safetensors"
+    motion_context_frames = 17
 
     def output_metadata(self, output):
         import json
@@ -35,7 +36,11 @@ class MotionArtifacts:
                 original_filename=self.motion_filename,
                 run_id=run.id,
                 parent_artifact_ids=[artifact.id],
-                metadata={"internal_media": True, "role": self.motion_role, "context_frames": 17},
+                metadata={
+                    "internal_media": True,
+                    "role": self.motion_role,
+                    "context_frames": self.motion_context_frames,
+                },
             )
             if context.sha256 != motion["sha256"] or context.size_bytes != motion["size_bytes"]:
                 raise ValueError("Native motion checkpoint observation changed")

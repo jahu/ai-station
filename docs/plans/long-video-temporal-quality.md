@@ -527,3 +527,57 @@ when this wider native work changed the source beyond its original collection:
 failures. This is not a full-suite pass or validation of the expanded head.
 Retain the earlier complete 9,957-case baseline separately; use a frozen source
 for final broad verification rather than repeatedly testing a changing checkout.
+
+## Completed twenty-second recurrent film
+
+The actual four-window person film completed: 300 decoded frames at 15 fps,
+exactly twenty seconds. The first two full native windows were reused; only
+windows three/four and composition were new work (6310.3 seconds). All owned
+processes stopped and resource locks were released. Final CPU composition used
+the fixed CRF18 policy. The final artifact is
+`5c17ec5d-5102-4294-8e34-31b9356aef88` in the isolated qualification database.
+
+Twenty-four views include joins at frames 81, 158 and 235 plus final frame 299.
+The same recognizable face, hair, coat/scarf and coastal scene persist without
+obvious sampled scene jumps, severe exposure bleaching or anatomical collapse.
+Gaze/head movement, blinks and breeze remain visible. Detail is still 480p, not
+HD. This permits further qualification; calm half-body footage does not prove
+dynamic/full-body, portrait or other-subject behavior. The complete film was
+imported into the owner's private Library with diagnostic provenance and no
+invented live execution history. See `svi-candidate/twenty-second-review.private.json`.
+
+A separate 512×288/50-step car candidate now reuses the same pinned weights and
+the earlier approved synthetic car source/prompt/seed. It waits for confirmed
+completion and process exit of the twenty-second probe, no actual compute work,
+19 GiB available RAM and operator priority before dispatch. Its first real high
+expert steps measured about 40 seconds each, compared with about 146 seconds
+for the earlier larger geometry. This is a partial observation, not a complete
+runtime or quality result. Fifty steps follow the reference recipe's count;
+the candidate remains private and does not change public sampling defaults.
+
+## Shared worker integration in progress
+
+The control plane now has an unregistered SVI adapter and queued-segment creator
+over the existing `HostMediaExecutor`, Task, Run, Events and Artifact services.
+They freeze the exact native engine/model observation, eligible devices and
+owned original image, reserve 18 GiB RAM and cap each native child to one hour.
+Continuation binds only a succeeded same-owner SVI producer with unchanged
+original image/engine and an available video→motion provenance chain. Binding
+is idempotent, records one structured event and refuses a modified frozen
+snapshot. Internal motion artifacts declare four context frames and their
+profile identity; the old 5B default remains seventeen frames.
+
+Whole worker tests with fake native media cover two dependent windows, state
+collection, resource release, stale-worker inspection recovery without another
+native start, and cancellation on resume without artifact publication. SVI
+progress reports truthful high/low-expert phases; separate 9/11-step bars are
+not interpreted as complete twenty-step job progress. Timing histories retain
+the distinct executor/backend/geometry signature.
+
+The expanded affected backend group passed 137 tests. A later model-snapshot
+freezing change and additional regression passed the final 45 focused SVI
+tests. These normal tests use temporary databases/fake executors, not real GPU
+inference. Public creation/model routing, guided installation, model-aware
+frozen timelines/composition, UI choices and fresh managed-runtime/GPU
+qualification still gate registration and availability. Existing videos remain
+on the deployed reviewed 5B path.
