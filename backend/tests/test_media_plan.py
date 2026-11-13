@@ -53,3 +53,19 @@ def test_recurrent_timing_keeps_the_four_frame_prefix_and_exact_duration():
         (4, 69, 81),
     ]
     assert plan.target_frames / plan.fps == 10
+
+
+@pytest.mark.parametrize("seconds", [1, 5, 10, 12, 20])
+def test_fixed_window_recipe_never_shortens_native_sampling_for_a_trimmed_tail(seconds):
+    plan = timeline(
+        frames=seconds * 15, fps=15, seed=43, mode="continuous", context_frames=4, fixed_windows=True
+    )
+    assert all(part.generated_frames == 81 for part in plan.segments)
+    assert sum(part.output_frames for part in plan.segments) == seconds * 15
+    assert all(part.first_frame == 4 for part in plan.segments[1:])
+
+
+@pytest.mark.parametrize("fixed", [1, None, "true"])
+def test_fixed_window_policy_is_not_coerced(fixed):
+    with pytest.raises(ValueError):
+        timeline(frames=180, fps=15, seed=43, fixed_windows=fixed)

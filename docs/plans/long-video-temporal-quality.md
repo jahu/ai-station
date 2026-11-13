@@ -274,3 +274,9 @@ closed four-frame context value; old one/seventeen-frame strategies are unchange
 The real CPU ten-second test trims those four frames exactly once and checks the
 actual first retained pixel value at the join. This prevents a future adapter from
 silently inheriting the 5B RGB-anchor overlap merely because both models use Wan.
+Fixed-window recipes can also freeze a full native window for a short tail and
+trim only during composition. An eventual 81-frame-qualified SVI adapter must
+not silently sample 17/33 frames merely because the final requested duration is
+shorter. The internal timeline supports this explicit strict-boolean policy;
+legacy variable-size sampling remains the default. Duration/overlap tests include
+one-, five-, ten-, twelve- and twenty-second plans with full 81-frame sampling.
