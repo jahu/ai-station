@@ -90,7 +90,7 @@ def conditioning(anchor, previous, latent_format):
     if tuple(anchor.shape) != SHAPE or (previous is not None and tuple(previous.shape) != SHAPE):
         raise ValueError("SVI context must match its fixed Wan21 anchor geometry")
     if (
-        not anchor.is_floating_point()
+        anchor.dtype != torch.float32
         or not torch.isfinite(anchor).all()
         or (
             previous is not None
@@ -101,7 +101,7 @@ def conditioning(anchor, previous, latent_format):
             )
         )
     ):
-        raise ValueError("SVI context requires finite matching floating-point tensors")
+        raise ValueError("SVI context requires finite matching F32 tensors")
     count = (FRAMES - 1) // 4 + 1
     normalized = torch.zeros((1, 16, count, *SHAPE[-2:]), dtype=anchor.dtype, device=anchor.device)
     raw = latent_format.process_out(normalized)

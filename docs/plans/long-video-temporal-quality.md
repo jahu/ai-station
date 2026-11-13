@@ -465,7 +465,8 @@ Product integration keeps these boundaries:
 
 The checked repository conditioning matches the pinned Pro embedder through the
 actual installed core on CPU for both initial and continuation cases: maximum
-absolute error zero, with five invalid context cases rejected. Normal tests use
+absolute error zero, with seven invalid context cases rejected, including
+non-F32 anchors. Normal tests use
 bounded synthetic tensor headers/matrix geometry and load no model. This proves
 the bridge mathematics/storage contract; it is not public runtime readiness.
 The repository PEFT bridge also mapped both actual pinned adapters on CPU to
@@ -474,3 +475,13 @@ high expert's common target geometry for both adapters; it did not run inference
 or independently qualify low-expert generation. The 33 focused normal tests
 cover the new contracts and existing 5B motion handling without AI dependencies.
 Private evidence remains under `svi-candidate/` in the investigation directory.
+
+The reviewed `08bf9501` baseline is now deployed to the target station. It
+advertises the qualified 121-frame option only for the bounded 1280×704 recipe
+and retains CRF18/medium encoding for new ordinary video/composition outputs.
+The preserving rollout checked exact existing account/content table bytes,
+database integrity, unchanged LAN binds and the same enrolled Tailscale node and
+HTTPS origin. The owned Tailscale daemon's process/Run identity legitimately
+changes during native service restart; it is distinct from the persistent node
+identity. The private twenty-second SVI probe continues independently. This
+deployment does not enable SVI or claim that the full quality goal is complete.
