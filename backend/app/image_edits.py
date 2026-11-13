@@ -522,7 +522,6 @@ class ImageEditExecutor:
                     f"observe-recheck:{len(attempts)}",
                     "observe_candidate",
                     {
-                        "previous_observation": observation.model_dump(),
                         "reinspection_note": "Recheck actual image boundaries and visible extent. Distinguish observed clipping from speculation; return an empty clipped_elements list if nothing is visibly cut off.",
                     },
                     [artifact.id],

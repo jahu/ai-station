@@ -46,6 +46,7 @@ def edit_runtime(vision_runtime, monkeypatch):
             )
         elif title == "CandidateObservation":
             assert "user_request" not in payload and "instruction" not in payload
+            assert "previous_observation" not in payload
             assert len([part for part in content if part["type"] == "image_url"]) == 1
             yield json.dumps(
                 {

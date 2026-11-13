@@ -185,3 +185,33 @@ uncertainty still vetoes acceptance; this is bounded evidence repair, not an
 unlimited generation/review loop. Observations must distinguish actual contact
 with an image edge from speculation or internal occlusion; placement and viewing
 orientation are separate properties.
+Reinspection receives only the candidate and a neutral boundary-check note,
+never the previous observation/verdict or desired result. Replaying an earlier
+description caused the local model to repeat its unsupported crop claims;
+independent pixel inspection corrected the positive example while retaining
+the genuinely cropped negative description.
+
+## Final local qualification — 2026-11-13
+
+Normal local validation passed 886 affected backend/Runner cases, plus full
+repository Ruff/format and application image/Compose checks. Coverage includes
+the new observation/reinspection/audit lifecycle, bounded corrections, explicit
+models and controls, zero amplification, seed exclusions/wraparound, account
+isolation, Stop/recovery and existing conversation/agent/media paths.
+
+Actual automatic Chat kept its configured Krea preference but independently
+selected Qwen from the captured capability catalog for the same two-reference
+request. The resulting image visibly showed the entire standing subject,
+including both feet, with the referenced appearance retained. Generation was
+executed on the existing native runtime and inspected locally; no weights were
+downloaded and no original photo script was changed.
+
+The generated image and a genuinely cropped Krea negative were then qualified
+separately through real local pixel observations and consistency Runs. Neutral
+reinspection returned no clipped elements for the complete image; its audit was
+`consistent`. The cropped negative remained `contradicted`. The redundant QA
+correction caused by the earlier false alarm was stopped through ordinary Task
+Stop, with owned-process termination confirmed. This records real generation
+and verification of the same artifact, not a claim of a fresh complete controller
+execution after the final verifier-only adjustment. Private images, account data
+and exact acceptance records remain outside Git.
