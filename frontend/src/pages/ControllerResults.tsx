@@ -65,6 +65,7 @@ export default function ControllerResults({
   busy,
   onUse,
   active,
+  drafts,
 }: {
   result: ActionResult;
   children: (deliveredIds: ReadonlySet<string>) => ReactNode;
@@ -72,6 +73,7 @@ export default function ControllerResults({
   busy?: boolean;
   onUse?: (artifact: Artifact) => void;
   active: boolean;
+  drafts?: ReactNode;
 }) {
   const steps = result.controller_steps ?? [];
   const finished = result.task_status
@@ -189,6 +191,7 @@ export default function ControllerResults({
           ))}
         </section>
       )}
+      {drafts}
       <section className="controller-activity" aria-label="Task activity">
         <button
           type="button"

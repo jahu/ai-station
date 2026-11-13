@@ -13,6 +13,22 @@ import ControllerResults from "./ControllerResults";
 
 afterEach(cleanup);
 
+it("keeps agent-definition review outside collapsed execution history", () => {
+  render(
+    <MemoryRouter>
+      <ControllerResults
+        result={{ task_status: "succeeded", controller_steps: [] }}
+        active
+        drafts={<p>Review the disabled agent definition</p>}
+      >
+        {() => <p>Detailed tool history</p>}
+      </ControllerResults>
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("Review the disabled agent definition")).toBeTruthy();
+  expect(screen.queryByText("Detailed tool history")).toBeNull();
+});
+
 function image(id: string): Artifact {
   return {
     id,

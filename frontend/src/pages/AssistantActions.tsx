@@ -462,6 +462,25 @@ export function AssistantResults({
         busy={busy}
         onUse={onUse}
         active={active}
+        drafts={steps.map((step) =>
+          step.agent_draft ? (
+            <AssistantAgentDraft
+              key={step.run_id}
+              agentId={step.agent_draft.agent_id}
+              compact
+              tabIndex={active ? 0 : -1}
+              conversationContext={
+                conversationContext
+                  ? {
+                      ...conversationContext,
+                      sourceMessageId: step.agent_draft.source_message_id,
+                      busy: !!busy,
+                    }
+                  : undefined
+              }
+            />
+          ) : null,
+        )}
       >
         {(deliveredIds) => (
           <ol>
@@ -530,22 +549,6 @@ export function AssistantResults({
                   onRepeatAnalysis={onRepeatAnalysis}
                   active={active}
                 />
-                {step.agent_draft && (
-                  <AssistantAgentDraft
-                    agentId={step.agent_draft.agent_id}
-                    compact
-                    tabIndex={active ? 0 : -1}
-                    conversationContext={
-                      conversationContext
-                        ? {
-                            ...conversationContext,
-                            sourceMessageId: step.agent_draft.source_message_id,
-                            busy: !!busy,
-                          }
-                        : undefined
-                    }
-                  />
-                )}
               </li>
             ))}
           </ol>
