@@ -88,9 +88,9 @@ a reason to close the larger recurrent-model work.
 
 ## Recurrent candidate: finite SVI Pro recipe
 
-Read-only publisher/SDK inspection identifies a concrete next candidate if the
-native 5B comparison fails the longer-film gate. Nothing below is installed or
-advertised as operational:
+Publisher/SDK inspection identifies a concrete next candidate if the native 5B
+comparison fails the longer-film gate. Its ingredients are staged only for
+private engineering qualification; no operational SVI integration is advertised:
 
 - SVI Wan 2.2 Pro source revision
   `bab066229ea530a09587bed52c41ed6089bd509f`. It conditions on the original
@@ -154,3 +154,42 @@ and `full-film-probe.private.json` under the investigation evidence directory.
 The source candidate passes repository Ruff/format and 200 affected normal tests,
 including actual CPU composition after Stop/resume with fake inference. These
 checks do not replace the pending real whole-film quality gate.
+
+## Recurrent candidate preparation and broader comparisons
+
+All five pinned candidate data files (two Q4_K_M experts, two Pro LoRAs and the
+compatible VAE; about 20.5 GiB) have downloaded and passed their complete publisher
+SHA-256 checks. There is one staged copy of each, no activation, and no change to
+existing models or Python environments. The fixed loader and one GGUF wheel live
+in an isolated private qualification directory.
+
+CPU-only checks under a 4-GiB/zero-swap scope establish these limited facts:
+
+- The pinned loader imports with the installed Torch/core and recognizes the
+  actual high expert as a 40-block WAN21 graph, with 36 input channels and
+  16 latent channels. This does not prove GPU inference or memory fit.
+- Both official PEFT adapters map all 800 tensor keys to their expected 400
+  rank-128 targets. Geometry comes from the actual quantized parameter's logical
+  shape; the loader's `state_dict()` deliberately contains packed meta tensors
+  for VRAM estimation and cannot validate the logical matrix shape.
+- Initial and continuation conditioning match the pinned upstream Pro embedder
+  exactly (maximum absolute error zero in both CPU comparisons). The core
+  normalizes raw VAE values, so padding must represent `process_out(0)`, rather
+  than raw zeros. The mask is also converted through the core's inversion rule.
+
+A private fixed GPU job is prepared but not dispatched. It uses persistent
+original-anchor conditioning, the bounded preceding motion tensor, separately
+bound high/low experts, explicit FP32 VAE decoding and 15-fps output. The initial
+engineering recipe uses 20 Euler/simple steps, shift 5 and the reference 0.875
+expert boundary; this is a measured-candidate choice, not a claim of matching
+the reference script's default 50-step quality. No acceleration LoRA is mixed in.
+Kernel memory bounds, actual complete frames, timing and visual quality still
+need real qualification before any product integration.
+
+The existing 5B candidate now also has a separate 20-second/480-frame ordinary
+publication from the approved synthetic car showcase image, with camera tracking
+and moving water. It runs on the other discovered idle GPU while the person's
+ten-second film continues. Each has its own private database/socket and enforced
+11-GiB/zero-swap native scopes, retains the existing process/deadline ownership,
+and yields to actual operator work. This broadens the quality check beyond a
+person or a calm low-detail lake; neither pending film is accepted yet.
