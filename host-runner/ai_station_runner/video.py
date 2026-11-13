@@ -62,7 +62,7 @@ class VideoRequest(BaseModel):
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
-    frames: Literal[17, 33, 49, 65, 81] = 49
+    frames: Literal[17, 33, 49, 65, 81, 121] = 49
     steps: int = Field(default=20, ge=4, le=40)
     cfg: float = Field(default=5, ge=1, le=10, allow_inf_nan=False)
     seed: int = Field(default=43, ge=0, le=2147483647)
@@ -206,7 +206,7 @@ def capabilities(checkpoint=None, runtime=None):
             )
             // (1024 * 1024)
             + 4096
-            + 81 * 1280 * 704 * 12 // (1024 * 1024)
+            + get_settings().wan_native_window_frames * 1280 * 704 * 12 // (1024 * 1024)
         )
         return {
             "available": True,
@@ -225,6 +225,7 @@ def capabilities(checkpoint=None, runtime=None):
             **({"guidance_observation": guidance} if guidance else {}),
             "modes": ["generate", "animate"],
             "fps": 24,
+            "native_window_frames": get_settings().wan_native_window_frames,
             "memory_estimate_mib": memory_mib,
             "profile_observation": observation,
             "memory_profiles": memory_profiles(explicit_managed=bool(checkpoint)),
@@ -271,6 +272,8 @@ def memory_profiles(*, explicit_managed=False):
 def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
+    if body.frames > get_settings().wan_native_window_frames:
+        raise HTTPException(409, "The larger native video window is not qualified on this Runner")
     from ai_station_runner.video_selection import selection
 
     if body.checkpoint:

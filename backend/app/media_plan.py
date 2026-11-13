@@ -11,8 +11,8 @@ class Segment(BaseModel):
     index: StrictInt = Field(ge=0)
     start_frame: StrictInt = Field(ge=0)
     first_frame: StrictInt = Field(default=0, ge=0, le=17)
-    output_frames: StrictInt = Field(ge=1, le=81)
-    generated_frames: StrictInt = Field(ge=17, le=81)
+    output_frames: StrictInt = Field(ge=1, le=121)
+    generated_frames: StrictInt = Field(ge=17, le=121)
     seed: StrictInt = Field(ge=0, le=2147483647)
 
 
@@ -29,7 +29,7 @@ class MediaTimeline(BaseModel):
             if (
                 segment.index != index
                 or segment.start_frame != position
-                or segment.generated_frames not in (17, 33, 49, 65, 81)
+                or segment.generated_frames not in (17, 33, 49, 65, 81, 121)
                 or segment.first_frame + segment.output_frames > segment.generated_frames
             ):
                 raise ValueError("Invalid or noncontiguous media timeline")
@@ -39,7 +39,7 @@ class MediaTimeline(BaseModel):
         return self
 
 
-def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_frames=17):
+def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_frames=17, window_frames=81):
     segments = []
     position = 0
     if (
@@ -54,6 +54,8 @@ def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_fram
         or not 0 <= seed <= 2147483647
         or type(context_frames) is not int
         or context_frames not in (1, 17)
+        or type(window_frames) is not int
+        or window_frames not in (81, 121)
     ):
         raise ValueError("Invalid bounded media timing or seed")
     if scene_frames is not None and (
@@ -71,8 +73,8 @@ def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_fram
     while position < frames:
         first = context_frames if mode == "continuous" and segments else 0
         next_boundary = next(end for end in boundaries if end > position)
-        count = min(81 - first, next_boundary - position)
-        generated = next(n for n in (17, 33, 49, 65, 81) if n >= count + first)
+        count = min(window_frames - first, next_boundary - position)
+        generated = next(n for n in (17, 33, 49, 65, 81, 121) if n >= count + first)
         index = len(segments)
         derived = int.from_bytes(hashlib.sha256(f"{seed}:{index}".encode()).digest()[:4], "big") % 2147483648
         segments.append(

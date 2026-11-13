@@ -138,6 +138,9 @@ def publish_video(
         if continuation_strategy == "last_frame_apg_v1"
         else {}
     )
+    window_frames = observed_profile.get("native_window_frames", 81)
+    if type(window_frames) is not int or window_frames not in (81, 121):
+        raise HTTPException(409, "The Runner advertised an unsupported native video window")
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
         fps=24,
@@ -145,6 +148,7 @@ def publish_video(
         mode=body.composition_mode,
         scene_frames=[scene.duration_seconds * 24 for scene in body.scenes] if body.scenes else None,
         context_frames=1 if continuation_strategy in ("last_frame_v1", "last_frame_apg_v1") else 17,
+        window_frames=window_frames,
     )
     scene_index = 0
     scene_end = body.scenes[0].duration_seconds * 24 if body.scenes else 0

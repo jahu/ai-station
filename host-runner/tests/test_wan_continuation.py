@@ -54,9 +54,16 @@ def test_prefix_rejects_changed_bytes_dimensions_and_insufficient_history(tmp_pa
 
 
 def test_prefix_never_decodes_more_than_one_bounded_segment(tmp_path):
-    path, digest = clip(tmp_path, 82)
+    path, digest = clip(tmp_path, 122)
     with pytest.raises(ValueError, match="native segment size"):
         continuation_pixels(path, digest, 32, 32, 1)
+
+
+def test_prefix_accepts_the_complete_larger_native_window(tmp_path):
+    path, digest = clip(tmp_path, 121)
+    with av.open(str(path)) as container:
+        expected = list(container.decode(video=0))[-1].to_ndarray(format="rgb24").astype(np.float32) / 255
+    np.testing.assert_array_equal(continuation_pixels(path, digest, 32, 32, 1)[0], expected)
 
 
 def native_body():

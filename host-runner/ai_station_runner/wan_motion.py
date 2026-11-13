@@ -28,7 +28,7 @@ def continuation_pixels(path, sha256, width, height, context_frames=17):
         for count, frame in enumerate(container.decode(video=0), start=1):
             if frame.width != width or frame.height != height:
                 raise ValueError("Continuation segment dimensions changed")
-            if count > 81:
+            if count > 121:
                 raise ValueError("Continuation input exceeds native segment size")
             prior.append(frame.to_ndarray(format="rgb24"))
     if len(prior) < context_frames:

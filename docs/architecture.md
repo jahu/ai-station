@@ -1,3 +1,9 @@
+The [long-video quality investigation](plans/long-video-temporal-quality.md)
+keeps larger native windows behind a closed operator qualification gate. Only
+advertised fixed window sizes enter new frozen timelines; legacy publications,
+avatar windows and native process ownership remain unchanged. A successful
+decode is not a claim of temporal or subject consistency.
+
 New image edits use one public operation and a durable `image_edit` coordinator.
 Its `image_edit_reason` children inspect original pixels, plan closed criteria and
 observe candidate pixels without the goal, compare explicitly labeled images,

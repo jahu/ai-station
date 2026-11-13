@@ -176,6 +176,12 @@ def create_video_run(
         from app.video_models import profile_for
 
         observed_profile = profile_for(session, body.model_id, observed_profile)
+    if body.frames > 81 and (
+        not observed_profile.get("available")
+        or type(observed_profile.get("native_window_frames")) is not int
+        or observed_profile["native_window_frames"] != 121
+    ):
+        raise HTTPException(409, "The selected Runner has not qualified larger native video windows")
     managed = managed_parameters(body, observed_profile)
     reservation = None
     if body.memory_profile != "default" or managed:
