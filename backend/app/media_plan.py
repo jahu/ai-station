@@ -55,7 +55,7 @@ def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_fram
         or not isinstance(seed, int)
         or not 0 <= seed <= 2147483647
         or type(context_frames) is not int
-        or context_frames not in (1, 17)
+        or context_frames not in (1, 4, 17)
         or type(window_frames) is not int
         or window_frames not in (81, 121)
     ):

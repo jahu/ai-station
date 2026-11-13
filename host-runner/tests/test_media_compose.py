@@ -85,7 +85,7 @@ def test_fifteen_fps_continuation_preserves_ten_seconds_and_trims_context_once(t
     ]
     request = ComposeRequest(
         run_id=uuid4(),
-        clips=[inputs[0], {**inputs[1], "first_frame": 1, "frames": 69}],
+        clips=[inputs[0], {**inputs[1], "first_frame": 4, "frames": 69}],
         fps=15,
         width=128,
         height=128,
@@ -98,7 +98,7 @@ def test_fifteen_fps_continuation_preserves_ten_seconds_and_trims_context_once(t
     )
     with av.open(str(tmp_path / inputs[1]["relative_path"])) as source:
         next_frames = list(source.decode(video=0))
-        expected_join = next_frames[1].to_ndarray(format="gray").mean()
+        expected_join = next_frames[4].to_ndarray(format="gray").mean()
     with av.open(str(output)) as source:
         assert source.streams.video[0].average_rate == 15
         frames = list(source.decode(video=0))

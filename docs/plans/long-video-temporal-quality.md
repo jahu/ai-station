@@ -265,3 +265,12 @@ with repository lint/format. The initial failed test is retained in
 `fixed-fps-consumer-check.private.log`; it is repaired, not waived. The ongoing full
 run uses the earlier isolated source, so that known failing case there must be
 reconciled with the repaired-source checks rather than described as a green run.
+
+Pinned upstream [Pro inference](https://github.com/vita-epfl/Stable-Video-Infinity/blob/bab066229ea530a09587bed52c41ed6089bd509f/inference_svi_2.0_pro.py)
+uses one motion latent and defaults its command-line continuation overlap to four
+frames (the class constructor alone has a different overlap default). Preserve
+that distinction in a future recipe. Internal timelines now also accept the
+closed four-frame context value; old one/seventeen-frame strategies are unchanged.
+The real CPU ten-second test trims those four frames exactly once and checks the
+actual first retained pixel value at the join. This prevents a future adapter from
+silently inheriting the 5B RGB-anchor overlap merely because both models use Wan.

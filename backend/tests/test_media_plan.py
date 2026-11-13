@@ -44,3 +44,12 @@ def test_continuous_timeline_counts_only_new_motion_after_the_context_window():
         segment.first_frame + segment.output_frames <= segment.generated_frames for segment in plan.segments
     )
     assert sum(segment.output_frames for segment in plan.segments) == 360
+
+
+def test_recurrent_timing_keeps_the_four_frame_prefix_and_exact_duration():
+    plan = timeline(frames=150, fps=15, seed=43, mode="continuous", context_frames=4)
+    assert [(part.first_frame, part.output_frames, part.generated_frames) for part in plan.segments] == [
+        (0, 81, 81),
+        (4, 69, 81),
+    ]
+    assert plan.target_frames / plan.fps == 10

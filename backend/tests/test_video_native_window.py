@@ -31,7 +31,7 @@ def qualified_profile(windows=None):
 
 
 @pytest.mark.parametrize("frames", [24, 81, 120, 121, 122, 240, 480, 7200])
-@pytest.mark.parametrize("context", [1, 17])
+@pytest.mark.parametrize("context", [1, 4, 17])
 def test_larger_window_preserves_exact_duration_and_overlap(frames, context):
     plan = timeline(
         frames=frames, fps=24, seed=43, mode="continuous", context_frames=context, window_frames=121
