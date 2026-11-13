@@ -161,7 +161,6 @@ class ImageRequest(BaseModel):
         if self.mode == "t2i" and self.backend == "juggernaut" and self.seed is None:
             self.seed = 42
         if krea:
-            self.seed = self.seed if self.seed is not None else 42
             self.cfg = self.cfg if self.cfg is not None else 1.0
             if self.mode != "t2i":
                 self.reference_strength = (

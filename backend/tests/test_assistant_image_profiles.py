@@ -21,6 +21,26 @@ def test_explicit_model_overrides_workspace_default_without_sampling_regression(
     )
 
 
+def test_model_fit_policy_freezes_a_capable_edit_choice_without_replacing_a_manual_choice(session):
+    model, _ = registered(session)
+    change_default(DefaultsWrite(revision=0, mode="img2img", choice=model.id), session)
+    catalog = inventory(session)
+    assert catalog["models"]["qwen"]["edit_capabilities"]["conditioning"] == "instruction-native"
+    assert "caution" in catalog["models"][model.id]["edit_capabilities"]
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": catalog,
+            "controller_image_policy": "model-fit-v3",
+            "controller_verified_edits": True,
+        }
+    )
+    assert request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", []) == {
+        "backend": "qwen"
+    }
+    chosen = request_profile(session, root, SimpleNamespace(image_model=model.id), "recompose", [])
+    assert chosen["model_id"] == model.id and chosen["backend"] == "krea2"
+
+
 def source(session):
     task = create_task(session, title="Cabinet", prompt="A cabinet", capability="image.recompose")
     run = create_run(
@@ -63,10 +83,14 @@ def test_followup_preserves_actual_source_profile_over_different_workspace_defau
     assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6}
 
 
-def test_new_qwen_followup_does_not_inherit_the_sources_noise_seed(session):
+@pytest.mark.parametrize("backend", ["qwen", "krea2"])
+def test_new_image_followup_does_not_inherit_the_sources_noise_seed(session, backend):
     image = source(session)
     original = session.get(Run, image.run_id)
     original.parameters = {**original.parameters, "seed": 123}
+    if backend == "krea2":
+        model, _ = registered(session)
+        original.parameters = {**original.parameters, "backend": backend, "model_id": model.id}
     session.flush()
     root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
     values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])

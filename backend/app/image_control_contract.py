@@ -3,10 +3,12 @@
 from copy import deepcopy
 
 CONTROL_FIELDS = frozenset({"reference_layout"})
+MODEL_FIT_POLICY = "model-fit-v3"
+CURRENT_IMAGE_POLICIES = frozenset({"configured-default-v2", MODEL_FIT_POLICY})
 REFERENCE_LAYOUT = {
     "type": "string",
     "enum": ["aligned", "beside"],
-    "description": "Reference placement inside this model: aligned keeps framing; beside permits a new viewpoint/composition. Neither option changes the number of output files.",
+    "description": "Placement of every selected reference inside this model: aligned keeps framing; beside permits a new viewpoint/composition. No input is implicitly treated as a fixed scene. Neither option changes the number of output files.",
 }
 
 

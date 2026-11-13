@@ -9,6 +9,7 @@ from ai_station_runner.krea2 import (
     require_gpu_placement,
     require_loaded_gpu_weights,
 )
+from ai_station_runner.krea2_job import patch_references
 from pydantic import ValidationError
 
 
@@ -21,6 +22,35 @@ def test_fixed_operation_contract(mode, count, role, strength):
     request.validate_references(count)
     assert request.lora_role() == role
     assert request.reference_strength == strength
+
+
+@pytest.mark.parametrize("count", [1, 2])
+@pytest.mark.parametrize("layout", ["aligned", "beside"])
+def test_native_patch_applies_layout_to_every_reference_without_assigning_scene_roles(count, layout):
+    captured = {}
+    patched = object()
+
+    class Patch:
+        def patch(self, model, source_latent, **kwargs):
+            captured.update(model=model, source_latent=source_latent, **kwargs)
+            return (patched,)
+
+    options = KreaOptions(mode="recompose", prompt="Change the arrangement", reference_layout=layout)
+    model, vae, target = object(), object(), object()
+    sources, images = [object() for _ in range(count)], [object() for _ in range(count)]
+    assert (
+        patch_references(
+            SimpleNamespace(Krea2EditModelPatch=Patch), options, model, sources, images, vae, target
+        )
+        is patched
+    )
+    assert captured["source_latent"] is sources[0]
+    assert captured["source_image"] is images[0]
+    assert captured["source_latent_b"] is (sources[1] if count == 2 else None)
+    assert captured["source_image_b"] is (images[1] if count == 2 else None)
+    assert captured["model"] is model and captured["vae"] is vae and captured["target_latent"] is target
+    assert captured["ref_position"] == captured["ref_position_a"]
+    assert captured["ref_position"].startswith(layout)
 
 
 @pytest.mark.parametrize(

@@ -108,3 +108,110 @@ review may mark an incidental, unrequested preservation check `not_required`,
 with evidence. It cannot waive a change criterion, and independent verification
 of the original request must still pass. Follow-up tests cover both boundaries,
 including a false-goal verdict despite dispensable preservation criteria.
+
+## Multi-reference Krea correction — 2026-11-13
+
+Diagnosis of an actual two-reference edit found that the native adapter always
+aligned the first reference, even when the frozen request selected `beside`.
+The upstream patch API assigns separate placement arguments to the first and
+last reference; our public control describes the whole operation. Treating the
+first arbitrary image as a layout-preserving scene silently contradicted that
+contract. Both references must receive the selected placement. No subject-type,
+pose-word or person/scene heuristic may assign a reference role.
+
+Krea also replaced an omitted seed with 42 before enqueueing, and conversation
+profiles inherited source seeds. Preserve explicit seeds, but freeze fresh image
+seeds for omitted selections across both native image backends. A bounded edit
+correction with an automatic seed must use a persisted different seed; transport
+retries of that photo Run retain it. Voice seed continuity is unrelated.
+Both initial and corrective automatic draws exclude reference noise, including
+legacy native receipts, and retain unsigned 32-bit wraparound semantics.
+
+Qualification requires native argument coverage with one/two distinct reference
+sentinels, automatic/explicit seed and correction regressions, and an actual
+two-reference Krea edit through the normal worker with independent image review.
+Retain selected checkpoints, source order, account isolation and the two-attempt
+limit. Failed or uncertain review must still prevent accepted-result publication.
+
+The controlled native comparison kept the same checkpoint, prompt, seed and
+references. Removing the hidden layout pin changed the previously seated result
+to standing, but the frame still excluded part of the requested subject. The
+existing goal-conditioned reviewer falsely described the cropped result as
+complete. Its image inputs also lacked per-image role labels.
+
+Add an independent candidate-only observation before review, without the user
+goal or criteria. Persist visible extent, clipped content and uncertainty as
+ordinary local vision evidence. Label every actual review image as an original
+reference (with its index) or the candidate. A partially met criterion fails;
+unresolved disagreement with the independent observation is uncertain.
+
+For Krea's single bounded correction, failed changes with passed preservation
+checks may lower automatic reference amplification to the neutral 1.0 and
+grounding resolution to at most 512, within the installed adapter's supported
+range. This relaxes image copying without keyword/subject heuristics. Do not
+relax after a failed/uncertain preservation check, or override an explicit
+operator value. Conversation preset values are distinct from operator tuning.
+Keep the selected checkpoint, sources, output size and the two-photo limit.
+
+The real cropped negative control also showed that correct independent
+observations alone do not prevent an optimistic visual verdict. Before accepting
+a passed review, run a separate text consistency audit over the observation,
+original goal, criteria and proposed verdict. Contradiction vetoes acceptance
+and supplies bounded correction feedback; unresolved uncertainty vetoes success.
+Do not turn an omitted incidental detail into a new preservation requirement.
+Plan atomic change criteria so meeting one part cannot satisfy a conjunction.
+These are ordinary local reasoning children, with the same scope, leases,
+cancellation and recovery; they add no photo attempts or execution permissions.
+
+The complete Krea qualification still failed the requested framing after both
+bounded attempts, and both results were correctly rejected. Therefore fixing the
+adapter and verifier alone does not establish task fitness. New conversation
+controllers freeze `model-fit-v3`: their captured installed-model catalog
+describes instruction-native versus reference-conditioned editing. For automatic
+edits, the planner selects a model suited to the requested structural/extent
+changes; the configured default is a preference, not a capability guarantee.
+Explicit user model choices stay authoritative, and the selected checkpoint
+remains fixed during the edit. Older frozen controller policies retain their
+prior default/source behavior. This uses semantic planning over finite adapter
+capabilities, not subject-specific wording rules or silent post-failure swaps.
+
+The real automatic Chat selected Qwen and generated a visibly complete standing
+figure. Qualification also exposed an overly cautious observation that listed
+possible clipping despite describing a full-length image with surrounding empty
+space. A contradictory audit of an otherwise passed visual review now triggers
+one candidate-only reinspection and one fresh consistency audit before any new
+photo attempt. Both assessments remain recorded. Unresolved contradiction or
+uncertainty still vetoes acceptance; this is bounded evidence repair, not an
+unlimited generation/review loop. Observations must distinguish actual contact
+with an image edge from speculation or internal occlusion; placement and viewing
+orientation are separate properties.
+Reinspection receives only the candidate and a neutral boundary-check note,
+never the previous observation/verdict or desired result. Replaying an earlier
+description caused the local model to repeat its unsupported crop claims;
+independent pixel inspection corrected the positive example while retaining
+the genuinely cropped negative description.
+
+## Final local qualification — 2026-11-13
+
+Normal local validation passed 886 affected backend/Runner cases, plus full
+repository Ruff/format and application image/Compose checks. Coverage includes
+the new observation/reinspection/audit lifecycle, bounded corrections, explicit
+models and controls, zero amplification, seed exclusions/wraparound, account
+isolation, Stop/recovery and existing conversation/agent/media paths.
+
+Actual automatic Chat kept its configured Krea preference but independently
+selected Qwen from the captured capability catalog for the same two-reference
+request. The resulting image visibly showed the entire standing subject,
+including both feet, with the referenced appearance retained. Generation was
+executed on the existing native runtime and inspected locally; no weights were
+downloaded and no original photo script was changed.
+
+The generated image and a genuinely cropped Krea negative were then qualified
+separately through real local pixel observations and consistency Runs. Neutral
+reinspection returned no clipped elements for the complete image; its audit was
+`consistent`. The cropped negative remained `contradicted`. The redundant QA
+correction caused by the earlier false alarm was stopped through ordinary Task
+Stop, with owned-process termination confirmed. This records real generation
+and verification of the same artifact, not a claim of a fresh complete controller
+execution after the final verifier-only adjustment. Private images, account data
+and exact acceptance records remain outside Git.

@@ -5,7 +5,7 @@ import json
 
 from fastapi import HTTPException
 
-from app.image_control_contract import CONTROL_FIELDS, validate_controls
+from app.image_control_contract import CONTROL_FIELDS, CURRENT_IMAGE_POLICIES, validate_controls
 from app.image_models import choice, defaults, frozen_model
 from app.models import Artifact, ModelDefinition, Run
 
@@ -62,6 +62,17 @@ def inventory(session):
                 if key in item
             }
             models[identifier]["identity"] = fingerprint
+            if item["backend"] == "qwen":
+                models[identifier]["edit_capabilities"] = {
+                    "conditioning": "instruction-native",
+                    "preferred_for": "Requested structural changes, new geometry/framing/visible extent, and arbitrary multi-reference instructions.",
+                }
+            elif item["backend"] == "krea2":
+                models[identifier]["edit_capabilities"] = {
+                    "conditioning": "reference-conditioned identity/general-edit LoRAs",
+                    "preferred_for": "Appearance, style and identity-focused variations where retaining source geometry/framing is acceptable.",
+                    "caution": "Can retain source framing despite a different-composition instruction; not the preferred automatic choice for structural reconstruction or expanding visible extent. Two-reference training uses scene plus identity, not arbitrary independent views.",
+                }
     return {"models": models, "defaults": defaults(session)}
 
 
@@ -115,7 +126,7 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
     inherited = source_profile(session, artifact_ids)
     selected = getattr(args, "image_model", None)
     if selected is None and (
-        inherit_source or root.parameters.get("controller_image_policy") != "configured-default-v2"
+        inherit_source or root.parameters.get("controller_image_policy") not in CURRENT_IMAGE_POLICIES
     ):
         proposed = inherited.get("model_id") or inherited.get("backend")
         if proposed and proposed not in catalog["models"]:
@@ -136,7 +147,7 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         item["backend"],
         mode,
         controls,
-        required=root.parameters.get("controller_image_policy") == "configured-default-v2"
+        required=root.parameters.get("controller_image_policy") in CURRENT_IMAGE_POLICIES
         and not inherit_source
         and not verified,
     )
@@ -164,11 +175,7 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         and inherited.get("model_id") == values.get("model_id")
     ):
         values.update(
-            {
-                key: value
-                for key, value in inherited.items()
-                if key in PROFILE_FIELDS and not (key == "seed" and item["backend"] == "qwen")
-            }
+            {key: value for key, value in inherited.items() if key in PROFILE_FIELDS and key != "seed"}
         )
     if verified:
         for key in ("width", "height", "reference_layout"):

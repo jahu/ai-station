@@ -1,6 +1,7 @@
 New image edits use one public operation and a durable `image_edit` coordinator.
 Its `image_edit_reason` children inspect original pixels, plan closed criteria and
-review candidate pixels using the existing owned local vision runtime. Ordinary
+observe candidate pixels without the goal, compare explicitly labeled images,
+and audit review consistency using the existing owned local vision runtime. Ordinary
 photo Runs retain native execution and file ownership; the coordinator points to
 one accepted child artifact. At most two photo attempts run from the same frozen
 references/model. New conversation controllers expose only `image.edit`; old

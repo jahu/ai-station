@@ -44,6 +44,29 @@ def edit_runtime(vision_runtime, monkeypatch):
                     ]
                 }
             )
+        elif title == "CandidateObservation":
+            assert "user_request" not in payload and "instruction" not in payload
+            assert "previous_observation" not in payload
+            assert len([part for part in content if part["type"] == "image_url"]) == 1
+            yield json.dumps(
+                {
+                    "description": "A blue rectangle.",
+                    "framing": "The complete rectangle is visible inside the frame.",
+                    "clipped_elements": [],
+                    "uncertainty": "",
+                }
+            )
+        elif title == "ReviewConsistency":
+            assert isinstance(content, str)
+            assert payload["candidate_observation"] and payload["proposed_review"]
+            yield json.dumps(
+                {
+                    "verdict": state["audit_verdicts"].pop(0)
+                    if state.get("audit_verdicts")
+                    else state.get("audit_verdict", "consistent"),
+                    "evidence": "Compared the proposed verdict with the independently observed visible extent.",
+                }
+            )
         elif title == "EditPlan":
             yield json.dumps(
                 {
@@ -70,6 +93,10 @@ def edit_runtime(vision_runtime, monkeypatch):
             )
         elif title == "EditReview":
             state["reviews"] += 1
+            assert payload["candidate_observation"]["description"] == "A blue rectangle."
+            labels = [part["text"] for part in content[1:] if part["type"] == "text"]
+            assert labels[-1].startswith("CANDIDATE")
+            assert all(label.startswith("ORIGINAL REFERENCE index ") for label in labels[:-1])
             yield json.dumps(
                 {
                     "request_verdict": state.get("request_verdict", state["verdict"]),
@@ -183,10 +210,26 @@ def test_verified_edit_uses_real_workflow_and_only_publishes_accepted_candidate(
             )
 
 
-def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corrected(edit_runtime):
+@pytest.mark.parametrize("backend", ["qwen", "krea2"])
+@pytest.mark.parametrize("seed", [None, 42])
+def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corrected(
+    edit_runtime, backend, seed, monkeypatch
+):
+    changes = {"backend": backend}
+    if backend == "krea2":
+        from test_image_models import registered
+
+        with session_factory()() as session:
+            model, _ = registered(session)
+            changes["model_id"] = model.id
+            session.commit()
+    if seed is not None:
+        changes["seed"] = seed
+    else:
+        monkeypatch.setattr("app.images.secrets.randbits", lambda _: 41)
     edit_runtime["identical_first"] = True
     with TestClient(app) as client:
-        root, source = submit(client)
+        root, source = submit(client, **changes)
         drain(edit_runtime)
         result = client.get(f"/api/runs/{root['id']}").json()
         assert result["status"] == "succeeded", result.get("error_message")
@@ -199,7 +242,11 @@ def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corre
             assert first.metadata_json["image_edit_review"]["status"] == "rejected"
             photos = [session.get(Run, a["photo_run"]) for a in attempts]
             assert all(r.parameters["parent_artifact_ids"] == [source["id"]] for r in photos)
-            assert photos[0].parameters["seed"] != photos[1].parameters["seed"]
+            if seed is None:
+                assert photos[0].parameters["seed"] != photos[1].parameters["seed"]
+                assert all(r.parameters["seed"] != 42 for r in photos)
+            else:
+                assert all(r.parameters["seed"] == seed for r in photos)
 
 
 @pytest.mark.parametrize("verdict,expected_photos", [("failed", 2), ("uncertain", 1)])
@@ -214,6 +261,79 @@ def test_unverified_changes_never_become_success_or_final_preview(edit_runtime, 
         assert not result["metadata"].get("accepted_artifact_ids")
         assert edit_runtime["photos"] == expected_photos
         assert len(client.get(f"/api/images/runs/{root['id']}/workflow").json()["steps"]) == 1
+
+
+@pytest.mark.parametrize(
+    "explicit,preserve_failed,preset_strength",
+    [
+        ({}, False, None),
+        ({"reference_strength": 3}, False, None),
+        ({"grounding_px": 768}, False, None),
+        ({}, True, None),
+        ({}, False, 0),
+    ],
+)
+def test_krea_correction_only_relaxes_automatic_controls_after_preservation_passes(
+    edit_runtime, explicit, preserve_failed, preset_strength
+):
+    from test_image_models import registered
+
+    with session_factory()() as session:
+        model, _ = registered(session)
+        if preset_strength is not None:
+            model.metadata_json = {
+                "image": {
+                    **model.metadata_json["image"],
+                    "presets": {"recompose": {"reference_strength": preset_strength}},
+                }
+            }
+        model_id = model.id
+        session.commit()
+    edit_runtime["verdict"] = "failed"
+    if preserve_failed:
+        edit_runtime["preserve_verdict"] = "failed"
+    with TestClient(app) as client:
+        root, _ = submit(client, backend="krea2", model_id=model_id, **explicit)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "failed" and result["error_type"] == "ImageEditNotVerified"
+        with session_factory()() as session:
+            first, second = [session.get(Run, a["photo_run"]) for a in result["metadata"]["edit_attempts"]]
+            for field, adjusted in (("reference_strength", 1), ("grounding_px", 512)):
+                assert second.parameters[field] == (
+                    first.parameters[field]
+                    if preserve_failed
+                    or field in explicit
+                    or (field == "reference_strength" and preset_strength == 0)
+                    else adjusted
+                )
+            assert first.parameters["model_id"] == second.parameters["model_id"] == model_id
+            assert first.parameters["parent_artifact_ids"] == second.parameters["parent_artifact_ids"]
+
+
+@pytest.mark.parametrize("verdict,attempts", [("contradicted", 2), ("uncertain", 1)])
+def test_inconsistent_passed_visual_review_cannot_publish_a_success(edit_runtime, verdict, attempts):
+    edit_runtime["audit_verdict"] = verdict
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "failed" and result["error_type"] == "ImageEditNotVerified"
+        assert not result["metadata"].get("accepted_artifact_ids")
+        assert edit_runtime["photos"] == attempts
+        assert all(attempt["audit_runs"] for attempt in result["metadata"]["edit_attempts"])
+
+
+def test_conflicting_observation_is_rechecked_once_before_regenerating(edit_runtime):
+    edit_runtime["audit_verdicts"] = ["contradicted", "consistent"]
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "succeeded", result
+        assert edit_runtime["photos"] == 1
+        attempt = result["metadata"]["edit_attempts"][0]
+        assert attempt["observation_recheck_run"] and len(attempt["recheck_audit_runs"]) == 1
 
 
 def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_runtime):
