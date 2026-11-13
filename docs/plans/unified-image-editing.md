@@ -150,3 +150,13 @@ range. This relaxes image copying without keyword/subject heuristics. Do not
 relax after a failed/uncertain preservation check, or override an explicit
 operator value. Conversation preset values are distinct from operator tuning.
 Keep the selected checkpoint, sources, output size and the two-photo limit.
+
+The real cropped negative control also showed that correct independent
+observations alone do not prevent an optimistic visual verdict. Before accepting
+a passed review, run a separate text consistency audit over the observation,
+original goal, criteria and proposed verdict. Contradiction vetoes acceptance
+and supplies bounded correction feedback; unresolved uncertainty vetoes success.
+Do not turn an omitted incidental detail into a new preservation requirement.
+Plan atomic change criteria so meeting one part cannot satisfy a conjunction.
+These are ordinary local reasoning children, with the same scope, leases,
+cancellation and recovery; they add no photo attempts or execution permissions.

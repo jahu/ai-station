@@ -55,6 +55,15 @@ def edit_runtime(vision_runtime, monkeypatch):
                     "uncertainty": "",
                 }
             )
+        elif title == "ReviewConsistency":
+            assert isinstance(content, str)
+            assert payload["candidate_observation"] and payload["proposed_review"]
+            yield json.dumps(
+                {
+                    "verdict": state.get("audit_verdict", "consistent"),
+                    "evidence": "Compared the proposed verdict with the independently observed visible extent.",
+                }
+            )
         elif title == "EditPlan":
             yield json.dumps(
                 {
@@ -280,6 +289,19 @@ def test_krea_correction_only_relaxes_automatic_controls_after_preservation_pass
                 )
             assert first.parameters["model_id"] == second.parameters["model_id"] == model_id
             assert first.parameters["parent_artifact_ids"] == second.parameters["parent_artifact_ids"]
+
+
+@pytest.mark.parametrize("verdict,attempts", [("contradicted", 2), ("uncertain", 1)])
+def test_inconsistent_passed_visual_review_cannot_publish_a_success(edit_runtime, verdict, attempts):
+    edit_runtime["audit_verdict"] = verdict
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "failed" and result["error_type"] == "ImageEditNotVerified"
+        assert not result["metadata"].get("accepted_artifact_ids")
+        assert edit_runtime["photos"] == attempts
+        assert all(attempt["audit_runs"] for attempt in result["metadata"]["edit_attempts"])
 
 
 def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_runtime):

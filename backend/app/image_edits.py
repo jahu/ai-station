@@ -18,6 +18,7 @@ from app.db import utcnow
 from app.dependencies import depend_on
 from app.events import append_event
 from app.image_edit_contract import (
+    AUDIT_REVIEW,
     INSPECT,
     OBSERVE_CANDIDATE,
     PLAN,
@@ -25,6 +26,7 @@ from app.image_edit_contract import (
     CandidateObservation,
     EditPlan,
     EditReview,
+    ReviewConsistency,
     SourceInspection,
 )
 from app.image_models import choice, defaults, frozen_model, resolve_request
@@ -475,6 +477,43 @@ class ImageEditExecutor:
             waiting(session, root, rows, "Checking the requested changes")
             return
         reviews = [EditReview.model_validate(result(session, root, rid)) for rid in current["review_runs"]]
+        if all(review.request_verdict == "passed" for review in reviews):
+            if "audit_runs" not in current:
+                rows = [
+                    enqueue_reason(
+                        session,
+                        root,
+                        f"audit:{len(attempts)}:{index}",
+                        "audit_review",
+                        {
+                            "user_request": root.parameters["user_request"],
+                            "instruction": root.parameters["original_instruction"],
+                            "candidate_observation": observation.model_dump(),
+                            "criteria": {
+                                str(check.criterion_index): plan.criteria[check.criterion_index].model_dump()
+                                for check in review.checks
+                            },
+                            "proposed_review": review.model_dump(),
+                        },
+                    )
+                    for index, review in enumerate(reviews)
+                ]
+                current["audit_runs"] = [row.id for row in rows]
+                attempts[-1] = current
+                root.metadata_json = {**state, "edit_attempts": attempts}
+                waiting(session, root, rows, "Checking review consistency")
+                return
+            for review, identity in zip(reviews, current["audit_runs"], strict=True):
+                audit = ReviewConsistency.model_validate(result(session, root, identity))
+                if audit.verdict != "consistent":
+                    verdict = "failed" if audit.verdict == "contradicted" else "uncertain"
+                    review.request_verdict = verdict
+                    review.request_evidence = audit.evidence
+                    review.correction = audit.evidence
+                    for check in review.checks:
+                        if plan.criteria[check.criterion_index].kind == "change":
+                            check.verdict = verdict
+                            check.evidence = audit.evidence
         checks = [check for review in reviews for check in review.checks]
         if {check.criterion_index for check in checks} != set(range(len(plan.criteria))) or len(
             checks
@@ -577,10 +616,15 @@ class ImageEditReasonExecutor:
             "plan": EditPlan,
             "review": EditReview,
             "observe_candidate": CandidateObservation,
+            "audit_review": ReviewConsistency,
         }[stage]
-        system = {"inspect": INSPECT, "plan": PLAN, "review": REVIEW, "observe_candidate": OBSERVE_CANDIDATE}[
-            stage
-        ]
+        system = {
+            "inspect": INSPECT,
+            "plan": PLAN,
+            "review": REVIEW,
+            "observe_candidate": OBSERVE_CANDIDATE,
+            "audit_review": AUDIT_REVIEW,
+        }[stage]
         output_schema = schema.model_json_schema()
         if stage == "plan" and payload["backend"] != "krea2":
             output_schema["properties"]["reference_layout"] = {
