@@ -359,7 +359,13 @@ class AssistantDecisionExecutor:
 
     def execute(self, session, run):
         from app.assistant_controller import missing_outcomes, sources
-        from app.assistant_controller_tools import TOOLS, bind_page_arguments, catalog, wrapper_parameters
+        from app.assistant_controller_tools import (
+            TOOLS,
+            bind_image_arguments,
+            bind_page_arguments,
+            catalog,
+            wrapper_parameters,
+        )
         from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, planning_messages, validate_plan
         from app.models import Run
 
@@ -426,6 +432,19 @@ class AssistantDecisionExecutor:
                     raise ValueError("Decision has no valid originating controller")
                 if value.tool in {"web.read", "web.image_import"}:
                     value.arguments = bind_page_arguments(value.arguments, sources(root))
+                bound = bind_image_arguments(context, value.tool, value.arguments)
+                if bound != value.arguments:
+                    append_event(
+                        session,
+                        run.id,
+                        "assistant.decision.references_bound",
+                        {
+                            "tool": value.tool,
+                            "images": bound["images"],
+                            "reason": "omitted unambiguous frozen references",
+                        },
+                    )
+                    value.arguments = bound
                 arguments = TOOLS[value.tool].arguments.model_validate(value.arguments).model_dump()
                 for observed in context["observations"]:
                     if observed["tool"] != value.tool:

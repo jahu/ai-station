@@ -169,3 +169,93 @@ def test_model_schema_advertises_actual_reference_and_generation_limits():
             if rule["if"].get("properties", {}).get("image_model", {}).get("const") == "installed-krea"
         )
         assert choice["then"]["properties"]["images"] == {"maxItems": maximum, "minItems": minimum}
+
+
+def reference_context(mode="provided"):
+    c = context()
+    c["outcomes"] = [
+        {
+            "kind": "image",
+            "count": 3,
+            "reference_mode": mode,
+            "source_inputs": ["input:image:2", "input:image:1", "input:image:3"],
+        }
+    ]
+    c["inputs_and_results"] = [{"alias": f"input:image:{i}", "type": "image"} for i in range(1, 4)] + [
+        {
+            "alias": "step:1:image:1",
+            "type": "image",
+            "origin": "current_result",
+            "source_step": 1,
+        }
+    ]
+    c["observations"] = [
+        {
+            "index": 1,
+            "tool": "image.edit",
+            "status": "succeeded",
+            "produced_types": ["image"],
+            "arguments": {"instruction": "First view", "images": c["outcomes"][0]["source_inputs"]},
+        }
+    ]
+    return c
+
+
+def test_continuation_prompt_and_repair_expose_every_frozen_original_reference():
+    c = reference_context()
+    schema = parameter_schema(c, "image.edit", ImageOperation)
+    images = schema["properties"]["images"]
+    assert "images" in schema["required"] and "default" not in images
+    assert images["minItems"] == 3 and images["uniqueItems"]
+    assert [rule["contains"]["const"] for rule in images["allOf"]] == c["outcomes"][0]["source_inputs"]
+    feedback = repair_context(c, {"tool": "image.edit", "arguments": {}}, "Missing references")
+    assert feedback["reference_contract"] == {
+        "required_images": c["outcomes"][0]["source_inputs"],
+        "one_of_images": [],
+    }
+
+    async def invoke(messages):
+        assert all(alias in messages[0]["content"] for alias in c["outcomes"][0]["source_inputs"])
+        return 'Thought: Continue the series.\nAction: image_recompose\nAction Input: {"instruction":"Another view"}'
+
+    assert asyncio.run(take_action(c, invoke))["tool"] == "image.recompose"
+
+
+def test_only_omitted_unambiguous_references_are_bound_without_changing_explicit_choices():
+    from app.assistant_controller_tools import bind_image_arguments
+
+    c = reference_context()
+    proposed = {"instruction": "Another view", "image_model": "qwen"}
+    bound = bind_image_arguments(c, "image.edit", proposed)
+    assert bound == {**proposed, "images": c["outcomes"][0]["source_inputs"]}
+    assert "images" not in proposed
+    for aliases in ([], ["input:image:1"], ["step:1:image:1"], ["foreign:image:1"]):
+        explicit = {**proposed, "images": aliases}
+        assert bind_image_arguments(c, "image.edit", explicit) is explicit
+    for name in ("image.describe", "image.generate", "agent.create", []):
+        assert bind_image_arguments(c, name, proposed) is proposed
+    sequential = bind_image_arguments(reference_context("sequential"), "image.edit", proposed)
+    assert sequential["images"] == ["step:1:image:1"]
+
+
+def test_binding_does_not_guess_between_imported_web_candidates():
+    from app.assistant_controller_tools import bind_image_arguments
+
+    c = context()
+    c["outcomes"] = [{"kind": "image", "count": 1, "reference_mode": "web", "source_inputs": []}]
+    c["observations"] = [{"index": 1, "tool": "web.image_import", "status": "succeeded"}]
+    c["inputs_and_results"] = [
+        {
+            "alias": f"step:1:image:{i}",
+            "type": "image",
+            "origin": "current_result",
+            "source_tool": "web.image_import",
+            "source_step": 1,
+        }
+        for i in (1, 2)
+    ]
+    proposed = {"instruction": "Edit one search result"}
+    assert bind_image_arguments(c, "image.edit", proposed) is proposed
+    c["inputs_and_results"].pop()
+    assert bind_image_arguments(c, "image.edit", proposed)["images"] == ["step:1:image:1"]
+    assert bind_image_arguments(context(), "image.edit", proposed) is proposed

@@ -820,6 +820,34 @@ def test_ordered_multiple_references_are_bound_without_reordering_or_choosing_a_
             assert photo.parameters["parent_artifact_ids"] == list(reversed(images))
 
 
+def test_dispatch_binds_only_missing_frozen_references_and_still_rejects_explicit_wrong_ones(model):
+    from app.assistant_controller_tools import wrapper_parameters
+
+    with TestClient(app) as api:
+        images = [upload(api)["id"], upload(api)["id"]]
+        result = submit(api, "Edit both original references", image_artifact_ids=images)
+        with session_factory()() as db:
+            root = db.get(Run, result["run"]["id"])
+            root.metadata_json = {
+                **root.metadata_json,
+                "controller_outcomes": [
+                    {
+                        "kind": "image",
+                        "count": 2,
+                        "reference_mode": "provided",
+                        "source_inputs": ["input:image:2", "input:image:1"],
+                    }
+                ],
+            }
+            proposed = {"instruction": "A new view", "image_model": "qwen"}
+            bound = wrapper_parameters(db, root, "image.recompose", proposed)
+            assert bound["image_artifact_ids"] == list(reversed(images))
+            assert "images" not in proposed
+            for aliases in ([], ["input:image:1"], ["foreign:image:1"]):
+                with pytest.raises(ValueError, match="requested source aliases"):
+                    wrapper_parameters(db, root, "image.recompose", {**proposed, "images": aliases})
+
+
 def test_explicit_public_query_cannot_be_replaced_with_private_instructions(model, monkeypatch):
     from app import web_search
 

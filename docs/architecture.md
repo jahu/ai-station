@@ -22,6 +22,9 @@ validation events support diagnosis. Exhausted technical planning fails while
 preserving completed artifacts. Genuine ambiguity uses the existing clarification
 and follow-up flow; separate requested image results require separate production
 Runs from the requested sources.
+Reference-write schemas expose the frozen source aliases. An omitted reference
+list can reuse only unambiguous frozen inputs, in order, with a persisted binding
+event; explicit choices still pass the ordinary owned-catalog provenance checks.
 
 The next-release [open model discovery contract](plans/open-model-discovery.md)
 extends existing model setup rather than adding an execution system. A source

@@ -10,7 +10,7 @@ from app.db import session_factory
 from app.engine import tick
 from app.executors import EXECUTORS
 from app.local_provider import LocalChatProvider
-from app.models import Artifact, Run
+from app.models import Artifact, Run, RunEvent
 from app.photo_executor import PhotoPipeExecutor
 from app.runs import request_cancel, transition
 from app.state import RunStatus
@@ -537,6 +537,96 @@ def test_original_goal_check_can_reject_even_if_generated_criteria_pass(edit_run
         assert result["error_type"] == "ImageEditNotVerified"
         assert edit_runtime["photos"] == 2
         assert client.get(f"/api/artifacts?run_id={root['id']}").json() == []
+
+
+def test_three_verified_chat_edits_keep_originals_when_continuations_omit_images(edit_runtime, monkeypatch):
+    from app import assistant_decisions
+    from test_assistant_controller import submit as submit_chat
+
+    original_infer = assistant_decisions.infer
+    aliases = ["input:image:2", "input:image:1", "input:image:3"]
+    actions = []
+    monkeypatch.setattr(LocalChatProvider, "models", lambda _: ["test-model"])
+
+    async def infer(session, run, messages, *, json_output=True):
+        if run.executor_type != "assistant_decision":
+            return await original_infer(session, run, messages, json_output=json_output)
+        if messages[0]["content"].startswith("Infer the user's requested outcomes"):
+            return json.dumps(
+                {
+                    "reason": "Three separate edits of the supplied rectangles",
+                    "immediate": [
+                        {
+                            "kind": "image",
+                            "count": 1,
+                            "description": f"Blue rectangle variant {i}",
+                            "reference_mode": "provided",
+                            "source_inputs": aliases,
+                        }
+                        for i in range(1, 4)
+                    ],
+                }
+            )
+        actions.append(run.id)
+        if len(actions) <= 3:
+            arguments = {
+                "instruction": f"Blue rectangle variant {len(actions)}; retain the rectangular shape",
+                "image_model": "qwen",
+            }
+            # Replay Maya's failure: the first action supplies references; subsequent ones omit them.
+            if len(actions) == 1:
+                arguments["images"] = aliases
+            return "Thought: Make another separate edit.\nAction: image_edit\nAction Input: " + json.dumps(
+                arguments
+            )
+        return "Thought: All three edits were verified.\nAnswer: Three separate images are ready."
+
+    monkeypatch.setattr(assistant_decisions, "infer", infer)
+    with TestClient(app) as client:
+        references = []
+        for color in ("red", "green", "orange"):
+            data = io.BytesIO()
+            Image.new("RGB", (512, 768), color).save(data, "PNG")
+            response = client.post(
+                "/api/images/uploads", files={"file": (f"{color}.png", data.getvalue(), "image/png")}
+            )
+            assert response.status_code == 201, response.text
+            references.append(response.json()["id"])
+        result = submit_chat(
+            client, "Create three separate blue rectangle variants", image_artifact_ids=references
+        )
+        for _ in range(160):
+            with session_factory()() as session:
+                if tick(session, "verified-series-test", executors=edit_runtime["executors"]) is None:
+                    break
+        else:
+            raise AssertionError("Verified series queue did not drain")
+        detail = client.get(f"/api/runs/{result['run']['id']}").json()
+        assert detail["status"] == "succeeded", detail.get("error_message")
+        steps = detail["metadata"]["controller_steps"]
+        assert len(steps) == 3
+        assert all(step["arguments"]["images"] == aliases for step in steps)
+        assert edit_runtime["photos"] == edit_runtime["reviews"] == 3
+        with session_factory()() as session:
+            photos = list(session.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
+            assert len(photos) == 3 and all(photo.status == "succeeded" for photo in photos)
+            expected = [references[1], references[0], references[2]]
+            assert all(photo.parameters["parent_artifact_ids"] == expected for photo in photos)
+            edits = list(session.scalars(select(Run).where(Run.executor_type == "image_edit")))
+            accepted = [edit.metadata_json["accepted_artifact_ids"][0] for edit in edits]
+            assert len(edits) == len(set(accepted)) == 3
+            assert all(
+                session.get(Artifact, artifact_id).metadata_json["image_edit_review"]["status"] == "accepted"
+                for artifact_id in accepted
+            )
+            bound_events = list(
+                session.scalars(
+                    select(RunEvent).where(RunEvent.event_type == "assistant.decision.references_bound")
+                )
+            )
+            assert len(bound_events) == 2
+            assert all(event.payload["images"] == aliases for event in bound_events)
+            assert {event.run_id for event in bound_events} == set(actions[1:3])
 
 
 def test_accepted_edit_history_survives_trash_without_delivering_deleted_bytes(edit_runtime):

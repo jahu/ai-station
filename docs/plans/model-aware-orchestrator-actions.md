@@ -213,3 +213,32 @@ sd-cli at seed 42, which can replay the source's generation noise. The
 [seed forwarding/inheritance repair](qwen-reference-seeds.md) records the separate
 root cause and its actual qualification. The account-default fix above remains a
 distinct configuration regression; selecting Krea does not repair Qwen itself.
+
+## Reference collection continuation — 2026-11-13
+
+The latest reported three-image collection completed its first verified Qwen
+edit, then stopped before the second render. Both saved continuation proposals
+omitted `images`. The common argument model defaulted that omission to an empty
+list, but the dispatch provenance contract required the three frozen originals.
+The planner's tool schema did not express those required aliases; correction
+reported a provenance error without enumerating the aliases. This was a planning
+contract failure, not GPU unavailability or a failed first image edit.
+
+Project the existing frozen provenance contract into the actual tool schema and
+repair feedback. For reference writes only, a genuinely omitted `images` list
+may bind the unambiguous frozen references in their declared order. Independent
+variants reuse originals; sequential transformations use the preceding accepted
+result. Multiple possible imported results remain a model/user choice. Explicit
+empty, partial, wrong or foreign reference lists are never silently replaced.
+The dispatcher recomputes the same contract against its owned artifact catalog;
+model limits, hashes, permissions, verification, Stop and recovery remain intact.
+Persist normalized arguments and a structured reference-binding event before
+execution so the reused inputs are inspectable. No subject-specific prompts,
+extra generation retries or automatic model substitutions are introduced.
+
+Regression acceptance includes three separate current-ReAct verified edits from
+three original references, with the second and third proposals omitting `images`.
+Check all accepted artifacts, original parent ordering, completed step count and
+binding events. Also cover sequential provenance, ambiguous web imports, explicit
+invalid inputs and independently validated dispatch. Normal tests use isolated
+databases and fake model/render executors; they do not qualify a new GPU series.
