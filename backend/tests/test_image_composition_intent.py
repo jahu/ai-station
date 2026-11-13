@@ -76,6 +76,12 @@ def test_ordered_photo_composition_waits_without_stopping_active_model(managed, 
             },
         )
         assert response.status_code == 202, response.text
+        # Replay an already queued pre-verification photo dispatch. Current Edit
+        # orchestration and multi-reference execution have their own full tests.
+        with session_factory()() as session:
+            old = session.get(Run, response.json()["id"])
+            old.parameters = {**old.parameters, "verify_image_changes": False}
+            session.commit()
         assert step() == response.json()["id"]
         with session_factory()() as session:
             children = list(session.scalars(select(Run).where(Run.parent_run_id == response.json()["id"])))

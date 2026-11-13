@@ -25,6 +25,12 @@ class Images(Instruction):
 
 
 class ImageOperation(Images):
+    instruction: str = Field(
+        min_length=1,
+        max_length=10000,
+        description="One self-contained concrete visual brief for this result. Resolve delegated creative choices; do not pass alternative possibilities to the renderer or combine separate variants into a composite unless requested. Preserve only requested invariants and state the intended change relative to the references. For discretionary views, keep required distinguishing features observable at their original locations on the referenced subject, without relocating or duplicating them to solve occlusion. Honor explicitly requested changes or views.",
+    )
+
     image_model: Alias | None = Field(
         default=None,
         description="An exact installed image_models alias. Honor the user's named model. Omit to use the configured default for this operation; a recurring draft from a newly produced result retains that compatible result model unless explicitly overridden.",
@@ -238,6 +244,8 @@ def available_tools(params):
     """Capability authority comes from the selected scope, never model output."""
     selected = {}
     for name, spec in TOOLS.items():
+        if name == "image.recompose" and params.get("controller_verified_edits"):
+            continue
         if (
             name in {"web.image_search", "web.image_import"}
             and params.get("controller_web_image_policy") != "public-images-v1"
@@ -261,7 +269,14 @@ def available_tools(params):
             and params.get("controller_provider", {}).get("location") != "local"
         ):
             continue
-        selected[name] = {"description": spec.description, "arguments_type": spec.arguments.__name__}
+        selected[name] = {
+            "description": (
+                "Edit one image using one or several ordered reference images. The instruction defines any requested changes and features to preserve; actual pixels are inspected and the changes are checked before a result is accepted. One call creates one image."
+                if name == "image.edit" and params.get("controller_verified_edits")
+                else spec.description
+            ),
+            "arguments_type": spec.arguments.__name__,
+        }
     return selected
 
 
@@ -417,6 +432,45 @@ def image_contract(context):
     return {"image.generate"}, set(), set()
 
 
+def image_reference_requirements(context):
+    """Project the existing frozen provenance constraint without selecting new inputs."""
+    from app.assistant_controller import missing_outcomes
+
+    allowed, required, alternatives = image_contract(context)
+    goal = next(
+        (
+            item
+            for item in missing_outcomes(context.get("observations", []), context.get("outcomes", []))
+            if item["kind"] == "image"
+        ),
+        {},
+    )
+    ordered = list(dict.fromkeys(alias for alias in goal.get("source_inputs", []) if alias in required))
+    return {
+        "allowed_tools": sorted(allowed),
+        "required_images": ordered,
+        "one_of_images": sorted(alternatives),
+    }
+
+
+def bind_image_arguments(context, name, arguments):
+    """An omitted list may reuse unambiguous frozen inputs; explicit lists stay authoritative."""
+    if (
+        not isinstance(name, str)
+        or not isinstance(arguments, dict)
+        or name not in {"image.edit", "image.recompose", "image.upscale"}
+        or "images" in arguments
+    ):
+        return arguments
+    contract = image_reference_requirements(context)
+    if name not in contract["allowed_tools"]:
+        return arguments
+    required, alternatives = contract["required_images"], contract["one_of_images"]
+    if len(alternatives) > 1 or not (required or alternatives):
+        return arguments
+    return {**arguments, "images": list(dict.fromkeys([*required, *alternatives]))}
+
+
 def observation(session, root, step):
     if step["tool"] == "studio.produce":
         from app.studio_assistant import observed_result
@@ -441,6 +495,9 @@ def observation(session, root, step):
     )
     if len(artifacts) > 64:
         raise ValueError("Controller tool produced too many artifacts")
+    from app.image_edits import published_artifacts
+
+    artifacts = published_artifacts(artifacts)
     wrapper = next((row for row in rows if row.executor_type == "orchestrator"), None)
     superseded = set()
     if wrapper is not None:
@@ -605,6 +662,8 @@ def wrapper_parameters(session, root, name, raw):
                 if step.get("observation")
             ],
         }
+        raw = bind_image_arguments(contract_context, name, raw)
+        args = TOOLS[name].arguments.model_validate(raw)
         allowed, required, previous = image_contract(contract_context)
         if name not in allowed:
             raise ValueError(
@@ -623,12 +682,16 @@ def wrapper_parameters(session, root, name, raw):
         agent_scope = capture(session, root, args, entries)
         images = []
     audio = resolve(entries, [args.audio], "audio")[0] if getattr(args, "audio", None) else None
-    if name in {"image.edit", "image.upscale"} and len(images) != 1:
+    if (
+        name == "image.upscale"
+        or name == "image.edit"
+        and not root.parameters.get("controller_verified_edits")
+    ) and len(images) != 1:
         raise ValueError("This tool requires exactly one image reference")
-    if name == "image.recompose" and not images:
-        raise ValueError("Recompose requires at least one image reference")
+    if name in {"image.edit", "image.recompose"} and not images:
+        raise ValueError("Edit requires at least one image reference")
     if name == "image.generate" and images:
-        raise ValueError("Generate uses text only; choose Recompose for references")
+        raise ValueError("Generate uses text only; choose Edit for references")
     if name == "image.describe" and not 1 <= len(images) <= 4:
         raise ValueError("Image inspection requires one to four images")
     if name in {"avatar.animate", "audio.speech", "audio.analyze", "audio.transcribe"} and not audio:
@@ -661,6 +724,8 @@ def wrapper_parameters(session, root, name, raw):
             "image.recompose": "recompose",
             "image.upscale": "upscale",
         }[name]
+        if name == "image.edit" and root.parameters.get("controller_verified_edits"):
+            mode = "recompose"
         params["controller_image_request"] = request_profile(session, root, args, mode, images)
     from app.vision_inputs import freeze
 

@@ -192,10 +192,37 @@ export default function AgentMediaScopeEditor({
               : Image;
   function updateImage(patch: Partial<ImageMediaRequest>) {
     if (scope.kind === "image")
-      onChange({ ...scope, request: { ...scope.request, ...patch } });
+      onChange({
+        ...scope,
+        request: {
+          ...scope.request,
+          ...patch,
+          ...(image?.mode === "img2img" || image?.mode === "recompose"
+            ? { verify_changes: true }
+            : {}),
+        },
+      });
   }
   function changeImageMode(mode: ImageMediaRequest["mode"]) {
     if (!image) return;
+    if (
+      (mode === "img2img" || mode === "recompose") &&
+      (image.mode === "img2img" || image.mode === "recompose")
+    ) {
+      onChange({
+        ...scope,
+        kind: "image",
+        request: {
+          ...image,
+          mode: "recompose",
+          verify_changes: true,
+          prompt_style: "instruction",
+          prompt: caption || goal,
+          edit_prompt: caption || goal,
+        },
+      });
+      return;
+    }
     const keepModel = !!image.model_id && mode !== "upscale";
     const keepKrea = image.backend === "krea2" && keepModel;
     onChange({
@@ -206,9 +233,14 @@ export default function AgentMediaScopeEditor({
           : mode === "recompose"
             ? "goal"
             : scope.description_source,
-      ...(mode === "recompose" ? { vary_scenes: true } : {}),
+      ...(mode === "recompose"
+        ? { vary_scenes: scope.kind === "image" && scope.vary_scenes === true }
+        : {}),
       request: {
         mode,
+        ...(mode === "img2img" || mode === "recompose"
+          ? { verify_changes: true }
+          : {}),
         backend: keepModel ? image.backend : "qwen",
         ...(keepModel ? { model_id: image.model_id } : {}),
         ...(keepKrea
@@ -349,16 +381,13 @@ export default function AgentMediaScopeEditor({
             Image operation
             <select
               aria-label="Agent image operation"
-              value={image.mode}
+              value={image.mode === "img2img" ? "recompose" : image.mode}
               onChange={(event) =>
                 changeImageMode(event.target.value as ImageMediaRequest["mode"])
               }
             >
               <option value="t2i">Create from text</option>
-              <option value="img2img">
-                Small changes to the reference image
-              </option>
-              <option value="recompose">New variations from references</option>
+              <option value="recompose">Edit</option>
               <option value="upscale">Upscale 4×</option>
             </select>
           </label>
@@ -368,28 +397,18 @@ export default function AgentMediaScopeEditor({
             request={image}
             disabled={disabled || uploading}
             onChange={(request) =>
-              onChange({ ...scope, kind: "image", request })
+              onChange({
+                ...scope,
+                kind: "image",
+                request: {
+                  ...request,
+                  ...(request.mode === "img2img" || request.mode === "recompose"
+                    ? { verify_changes: true }
+                    : {}),
+                },
+              })
             }
           />
-        )}
-        {image?.mode === "img2img" && (
-          <div className="agent-image-purpose notice">
-            <div>
-              <strong>Want a new composition or setting?</strong>
-              <p>
-                Small edits stay close to the reference. Variations follow your
-                brief to decide which features stay consistent and which may
-                change.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => changeImageMode("recompose")}
-            >
-              Use variations
-            </Button>
-          </div>
         )}
         {image?.mode === "recompose" &&
           scope.kind === "image" &&
@@ -794,7 +813,7 @@ export default function AgentMediaScopeEditor({
                   ? "Preserves the original image as much as possible."
                   : image.mode === "recompose"
                     ? "Uses the references according to your brief: keep requested features and vary only the relevant aspects."
-                    : "Makes the reviewed image four times larger. Research tools are available with Generate, Edit and Recompose."}
+                    : "Makes the reviewed image four times larger. Research tools are available with Generate and Edit."}
               </p>
             )}
             {image.mode !== "t2i" && (
@@ -824,7 +843,7 @@ export default function AgentMediaScopeEditor({
                         onBusy(busy);
                       }}
                     />
-                    {image.mode === "recompose" &&
+                    {(image.mode === "img2img" || image.mode === "recompose") &&
                       (image.input_artifact_ids?.length ?? 0) > 1 && (
                         <Button
                           type="button"
@@ -845,13 +864,16 @@ export default function AgentMediaScopeEditor({
                       )}
                   </div>
                 ))}
-                {image.mode === "recompose" &&
+                {(image.mode === "img2img" || image.mode === "recompose") &&
                   (image.input_artifact_ids?.length ?? 0) < 8 && (
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() =>
                         updateImage({
+                          mode: "recompose",
+                          prompt: image.edit_prompt || image.prompt || goal,
+                          verify_changes: true,
                           input_artifact_ids: [
                             ...(image.input_artifact_ids ?? [""]),
                             "",

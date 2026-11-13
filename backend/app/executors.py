@@ -49,6 +49,7 @@ from app.film_sound import FilmSoundExecutor
 from app.fish_setup_job import FishSetupExecutor
 from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
+from app.image_edits import ImageEditExecutor, ImageEditReasonExecutor
 from app.image_setup_job import ImageSetupExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
@@ -346,6 +347,8 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    ImageEditExecutor.name: ImageEditExecutor(),
+    ImageEditReasonExecutor.name: ImageEditReasonExecutor(),
     AssistantStudioExecutor.name: AssistantStudioExecutor(),
     StudioProductionExecutor.name: StudioProductionExecutor(),
     "assistant_controller": AssistantControllerExecutor(),

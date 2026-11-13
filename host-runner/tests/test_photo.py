@@ -49,7 +49,7 @@ def test_argv_matches_actual_reference_parser(mode, backend, inputs):
         output="/data/result.png",
         inputs=inputs,
     )
-    parsed = namespace["build_parser"]().parse_args(argv[2:])
+    parsed = namespace["build_parser"]().parse_args(argv[argv.index("/photo.py") + 1 :])
     assert parsed.device == "cuda:7"
     assert parsed.out == "/data/result.png"
     if mode == "recompose":
@@ -154,7 +154,10 @@ def test_runner_rejects_prompt_only_profile_for_identity_and_upscale_modes(tmp_p
 
 
 @pytest.mark.parametrize("mode", ["t2i", "img2img", "recompose"])
-def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(tmp_path, mode):
+@pytest.mark.parametrize("configured_runtime", [False, True])
+def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(
+    tmp_path, mode, configured_runtime
+):
     import subprocess
     import sys
     import time
@@ -163,6 +166,8 @@ def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(tmp
 
     script = tmp_path / "pipeline.py"
     source = """import subprocess,sys,time
+from pathlib import Path
+SDCLI=Path("/old/sd-cli")
 PHOTO_SUFFIX='portrait'
 T2I_NEGATIVE='painting'
 IDENTITY_PREFIX='preserve facial details'
@@ -194,6 +199,7 @@ if __name__=='__main__':main()
         output=str(tmp_path / "out.png"),
         inputs=[] if mode == "t2i" else [str(tmp_path / "source.png")],
         prompt_style="prompt" if mode == "t2i" else "instruction",
+        sd_cli=sys.executable if configured_runtime else "",
     )
     manager = ProcessManager(tmp_path, grace_seconds=0.05)
     unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)"])

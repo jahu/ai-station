@@ -1,3 +1,35 @@
+New image edits use one public operation and a durable `image_edit` coordinator.
+Its `image_edit_reason` children inspect original pixels, plan closed criteria and
+observe candidate pixels without the goal, compare explicitly labeled images,
+and audit review consistency using the existing owned local vision runtime.
+Edits also require a separate candidate/reference technical-quality assessment,
+independent of generated change criteria. Material unrequested damage blocks
+publication even when the requested semantic changes pass. Quality failure may
+use the same bounded correction; uncertainty cannot publish a success.
+Ordinary photo Runs retain native execution and file ownership; the coordinator points to
+one accepted child artifact. At most two photo attempts run from the same frozen
+references/model. New conversation controllers expose only `image.edit`; old
+frozen controllers, API operations, URLs and definitions remain readable.
+See [unified editing](plans/unified-image-editing.md).
+
+The existing native photo integration honors an optional operator-configured
+`AI_STATION_SD_CLI` through its owned import wrapper. The original script and
+model files remain external resources; a client cannot choose an executable.
+Unset configuration preserves the original engine and invalid explicit
+configuration refuses rather than falling back. Ordinary Run/process ownership,
+source/checkpoint validation, Stop and restart inspection remain authoritative.
+
+The [model-aware action repair](plans/model-aware-orchestrator-actions.md) keeps
+complete closed tool schemas and derives image controls from the frozen selected
+model/mode. Bounded rejected proposals remain private to the decision Run; safe
+validation events support diagnosis. Exhausted technical planning fails while
+preserving completed artifacts. Genuine ambiguity uses the existing clarification
+and follow-up flow; separate requested image results require separate production
+Runs from the requested sources.
+Reference-write schemas expose the frozen source aliases. An omitted reference
+list can reuse only unambiguous frozen inputs, in order, with a persisted binding
+event; explicit choices still pass the ordinary owned-catalog provenance checks.
+
 The next-release [open model discovery contract](plans/open-model-discovery.md)
 extends existing model setup rather than adding an execution system. A source
 observation may retain one pinned supported language configuration for all file

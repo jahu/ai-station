@@ -150,3 +150,21 @@ Exact reviewed/tested-head mappings, full review and deployment verification:
 `data/acceptance/safety-redeploy-20261012/deployment.json`. No native API,
 database schema, driver, original photo script or external runtime was changed.
 The full-platform goal and final operator workbook handoff remain open.
+
+## Attachment composer viewport correction — 2026-11-13
+
+The entry screen's child scroll area was capped at the parent's full height,
+without accounting for its outside margins. Image references and expanded tools
+therefore pushed Send below the parent's clipped edge, beyond reachable scrolling.
+The entry's main area now owns scrolling, with safe automatic centering when the
+form fits. Existing conversations also allow overflow scrolling as a fallback
+when a very short viewport cannot contain their header and composer.
+
+Chromium acceptance used synthetic image uploads and intercepted API responses:
+1280×650 with one/four references, 1440×900 with tools closed, 390×844,
+390×500 with four references, and 844×390. Real wheel scrolling and hit-testing
+verified prompt entry, Send, reference IDs in the submitted request, and follow-up
+controls. The previous CSS failed the 1280×650 one-image case; the corrected CSS
+passed all six cases without page errors or horizontal overflow. No inference or
+private image upload was needed. Private evidence is under
+`data/acceptance/chat-composer-viewport-20261113/`.

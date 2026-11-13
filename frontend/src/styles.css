@@ -5969,6 +5969,7 @@ section:has(> .memory-grid) > .dashboard-note {
   position: relative;
   height: 100%;
   min-height: 0;
+  overflow-y: auto;
 }
 .chat-heading {
   padding: 14px 64px 14px 28px;
@@ -6314,9 +6315,19 @@ section:has(> .memory-grid) > .dashboard-note {
 .station-navigation-backdrop {
   display: none;
 }
-.chat-main > .new-chat {
-  max-height: 100%;
+/* Scroll the entry including its spacing; a capped child can be clipped below it. */
+.chat-entry-layout:not(.chat-conversation-layout) > .chat-main {
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
+  padding-block: clamp(16px, 4dvh, 40px);
+  scroll-padding-block: 20px;
+}
+.chat-main > .new-chat {
+  flex-shrink: 0;
+  max-height: none;
+  overflow: visible;
+  margin-block: auto;
 }
 .conversation-shell > .work-context-card,
 .conversation-shell > .work-picker {
@@ -6338,10 +6349,6 @@ section:has(> .memory-grid) > .dashboard-note {
     right: 44px;
     top: 16px;
     padding: 5px;
-  }
-  .chat-main .new-chat {
-    max-height: calc(100% - 70px);
-    margin-top: 60px;
   }
 }
 /* Keep a useful reading area even on a small phone or with its keyboard open. */

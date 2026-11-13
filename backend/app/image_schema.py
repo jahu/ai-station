@@ -25,6 +25,7 @@ class ImageRequest(BaseModel):
     _selection: dict | None = PrivateAttr(default=None)
 
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
+    verify_changes: StrictBool = False
     backend: Literal["qwen", "juggernaut", "krea2"] = "qwen"
     model_id: UUID | None = None
     reference_strength: float | None = Field(default=None, ge=0, le=8, allow_inf_nan=False)
@@ -49,6 +50,8 @@ class ImageRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_existing_image_identity(self, handler):
         values = handler(self)
+        if not self.verify_changes:
+            values.pop("verify_changes", None)
         for key in (
             "model_id",
             "reference_strength",
@@ -78,6 +81,8 @@ class ImageRequest(BaseModel):
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
         self._explicit_fields = set(self.model_fields_set)
+        if self.verify_changes and self.mode not in {"img2img", "recompose"}:
+            raise ValueError("Change verification applies only to Edit")
         if self.model_selection is not None and (
             self.mode not in {"img2img", "recompose"}
             or self.model_id is not None
@@ -107,7 +112,11 @@ class ImageRequest(BaseModel):
         count = len(self.input_artifact_ids)
         if self.mode == "t2i" and count:
             raise ValueError("Generate does not accept source images")
-        if self.mode in {"img2img", "upscale"} and count != 1:
+        if (
+            self.mode in {"img2img", "upscale"}
+            and count != 1
+            and not (self.mode == "img2img" and self.verify_changes and count > 0)
+        ):
             raise ValueError("Edit and Upscale require exactly one source image")
         if self.mode == "recompose" and count < 1:
             raise ValueError("Recompose requires at least one reference image")
@@ -131,8 +140,10 @@ class ImageRequest(BaseModel):
         if self.mode != "t2i" and self.backend not in {"qwen", "krea2"}:
             raise ValueError("Backend selection applies only to Generate")
         if not krea and (self.mode != "t2i" or self.backend != "juggernaut"):
-            if self.seed is not None or self.negative:
-                raise ValueError("Seed and negative prompt are supported only by Juggernaut")
+            if self.negative:
+                raise ValueError("Negative prompt is supported only by Juggernaut")
+            if self.mode == "upscale" and self.seed is not None:
+                raise ValueError("Upscale does not use a seed")
         if self.mode in {"t2i", "recompose"}:
             self.width = self.width or (768 if krea else 832)
             self.height = self.height or (1024 if krea else 1216)
@@ -150,7 +161,6 @@ class ImageRequest(BaseModel):
         if self.mode == "t2i" and self.backend == "juggernaut" and self.seed is None:
             self.seed = 42
         if krea:
-            self.seed = self.seed if self.seed is not None else 42
             self.cfg = self.cfg if self.cfg is not None else 1.0
             if self.mode != "t2i":
                 self.reference_strength = (

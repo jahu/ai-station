@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from app.assistant_image_profiles import inventory, request_profile
 from app.image_models import DefaultsWrite, change_default
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.runs import create_run, create_task
 from app.state import RunStatus
 from test_image_models import registered
@@ -19,6 +19,26 @@ def test_explicit_model_overrides_workspace_default_without_sampling_regression(
         request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [])["model_id"]
         == model.id
     )
+
+
+def test_model_fit_policy_freezes_a_capable_edit_choice_without_replacing_a_manual_choice(session):
+    model, _ = registered(session)
+    change_default(DefaultsWrite(revision=0, mode="img2img", choice=model.id), session)
+    catalog = inventory(session)
+    assert catalog["models"]["qwen"]["edit_capabilities"]["conditioning"] == "instruction-native"
+    assert "caution" in catalog["models"][model.id]["edit_capabilities"]
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": catalog,
+            "controller_image_policy": "model-fit-v3",
+            "controller_verified_edits": True,
+        }
+    )
+    assert request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", []) == {
+        "backend": "qwen"
+    }
+    chosen = request_profile(session, root, SimpleNamespace(image_model=model.id), "recompose", [])
+    assert chosen["model_id"] == model.id and chosen["backend"] == "krea2"
 
 
 def source(session):
@@ -60,7 +80,22 @@ def test_followup_preserves_actual_source_profile_over_different_workspace_defau
     change_default(DefaultsWrite(revision=0, mode="recompose", choice=model.id), session)
     root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
     values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
-    assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6, "seed": None}
+    assert values == {"backend": "qwen", "width": 832, "height": 1216, "steps": 30, "cfg": 6}
+
+
+@pytest.mark.parametrize("backend", ["qwen", "krea2"])
+def test_new_image_followup_does_not_inherit_the_sources_noise_seed(session, backend):
+    image = source(session)
+    original = session.get(Run, image.run_id)
+    original.parameters = {**original.parameters, "seed": 123}
+    if backend == "krea2":
+        model, _ = registered(session)
+        original.parameters = {**original.parameters, "backend": backend, "model_id": model.id}
+    session.flush()
+    root = SimpleNamespace(parameters={"controller_image_catalog": inventory(session)})
+    values = request_profile(session, root, SimpleNamespace(image_model=None), "recompose", [image.id])
+    assert "seed" not in values
+    assert values["steps"] == 30
 
 
 def test_changed_model_is_not_silently_replaced(session):

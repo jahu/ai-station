@@ -566,9 +566,8 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
   expect(
     screen.getByRole("link", { name: "Edit result" }).getAttribute("href"),
   ).toBe("/images?mode=img2img&input=result");
-  expect(
-    screen.getByRole("link", { name: "Recompose result" }).getAttribute("href"),
-  ).toBe("/images?mode=recompose&input=result");
+
+  expect(screen.queryByRole("link", { name: "Recompose result" })).toBeNull();
   expect(
     screen.getByRole("link", { name: "Upscale result" }).getAttribute("href"),
   ).toBe("/images?mode=upscale&input=result");
@@ -2141,7 +2140,7 @@ it("shows ordered observed tool results and inspection links in one activity pan
   });
   const panel = screen.getByRole("region", { name: "Task activity" });
   expect(within(panel).getByText("Web · Search")).toBeTruthy();
-  expect(within(panel).getByText("Image · Recompose")).toBeTruthy();
+  expect(within(panel).getByText("Image · Edit")).toBeTruthy();
   expect(
     within(panel)
       .getByRole("link", { name: "Design source" })
@@ -2195,6 +2194,8 @@ it("opens a conversation Studio material during production and plays only the fi
     screen.getByLabelText("Generated Studio film").getAttribute("src"),
   ).toBe("/api/artifacts/final-film/file");
   expect(screen.queryByLabelText("Generated speech")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Task activity/ }));
+  expect(screen.getAllByLabelText("Generated Studio film")).toHaveLength(1);
   mounted.unmount();
   mountResults({
     controller_steps: [
@@ -2246,6 +2247,7 @@ it("shows an imported reference as an owned Library image inside its tool step",
       },
     ],
   });
+  fireEvent.click(screen.getByRole("button", { name: /Task activity/ }));
   expect(screen.getByText("Save image references")).toBeTruthy();
   expect(screen.getByText("Reference image · saved to Library")).toBeTruthy();
   expect(

@@ -54,6 +54,7 @@ import { ProjectChoiceList } from "./ProjectChoiceList";
 import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { NewProjectBuild } from "./NewProjectBuild";
 import { AssistantAgentDraft } from "./AssistantAgentDraft";
+import ControllerResults from "./ControllerResults";
 import "./ControllerActivity.css";
 import { newProjectScope, type NewProjectScope } from "./new-project-scope";
 import { GgufChoiceList } from "./GgufChoiceList";
@@ -455,91 +456,104 @@ export function AssistantResults({
     );
     if (!steps.length) return null;
     return (
-      <section className="controller-activity" aria-label="Task activity">
-        <div className="controller-activity-heading">
-          <span>Task activity</span>
-          <span>
-            {steps.length} {steps.length === 1 ? "step" : "steps"}
-          </span>
-        </div>
-        <ol>
-          {steps.map((step) => (
-            <li key={step.run_id}>
-              <div className="controller-step-heading">
-                <span className="controller-step-number">{step.index}</span>
-                <strong>
-                  {{
-                    "web.image_search": "Find images online",
-                    "web.image_import": "Save image references",
-                  }[step.tool] ??
-                    step.tool
-                      .split(".")
-                      .map(
-                        (part) => part.charAt(0).toUpperCase() + part.slice(1),
-                      )
-                      .join(" · ")}
-                </strong>
-                <Badge status={step.status} />
-                <Link to={`/runs/${step.run_id}`} tabIndex={active ? 0 : -1}>
-                  Inspect
-                </Link>
-              </div>
-              <p className="controller-step-reason">{step.reason}</p>
-              {step.result.studio_material_id && (
-                <Link
-                  to={`/studio/materials/${step.result.studio_material_id}${step.result.studio_revision_id ? `?revision=${encodeURIComponent(step.result.studio_revision_id)}` : ""}`}
-                  tabIndex={active ? 0 : -1}
-                >
-                  Open in Studio
-                </Link>
-              )}
-              {step.sources.length > 0 && (
-                <ul className="controller-step-sources">
-                  {step.sources.map((source) => (
-                    <li key={source.url}>
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        tabIndex={active ? 0 : -1}
-                      >
-                        {source.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <AssistantResults
-                result={step.result}
-                inputs={inputs}
-                busy={busy}
-                onUse={onUse}
-                onQueued={onQueued}
-                onProject={onProject}
-                onData={onData}
-                onRepeatAnalysis={onRepeatAnalysis}
-                active={active}
-              />
-              {step.agent_draft && (
-                <AssistantAgentDraft
-                  agentId={step.agent_draft.agent_id}
-                  compact
-                  tabIndex={active ? 0 : -1}
-                  conversationContext={
-                    conversationContext
-                      ? {
-                          ...conversationContext,
-                          sourceMessageId: step.agent_draft.source_message_id,
-                          busy: !!busy,
-                        }
-                      : undefined
-                  }
+      <ControllerResults
+        result={{ ...result, controller_steps: steps }}
+        inputs={inputs}
+        busy={busy}
+        onUse={onUse}
+        active={active}
+        drafts={steps.map((step) =>
+          step.agent_draft ? (
+            <AssistantAgentDraft
+              key={step.run_id}
+              agentId={step.agent_draft.agent_id}
+              compact
+              tabIndex={active ? 0 : -1}
+              conversationContext={
+                conversationContext
+                  ? {
+                      ...conversationContext,
+                      sourceMessageId: step.agent_draft.source_message_id,
+                      busy: !!busy,
+                    }
+                  : undefined
+              }
+            />
+          ) : null,
+        )}
+      >
+        {(deliveredIds) => (
+          <ol>
+            {steps.map((step) => (
+              <li key={step.run_id}>
+                <div className="controller-step-heading">
+                  <span className="controller-step-number">{step.index}</span>
+                  <strong>
+                    {{
+                      "web.image_search": "Find images online",
+                      "web.image_import": "Save image references",
+                      "image.edit": "Image · Edit",
+                      "image.recompose": "Image · Edit",
+                    }[step.tool] ??
+                      step.tool
+                        .split(".")
+                        .map(
+                          (part) =>
+                            part.charAt(0).toUpperCase() + part.slice(1),
+                        )
+                        .join(" · ")}
+                  </strong>
+                  <Badge status={step.status} />
+                  <Link to={`/runs/${step.run_id}`} tabIndex={active ? 0 : -1}>
+                    Inspect
+                  </Link>
+                </div>
+                <p className="controller-step-reason">{step.reason}</p>
+                {step.result.studio_material_id && (
+                  <Link
+                    to={`/studio/materials/${step.result.studio_material_id}${step.result.studio_revision_id ? `?revision=${encodeURIComponent(step.result.studio_revision_id)}` : ""}`}
+                    tabIndex={active ? 0 : -1}
+                  >
+                    Open in Studio
+                  </Link>
+                )}
+                {step.sources.length > 0 && (
+                  <ul className="controller-step-sources">
+                    {step.sources.map((source) => (
+                      <li key={source.url}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          tabIndex={active ? 0 : -1}
+                        >
+                          {source.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <AssistantResults
+                  result={{
+                    ...step.result,
+                    artifacts: step.result.artifacts?.filter(
+                      (artifact) => !deliveredIds.has(artifact.id),
+                    ),
+                  }}
+                  inputs={inputs}
+                  busy={busy}
+                  onUse={onUse}
+                  onQueued={onQueued}
+                  onProject={onProject}
+                  onData={onData}
+                  onRepeatAnalysis={onRepeatAnalysis}
+                  active={active}
                 />
-              )}
-            </li>
-          ))}
-        </ol>
-      </section>
+              </li>
+            ))}
+          </ol>
+        )}
+      </ControllerResults>
     );
   }
   const hasFilmSound = result.steps?.some((step) =>
@@ -889,7 +903,6 @@ export function AssistantResults({
                   {(
                     [
                       ["img2img", "Edit"],
-                      ["recompose", "Recompose"],
                       ["upscale", "Upscale"],
                     ] as const
                   ).map(([mode, label]) => (

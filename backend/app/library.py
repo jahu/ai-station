@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/artifacts")
@@ -67,7 +67,17 @@ def artifacts(
 ):
     statement = select(Artifact)
     if run_id:
-        statement = statement.where(Artifact.run_id == str(run_id))
+        root = session.get(Run, str(run_id))
+        if root is not None and root.executor_type == "image_edit":
+            from app.image_edits import accepted_artifacts
+
+            try:
+                accepted = accepted_artifacts(session, root, available=False)
+            except ValueError as exc:
+                raise HTTPException(409, "The accepted edit needs inspection") from exc
+            statement = statement.where(Artifact.id.in_([row.id for row in accepted]))
+        else:
+            statement = statement.where(Artifact.run_id == str(run_id))
     else:
         statement = statement.where(
             Artifact.trashed_at.is_not(None) if view == "trash" else Artifact.trashed_at.is_(None)

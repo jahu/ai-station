@@ -1,3 +1,40 @@
+Verified Edit adds no execution authority: a fixed coordinator may request the
+existing owned local vision consumer and native photo executor, with the original
+source snapshots and selected model binding rechecked before use/publication.
+Closed local plans cannot choose arbitrary files, models, commands or permissions.
+Reference/criterion indices are bounded; references are inspected in groups of
+four and each review uses at most three originals plus its candidate. Exact
+pixel identity overrides model opinion. Rejected/pending candidates are retained
+for audit but excluded from conversation fulfillment and final agent delivery.
+Pure local inference/coordinator recovery is bounded and idempotent; native photo
+recovery remains unchanged. Retrying refuses an unresolved owned photo dispatch.
+The HTTP operation only queues; no hidden user conversation is created for vision.
+Candidate-only observations carry no desired-result instructions. Labeled visual
+review and a separate consistency veto reuse those same local reasoning children;
+neither can select a model, change references or grant execution permissions.
+The separate technical-quality assessment uses the same owned local reasoning
+executor with one frozen original and its candidate. It can veto publication or
+request the existing bounded correction; it grants no new tool, model or file
+access and cannot bypass the later semantic review.
+
+Accounts without personal image defaults inherit only the closed revision/model-ID
+projection of the retained station image-default setting. Model definitions are
+shared; no administrator UserSetting or other station setting is exposed. Personal
+overrides take precedence and new Runs freeze their effective selection.
+
+The native Qwen import adapter forwards one validated unsigned 32-bit seed to
+the configured sd-cli argv. Its subprocess proxy belongs only to the imported
+pipeline module; it cannot select another executable or enable a shell. New
+automatic Qwen Runs persist their seed before dispatch; this adds no HTTP/Runner
+field or execution permission and leaves voice seed continuity unchanged.
+
+The photo adapter may honor the native operator's existing `AI_STATION_SD_CLI`
+setting through its owned import wrapper. The configured executable is checked
+before launch and import; clients cannot supply it in a photo request. Original
+pipeline files remain unchanged, selected checkpoint fingerprints and source paths
+retain their checks, and the existing managed process group owns cancellation and
+recovery. A missing configured executable refuses rather than falling back.
+
 Windows preserving updates accept ordinary owned XDG parents (`~/.local` and
 `~/.local/share`) with read/execute access such as 0755. Symlink parents,
 unexpected owners and group/world-writable directories remain rejected. The

@@ -163,7 +163,10 @@ it("keeps the stored image and parent error visible when a later upload fails", 
   });
   await screen.findByText("Second image could not be stored");
   await screen.findByAltText("Reference 1");
-  expect(screen.queryByLabelText("Attach files")).toBeNull();
+  // The hidden upload input stays available so the failed file can be retried.
+  expect(
+    (screen.getByLabelText("Attach files") as HTMLInputElement).disabled,
+  ).toBe(false);
   expect(screen.queryByAltText("Reference 2")).toBeNull();
   expect((message as HTMLTextAreaElement).value).toBe("Keep my question");
   expect(state.writes).toHaveLength(0);

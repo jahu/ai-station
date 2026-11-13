@@ -38,6 +38,26 @@ def load_plugin(path, name):
     return module
 
 
+def patch_references(edit, request, model, sources, images, vae, latent):
+    # Our operation-wide control applies to every input. The upstream API's
+    # first/last slots do not imply that an arbitrary first image is a scene.
+    placement = "aligned (trained)" if request.reference_layout == "aligned" else "beside (right of target)"
+    return edit.Krea2EditModelPatch().patch(
+        model,
+        sources[0],
+        source_latent_b=sources[1] if len(sources) > 1 else None,
+        vae=vae,
+        source_image=images[0],
+        source_image_b=images[1] if len(images) > 1 else None,
+        target_latent=latent,
+        fit_mode="fit",
+        ref_boost=request.reference_strength,
+        ref_boost_a=request.reference_strength,
+        ref_position=placement,
+        ref_position_a=placement,
+    )[0]
+
+
 def main(config_path):
     config = json.loads(Path(config_path).read_text())
     request = KreaOptions.model_validate(config["request"])
@@ -135,22 +155,7 @@ def main(config_path):
             # Pre-encode at target size before loading/sampling the diffusion model.
             # VAE stays on the auxiliary GPU, never falls back to CPU.
             torch.cuda.set_device(auxiliary)
-            model = edit.Krea2EditModelPatch().patch(
-                model,
-                sources[0],
-                source_latent_b=sources[1] if len(sources) > 1 else None,
-                vae=vae,
-                source_image=images[0],
-                source_image_b=images[1] if len(images) > 1 else None,
-                target_latent=latent,
-                fit_mode="fit",
-                ref_boost=request.reference_strength,
-                ref_boost_a=request.reference_strength,
-                ref_position="aligned (trained)"
-                if request.reference_layout == "aligned"
-                else "beside (right of target)",
-                ref_position_a="aligned (trained)",
-            )[0]
+            model = patch_references(edit, request, model, sources, images, vae, latent)
             torch.cuda.set_device(0)
         require_gpu_placement(model, 0)
         memory.load_models_gpu([model], force_full_load=True)

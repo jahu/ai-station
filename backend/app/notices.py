@@ -67,6 +67,8 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 
 
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
+    if run.metadata_json.get("image_edit_root_id") or run.executor_type == "image_edit_reason":
+        return None  # Native completion is not an accepted image edit.
     if run.executor_type == "email_send" and run.parameters.get("agent_result"):
         return None
     if run.agent_id and run.executor_type in {"llama_load", "llama_stop", "llama_resume_consumer"}:
@@ -82,6 +84,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     media = None
     if run.agent_id and run.executor_type in {
         "agent_media",
+        "image_edit",
         "photo_pipe",
         "ace_step_music",
         "chatterbox",

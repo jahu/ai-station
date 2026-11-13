@@ -50,7 +50,7 @@ export function WorkflowStepCards({
     "agent.media.prepare": "Prepare media",
     "image.generate": "Generate image",
     "image.edit": "Edit image",
-    "image.recompose": "Recompose image",
+    "image.recompose": "Edit image",
     "image.upscale": "Upscale image",
     "audio.music": "Generate music",
     "audio.speech": "Generate speech",

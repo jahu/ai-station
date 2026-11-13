@@ -262,10 +262,10 @@ def invalid_decision_fallback(context):
             response="Your requested results are ready. You can inspect the outputs and completed steps below.",
             evidence=evidence,
         )
-    return Decision(
-        kind="clarify",
-        reason="Unable to choose a valid next action",
-        response="I could not choose a valid next action. Please clarify the intended result; no additional tool was executed.",
+    raise ProviderError(
+        "The planner could not prepare a valid tool action after correction. "
+        "No additional tool was executed; completed results remain available. "
+        "Inspect the decision Run for validation details."
     )
 
 
@@ -286,8 +286,12 @@ async def infer(session, run, messages, *, json_output=True):
             else None
         )
         context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
-        output_tokens = min(2048, max(512, context_size // 4))
-        context = json.loads(messages[1]["content"]) if json_output else {}
+        output_limit = 4096 if run.executor_type == "image_edit_reason" else 2048
+        output_tokens = min(output_limit, max(512, context_size // 4))
+        # JSON transport also serves single-message multimodal edit contracts.
+        # Only controller decisions carry this second-message context envelope.
+        controller_context = json_output and run.executor_type == "assistant_decision"
+        context = json.loads(messages[1]["content"]) if controller_context else {}
         # Keep the original goal, declared outcomes, status and aliases intact.
         # Older large excerpts stay inspectable in their Runs; they need not be
         # recopied verbatim on every round. This is a bound, not a token guarantee.
@@ -301,7 +305,7 @@ async def infer(session, run, messages, *, json_output=True):
                 summaries=[text[:200] for text in observed.get("summaries", [])[-1:]],
                 context_excerpt_truncated=True,
             )
-        if json_output:
+        if controller_context:
             messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
         return completion_stream(
             session,
@@ -358,7 +362,13 @@ class AssistantDecisionExecutor:
 
     def execute(self, session, run):
         from app.assistant_controller import missing_outcomes, sources
-        from app.assistant_controller_tools import TOOLS, bind_page_arguments, catalog, wrapper_parameters
+        from app.assistant_controller_tools import (
+            TOOLS,
+            bind_image_arguments,
+            bind_page_arguments,
+            catalog,
+            wrapper_parameters,
+        )
         from app.assistant_intents import PLANNING_SYSTEM, IntentPlan, planning_messages, validate_plan
         from app.models import Run
 
@@ -425,6 +435,19 @@ class AssistantDecisionExecutor:
                     raise ValueError("Decision has no valid originating controller")
                 if value.tool in {"web.read", "web.image_import"}:
                     value.arguments = bind_page_arguments(value.arguments, sources(root))
+                bound = bind_image_arguments(context, value.tool, value.arguments)
+                if bound != value.arguments:
+                    append_event(
+                        session,
+                        run.id,
+                        "assistant.decision.references_bound",
+                        {
+                            "tool": value.tool,
+                            "images": bound["images"],
+                            "reason": "omitted unambiguous frozen references",
+                        },
+                    )
+                    value.arguments = bound
                 arguments = TOOLS[value.tool].arguments.model_validate(value.arguments).model_dump()
                 for observed in context["observations"]:
                     if observed["tool"] != value.tool:
@@ -616,6 +639,7 @@ class AssistantDecisionExecutor:
             ]
             correction, text = None, ""
             for attempt in range(2):
+                proposed = None
                 try:
                     if react:
                         from app.assistant_react import take_action
@@ -629,26 +653,39 @@ class AssistantDecisionExecutor:
                         text = json.dumps(proposed, ensure_ascii=False)
                     else:
                         text = asyncio.run(infer(session, run, messages))
+                        proposed = json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip()))
                     value = asyncio.run(database_step(session, run, claim, deadline, lambda: validate(text)))
                     break
                 except ValueError as exc:
-                    correction = str(exc)[:1800]
-                    # Keep rejection count inspectable without persisting a raw
-                    # framework response/private scratchpad in public activity.
-                    asyncio.run(
-                        database_step(
+                    from app.assistant_action_contracts import repair_context
+                    from app.assistant_intents import validation_diagnostic
+
+                    detail = validation_diagnostic(exc)
+                    correction = repair_context(run.parameters["decision_context"], proposed, detail)
+
+                    def record_rejection():
+                        # Only the normalized proposal/diagnostic is retained in
+                        # this private owned Run. No framework Thought/scratchpad.
+                        run.parameters = {
+                            **run.parameters,
+                            "decision_attempts": [
+                                *run.parameters.get("decision_attempts", [])[-1:],
+                                {"attempt": attempt + 1, **correction},
+                            ],
+                        }
+                        append_event(
                             session,
-                            run,
-                            claim,
-                            deadline,
-                            lambda: append_event(
-                                session,
-                                run.id,
-                                "assistant.decision.rejected",
-                                {"attempt": attempt + 1, "retrying": not bool(attempt)},
-                            ),
+                            run.id,
+                            "assistant.decision.rejected",
+                            {
+                                "attempt": attempt + 1,
+                                "retrying": not bool(attempt),
+                                "tool": proposed.get("tool") if isinstance(proposed, dict) else None,
+                                "validation": detail,
+                            },
                         )
-                    )
+
+                    asyncio.run(database_step(session, run, claim, deadline, record_rejection))
                     if attempt:
                         value = invalid_decision_fallback(run.parameters["decision_context"])
                         break

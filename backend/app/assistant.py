@@ -707,6 +707,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True, parent_
             if getattr(body, "execution_mode", None) == "chat"
             else "work",
             "policy_version": 1,
+            "verify_image_changes": True,
             **({"agent_draft_authorized": draft_authorized} if unified else {}),
             **(
                 {"page_design": True, "page_read": {"urls": design_pages, "renderer": "browser"}}
@@ -1691,6 +1692,8 @@ class AssistantExecutor:
                     **params.get("controller_image_request", {}),
                     translation=params.get("media_translation"),
                     mode=mode,
+                    verify_changes=mode in {"img2img", "recompose"}
+                    and params.get("verify_image_changes", False),
                     prompt_style="prompt"
                     if mode == "t2i"
                     else "instruction"
@@ -2093,6 +2096,9 @@ def task_results(session, message, run):
         )
     )
     artifacts.reverse()
+    from app.image_edits import published_artifacts
+
+    artifacts = published_artifacts(artifacts)
     by_id = {step.id: step for step in steps}
     superseded = set()
     from app.media_retry_projection import projection as media_projection

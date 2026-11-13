@@ -15,7 +15,7 @@ const phases: Record<string, string> = {
 const labels: Record<string, string> = {
   "image.generate": "Image",
   "image.edit": "Image edit",
-  "image.recompose": "Recompose",
+  "image.recompose": "Edit",
   "image.upscale": "Upscale",
   "video.generate": "Video",
   "avatar.animate": "Avatar",

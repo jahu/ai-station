@@ -228,7 +228,7 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 def request_cancel(session: Session, run: Run) -> Run:
     if (
-        run.executor_type == "assistant_controller"
+        run.executor_type in {"assistant_controller", "image_edit"}
         and run.status not in TERMINAL
         and not run.task.metadata_json.get("stop_requested_at")
     ):

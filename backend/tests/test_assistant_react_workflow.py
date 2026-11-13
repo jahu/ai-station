@@ -20,7 +20,7 @@ def action(name, **arguments):
 
 
 @pytest.fixture
-def react_model(monkeypatch):
+def react_model(monkeypatch, historical_image_edit_protocol):
     state = {"calls": [], "actions": [], "immediate": [], "automations": []}
     monkeypatch.setattr(LocalChatProvider, "models", lambda _: ["test-model"])
 

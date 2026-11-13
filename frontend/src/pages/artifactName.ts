@@ -7,7 +7,7 @@ export function artifactName(artifact: Artifact) {
       ? ({
           t2i: "Generate",
           img2img: "Edit",
-          recompose: "Recompose",
+          recompose: "Edit",
           upscale: "Upscale",
         }[artifact.metadata.mode] ?? artifact.metadata.mode)
       : artifact.original_filename)

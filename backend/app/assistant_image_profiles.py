@@ -5,6 +5,7 @@ import json
 
 from fastapi import HTTPException
 
+from app.image_control_contract import CONTROL_FIELDS, CURRENT_IMAGE_POLICIES, validate_controls
 from app.image_models import choice, defaults, frozen_model
 from app.models import Artifact, ModelDefinition, Run
 
@@ -61,6 +62,17 @@ def inventory(session):
                 if key in item
             }
             models[identifier]["identity"] = fingerprint
+            if item["backend"] == "qwen":
+                models[identifier]["edit_capabilities"] = {
+                    "conditioning": "instruction-native",
+                    "preferred_for": "Requested structural changes, new geometry/framing/visible extent, and arbitrary multi-reference instructions.",
+                }
+            elif item["backend"] == "krea2":
+                models[identifier]["edit_capabilities"] = {
+                    "conditioning": "reference-conditioned identity/general-edit LoRAs",
+                    "preferred_for": "Appearance, style and identity-focused variations where retaining source geometry/framing is acceptable.",
+                    "caution": "Can retain source framing despite a different-composition instruction; not the preferred automatic choice for structural reconstruction or expanding visible extent. Two-reference training uses scene plus identity, not arbitrary independent views.",
+                }
     return {"models": models, "defaults": defaults(session)}
 
 
@@ -99,16 +111,22 @@ def source_profile(session, artifact_ids):
 def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=False):
     catalog = root.parameters.get("controller_image_catalog")
     controls = {
-        key: getattr(args, key, None) for key in ("reference_layout",) if getattr(args, key, None) is not None
+        key: getattr(args, key, None) for key in CONTROL_FIELDS if getattr(args, key, None) is not None
     }
     if not catalog:
         if controls:
             raise ValueError("Reference controls require a current frozen image model catalog")
         return {}
+    verified = bool(
+        root.parameters.get("controller_verified_edits")
+        and mode in {"img2img", "recompose"}
+        and not inherit_source
+    )
+    default_mode = "img2img" if verified else mode
     inherited = source_profile(session, artifact_ids)
     selected = getattr(args, "image_model", None)
     if selected is None and (
-        inherit_source or root.parameters.get("controller_image_policy") != "configured-default-v2"
+        inherit_source or root.parameters.get("controller_image_policy") not in CURRENT_IMAGE_POLICIES
     ):
         proposed = inherited.get("model_id") or inherited.get("backend")
         if proposed and proposed not in catalog["models"]:
@@ -121,22 +139,18 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
             else catalog["defaults"]["choices"][mode]
         )
     if selected is None:
-        selected = catalog["defaults"]["choices"][mode]
+        selected = catalog["defaults"]["choices"][default_mode]
     item = catalog["models"].get(selected)
     if item is None or mode not in item["modes"]:
         raise ValueError("Choose an available compatible image_model alias from image_models")
-    if (
-        root.parameters.get("controller_image_policy") == "configured-default-v2"
-        and item["backend"] == "krea2"
-        and mode in {"img2img", "recompose"}
+    validate_controls(
+        item["backend"],
+        mode,
+        controls,
+        required=root.parameters.get("controller_image_policy") in CURRENT_IMAGE_POLICIES
         and not inherit_source
-        and not controls
-    ):
-        raise ValueError(
-            "Choose reference_layout explicitly for this Krea2 reference operation: "
-            "beside allows a different viewpoint or composition; aligned keeps reference framing. "
-            "Use the requested visual change to decide, then retry the tool with that argument."
-        )
+        and not verified,
+    )
     if len(artifact_ids) > item["maximum_references"]:
         raise ValueError(
             "The selected image model does not support this many references; choose a compatible image_model"
@@ -160,9 +174,12 @@ def request_profile(session, root, args, mode, artifact_ids, *, inherit_source=F
         and inherited.get("backend") == item["backend"]
         and inherited.get("model_id") == values.get("model_id")
     ):
-        values.update({key: value for key, value in inherited.items() if key in PROFILE_FIELDS})
+        values.update(
+            {key: value for key, value in inherited.items() if key in PROFILE_FIELDS and key != "seed"}
+        )
+    if verified:
+        for key in ("width", "height", "reference_layout"):
+            values.pop(key, None)
     if controls:
-        if item["backend"] != "krea2" or mode not in {"img2img", "recompose"}:
-            raise ValueError("Reference controls apply only to Krea2 Edit or Recompose")
         values.update(controls)
     return values

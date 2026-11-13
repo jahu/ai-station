@@ -112,6 +112,14 @@ def root_state(result):
         return root.metadata_json
 
 
+def failed_root_state(result):
+    with session_factory()() as db:
+        root = db.get(Run, result["run"]["id"])
+        assert root.status == "failed", root.error_message
+        assert "Controller decision failed" in root.error_message
+        return root.metadata_json
+
+
 @pytest.mark.parametrize(
     "content",
     [
@@ -275,7 +283,7 @@ def test_closed_tools_and_outcome_affordances_reject_unrequested_actions(model, 
     with TestClient(app) as api:
         result = submit(api, "Explain tools; do not run any action")
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         with session_factory()() as db:
             assert not list(db.scalars(select(Run).where(Run.run_type == "tool")))
             assert not list(db.scalars(select(Agent)))
@@ -289,7 +297,7 @@ def test_generated_result_cannot_be_replaced_with_a_guessed_uuid(model, bridge):
             api, "A version of the supplied cabinet in a new scene", image_artifact_ids=[upload(api)["id"]]
         )
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         with session_factory()() as db:
             assert not list(db.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
 
@@ -300,8 +308,8 @@ def test_two_requested_images_cannot_finish_after_only_one(model, bridge):
     with TestClient(app) as api:
         result = submit(api, "Create two separate wardrobe images")
         drain()
-        state = root_state(result)
-        assert state["controller_outcome"] == "clarify"
+        state = failed_root_state(result)
+        assert state.get("controller_outcome") != "finish"
         assert len(state["controller_steps"]) == 1
         assert state["controller_outcomes"][0]["count"] == 2
 
@@ -313,7 +321,7 @@ def test_declared_outcomes_cannot_be_shrunk_after_a_tool(model, bridge):
     with TestClient(app) as api:
         result = submit(api, "Create two separate wardrobe images")
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
 
 
 def test_failed_tool_is_observed_before_a_different_call_and_streamed_reply(model, monkeypatch):
@@ -812,6 +820,34 @@ def test_ordered_multiple_references_are_bound_without_reordering_or_choosing_a_
             assert photo.parameters["parent_artifact_ids"] == list(reversed(images))
 
 
+def test_dispatch_binds_only_missing_frozen_references_and_still_rejects_explicit_wrong_ones(model):
+    from app.assistant_controller_tools import wrapper_parameters
+
+    with TestClient(app) as api:
+        images = [upload(api)["id"], upload(api)["id"]]
+        result = submit(api, "Edit both original references", image_artifact_ids=images)
+        with session_factory()() as db:
+            root = db.get(Run, result["run"]["id"])
+            root.metadata_json = {
+                **root.metadata_json,
+                "controller_outcomes": [
+                    {
+                        "kind": "image",
+                        "count": 2,
+                        "reference_mode": "provided",
+                        "source_inputs": ["input:image:2", "input:image:1"],
+                    }
+                ],
+            }
+            proposed = {"instruction": "A new view", "image_model": "qwen"}
+            bound = wrapper_parameters(db, root, "image.recompose", proposed)
+            assert bound["image_artifact_ids"] == list(reversed(images))
+            assert "images" not in proposed
+            for aliases in ([], ["input:image:1"], ["foreign:image:1"]):
+                with pytest.raises(ValueError, match="requested source aliases"):
+                    wrapper_parameters(db, root, "image.recompose", {**proposed, "images": aliases})
+
+
 def test_explicit_public_query_cannot_be_replaced_with_private_instructions(model, monkeypatch):
     from app import web_search
 
@@ -832,7 +868,7 @@ def test_explicit_public_query_cannot_be_replaced_with_private_instructions(mode
             web_search={"enabled": True, "query": "public furniture design"},
         )
         drain()
-        assert root_state(result)["controller_outcome"] == "clarify"
+        assert failed_root_state(result).get("controller_outcome") != "finish"
         assert not queries
 
 

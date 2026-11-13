@@ -291,11 +291,8 @@ it("shows a generated image with source lineage in the workspace", async () => {
   expect(
     screen.getByRole("link", { name: "Edit edited01" }).getAttribute("href"),
   ).toBe("/images?mode=img2img&input=edited01&run=photo");
-  expect(
-    screen
-      .getByRole("link", { name: "Recompose edited01" })
-      .getAttribute("href"),
-  ).toBe("/images?mode=recompose&input=edited01&run=photo");
+
+  expect(screen.queryByRole("link", { name: "Recompose edited01" })).toBeNull();
   expect(
     screen.getByRole("link", { name: "Upscale edited01" }).getAttribute("href"),
   ).toBe("/images?mode=upscale&input=edited01&run=photo");

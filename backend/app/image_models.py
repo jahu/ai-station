@@ -9,8 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.data_access import ScopedSession
 from app.db import session_scope
-from app.models import ModelDefinition, ModelFile
+from app.models import ModelDefinition, ModelFile, Setting
 from app.personal_settings import preference_row
 
 router = APIRouter(prefix="/images", tags=["images"])
@@ -37,9 +38,42 @@ DEFAULTS = {"revision": 0, "choices": {mode: "realesrgan" if mode == "upscale" e
 
 def defaults(session):
     row = preference_row(session, KEY)
+    if row is None and isinstance(session, ScopedSession):
+        # This one machine setting contains shared model IDs, not another
+        # account's preferences. Project only its closed public coordinates.
+        # Use the current transaction: a second default SQLite session would
+        # acquire BEGIN IMMEDIATE and contend with this request's writer.
+        station = session.connection().execute(select(Setting.value).where(Setting.key == KEY)).first()
+        if station is not None:
+            return _defaults_value(station[0])
     if row is None:
         return {"revision": 0, "choices": dict(DEFAULTS["choices"])}
-    return {"revision": row.value["revision"], "choices": {**DEFAULTS["choices"], **row.value["choices"]}}
+    return _defaults_value(row.value)
+
+
+def _defaults_value(value):
+    error = HTTPException(409, "Image defaults need a valid revision and compatible model identifiers")
+    if not isinstance(value, dict):
+        raise error
+    revision, choices = value.get("revision"), value.get("choices")
+    if (
+        type(revision) is not int
+        or revision < 0
+        or not isinstance(choices, dict)
+        or set(choices) - set(MODES)
+    ):
+        raise error
+    normalized = {}
+    for mode, identifier in choices.items():
+        if not isinstance(identifier, str) or len(identifier) > 64:
+            raise error
+        if identifier not in LEGACY:
+            try:
+                identifier = str(UUID(identifier))
+            except ValueError:
+                raise error from None
+        normalized[mode] = identifier
+    return {"revision": revision, "choices": {**DEFAULTS["choices"], **normalized}}
 
 
 def choice(session, identifier):
@@ -249,7 +283,7 @@ class DefaultsWrite(BaseModel):
 @router.put("/defaults")
 def change_default(body: DefaultsWrite, session: DB):
     frozen_model(session, body.choice, body.mode)
-    row = preference_row(session, KEY, default=DEFAULTS, lock=True)
+    row = preference_row(session, KEY, default=defaults(session), lock=True)
     current = defaults(session)
     if current["revision"] != body.revision:
         raise HTTPException(409, "Image defaults changed; refresh before saving")
