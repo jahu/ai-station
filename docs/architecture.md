@@ -595,6 +595,14 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+The [long-video investigation](plans/long-video-temporal-quality.md) now includes
+closed SVI Pro context primitives, separate from the operational 5B adapter.
+They preserve the original anchor and one preceding motion latent, validate the
+16-channel checkpoint identity, and map the complete fixed Pro adapter against
+logical GGUF weight geometry. They add no operational executor or public graph
+API. Complete model preparation, typed dispatch, Stop/recovery, model-aware
+timelines and broader actual film qualification remain required admission gates.
+
 Creative Studio development follows [the creative production contract](plans/creative-studio.md).
 CreativeProject is an account-owned brand/editorial identity, separate from the
 Git Project registry. Existing CreativeSessions may belong to it; historical

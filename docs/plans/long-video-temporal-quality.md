@@ -393,3 +393,84 @@ fixture and compares decoded output against the implicit default, alongside the
 existing full-audio/timeline/ownership cases. Lint/format and 130 relevant tests
 pass; the native GPU writer itself has not been rerun with the new encoder policy.
 The ongoing private SVI continuation stays on its frozen earlier source.
+
+## Actual recurrent continuation and product integration
+
+The first complete recurrent ten-second film is now terminal: 150 fully decoded
+frames at 15 fps, with the original image retained in both native windows and
+one owned raw motion latent passed between them. The final film reuses the
+already generated first 81-frame clip and retains 69 frames from the second
+after its four-frame context. It does not stretch or loop a shorter clip.
+The second native Run is `5f8b54f5-c8d7-44fe-801b-adac26e30c08`; composition is
+`35da99b4-b058-4766-b1aa-8126f1c64417`. Its complete output SHA-256 is
+`df03344ca5b77dfd1250400228c98a34545988d141d03855451a0184e4411f10`.
+
+Seventeen sampled views include the actual frame-80/81 join and final frame.
+Face, hair, coat/scarf and coast remain recognizable without obvious sampled
+scene jumps or severe anatomical collapse. Later frames develop gaze/head
+movement and a blink. This is calm, half-body landscape footage; it does not
+establish dynamic full-body, portrait-orientation, multiple-seed or long-film
+acceptance. The original and result are private owner Library QA artifacts.
+
+The worker was deliberately replaced during sampling. After lease expiry,
+ordinary inspection resumed the same native PID/group/start ticks and absolute
+deadline, without restarting inference. All test-owned processes stopped after
+composition. Stop during input verification also passed; GPU-phase Stop still
+requires its own actual test.
+
+A twenty-second Task now reuses both complete native clips and generates only
+the next two. Its retained frame counts are 81, 77, 77 and 65, totaling exactly
+300 frames at 15 fps. Reusing the second full native clip restores its unused
+tail before the next motion state; chaining from the trimmed ten-second export
+would skip that state and is not allowed. The worker resolves each prior motion
+artifact only after success, checks same-owner provenance, original image,
+profile identity, trash/purge state and unchanged frozen source observation.
+CPU rehearsal accepted valid/idempotent binding and rejected nine changes to
+ownership, source identity, checkpoint lineage or availability. Actual longer
+generation and its join/ending review remain pending.
+
+Product integration keeps these boundaries:
+
+1. `wan_svi_context` and `wan_svi_adapter` provide the closed Wan21 conditioning,
+   bounded SafeTensors header and complete 400-target/rank-128 PEFT bridge. They
+   import no AI dependencies at application startup and register no executor.
+   Production motion metadata uses `station.svi_profile`; private candidate and
+   old 48-channel 5B checkpoints cannot be silently adopted. Native dispatch
+   must bind the complete recipe/implementation, original anchor and components
+   before supplying this identity. The checkpoint header is not a substitute
+   for canonical owned paths, whole-file hashes or account provenance.
+2. Extend existing reviewed model bundles and runtime preparation with the two
+   pinned Q4 experts, two matching Pro adapters, compatible 16-channel VAE, text
+   encoder and pinned GGUF SDK/wheel. Reuse verified store objects; do not expose
+   raw paths, editable model graphs or mutate an existing runtime. Structural
+   inspection alone never grants inference readiness.
+3. Add a distinct typed native SVI dispatch and executor identity over the
+   existing process manager and `HostMediaExecutor`. Keep the measured 18-GiB
+   zero-swap scope and 12-GiB GPU admission. Original anchor and preceding motion
+   remain separate typed owned inputs; every window preserves its source/hash,
+   derived seed and deadline. Test GPU Stop, restart and lost acknowledgements
+   before registering this as an operational executor.
+4. Bind shared model definitions to this complete recipe. Model capabilities,
+   rather than the 5B hard-coded defaults, select dimensions, 15 fps, full
+   81-frame sampling and four-frame context. Workspaces, assistant tools and
+   reviewed agents must use the same frozen recipe and exact composition.
+   Timing estimates need a separate recipe identity and must respect the
+   user's execution budget; a measured slow model is not silently promised to
+   finish a long job within the existing four-hour agent maximum.
+5. Qualify moving/full-body and nonhuman scenes, multiple seeds and portrait
+   intent, then expose a clear installed model choice and preserving deployment.
+   Lower-resolution acceleration is a separate measured recipe, not an
+   unsupported FPS reinterpretation or untested sampler reduction. Sound/effects
+   must retain real time when handling 15-fps output.
+
+The checked repository conditioning matches the pinned Pro embedder through the
+actual installed core on CPU for both initial and continuation cases: maximum
+absolute error zero, with five invalid context cases rejected. Normal tests use
+bounded synthetic tensor headers/matrix geometry and load no model. This proves
+the bridge mathematics/storage contract; it is not public runtime readiness.
+The repository PEFT bridge also mapped both actual pinned adapters on CPU to
+all 400 targets/800 tensors at rank 128 and strength 1.0. That check used the
+high expert's common target geometry for both adapters; it did not run inference
+or independently qualify low-expert generation. The 33 focused normal tests
+cover the new contracts and existing 5B motion handling without AI dependencies.
+Private evidence remains under `svi-candidate/` in the investigation directory.
