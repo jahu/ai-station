@@ -130,3 +130,23 @@ sentinels, automatic/explicit seed and correction regressions, and an actual
 two-reference Krea edit through the normal worker with independent image review.
 Retain selected checkpoints, source order, account isolation and the two-attempt
 limit. Failed or uncertain review must still prevent accepted-result publication.
+
+The controlled native comparison kept the same checkpoint, prompt, seed and
+references. Removing the hidden layout pin changed the previously seated result
+to standing, but the frame still excluded part of the requested subject. The
+existing goal-conditioned reviewer falsely described the cropped result as
+complete. Its image inputs also lacked per-image role labels.
+
+Add an independent candidate-only observation before review, without the user
+goal or criteria. Persist visible extent, clipped content and uncertainty as
+ordinary local vision evidence. Label every actual review image as an original
+reference (with its index) or the candidate. A partially met criterion fails;
+unresolved disagreement with the independent observation is uncertain.
+
+For Krea's single bounded correction, failed changes with passed preservation
+checks may lower automatic reference amplification to the neutral 1.0 and
+grounding resolution to at most 512, within the installed adapter's supported
+range. This relaxes image copying without keyword/subject heuristics. Do not
+relax after a failed/uncertain preservation check, or override an explicit
+operator value. Conversation preset values are distinct from operator tuning.
+Keep the selected checkpoint, sources, output size and the two-photo limit.

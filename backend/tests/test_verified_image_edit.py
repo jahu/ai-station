@@ -44,6 +44,17 @@ def edit_runtime(vision_runtime, monkeypatch):
                     ]
                 }
             )
+        elif title == "CandidateObservation":
+            assert "user_request" not in payload and "instruction" not in payload
+            assert len([part for part in content if part["type"] == "image_url"]) == 1
+            yield json.dumps(
+                {
+                    "description": "A blue rectangle.",
+                    "framing": "The complete rectangle is visible inside the frame.",
+                    "clipped_elements": [],
+                    "uncertainty": "",
+                }
+            )
         elif title == "EditPlan":
             yield json.dumps(
                 {
@@ -70,6 +81,10 @@ def edit_runtime(vision_runtime, monkeypatch):
             )
         elif title == "EditReview":
             state["reviews"] += 1
+            assert payload["candidate_observation"]["description"] == "A blue rectangle."
+            labels = [part["text"] for part in content[1:] if part["type"] == "text"]
+            assert labels[-1].startswith("CANDIDATE")
+            assert all(label.startswith("ORIGINAL REFERENCE index ") for label in labels[:-1])
             yield json.dumps(
                 {
                     "request_verdict": state.get("request_verdict", state["verdict"]),
@@ -186,7 +201,7 @@ def test_verified_edit_uses_real_workflow_and_only_publishes_accepted_candidate(
 @pytest.mark.parametrize("backend", ["qwen", "krea2"])
 @pytest.mark.parametrize("seed", [None, 42])
 def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corrected(
-    edit_runtime, backend, seed
+    edit_runtime, backend, seed, monkeypatch
 ):
     changes = {"backend": backend}
     if backend == "krea2":
@@ -198,6 +213,8 @@ def test_identical_pixels_are_rejected_even_when_png_metadata_differs_then_corre
             session.commit()
     if seed is not None:
         changes["seed"] = seed
+    else:
+        monkeypatch.setattr("app.images.secrets.randbits", lambda _: 41)
     edit_runtime["identical_first"] = True
     with TestClient(app) as client:
         root, source = submit(client, **changes)
@@ -232,6 +249,37 @@ def test_unverified_changes_never_become_success_or_final_preview(edit_runtime, 
         assert not result["metadata"].get("accepted_artifact_ids")
         assert edit_runtime["photos"] == expected_photos
         assert len(client.get(f"/api/images/runs/{root['id']}/workflow").json()["steps"]) == 1
+
+
+@pytest.mark.parametrize(
+    "explicit,preserve_failed",
+    [({}, False), ({"reference_strength": 3}, False), ({"grounding_px": 768}, False), ({}, True)],
+)
+def test_krea_correction_only_relaxes_automatic_controls_after_preservation_passes(
+    edit_runtime, explicit, preserve_failed
+):
+    from test_image_models import registered
+
+    with session_factory()() as session:
+        model, _ = registered(session)
+        model_id = model.id
+        session.commit()
+    edit_runtime["verdict"] = "failed"
+    if preserve_failed:
+        edit_runtime["preserve_verdict"] = "failed"
+    with TestClient(app) as client:
+        root, _ = submit(client, backend="krea2", model_id=model_id, **explicit)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "failed" and result["error_type"] == "ImageEditNotVerified"
+        with session_factory()() as session:
+            first, second = [session.get(Run, a["photo_run"]) for a in result["metadata"]["edit_attempts"]]
+            for field, adjusted in (("reference_strength", 1), ("grounding_px", 512)):
+                assert second.parameters[field] == (
+                    first.parameters[field] if preserve_failed or field in explicit else adjusted
+                )
+            assert first.parameters["model_id"] == second.parameters["model_id"] == model_id
+            assert first.parameters["parent_artifact_ids"] == second.parameters["parent_artifact_ids"]
 
 
 def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_runtime):

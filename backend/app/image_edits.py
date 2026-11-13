@@ -17,7 +17,16 @@ from app.artifacts import register_file
 from app.db import utcnow
 from app.dependencies import depend_on
 from app.events import append_event
-from app.image_edit_contract import INSPECT, PLAN, REVIEW, EditPlan, EditReview, SourceInspection
+from app.image_edit_contract import (
+    INSPECT,
+    OBSERVE_CANDIDATE,
+    PLAN,
+    REVIEW,
+    CandidateObservation,
+    EditPlan,
+    EditReview,
+    SourceInspection,
+)
 from app.image_models import choice, defaults, frozen_model, resolve_request
 from app.image_schema import ImageRequest
 from app.models import Artifact, Run
@@ -85,6 +94,7 @@ def enqueue_edit(session, body, *, task=None, parent_run_id=None):
     instruction = body.edit_prompt or body.prompt
     user_request = instruction
     prior_edits = []
+    explicit_controls = body._explicit_fields & {"reference_layout", "reference_strength", "grounding_px"}
     parent = session.get(Run, parent_run_id) if parent_run_id else None
     if parent and parent.executor_type == "orchestrator" and parent.parameters.get("controller_parent_id"):
         from app.assistant_controller import verify_wrapper
@@ -95,6 +105,9 @@ def enqueue_edit(session, body, *, task=None, parent_run_id=None):
         if wrapper.metadata_json.get("child_run_id") != parent.id or controller.owner_id != parent.owner_id:
             raise ValueError("The edit instruction lost its originating conversation")
         user_request = controller.parameters["controller_request"]["content"]
+        # Conversation tools expose layout only; other values came from the
+        # selected model preset, not an explicit operator tuning decision.
+        explicit_controls -= {"reference_strength", "grounding_px"}
         from app.assistant_controller_tools import subtree
 
         for step in controller.metadata_json.get("controller_steps", [])[-8:]:
@@ -160,7 +173,7 @@ def enqueue_edit(session, body, *, task=None, parent_run_id=None):
             "source_inputs": sources,
             "selected_model": identifier,
             "frozen_model": binding,
-            "explicit_controls": sorted(body._explicit_fields & {"reference_layout"}),
+            "explicit_controls": sorted(explicit_controls),
             "execution_deadline_at": deadline.isoformat(),
         },
         metadata={"edit_phase": "Inspecting references", "edit_attempts": []},
@@ -366,6 +379,22 @@ class ImageEditExecutor:
             )
             prompt = plan.visual.image_prompt()
             values.update(prompt=prompt, edit_prompt=prompt)
+            if attempts and values["backend"] == "krea2" and state.get("edit_relax_references"):
+                adjusted = {}
+                for field, maximum in (("reference_strength", 1.0), ("grounding_px", 512)):
+                    if field not in root.parameters["explicit_controls"]:
+                        values[field] = min(values.get(field) or maximum, maximum)
+                        adjusted[field] = values[field]
+                if adjusted:
+                    append_event(
+                        session,
+                        root.id,
+                        "image.edit.reference_adjusted",
+                        {
+                            "reason": "Requested changes failed while preservation checks passed",
+                            "controls": adjusted,
+                        },
+                    )
             if attempts and values.get("seed") is None:
                 # A correction is a new visual attempt, not a transport retry.
                 # Freeze a distinct seed before dispatch; explicit seeds keep authority.
@@ -403,6 +432,16 @@ class ImageEditExecutor:
         )
         if artifact is None or artifact.trashed_at is not None or artifact.purged_at is not None:
             raise ValueError("The candidate image is unavailable")
+        if "observation_run" not in current:
+            observation = enqueue_reason(
+                session, root, f"observe:{len(attempts)}", "observe_candidate", {}, [artifact.id]
+            )
+            current["observation_run"] = observation.id
+            attempts[-1] = current
+            root.metadata_json = {**state, "edit_attempts": attempts}
+            waiting(session, root, [observation], "Inspecting the generated image")
+            return
+        observation = CandidateObservation.model_validate(result(session, root, current["observation_run"]))
         if "review_runs" not in current:
             groups = {}
             for index, criterion in enumerate(plan.criteria):
@@ -424,6 +463,7 @@ class ImageEditExecutor:
                             "criteria": {str(i): plan.criteria[i].model_dump() for i in indices},
                             "base_reference_id": sources[plan.base_reference_index]["artifact_id"],
                             "candidate_id": artifact.id,
+                            "candidate_observation": observation.model_dump(),
                         },
                         ids + [artifact.id],
                     )
@@ -483,6 +523,15 @@ class ImageEditExecutor:
             **state,
             "edit_plan_run": None,
             "edit_feedback": [review.model_dump() for review in reviews],
+            "edit_relax_references": any(
+                check.verdict == "failed" and plan.criteria[check.criterion_index].kind == "change"
+                for check in checks
+            )
+            and all(
+                check.verdict in {"passed", "not_required"}
+                for check in checks
+                if plan.criteria[check.criterion_index].kind == "preserve"
+            ),
             "edit_attempts": [*attempts, {}],
         }
         self.advance(session, root)
@@ -523,8 +572,15 @@ class ImageEditReasonExecutor:
         claim = run.worker_id, run.claimed_at
         deadline = datetime.fromisoformat(run.parameters["execution_deadline_at"])
         stage, payload = run.parameters["stage"], run.parameters["payload"]
-        schema = {"inspect": SourceInspection, "plan": EditPlan, "review": EditReview}[stage]
-        system = {"inspect": INSPECT, "plan": PLAN, "review": REVIEW}[stage]
+        schema = {
+            "inspect": SourceInspection,
+            "plan": EditPlan,
+            "review": EditReview,
+            "observe_candidate": CandidateObservation,
+        }[stage]
+        system = {"inspect": INSPECT, "plan": PLAN, "review": REVIEW, "observe_candidate": OBSERVE_CANDIDATE}[
+            stage
+        ]
         output_schema = schema.model_json_schema()
         if stage == "plan" and payload["backend"] != "krea2":
             output_schema["properties"]["reference_layout"] = {
@@ -566,6 +622,19 @@ class ImageEditReasonExecutor:
                 ]
                 if run.parameters["vision_artifact_ids"]:
                     messages = image_context(session, run, messages)
+                    if stage == "review":
+                        content = messages[0]["content"]
+                        parts = [content[0]]
+                        for offset, (identity, image) in enumerate(
+                            zip(run.parameters["vision_artifact_ids"], content[1:], strict=True)
+                        ):
+                            role = (
+                                "CANDIDATE — generated output to judge"
+                                if identity == payload["candidate_id"]
+                                else "ORIGINAL REFERENCE index " + str(payload["reference_indices"][offset])
+                            )
+                            parts.extend([{"type": "text", "text": role}, image])
+                        messages[0]["content"] = parts
                 session.commit()
                 for format_attempt in range(2):
                     raw = await infer(session, run, messages, json_output=False)
