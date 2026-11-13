@@ -22,6 +22,7 @@ from app.chat_providers import chat_permissions, snapshot_provider
 from app.db import utcnow
 from app.dependencies import depend_on
 from app.events import append_event
+from app.image_control_contract import MODEL_FIT_POLICY
 from app.models import Artifact, Conversation, Message, Run
 from app.runs import create_run, create_task, mark_failed, transition
 from app.state import TERMINAL, RunStatus
@@ -311,7 +312,7 @@ def enqueue(session, conversation, body, *, commit=True):
         parameters={
             "controller_version": VERSION,
             "controller_protocol": PROTOCOL,
-            "controller_image_policy": "configured-default-v2",
+            "controller_image_policy": MODEL_FIT_POLICY,
             "controller_verified_edits": VERIFIED_EDITS,
             "controller_web_image_policy": "public-images-v1",
             "controller_studio_policy": "studio-v1",
@@ -499,7 +500,9 @@ def decision_context(session, root):
         "image_contract_version": root.parameters.get("controller_image_policy"),
         "verified_image_edit": root.parameters.get("controller_verified_edits", False),
         "image_model_policy": (
-            "Honor an explicit image_model; otherwise use the configured per-operation default. Reference images select content, not the generator. A recurring draft bound to a newly produced result retains its compatible result model."
+            "Honor a model explicitly requested by the user. For automatic image.edit, choose the installed model whose edit_capabilities fit the intended changes; the configured default is a preference, not proof of task fitness. Prefer instruction-native editing for changed geometry, arrangement or visible extent and arbitrary multi-reference reconstruction. Reference-conditioned variants suit appearance/identity changes with compatible framing. Freeze the chosen model before execution; do not silently replace it during retries. Other image operations retain their configured default, and result-bound agent drafts retain their compatible source model."
+            if root.parameters.get("controller_image_policy") == MODEL_FIT_POLICY
+            else "Honor an explicit image_model; otherwise use the configured per-operation default. Reference images select content, not the generator. A recurring draft bound to a newly produced result retains its compatible result model."
             if root.parameters.get("controller_image_policy") == "configured-default-v2"
             else "Legacy scope: retain a compatible source profile or the frozen configured default unless explicitly overridden."
         ),

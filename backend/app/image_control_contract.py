@@ -3,6 +3,8 @@
 from copy import deepcopy
 
 CONTROL_FIELDS = frozenset({"reference_layout"})
+MODEL_FIT_POLICY = "model-fit-v3"
+CURRENT_IMAGE_POLICIES = frozenset({"configured-default-v2", MODEL_FIT_POLICY})
 REFERENCE_LAYOUT = {
     "type": "string",
     "enum": ["aligned", "beside"],

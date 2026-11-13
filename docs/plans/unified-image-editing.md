@@ -162,3 +162,15 @@ Do not turn an omitted incidental detail into a new preservation requirement.
 Plan atomic change criteria so meeting one part cannot satisfy a conjunction.
 These are ordinary local reasoning children, with the same scope, leases,
 cancellation and recovery; they add no photo attempts or execution permissions.
+
+The complete Krea qualification still failed the requested framing after both
+bounded attempts, and both results were correctly rejected. Therefore fixing the
+adapter and verifier alone does not establish task fitness. New conversation
+controllers freeze `model-fit-v3`: their captured installed-model catalog
+describes instruction-native versus reference-conditioned editing. For automatic
+edits, the planner selects a model suited to the requested structural/extent
+changes; the configured default is a preference, not a capability guarantee.
+Explicit user model choices stay authoritative, and the selected checkpoint
+remains fixed during the edit. Older frozen controller policies retain their
+prior default/source behavior. This uses semantic planning over finite adapter
+capabilities, not subject-specific wording rules or silent post-failure swaps.

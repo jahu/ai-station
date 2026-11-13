@@ -3,7 +3,12 @@
 from copy import deepcopy
 from math import isfinite
 
-from app.image_control_contract import CONTROL_FIELDS, control_schema
+from app.image_control_contract import (
+    CONTROL_FIELDS,
+    CURRENT_IMAGE_POLICIES,
+    MODEL_FIT_POLICY,
+    control_schema,
+)
 
 IMAGE_MODES = {"image.generate": "t2i", "image.edit": "img2img", "image.recompose": "recompose"}
 
@@ -63,7 +68,7 @@ def parameter_schema(context, name, base):
     options = image_options(context, name)
     if options is None or not CONTROL_FIELDS.intersection(schema.get("properties", {})):
         return schema
-    current = context.get("image_contract_version") == "configured-default-v2"
+    current = context.get("image_contract_version") in CURRENT_IMAGE_POLICIES
     required = (
         current
         and not options["inherited"]
@@ -77,6 +82,14 @@ def parameter_schema(context, name, base):
         "default": None,
         "description": f"Exact captured model alias. Configured {options['mode']} default: {options['default']}. Omit to preserve that choice (or the source model for a result-bound agent); do not switch models to bypass validation.",
     }
+    if name == "image.edit" and context.get("image_contract_version") == MODEL_FIT_POLICY:
+        schema["properties"]["image_model"]["description"] = (
+            "Choose an exact installed alias by edit_capabilities and the user's requested changes. "
+            "An explicitly user-selected model takes precedence. Otherwise prefer instruction-native "
+            "editing for changes to geometry, arrangement or visible extent; use the configured default "
+            "only when it fits the task. Supply the alias when choosing a different model. "
+            "Never switch checkpoints after the edit starts or to bypass validation."
+        )
     schema["properties"]["reference_layout"]["description"] += (
         " This is an internal reference control, never output count or a collage request. "
         "Use it only when the selected model's conditional schema permits it; otherwise omit it."

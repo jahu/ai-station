@@ -9,6 +9,9 @@ for audit but excluded from conversation fulfillment and final agent delivery.
 Pure local inference/coordinator recovery is bounded and idempotent; native photo
 recovery remains unchanged. Retrying refuses an unresolved owned photo dispatch.
 The HTTP operation only queues; no hidden user conversation is created for vision.
+Candidate-only observations carry no desired-result instructions. Labeled visual
+review and a separate consistency veto reuse those same local reasoning children;
+neither can select a model, change references or grant execution permissions.
 
 Accounts without personal image defaults inherit only the closed revision/model-ID
 projection of the retained station image-default setting. Model definitions are

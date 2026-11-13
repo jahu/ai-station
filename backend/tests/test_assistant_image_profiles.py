@@ -21,6 +21,26 @@ def test_explicit_model_overrides_workspace_default_without_sampling_regression(
     )
 
 
+def test_model_fit_policy_freezes_a_capable_edit_choice_without_replacing_a_manual_choice(session):
+    model, _ = registered(session)
+    change_default(DefaultsWrite(revision=0, mode="img2img", choice=model.id), session)
+    catalog = inventory(session)
+    assert catalog["models"]["qwen"]["edit_capabilities"]["conditioning"] == "instruction-native"
+    assert "caution" in catalog["models"][model.id]["edit_capabilities"]
+    root = SimpleNamespace(
+        parameters={
+            "controller_image_catalog": catalog,
+            "controller_image_policy": "model-fit-v3",
+            "controller_verified_edits": True,
+        }
+    )
+    assert request_profile(session, root, SimpleNamespace(image_model="qwen"), "recompose", []) == {
+        "backend": "qwen"
+    }
+    chosen = request_profile(session, root, SimpleNamespace(image_model=model.id), "recompose", [])
+    assert chosen["model_id"] == model.id and chosen["backend"] == "krea2"
+
+
 def source(session):
     task = create_task(session, title="Cabinet", prompt="A cabinet", capability="image.recompose")
     run = create_run(
