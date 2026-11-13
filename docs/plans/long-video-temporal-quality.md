@@ -193,3 +193,32 @@ ten-second film continues. Each has its own private database/socket and enforced
 11-GiB/zero-swap native scopes, retains the existing process/deadline ownership,
 and yields to actual operator work. This broadens the quality check beyond a
 person or a calm low-detail lake; neither pending film is accepted yet.
+
+## Ten-second person result and remaining admission gates
+
+The person film is now technically complete: 240 decoded frames/ten seconds,
+two ordinary native windows plus composition, 2190.9 seconds wall time. Samples
+throughout the output, including frames 119–122 at the join and frame 239 at the
+ending, retain the face, hair colour, coat/scarf and coastal setting without a
+pronounced exposure jump or severe anatomical collapse. Scarf/hair movement
+becomes stronger after the join than the gentle-motion instruction. This case
+passes sampled basic subject continuity, not arbitrary motion fidelity, smooth
+temporal velocity proved from stills, portrait/full-body or longer-person quality.
+Its three authoritative native records exited successfully and the complete
+MP4 passed decoding/hash checks; the enclosing tool shell later reported 143,
+so do not describe that shell status as a clean test-run exit. The separate
+20-second object film is still running and remains an open quality gate.
+
+Before rollout, scope larger-window admission to the actually qualified memory,
+precision and geometry, or establish separate real evidence for the other
+profiles. Current proof uses landscape and `bounded_11g`/FP8; the experimental
+global window flag alone must not be interpreted as FP16 or portrait acceptance.
+The eventual default must be selected through the ordinary frozen model/profile
+path, with understandable UI choices and old plans preserved.
+
+Full parallel verification exposed pre-existing parameter IDs containing random
+UUIDs and timestamped workbook bytes. Only the display IDs in those two modules
+were made stable; input data, assertions and test selection are unchanged. Their
+91 tests pass with four workers. Complete parallel verification is running;
+earlier collection failures and the interrupted serial fallback remain recorded,
+not counted as passing checks.
