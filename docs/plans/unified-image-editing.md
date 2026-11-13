@@ -124,6 +124,8 @@ profiles inherited source seeds. Preserve explicit seeds, but freeze fresh image
 seeds for omitted selections across both native image backends. A bounded edit
 correction with an automatic seed must use a persisted different seed; transport
 retries of that photo Run retain it. Voice seed continuity is unrelated.
+Both initial and corrective automatic draws exclude reference noise, including
+legacy native receipts, and retain unsigned 32-bit wraparound semantics.
 
 Qualification requires native argument coverage with one/two distinct reference
 sentinels, automatic/explicit seed and correction regressions, and an actual

@@ -373,7 +373,7 @@ class ImageEditExecutor:
         ):
             raise ValueError("Edit plan uses an unavailable reference")
         if not attempts or "photo_run" not in attempts[-1]:
-            from app.images import create_image_run
+            from app.images import create_image_run, fresh_seed
 
             values = {k: v for k, v in root.parameters.items() if k in ImageRequest.model_fields}
             values.update(
@@ -402,9 +402,11 @@ class ImageEditExecutor:
                 # Freeze a distinct seed before dispatch; explicit seeds keep authority.
                 previous_attempt = next(a for a in reversed(attempts) if a.get("photo_run"))
                 previous = child(session, root, previous_attempt["photo_run"])
-                values["seed"] = (previous.parameters["seed"] + 1) % (2**32)
-                if values["seed"] == 42:
-                    values["seed"] = 43
+                values["seed"] = fresh_seed(
+                    session,
+                    [session.get(Artifact, source["artifact_id"]) for source in sources],
+                    previous=previous.parameters["seed"],
+                )
             if plan.reference_layout is not None:
                 if values["backend"] != "krea2":
                     raise ValueError("The edit plan proposed unsupported reference controls")

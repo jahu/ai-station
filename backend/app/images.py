@@ -235,6 +235,24 @@ def enqueue_image(body: ImageRequest, session: DB):
     return run_dict(run)
 
 
+def fresh_seed(session, parents, *, previous=None):
+    excluded = {42}  # Legacy external pipeline/sd-cli default.
+    for parent in parents:
+        source = session.get(Run, parent.run_id) if parent.run_id else None
+        values = [parent.metadata_json.get("seed")]
+        if source:
+            values.append(source.parameters.get("seed"))
+            # Older managed Runs froze their actual seed in the native
+            # command receipt rather than top-level parameters.
+            runtime = source.parameters.get("managed_image_runtime") or {}
+            values.append((runtime.get("command") or {}).get("seed"))
+        excluded.update(value for value in values if type(value) is int)
+    seed = secrets.randbits(32) if previous is None else (previous + 1) % (2**32)
+    while seed in excluded or seed == previous:
+        seed = (seed + 1) % (2**32)
+    return seed
+
+
 def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=None):
     if body.verify_changes:
         from app.image_edits import enqueue_edit
@@ -277,21 +295,7 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
     if body.backend in {"qwen", "krea2"} and body.mode != "upscale" and body.seed is None:
         # Replaying a reference's initial noise can reconstruct an oversharpened
         # near-copy in Qwen 2.1. Freeze a fresh seed once, never on each dispatch.
-        excluded = {42}  # Legacy external pipeline/sd-cli default.
-        for parent in parents:
-            source = session.get(Run, parent.run_id) if parent.run_id else None
-            values = [parent.metadata_json.get("seed")]
-            if source:
-                values.append(source.parameters.get("seed"))
-                # Older managed Runs froze their actual seed in the native
-                # command receipt rather than top-level parameters.
-                runtime = source.parameters.get("managed_image_runtime") or {}
-                values.append((runtime.get("command") or {}).get("seed"))
-            excluded.update(value for value in values if type(value) is int)
-        seed = secrets.randbits(32)
-        while seed in excluded:
-            seed = (seed + 1) % (2**32)
-        parameters["seed"] = seed
+        parameters["seed"] = fresh_seed(session, parents)
     resources = {"gpu": body.gpu}
     if model_snapshot:
         parameters["image_model"] = model_snapshot

@@ -1,6 +1,6 @@
 import pytest
 from app.image_schema import ImageRequest
-from app.images import create_image_run
+from app.images import create_image_run, fresh_seed
 from app.models import Artifact
 
 
@@ -52,3 +52,19 @@ def test_explicit_zero_and_legacy_seed_remain_authoritative(session):
     for seed in (0, 42):
         run = create_image_run(session, ImageRequest(mode="t2i", backend="qwen", prompt="A room", seed=seed))
         assert run.parameters["seed"] == seed
+
+
+@pytest.mark.parametrize("previous,source_seed,expected", [(41, 43, 44), (2**32 - 1, 0, 1)])
+def test_correction_seed_also_avoids_source_noise_and_wraps_safely(session, previous, source_seed, expected):
+    original = create_image_run(
+        session, ImageRequest(mode="t2i", backend="qwen", prompt="A cabinet", seed=source_seed)
+    )
+    source = Artifact(
+        run_id=original.id,
+        artifact_type="image",
+        relative_path="artifacts/example.png",
+        metadata_json={"seed": source_seed},
+    )
+    session.add(source)
+    session.flush()
+    assert fresh_seed(session, [source], previous=previous) == expected
