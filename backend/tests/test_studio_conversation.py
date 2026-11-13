@@ -185,14 +185,18 @@ def reach_wrapper(identity, movie):
 
 
 @pytest.mark.parametrize("after_dispatch", [False, True])
+@pytest.mark.parametrize("clarify", [False, True])
 def test_stale_source_closes_outcome_without_recreating_whole_workflow(
-    completed, director, movie, after_dispatch
+    completed, director, movie, after_dispatch, clarify
 ):
     from sqlalchemy import select
 
     alice, _, _, conversation, catalog = completed
     alias, frozen = next(iter(catalog.items()))
     director["studio"] = {"source_material": alias, "project_resolution": "inherit"}
+    question = "The source film changed. Should I use its latest revision?"
+    if clarify:
+        director["missing_source_question"] = question
     identity = followup(alice, conversation)
     if after_dispatch:
         reach_wrapper(identity, movie)
@@ -202,7 +206,16 @@ def test_stale_source_closes_outcome_without_recreating_whole_workflow(
     advance(movie)
     with owned(alice) as db:
         root = db.get(Run, identity)
-        assert root.status == "succeeded", root.error_message
+        if clarify:
+            assert root.status == "succeeded", root.error_message
+            assert root.metadata_json["controller_outcome"] == "clarify"
+            from app.assistant_controller import message_for
+
+            assert message_for(db, root).content == question
+        else:
+            assert root.status == "failed"
+            assert "Controller decision failed" in root.error_message
+            assert "Completed results remain available" in root.error_message
         steps = root.metadata_json["controller_steps"]
         assert len(steps) == 1
         wrapper = db.get(Run, steps[0]["run_id"])

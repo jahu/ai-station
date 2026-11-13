@@ -302,3 +302,29 @@ The first SVI GPU observer is alive and waiting for at least 25,600 MiB of actua
 available RAM and no compute processes; the remaining regression workers still
 occupy memory. It has not dispatched a native job. Do not restart that observer
 or duplicate the completed car publication merely because admission takes time.
+
+## Regression reconciliation and first actual recurrent dispatch
+
+The complete isolated scope-source run reached its terminal result: 9,910 passed,
+25 skipped and eight failed in 2431.1 seconds. This is not a successful regression
+run. One failure is the agent-duration scope leak repaired above. The remaining
+seven assertions predate the verified-edit coordinator or the later strict
+terminal-planning contract; the corresponding application controller/decision
+sources are unchanged by this investigation. Reconcile the tests to require the
+coordinator before photo dispatch, technical failure for invalid exhausted
+terminal decisions, and an actual `ask_user` action for genuine stale-source
+clarification. Both explicit clarification and invalid-terminal failure must
+preserve the old completed Studio result and forbid another production attempt.
+Do not change the application to restore false-success behavior for those tests.
+
+The conservative 24-GiB admission observer was stopped before any dispatch, with
+its state/source preserved. A separate first memory-fit qualification now uses a
+fixed 18-GiB/zero-swap kernel scope and sequential experts, with at least 19 GiB
+available host RAM before admission. The first private wrapper attempt correctly
+refused its mistaken artifact-only guard on a `runs/` directory before launching
+anything; the canonical work-path guard was corrected and the failed attempt
+retained. The subsequent real native Run is sampling its high-noise expert.
+Initial observations show approximately 10 GiB VRAM and 15 GiB scoped RAM, with
+zero OOM events. The low-noise expert, decode, complete output and actual visual
+quality remain unproven. A read-only sampler retains per-stage kernel memory,
+anonymous/file-cache usage, OOM counters and selected-device observations.
