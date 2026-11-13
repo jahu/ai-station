@@ -94,6 +94,14 @@ def test_invalid_or_unbounded_or_animated_chart_cannot_be_published(data):
             sheet_xml='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><definedName>cmd|foo</definedName></worksheet>'
         ),
     ],
+    ids=[
+        "formula",
+        "macro",
+        "embedded-object",
+        "relationship-part",
+        "macro-content-type",
+        "named-expression",
+    ],
 )
 def test_generated_excel_rejects_formulas_and_active_package_parts(data):
     with pytest.raises(ValueError):
