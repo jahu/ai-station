@@ -30,6 +30,7 @@ from app.video import (
     managed_native_budget,
     managed_parameters,
     memory_reservation,
+    native_window_frames,
     valid_guidance_observation,
 )
 from app.video_schema import LongVideoSettings
@@ -138,9 +139,7 @@ def publish_video(
         if continuation_strategy == "last_frame_apg_v1"
         else {}
     )
-    window_frames = observed_profile.get("native_window_frames", 81)
-    if type(window_frames) is not int or window_frames not in (81, 121):
-        raise HTTPException(409, "The Runner advertised an unsupported native video window")
+    window_frames = native_window_frames(body, observed_profile)
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
         fps=24,

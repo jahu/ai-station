@@ -129,6 +129,16 @@ def test_larger_windows_survive_stop_resume_and_compose_the_exact_full_duration(
     from app.config import get_settings
 
     monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", "121")
+    monkeypatch.setenv("AI_STATION_WAN_BOUNDED_PROFILE", "true")
+    from ai_station_runner import memory_scope
+
+    monkeypatch.setattr(memory_scope, "available", lambda: True)
+
+    def hardware(*_):
+        return {"gpus": [{"index": 7, "memory_total_mib": 12288}], "memory": {"available_mib": 64000}}
+
+    monkeypatch.setattr(host_app, "collect", hardware)
+    monkeypatch.setattr(host_video, "collect", hardware)
     clear_settings_cache()
     with TestClient(app) as client:
         response = client.post(
@@ -137,9 +147,10 @@ def test_larger_windows_survive_stop_resume_and_compose_the_exact_full_duration(
                 "client_request_id": str(uuid4()),
                 "prompt": "A cup rotates on a table",
                 "duration_seconds": 10,
-                "width": 128,
-                "height": 128,
-                "steps": 4,
+                "width": 1280,
+                "height": 704,
+                "steps": 20,
+                "memory_profile": "bounded_11g",
             },
         )
         assert response.status_code == 202, response.text

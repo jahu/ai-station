@@ -9,9 +9,10 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 
-def test_larger_window_refuses_before_filesystem_or_process_side_effects(monkeypatch):
+@pytest.mark.parametrize("gate", [81, 121])
+def test_larger_window_refuses_unqualified_precision_before_side_effects(monkeypatch, gate):
     monkeypatch.setitem(Settings.model_config, "env_file", None)
-    monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", "81")
+    monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", str(gate))
     clear_settings_cache()
     try:
         body = VideoRequest(
@@ -37,3 +38,23 @@ def test_operator_gate_is_closed_to_unreviewed_window_sizes(window):
 def test_exact_environment_window_spelling_is_accepted(monkeypatch, window):
     monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", str(window))
     assert Settings(_env_file=None).wan_native_window_frames == window
+
+
+@pytest.mark.parametrize(
+    "total,expected", [(8192, []), (12288, [{"width": 1280, "height": 704, "frames": 121}])]
+)
+def test_scoped_advertisement_requires_fitting_gpu_and_keeps_only_tested_geometry(
+    monkeypatch, total, expected
+):
+    from ai_station_runner import memory_scope, video
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    monkeypatch.setenv("AI_STATION_WAN_NATIVE_WINDOW_FRAMES", "121")
+    monkeypatch.setenv("AI_STATION_WAN_BOUNDED_PROFILE", "true")
+    monkeypatch.setattr(memory_scope, "available", lambda: True)
+    monkeypatch.setattr(video, "collect", lambda *_: {"gpus": [{"index": 7, "memory_total_mib": total}]})
+    clear_settings_cache()
+    try:
+        assert video.memory_profiles()[0]["native_windows"] == expected
+    finally:
+        clear_settings_cache()
