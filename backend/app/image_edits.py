@@ -385,7 +385,8 @@ class ImageEditExecutor:
                 adjusted = {}
                 for field, maximum in (("reference_strength", 1.0), ("grounding_px", 512)):
                     if field not in root.parameters["explicit_controls"]:
-                        values[field] = min(values.get(field) or maximum, maximum)
+                        current_value = values.get(field)
+                        values[field] = maximum if current_value is None else min(current_value, maximum)
                         adjusted[field] = values[field]
                 if adjusted:
                     append_event(

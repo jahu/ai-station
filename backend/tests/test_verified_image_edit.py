@@ -261,16 +261,29 @@ def test_unverified_changes_never_become_success_or_final_preview(edit_runtime, 
 
 
 @pytest.mark.parametrize(
-    "explicit,preserve_failed",
-    [({}, False), ({"reference_strength": 3}, False), ({"grounding_px": 768}, False), ({}, True)],
+    "explicit,preserve_failed,preset_strength",
+    [
+        ({}, False, None),
+        ({"reference_strength": 3}, False, None),
+        ({"grounding_px": 768}, False, None),
+        ({}, True, None),
+        ({}, False, 0),
+    ],
 )
 def test_krea_correction_only_relaxes_automatic_controls_after_preservation_passes(
-    edit_runtime, explicit, preserve_failed
+    edit_runtime, explicit, preserve_failed, preset_strength
 ):
     from test_image_models import registered
 
     with session_factory()() as session:
         model, _ = registered(session)
+        if preset_strength is not None:
+            model.metadata_json = {
+                "image": {
+                    **model.metadata_json["image"],
+                    "presets": {"recompose": {"reference_strength": preset_strength}},
+                }
+            }
         model_id = model.id
         session.commit()
     edit_runtime["verdict"] = "failed"
@@ -285,7 +298,11 @@ def test_krea_correction_only_relaxes_automatic_controls_after_preservation_pass
             first, second = [session.get(Run, a["photo_run"]) for a in result["metadata"]["edit_attempts"]]
             for field, adjusted in (("reference_strength", 1), ("grounding_px", 512)):
                 assert second.parameters[field] == (
-                    first.parameters[field] if preserve_failed or field in explicit else adjusted
+                    first.parameters[field]
+                    if preserve_failed
+                    or field in explicit
+                    or (field == "reference_strength" and preset_strength == 0)
+                    else adjusted
                 )
             assert first.parameters["model_id"] == second.parameters["model_id"] == model_id
             assert first.parameters["parent_artifact_ids"] == second.parameters["parent_artifact_ids"]
