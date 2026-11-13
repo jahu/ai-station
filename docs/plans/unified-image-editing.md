@@ -174,3 +174,14 @@ Explicit user model choices stay authoritative, and the selected checkpoint
 remains fixed during the edit. Older frozen controller policies retain their
 prior default/source behavior. This uses semantic planning over finite adapter
 capabilities, not subject-specific wording rules or silent post-failure swaps.
+
+The real automatic Chat selected Qwen and generated a visibly complete standing
+figure. Qualification also exposed an overly cautious observation that listed
+possible clipping despite describing a full-length image with surrounding empty
+space. A contradictory audit of an otherwise passed visual review now triggers
+one candidate-only reinspection and one fresh consistency audit before any new
+photo attempt. Both assessments remain recorded. Unresolved contradiction or
+uncertainty still vetoes acceptance; this is bounded evidence repair, not an
+unlimited generation/review loop. Observations must distinguish actual contact
+with an image edge from speculation or internal occlusion; placement and viewing
+orientation are separate properties.

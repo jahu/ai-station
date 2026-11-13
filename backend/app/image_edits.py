@@ -446,7 +446,9 @@ class ImageEditExecutor:
             root.metadata_json = {**state, "edit_attempts": attempts}
             waiting(session, root, [observation], "Inspecting the generated image")
             return
-        observation = CandidateObservation.model_validate(result(session, root, current["observation_run"]))
+        observation = CandidateObservation.model_validate(
+            result(session, root, current.get("observation_recheck_run") or current["observation_run"])
+        )
         if "review_runs" not in current:
             groups = {}
             for index, criterion in enumerate(plan.criteria):
@@ -481,12 +483,13 @@ class ImageEditExecutor:
             return
         reviews = [EditReview.model_validate(result(session, root, rid)) for rid in current["review_runs"]]
         if all(review.request_verdict == "passed" for review in reviews):
-            if "audit_runs" not in current:
+            audit_key = "recheck_audit_runs" if current.get("observation_recheck_run") else "audit_runs"
+            if audit_key not in current:
                 rows = [
                     enqueue_reason(
                         session,
                         root,
-                        f"audit:{len(attempts)}:{index}",
+                        f"{audit_key}:{len(attempts)}:{index}",
                         "audit_review",
                         {
                             "user_request": root.parameters["user_request"],
@@ -501,13 +504,35 @@ class ImageEditExecutor:
                     )
                     for index, review in enumerate(reviews)
                 ]
-                current["audit_runs"] = [row.id for row in rows]
+                current[audit_key] = [row.id for row in rows]
                 attempts[-1] = current
                 root.metadata_json = {**state, "edit_attempts": attempts}
                 waiting(session, root, rows, "Checking review consistency")
                 return
-            for review, identity in zip(reviews, current["audit_runs"], strict=True):
-                audit = ReviewConsistency.model_validate(result(session, root, identity))
+            audits = [
+                ReviewConsistency.model_validate(result(session, root, identity))
+                for identity in current[audit_key]
+            ]
+            if any(audit.verdict != "consistent" for audit in audits) and not current.get(
+                "observation_recheck_run"
+            ):
+                recheck = enqueue_reason(
+                    session,
+                    root,
+                    f"observe-recheck:{len(attempts)}",
+                    "observe_candidate",
+                    {
+                        "previous_observation": observation.model_dump(),
+                        "reinspection_note": "Recheck actual image boundaries and visible extent. Distinguish observed clipping from speculation; return an empty clipped_elements list if nothing is visibly cut off.",
+                    },
+                    [artifact.id],
+                )
+                current["observation_recheck_run"] = recheck.id
+                attempts[-1] = current
+                root.metadata_json = {**state, "edit_attempts": attempts}
+                waiting(session, root, [recheck], "Rechecking conflicting image observations")
+                return
+            for review, audit in zip(reviews, audits, strict=True):
                 if audit.verdict != "consistent":
                     verdict = "failed" if audit.verdict == "contradicted" else "uncertain"
                     review.request_verdict = verdict

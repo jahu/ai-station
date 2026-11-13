@@ -60,7 +60,9 @@ def edit_runtime(vision_runtime, monkeypatch):
             assert payload["candidate_observation"] and payload["proposed_review"]
             yield json.dumps(
                 {
-                    "verdict": state.get("audit_verdict", "consistent"),
+                    "verdict": state["audit_verdicts"].pop(0)
+                    if state.get("audit_verdicts")
+                    else state.get("audit_verdict", "consistent"),
                     "evidence": "Compared the proposed verdict with the independently observed visible extent.",
                 }
             )
@@ -319,6 +321,18 @@ def test_inconsistent_passed_visual_review_cannot_publish_a_success(edit_runtime
         assert not result["metadata"].get("accepted_artifact_ids")
         assert edit_runtime["photos"] == attempts
         assert all(attempt["audit_runs"] for attempt in result["metadata"]["edit_attempts"])
+
+
+def test_conflicting_observation_is_rechecked_once_before_regenerating(edit_runtime):
+    edit_runtime["audit_verdicts"] = ["contradicted", "consistent"]
+    with TestClient(app) as client:
+        root, _ = submit(client)
+        drain(edit_runtime)
+        result = client.get(f"/api/runs/{root['id']}").json()
+        assert result["status"] == "succeeded", result
+        assert edit_runtime["photos"] == 1
+        attempt = result["metadata"]["edit_attempts"][0]
+        assert attempt["observation_recheck_run"] and len(attempt["recheck_audit_runs"]) == 1
 
 
 def test_stop_waiting_edit_cancels_owned_stages_without_publishing_photo(edit_runtime):
