@@ -328,3 +328,43 @@ Initial observations show approximately 10 GiB VRAM and 15 GiB scoped RAM, with
 zero OOM events. The low-noise expert, decode, complete output and actual visual
 quality remain unproven. A read-only sampler retains per-stage kernel memory,
 anonymous/file-cache usage, OOM counters and selected-device observations.
+
+## Integrated verification and completed first recurrent window
+
+The integrated source at `39ef618f` passes repository Ruff/format and the complete
+Python suite: **9,957 passed, 25 opt-in cases skipped**, 2388.1 seconds. The prior
+eight failures are repaired/reconciled, not waived. Real media/model work remains
+separate from that normal fake-executor suite. The CPU-only cross-Task rehearsal
+also passed ordinary composition of a retained prior clip and a new fixture:
+150 decoded frames at 15 fps, ten seconds, four context frames trimmed once,
+source artifact lineage preserved. Its inference was explicitly fake.
+
+The first real SVI Pro Q4 window has completed through its private typed Runner
+and ordinary worker: 81 decoded frames at 15 fps, 832×480, twenty steps/CFG5,
+3169.8 seconds wall time. Both experts and FP32 VAE decoding succeeded on one
+12-GiB GPU. Torch peak reserved memory was 10,175,381,504 bytes for the high
+expert and 9,990,832,128 for the low expert. The kernel RAM peak reached the
+18-GiB bound, with zero scope swap and no observed OOM; file-cache reclaim
+occurred, so this is not evidence of spare RAM.
+
+Eleven views across that first window retain the same face, hair, coat/scarf and
+coast, with subtle gaze/smile and breeze motion. This permits a continuation
+experiment, not acceptance of long-film quality. Its actual Run is
+`a7b164cf-2377-4300-ab2c-6da19e1d717b`; the complete receipt, per-stage memory
+samples and visual review remain under `svi-candidate/` in the evidence directory.
+
+A separate actual native Stop probe canceled its owned process during input
+verification (exit -15), adopted no output and released its resource locks.
+That proves pre-sampling process cancellation, not GPU-phase Stop. A new
+ten-second Task now reuses the completed first clip and its owned motion state,
+preserves the original image, and samples the second window with a derived seed.
+It will deliberately replace only its private worker during sampling, then require
+inspection recovery with unchanged native PID/group/start time/deadline before
+normal CPU composition. Recovery, the actual join/ending, longer-person and
+portrait/full-body qualification, GPU-phase Stop and public model installation
+remain open. SVI is not registered as an operational product executor.
+
+The completed neutral 5B ten/twenty-second films and first SVI window were imported
+into the owner's private Library as explicitly labeled QA artifacts. Import notes
+retain their isolated provenance and unresolved quality caveats; no live Runs or
+success history were invented. Only temporary import staging copies were removed.
