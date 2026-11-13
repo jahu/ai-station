@@ -1,8 +1,11 @@
 import pytest
-from app.media_plan import audio_boundary, audio_frames, duration_frames, timeline
+from app.media_plan import MediaTimeline, audio_boundary, audio_frames, duration_frames, timeline
+from pydantic import ValidationError
 
 
-@pytest.mark.parametrize("seconds,fps", [(15, 24), (30, 24), (60, 24), ("15.25", 24), ("0.68", 25)])
+@pytest.mark.parametrize(
+    "seconds,fps", [(10, 15), (20, 15), (15, 24), (30, 24), (60, 24), ("15.25", 24), ("0.68", 25)]
+)
 def test_timeline_covers_every_requested_frame_with_valid_native_windows(seconds, fps):
     plan = timeline(frames=duration_frames(seconds, fps), fps=fps, seed=42)
     assert sum(s.output_frames for s in plan.segments) == plan.target_frames
@@ -12,6 +15,15 @@ def test_timeline_covers_every_requested_frame_with_valid_native_windows(seconds
     )
     assert plan == timeline(frames=plan.target_frames, fps=fps, seed=42)
     assert len({s.seed for s in plan.segments}) == len(plan.segments)
+
+
+@pytest.mark.parametrize("fps", [True, "15", 15.0, 14, 16, 23, 30])
+def test_frozen_timeline_accepts_only_exact_supported_integer_frame_rates(fps):
+    plan = timeline(frames=150, fps=15, seed=42)
+    with pytest.raises(ValidationError):
+        MediaTimeline.model_validate({**plan.model_dump(), "fps": fps})
+    with pytest.raises(ValueError):
+        timeline(frames=150, fps=fps, seed=42)
 
 
 def test_full_audio_timing_uses_absolute_boundaries_without_drift():

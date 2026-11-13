@@ -36,14 +36,15 @@ def clip(root, name, frames=17, fps=24, color=30):
     }
 
 
-def test_cpu_composition_decodes_all_frames_and_muxes_entire_canonical_audio(tmp_path):
+@pytest.mark.parametrize("fps", [15, 24, 25])
+def test_cpu_composition_decodes_all_frames_and_muxes_entire_canonical_audio(tmp_path, fps):
     clips = [
-        clip(tmp_path, "one.mp4", frames=81, fps=25),
-        clip(tmp_path, "two.mp4", frames=17, fps=25, color=100),
+        clip(tmp_path, "one.mp4", frames=81, fps=fps),
+        clip(tmp_path, "two.mp4", frames=17, fps=fps, color=100),
     ]
     clips[-1]["frames"] = 10
     audio = tmp_path / "artifacts/speech.wav"
-    samples = 91 * 48000 // 25 - 100
+    samples = 91 * 48000 // fps - 100
     with wave.open(str(audio), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
@@ -60,7 +61,7 @@ def test_cpu_composition_decodes_all_frames_and_muxes_entire_canonical_audio(tmp
     request = ComposeRequest(
         run_id=uuid4(),
         clips=clips,
-        fps=25,
+        fps=fps,
         width=128,
         height=128,
         target_frames=91,
@@ -73,6 +74,55 @@ def test_cpu_composition_decodes_all_frames_and_muxes_entire_canonical_audio(tmp
     )
     assert report["verified"] and report["frames"] == 91 and report["audio_source_samples"] == samples
     assert output.is_file() and json.loads(output.with_suffix(".json").read_text())["verified"]
+
+
+def test_fifteen_fps_continuation_preserves_ten_seconds_and_trims_context_once(tmp_path):
+    from fractions import Fraction
+
+    inputs = [
+        clip(tmp_path, "first.mp4", frames=81, fps=15),
+        clip(tmp_path, "next.mp4", frames=81, fps=15, color=100),
+    ]
+    request = ComposeRequest(
+        run_id=uuid4(),
+        clips=[inputs[0], {**inputs[1], "first_frame": 1, "frames": 69}],
+        fps=15,
+        width=128,
+        height=128,
+        target_frames=150,
+        permissions=["filesystem_read", "workspace_write"],
+    )
+    output = tmp_path / "artifacts/ten-seconds.mp4"
+    report = compose(
+        {"root": str(tmp_path), "output": str(output), "request": request.model_dump(mode="json")}
+    )
+    with av.open(str(tmp_path / inputs[1]["relative_path"])) as source:
+        next_frames = list(source.decode(video=0))
+        expected_join = next_frames[1].to_ndarray(format="gray").mean()
+    with av.open(str(output)) as source:
+        assert source.streams.video[0].average_rate == 15
+        frames = list(source.decode(video=0))
+        assert len(frames) == 150
+        assert Fraction(frames[-1].pts) * frames[-1].time_base == Fraction(149, 15)
+        assert abs(frames[81].to_ndarray(format="gray").mean() - expected_join) < 4
+    assert report["verified"] and report["duration_seconds"] == 10
+
+
+@pytest.mark.parametrize("source_fps,target_fps", [(24, 15), (15, 24), (25, 24)])
+def test_composition_refuses_silent_source_speed_changes(tmp_path, source_fps, target_fps):
+    request = ComposeRequest(
+        run_id=uuid4(),
+        clips=[clip(tmp_path, "source.mp4", fps=source_fps)],
+        fps=target_fps,
+        width=128,
+        height=128,
+        target_frames=17,
+        permissions=["filesystem_read", "workspace_write"],
+    )
+    output = tmp_path / "artifacts/wrong-speed.mp4"
+    with pytest.raises(ValueError, match="Source frame rate"):
+        compose({"root": str(tmp_path), "output": str(output), "request": request.model_dump(mode="json")})
+    assert not output.exists()
 
 
 def test_cpu_composition_rejects_changed_hash_and_truncated_source(tmp_path):
@@ -97,7 +147,16 @@ def test_cpu_composition_rejects_changed_hash_and_truncated_source(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "field,value", [("fps", 23), ("target_frames", 18), ("width", 129), ("filter", "evil")]
+    "field,value",
+    [
+        ("fps", 14),
+        ("fps", 16),
+        ("fps", 23),
+        ("fps", 30),
+        ("target_frames", 18),
+        ("width", 129),
+        ("filter", "evil"),
+    ],
 )
 def test_typed_composition_rejects_arbitrary_or_conflicting_inputs(tmp_path, field, value):
     one = clip(tmp_path, "one.mp4")

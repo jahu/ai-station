@@ -222,3 +222,34 @@ were made stable; input data, assertions and test selection are unchanged. Their
 91 tests pass with four workers. Complete parallel verification is running;
 earlier collection failures and the interrupted serial fallback remain recorded,
 not counted as passing checks.
+
+## Scoped admission and recurrent timing preparation
+
+The larger-window follow-up now binds admission to an available bounded FP8
+profile, its advertised fixed geometry, at least twenty sampling steps and a
+detected GPU with at least 12 GiB of dedicated VRAM. Only the tested landscape
+geometry is advertised. An explicitly selected standard/FP16 profile and portrait
+requests retain 81-frame windows. The legacy top-level capability also remains
+81; new publication resolves the selected profile's closed `native_windows`
+metadata. Auto may recommend the qualified bounded profile, while explicit
+standard selection and previously frozen plans retain their identities.
+Repository lint/format and 232 affected tests pass for this follow-up. Complete
+regression is running in its isolated source checkout; the earlier interrupted
+attempt remains unqualified.
+
+The SVI candidate's 15-fps rate is now accepted by the internal timeline and CPU
+composition contracts alongside the existing 24/25-fps rates. Existing video and
+avatar publication defaults are unchanged; this does not register a selectable
+SVI model. Actual CPU composition tests cover a 150-frame/ten-second output,
+one-time trimming of the continuation context, final timestamps and complete
+canonical audio at all three rates. Source timestamps must match the frozen
+composition rate: a mismatched input fails instead of silently changing playback
+speed. Unsupported rates remain rejected. Repository lint/format and 92 related
+tests pass; this is timing/lifecycle preparation rather than GPU quality evidence.
+
+A separate private SVI qualification observer waits for the existing twenty-second
+film's actual cleanup, no compute processes and sufficient available host RAM
+before it may enqueue one ordinary Task/Run through its private typed Runner.
+Its fixed experimental adapter is registered only in that test worker process,
+never in the application registry. Real inference, original-anchor consistency,
+GPU/RAM fit, continuation, Stop/recovery and whole-film quality remain open gates.

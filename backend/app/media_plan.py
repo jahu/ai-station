@@ -18,12 +18,14 @@ class Segment(BaseModel):
 
 class MediaTimeline(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    fps: StrictInt = Field(ge=24, le=25)
+    fps: StrictInt = Field(ge=15, le=25)
     target_frames: StrictInt = Field(ge=1, le=7500)
     segments: tuple[Segment, ...] = Field(min_length=1, max_length=256)
 
     @model_validator(mode="after")
     def contiguous(self):
+        if self.fps not in (15, 24, 25):
+            raise ValueError("Unsupported fixed media frame rate")
         position = 0
         for index, segment in enumerate(self.segments):
             if (
@@ -47,7 +49,7 @@ def timeline(*, frames, fps, seed, mode="shots", scene_frames=None, context_fram
         or not isinstance(frames, int)
         or not 1 <= frames <= 7500
         or type(fps) is not int
-        or fps not in (24, 25)
+        or fps not in (15, 24, 25)
         or mode not in {"continuous", "shots"}
         or isinstance(seed, bool)
         or not isinstance(seed, int)
