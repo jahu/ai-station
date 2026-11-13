@@ -85,3 +85,43 @@ trained error correction. This is different from our old untrained raw-tail
 copy. Reusing its conditioning trick on an incompatible 5B model is not an
 evidence-based fix. Native-window qualification is the first comparison, not
 a reason to close the larger recurrent-model work.
+
+## Recurrent candidate: finite SVI Pro recipe
+
+Read-only publisher/SDK inspection identifies a concrete next candidate if the
+native 5B comparison fails the longer-film gate. Nothing below is installed or
+advertised as operational:
+
+- SVI Wan 2.2 Pro source revision
+  `bab066229ea530a09587bed52c41ed6089bd509f`. It conditions on the original
+  anchor latent in every window plus one preceding generated motion latent.
+  These are lossless tensors, not repeatedly decoded/re-encoded MP4 frames.
+- Matching high/low-noise 14B models are both required. QuantStack repository
+  `Wan2.2-I2V-A14B-GGUF`, revision
+  `6c6717459277b9cd1f72579d78a0fd62a79e57dc`, publishes two Q4_K_M files of
+  9,651,728,896 bytes each. Their size alone does not prove a 12-GiB inference fit.
+- The two official SVI 2.0 Pro LoRAs at publisher revision
+  `f9bdd50c57e4c28f0d088b6bad8afa3fdc3bc1ac` are 1,226,928,552 bytes each.
+  Do not mix their expert roles or use older SVI conditioning with these weights.
+  Full file identities/hashes are retained in private qualification metadata.
+- This family needs the compatible Wan 2.1 VAE/16-channel latent geometry,
+  not the current TI2V 5B VAE/48-channel geometry. Reuse the verified text encoder
+  only after checking the actual model contract. Inspect all pinned SDK imports
+  before running them; no arbitrary/custom graph endpoint is introduced.
+- The inspected fixed GGUF loader supports dynamic low-rank patches without
+  permanently expanding every quantized weight. Actual CPU/GPU allocation,
+  compatibility with the installed core and frame quality still require proof.
+  Use an isolated owned environment, finite kernel RAM/zero-swap bounds and the
+  existing process manager. Never mutate the working Comfy installation.
+- Preserve the qualified temporal rate explicitly. The inspected SVI reference
+  script exports 15 fps; do not route it through our hard-coded 24-fps path.
+  Timeline construction, composition, metadata and duration estimates need the
+  same closed model-specific FPS, with legacy 24/25-fps plans unchanged.
+- Qualification must include moving people and nonhuman subjects, multiple
+  seeds, complete 10/20-second outputs and portrait as well as landscape intent.
+  Separate model weaknesses from adapter/conditioning/decoding faults. Register
+  a selectable production recipe only after native Stop/recovery, scheduling,
+  source lineage, whole-film quality and ordinary worker publication pass.
+
+This is a hardware-aware candidate rather than a promise based on model size or
+an upstream demo. No larger weights were downloaded during the first comparison.
