@@ -73,7 +73,76 @@ def test_cpu_composition_decodes_all_frames_and_muxes_entire_canonical_audio(tmp
         {"root": str(tmp_path), "output": str(output), "request": request.model_dump(mode="json")}
     )
     assert report["verified"] and report["frames"] == 91 and report["audio_source_samples"] == samples
+    assert report["video_encoding"] == {
+        "codec": "h264",
+        "pixel_format": "yuv420p",
+        "crf": 18,
+        "preset": "medium",
+    }
     assert output.is_file() and json.loads(output.with_suffix(".json").read_text())["verified"]
+
+
+def test_composition_preserves_more_moving_detail_than_the_implicit_encoder_default(tmp_path):
+    import numpy as np
+
+    source = tmp_path / "artifacts/detail.mp4"
+    source.parent.mkdir()
+    y, x = np.indices((256, 256))
+    with av.open(str(source), "w") as container:
+        stream = container.add_stream("libx264", rate=24)
+        stream.width = stream.height = 256
+        stream.pix_fmt = "yuv420p"
+        stream.codec_context.thread_count = 2
+        stream.options = {"crf": "0"}
+        for index in range(17):
+            grey = (((3 * x + 5 * y + index * 11) % 256) ^ ((x // 8 + y // 8) % 2 * 47)).astype(np.uint8)
+            pixels = np.repeat(grey[:, :, None], 3, axis=2)
+            for packet in stream.encode(av.VideoFrame.from_ndarray(pixels, format="rgb24")):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    with av.open(str(source)) as container:
+        expected = [frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)]
+    baseline = source.with_name("legacy-default.mp4")
+    with av.open(str(baseline), "w") as container:
+        stream = container.add_stream("libx264", rate=24)
+        stream.width = stream.height = 256
+        stream.pix_fmt = "yuv420p"
+        stream.codec_context.thread_count = 2
+        for pixels in expected:
+            for packet in stream.encode(av.VideoFrame.from_ndarray(pixels, format="rgb24")):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+    item = {
+        "relative_path": "artifacts/detail.mp4",
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "size_bytes": source.stat().st_size,
+        "expected_frames": 17,
+        "frames": 17,
+    }
+    request = ComposeRequest(
+        run_id=uuid4(),
+        clips=[item],
+        fps=24,
+        width=256,
+        height=256,
+        target_frames=17,
+        permissions=["filesystem_read", "workspace_write"],
+    )
+    output = source.with_name("quality-output.mp4")
+    compose({"root": str(tmp_path), "output": str(output), "request": request.model_dump(mode="json")})
+
+    def error(path):
+        with av.open(str(path)) as container:
+            frames = [frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)]
+        assert len(frames) == len(expected) == 17
+        return sum(
+            float(np.mean((actual.astype(np.float32) - original) ** 2))
+            for original, actual in zip(expected, frames, strict=True)
+        )
+
+    assert error(output) < error(baseline)
 
 
 def test_fifteen_fps_continuation_preserves_ten_seconds_and_trims_context_once(tmp_path):

@@ -368,3 +368,28 @@ The completed neutral 5B ten/twenty-second films and first SVI window were impor
 into the owner's private Library as explicitly labeled QA artifacts. Import notes
 retain their isolated provenance and unresolved quality caveats; no live Runs or
 success history were invented. Only temporary import staging copies were removed.
+
+## Encoding fidelity follow-up
+
+Wan clips and ordinary composition previously left libx264 quality implicit,
+unlike the existing CRF-18 Sonic and Studio paths. Every composition adds another
+lossy generation; RGB-based continuation can also inherit that loss. This is a
+secondary detail-loss source, not an explanation for all motion/identity drift.
+
+A CPU-only comparison re-encoded the same decoded 81-frame SVI sample with
+default options, CRF18 and CRF16. Compared with the decoded input, default encoding
+measured 41.69 dB PSNR / 4.403 RGB MSE; CRF18 measured 43.11 dB / 3.176 MSE,
+about 28% lower added pixel error. File size increased from 424,714 to 616,643
+bytes, with similar measured two-second encoding times. CRF16 increased size
+further for a smaller incremental improvement. The source was already compressed:
+these numbers measure added encoding loss, not uncompressed diffusion quality.
+Evidence: `encoding-measurement.private.json` under the investigation directory.
+
+Use the fixed CRF18/medium H264 policy for Wan output and ordinary composition,
+and retain that policy in artifact metadata. No client codec/filter options,
+model/sampler changes, new permissions or output retiming are introduced. Existing
+stored files remain intact. The actual CPU detail test uses a moving procedural
+fixture and compares decoded output against the implicit default, alongside the
+existing full-audio/timeline/ownership cases. Lint/format and 130 relevant tests
+pass; the native GPU writer itself has not been rerun with the new encoder policy.
+The ongoing private SVI continuation stays on its frozen earlier source.

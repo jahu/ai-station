@@ -9,6 +9,8 @@ import wave
 from fractions import Fraction
 from pathlib import Path
 
+from ai_station_runner.media_encoding import h264_options, video_encoding_metadata
+
 
 def source_path(root, item):
     relative = item["relative_path"]
@@ -192,6 +194,7 @@ def compose(config):
             video.height = request["height"]
             video.pix_fmt = "yuv420p"
             video.codec_context.thread_count = 2
+            video.options = h264_options()
             audio_stream = target.add_stream("aac", rate=48000) if request.get("audio") else None
             if audio_stream:
                 audio_stream.layout = pending.layout.name if pending else "mono"
@@ -220,6 +223,7 @@ def compose(config):
                 for packet in audio_stream.encode():
                     target.mux(packet)
         report = verify(av, temporary, request)
+        report["video_encoding"] = video_encoding_metadata()
         temporary.replace(output)
         output.with_suffix(".json").write_text(json.dumps(report))
         print("media.stage: completed", flush=True)
