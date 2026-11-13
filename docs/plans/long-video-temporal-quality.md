@@ -280,3 +280,25 @@ not silently sample 17/33 frames merely because the final requested duration is
 shorter. The internal timeline supports this explicit strict-boolean policy;
 legacy variable-size sampling remains the default. Duration/overlap tests include
 one-, five-, ten-, twelve- and twenty-second plans with full 81-frame sampling.
+
+## Complete twenty-second nonhuman result
+
+The car/camera-motion case completed all four real native windows and ordinary
+composition: 480 decoded frames at 24 fps, exactly twenty seconds, 4848.1 seconds
+wall time. Every owned stage succeeded and all probe-owned processes stopped.
+The final file hash and complete decode passed; no production data was changed.
+
+Samples include each join and the final frame. The burgundy coupe's basic design
+and harbor scene remain recognizable without pronounced bleaching or a clear
+sampled cut. However, motion grows stronger after the first segment and the
+ending has more blur and a substantially changed perspective. This is limited
+evidence of subject continuity, not a pass for uniformly slow camera motion or
+the full long-video quality goal. Descriptive successive-frame RGB changes also
+increase after the initial window; those measurements are not a semantic quality
+verdict. See `twenty-second-visual-review.private.json` and the complete output
+in `nonhuman-film-probe.private.json` under the investigation evidence directory.
+
+The first SVI GPU observer is alive and waiting for at least 25,600 MiB of actual
+available RAM and no compute processes; the remaining regression workers still
+occupy memory. It has not dispatched a native job. Do not restart that observer
+or duplicate the completed car publication merely because admission takes time.
