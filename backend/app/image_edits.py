@@ -765,7 +765,7 @@ class ImageEditReasonExecutor:
                         messages[0]["content"] = parts
                 session.commit()
                 for format_attempt in range(2):
-                    raw = await infer(session, run, messages, json_output=False)
+                    raw = await infer(session, run, messages, json_output=True)
                     try:
                         if raw.lstrip().startswith("```"):
                             raw = raw.strip().split("\n", 1)[1].rsplit("```", 1)[0]

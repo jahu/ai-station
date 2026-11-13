@@ -62,6 +62,27 @@ Those operations are adapter details, not choices an ordinary user must make.
 
 ## Verification record
 
+### Structured visual responses — 2026-11-13
+
+A reference-inspection child exhausted its one format correction with mismatched
+JSON brackets. The failed child inspected one image; this failure was not an
+eight-image batch overflow. Edit reasoning requested JSON only in prompt text and
+explicitly disabled the owned runtime's existing JSON-object response format.
+The shared inference helper also coupled that transport flag to a controller-only
+second-message context envelope, so simply enabling it for multimodal messages
+would index/rewrite the wrong message.
+
+Enable native JSON transport for every closed edit reasoning stage. Compact the
+second-message envelope only for actual controller decisions; preserve standalone
+multimodal prompts and their correction history intact. Keep strict Pydantic
+shape/index checks and the existing single bounded format repair. Never guess a
+missing bracket or fabricate source observations. Eight references still use two
+inspection batches of four with exact original indices and ordering. Normal
+regressions use neutral fixtures; real format qualification uses only neutral
+rectangles, not the reported generation request.
+The actual owned local vision model completed both four-reference batches with
+native JSON and the same bounded schema correction. No image rendering was run.
+
 ### Technical usability is independent of semantic success — 2026-11-13
 
 A reported accepted edit changed the requested clothing, but a large lower region

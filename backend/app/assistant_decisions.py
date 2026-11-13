@@ -288,7 +288,10 @@ async def infer(session, run, messages, *, json_output=True):
         context_size = int(instance.metadata_json.get("context_size", 32768)) if instance else 32768
         output_limit = 4096 if run.executor_type == "image_edit_reason" else 2048
         output_tokens = min(output_limit, max(512, context_size // 4))
-        context = json.loads(messages[1]["content"]) if json_output else {}
+        # JSON transport also serves single-message multimodal edit contracts.
+        # Only controller decisions carry this second-message context envelope.
+        controller_context = json_output and run.executor_type == "assistant_decision"
+        context = json.loads(messages[1]["content"]) if controller_context else {}
         # Keep the original goal, declared outcomes, status and aliases intact.
         # Older large excerpts stay inspectable in their Runs; they need not be
         # recopied verbatim on every round. This is a bound, not a token guarantee.
@@ -302,7 +305,7 @@ async def infer(session, run, messages, *, json_output=True):
                 summaries=[text[:200] for text in observed.get("summaries", [])[-1:]],
                 context_excerpt_truncated=True,
             )
-        if json_output:
+        if controller_context:
             messages[1]["content"] = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
         return completion_stream(
             session,
