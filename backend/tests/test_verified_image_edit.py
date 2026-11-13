@@ -26,6 +26,7 @@ def edit_runtime(vision_runtime, monkeypatch):
     state = {"photos": 0, "reviews": 0, "identical_first": False, "verdict": "passed"}
 
     async def stream(self, **parameters):
+        assert parameters.get("json_output") is True
         content = parameters["messages"][0]["content"]
         text = content[0]["text"] if isinstance(content, list) else content
         payload = json.loads(text.rsplit("\n", 1)[1])
@@ -196,6 +197,55 @@ def drain(state):
             if tick(session, "verified-edit-test", executors=state["executors"]) is None:
                 return
     raise AssertionError("Edit queue did not drain")
+
+
+def test_eight_references_keep_native_json_transport_and_exact_batched_indices(edit_runtime):
+    with TestClient(app) as client:
+        sources = []
+        for i in range(8):
+            data = io.BytesIO()
+            Image.new("RGB", (512, 768), (200, i * 20, 40)).save(data, "PNG")
+            response = client.post(
+                "/api/images/uploads", files={"file": (f"object-{i}.png", data.getvalue(), "image/png")}
+            )
+            assert response.status_code == 201, response.text
+            sources.append(response.json()["id"])
+        response = client.post(
+            "/api/images/runs",
+            json={
+                "mode": "recompose",
+                "backend": "qwen",
+                "prompt": "Change red to blue while retaining the rectangular shape",
+                "verify_changes": True,
+                "input_artifact_ids": sources,
+            },
+        )
+        assert response.status_code == 202, response.text
+        drain(edit_runtime)
+        detail = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert detail["status"] == "succeeded", detail.get("error_message")
+        with session_factory()() as session:
+            inspections = [
+                run
+                for run in session.scalars(select(Run).where(Run.executor_type == "image_edit_reason"))
+                if run.parameters["stage"] == "inspect"
+            ]
+            inspections.sort(key=lambda run: run.parameters["payload"]["indices"][0])
+            assert [run.parameters["payload"]["indices"] for run in inspections] == [
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+            ]
+            assert [run.parameters["vision_artifact_ids"] for run in inspections] == [
+                sources[:4],
+                sources[4:],
+            ]
+            assert [
+                item["index"]
+                for run in inspections
+                for item in run.metadata_json["edit_result"]["references"]
+            ] == list(range(8))
+            photo = session.scalar(select(Run).where(Run.executor_type == "photo_pipe"))
+            assert photo.parameters["parent_artifact_ids"] == sources
 
 
 def test_verified_edit_uses_real_workflow_and_only_publishes_accepted_candidate(edit_runtime):
