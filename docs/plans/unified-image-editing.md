@@ -62,6 +62,37 @@ Those operations are adapter details, not choices an ordinary user must make.
 
 ## Verification record
 
+### Technical usability is independent of semantic success — 2026-11-13
+
+A reported accepted edit changed the requested clothing, but a large lower region
+became nearly indistinguishable from its white background. The original had clear
+foreground detail. The source/candidate files were correct; semantic review and
+its text consistency audit had no mandatory technical-usability verdict. The
+candidate observation focused on content/framing and did not report the exposure
+damage. A successful requested change therefore incorrectly implied acceptance.
+
+Require an additional owned local visual assessment of the labeled candidate and
+its original base reference, independent of generated semantic criteria and their
+verdicts. Inspect the entire image for material unintended visibility/detail loss
+or rendering damage. Respect explicit artistic effects and inherited reference
+styles; neither a white background nor minor imperfections alone fail. Closed
+quality results carry verdict, observed defects, evidence and correction. Material
+failure blocks publication even if semantic criteria would pass; uncertainty also
+cannot publish. Reuse the same two-render budget for one quality correction, with
+the same originals/model and ordinary fresh-seed rules. Do not relax reference
+strength for a technical-quality failure. Retain rejected candidates and evidence.
+Existing waiting workflows without a quality stage acquire one before acceptance;
+terminal historical records are not silently rewritten.
+
+Actual local vision qualification on the reported file rejects the washed-out
+candidate, accepts its clear original as a quality-positive control, and accepts
+the faded image when the request explicitly asks for that artistic effect. This
+checks real image perception and style-sensitive admission, not a new GPU render
+or a guarantee of perfect perception. Fake-executor regressions cover rejection,
+uncertainty, bounded correction, original lineage/model preservation, publication
+and cancellation while quality checking. No subject/template matching or global
+sampling defaults are added.
+
 The implementation keeps legacy API/Run contracts explicit while new controllers
 freeze verified editing and expose one editing tool. Pixel comparison is separate
 from local visual review; the latter also judges the original request independently

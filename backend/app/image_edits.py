@@ -22,10 +22,12 @@ from app.image_edit_contract import (
     INSPECT,
     OBSERVE_CANDIDATE,
     PLAN,
+    QUALITY,
     REVIEW,
     CandidateObservation,
     EditPlan,
     EditReview,
+    ImageQuality,
     ReviewConsistency,
     SourceInspection,
 )
@@ -449,6 +451,57 @@ class ImageEditExecutor:
         observation = CandidateObservation.model_validate(
             result(session, root, current.get("observation_recheck_run") or current["observation_run"])
         )
+        if "quality_run" not in current:
+            quality = enqueue_reason(
+                session,
+                root,
+                f"quality:{len(attempts)}",
+                "quality",
+                {
+                    "user_request": root.parameters["user_request"],
+                    "instruction": root.parameters["original_instruction"],
+                    "base_reference_id": sources[plan.base_reference_index]["artifact_id"],
+                    "candidate_id": artifact.id,
+                },
+                [sources[plan.base_reference_index]["artifact_id"], artifact.id],
+            )
+            current["quality_run"] = quality.id
+            attempts[-1] = current
+            root.metadata_json = {**state, "edit_attempts": attempts}
+            waiting(session, root, [quality], "Checking image quality")
+            return
+        quality = ImageQuality.model_validate(result(session, root, current["quality_run"]))
+        if "quality_result" not in current:
+            current["quality_result"] = quality.model_dump()
+            attempts[-1] = current
+            state = {**state, "edit_attempts": attempts}
+            root.metadata_json = state
+            append_event(
+                session,
+                root.id,
+                "image.edit.quality_reviewed",
+                {"attempt": len(attempts), "artifact_id": artifact.id, "verdict": quality.verdict},
+            )
+        if quality.verdict != "passed":
+            review_tag(artifact, root, "rejected")
+            if quality.verdict == "uncertain" or len(attempts) >= 2:
+                mark_failed(
+                    session,
+                    root,
+                    "ImageEditNotVerified",
+                    "The generated image did not pass technical quality verification. "
+                    "Attempts and quality evidence remain available.",
+                )
+                return
+            root.metadata_json = {
+                **state,
+                "edit_plan_run": None,
+                "edit_feedback": [{"technical_quality": quality.model_dump()}],
+                "edit_relax_references": False,
+                "edit_attempts": [*attempts, {}],
+            }
+            self.advance(session, root)
+            return
         if "review_runs" not in current:
             groups = {}
             for index, criterion in enumerate(plan.criteria):
@@ -644,6 +697,7 @@ class ImageEditReasonExecutor:
             "review": EditReview,
             "observe_candidate": CandidateObservation,
             "audit_review": ReviewConsistency,
+            "quality": ImageQuality,
         }[stage]
         system = {
             "inspect": INSPECT,
@@ -651,6 +705,7 @@ class ImageEditReasonExecutor:
             "review": REVIEW,
             "observe_candidate": OBSERVE_CANDIDATE,
             "audit_review": AUDIT_REVIEW,
+            "quality": QUALITY,
         }[stage]
         output_schema = schema.model_json_schema()
         if stage == "plan" and payload["backend"] != "krea2":
@@ -693,7 +748,7 @@ class ImageEditReasonExecutor:
                 ]
                 if run.parameters["vision_artifact_ids"]:
                     messages = image_context(session, run, messages)
-                    if stage == "review":
+                    if stage in {"review", "quality"}:
                         content = messages[0]["content"]
                         parts = [content[0]]
                         for offset, (identity, image) in enumerate(
@@ -702,6 +757,8 @@ class ImageEditReasonExecutor:
                             role = (
                                 "CANDIDATE — generated output to judge"
                                 if identity == payload["candidate_id"]
+                                else "ORIGINAL REFERENCE — technical quality baseline"
+                                if stage == "quality"
                                 else "ORIGINAL REFERENCE index " + str(payload["reference_indices"][offset])
                             )
                             parts.extend([{"type": "text", "text": role}, image])

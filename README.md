@@ -58,7 +58,9 @@ New automatic Qwen image requests also freeze a fresh seed, rather than replayin
 the reference image's generation noise. Explicit seeds and saved retries remain
 reproducible. [Reference-seed diagnosis](docs/plans/qwen-reference-seeds.md).
 New edits inspect the references, prepare concrete changes and compare the actual
-result against the request. Unchanged pixels are rejected. A missed change gets
+result against the request. A separate visual quality check rejects material
+unintended rendering damage, while respecting requested artistic effects.
+Unchanged pixels are rejected. A missed change or technical defect gets
 at most one correction; an uncertain or unsuccessful final check remains an
 inspectable failure, rather than an accepted image. This uses an installed local
 vision model, with no cloud fallback. [Verified editing](docs/plans/unified-image-editing.md).
