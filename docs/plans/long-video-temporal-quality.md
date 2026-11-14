@@ -937,8 +937,10 @@ failure-capturing replay of the original 2,613-test prefix was intentionally
 stopped before reaching that test once the portrait source was committed. The
 required full `scripts/check.sh` for the completed source now includes immediate
 failure capture, consolidating diagnosis and final validation without running two
-duplicate Python suites. The original failure remains unresolved; the full-source
-check and draft integration PR remain unqualified until it is resolved.
+duplicate Python suites. The original failure was unresolved; the full-source
+check and draft integration PR remained unqualified at that point. The subsequent
+root cause and repair are recorded below; the complete repaired-source check
+still must pass before admission.
 
 
 ## Full-suite startup failure: reproduced fixture lifecycle leak
@@ -963,11 +965,30 @@ account/private-startup and desktop-identity cases passed in 46.19 seconds after
 the repair. A new complete source check remains required before integration
 admission.
 
-The real public film separately completed its third 81-frame window. Six native
-full-size views around the second join retain the recognizable subject, clothing
-and coast through roughly fifteen seconds. The face remains soft at 480p; this
-sampled-frame observation does not establish full temporal playback or full-body
-quality. The fourth original native Run continues on its immutable earlier source.
-The subsequent portrait/nonhuman waiter stopped before creating any Task when
-full validation failed. It must be rescheduled only for the reviewed repaired
-source; the existing real film must not be replayed.
+The original public film subsequently completed all four 81-frame native windows
+and ordinary composition: 300 decoded frames, 832×480, 15 fps and exactly 20
+seconds, in 12,742.35 seconds (3 h 32 min). It retained the original image anchor
+and four-frame motion context across joins at frames 81, 158 and 235. All five
+Runs succeeded, their owned processes stopped, and the complete MP4 was imported
+into the administrator's private Library with truthful isolated-test provenance.
+No generated media is published in this repository. Sampled complete-film and
+join frames retain the recognizable subject, clothing and coast, with head turn,
+wind and camera movement. The face remains soft at 480p; this is not a claim of
+artifact-free temporal playback or full-body quality. The workload used one GPU,
+not a qualified dual-GPU inference profile.
+
+Actual CPU timeline editing also completed in the same owned environment: four
+seconds, 60 decoded frames at 15 fps and 192,000 PCM test-tone samples. This
+checks the installed editor path, not generated MMAudio sound.
+
+At repaired immutable source `f641c740`, the complete normal Python suite has
+passed beyond the formerly failing startup test and continues; a final full-suite
+pass is not yet recorded. A separate live qualification now uses that source and
+normal private Tasks/Runs for two ten-second 480×832 full-body films with distinct
+seeds, then a ten-second nonhuman landscape film and actual generated sound plus
+preview. Its fully clothed fictional reference was generated through the normal
+owned image executor. The first portrait native window is running; no completed
+portrait or generated-sound result is claimed yet. Only the isolated qualification
+Runner overrides the admission flags in memory. Source flags and production
+remain unchanged. Existing completed films and motion checkpoints keep their
+original immutable source; none are replayed or relabeled for this new source.

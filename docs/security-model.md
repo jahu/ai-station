@@ -2151,12 +2151,13 @@ previews use authenticated local artifact routes, not untrusted remote thumbnail
 Imported references remain distinct from the requested edited result. See
 [the chat/image contract](plans/chat-web-images-and-clipboard.md).
 
-The planned recurrent portrait format must remain a finite, separately qualified
-480×832 geometry. Its F32 motion identity/shape cannot consume a landscape
-checkpoint, and a supported engine alone does not authorize that orientation.
-Existing definitions and frozen requests must not be rewritten to gain admission.
-Native process ownership, source hashes, memory scope and explicit deadlines
-remain mandatory. Typed native portrait selection and inference dimension threading are staged
-behind their own false qualification gate. The legacy landscape serialization
-remains unchanged; public portrait selection and actual GPU qualification are
-still outstanding.
+The staged recurrent portrait format is a finite, separately qualified 480×832
+geometry. Its F32 motion identity/shape cannot consume a landscape checkpoint,
+and a supported engine alone does not authorize that orientation. Typed native
+selection and public model/workspace/agent/Studio requests bind the same exact
+format; cached observations cannot cross orientations. Existing definitions and
+frozen requests are not rewritten to gain admission. Native process ownership,
+source hashes, memory scope and explicit deadlines remain mandatory. Both the
+engine and separate portrait qualification gates remain false while real visual
+qualification and full local checks continue. Legacy landscape serialization
+remains unchanged; no production portrait admission is claimed.

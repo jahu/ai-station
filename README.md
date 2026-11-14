@@ -427,13 +427,15 @@ Longer-film consistency remains under active qualification. The
 [current investigation](docs/plans/long-video-temporal-quality.md) records complete
 10/20-second tests and experimental recurrent-model results; these are not a
 claim that every duration, motion or model is production-ready.
-The new SVI Pro installation and execution path is being integrated with normal
-Tasks and owned runtime setup; it remains unavailable until its complete managed
-runtime inference and broader motion tests pass.
-The integration keeps model-specific settings together: an original first-frame
-image, 832×480, 15 fps and complete recurrent windows. Longer requests retain that
-anchor, resume from verified checkpoints and can enter the existing sound/editor
-workflow. These controls are under test; the current release and installed
+The staged SVI Pro path uses normal Tasks and owned runtime setup. An actual
+20-second, 300-frame landscape film completed in **3 h 32 min** on one RTX 3060
+12 GB, at 832×480 and 15 fps. Sampled frames retain the subject and scene; this
+does not yet establish complete motion quality across subjects and seeds.
+Model-specific controls keep the original image, resolution and sampling recipe
+together. Longer requests retain that anchor and verified motion checkpoints.
+The staged 480×832 portrait option is undergoing separate real generation tests.
+Existing CPU timeline editing passed with the managed environment; generated
+sound qualification remains in progress. The current release and installed
 production station do not yet enable this engine.
 
 ## 🚀 Get started

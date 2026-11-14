@@ -1943,11 +1943,13 @@ an original downloaded image as the completed edit. Clipboard attachment events
 reuse the existing browser attachment pipeline. See
 [the 0.6.1 contract](plans/chat-web-images-and-clipboard.md).
 
-Planned recurrent portrait support is a second finite generation geometry over
-that same owned SVI engine and six-component binding. Its typed capabilities,
-raw motion shape/identity, immutable timelines and model-aware format controls
-must agree. It adds no execution service or arbitrary model graph. See the next
-implementation section in the [long-video plan](plans/long-video-temporal-quality.md).
-Typed native format selection, orientation-bound conditioning/checkpoints and
-offline job dimensions are staged behind a separate closed portrait gate. Public
-model/UI selection and real portrait qualification remain outstanding.
+Staged recurrent portrait support adds a second finite generation geometry over
+the same owned SVI engine and six-component binding. Typed capabilities,
+orientation-bound motion conditioning/checkpoints, immutable timelines and
+model-aware workspace/agent controls now agree on the requested format. Studio
+requests that same explicit portrait capability. A cached landscape observation
+cannot authorize portrait, and saved unsupported choices remain visible for
+correction. It adds no execution service or arbitrary model graph. Both native
+qualification gates remain closed pending complete local checks and real visual
+qualification; staged public/UI implementation does not imply production
+availability. See the [long-video plan](plans/long-video-temporal-quality.md).
