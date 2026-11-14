@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.models import ModelDefinition
+from app.svi_models import CHECKPOINT_PROFILE as SVI_CHECKPOINT_PROFILE
 
 LIMIT = 16
 
@@ -67,16 +68,33 @@ def catalog(session, *, identifier=None):
                         "minimum_physical_ram_mib": 16384,
                     }
                 else:
-                    frozen_model(session, row.id)
-                    item = {
-                        "width": 1280,
-                        "height": 704,
-                        "minimum_steps": 20,
-                        "memory_profile": "bounded_11g",
-                        "cpu_offload": True,
-                        "minimum_vram_mib": 12288,
-                        "minimum_physical_ram_mib": 24576,
-                    }
+                    model = frozen_model(session, row.id)
+                    if model["binding"]["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE:
+                        from app.video_models import profile_for
+
+                        profile = profile_for(session, row.id)
+                        recipe = profile["operation_recipe"]
+                        item = {
+                            **{
+                                key: recipe[key]
+                                for key in ("width", "height", "steps", "cfg", "image_required")
+                            },
+                            "memory_profile": "default",
+                            "cpu_offload": True,
+                            "minimum_vram_mib": 12288,
+                            "minimum_physical_ram_mib": 24576,
+                            **({"resolutions": recipe["resolutions"]} if "resolutions" in recipe else {}),
+                        }
+                    else:
+                        item = {
+                            "width": 1280,
+                            "height": 704,
+                            "minimum_steps": 20,
+                            "memory_profile": "bounded_11g",
+                            "cpu_offload": True,
+                            "minimum_vram_mib": 12288,
+                            "minimum_physical_ram_mib": 24576,
+                        }
             except HTTPException:
                 continue
             result.append({"kind": kind, "model_id": row.id, "name": row.name[:180], **item})
@@ -103,6 +121,20 @@ def validate_selection(session, media, offered):
         raise ValueError("Keep the selected image model's registered backend")
     if media.kind == "video":
         request = media.request
+        if matches[0].get("image_required"):
+            selected = matches[0]
+            resolutions = selected.get(
+                "resolutions", [{"width": selected["width"], "height": selected["height"]}]
+            )
+            if (
+                {"width": request.width, "height": request.height} not in resolutions
+                or request.steps != matches[0]["steps"]
+                or request.cfg != matches[0]["cfg"]
+                or request.memory_profile != "default"
+                or request.image_artifact_id is None
+            ):
+                raise ValueError("Keep the recurrent model's fixed recipe and choose its original image")
+            return matches[0]
         if (
             request.width != 1280
             or request.height != 704

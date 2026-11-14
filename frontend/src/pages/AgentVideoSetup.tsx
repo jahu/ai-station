@@ -39,9 +39,15 @@ export default function AgentVideoSetup({
   });
   if (value?.kind !== "video" || !capability.data?.available) return null;
   const request = value.request;
-  const suggestedLimit = request.duration_seconds <= 15 ? 7200 : 14400;
+  const recurrent = !!capability.data.operation_recipe;
+  const suggestedLimit = recurrent
+    ? 14400
+    : request.duration_seconds <= 15
+      ? 7200
+      : 14400;
   const needsTime = maximumRuntime < suggestedLimit;
   const compatible =
+    !recurrent &&
     !request.image_artifact_id &&
     (request.width ?? 1280) === 1280 &&
     (request.height ?? 704) === 704 &&
@@ -53,7 +59,8 @@ export default function AgentVideoSetup({
     capability.data.memory_profiles?.some(
       (profile) => profile.id === "bounded_11g" && profile.available,
     );
-  if (!needsTime && !needsMemory) return null;
+  const longRecurrent = recurrent && request.duration_seconds > 15;
+  if (!needsTime && !needsMemory && !longRecurrent) return null;
   const hours = suggestedLimit / 3600;
   return (
     <section className="agent-video-setup" aria-label="Suggested video setup">
@@ -62,35 +69,41 @@ export default function AgentVideoSetup({
         Suggested video setup
       </h3>
       <p>
-        Local video can take many minutes per segment.
+        {recurrent
+          ? "Continuous video uses repeated full generation windows and can take several hours."
+          : "Local video can take many minutes per segment."}
         {needsTime
           ? ` Allow up to ${hours} hours for waiting, generation and assembly.`
           : " Keep your current time limit."}
         {needsMemory &&
           " The reduced-RAM landscape profile is recommended for currently available memory."}{" "}
         Generation finishes when the film is ready.
+        {longRecurrent &&
+          " Longer films may reach the four-hour agent limit. Consider a shorter film or a faster video model; this allowance is not a completion-time estimate."}
       </p>
-      <Button
-        type="button"
-        disabled={disabled}
-        tabIndex={tabIndex}
-        onClick={() =>
-          onApply({
-            media: {
-              ...value,
-              request: {
-                ...request,
-                ...(needsMemory
-                  ? { memory_profile: "bounded_11g" as const }
-                  : {}),
+      {(needsTime || needsMemory) && (
+        <Button
+          type="button"
+          disabled={disabled}
+          tabIndex={tabIndex}
+          onClick={() =>
+            onApply({
+              media: {
+                ...value,
+                request: {
+                  ...request,
+                  ...(needsMemory
+                    ? { memory_profile: "bounded_11g" as const }
+                    : {}),
+                },
               },
-            },
-            maximum_runtime: Math.max(maximumRuntime, suggestedLimit),
-          })
-        }
-      >
-        {actionLabel}
-      </Button>
+              maximum_runtime: Math.max(maximumRuntime, suggestedLimit),
+            })
+          }
+        >
+          {actionLabel}
+        </Button>
+      )}
     </section>
   );
 }

@@ -18,6 +18,7 @@ from app.assistant_controller_tools import (
     wrapper_parameters,
 )
 from app.assistant_decisions import Decision
+from app.assistant_video_profiles import public_catalog as public_video_catalog
 from app.chat_providers import chat_permissions, snapshot_provider
 from app.db import utcnow
 from app.dependencies import depend_on
@@ -119,6 +120,9 @@ def enqueue(session, conversation, body, *, commit=True):
     from app.assistant_image_profiles import inventory
 
     image_catalog = inventory(session)
+    from app.assistant_video_profiles import inventory as video_inventory
+
+    video_catalog = video_inventory(session, body.media.model_id if body.media else None)
     user = Message(
         conversation_id=conversation.id,
         role="user",
@@ -327,6 +331,7 @@ def enqueue(session, conversation, body, *, commit=True):
             "planner_context": prior["history"],
             "recent_work": recent_work,
             "controller_image_catalog": image_catalog,
+            "controller_video_catalog": video_catalog,
             "reference_text": user.content[len(body.content) :][:24000],
             "web_search": body.web_search.model_dump(),
             **{name: request.get(name) for name in ("coding", "data", "effects")},
@@ -497,6 +502,9 @@ def decision_context(session, root):
         "inputs_and_results": entries,
         "reference_context": reference_context(entries),
         "image_models": root.parameters.get("controller_image_catalog", {}),
+        "video_models": public_video_catalog(root.parameters.get("controller_video_catalog", {})),
+        "selected_video_settings": root.parameters.get("controller_request", {}).get("media"),
+        "video_model_policy": "Honor the reviewed video model, format and duration. If no model is selected, prefer an offered original-image recurrent model for longer continuous reference-based films where consistency matters; its workload can take hours. Use the default or a short-preview model for quick previews or text-only video. Only registered aliases may be selected; actual native readiness is checked before dispatch. Ask for clarification when the requested result conflicts with reviewed settings.",
         "image_contract_version": root.parameters.get("controller_image_policy"),
         "verified_image_edit": root.parameters.get("controller_verified_edits", False),
         "image_model_policy": (

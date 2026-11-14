@@ -22,8 +22,8 @@ def effects_windows(frames: int, fps: int, *, cuts: tuple[int, ...] = ()) -> lis
     context; only the real interval is published. Endpoints derive from absolute
     frame positions, preventing cumulative rounding drift at 44.1kHz/24fps.
     """
-    if type(fps) is not int or fps not in (24, 25):
-        raise ValueError("Choose an inspected 24 or 25 FPS film")
+    if type(fps) is not int or fps not in (15, 24, 25):
+        raise ValueError("Choose an inspected 15, 24 or 25 FPS film")
     if type(frames) is not int or not 1 <= frames <= fps * 300:
         raise ValueError("Choose a complete film of at most five minutes")
     if (

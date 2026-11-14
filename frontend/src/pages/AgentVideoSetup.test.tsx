@@ -95,6 +95,66 @@ it("keeps a larger custom allowance exact", async () => {
   expect(apply.mock.calls[0][0].maximum_runtime).toBe(9107);
 });
 
+it.each([5, 10, 15, 20])(
+  "offers the four-hour recurrent allowance for %s seconds without changing reviewed settings or the first frame",
+  async (seconds) => {
+    const scope: AgentMediaScope = {
+      ...video,
+      request: {
+        ...video.request,
+        model_id: "recurrent-model",
+        width: 832,
+        height: 480,
+        duration_seconds: seconds,
+        image_artifact_id: "original-image",
+      },
+    };
+    const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+      expect(path).toBe("/api/video/models/recurrent-model/capabilities");
+      expect(options?.method ?? "GET").toBe("GET");
+      return {
+        ok: true,
+        json: async () => ({
+          ...capability,
+          operation_recipe: {
+            label: "SVI Pro",
+            width: 832,
+            height: 480,
+            frames: 81,
+            fps: 15,
+            steps: 20,
+            cfg: 5,
+            image_required: true,
+            memory_mib: 18432,
+          },
+        }),
+      };
+    });
+    vi.stubGlobal("fetch", fetch);
+    const apply = vi.fn();
+    frame(
+      <AgentVideoSetup value={scope} maximumRuntime={600} onApply={apply} />,
+    );
+    const button = await screen.findByRole("button", {
+      name: "Use suggested setup",
+    });
+    expect(apply).not.toHaveBeenCalled();
+    expect(screen.getByText(/can take several hours/)).toBeTruthy();
+    fireEvent.click(button);
+    expect(apply).toHaveBeenCalledWith({
+      media: scope,
+      maximum_runtime: 14400,
+    });
+    expect(JSON.stringify(apply.mock.calls[0][0].media)).not.toContain(
+      "bounded_11g",
+    );
+    if (seconds > 15)
+      expect(
+        screen.getByText(/may reach the four-hour agent limit/),
+      ).toBeTruthy();
+  },
+);
+
 it("uses the existing four-hour ceiling for longer films", async () => {
   const apply = mount({
     ...video,
@@ -104,6 +164,32 @@ it("uses the existing four-hour ceiling for longer films", async () => {
     await screen.findByRole("button", { name: "Use suggested setup" }),
   );
   expect(apply.mock.calls[0][0].maximum_runtime).toBe(14400);
+});
+
+it("keeps long recurrent cost guidance visible at the ceiling without offering a no-op change", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        available: true,
+        operation_recipe: { label: "SVI Pro" },
+      }),
+    })),
+  );
+  const apply = vi.fn();
+  frame(
+    <AgentVideoSetup
+      value={{ ...video, request: { ...video.request, duration_seconds: 30 } }}
+      maximumRuntime={14400}
+      onApply={apply}
+    />,
+  );
+  await screen.findByText(/may reach the four-hour agent limit/);
+  expect(
+    screen.queryByRole("button", { name: "Use suggested setup" }),
+  ).toBeNull();
+  expect(apply).not.toHaveBeenCalled();
 });
 
 it("does not present setup as ready when the video engine is unavailable", async () => {

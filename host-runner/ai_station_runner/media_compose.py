@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, 
 from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_inputs import MediaInput
-from ai_station_runner.video_runtime_schema import ManagedRuntime
+from ai_station_runner.video_runtime_schema import ManagedRuntime, SviManagedRuntime
 
 
 class ClipInput(MediaInput):
@@ -37,7 +37,7 @@ class ComposeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     run_id: UUID
     deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
-    managed_runtime: ManagedRuntime | None = None
+    managed_runtime: ManagedRuntime | SviManagedRuntime | None = None
     effects_environment_id: str | None = Field(
         default=None, pattern=r"^[a-f0-9]{64}$", exclude_if=lambda v: v is None
     )
@@ -110,7 +110,20 @@ def start_composition(manager, body, *, effects_preview=False):
     if body.managed_runtime is not None:
         from ai_station_runner.video_selection import selection
 
-        managed = selection(settings, body.managed_runtime.model_dump(mode="json"))
+        if isinstance(body.managed_runtime, SviManagedRuntime):
+            from ai_station_runner import svi_environment
+            from ai_station_runner.video_composition_runtime import resolve_public
+
+            if not svi_environment.QUALIFIED:
+                raise HTTPException(409, "SVI composition is still being qualified")
+            try:
+                managed = resolve_public(
+                    settings.host_data_dir().resolve(), body.managed_runtime.model_dump(mode="json")
+                )
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(409, "The exact managed SVI environment is unavailable") from exc
+        else:
+            managed = selection(settings, body.managed_runtime.model_dump(mode="json"))
         if not managed or not managed.get("managed"):
             raise HTTPException(409, "The exact managed video environment is no longer selected")
     configured_python = settings.video_python or (settings.mmaudio_python if settings.mmaudio_enabled else "")

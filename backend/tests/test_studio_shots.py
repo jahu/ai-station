@@ -65,7 +65,7 @@ def test_regenerating_keeps_previous_takes_and_uses_explicit_model():
 def test_video_publishes_real_continuation_and_compose_runs_for_complete_coverage(monkeypatch):
     monkeypatch.setattr(
         "app.video_models.profile_for",
-        lambda *a: {
+        lambda *a, **_kwargs: {
             "available": True,
             "memory_estimate_mib": 16384,
         },
@@ -132,7 +132,7 @@ def test_generation_and_production_views_are_private(accounts):  # noqa: F811
 def test_shot_stop_cancels_every_video_stage_without_touching_other_materials(monkeypatch):
     monkeypatch.setattr(
         "app.video_models.profile_for",
-        lambda *a: {
+        lambda *a, **_kwargs: {
             "available": True,
             "memory_estimate_mib": 16384,
         },

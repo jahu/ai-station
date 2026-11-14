@@ -52,6 +52,7 @@ _BLOCKED = (
 )
 _VIDEO_EXECUTORS = {
     "wan_video",
+    "wan_svi_video",
     "media_compose",
     "echomimic",
     "sonic_whole",

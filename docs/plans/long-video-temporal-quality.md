@@ -1,5 +1,77 @@
 # Longer video: temporal quality qualification
 
+## Current delivery state — 2026-11-14
+
+The fixed Linux SVI Pro Q4 profile is qualified for 832×480 landscape and 480×832
+portrait, with 81-frame native windows at 15 fps, 20 steps and CFG 5. It keeps the
+original image plus four-frame recurrent motion context. This is a distinct owned
+model/engine, not an enlarged or relabeled 5B window. Existing 5B native-window
+configuration is preserved; this qualification does not change it. The sections below retain the chronological investigation;
+their earlier pending/closed observations are historical.
+
+Actual complete results include a 20-second landscape human scene and two
+10-second portrait seeds, followed by a 10-second landscape car scene. Full-film
+sampled views, native joins and complete CPU decodes retain recognizable people,
+clothing, vehicle geometry and setting. Actual movement continues across native
+windows. The owner reports visible improvement in the first portrait. Portrait
+feet can leave frame and the second seed misses its final return-to-camera action;
+these are documented model limits, not silently reported perfect adherence.
+
+The three 10-second workflows each take about 1 h 46 min on one RTX 3060 12 GB;
+the 20-second result took 3 h 32 min. The workstation has 32 GB RAM and two cards,
+but this is not a dual-GPU acceleration result. The native job reserves an
+18-GiB zero-swap memory scope. Resolution/detail remain 480p-class.
+
+Actual MMAudio generation produced 441,000 mono 44.1-kHz samples for the car film;
+the normal preview has 150 decoded frames at 15 fps and ten seconds of AAC.
+There are no near-clipped PCM samples. Existing CPU composition re-encodes H.264;
+the preview's measured mean PSNR is 43.72 dB, not bit-exact stream copying.
+Subjective listening is still unclaimed. The owned CPU editor also completed a
+four-second/60-frame test with a PCM test tone, separately from generated sound.
+
+Final executable source `22a26cda` passed the complete `scripts/check.sh` with the
+already installed pytest-xdist (four workers, `--dist=loadfile`): **10,233 passed,
+25 skipped, zero failures/errors**, in 38 min 31 s. All **1,276 frontend tests**,
+format/lint/type/build, both Compose configurations, the exact Docker build and
+its isolated API/separate fake-worker/SSE/restart checks passed. Earlier failed
+or interrupted invocations are not counted as passes. The final deadline-test
+failure was reproduced: a 0.6-second budget correctly expired before dispatch
+under load. A test-only repair includes controlled preparation time, preserves
+the exact native deadline and strengthens owned cleanup assertions; 54 focused
+tests then passed before the complete rerun. Runtime/inference code was unchanged.
+
+Native admission flags are enabled for this fixed profile. Source/engine identity,
+required inputs, resource checks and permissions still apply. Qualification does
+not install a model or make a station ready. The preserving local station update
+and ordinary administrator setup are now complete, with a fresh owned SDK and
+shared model binding. No private preparation receipts or execution history were
+copied. Legacy development storage permissions initially stopped setup; only the
+two owned storage directories were made private, then the same setup Task resumed
+successfully without weakening the guard.
+
+An actual normal Auto conversation loaded the selected local 9B LLM, chose the
+selected SVI model/format, stopped its owned LLM before GPU generation, composed
+the requested five-second landscape result and reloaded the LLM for its final
+answer. The same scoped UI projection returns the finished video artifact.
+All 75 frames decode at exact 15-fps timestamps and 832×480; sampled views retain
+the car, harbor and gentle camera movement. The earlier 10/20-second portfolio
+remains the longer-video qualification. Existing user settings, accounts and
+history were retained. Do not reuse motion under a changed implementation identity. The v0.6.2 installers do not contain this development
+profile. No sexual-content or Windows-native inference test is claimed.
+
+Private evidence: `data/acceptance/long-video-temporal-quality-20261113/`, especially
+`svi-profile-qualification-decision.private.json`, the complete film reviews,
+`svi-managed-qualification/portrait-film-probe.private.json`, the final JUnit
+report and `svi-deadline-test-only-source-proof.private.json`. No private media
+or credentials are published in this repository.
+
+Six of the full-suite skips came from Node being absent from the validation
+process's PATH. The existing project-local Node 22 was then supplied to those
+exact six ordinary static-site cases: all passed in 3.59 s, with a separate JUnit
+report. No dependency was installed and no expensive integration was enabled.
+The remaining skips require explicit opt-in or a native platform unavailable in
+this Linux test environment.
+
 ## Problem and evidence — 2026-11-13
 
 The current Wan 2.2 TI2V 5B adapter generates at most 81 frames per invocation
@@ -393,3 +465,642 @@ fixture and compares decoded output against the implicit default, alongside the
 existing full-audio/timeline/ownership cases. Lint/format and 130 relevant tests
 pass; the native GPU writer itself has not been rerun with the new encoder policy.
 The ongoing private SVI continuation stays on its frozen earlier source.
+
+## Actual recurrent continuation and product integration
+
+The first complete recurrent ten-second film is now terminal: 150 fully decoded
+frames at 15 fps, with the original image retained in both native windows and
+one owned raw motion latent passed between them. The final film reuses the
+already generated first 81-frame clip and retains 69 frames from the second
+after its four-frame context. It does not stretch or loop a shorter clip.
+The second native Run is `5f8b54f5-c8d7-44fe-801b-adac26e30c08`; composition is
+`35da99b4-b058-4766-b1aa-8126f1c64417`. Its complete output SHA-256 is
+`df03344ca5b77dfd1250400228c98a34545988d141d03855451a0184e4411f10`.
+
+Seventeen sampled views include the actual frame-80/81 join and final frame.
+Face, hair, coat/scarf and coast remain recognizable without obvious sampled
+scene jumps or severe anatomical collapse. Later frames develop gaze/head
+movement and a blink. This is calm, half-body landscape footage; it does not
+establish dynamic full-body, portrait-orientation, multiple-seed or long-film
+acceptance. The original and result are private owner Library QA artifacts.
+
+The worker was deliberately replaced during sampling. After lease expiry,
+ordinary inspection resumed the same native PID/group/start ticks and absolute
+deadline, without restarting inference. All test-owned processes stopped after
+composition. Stop during input verification also passed; GPU-phase Stop still
+requires its own actual test.
+
+A twenty-second Task now reuses both complete native clips and generates only
+the next two. Its retained frame counts are 81, 77, 77 and 65, totaling exactly
+300 frames at 15 fps. Reusing the second full native clip restores its unused
+tail before the next motion state; chaining from the trimmed ten-second export
+would skip that state and is not allowed. The worker resolves each prior motion
+artifact only after success, checks same-owner provenance, original image,
+profile identity, trash/purge state and unchanged frozen source observation.
+CPU rehearsal accepted valid/idempotent binding and rejected nine changes to
+ownership, source identity, checkpoint lineage or availability. Actual longer
+generation and its join/ending review remain pending.
+
+Product integration keeps these boundaries:
+
+1. `wan_svi_context` and `wan_svi_adapter` provide the closed Wan21 conditioning,
+   bounded SafeTensors header and complete 400-target/rank-128 PEFT bridge. They
+   import no AI dependencies at application startup and register no executor.
+   Production motion metadata uses `station.svi_profile`; private candidate and
+   old 48-channel 5B checkpoints cannot be silently adopted. Native dispatch
+   must bind the complete recipe/implementation, original anchor and components
+   before supplying this identity. The checkpoint header is not a substitute
+   for canonical owned paths, whole-file hashes or account provenance.
+2. Extend existing reviewed model bundles and runtime preparation with the two
+   pinned Q4 experts, two matching Pro adapters, compatible 16-channel VAE, text
+   encoder and pinned GGUF SDK/wheel. Reuse verified store objects; do not expose
+   raw paths, editable model graphs or mutate an existing runtime. Structural
+   inspection alone never grants inference readiness.
+3. Add a distinct typed native SVI dispatch and executor identity over the
+   existing process manager and `HostMediaExecutor`. Keep the measured 18-GiB
+   zero-swap scope and 12-GiB GPU admission. Original anchor and preceding motion
+   remain separate typed owned inputs; every window preserves its source/hash,
+   derived seed and deadline. Test GPU Stop, restart and lost acknowledgements
+   before registering this as an operational executor.
+4. Bind shared model definitions to this complete recipe. Model capabilities,
+   rather than the 5B hard-coded defaults, select dimensions, 15 fps, full
+   81-frame sampling and four-frame context. Workspaces, assistant tools and
+   reviewed agents must use the same frozen recipe and exact composition.
+   Timing estimates need a separate recipe identity and must respect the
+   user's execution budget; a measured slow model is not silently promised to
+   finish a long job within the existing four-hour agent maximum.
+5. Qualify moving/full-body and nonhuman scenes, multiple seeds and portrait
+   intent, then expose a clear installed model choice and preserving deployment.
+   Lower-resolution acceleration is a separate measured recipe, not an
+   unsupported FPS reinterpretation or untested sampler reduction. Sound/effects
+   must retain real time when handling 15-fps output.
+
+The checked repository conditioning matches the pinned Pro embedder through the
+actual installed core on CPU for both initial and continuation cases: maximum
+absolute error zero, with seven invalid context cases rejected, including
+non-F32 anchors. Normal tests use
+bounded synthetic tensor headers/matrix geometry and load no model. This proves
+the bridge mathematics/storage contract; it is not public runtime readiness.
+The repository PEFT bridge also mapped both actual pinned adapters on CPU to
+all 400 targets/800 tensors at rank 128 and strength 1.0. That check used the
+high expert's common target geometry for both adapters; it did not run inference
+or independently qualify low-expert generation. The 33 focused normal tests
+cover the new contracts and existing 5B motion handling without AI dependencies.
+Private evidence remains under `svi-candidate/` in the investigation directory.
+
+The reviewed `08bf9501` baseline is now deployed to the target station. It
+advertises the qualified 121-frame option only for the bounded 1280×704 recipe
+and retains CRF18/medium encoding for new ordinary video/composition outputs.
+The preserving rollout checked exact existing account/content table bytes,
+database integrity, unchanged LAN binds and the same enrolled Tailscale node and
+HTTPS origin. The owned Tailscale daemon's process/Run identity legitimately
+changes during native service restart; it is distinct from the persistent node
+identity. The private twenty-second SVI probe continues independently. This
+deployment does not enable SVI or claim that the full quality goal is complete.
+
+## Owned native SVI integration in progress
+
+The candidate now has a separate fixed
+`wan22-svi-pro-q4-linux-x86-64-python312-v1` recipe and offline assembler. Its
+107 inputs retain the exact existing 5B engine's Python/coherent dependencies,
+add the pinned GGUF SDK/wheel, and select six SVI model components. They exclude
+the unused TI2V 5B diffusion/VAE weights. Preparation reuses verified store
+objects, creates its own Python/source namespace, executes an offline CPU-only
+tokenizer/loader probe and publishes readiness only afterward. Opaque shared
+engine identities hide private setup Run IDs. This assembler is implemented;
+guided setup Tasks/catalog admission and an actual fresh environment preparation
+are not yet qualified or exposed.
+
+Typed native `/v1/video/svi/capabilities`, model-capabilities and `/v1/runs/svi`
+operations now exist behind the closed qualification flag. The default reports
+unavailable and refuses execution. A dispatch accepts only its opaque engine,
+original owned PNG/JPEG, optional matching owned motion tensor, prompt, derived
+seed, allocated GPU, explicit permissions and absolute deadline. It cannot choose
+a graph, executable, arbitrary resolution, steps or sampler. The native child
+rechecks the canonical request, actual 18-GiB zero-swap scope, exact Python/SDKs,
+complete six model hashes, source hashes and implementation/anchor motion
+identity before sampling. It preserves sequential experts, FP32 VAE, 15 fps,
+the trained anchor/motion conditioning and fixed CRF18 export. Nonfinite samples
+or decoded pixels cannot publish a result. The control-plane executor and model
+selection still need integration; these native endpoints do not make a new
+operational product capability.
+
+Repository lint/format and 280 affected normal tests pass, covering owned
+assembly, tamper rejection, typed dispatch, the old video profile, platform/API
+boundaries and process/deadline behavior. A real process-group test uses an
+explicitly fake engine, reattaches its same native identity after manager
+replacement, then escalates Stop against only that owned group. It is not a GPU
+inference or GPU Stop test. A child-import test denies API-server, eager Torch
+and network imports. New-job fresh-runtime inference remains pending.
+
+The earlier unregistered-core whole-suite attempt was deliberately interrupted
+when this wider native work changed the source beyond its original collection:
+1,818 passed in 2458.1 seconds before KeyboardInterrupt, with no observed test
+failures. This is not a full-suite pass or validation of the expanded head.
+Retain the earlier complete 9,957-case baseline separately; use a frozen source
+for final broad verification rather than repeatedly testing a changing checkout.
+
+## Completed twenty-second recurrent film
+
+The actual four-window person film completed: 300 decoded frames at 15 fps,
+exactly twenty seconds. The first two full native windows were reused; only
+windows three/four and composition were new work (6310.3 seconds). All owned
+processes stopped and resource locks were released. Final CPU composition used
+the fixed CRF18 policy. The final artifact is
+`5c17ec5d-5102-4294-8e34-31b9356aef88` in the isolated qualification database.
+
+Twenty-four views include joins at frames 81, 158 and 235 plus final frame 299.
+The same recognizable face, hair, coat/scarf and coastal scene persist without
+obvious sampled scene jumps, severe exposure bleaching or anatomical collapse.
+Gaze/head movement, blinks and breeze remain visible. Detail is still 480p, not
+HD. This permits further qualification; calm half-body footage does not prove
+dynamic/full-body, portrait or other-subject behavior. The complete film was
+imported into the owner's private Library with diagnostic provenance and no
+invented live execution history. See `svi-candidate/twenty-second-review.private.json`.
+
+A separate 512×288/50-step car candidate now reuses the same pinned weights and
+the earlier approved synthetic car source/prompt/seed. It waits for confirmed
+completion and process exit of the twenty-second probe, no actual compute work,
+19 GiB available RAM and operator priority before dispatch. Its first real high
+expert steps measured about 40 seconds each, compared with about 146 seconds
+for the earlier larger geometry. This is a partial observation, not a complete
+runtime or quality result. Fifty steps follow the reference recipe's count;
+the candidate remains private and does not change public sampling defaults.
+
+## Shared worker integration in progress
+
+The control plane now has an unregistered SVI adapter and queued-segment creator
+over the existing `HostMediaExecutor`, Task, Run, Events and Artifact services.
+They freeze the exact native engine/model observation, eligible devices and
+owned original image, reserve 18 GiB RAM and cap each native child to one hour.
+Continuation binds only a succeeded same-owner SVI producer with unchanged
+original image/engine and an available video→motion provenance chain. Binding
+is idempotent, records one structured event and refuses a modified frozen
+snapshot. Internal motion artifacts declare four context frames and their
+profile identity; the old 5B default remains seventeen frames.
+
+Whole worker tests with fake native media cover two dependent windows, state
+collection, resource release, stale-worker inspection recovery without another
+native start, and cancellation on resume without artifact publication. SVI
+progress reports truthful high/low-expert phases; separate 9/11-step bars are
+not interpreted as complete twenty-step job progress. Timing histories retain
+the distinct executor/backend/geometry signature.
+
+The expanded affected backend group passed 137 tests. A later model-snapshot
+freezing change and additional regression passed the final 45 focused SVI
+tests. These normal tests use temporary databases/fake executors, not real GPU
+inference. Public creation/model routing, guided installation, model-aware
+frozen timelines/composition, UI choices and fresh managed-runtime/GPU
+qualification still gate registration and availability. Existing videos remain
+on the deployed reviewed 5B path.
+
+
+## Owned SVI setup lifecycle
+
+The fixed native setup protocol now covers catalog, prepare, inspection, Stop
+and explicit adoption through `OwnedEnvironmentPreparation`. It reuses the same
+4-GiB bounded offline assembly process, immutable request/journal and opaque
+engine publication. The only accepted recipe is the pinned 107-input SVI
+manifest. Catalog reports actual GPU/RAM/driver/storage constraints and component
+licenses, including the separate MIT Pro adapters and Apache-2.0 GGUF SDK.
+Preparation and adoption share the native SVI qualification flag; both remain
+closed by default, including adoption after an earlier process has completed.
+
+The ordinary administrator runtime-setup API now recognizes this profile and
+queues an `svi_setup` Run. Its executor reuses verified resumable downloads,
+checks the six distinct component roles, and publishes model files plus the
+private setup receipt through the existing services. Native setup processes and
+media generation remain distinct operations. Account-worker admission, revoked
+administrator cleanup, lease recovery and queued cancellation recognize the new
+setup executor. No frontend operational model choice is enabled by this change.
+
+Normal tests cover the fake complete API/download/native/adoption path, corrupt
+inputs, Stop before and after dispatch, immutable resume, stale worker fencing,
+private setup history, account revocation and resource release. The offline child
+also rejects foreign requests/recipes, missing journals, naive or expired
+deadlines, and observes durable Stop during assembly. These checks install no
+real engine and are not fresh-runtime or GPU qualification.
+
+The setup change passed 102 affected native tests, 34 setup-worker regression
+cases across the SVI/5B paths, 71 shared setup/account/recovery and recurrent-run
+regressions, then the final 19 SVI setup cases after adding incomplete-component
+and closed-catalog regressions. Repository Ruff and format checks passed. These
+are focused checks, not a new full-suite pass or real installation evidence.
+
+
+## Recurrent CPU composition and lower-resolution observation
+
+CPU composition now accepts the closed SVI engine identity alongside the existing
+5B identity. The parent chooses the explicit SVI environment, checks its admission
+flag and refuses unavailable/changed receipts instead of falling back to a
+configured 5B Python. The offline child independently resolves the same frozen
+profile and requires its exact prepared interpreter, CPU resource scope and
+absolute deadline. The resolver imports no Runner API. Legacy 5B explicit-path
+precedence and requests without a managed identity retain their behavior.
+
+The final 146-case native/platform group passed, including actual tiny CPU encode/decode
+of two synthetic 81-frame clips into 150 frames at 15 fps, with four-frame context
+trimming and CRF18 output. The managed environment in this test is synthetic;
+it is not a fresh SVI installation or real GPU result. Negative tests reject
+foreign Python, unknown profiles, arbitrary paths and unqualified/missing engines.
+
+The private 512×288/50-step nonhuman candidate completed its first 81-frame window
+at 15 fps in 2236.5 seconds, including its actual worker/native execution boundary.
+All frames decoded and all owned processes stopped. Eleven sampled views preserve
+the recognizable harbor car, grille, round headlights, wheels/windows and scene,
+with a visible lateral camera reveal. This is low-resolution detail and only a
+5.4-second observation, not broad long-video quality qualification. The checked
+film is in the owner's private Library. A ten-second continuation now reuses its
+first window and original anchor; no repeated initial generation is required.
+It uses the same method's separate 512×288 motion identity, not a relabeled public
+832×480 checkpoint. This measurement does not yet change the product recipe.
+
+
+## Shared recurrent model registration
+
+Successful SVI setup now registers one shared Video definition for its complete
+six-component bundle and opaque prepared engine. Each component retains its
+owned registry ID, hash, relative store path, byte size and mtime; selection
+rechecks all six and the primary high-noise model. The definition binds the
+actual fixed geometry, 15-fps timing, four-frame context and 18-GiB workload.
+Shared metadata contains no private setup operation ID. Registration is
+idempotent for the same environment and refuses conflicting bindings.
+
+SVI setup requires separate explicit CPU-offload/workload acceptance in addition
+to license acceptance. Older runtime setup requests keep their existing contract.
+The shared offline-setup executor has a default empty post-preparation hook;
+SVI alone uses it to register the complete model before its private setup receipt
+and success transition. Other media setup paths retain their receipt format.
+
+Video model capabilities select the SVI typed engine endpoint without passing a
+5B checkpoint slot. Incompatible engine/geometry/fps/context/resources are
+rejected. An unregistered recurrent execution adapter cannot be advertised as
+available, even when an isolated native test engine reports readiness. Short/
+long public dispatch and UI admission remain separate outstanding work.
+
+The existing model-install Run also has a metadata-only SVI bundle recheck; it
+does not parse the GGUF as a conversational model, download weights or load a
+GPU. It preserves the frozen bundle, claim fencing, Stop and administrator
+checks, and returns an honest metadata-only receipt (no new full weight hash or
+inference claim). Native inference retains its full six-object hash validation.
+Focused tests cover selection tampering, private-ID exclusion, immutable
+snapshots, typed capabilities, consent, recheck cancellation and stale claims.
+
+The integrated registry/setup group passed 195 tests in 260.2 seconds, including
+existing 5B model installation/definitions and speech/music/avatar/effects/Fish
+setup regressions. Repository Ruff and format checks passed for 1,393 files.
+This remains focused normal-test evidence, separate from actual owned assembly,
+new native inference and final whole-source validation.
+
+
+## Actual owned SVI setup qualification
+
+The frozen `a4e5f896` source completed an actual new SVI setup in an isolated
+application data root in 507.7 seconds. The normal API service queued a setup
+Task/Run; the ordinary worker verified all 107 inputs, invoked the owned native
+preparation process, adopted the ready environment, registered six model files
+and one complete Video definition, and wrote its private receipt. All resource
+locks released and both observer-owned/native processes stopped.
+
+The test copied and fully hashed existing inputs without altering their source
+files. Only two missing small SDK/wheel inputs were downloaded by the normal
+verified downloader. The environment has its own pinned Python, SDKs and
+immutable store; the CPU-only offline probe passed with GGUF loader/tokenizer
+checks and no inference/GPU use. Private evidence is in
+`svi-managed-qualification/setup-probe.private.json` under the investigation
+root. Its qualification flag override applied only to that private Runner
+process/socket. Production flags and source files were unchanged. This proves
+actual owned assembly and the setup lifecycle; new-job GPU inference/Stop and
+broad video quality remain separate gates.
+
+The Video setup UI now offers a separate optional continuous-video card using
+the existing installation panel/history controls. It shows real storage and
+hardware requirements, qualification failures and separate license/workload
+acceptance. Prepared files cannot be presented as an operational engine while
+the shared execution adapter remains unregistered. Video model selection shows
+the model's actual profile instead of a hard-coded 5B resolution.
+
+The setup/picker UI passed 51 tests across eight files, including existing media
+setup panels; frontend lint, TypeScript and production build passed. The small
+backend readiness projection passed 37 model/setup tests. Existing unrelated
+ESLint warnings remain warnings; no lint errors occurred. These checks do not
+qualify the still-pending public generation/workflow controls.
+
+The 512×288 candidate's actual ten-second film also completed: 150 decoded frames
+at 15 fps, with its original first window reused and only the second window plus
+composition new (2227.6 seconds). Seventeen sampled views include the frame80/81
+join and final frame149. The recognizable car/harbor persist without obvious
+sampled severe geometry collapse, bleaching or an abrupt join. The continued
+camera move partly crops the car's front near the ending, so framing/trajectory
+needs longer review. This is nonhuman low-resolution evidence, not human/dynamic
+or broad twenty-second qualification. The complete checked film was imported
+into the owner's private Library; no sample was uploaded publicly.
+
+A separate real new-native-job qualification now uses the actually prepared
+owned SVI environment, the normal typed native endpoint and the shared SVI
+worker adapter in a private process registry. It first waits for an actual
+completed high-expert GPU step before Stop, then checks a complete new window
+and same-native worker recovery. The production admission flag and process
+registry remain unchanged. Poll its existing observer; never replay an uncertain
+native operation or relabel old private checkpoints as new managed outputs.
+
+## Public workflow integration, still behind native qualification
+
+The worker now registers the recurrent adapter while the native setup/inference
+qualification flag remains false. Selecting its complete registered model uses
+one fixed operation recipe; there is no fallback to the old 5B geometry. Public
+short generation requires an original image and produces a complete 81-frame,
+832×480, 15-fps window at 20 steps/CFG 5. Longer manual requests use ordinary
+Tasks, dependencies and CPU composition for exact requested frame coverage.
+The model-aware workspace displays 5.4-second short samples, the required first
+frame and real memory/timing settings. It preserves prior 5B controls when that
+model is selected. Installation/setup does not claim inference qualification.
+
+Continuous films preserve the original anchor and the preceding four-frame raw
+motion latent. Explicit multi-scene films continue within each scene and reset
+at an intentional cut; independent unplanned shots remain independent. Resume
+checks retained motion as well as playable output, rebuilds a broken dependent
+chain with new producer IDs and clears old checkpoint snapshots. Independent
+completed scenes can be reused. Existing agent absolute deadlines remain exact;
+manual workflow allowances do not expand reviewed agent budgets.
+
+Shared translation/enhancement supports recurrent descriptions, one reviewed
+preparation per group and original-source/recipe provenance. Derived motion
+binding does not change that source identity. Changes to the original image,
+engine or generation settings still invalidate it. Agent model suggestions and
+activation check the same fixed recipe and required image rather than assigning
+all Video models 5B settings. Studio shot publication consumes the selected
+recipe, requires its reference and refuses unsupported native portrait footage.
+Portrait recurrent qualification remains outstanding, not silently emulated by
+stretching landscape output.
+
+Sound source inspection, frame-based cues and the CPU timeline now accept 15 fps
+end to end. The editor preserves frame coverage and supports explicit retiming.
+Real CPU encode/decode tests cover a ten-second 150-frame/480000-sample export;
+MMAudio conditioning timing tests cover 15/24/25 fps. This is not a claim of a new
+actual 15-fps GPU sound-generation smoke test. The exact owned SVI Python can
+supply the CPU editor only behind qualification and without overriding an
+explicit/partial legacy installation.
+
+Focused checks so far include 178 backend regressions (translation, effects,
+notices, timeline and media jobs) and 71 UI tests (workspace, agent models,
+Studio selection and timeline). The agent/public bridge group passed 86 checks
+before the added lost-checkpoint resume cases. These use fake native generation
+and actual CPU codecs, not real model-quality claims. Final full-source checks
+and real managed continuation/quality qualification remain required.
+
+## New managed native window result and agent allowance follow-up
+
+The actual newly prepared engine completed its full 832×480, 81-frame, 15-fps,
+20-step sample in 3154.8 seconds. Every frame decoded; the output hash and raw
+motion provenance were verified. GPU-phase Stop and recovery of the same native
+process after worker replacement passed separately. All original qualification
+roles/processes stopped. Eleven sampled views retain the fictional adult's face,
+hair, coat/scarf and coast without obvious severe collapse or bleaching. This is
+calm upper-body, soft 480p footage; sampled contact-sheet review does not qualify
+complete temporal playback, full-body motion, portrait or arbitrary subjects.
+A fresh twenty-second public-API qualification is now running four actual full
+windows from one original anchor with a different seed and greater shoulder,
+facial and camera movement. It does not reuse earlier private method outputs.
+Production admission remains closed while that and broader quality tests run.
+
+The agent setup hint must also distinguish this recurrent engine from 5B. The
+old short-film suggestion of two hours can expire before three ~53-minute
+windows finish on the tested workstation, even before queue waiting. For the
+recurrent profile the explicit suggestion therefore uses the existing four-hour
+agent ceiling; it does not automatically change a saved definition, increase the
+ceiling or promise that generation takes four hours. Reviewed geometry, original
+image, seed, model, permissions and memory profile stay exact. Longer requests
+show that the ceiling can be reached and may need shorter footage or a faster
+model. At an already accepted ceiling the guidance remains visible without a
+no-op Apply button. Other video models preserve their prior two-/four-hour hints.
+
+## Next implementation: finite portrait generation without losing the reference
+
+Status: finite native, public model, workspace/agent/Studio and immutable-plan
+integration is staged behind separate closed qualification gates. The new format
+has not passed actual GPU qualification. The original landscape native SVI job passes
+its original reference through a center crop into fixed 832×480 conditioning.
+A portrait/full-body input can therefore lose its head, feet or other important
+context before diffusion. The completed coastal reference is landscape; it does
+not establish full-body/portrait behavior. This is an additional input-framing
+limitation, not proof that cropping caused the user's temporal deformation.
+
+Implement one additional closed 480×832 profile, keeping 81 frames, 15 fps,
+20 steps/CFG 5, four-frame context, existing six weights, one 12-GiB GPU and the
+18-GiB zero-swap workload. Both orientations have the same pixel count, but real
+memory/quality qualification is still required. Do not admit arbitrary geometry,
+silently rotate/stretch input or relabel a landscape motion checkpoint.
+
+Implementation sequence:
+
+1. Add pure finite geometry selection independently to the packaged backend and
+   Runner, with parity tests. Preserve exported landscape defaults and legacy
+   request serialization. Existing model definitions remain unchanged: they bind
+   the exact six components and engine; native capabilities authorize supported
+   generation geometry. Do not mutate existing definition bindings merely to add
+   another output orientation.
+2. Extend the typed native capability selection for an optional closed generation
+   profile; old requests retain their landscape meaning. Keep portrait behind its
+   own qualification gate. Only qualified formats appear in capability choices.
+   Dispatch rechecks the selected format, original image, engine and resource
+   contract. No graph, SDK/model path, shell or caller-controlled precision enters
+   the request.
+3. Generalize pure conditioning/checkpoint validation to the two fixed latent
+   shapes: landscape `[1,16,1,60,104]`, portrait `[1,16,1,104,60]`. Both remain F32.
+   Keep the exact original-anchor/four-frame continuation math. Include selected
+   geometry in motion identity, verify provenance and reject cross-orientation
+   continuation before GPU dispatch. Never rewrite old motion metadata to make a
+   checkpoint pass. Preserve finite/pixel checks, ownership, deadlines, Stop and
+   same-native recovery.
+4. Thread selected dimensions through public short/long requests, native job
+   sampling/decoding/report checks and immutable film plans. Keep composition at
+   the selected 15-fps geometry and exact retained-frame coverage. Default legacy
+   5B requests, retries and model definitions must remain unchanged.
+5. Let Video and agent format selectors use the qualified formats of the chosen
+   model. Retain explicit saved choices, fixed sampling controls and required
+   original image. Natural agent suggestions must validate an offered format,
+   rather than hard-coding every Video model to one geometry. Studio selects an
+   admitted profile for its actual aspect; an unavailable portrait choice stays
+   unavailable instead of stretching/cropping landscape footage into a claimed
+   portrait result.
+6. Run pure numerical conditioning equivalence and negative shape/dtype/context
+   tests; typed API/worker/Run, ownership, recovery and resume regressions; and
+   frontend format/save/restore tests. Then qualify actual portrait/full-body
+   output using a neutral fully clothed fictional adult reference and movement,
+   multiple seeds, exact decode/joins, memory, Stop and recovery. Prepare that
+   fictional reference with an existing local image engine once resources are
+   free. No public stock-person image has been imported for this investigation.
+
+Keep the running immutable `8e84c524` public-film source and existing full-source
+validation unchanged. New geometry work happens in a separate feature worktree;
+its code, full local checks and real profile qualification must pass before
+admission. A good twenty-second landscape film cannot by itself qualify portrait.
+
+The staged pure context functions now accept only the two exact orientations
+through explicit keyword dimensions. Default calls keep the landscape shape;
+portrait checkpoints still refuse a landscape consumer and the native route
+has not gained portrait authority. Header validation retains its F32, one-latent,
+owned-regular-file, bounded-size and exact-profile rules. Eighty-four focused
+context/native-dispatch/backend regressions passed. A separate actual CPU-only
+probe in the prepared SDK/Python checked normalized-core equivalence for first
+and continuation windows in both orientations: maximum error 0.0 in all four
+cases, with eight invalid dtype/shape/finite/cross-orientation cases rejected.
+No model or GPU was used; this is not portrait inference qualification.
+
+Changing the context source changes the native implementation fingerprint.
+Existing private landscape runs retain their immutable old source; their raw
+checkpoints must not be relabeled for the new implementation. Complete typed
+selection/job/model/UI integration and new-source real qualification remain next.
+
+The native typed request/inspection now accepts only an optional closed
+`generation_profile` (`landscape` or `portrait`); default serialization omits it
+to retain old landscape request identity. Portrait admission has its own false
+qualification flag in addition to the shared false engine flag. Available-format
+metadata cannot advertise it while that gate is closed. The offline child
+selects the same finite dimensions for source conditioning, motion validation,
+sample shape, decoding and output/report checks. Motion identity includes the
+chosen orientation; a landscape checkpoint cannot serve a portrait request even
+when its payload byte count is identical. Unknown profiles remain rejected.
+
+Ninety focused native/context/backend regressions passed after this native
+threading, including real closed-gate rejection, format discovery with synthetic
+hardware, request serialization, owned dispatch and cross-orientation refusal.
+The actual CPU normalized-core proof was repeated for the current context source
+and remains error 0.0 for both initial/continuation orientations. These checks
+load no model and do not qualify actual portrait GPU inference. Public model,
+workspace/agent/Studio and immutable-plan integration were the next stage; their
+implementation and current verification are recorded below.
+
+
+## Finite portrait product threading and validation
+
+The staged backend derives only 832×480 or 480×832 from the actual request and
+asks the selected native model for that exact generation profile. It checks the
+returned orientation, fixed sampling/resource recipe and advertised finite format
+catalog. A cached landscape observation cannot authorize portrait. Existing six-
+component model definitions keep their original binding. New Runs and immutable
+film plans freeze the selected output geometry; predecessor motion must use the
+same orientation before any native dispatch or context binding.
+
+Video and agent editors show only the selected model's offered formats. Explicit
+saved unsupported formats remain visible for correction instead of being silently
+replaced. Video refuses submission until that choice is repaired. Agent activation
+and natural-language media proposals validate the offered format through the
+existing backend authority. Studio asks for an admitted portrait profile for a
+portrait material, retaining the original image and fixed 15-fps composition.
+
+Current staged checks passed 60 backend model/public-job cases (including both
+agent orientations and a portrait Studio request), and 41 workspace/agent UI
+cases. Public short/ten-second portrait tests use explicitly fake native model
+sampling and actual CPU MP4 encoding/composition: they verify 81/150 decoded
+480×832 frames and exact presentation timing, not generated visual quality.
+Lint, TypeScript checking and the production frontend build passed; existing lint
+warnings remain. All 43 source/motion checks passed, including cross-orientation
+refusal before context binding; the complete frontend suite passed 1,274 tests
+across 195 files. Both native qualification flags remain false; nothing here
+claims actual portrait inference or a production rollout.
+
+The earlier full Python run at immutable `8e84c524` failed at the public desktop
+health identity test. An interrupted failure-report teardown also obscured the
+normal traceback. The individual test, its nearest 49-test group and the 91-test
+desktop group passed separately; this does not waive the full-run failure. A
+failure-capturing replay of the original 2,613-test prefix was intentionally
+stopped before reaching that test once the portrait source was committed. The
+required full `scripts/check.sh` for the completed source now includes immediate
+failure capture, consolidating diagnosis and final validation without running two
+duplicate Python suites. The original failure was unresolved; the full-source
+check and draft integration PR remained unqualified at that point. The subsequent
+root cause and repair are recorded below; the complete repaired-source check
+still must pass before admission.
+
+
+## Full-suite startup failure: reproduced fixture lifecycle leak
+
+The final-source Python run at `b9654650` completed 2,612 tests before reproducing
+the same desktop-health test failure in 4,154 seconds. Immediate failure capture
+shows `RecursionError` during `TestClient` application startup, before the health
+request itself. A new focused regression reproduces that exact failure in 1.73
+seconds by entering/leaving the real private-account fixture 256 times and then
+starting the application.
+
+`install_account_access` includes two FastAPI routers. FastAPI merges their
+lifespan contexts even when they have no custom lifespan. The fixture restored
+routes, handlers and account state but retained the new lifespan wrappers on the
+shared application. Repeated fixtures therefore accumulated recursive startup
+layers until a later consumer overflowed Python's stack. Restoring the original
+lifespan and startup/shutdown callback lists in both test-only account activation
+scopes fixes the state leak. Application registration/security behavior and
+Python's recursion limit stay unchanged. The regression remains part of ordinary
+checks; it does not skip the formerly failing test. All 51 focused lifecycle,
+account/private-startup and desktop-identity cases passed in 46.19 seconds after
+the repair. A new complete source check remains required before integration
+admission.
+
+The original public film subsequently completed all four 81-frame native windows
+and ordinary composition: 300 decoded frames, 832×480, 15 fps and exactly 20
+seconds, in 12,742.35 seconds (3 h 32 min). It retained the original image anchor
+and four-frame motion context across joins at frames 81, 158 and 235. All five
+Runs succeeded, their owned processes stopped, and the complete MP4 was imported
+into the administrator's private Library with truthful isolated-test provenance.
+No generated media is published in this repository. Sampled complete-film and
+join frames retain the recognizable subject, clothing and coast, with head turn,
+wind and camera movement. The face remains soft at 480p; this is not a claim of
+artifact-free temporal playback or full-body quality. The workload used one GPU,
+not a qualified dual-GPU inference profile.
+
+Actual CPU timeline editing also completed in the same owned environment: four
+seconds, 60 decoded frames at 15 fps and 192,000 PCM test-tone samples. This
+checks the installed editor path, not generated MMAudio sound.
+
+At repaired immutable source `f641c740`, the complete normal Python suite has
+passed beyond the formerly failing startup test and continues; a final full-suite
+pass is not yet recorded. A separate live qualification now uses that source and
+normal private Tasks/Runs for two ten-second 480×832 full-body films with distinct
+seeds, then a ten-second nonhuman landscape film and actual generated sound plus
+preview. Its fully clothed fictional reference was generated through the normal
+owned image executor. The first portrait native window is running; no completed
+portrait or generated-sound result is claimed yet. Only the isolated qualification
+Runner overrides the admission flags in memory. Source flags and production
+remain unchanged. Existing completed films and motion checkpoints keep their
+original immutable source; none are replayed or relabeled for this new source.
+
+## Conversation model handoff repair
+
+Review found that the Video/agent model integration did not yet reach the normal
+conversation video tool. `VideoScope` contained only duration/composition/memory,
+the controller replaced that entire scope with its proposed duration, and the
+legacy assistant always inspected the default 5B capabilities. A selectable Video
+profile alone therefore did not improve the main conversation path.
+
+The staged repair retains optional model and paired dimensions in that existing
+scope, preserving old serialization when absent. Video tools retain reviewed
+settings and use the selected model's actual native recipe for ordinary film
+publication. A bounded metadata-only registered-video catalog lets the local
+controller choose a recurrent model for a longer reference-based film; explicit
+user model/format/duration selections take precedence. Snapshot identity and
+required reference checks reject unavailable, invented or changed choices. The
+conversation tool panel shares the existing model/format controls and displays
+the fixed workload. Sound cue timing follows the chosen model's frame rate.
+New ordinary API tests publish both orientations without inference, verify closed
+readiness never falls back, and exercise real controller argument binding. The
+candidate remains separate from immutable running GPU qualification source.
+
+## Studio fixture protocol repair
+
+The complete `f641c740` check passed 6,384 cases and skipped 17 opted-in cases
+before failing the two-shot Studio production test. Separate reproduction on
+`94414898` found two obsolete test doubles: their `lambda *args` signatures
+rejected Studio's new `requested_geometry` keyword. The production function
+already accepts that keyword. One test exposed this directly as `TypeError` in
+2.79 seconds; the coordinator test instead observed no child Task and raised
+`IndexError` after its fake production step failed.
+
+Both doubles now use `create_autospec` against the actual `profile_for` function,
+retaining the original graph, independent-shot and source-trim assertions. All
+29 Studio production/shared-source/shot tests pass after this test-only repair.
+The redundant `94414898` whole-suite process was gracefully interrupted after
+that same failure was reproduced, preserving its 356-pass/exit-2 record. A fresh
+complete check is required on the committed repair; neither interrupted nor
+failed full-suite run is counted as passing. Running native qualification and
+all production inference code remain unchanged.

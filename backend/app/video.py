@@ -214,7 +214,20 @@ def create_video_run(
     if body.model_id:
         from app.video_models import profile_for
 
-        observed_profile = profile_for(session, body.model_id, observed_profile)
+        observed_profile = profile_for(
+            session, body.model_id, observed_profile, requested_geometry=(body.width, body.height)
+        )
+    if observed_profile.get("backend") == "wan22-svi-pro-q4":
+        from app.svi_runs import create_svi_run
+
+        return create_svi_run(
+            session,
+            body,
+            task=task,
+            parent_run_id=parent_run_id,
+            observed_profile=observed_profile,
+            _prepare_translation=_prepare_translation,
+        )
     if body.frames > native_window_frames(body, observed_profile):
         raise HTTPException(409, "The selected Runner has not qualified larger native video windows")
     managed = managed_parameters(body, observed_profile)

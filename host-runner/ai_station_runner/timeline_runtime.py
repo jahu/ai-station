@@ -32,9 +32,23 @@ def installation():
     if not configured:
         from ai_station_runner.video_selection import selection
 
-        managed = selection(cfg) or {}
-        if managed.get("managed"):
+        managed = selection(cfg)
+        if managed and managed.get("managed"):
             configured = managed["video_python"]
+        elif managed is None:
+            from ai_station_runner import svi_environment
+
+            if svi_environment.QUALIFIED:
+                try:
+                    root = cfg.host_data_dir().resolve()
+                    try:
+                        current = svi_environment.read_json(root / "runtime/svi-environments/active.json")
+                    except FileNotFoundError:
+                        pass  # An optional engine that was never selected is not a damaged installation.
+                    else:
+                        configured = svi_environment.resolve(root, current)["video_python"]
+                except (OSError, ValueError, KeyError, TypeError) as exc:
+                    raise ValueError("The prepared CPU video environment is unavailable") from exc
     if not configured:
         raise ValueError("Configure a CPU video Python with PyAV, NumPy and Pydantic v2")
     python = Path(configured).expanduser().absolute()

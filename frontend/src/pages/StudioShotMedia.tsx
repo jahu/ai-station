@@ -315,7 +315,7 @@ export default function StudioShotMedia({
             <>
               <VideoModelChoice
                 value={videoModel}
-                onChange={setVideoModel}
+                onChange={(id) => setVideoModel(id)}
                 disabled={disabled || !!active}
               />
               <p>

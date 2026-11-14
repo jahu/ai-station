@@ -19,6 +19,7 @@ from app.db import session_factory, utcnow
 from app.engine import tick
 from app.models import Run
 from app.resources import active_locks
+from app.runner_client import RunnerClient
 from fastapi.testclient import TestClient
 from test_avatars import avatar_bridge as avatar_bridge
 from test_avatars import inputs
@@ -123,19 +124,29 @@ def test_motion_budget_schema_refuses_nonfinite_or_untyped_values(kind, value, r
         schema.model_validate({**payload, "deadline_at": value})
 
 
-def test_video_worker_forwards_exact_absolute_budget_and_confirms_cleanup(bridge):
+def test_video_worker_forwards_exact_absolute_budget_and_confirms_cleanup(bridge, monkeypatch):
+    original_hardware = RunnerClient.hardware
+
+    def preparing_hardware(runner):
+        # Admission may take longer than a subsecond execution budget. Exercise
+        # actual native dispatch rather than pre-dispatch deadline cancellation.
+        time.sleep(0.8)
+        return original_hardware(runner)
+
+    monkeypatch.setattr(RunnerClient, "hardware", preparing_hardware)
     with TestClient(app) as api:
         response = api.post("/api/video/runs", json={"prompt": "wait"})
         assert response.status_code == 202
         with session_factory()() as session:
             run = session.get(Run, response.json()["id"])
-            deadline = utcnow() + timedelta(seconds=0.6)
+            deadline = utcnow() + timedelta(seconds=5)
             run.parameters = {**run.parameters, "execution_deadline_at": deadline.isoformat()}
             session.commit()
             tick(session, "budgeted-video")
             session.refresh(run)
             native = host_app.manager().inspect(run.id)
             assert run.status == "canceled" and not native["alive"]
+            assert native["executor"] == "wan_video" and native["status"] == "canceled"
             assert native["deadline_at"] == deadline.timestamp()
             assert not active_locks(session)
         assert api.get("/api/artifacts", params={"run_id": run.id}).json() == []

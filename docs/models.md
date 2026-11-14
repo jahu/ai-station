@@ -316,6 +316,50 @@ was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sha
 other Wan architectures and other media families require their own supported
 slots and complete plans, not this F16 admission path.
 
+### Continuous SVI Pro video (Linux-qualified development profile)
+
+The separate fixed `wan22-svi-pro-q4-linux-x86-64-python312-v1` preparation
+profile assembles the high/low Wan 2.2 GGUF experts, their paired SVI Pro adapters,
+text encoder and VAE. This six-component binding is distinct from the single
+5B SafeTensors slot above: a matching filename or generic GGUF inspection cannot
+activate it. Preparation uses the existing private administrator-owned Task,
+verified content store, license consent and explicit CPU-offload acceptance.
+The shared definition retains opaque engine/component identities; it exposes no
+administrator setup history or host paths.
+
+Use **Video → Set up video → Continuous video** to prepare the complete profile.
+Choose **SVI Pro** from **Video model**, select the original PNG/JPEG image and
+describe its motion. The model-aware controls offer only native-advertised
+formats: 832×480 landscape, or separately qualified 480×832 portrait. Sampling is
+fixed at 20 steps, CFG 5 and 15 fps. Longer requests reuse the original anchor
+and verified motion context instead of repeatedly using a decoded last frame as
+a new source. The same binding is available to reviewed video agents and Studio.
+This profile requires Linux x86-64, a compatible NVIDIA driver, one 12-GiB GPU
+and at least 24 GiB physical RAM; inference reserves 18 GiB RAM without swap.
+
+The Chat tool panel also offers **Generate video → Video model**, format
+and length. The controller can choose a captured registered model for an ordinary
+video request; explicit reviewed selections take precedence. It reuses the same
+frozen film Runs and native admission, rather than a separate chat video engine.
+
+Actual isolated managed setup, owned Stop/recovery, a complete 20-second landscape
+film, two 10-second portrait seeds and a 10-second nonhuman scene passed their
+recorded checks. Full-film sampled views and native joins retain recognizable
+subjects/objects; portrait framing and one final requested action remain imperfect.
+Actual 10-second MMAudio generation and its 150-frame preview passed timing,
+decode and audio checks. CPU editing also completed. Subjective sound listening
+is not claimed. The final executable source passed 10,233 Python tests, with
+25 cases skipped, plus all 1,276 frontend tests and the build checks. Six ordinary
+Node-dependent cases were then run with the existing project-local Node 22 and
+passed separately; the other skips require opted-in or native-platform execution.
+
+The two native admission flags are enabled for this fixed Linux profile. An
+exact installed engine, component/source observations, memory and GPU admission
+remain required; a flag alone cannot execute it. This development change is not
+in the v0.6.2 installers. No Windows-native or dual-GPU inference result is claimed.
+See the [quality investigation](plans/long-video-temporal-quality.md) for actual
+measurements and the separate preserving station rollout.
+
 ### Speech checkpoint admission (structural only)
 
 The native preparation catalog declares `chatterbox-v3-t3-v1`, a single

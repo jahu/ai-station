@@ -152,12 +152,22 @@ class VideoScope(BaseModel):
     duration_seconds: StrictInt = Field(ge=1, le=MAX_VIDEO_SECONDS)
     composition_mode: Literal["continuous", "shots"] = "continuous"
     memory_profile: Literal["default", "bounded_11g"] | None = None
+    model_id: UUID | None = None
+    width: StrictInt | None = Field(default=None, ge=128, le=1280, multiple_of=32)
+    height: StrictInt | None = Field(default=None, ge=128, le=1280, multiple_of=32)
+
+    @model_validator(mode="after")
+    def complete_format(self):
+        if (self.width is None) != (self.height is None):
+            raise ValueError("Choose both video dimensions")
+        return self
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
-        if self.memory_profile is None:
-            values.pop("memory_profile", None)
+        for key in ("memory_profile", "model_id", "width", "height"):
+            if getattr(self, key) is None:
+                values.pop(key, None)
         return values
 
 
@@ -1228,10 +1238,15 @@ class AssistantExecutor:
                 plan = Plan(action="clarify", reason=str(exc.detail))
         video_profile = None
         if plan and plan.action in {"video.generate", "image.generate_video"}:
-            from app.video import capabilities
+            from app.conversation_video import selected_profile as selected_video_profile
 
-            video_profile = capabilities()
-            if not video_profile["available"]:
+            try:
+                video_profile = selected_video_profile(session, run.parameters)
+            except (HTTPException, ValueError) as exc:
+                plan = Plan(
+                    action="clarify", reason=str(exc.detail if isinstance(exc, HTTPException) else exc)
+                )
+            if video_profile is not None and not video_profile["available"]:
                 plan = Plan(
                     action="clarify",
                     reason="Local video needs setup. Open Video to inspect the configured Wan runtime before generating.",
@@ -1444,12 +1459,14 @@ class AssistantExecutor:
                         selected_profile = profile.get("recommended_memory_profile", "default")
                     settings = {"memory_profile": selected_profile} if selected_profile != "default" else {}
                     if scope:
+                        from app.conversation_video import request_settings
+
                         request = LongVideoRequest(
                             translation=params.get("media_translation"),
                             client_request_id=UUID(run.id),
                             prompt=film_prompt[:2000],
                             image_artifact_id=images[0] if images else None,
-                            **scope.model_dump(exclude={"memory_profile"}),
+                            **request_settings(scope, profile),
                             **settings,
                         )
                         publish_video(

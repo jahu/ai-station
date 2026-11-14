@@ -1,11 +1,13 @@
 """Owned renderer bindings reuse exact media, including clip trim coverage."""
 
+from unittest.mock import create_autospec
 from uuid import uuid4
 
 import pytest
 from app.api import app
 from app.db import session_factory
 from app.models import Run
+from app.video_models import profile_for
 from fastapi.testclient import TestClient
 from test_account_private_api import accounts, private_app, upload  # noqa: F401
 from test_studio_render import draft, render
@@ -74,9 +76,8 @@ def test_shared_library_source_resolves_without_a_fake_generated_take(ready):
 
 @pytest.mark.parametrize("length,offset,seconds", [(120, 4.0, 8), (2700, 30.0, 120)])
 def test_generated_clip_budget_covers_later_shared_scene_trim(monkeypatch, length, offset, seconds):
-    monkeypatch.setattr(
-        "app.video_models.profile_for", lambda *args: {"available": True, "memory_estimate_mib": 16384}
-    )
+    profile = create_autospec(profile_for, return_value={"available": True, "memory_estimate_mib": 16384})
+    monkeypatch.setattr("app.video_models.profile_for", profile)
     with TestClient(app) as api:
         row, revision = shared_plan(
             api, [visual(60, kind="video"), shared(0, length, media_start_seconds=offset)]

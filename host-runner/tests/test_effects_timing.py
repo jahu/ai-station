@@ -2,7 +2,7 @@ import pytest
 from ai_station_runner.effects_timing import effects_windows
 
 
-@pytest.mark.parametrize("fps", [24, 25])
+@pytest.mark.parametrize("fps", [15, 24, 25])
 @pytest.mark.parametrize("seconds,extra_frames", [(0, 1), (1, 0), (8, 0), (8, 1), (15, 0), (299, 1)])
 def test_sound_windows_cover_every_source_frame_and_sample_without_rounding_drift(fps, seconds, extra_frames):
     frames = fps * seconds + extra_frames
@@ -34,7 +34,7 @@ def test_invalid_or_unbounded_film_timing_is_rejected(frames, fps):
         effects_windows(frames, fps)
 
 
-@pytest.mark.parametrize("fps,frames", [(24, 33), (25, 53), (24, 192), (25, 200)])
+@pytest.mark.parametrize("fps,frames", [(15, 33), (15, 120), (24, 33), (25, 53), (24, 192), (25, 200)])
 def test_fixed_context_encodes_every_source_frame_including_the_tail(fps, frames):
     from ai_station_runner.effects_video import frame_indices
 
@@ -45,7 +45,7 @@ def test_fixed_context_encodes_every_source_frame_including_the_tail(fps, frames
     assert set(indices) == set(range(frames))
 
 
-@pytest.mark.parametrize("fps", [24, 25])
+@pytest.mark.parametrize("fps", [15, 24, 25])
 def test_scene_boundaries_keep_every_frame_and_exact_samples_without_cross_scene_context(fps):
     from ai_station_runner.effects_contract import SoundCue
     from ai_station_runner.effects_timing import cue_cuts, window_prompt

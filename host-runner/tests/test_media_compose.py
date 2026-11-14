@@ -336,4 +336,15 @@ def test_managed_composition_rejects_different_interpreter_before_decoding(tmp_p
 
     monkeypatch.setattr(video_environment, "resolve_public", lambda *args: {"environment": tmp_path})
     with pytest.raises(ValueError, match="exact frozen"):
-        compose({"request": {"managed_runtime": {"environment_id": "a" * 64}}, "root": str(tmp_path)})
+        compose(
+            {
+                "request": {
+                    "managed_runtime": {
+                        "profile": "wan22-5b-linux-x86-64-python312-v1",
+                        "manifest_sha256": "b" * 64,
+                        "environment_id": "a" * 64,
+                    }
+                },
+                "root": str(tmp_path),
+            }
+        )

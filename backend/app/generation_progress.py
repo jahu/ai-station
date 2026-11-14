@@ -16,6 +16,7 @@ from app.state import TERMINAL
 EXECUTORS = {
     "photo_pipe",
     "wan_video",
+    "wan_svi_video",
     "echomimic",
     "chatterbox",
     "fish_speech",
@@ -57,6 +58,24 @@ def positive(value):
 
 def parse_line(line, run):
     line = ANSI.sub("", line).strip()
+    if run.executor_type == "wan_svi_video":
+        # Each expert reports its own 9/11-step bar. Neither is a complete
+        # twenty-step job counter; use truthful phase observations instead.
+        stages = {
+            "verifying frozen SVI inputs": "preparing",
+            "encoding prompt": "preparing",
+            "encoding original anchor": "preparing",
+            "loading high expert": "preparing",
+            "sampling high expert": "generating",
+            "loading low expert": "generating",
+            "sampling low expert": "generating",
+            "decoding frames": "finishing",
+            "complete": "finishing",
+        }
+        prefix = "video.stage: "
+        if line.startswith(prefix) and line[len(prefix) :] in stages:
+            return {"phase": stages[line[len(prefix) :]]}
+        return None
     if run.executor_type == "timeline_render":
         if line in {"timeline.stage: inspecting", "timeline.stage: mixing"}:
             return {"phase": "preparing"}

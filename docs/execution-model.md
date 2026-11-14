@@ -41,6 +41,15 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+The qualified Linux SVI Pro profile uses the same queued media lifecycle and
+owned native process manager. A continuous scene freezes its original image,
+81-frame/15-fps recipe and orientation-bound motion continuation. Explicit scene
+cuts reset that context. Video, Chat, agents and Studio resolve the same selected
+model; stale/unavailable choices refuse instead of changing engines. Setup is a
+normal administrator-owned Task, and qualification alone does not prepare an
+engine. Native Stop, deadlines, claims and resource recovery remain mandatory.
+[Actual qualification and rollout](plans/long-video-temporal-quality.md).
+
 Decision runtime/provider preparation retries transient database contention under
 its original claim, Stop and deadline. Its unstarted completion stream leaves
 the DB transaction before network I/O; inference and tool execution are never

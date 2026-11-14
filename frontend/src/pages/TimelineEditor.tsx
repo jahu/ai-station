@@ -1093,10 +1093,11 @@ function Editor() {
                 value={manifest.fps}
                 onChange={(e) =>
                   setManifest((m) =>
-                    retime(m, Number(e.target.value) as 24 | 25),
+                    retime(m, Number(e.target.value) as 15 | 24 | 25),
                   )
                 }
               >
+                <option value={15}>15 fps</option>
                 <option value={24}>24 fps</option>
                 <option value={25}>25 fps</option>
               </select>

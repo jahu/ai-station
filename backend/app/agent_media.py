@@ -606,7 +606,11 @@ class AgentMediaExecutor:
             elif definition.media.kind == "video" and definition.media.request.model_id:
                 from app.video_models import profile_for
 
-                profile = profile_for(session, definition.media.request.model_id)
+                profile = profile_for(
+                    session,
+                    definition.media.request.model_id,
+                    requested_geometry=(definition.media.request.width, definition.media.request.height),
+                )
             elif definition.media.kind == "speech" and definition.media.request.model_id:
                 from app.audio_models import profile_for
 
