@@ -42,11 +42,21 @@ tests then passed before the complete rerun. Runtime/inference code was unchange
 
 Native admission flags are enabled for this fixed profile. Source/engine identity,
 required inputs, resource checks and permissions still apply. Qualification does
-not install a model or make a station ready. Remaining delivery is a preserving
-station update, fresh ordinary administrator `runtime_setup` and shared model
-binding, then actual normal conversation-to-native generation and final review.
-Do not copy private preparation receipts/history or reuse motion under a changed
-implementation identity. The v0.6.2 installers do not contain this development
+not install a model or make a station ready. The preserving local station update
+and ordinary administrator setup are now complete, with a fresh owned SDK and
+shared model binding. No private preparation receipts or execution history were
+copied. Legacy development storage permissions initially stopped setup; only the
+two owned storage directories were made private, then the same setup Task resumed
+successfully without weakening the guard.
+
+An actual normal Auto conversation loaded the selected local 9B LLM, chose the
+selected SVI model/format, stopped its owned LLM before GPU generation, composed
+the requested five-second landscape result and reloaded the LLM for its final
+answer. The same scoped UI projection returns the finished video artifact.
+All 75 frames decode at exact 15-fps timestamps and 832×480; sampled views retain
+the car, harbor and gentle camera movement. The earlier 10/20-second portfolio
+remains the longer-video qualification. Existing user settings, accounts and
+history were retained. Do not reuse motion under a changed implementation identity. The v0.6.2 installers do not contain this development
 profile. No sexual-content or Windows-native inference test is claimed.
 
 Private evidence: `data/acceptance/long-video-temporal-quality-20261113/`, especially
