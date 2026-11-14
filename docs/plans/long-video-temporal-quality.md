@@ -1,5 +1,67 @@
 # Longer video: temporal quality qualification
 
+## Current delivery state — 2026-11-14
+
+The fixed Linux SVI Pro Q4 profile is qualified for 832×480 landscape and 480×832
+portrait, with 81-frame native windows at 15 fps, 20 steps and CFG 5. It keeps the
+original image plus four-frame recurrent motion context. This is a distinct owned
+model/engine, not an enlarged or relabeled 5B window. The earlier 5B larger-window
+gate remains closed. The sections below retain the chronological investigation;
+their earlier pending/closed observations are historical.
+
+Actual complete results include a 20-second landscape human scene and two
+10-second portrait seeds, followed by a 10-second landscape car scene. Full-film
+sampled views, native joins and complete CPU decodes retain recognizable people,
+clothing, vehicle geometry and setting. Actual movement continues across native
+windows. The owner reports visible improvement in the first portrait. Portrait
+feet can leave frame and the second seed misses its final return-to-camera action;
+these are documented model limits, not silently reported perfect adherence.
+
+The three 10-second workflows each take about 1 h 46 min on one RTX 3060 12 GB;
+the 20-second result took 3 h 32 min. The workstation has 32 GB RAM and two cards,
+but this is not a dual-GPU acceleration result. The native job reserves an
+18-GiB zero-swap memory scope. Resolution/detail remain 480p-class.
+
+Actual MMAudio generation produced 441,000 mono 44.1-kHz samples for the car film;
+the normal preview has 150 decoded frames at 15 fps and ten seconds of AAC.
+There are no near-clipped PCM samples. Existing CPU composition re-encodes H.264;
+the preview's measured mean PSNR is 43.72 dB, not bit-exact stream copying.
+Subjective listening is still unclaimed. The owned CPU editor also completed a
+four-second/60-frame test with a PCM test tone, separately from generated sound.
+
+Final executable source `22a26cda` passed the complete `scripts/check.sh` with the
+already installed pytest-xdist (four workers, `--dist=loadfile`): **10,233 passed,
+25 skipped, zero failures/errors**, in 38 min 31 s. All **1,276 frontend tests**,
+format/lint/type/build, both Compose configurations, the exact Docker build and
+its isolated API/separate fake-worker/SSE/restart checks passed. Earlier failed
+or interrupted invocations are not counted as passes. The final deadline-test
+failure was reproduced: a 0.6-second budget correctly expired before dispatch
+under load. A test-only repair includes controlled preparation time, preserves
+the exact native deadline and strengthens owned cleanup assertions; 54 focused
+tests then passed before the complete rerun. Runtime/inference code was unchanged.
+
+Native admission flags are enabled for this fixed profile. Source/engine identity,
+required inputs, resource checks and permissions still apply. Qualification does
+not install a model or make a station ready. Remaining delivery is a preserving
+station update, fresh ordinary administrator `runtime_setup` and shared model
+binding, then actual normal conversation-to-native generation and final review.
+Do not copy private preparation receipts/history or reuse motion under a changed
+implementation identity. The v0.6.2 installers do not contain this development
+profile. No sexual-content or Windows-native inference test is claimed.
+
+Private evidence: `data/acceptance/long-video-temporal-quality-20261113/`, especially
+`svi-profile-qualification-decision.private.json`, the complete film reviews,
+`svi-managed-qualification/portrait-film-probe.private.json`, the final JUnit
+report and `svi-deadline-test-only-source-proof.private.json`. No private media
+or credentials are published in this repository.
+
+Six of the full-suite skips came from Node being absent from the validation
+process's PATH. The existing project-local Node 22 was then supplied to those
+exact six ordinary static-site cases: all passed in 3.59 s, with a separate JUnit
+report. No dependency was installed and no expensive integration was enabled.
+The remaining skips require explicit opt-in or a native platform unavailable in
+this Linux test environment.
+
 ## Problem and evidence — 2026-11-13
 
 The current Wan 2.2 TI2V 5B adapter generates at most 81 frames per invocation

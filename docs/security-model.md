@@ -676,8 +676,8 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
-The staged SVI native operations remain unavailable behind their qualification
-gate. Their closed request accepts only an opaque owned engine and bounded
+The fixed Linux SVI native operations passed their qualification gate. Their
+closed request still accepts only an opaque owned engine and bounded
 owned image/motion identities, never SDK paths, a graph or command arguments.
 The offline child independently checks its immutable inputs, original-anchor
 context, implementation identity, 18-GiB zero-swap scope and absolute deadline.
@@ -2151,16 +2151,18 @@ previews use authenticated local artifact routes, not untrusted remote thumbnail
 Imported references remain distinct from the requested edited result. See
 [the chat/image contract](plans/chat-web-images-and-clipboard.md).
 
-The staged recurrent portrait format is a finite, separately qualified 480×832
+The recurrent portrait format is a finite, separately qualified 480×832
 geometry. Its F32 motion identity/shape cannot consume a landscape checkpoint,
 and a supported engine alone does not authorize that orientation. Typed native
 selection and public model/workspace/agent/Studio requests bind the same exact
 format; cached observations cannot cross orientations. Existing definitions and
 frozen requests are not rewritten to gain admission. Native process ownership,
 source hashes, memory scope and explicit deadlines remain mandatory. Both the
-engine and separate portrait qualification gates remain false while real visual
-qualification and full local checks continue. Legacy landscape serialization
-remains unchanged; no production portrait admission is claimed.
+engine and separate portrait qualification gates now admit this fixed Linux
+profile after actual portrait/multiple-seed/nonhuman checks and the complete
+local suite. Installed-engine/source/resource checks still apply to every request;
+qualification does not activate an engine or clone a private setup identity.
+Legacy landscape serialization remains unchanged.
 
 Conversation video planning can choose only a captured registered-model alias.
 Its component/engine identity is rechecked before dispatch, with the same native

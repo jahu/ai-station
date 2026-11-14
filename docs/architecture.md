@@ -596,14 +596,14 @@ additional agent execution engine or model download is introduced.
 # Architecture
 
 The [long-video investigation](plans/long-video-temporal-quality.md) now includes
-closed SVI Pro context primitives, separate from the operational 5B adapter.
+qualified fixed SVI Pro context primitives, separate from the 5B adapter.
 They preserve the original anchor and one preceding motion latent, validate the
 16-channel checkpoint identity, and map the complete fixed Pro adapter against
 logical GGUF weight geometry. Typed native dispatch and a shared-worker adapter
-remain behind qualification. The fixed `/v1/setup/svi` protocol and the existing
+retain native qualification and readiness checks. The fixed `/v1/setup/svi` protocol and the existing
 administrator-owned runtime preparation Tasks reuse verified downloads, offline
 assembly, immutable process journals, Stop and lease recovery. Activation and new
-installation remain closed by the same native qualification flag; no caller can
+installation use the same qualified native profile; no caller can
 choose a graph, command, dependency or model path. Successful setup registers one
 shared six-component model binding without a private setup Run identity; workload
 consent is separate from license acceptance. CPU composition resolves the exact
@@ -616,9 +616,10 @@ then binds new producers while reusing independent completed scenes. Translation
 binds the original image and frozen recipe; a derived motion binding cannot
 invalidate its approved text. Workspace/agent/Studio model selection preserves
 the actual recipe and required anchor. Sound/editor contracts retain native
-15-fps timing instead of silently changing it to 24 fps. Real native inference,
-long-film quality and final whole-source checks remain admission gates; native
-qualification stays closed. The common model-install Run can recheck the complete SVI metadata/engine
+15-fps timing instead of silently changing it to 24 fps. Actual Linux inference,
+multiple-seed portrait/nonhuman footage and complete local checks now qualify
+this fixed profile, with documented model limits. Preserving production setup
+and rollout are separate from that qualification. The common model-install Run can recheck the complete SVI metadata/engine
 binding with claim fencing and Stop, without misclassifying its GGUF as an LLM.
 
 Creative Studio development follows [the creative production contract](plans/creative-studio.md).
@@ -1943,16 +1944,16 @@ an original downloaded image as the completed edit. Clipboard attachment events
 reuse the existing browser attachment pipeline. See
 [the 0.6.1 contract](plans/chat-web-images-and-clipboard.md).
 
-Staged recurrent portrait support adds a second finite generation geometry over
+Qualified recurrent portrait support adds a second finite generation geometry over
 the same owned SVI engine and six-component binding. Typed capabilities,
 orientation-bound motion conditioning/checkpoints, immutable timelines and
 model-aware workspace/agent controls now agree on the requested format. Studio
 requests that same explicit portrait capability. A cached landscape observation
 cannot authorize portrait, and saved unsupported choices remain visible for
 correction. It adds no execution service or arbitrary model graph. Both native
-qualification gates remain closed pending complete local checks and real visual
-qualification; staged public/UI implementation does not imply production
-availability. See the [long-video plan](plans/long-video-temporal-quality.md).
+qualification gates now admit this fixed Linux profile after complete local
+checks and real visual qualification. A matching installed engine and current
+resource/source admission are still required. See the [long-video plan](plans/long-video-temporal-quality.md).
 
 The staged conversation bridge freezes at most sixteen registered video choices
 from metadata at enqueue, including an explicitly selected choice first. Local

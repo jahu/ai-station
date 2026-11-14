@@ -410,6 +410,8 @@ hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB
 | **Edit · two references** | Same model/size/steps; ordered scene and person references | **3 min 10 s** |
 | **Generate two video shots in parallel** | Wan2.2 5B; 2 × 2-second shots; 1280×704; 20 steps; separate GPUs | **7 min 58 s** for the full four-second film and composition. |
 | **Generate a continuous one-minute film** | Wan2.2 5B; 1280×704; 24 fps; 20 steps; 18 sequential windows; bounded host RAM | **3 h 16 min** for the complete 1,440-frame workflow. |
+| **Steadier reference-based video · development profile** | Wan 2.2 SVI Pro Q4; two 10-second portrait seeds at 480×832 and a 10-second landscape car scene at 832×480; 15 fps; 20 steps; one GPU | **About 1 h 46 min per film**. Subject/object and scene remain recognizable in inspected frames across native-window joins. |
+| **Longer recurrent video · development profile** | Same SVI Pro profile; complete 20-second landscape scene; 832×480; 15 fps; one GPU | **3 h 32 min**, 300 decoded frames. |
 | **Create a one-minute speaking avatar** | EchoMimic V3; 384 px; 8 steps; 24 windows; one GPU; 60-second recording | **48 min 18 s**, including fresh source-speech preparation and composition. |
 | **Create a whole-recording avatar with more detail** | Sonic; native 512×768; 25 steps; both GPUs; complete 40.08-second recording | **2 h 27 min 18 s** end to end; 1,002 frames at 25 fps. Owner confirms substantially improved quality; not native HD. |
 
@@ -423,20 +425,20 @@ color/facial-detail limitations. The newer Sonic result received positive owner
 feedback; duration success alone is not a promise of perfect visual quality.
 [Method, exact scope and evidence](docs/benchmarks.md).
 
-Longer-film consistency remains under active qualification. The
-[current investigation](docs/plans/long-video-temporal-quality.md) records complete
-10/20-second tests and experimental recurrent-model results; these are not a
-claim that every duration, motion or model is production-ready.
-The staged SVI Pro path uses normal Tasks and owned runtime setup. An actual
-20-second, 300-frame landscape film completed in **3 h 32 min** on one RTX 3060
-12 GB, at 832×480 and 15 fps. Sampled frames retain the subject and scene; this
-does not yet establish complete motion quality across subjects and seeds.
-Model-specific controls keep the original image, resolution and sampling recipe
-together. Longer requests retain that anchor and verified motion checkpoints.
-The staged 480×832 portrait option is undergoing separate real generation tests.
-Existing CPU timeline editing passed with the managed environment; generated
-sound qualification remains in progress. The current release and installed
-production station do not yet enable this engine.
+**Steadier longer clips are coming in the next release.** The Linux SVI Pro
+development profile keeps the original image and motion context across windows,
+improving subject consistency beyond a short clip. Actual qualification includes
+a complete 20-second landscape film, two 10-second moving-person portrait seeds
+and a 10-second car scene. The owner reports visible improvement in the first
+portrait. Generated MMAudio sound and its 15-fps preview also passed technical
+checks; the CPU editor was tested with the managed environment.
+
+This favors consistency over speed: the measurements above use one 12 GB GPU.
+Native detail is still 480p-class, some framing and secondary actions remain
+imperfect, and these examples cannot guarantee every future result. Chat,
+Video, agents and Studio share the selected model and format through ordinary
+Tasks and Runs. The v0.6.2 installers do not include this development profile.
+[Setup, exact qualification and remaining delivery checks](docs/plans/long-video-temporal-quality.md).
 
 ## 🚀 Get started
 
