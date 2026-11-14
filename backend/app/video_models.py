@@ -18,10 +18,24 @@ router = APIRouter(prefix="/api/video/models", tags=["video"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
-def recurrent_recipe():
-    from app.svi_executor import GEOMETRY, RAM_MIB
+def recurrent_recipe(report=None):
+    from app.svi_executor import RAM_MIB, geometry
 
-    return {"label": "SVI Pro", **GEOMETRY, "image_required": True, "memory_mib": RAM_MIB}
+    return {
+        "label": "SVI Pro",
+        **geometry(report),
+        "image_required": True,
+        "memory_mib": RAM_MIB,
+        **(
+            {
+                "resolutions": [
+                    {"width": p["width"], "height": p["height"]} for p in report["generation_profiles"]
+                ]
+            }
+            if report and "generation_profiles" in report
+            else {}
+        ),
+    }
 
 
 def frozen_model(session, identity, *, recheck=False):
@@ -75,20 +89,33 @@ def same_model(first, second):
     )
 
 
-def profile_for(session, identity, observed=None, *, recheck=False):
+def profile_for(session, identity, observed=None, *, recheck=False, requested_geometry=None):
     if identity is None:
         from app.video import capabilities
 
         return observed if observed is not None else capabilities()
     model = frozen_model(session, identity, recheck=recheck)
     recurrent = model["binding"]["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE
+    selected = None
     if recurrent:
         from app.executors import EXECUTORS
         from app.svi_executor import NAME
 
         if NAME not in EXECUTORS:
             raise HTTPException(409, "Recurrent video execution is still being qualified")
+        from app.svi_executor import generation_profile, geometry
+
+        try:
+            selected = geometry(
+                None
+                if requested_geometry is None
+                else dict(zip(("width", "height"), requested_geometry, strict=True))
+            )
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, "Choose a fixed recurrent video format") from exc
     cached = observed is not None and same_model(observed.get("video_model"), model)
+    if cached and recurrent:
+        cached = all(observed.get(key) == selected[key] for key in ("width", "height"))
     if cached and not recurrent:
         return observed
     try:
@@ -102,6 +129,11 @@ def profile_for(session, identity, observed=None, *, recheck=False):
                     **({} if recurrent else {"checkpoint": model["checkpoint"]}),
                     "managed_runtime": model["binding"]["managed_runtime"],
                     "permissions": ["filesystem_read"],
+                    **(
+                        {"generation_profile": "portrait"}
+                        if recurrent and generation_profile(selected) == "portrait"
+                        else {}
+                    ),
                 },
             )
         )
@@ -112,7 +144,7 @@ def profile_for(session, identity, observed=None, *, recheck=False):
             409, report.get("reason") or "The selected video model's fixed engine is unavailable"
         )
     if recurrent:
-        from app.svi_executor import GEOMETRY, RAM_MIB, checked_recipe
+        from app.svi_executor import RAM_MIB, checked_recipe
 
         try:
             if (
@@ -124,13 +156,34 @@ def profile_for(session, identity, observed=None, *, recheck=False):
             checked_recipe(
                 {
                     **report,
-                    "frames": GEOMETRY["frames"],
+                    "frames": selected["frames"],
                     "managed_video_gpu_indices": report.get("eligible_gpu_indices"),
                 },
                 {"ram_mib": RAM_MIB},
             )
             if report.get("memory_estimate_mib") != RAM_MIB:
                 raise ValueError("The recurrent resource profile changed")
+            if any(report.get(key) != selected[key] for key in ("width", "height")):
+                raise ValueError("The recurrent output format differs from its requested profile")
+            profiles = report.get("generation_profiles")
+            if profiles is not None:
+                allowed = [
+                    {"id": "landscape", "width": 832, "height": 480},
+                    {"id": "portrait", "width": 480, "height": 832},
+                ]
+                if (
+                    not isinstance(profiles, list)
+                    or not 1 <= len(profiles) <= 2
+                    or any(p not in allowed for p in profiles)
+                    or len({p["id"] for p in profiles}) != len(profiles)
+                    or not any(
+                        p["width"] == selected["width"] and p["height"] == selected["height"]
+                        for p in profiles
+                    )
+                ):
+                    raise ValueError("The advertised recurrent formats changed")
+            elif generation_profile(selected) != "landscape":
+                raise ValueError("Portrait requires an explicitly qualified native format")
         except ValueError as exc:
             raise HTTPException(409, "The recurrent video recipe changed; refresh its capabilities") from exc
     return {
@@ -140,7 +193,7 @@ def profile_for(session, identity, observed=None, *, recheck=False):
         **(
             {
                 "configuration_source": "managed",
-                "operation_recipe": recurrent_recipe(),
+                "operation_recipe": recurrent_recipe(report),
             }
             if recurrent
             else {}
@@ -156,10 +209,11 @@ def choices(session: DB):
     ):
         if not isinstance(row.metadata_json.get("video"), dict):
             continue
+        current_profile = None
         try:
             model = frozen_model(session, row.id)
             if model["binding"]["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE:
-                profile_for(session, row.id)
+                current_profile = profile_for(session, row.id)
             available = True
         except HTTPException:
             available = False
@@ -172,8 +226,20 @@ def choices(session: DB):
                 "name": row.name,
                 "available": available,
                 "cpu_offload": True,
-                **({"operation_recipe": recurrent_recipe()} if recurrent and available else {}),
-                "profile": "832×480 · 15 fps · 12 GiB GPU · 24 GiB RAM"
+                **(
+                    {"operation_recipe": current_profile["operation_recipe"]}
+                    if recurrent and available
+                    else {}
+                ),
+                "profile": (
+                    " / ".join(
+                        f"{size['width']}×{size['height']}"
+                        for size in (current_profile or {})
+                        .get("operation_recipe", {})
+                        .get("resolutions", [{"width": 832, "height": 480}])
+                    )
+                    + " · 15 fps · 12 GiB GPU · 24 GiB RAM"
+                )
                 if recurrent
                 else "1280×704 · 12 GiB GPU · 24 GiB RAM",
             }

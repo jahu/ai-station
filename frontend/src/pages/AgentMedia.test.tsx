@@ -1151,9 +1151,13 @@ it("shows the stored Juggernaut negative prompt and clears incompatible options 
   expect(screen.queryByLabelText("Agent negative prompt")).toBeNull();
 });
 
-it.each([false, true])(
-  "keeps an installed video choice and its recipe in the agent scope (recurrent=%s)",
-  async (recurrent) => {
+it.each([
+  [false, false],
+  [true, false],
+  [true, true],
+])(
+  "keeps an installed video choice and its recipe in the agent scope (recurrent=%s, portrait=%s)",
+  async (recurrent, portrait) => {
     const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
     const recipe = recurrent
       ? {
@@ -1166,6 +1170,14 @@ it.each([false, true])(
           cfg: 5,
           image_required: true,
           memory_mib: 18432,
+          ...(portrait
+            ? {
+                resolutions: [
+                  { width: 832, height: 480 },
+                  { width: 480, height: 832 },
+                ],
+              }
+            : {}),
         }
       : undefined;
     vi.stubGlobal(
@@ -1239,7 +1251,23 @@ it.each([false, true])(
       expect(
         (screen.getByLabelText("Agent video resolution") as HTMLSelectElement)
           .disabled,
-      ).toBe(true);
+      ).toBe(!portrait);
+      if (portrait) {
+        const before = JSON.parse(
+          screen.getByTestId("video-scope").textContent!,
+        );
+        fireEvent.change(screen.getByLabelText("Agent video resolution"), {
+          target: { value: "480x832" },
+        });
+        const after = JSON.parse(
+          screen.getByTestId("video-scope").textContent!,
+        );
+        expect(after).toEqual({
+          ...before,
+          request: { ...before.request, width: 480, height: 832 },
+        });
+        expect(screen.queryByRole("option", { name: /1280 × 704/ })).toBeNull();
+      }
       expect(
         (screen.getByLabelText("Agent video steps") as HTMLInputElement)
           .disabled,

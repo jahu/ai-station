@@ -805,9 +805,9 @@ no-op Apply button. Other video models preserve their prior two-/four-hour hints
 
 ## Next implementation: finite portrait generation without losing the reference
 
-Status: native portrait selection/dispatch is staged behind a separate closed
-qualification gate; public model/UI selection remains unimplemented and the new
-format is unqualified. The current native SVI job passes
+Status: finite native, public model, workspace/agent/Studio and immutable-plan
+integration is staged behind separate closed qualification gates. The new format
+has not passed actual GPU qualification. The original landscape native SVI job passes
 its original reference through a center crop into fixed 832×480 conditioning.
 A portrait/full-body input can therefore lose its head, feet or other important
 context before diffusion. The completed coastal reference is landscape; it does
@@ -897,4 +897,42 @@ hardware, request serialization, owned dispatch and cross-orientation refusal.
 The actual CPU normalized-core proof was repeated for the current context source
 and remains error 0.0 for both initial/continuation orientations. These checks
 load no model and do not qualify actual portrait GPU inference. Public model,
-workspace/agent/Studio and immutable-plan integration remain outstanding.
+workspace/agent/Studio and immutable-plan integration were the next stage; their
+implementation and current verification are recorded below.
+
+
+## Finite portrait product threading and validation
+
+The staged backend derives only 832×480 or 480×832 from the actual request and
+asks the selected native model for that exact generation profile. It checks the
+returned orientation, fixed sampling/resource recipe and advertised finite format
+catalog. A cached landscape observation cannot authorize portrait. Existing six-
+component model definitions keep their original binding. New Runs and immutable
+film plans freeze the selected output geometry; predecessor motion must use the
+same orientation before any native dispatch or context binding.
+
+Video and agent editors show only the selected model's offered formats. Explicit
+saved unsupported formats remain visible for correction instead of being silently
+replaced. Video refuses submission until that choice is repaired. Agent activation
+and natural-language media proposals validate the offered format through the
+existing backend authority. Studio asks for an admitted portrait profile for a
+portrait material, retaining the original image and fixed 15-fps composition.
+
+Current staged checks passed 60 backend model/public-job cases (including both
+agent orientations and a portrait Studio request), and 41 workspace/agent UI
+cases. Public short/ten-second portrait tests use explicitly fake native model
+sampling and actual CPU MP4 encoding/composition: they verify 81/150 decoded
+480×832 frames and exact presentation timing, not generated visual quality.
+Lint, TypeScript checking and the production frontend build passed; existing lint
+warnings remain. All 43 source/motion checks passed, including cross-orientation
+refusal before context binding; the complete frontend suite passed 1,274 tests
+across 195 files. Both native qualification flags remain false; nothing here
+claims actual portrait inference or a production rollout.
+
+The earlier full Python run at immutable `8e84c524` failed at the public desktop
+health identity test. An interrupted failure-report teardown also obscured the
+normal traceback. The individual test, its nearest 49-test group and the 91-test
+desktop group passed separately; this does not waive the full-run failure. A
+failure-capturing replay of the original 2,613-test prefix is running against the
+unchanged source to identify the actual order-dependent fault. The full-source
+check and draft integration PR remain unqualified until this is resolved.

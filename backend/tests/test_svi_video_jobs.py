@@ -37,16 +37,16 @@ def body(source, **changes):
     }
 
 
-def write_clip(path, color):
+def write_clip(path, color, *, width=832, height=480):
     path.parent.mkdir(parents=True, exist_ok=True)
     with av.open(str(path), "w") as target:
         stream = target.add_stream("libx264", rate=15)
-        stream.width, stream.height = GEOMETRY["width"], GEOMETRY["height"]
+        stream.width, stream.height = width, height
         stream.pix_fmt = "yuv420p"
         stream.codec_context.thread_count = 2
         stream.options = {"preset": "ultrafast", "crf": "0"}
         for n in range(81):
-            frame = av.VideoFrame(GEOMETRY["width"], GEOMETRY["height"], "yuv420p")
+            frame = av.VideoFrame(width, height, "yuv420p")
             for plane in frame.planes:
                 plane.update(bytes([color + n % 10]) * plane.buffer_size)
             for packet in stream.encode(frame):
@@ -56,7 +56,7 @@ def write_clip(path, color):
 
 
 @pytest.fixture
-def bridge(monkeypatch):
+def bridge(monkeypatch, request):
     from ai_station_runner.media_compose_job import compose
 
     runtime = {"profile": PROFILE, "manifest_sha256": "a" * 64, "environment_id": "b" * 64}
@@ -70,6 +70,15 @@ def bridge(monkeypatch):
         "managed_runtime": runtime,
         "eligible_gpu_indices": [7],
     }
+    if getattr(request, "param", "landscape") == "portrait":
+        profile.update(
+            width=480,
+            height=832,
+            generation_profiles=[
+                {"id": "landscape", "width": 832, "height": 480},
+                {"id": "portrait", "width": 480, "height": 832},
+            ],
+        )
     monkeypatch.setattr(video, "capabilities", lambda: profile)
     monkeypatch.setattr(media_jobs, "capabilities", lambda: profile)
 
@@ -80,8 +89,13 @@ def bridge(monkeypatch):
                 result = super().request(method, path, payload)
                 rid = payload["run_id"]
                 base = root / f"artifacts/{rid[:2]}/{rid[2:4]}/{rid}"
-                write_clip(base.with_suffix(".mp4"), 30 + len(self.starts) * 20)
                 report = json.loads(base.with_suffix(".json").read_text())
+                write_clip(
+                    base.with_suffix(".mp4"),
+                    30 + len(self.starts) * 20,
+                    width=report["width"],
+                    height=report["height"],
+                )
                 report["output_sha256"] = hashlib.sha256(base.with_suffix(".mp4").read_bytes()).hexdigest()
                 base.with_suffix(".json").write_text(json.dumps(report))
                 return result
@@ -405,6 +419,7 @@ def test_recurrent_prompt_preparation_is_shared_reviewed_and_survives_motion_bin
         assert all(call["prompt"] == accepted["prompt"] for call in bridge.fake.starts)
 
 
+@pytest.mark.parametrize("bridge", ["landscape", "portrait"], indirect=True)
 def test_selected_recurrent_agent_completes_through_shared_job_without_changing_its_budget(
     bridge, monkeypatch
 ):
@@ -420,7 +435,12 @@ def test_selected_recurrent_agent_completes_through_shared_job_without_changing_
     }
     monkeypatch.setattr("app.video_models.profile_for", lambda *args, **kwargs: profile)
     with TestClient(app) as api:
-        request = body(bridge.source, model_id=identity)
+        request = body(
+            bridge.source,
+            model_id=identity,
+            width=profile["width"],
+            height=profile["height"],
+        )
         request.pop("client_request_id")
         agent = create(api, kind="video", request=request, maximum_runtime=14400)
         root = start(api, agent)
@@ -438,6 +458,10 @@ def test_selected_recurrent_agent_completes_through_shared_job_without_changing_
             assert len(video) == 2 and all(r.agent_id == agent["id"] for r in video)
             assert len({r.parameters["execution_deadline_at"] for r in video}) == 1
             assert all(r.parameters["video_model"] == profile["video_model"] for r in video)
+            assert all(
+                (r.parameters["width"], r.parameters["height"]) == (profile["width"], profile["height"])
+                for r in video
+            )
             assert not active_locks(session)
 
 
@@ -479,3 +503,86 @@ def test_studio_shot_uses_model_recipe_and_refuses_missing_anchor_or_unsupported
                     r.parameters["width"] == 832 and r.parameters["height"] == 480 for r in parts
                 )
                 assert all(r.parameters["image_artifact_id"] == bridge.source for r in parts)
+
+
+@pytest.mark.parametrize("bridge", ["portrait"], indirect=True)
+def test_studio_portrait_requests_the_admitted_profile_and_preserves_film_geometry(bridge, monkeypatch):
+    from app.video_models import recurrent_recipe
+    from test_studio_materials import board, material
+    from test_studio_shots import submit
+
+    calls = []
+
+    def profile_for(*args, **kwargs):
+        calls.append(kwargs.get("requested_geometry"))
+        return {**bridge.profile, "operation_recipe": recurrent_recipe(bridge.profile)}
+
+    monkeypatch.setattr("app.video_models.profile_for", profile_for)
+    with TestClient(app) as api:
+        row = material(api, options={"audio": "silent", "aspect": "portrait"})
+        storyboard = board("silent")
+        storyboard["scenes"][0]["reference_artifact_ids"] = [bridge.source]
+        saved = api.post(
+            f"/api/studio/materials/{row['id']}/revisions",
+            json={"client_request_id": str(uuid4()), "expected_version": 1, "storyboard": storyboard},
+        )
+        assert saved.status_code == 201, saved.text
+        result = submit(api, row, saved.json())
+        assert result.status_code == 202, result.text
+        assert calls and all(value == (480, 832) for value in calls)
+        with session_factory()() as session:
+            parts = list(
+                session.scalars(
+                    select(Run).where(
+                        Run.task_id == result.json()["task_id"],
+                        Run.executor_type == NAME,
+                    )
+                )
+            )
+            assert parts and all(
+                (r.parameters["width"], r.parameters["height"]) == (480, 832)
+                and r.parameters["image_artifact_id"] == bridge.source
+                for r in parts
+            )
+
+
+@pytest.mark.parametrize("bridge", ["portrait"], indirect=True)
+@pytest.mark.parametrize("long", [False, True])
+def test_qualified_portrait_public_request_keeps_native_geometry_and_exact_film_timing(bridge, long):
+    with TestClient(app) as api:
+        request = body(bridge.source, width=480, height=832)
+        if not long:
+            request.pop("duration_seconds")
+            request.pop("client_request_id")
+            request["frames"] = 81
+        created = api.post("/api/media/jobs/video" if long else "/api/video/runs", json=request)
+        assert created.status_code == 202, created.text
+        for _ in range(3 if long else 1):
+            assert work()
+        if long:
+            result = api.get("/api/media/jobs/" + created.json()["task_id"]).json()
+            assert result["status"] == "succeeded", result
+            with session_factory()() as db:
+                artifact = db.get(Artifact, result["final_artifact_id"])
+                relative = artifact.relative_path
+                metadata = artifact.metadata_json
+        else:
+            result = api.get("/api/runs/" + created.json()["id"]).json()
+            assert result["status"] == "succeeded", result
+            with session_factory()() as db:
+                artifact = db.scalar(
+                    select(Artifact).where(
+                        Artifact.run_id == created.json()["id"], Artifact.artifact_type == "video"
+                    )
+                )
+                relative = artifact.relative_path
+                metadata = artifact.metadata_json
+        assert (metadata["width"], metadata["height"], metadata["fps"]) == (480, 832, 15)
+        with av.open(str(get_settings().data_dir / relative)) as film:
+            frames = list(film.decode(video=0))
+            assert len(frames) == (150 if long else 81)
+            assert all((frame.width, frame.height) == (480, 832) for frame in frames)
+            assert float(frames[-1].time) == pytest.approx((len(frames) - 1) / 15)
+        assert all(start["generation_profile"] == "portrait" for start in bridge.fake.starts)
+        if long:
+            assert bridge.fake.starts[1]["previous_motion"] is not None

@@ -97,6 +97,21 @@ def owned_pair(session):
     return SimpleNamespace(source=source, previous=previous, video=video, motion=motion, current=current)
 
 
+@pytest.mark.parametrize("current_portrait", [False, True])
+def test_continuation_rejects_the_other_orientation_before_binding_motion(session, pair, current_portrait):
+    changed = pair.current if current_portrait else pair.previous
+    changed.parameters = {**changed.parameters, "width": 480, "height": 832}
+    with pytest.raises(ValueError, match="same owned anchor"):
+        SviExecutor().validate_inputs(session, pair.current)
+    assert "previous_motion" not in pair.current.parameters
+    assert not session.scalar(
+        select(RunEvent.id).where(
+            RunEvent.run_id == pair.current.id,
+            RunEvent.event_type == "motion.context.bound",
+        )
+    )
+
+
 def test_completed_owned_motion_is_frozen_once_with_lineage_and_event(session, pair):
     adapter = SviExecutor()
     adapter.validate_inputs(session, pair.current)

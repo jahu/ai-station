@@ -93,7 +93,9 @@ def publish_video(
     if body.model_id:
         from app.video_models import profile_for
 
-        observed_profile = profile_for(session, body.model_id, observed_profile)
+        observed_profile = profile_for(
+            session, body.model_id, observed_profile, requested_geometry=(body.width, body.height)
+        )
     recurrent = observed_profile.get("backend") == "wan22-svi-pro-q4"
     if recurrent:
         from app.svi_runs import checked_profile

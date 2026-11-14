@@ -83,6 +83,7 @@ def catalog(session, *, identifier=None):
                             "cpu_offload": True,
                             "minimum_vram_mib": 12288,
                             "minimum_physical_ram_mib": 24576,
+                            **({"resolutions": recipe["resolutions"]} if "resolutions" in recipe else {}),
                         }
                     else:
                         item = {
@@ -121,9 +122,12 @@ def validate_selection(session, media, offered):
     if media.kind == "video":
         request = media.request
         if matches[0].get("image_required"):
+            selected = matches[0]
+            resolutions = selected.get(
+                "resolutions", [{"width": selected["width"], "height": selected["height"]}]
+            )
             if (
-                request.width != matches[0]["width"]
-                or request.height != matches[0]["height"]
+                {"width": request.width, "height": request.height} not in resolutions
                 or request.steps != matches[0]["steps"]
                 or request.cfg != matches[0]["cfg"]
                 or request.memory_profile != "default"

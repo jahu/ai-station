@@ -1,4 +1,7 @@
-import { boundedResolutions } from "../components/media/video-geometry";
+import {
+  boundedResolutions,
+  recipeResolutions,
+} from "../components/media/video-geometry";
 import CreativeWorkspace from "../components/creative/CreativeWorkspace";
 import {
   useCreative,
@@ -187,6 +190,9 @@ function SceneForm({
           : (saved.frames ?? "49")),
     ),
   );
+  const [explicitResolution, setExplicitResolution] = useState(
+    !!(saved.resolution || (saved.width && saved.height)),
+  );
   const [compositionMode, setCompositionMode] = useState<
     "continuous" | "shots"
   >(
@@ -239,6 +245,7 @@ function SceneForm({
       ),
   });
   const recipe = capability.data?.operation_recipe;
+  const recipeFormats = recipeResolutions(capability.data);
   const mode = recipe?.image_required ? "animate" : modeChoice;
   const duration =
     recipe && !durationChoice.endsWith("s")
@@ -248,10 +255,13 @@ function SceneForm({
   const fixedResolutions = boundedResolutions(capability.data);
   const fixedProfile = !!recipe || managed || profileChoice === "bounded_11g";
   const resolution = recipe
-    ? `${recipe.width}x${recipe.height}`
+    ? recipeFormats.includes(resolutionChoice) || explicitResolution
+      ? resolutionChoice
+      : `${recipe.width}x${recipe.height}`
     : fixedProfile && !fixedResolutions.includes(resolutionChoice)
       ? "1280x704"
       : resolutionChoice;
+  const unavailableFormat = !!recipe && !recipeFormats.includes(resolution);
   const steps =
     recipe?.steps ?? (managed ? Math.max(20, stepsChoice) : stepsChoice);
   const memoryProfile: VideoProfile = recipe
@@ -437,6 +447,7 @@ function SceneForm({
               !busy &&
               !uploading &&
               capability.data?.available &&
+              !unavailableFormat &&
               !sceneError &&
               prompt.trim() &&
               (mode !== "animate" || image)
@@ -453,7 +464,10 @@ function SceneForm({
           </div>
           <VideoModelChoice
             value={modelId}
-            onChange={(id) => setModelId(id)}
+            onChange={(id) => {
+              setModelId(id);
+              setExplicitResolution(false);
+            }}
             disabled={generate.isPending}
           />
           <fieldset disabled={busy || uploading}>
@@ -519,27 +533,54 @@ function SceneForm({
                   aria-label="Format"
                   value={resolution}
                   disabled={
-                    !!recipe || (fixedProfile && fixedResolutions.length === 1)
+                    recipe
+                      ? recipeFormats.length < 2 && !unavailableFormat
+                      : fixedProfile && fixedResolutions.length === 1
                   }
-                  onChange={(event) => setResolution(event.target.value)}
+                  onChange={(event) => {
+                    setResolution(event.target.value);
+                    setExplicitResolution(true);
+                  }}
                 >
-                  {!["1280x704", "704x1280", "768x768"].includes(
-                    resolution,
-                  ) && (
-                    <option value={resolution}>
-                      {resolution.replace("x", " × ")}
-                    </option>
+                  {recipe ? (
+                    <>
+                      {unavailableFormat && (
+                        <option value={resolution} disabled>
+                          Saved format · {resolution.replace("x", " × ")} ·
+                          unavailable
+                        </option>
+                      )}
+                      {recipeFormats.map((size) => (
+                        <option key={size} value={size}>
+                          {Number(size.split("x")[0]) >
+                          Number(size.split("x")[1])
+                            ? "Landscape"
+                            : "Portrait"}{" "}
+                          · {size.replace("x", " × ")}
+                        </option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {!["1280x704", "704x1280", "768x768"].includes(
+                        resolution,
+                      ) && (
+                        <option value={resolution}>
+                          {resolution.replace("x", " × ")}
+                        </option>
+                      )}
+                      <option value="1280x704">Landscape · 1280 × 704</option>
+                      <option
+                        value="704x1280"
+                        disabled={fixedProfile && fixedResolutions.length === 1}
+                      >
+                        Portrait · 704 × 1280
+                      </option>
+                      <option value="768x768" disabled={fixedProfile}>
+                        Square · 768 × 768
+                      </option>
+                    </>
                   )}
-                  <option value="1280x704">Landscape · 1280 × 704</option>
-                  <option
-                    value="704x1280"
-                    disabled={fixedProfile && fixedResolutions.length === 1}
-                  >
-                    Portrait · 704 × 1280
-                  </option>
-                  <option value="768x768" disabled={fixedProfile}>
-                    Square · 768 × 768
-                  </option>
                 </select>
               </label>
               <label>
@@ -717,11 +758,18 @@ function SceneForm({
                 <Link to="/system">Inspect system</Link>
               </p>
             )}
+            {unavailableFormat && (
+              <p className="notice">
+                The saved format is unavailable for this model. Choose an
+                available format before generating.
+              </p>
+            )}
             <Button
               type="submit"
               className="media-generate"
               disabled={
                 !capability.data?.available ||
+                unavailableFormat ||
                 !prompt.trim() ||
                 !!sceneError ||
                 (mode === "animate" && !image) ||

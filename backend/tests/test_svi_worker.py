@@ -43,6 +43,11 @@ class FakeNative:
             json.dumps(
                 {
                     **GEOMETRY,
+                    **(
+                        {"width": 480, "height": 832}
+                        if payload.get("generation_profile") == "portrait"
+                        else {}
+                    ),
                     "backend": "wan22-svi-pro-q4",
                     "profile_identity": "c" * 64,
                     "managed_runtime": payload["managed_runtime"],

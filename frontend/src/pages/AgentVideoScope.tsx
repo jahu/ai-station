@@ -15,6 +15,7 @@ import VideoMemoryProfile, {
   type VideoCapabilities,
 } from "../components/media/VideoMemoryProfile";
 import VideoModelChoice from "../components/media/VideoModelChoice";
+import { recipeResolutions } from "../components/media/video-geometry";
 
 export default function AgentVideoScope({
   value,
@@ -40,6 +41,9 @@ export default function AgentVideoScope({
       ),
   });
   const recipe = capability.data?.operation_recipe;
+  const recipeFormats = recipeResolutions(capability.data);
+  const savedFormat = `${value.width ?? 1280}x${value.height ?? 704}`;
+  const unavailableFormat = !!recipe && !recipeFormats.includes(savedFormat);
   const incoming = value.scenes;
   const [sceneState, setSceneState] = useState(() => ({
     source: incoming,
@@ -208,31 +212,56 @@ export default function AgentVideoScope({
             Resolution
             <select
               aria-label="Agent video resolution"
-              disabled={!!recipe || value.memory_profile === "bounded_11g"}
+              disabled={
+                recipe
+                  ? recipeFormats.length < 2 && !unavailableFormat
+                  : value.memory_profile === "bounded_11g"
+              }
               value={`${value.width ?? 1280}x${value.height ?? 704}`}
               onChange={(e) => {
                 const [width, height] = e.target.value.split("x").map(Number);
                 patch({ width, height });
               }}
             >
-              {![
-                ["1280", "704"],
-                ["704", "1280"],
-                ["768", "768"],
-                ["512", "288"],
-              ].some(
-                ([w, h]) =>
-                  Number(w) === (value.width ?? 1280) &&
-                  Number(h) === (value.height ?? 704),
-              ) && (
-                <option value={`${value.width}x${value.height}`}>
-                  {value.width} × {value.height}
-                </option>
+              {recipe ? (
+                <>
+                  {unavailableFormat && (
+                    <option disabled value={savedFormat}>
+                      Saved format · {savedFormat.replace("x", " × ")} ·
+                      unavailable
+                    </option>
+                  )}
+                  {recipeFormats.map((size) => (
+                    <option key={size} value={size}>
+                      {Number(size.split("x")[0]) > Number(size.split("x")[1])
+                        ? "Landscape"
+                        : "Portrait"}{" "}
+                      · {size.replace("x", " × ")}
+                    </option>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {![
+                    ["1280", "704"],
+                    ["704", "1280"],
+                    ["768", "768"],
+                    ["512", "288"],
+                  ].some(
+                    ([w, h]) =>
+                      Number(w) === (value.width ?? 1280) &&
+                      Number(h) === (value.height ?? 704),
+                  ) && (
+                    <option value={`${value.width}x${value.height}`}>
+                      {value.width} × {value.height}
+                    </option>
+                  )}
+                  <option value="1280x704">Landscape · 1280 × 704</option>
+                  <option value="704x1280">Portrait · 704 × 1280</option>
+                  <option value="768x768">Square · 768 × 768</option>
+                  <option value="512x288">Draft · 512 × 288</option>
+                </>
               )}
-              <option value="1280x704">Landscape · 1280 × 704</option>
-              <option value="704x1280">Portrait · 704 × 1280</option>
-              <option value="768x768">Square · 768 × 768</option>
-              <option value="512x288">Draft · 512 × 288</option>
             </select>
           </label>
           <label>

@@ -20,6 +20,7 @@ function mount(
   models: { id: string; name: string; available: boolean }[] = [],
   portrait = false,
   recurrent = false,
+  restored?: Record<string, unknown>,
 ) {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
@@ -45,6 +46,14 @@ function mount(
                             cfg: 5,
                             image_required: true,
                             memory_mib: 18432,
+                            ...(portrait
+                              ? {
+                                  resolutions: [
+                                    { width: 832, height: 480 },
+                                    { width: 480, height: 832 },
+                                  ],
+                                }
+                              : {}),
                           },
                         }
                       : {}),
@@ -76,7 +85,8 @@ function mount(
                     revision: 1,
                     kind: "video",
                     mode: "continuous",
-                    status: "queued",
+                    status: restored ? "succeeded" : "queued",
+                    ...(restored ? { request: restored } : {}),
                     active_run_ids: [],
                     duration_seconds: 10,
                     completed_segments: 0,
@@ -480,4 +490,84 @@ it("requires an original image for the recurrent model, including direct form su
   expect(
     fetch.mock.calls.some(([, options]) => options?.method === "POST"),
   ).toBe(false);
+});
+
+it.each(["81", "10s"])(
+  "sends the qualified portrait format for recurrent duration %s",
+  async (duration) => {
+    const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+    const fetch = mount(
+      `/video?model=${id}&input=source`,
+      true,
+      [{ id, name: "Continuous video", available: true }],
+      true,
+      true,
+    );
+    await screen.findByRole("option", { name: "Portrait · 480 × 832" });
+    const format = screen.getByLabelText("Format") as HTMLSelectElement;
+    expect(format.disabled).toBe(false);
+    expect(screen.queryByRole("option", { name: /1280 × 704/ })).toBeNull();
+    fireEvent.change(format, { target: { value: "480x832" } });
+    fireEvent.change(screen.getByLabelText("Scene and motion"), {
+      target: { value: "A full-length figure moves naturally" },
+    });
+    fireEvent.change(screen.getByLabelText("Duration"), {
+      target: { value: duration },
+    });
+    const submit = screen.getByRole("button", { name: "Generate video" });
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(submit);
+    const route =
+      duration === "81" ? "/api/video/runs" : "/api/media/jobs/video";
+    await waitFor(() =>
+      expect(fetch.mock.calls.some(([path]) => path === route)).toBe(true),
+    );
+    const call = fetch.mock.calls.find(([path]) => path === route)!;
+    const body = JSON.parse(String(call[1]?.body));
+    expect(body).toMatchObject({
+      model_id: id,
+      width: 480,
+      height: 832,
+      steps: 20,
+      cfg: 5,
+      image_artifact_id: "source",
+    });
+    if (duration === "81") expect(body.frames).toBe(81);
+    else expect(body.duration_seconds).toBe(10);
+  },
+);
+
+it("preserves a saved unavailable portrait and requires an explicit format change", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  const fetch = mount(
+    "/video?job=saved",
+    true,
+    [{ id, name: "Continuous video", available: true }],
+    false,
+    true,
+    {
+      model_id: id,
+      image_artifact_id: "source",
+      prompt: "Saved portrait direction",
+      width: 480,
+      height: 832,
+      steps: 20,
+      cfg: 5,
+      seed: 29,
+      duration_seconds: 10,
+      composition_mode: "continuous",
+    },
+  );
+  await screen.findByText(/The saved format is unavailable/);
+  const format = screen.getByLabelText("Format") as HTMLSelectElement;
+  expect(format.value).toBe("480x832");
+  const submit = screen.getByRole("button", { name: "Generate video" });
+  expect(submit.hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(submit.closest("form")!);
+  expect(
+    fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+  ).toBe(false);
+  fireEvent.change(format, { target: { value: "832x480" } });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  expect(screen.queryByText(/The saved format is unavailable/)).toBeNull();
 });

@@ -12,29 +12,33 @@ from app.models import Artifact, Run
 from app.paths import safe_join
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task
-from app.svi_executor import GEOMETRY, NAME, RAM_MIB, available_artifact, checked_recipe, descriptor
+from app.svi_executor import NAME, RAM_MIB, available_artifact, checked_recipe, descriptor, geometry
 
 
 def checked_profile(body, profile, *, long=False):
+    try:
+        selected = geometry({"width": body.width, "height": body.height})
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     if (
         profile.get("available") is not True
         or profile.get("backend") != "wan22-svi-pro-q4"
         or profile.get("native_window_frames") != 81
         or profile.get("continuation_frames") != 4
         or profile.get("memory_estimate_mib") != RAM_MIB
-        or any(profile.get(key) != value for key, value in GEOMETRY.items() if key != "frames")
+        or any(profile.get(key) != value for key, value in selected.items() if key != "frames")
     ):
         raise HTTPException(409, "The selected SVI recipe is unavailable or has not been qualified")
     if any(
         getattr(body, key) != value
-        for key, value in GEOMETRY.items()
+        for key, value in selected.items()
         if key not in ({"fps", "frames"} if long else {"fps"})
     ):
-        raise HTTPException(422, "This SVI recipe uses 832×480, 81 frames, 20 steps and CFG 5")
+        raise HTTPException(422, "This SVI recipe uses its qualified geometry, 81 frames, 20 steps and CFG 5")
     if body.memory_profile != "default":
         raise HTTPException(422, "SVI uses its model-default 18-GiB workload, not the 11-GiB Wan profile")
     parameters = {
-        **GEOMETRY,
+        **selected,
         "managed_runtime": profile.get("managed_runtime"),
         "managed_video_gpu_indices": profile.get("eligible_gpu_indices"),
     }
@@ -120,7 +124,7 @@ def create_svi_run(
     managed = checked_profile(body, profile)
     parameters = {
         **body.model_dump(mode="json", exclude={"gpu", "image_artifact_id"}),
-        **GEOMETRY,
+        **geometry({"width": body.width, "height": body.height}),
         "backend": "wan22-svi-pro-q4",
         "managed_runtime": profile.get("managed_runtime"),
         "managed_video_gpu_indices": profile.get("eligible_gpu_indices"),

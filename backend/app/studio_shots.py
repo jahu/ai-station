@@ -132,7 +132,12 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
                 422,
                 "Keep one generated source within five minutes; shorten the trim window or use separate source shots",
             )
-        profile = profile_for(session, body.video_model_id, observed_video_profile)
+        profile = profile_for(
+            session,
+            body.video_model_id,
+            observed_video_profile,
+            requested_geometry=(480, 832) if revision.options["aspect"] == "portrait" else None,
+        )
         if not profile.get("available"):
             raise HTTPException(409, profile.get("reason", "Prepare local video before generating footage"))
         if len(references) > 1:

@@ -15,6 +15,7 @@ export type VideoCapabilities = {
     cfg: number;
     image_required: boolean;
     memory_mib: number;
+    resolutions?: { width: number; height: number }[];
   };
   reason?: string;
   configuration_source?: "managed" | "configured";
@@ -63,11 +64,13 @@ export default function VideoMemoryProfile({
       <div className="notice">
         <strong>{recipe.label} · installed video profile</strong>
         <p>
-          {recipe.width} × {recipe.height} · {recipe.fps} fps · {recipe.steps}{" "}
-          steps · {recipe.memory_mib / 1024} GiB system RAM without swap. Clips
-          use complete {(recipe.frames / recipe.fps).toFixed(1)}-second samples;
-          longer films are joined to your requested length. Generation can take
-          hours.
+          {(recipe.resolutions ?? [recipe])
+            .map((size) => `${size.width} × ${size.height}`)
+            .join(" / ")}{" "}
+          · {recipe.fps} fps · {recipe.steps} steps · {recipe.memory_mib / 1024}{" "}
+          GiB system RAM without swap. Clips use complete{" "}
+          {(recipe.frames / recipe.fps).toFixed(1)}-second samples; longer films
+          are joined to your requested length. Generation can take hours.
         </p>
       </div>
     );

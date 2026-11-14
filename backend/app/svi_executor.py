@@ -21,6 +21,19 @@ RAM_MIB = 18432
 GEOMETRY = {"width": 832, "height": 480, "frames": 81, "fps": 15, "steps": 20, "cfg": 5}
 
 
+def geometry(values=None):
+    values = GEOMETRY if values is None else values
+    width, height = values.get("width"), values.get("height")
+    if type(width) is not int or type(height) is not int or (width, height) not in {(832, 480), (480, 832)}:
+        raise ValueError("Choose the fixed landscape or portrait SVI geometry")
+    return {**GEOMETRY, "width": width, "height": height}
+
+
+def generation_profile(values):
+    selected = geometry(values)
+    return "portrait" if selected["height"] > selected["width"] else "landscape"
+
+
 def descriptor(artifact):
     return {key: getattr(artifact, key) for key in ("relative_path", "sha256", "size_bytes")}
 
@@ -42,12 +55,13 @@ def checked_parameters(run):
 
 
 def checked_recipe(values, resources):
+    selected = geometry(values)
     runtime = values.get("managed_runtime")
     eligible = values.get("managed_video_gpu_indices")
     if (
         type(resources.get("ram_mib")) is not int
         or resources.get("ram_mib") != RAM_MIB
-        or any(values.get(key) != expected for key, expected in GEOMETRY.items())
+        or any(values.get(key) != expected for key, expected in selected.items())
         or not isinstance(runtime, dict)
         or set(runtime) != {"profile", "manifest_sha256", "environment_id"}
         or runtime["profile"] != PROFILE
@@ -125,6 +139,7 @@ class SviExecutor(MotionArtifacts, HostMediaExecutor):
             or previous.status != "succeeded"
             or previous.parameters.get("image") != values["image"]
             or previous.parameters.get("managed_runtime") != values["managed_runtime"]
+            or any(previous.parameters.get(key) != values.get(key) for key in ("width", "height", "fps"))
         ):
             raise ValueError("SVI continuation needs the same owned anchor and completed engine")
         video = session.scalar(
@@ -195,6 +210,7 @@ class SviExecutor(MotionArtifacts, HostMediaExecutor):
                 "seed": values["seed"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **({"generation_profile": "portrait"} if generation_profile(values) == "portrait" else {}),
             },
         )
 
@@ -206,7 +222,7 @@ class SviExecutor(MotionArtifacts, HostMediaExecutor):
         if (
             not isinstance(profile, str)
             or not re.fullmatch(r"[a-f0-9]{64}", profile)
-            or any(metadata.get(key) != expected for key, expected in GEOMETRY.items())
+            or any(metadata.get(key) != expected for key, expected in geometry(run.parameters).items())
             or metadata.get("managed_runtime") != run.parameters["managed_runtime"]
             or metadata.get("backend") != "wan22-svi-pro-q4"
             or metadata.get("output_sha256") != artifact.sha256

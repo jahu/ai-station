@@ -336,7 +336,9 @@ def test_setup_catalog_does_not_claim_video_ready_before_shared_execution_admiss
     assert native["managed_svi"]["available"] is True
 
 
-@pytest.mark.parametrize("change", [None, "image", "size", "steps", "cfg", "memory", "unavailable"])
+@pytest.mark.parametrize(
+    "change", [None, "portrait", "image", "size", "steps", "cfg", "memory", "unavailable"]
+)
 def test_agent_catalog_binds_recurrent_recipe_without_inheriting_5b_defaults(
     session, prepared, monkeypatch, change
 ):
@@ -354,6 +356,11 @@ def test_agent_catalog_binds_recurrent_recipe_without_inheriting_5b_defaults(
         "memory_estimate_mib": RAM_MIB,
         "eligible_gpu_indices": [7],
     }
+    if change == "portrait":
+        report["generation_profiles"] = [
+            {"id": "landscape", "width": 832, "height": 480},
+            {"id": "portrait", "width": 480, "height": 832},
+        ]
     monkeypatch.setattr(video_models.RunnerClient, "request", lambda *args: report)
     offered = catalog(session)
     if change == "unavailable":
@@ -364,7 +371,9 @@ def test_agent_catalog_binds_recurrent_recipe_without_inheriting_5b_defaults(
     selected = offered[0]
     assert selected["image_required"] is True and selected["width"] == 832
     assert selected["memory_profile"] == "default" and selected["steps"] == 20
-    assert video_models.choices(session)["items"][0]["operation_recipe"] == video_models.recurrent_recipe()
+    assert video_models.choices(session)["items"][0]["operation_recipe"] == video_models.recurrent_recipe(
+        report
+    )
     values = {
         "model_id": row.id,
         "prompt": "A boat crossing a pond",
@@ -383,9 +392,97 @@ def test_agent_catalog_binds_recurrent_recipe_without_inheriting_5b_defaults(
         "cfg": {"cfg": 6},
         "memory": {"memory_profile": "bounded_11g"},
     }
-    if change:
+    if change == "portrait":
+        scope = scope.model_copy(
+            update={"request": scope.request.model_copy(update={"width": 480, "height": 832})}
+        )
+        assert validate_selection(session, scope, offered) == selected
+    elif change:
         scope = scope.model_copy(update={"request": scope.request.model_copy(update=changes[change])})
         with pytest.raises(ValueError, match="fixed recipe"):
             validate_selection(session, scope, offered)
     else:
         assert validate_selection(session, scope, offered) == selected
+
+
+def test_portrait_choice_uses_qualified_native_format_without_rewriting_model_binding(
+    session, prepared, monkeypatch
+):
+    row, installed = install(session, prepared)
+    before = deepcopy(row.metadata_json)
+    calls = []
+    profiles = [
+        {"id": "landscape", "width": 832, "height": 480},
+        {"id": "portrait", "width": 480, "height": 832},
+    ]
+
+    def observe(_client, method, path, payload):
+        calls.append((method, path, payload))
+        portrait = payload.get("generation_profile") == "portrait"
+        return {
+            "available": True,
+            "backend": "wan22-svi-pro-q4",
+            "managed_runtime": installed["managed_runtime"],
+            **GEOMETRY,
+            "width": 480 if portrait else 832,
+            "height": 832 if portrait else 480,
+            "generation_profiles": deepcopy(profiles),
+            "native_window_frames": 81,
+            "continuation_frames": 4,
+            "memory_estimate_mib": RAM_MIB,
+            "eligible_gpu_indices": [7],
+        }
+
+    monkeypatch.setattr(video_models.RunnerClient, "request", observe)
+    portrait = video_models.profile_for(session, row.id, requested_geometry=(480, 832))
+    assert portrait["operation_recipe"]["width"] == 480 and portrait["operation_recipe"]["height"] == 832
+    assert portrait["operation_recipe"]["resolutions"] == [
+        {"width": 832, "height": 480},
+        {"width": 480, "height": 832},
+    ]
+    assert calls[-1][2]["generation_profile"] == "portrait" and row.metadata_json == before
+    landscape = video_models.profile_for(session, row.id, portrait)
+    assert landscape["width"] == 832 and "generation_profile" not in calls[-1][2]
+    assert len(calls) == 2 and row.metadata_json == before
+
+
+@pytest.mark.parametrize(
+    "changed",
+    ["unqualified", "wrong_selected", "missing_catalog", "missing_portrait", "duplicate", "unknown"],
+)
+def test_portrait_native_admission_cannot_use_stale_or_invented_format_metadata(
+    session, prepared, monkeypatch, changed
+):
+    row, installed = install(session, prepared)
+    report = {
+        "available": True,
+        "backend": "wan22-svi-pro-q4",
+        "managed_runtime": installed["managed_runtime"],
+        **GEOMETRY,
+        "width": 480,
+        "height": 832,
+        "native_window_frames": 81,
+        "continuation_frames": 4,
+        "memory_estimate_mib": RAM_MIB,
+        "eligible_gpu_indices": [7],
+        "generation_profiles": [
+            {"id": "landscape", "width": 832, "height": 480},
+            {"id": "portrait", "width": 480, "height": 832},
+        ],
+    }
+    if changed == "unqualified":
+        report["available"] = False
+    elif changed == "wrong_selected":
+        report.update(width=832, height=480)
+    elif changed == "missing_catalog":
+        report.pop("generation_profiles")
+    elif changed == "missing_portrait":
+        report["generation_profiles"] = report["generation_profiles"][:1]
+    elif changed == "duplicate":
+        report["generation_profiles"] = [report["generation_profiles"][1]] * 2
+    else:
+        report["generation_profiles"][0] = {"id": "square", "width": 768, "height": 768}
+    monkeypatch.setattr(video_models.RunnerClient, "request", lambda *args: report)
+    with pytest.raises(HTTPException) as exc:
+        video_models.profile_for(session, row.id, requested_geometry=(480, 832))
+    assert exc.value.status_code == 409
