@@ -23,6 +23,7 @@ from app.native_llama_setup_client import NativeLlamaSetupClient
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
 from app.speech_setup_client import SpeechSetupClient
+from app.svi_setup_client import SviSetupClient
 from app.task_control import cancel_task, lock_task
 from app.video_setup_client import VideoSetupClient
 
@@ -34,6 +35,7 @@ IMAGE_PROFILE = "qwen-image21-cuda-linux-amd64-v1"
 AVATAR_PROFILE = "sonic-whole-linux-x86-64-python310-v1"
 EFFECTS_PROFILE = "mmaudio-large44-linux-x86-64-python312-v1"
 FISH_PROFILE = "fish-s2-pro-linux-x86-64-python312-v1"
+SVI_PROFILE = "wan22-svi-pro-q4-linux-x86-64-python312-v1"
 VIDEO_PROFILE = "wan22-5b-linux-x86-64-python312-v1"
 MUSIC_PROFILE = "ace-step15-turbo-linux-x86-64-python312-v1"
 NATIVE_LLAMA_PROFILES = {"llamacpp-native-darwin-arm64-b12032-v2", "llamacpp-native-darwin-x86_64-b12032-v2"}
@@ -45,6 +47,7 @@ Profile = Literal[
     "qwen-image21-cuda-linux-amd64-v1",
     "ace-step15-turbo-linux-x86-64-python312-v1",
     "wan22-5b-linux-x86-64-python312-v1",
+    "wan22-svi-pro-q4-linux-x86-64-python312-v1",
     "sonic-whole-linux-x86-64-python310-v1",
     "mmaudio-large44-linux-x86-64-python312-v1",
     "fish-s2-pro-linux-x86-64-python312-v1",
@@ -74,6 +77,8 @@ def report(profile="llamacpp-cuda-linux-amd64-v1"):
             if profile == EFFECTS_PROFILE
             else AvatarSetupClient(timeout=30)
             if profile == AVATAR_PROFILE
+            else SviSetupClient(timeout=30)
+            if profile == SVI_PROFILE
             else VideoSetupClient(timeout=30)
             if profile == VIDEO_PROFILE
             else MusicSetupClient(timeout=30)
@@ -132,12 +137,13 @@ def attempt(session, task, saved, previous=None):
     speech = saved["recipe"]["profile"] == SPEECH_PROFILE
     image = saved["recipe"]["profile"] == IMAGE_PROFILE
     music = saved["recipe"]["profile"] == MUSIC_PROFILE
+    svi = saved["recipe"]["profile"] == SVI_PROFILE
     video = saved["recipe"]["profile"] == VIDEO_PROFILE
     avatar = saved["recipe"]["profile"] == AVATAR_PROFILE
     effects = saved["recipe"]["profile"] == EFFECTS_PROFILE
     fish = saved["recipe"]["profile"] == FISH_PROFILE
     native_llama = saved["recipe"]["profile"] in NATIVE_LLAMA_PROFILES
-    inputs = speech or image or music or video or avatar or effects or fish or native_llama
+    inputs = speech or image or music or svi or video or avatar or effects or fish or native_llama
     motion = (
         saved["recipe"]["profile"] == MOTION_PROFILE
         and saved["recipe"].get("preparation_mode") == "owned_containers"
@@ -157,6 +163,8 @@ def attempt(session, task, saved, previous=None):
         if effects
         else "avatar_setup"
         if avatar
+        else "svi_setup"
+        if svi
         else "video_setup"
         if video
         else "music_setup"

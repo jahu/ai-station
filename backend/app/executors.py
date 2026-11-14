@@ -97,6 +97,7 @@ from app.studio_production import StudioProductionExecutor
 from app.studio_render import StudioRenderExecutor
 from app.studio_soundtrack import StudioSoundtrackExecutor
 from app.summary_executor import SummaryExecutor
+from app.svi_setup_job import SviSetupExecutor
 from app.timeline_waveforms import WaveformExecutor
 from app.timelines import TimelineExecutor
 from app.tools import get_tool
@@ -361,6 +362,7 @@ EXECUTORS = {
     "image_setup": ImageSetupExecutor(),
     "music_setup": MusicSetupExecutor(),
     "video_setup": VideoSetupExecutor(),
+    "svi_setup": SviSetupExecutor(),
     "avatar_setup": AvatarSetupExecutor(),
     "effects_setup": EffectsSetupExecutor(),
     "fish_setup": FishSetupExecutor(),

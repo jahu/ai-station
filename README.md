@@ -427,6 +427,9 @@ Longer-film consistency remains under active qualification. The
 [current investigation](docs/plans/long-video-temporal-quality.md) records complete
 10/20-second tests and experimental recurrent-model results; these are not a
 claim that every duration, motion or model is production-ready.
+The new SVI Pro installation and execution path is being integrated with normal
+Tasks and owned runtime setup; it remains unavailable until its complete managed
+runtime and broader motion tests pass.
 
 ## 🚀 Get started
 

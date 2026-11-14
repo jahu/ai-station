@@ -599,9 +599,14 @@ The [long-video investigation](plans/long-video-temporal-quality.md) now include
 closed SVI Pro context primitives, separate from the operational 5B adapter.
 They preserve the original anchor and one preceding motion latent, validate the
 16-channel checkpoint identity, and map the complete fixed Pro adapter against
-logical GGUF weight geometry. They add no operational executor or public graph
-API. Complete model preparation, typed dispatch, Stop/recovery, model-aware
-timelines and broader actual film qualification remain required admission gates.
+logical GGUF weight geometry. Typed native dispatch and a shared-worker adapter
+remain behind qualification. The fixed `/v1/setup/svi` protocol and the existing
+administrator-owned runtime preparation Tasks reuse verified downloads, offline
+assembly, immutable process journals, Stop and lease recovery. Activation and new
+installation remain closed by the same native qualification flag; no caller can
+choose a graph, command, dependency or model path. Actual fresh preparation,
+model-aware timelines/composition, UI selection and broader film qualification
+remain required admission gates.
 
 Creative Studio development follows [the creative production contract](plans/creative-studio.md).
 CreativeProject is an account-owned brand/editorial identity, separate from the

@@ -581,3 +581,36 @@ inference. Public creation/model routing, guided installation, model-aware
 frozen timelines/composition, UI choices and fresh managed-runtime/GPU
 qualification still gate registration and availability. Existing videos remain
 on the deployed reviewed 5B path.
+
+
+## Owned SVI setup lifecycle
+
+The fixed native setup protocol now covers catalog, prepare, inspection, Stop
+and explicit adoption through `OwnedEnvironmentPreparation`. It reuses the same
+4-GiB bounded offline assembly process, immutable request/journal and opaque
+engine publication. The only accepted recipe is the pinned 107-input SVI
+manifest. Catalog reports actual GPU/RAM/driver/storage constraints and component
+licenses, including the separate MIT Pro adapters and Apache-2.0 GGUF SDK.
+Preparation and adoption share the native SVI qualification flag; both remain
+closed by default, including adoption after an earlier process has completed.
+
+The ordinary administrator runtime-setup API now recognizes this profile and
+queues an `svi_setup` Run. Its executor reuses verified resumable downloads,
+checks the six distinct component roles, and publishes model files plus the
+private setup receipt through the existing services. Native setup processes and
+media generation remain distinct operations. Account-worker admission, revoked
+administrator cleanup, lease recovery and queued cancellation recognize the new
+setup executor. No frontend operational model choice is enabled by this change.
+
+Normal tests cover the fake complete API/download/native/adoption path, corrupt
+inputs, Stop before and after dispatch, immutable resume, stale worker fencing,
+private setup history, account revocation and resource release. The offline child
+also rejects foreign requests/recipes, missing journals, naive or expired
+deadlines, and observes durable Stop during assembly. These checks install no
+real engine and are not fresh-runtime or GPU qualification.
+
+The setup change passed 102 affected native tests, 34 setup-worker regression
+cases across the SVI/5B paths, 71 shared setup/account/recovery and recurrent-run
+regressions, then the final 19 SVI setup cases after adding incomplete-component
+and closed-catalog regressions. Repository Ruff and format checks passed. These
+are focused checks, not a new full-suite pass or real installation evidence.

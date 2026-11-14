@@ -90,6 +90,7 @@ from ai_station_runner.speech_prepare import router as speech_setup_router
 from ai_station_runner.speech_runtime_schema import CheckpointSelection as SpeechCheckpointSelection
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.station_updates import router as station_updates_router
+from ai_station_runner.svi_prepare import router as svi_setup_router
 from ai_station_runner.svi_video import router as svi_video_router
 from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
@@ -784,6 +785,7 @@ app.include_router(image_setup_router)
 app.include_router(music_setup_router)
 app.include_router(video_setup_router)
 app.include_router(svi_video_router)
+app.include_router(svi_setup_router)
 app.include_router(avatar_setup_router)
 app.include_router(effects_setup_router)
 app.include_router(fish_setup_router)
