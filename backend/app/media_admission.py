@@ -10,7 +10,7 @@ from app.task_control import lock_task
 
 
 def shot_task(session, run):
-    if run.executor_type != "wan_video" or not run.parameters.get("internal_media"):
+    if run.executor_type not in {"wan_video", "wan_svi_video"} or not run.parameters.get("internal_media"):
         return None
     task = session.get(Task, run.task_id)
     if not task or task.metadata_json.get("media_plan", {}).get("mode") != "shots":

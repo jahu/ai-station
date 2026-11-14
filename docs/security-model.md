@@ -683,6 +683,13 @@ The offline child independently checks its immutable inputs, original-anchor
 context, implementation identity, 18-GiB zero-swap scope and absolute deadline.
 This is a separate recipe from the existing 48-channel 5B path; old/private
 experimental checkpoints cannot be adopted under its production metadata key.
+The shared worker registration does not bypass that native gate. Public film
+planning accepts only the selected engine's fixed geometry/resource contract and
+an owned original image. Agent deadlines are preserved, never expanded by the
+recurrent planner. Resuming creates new attempts and removes old derived motion
+bindings; unrelated historical producers remain untouched. The CPU editor may
+use the qualified owned SVI Python only when no explicit legacy video setup takes
+precedence. Supporting 15-fps sources adds no executable, filter or shell input.
 
 Creative projects use the same private-root account policy as creative sessions.
 Membership and logo references must belong to the same owner; administrator

@@ -86,7 +86,7 @@ export default function MediaInput({
           (kind !== "video" ||
             (a.mime_type === "video/mp4" &&
               !!a.metadata?.frames &&
-              [24, 25].includes(Number(a.metadata?.fps)))) &&
+              [15, 24, 25].includes(Number(a.metadata?.fps)))) &&
           (kind !== "audio" ||
             ((audioMode === "transcription" ||
               a.metadata?.capability !== "audio.effects") &&

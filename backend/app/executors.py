@@ -97,6 +97,7 @@ from app.studio_production import StudioProductionExecutor
 from app.studio_render import StudioRenderExecutor
 from app.studio_soundtrack import StudioSoundtrackExecutor
 from app.summary_executor import SummaryExecutor
+from app.svi_executor import SviExecutor
 from app.svi_setup_job import SviSetupExecutor
 from app.timeline_waveforms import WaveformExecutor
 from app.timelines import TimelineExecutor
@@ -407,6 +408,7 @@ EXECUTORS = {
     "echomimic": AvatarExecutor(),
     "sonic_whole": WholeAvatarExecutor(),
     "wan_video": VideoExecutor(),
+    "wan_svi_video": SviExecutor(),
     CompositionExecutor.name: CompositionExecutor(),
     StudioDirector.name: StudioDirector(),
     StudioRenderExecutor.name: StudioRenderExecutor(),

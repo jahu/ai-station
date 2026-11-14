@@ -224,3 +224,58 @@ def test_existing_report_is_never_overwritten_or_followed(tmp_path, monkeypatch,
         job.render(request, tmp_path, work, output)
     assert outside.read_text() == "retained report" and report.read_text() == "retained report"
     assert not output.exists()
+
+
+def test_native_fifteen_fps_source_renders_without_time_stretch_and_preserves_full_audio_clock(
+    tmp_path, monkeypatch
+):
+    previous = fixture(tmp_path)
+    path = tmp_path / "artifacts/recurrent.mp4"
+    with av.open(str(path), "w") as movie:
+        stream = movie.add_stream("libx264", rate=15)
+        stream.width = stream.height = 128
+        stream.pix_fmt = "yuv420p"
+        for index in range(150):
+            pixels = np.zeros((128, 128, 3), dtype=np.uint8)
+            pixels[:] = [200, 0, 0] if index < 75 else [0, 0, 200]
+            for packet in stream.encode(av.VideoFrame.from_ndarray(pixels, format="rgb24")):
+                movie.mux(packet)
+        for packet in stream.encode():
+            movie.mux(packet)
+    video = {
+        "artifact_id": str(uuid4()),
+        "kind": "video",
+        "relative_path": "artifacts/recurrent.mp4",
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "size_bytes": path.stat().st_size,
+        "frames": 150,
+        "fps": 15,
+        "width": 128,
+        "height": 128,
+    }
+    audio = previous.sources[-1].model_dump(mode="json")
+    request = TimelineRequest.model_validate(
+        {
+            **previous.model_dump(mode="json"),
+            "sources": [video, audio],
+            "manifest": {
+                "fps": 15,
+                "width": 128,
+                "height": 128,
+                "clips": [{"artifact_id": video["artifact_id"], "out_frame": 150, "muted": True}],
+                "tracks": [{"artifact_id": audio["artifact_id"], "start_frame": 15, "duration_frames": 15}],
+            },
+        }
+    )
+    work = tmp_path / "work"
+    work.mkdir()
+    (tmp_path / "memory.peak").write_text("4096")
+    monkeypatch.setattr(job, "current_group", lambda: tmp_path)
+    output = tmp_path / "artifacts/fifteen-fps.mp4"
+    report = job.render(request, tmp_path, work, output)
+    assert report["verified"] and report["frames"] == 150 and report["timeline_audio_samples"] == 480000
+    with av.open(str(output)) as movie:
+        assert movie.streams.video[0].average_rate == 15
+        frames = list(movie.decode(video=0))
+        assert len(frames) == 150
+        assert float(frames[-1].time) == pytest.approx(149 / 15)

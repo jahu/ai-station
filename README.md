@@ -430,6 +430,11 @@ claim that every duration, motion or model is production-ready.
 The new SVI Pro installation and execution path is being integrated with normal
 Tasks and owned runtime setup; it remains unavailable until its complete managed
 runtime inference and broader motion tests pass.
+The integration keeps model-specific settings together: an original first-frame
+image, 832×480, 15 fps and complete recurrent windows. Longer requests retain that
+anchor, resume from verified checkpoints and can enter the existing sound/editor
+workflow. These controls are under test; the current release and installed
+production station do not yet enable this engine.
 
 ## 🚀 Get started
 

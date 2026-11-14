@@ -28,6 +28,7 @@ from app.state import TERMINAL, RunStatus
 RESUMABLE_MEDIA = {
     "photo_pipe",
     "wan_video",
+    "wan_svi_video",
     "echomimic",
     "sonic_whole",
     "chatterbox",

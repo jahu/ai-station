@@ -18,6 +18,12 @@ router = APIRouter(prefix="/api/video/models", tags=["video"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
 
 
+def recurrent_recipe():
+    from app.svi_executor import GEOMETRY, RAM_MIB
+
+    return {"label": "SVI Pro", **GEOMETRY, "image_required": True, "memory_mib": RAM_MIB}
+
+
 def frozen_model(session, identity, *, recheck=False):
     definition = session.get(ModelDefinition, str(identity))
     file = session.get(ModelFile, definition.file_id) if definition and definition.file_id else None
@@ -131,6 +137,14 @@ def profile_for(session, identity, observed=None, *, recheck=False):
         **report,
         "video_model": model,
         "recommended_memory_profile": "default" if recurrent else "bounded_11g",
+        **(
+            {
+                "configuration_source": "managed",
+                "operation_recipe": recurrent_recipe(),
+            }
+            if recurrent
+            else {}
+        ),
     }
 
 
@@ -158,6 +172,7 @@ def choices(session: DB):
                 "name": row.name,
                 "available": available,
                 "cpu_offload": True,
+                **({"operation_recipe": recurrent_recipe()} if recurrent and available else {}),
                 "profile": "832×480 · 15 fps · 12 GiB GPU · 24 GiB RAM"
                 if recurrent
                 else "1280×704 · 12 GiB GPU · 24 GiB RAM",

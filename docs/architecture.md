@@ -608,9 +608,17 @@ choose a graph, command, dependency or model path. Successful setup registers on
 shared six-component model binding without a private setup Run identity; workload
 consent is separate from license acceptance. CPU composition resolves the exact
 SVI engine in parent and child. Actual owned preparation has passed in an
-isolated qualification root; new native inference, model-aware public
-timelines/dispatch, UI selection and broader film qualification remain admission
-gates. The common model-install Run can recheck the complete SVI metadata/engine
+isolated qualification root. Model-aware public dispatch now shares the existing
+short/long film services: 15-fps timelines retain complete 81-frame samples,
+four-frame motion continuation within a scene and explicit resets at scene cuts.
+Resume invalidates a dependent chain when its video or latent checkpoint is lost,
+then binds new producers while reusing independent completed scenes. Translation
+binds the original image and frozen recipe; a derived motion binding cannot
+invalidate its approved text. Workspace/agent/Studio model selection preserves
+the actual recipe and required anchor. Sound/editor contracts retain native
+15-fps timing instead of silently changing it to 24 fps. Real native inference,
+long-film quality and final whole-source checks remain admission gates; native
+qualification stays closed. The common model-install Run can recheck the complete SVI metadata/engine
 binding with claim fencing and Stop, without misclassifying its GGUF as an LLM.
 
 Creative Studio development follows [the creative production contract](plans/creative-studio.md).

@@ -731,3 +731,48 @@ completed high-expert GPU step before Stop, then checks a complete new window
 and same-native worker recovery. The production admission flag and process
 registry remain unchanged. Poll its existing observer; never replay an uncertain
 native operation or relabel old private checkpoints as new managed outputs.
+
+## Public workflow integration, still behind native qualification
+
+The worker now registers the recurrent adapter while the native setup/inference
+qualification flag remains false. Selecting its complete registered model uses
+one fixed operation recipe; there is no fallback to the old 5B geometry. Public
+short generation requires an original image and produces a complete 81-frame,
+832×480, 15-fps window at 20 steps/CFG 5. Longer manual requests use ordinary
+Tasks, dependencies and CPU composition for exact requested frame coverage.
+The model-aware workspace displays 5.4-second short samples, the required first
+frame and real memory/timing settings. It preserves prior 5B controls when that
+model is selected. Installation/setup does not claim inference qualification.
+
+Continuous films preserve the original anchor and the preceding four-frame raw
+motion latent. Explicit multi-scene films continue within each scene and reset
+at an intentional cut; independent unplanned shots remain independent. Resume
+checks retained motion as well as playable output, rebuilds a broken dependent
+chain with new producer IDs and clears old checkpoint snapshots. Independent
+completed scenes can be reused. Existing agent absolute deadlines remain exact;
+manual workflow allowances do not expand reviewed agent budgets.
+
+Shared translation/enhancement supports recurrent descriptions, one reviewed
+preparation per group and original-source/recipe provenance. Derived motion
+binding does not change that source identity. Changes to the original image,
+engine or generation settings still invalidate it. Agent model suggestions and
+activation check the same fixed recipe and required image rather than assigning
+all Video models 5B settings. Studio shot publication consumes the selected
+recipe, requires its reference and refuses unsupported native portrait footage.
+Portrait recurrent qualification remains outstanding, not silently emulated by
+stretching landscape output.
+
+Sound source inspection, frame-based cues and the CPU timeline now accept 15 fps
+end to end. The editor preserves frame coverage and supports explicit retiming.
+Real CPU encode/decode tests cover a ten-second 150-frame/480000-sample export;
+MMAudio conditioning timing tests cover 15/24/25 fps. This is not a claim of a new
+actual 15-fps GPU sound-generation smoke test. The exact owned SVI Python can
+supply the CPU editor only behind qualification and without overriding an
+explicit/partial legacy installation.
+
+Focused checks so far include 178 backend regressions (translation, effects,
+notices, timeline and media jobs) and 71 UI tests (workspace, agent models,
+Studio selection and timeline). The agent/public bridge group passed 86 checks
+before the added lost-checkpoint resume cases. These use fake native generation
+and actual CPU codecs, not real model-quality claims. Final full-source checks
+and real managed continuation/quality qualification remain required.

@@ -334,3 +334,58 @@ def test_setup_catalog_does_not_claim_video_ready_before_shared_execution_admiss
     assert result["installation_available"] is True
     assert result["managed_svi"]["available"] is False
     assert native["managed_svi"]["available"] is True
+
+
+@pytest.mark.parametrize("change", [None, "image", "size", "steps", "cfg", "memory", "unavailable"])
+def test_agent_catalog_binds_recurrent_recipe_without_inheriting_5b_defaults(
+    session, prepared, monkeypatch, change
+):
+    from app.agent_media_choices import catalog, validate_selection
+    from app.agent_media_schema import AgentVideoScope
+
+    row, result = install(session, prepared)
+    report = {
+        "available": change != "unavailable",
+        "backend": "wan22-svi-pro-q4",
+        "managed_runtime": result["managed_runtime"],
+        **GEOMETRY,
+        "native_window_frames": 81,
+        "continuation_frames": 4,
+        "memory_estimate_mib": RAM_MIB,
+        "eligible_gpu_indices": [7],
+    }
+    monkeypatch.setattr(video_models.RunnerClient, "request", lambda *args: report)
+    offered = catalog(session)
+    if change == "unavailable":
+        assert not offered
+        assert "operation_recipe" not in video_models.choices(session)["items"][0]
+        return
+    assert len(offered) == 1
+    selected = offered[0]
+    assert selected["image_required"] is True and selected["width"] == 832
+    assert selected["memory_profile"] == "default" and selected["steps"] == 20
+    assert video_models.choices(session)["items"][0]["operation_recipe"] == video_models.recurrent_recipe()
+    values = {
+        "model_id": row.id,
+        "prompt": "A boat crossing a pond",
+        "duration_seconds": 10,
+        "width": 832,
+        "height": 480,
+        "steps": 20,
+        "cfg": 5,
+        "image_artifact_id": str(uuid4()),
+    }
+    scope = AgentVideoScope.model_validate({"kind": "video", "request": values})
+    changes = {
+        "image": {"image_artifact_id": None},
+        "size": {"width": 1280},
+        "steps": {"steps": 30},
+        "cfg": {"cfg": 6},
+        "memory": {"memory_profile": "bounded_11g"},
+    }
+    if change:
+        scope = scope.model_copy(update={"request": scope.request.model_copy(update=changes[change])})
+        with pytest.raises(ValueError, match="fixed recipe"):
+            validate_selection(session, scope, offered)
+    else:
+        assert validate_selection(session, scope, offered) == selected

@@ -11,7 +11,7 @@ export default function EditTimelineLink({ artifact }: { artifact: Artifact }) {
     (artifact.mime_type === "video/mp4" &&
       (!artifact.run_id ||
         !artifact.metadata?.frames ||
-        ![24, 25].includes(Number(artifact.metadata?.fps))))
+        ![15, 24, 25].includes(Number(artifact.metadata?.fps))))
   )
     return null;
   return (

@@ -105,7 +105,7 @@ def image_fields(run):
         from app.effects import descriptive_fields
 
         return descriptive_fields(params)
-    if run.executor_type == "wan_video":
+    if run.executor_type in {"wan_video", "wan_svi_video"}:
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
         return {"caption": params["caption"]}
@@ -141,6 +141,24 @@ def source_hash(run, fields):
             "backend",
             "parent_artifact_ids",
         ],
+        "wan_svi_video": [
+            "image",
+            "image_artifact_id",
+            "media_inputs",
+            "managed_runtime",
+            "video_model",
+            "backend",
+            "frames",
+            "fps",
+            "width",
+            "height",
+            "steps",
+            "cfg",
+            "seed",
+            "memory_profile",
+            "media_segment",
+            "scene_index",
+        ],
         "wan_video": [
             "image_relative",
             "parent_artifact_ids",
@@ -174,7 +192,7 @@ def source_hash(run, fields):
             inputs["cue_timing"] = [
                 {k: c[k] for k in ("start_frame", "end_frame")} for c in run.parameters["cues"]
             ]
-        if run.executor_type == "wan_video":
+        if run.executor_type in {"wan_video", "wan_svi_video"}:
             # Preserve the exact input identity of pre-strategy receipts, while
             # binding new plans to their frozen conditioning policy.
             for key in ("continuation_strategy", "guidance_observation"):
@@ -210,6 +228,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     if media.executor_type not in {
         "photo_pipe",
         "wan_video",
+        "wan_svi_video",
         "ace_step_music",
         "echomimic",
         "mmaudio_effects",
@@ -236,7 +255,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
         else 512
         if key == "caption"
         else 2000
-        if media.executor_type in {"wan_video", "echomimic", "mmaudio_effects"}
+        if media.executor_type in {"wan_video", "wan_svi_video", "echomimic", "mmaudio_effects"}
         else FIELD_LIMITS.get(key, 10000)
         for key in fields
     }
@@ -338,7 +357,7 @@ def consumer(session, run):
         or media.status != "queued"
         or media.task_id != run.task_id
         or media.executor_type
-        not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic", "mmaudio_effects"}
+        not in {"photo_pipe", "wan_video", "wan_svi_video", "ace_step_music", "echomimic", "mmaudio_effects"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -535,7 +554,7 @@ class MediaTranslationExecutor:
                     if (
                         not item
                         or item.task_id != media.task_id
-                        or item.executor_type not in {"wan_video", "echomimic"}
+                        or item.executor_type not in {"wan_video", "wan_svi_video", "echomimic"}
                         or not item.parameters.get("internal_media")
                         or item.status != "queued"
                     ):
@@ -875,6 +894,7 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
     if not source or source.executor_type not in {
         "wan_video",
+        "wan_svi_video",
         "ace_step_music",
         "echomimic",
         "mmaudio_effects",

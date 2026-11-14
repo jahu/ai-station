@@ -137,11 +137,21 @@ def enqueue_shot(session, material_id, body, *, observed_video_profile=None):
             raise HTTPException(409, profile.get("reason", "Prepare local video before generating footage"))
         if len(references) > 1:
             raise HTTPException(422, "A video shot accepts one first-frame reference; save its exact choice")
+        recipe = profile.get("operation_recipe") or {}
+        if recipe.get("image_required") and not references:
+            raise HTTPException(422, "This video model needs one first-frame image; choose a shot reference")
+        if recipe and revision.options["aspect"] == "portrait" and recipe["width"] > recipe["height"]:
+            raise HTTPException(
+                422,
+                "This video model supports landscape footage; choose a portrait-capable model for this shot",
+            )
         request = LongVideoRequest(
             client_request_id=body.client_request_id,
             prompt=prompt,
-            width=704 if revision.options["aspect"] == "portrait" else 1280,
-            height=1280 if revision.options["aspect"] == "portrait" else 704,
+            width=recipe.get("width", 704 if revision.options["aspect"] == "portrait" else 1280),
+            height=recipe.get("height", 1280 if revision.options["aspect"] == "portrait" else 704),
+            steps=recipe.get("steps", 20),
+            cfg=recipe.get("cfg", 5),
             duration_seconds=max(1, seconds),
             composition_mode="continuous",
             seed=body.client_request_id.int % 2**31,

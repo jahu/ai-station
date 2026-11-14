@@ -51,6 +51,7 @@ def timeline(
     context_frames=17,
     window_frames=81,
     fixed_windows=False,
+    continue_within_scenes=False,
 ):
     segments = []
     position = 0
@@ -69,6 +70,7 @@ def timeline(
         or type(window_frames) is not int
         or window_frames not in (81, 121)
         or type(fixed_windows) is not bool
+        or type(continue_within_scenes) is not bool
     ):
         raise ValueError("Invalid bounded media timing or seed")
     if scene_frames is not None and (
@@ -84,7 +86,10 @@ def timeline(
         boundary += count
         boundaries.append(boundary)
     while position < frames:
-        first = context_frames if mode == "continuous" and segments else 0
+        continuing = mode == "continuous" or (
+            continue_within_scenes and scene_frames is not None and position not in boundaries
+        )
+        first = context_frames if continuing and segments else 0
         next_boundary = next(end for end in boundaries if end > position)
         count = min(window_frames - first, next_boundary - position)
         generated = (

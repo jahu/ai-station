@@ -69,3 +69,30 @@ def test_fixed_window_recipe_never_shortens_native_sampling_for_a_trimmed_tail(s
 def test_fixed_window_policy_is_not_coerced(fixed):
     with pytest.raises(ValueError):
         timeline(frames=180, fps=15, seed=43, fixed_windows=fixed)
+
+
+def test_recurrent_scene_windows_continue_inside_a_scene_and_reset_at_explicit_cuts():
+    plan = timeline(
+        frames=210,
+        fps=15,
+        seed=43,
+        mode="shots",
+        scene_frames=[90, 120],
+        context_frames=4,
+        fixed_windows=True,
+        continue_within_scenes=True,
+    )
+    assert [part.first_frame for part in plan.segments] == [0, 4, 0, 4]
+    assert [part.output_frames for part in plan.segments] == [81, 9, 81, 39]
+    assert all(part.generated_frames == 81 for part in plan.segments)
+    legacy = timeline(frames=210, fps=15, seed=43, mode="shots", scene_frames=[90, 120], context_frames=4)
+    assert [part.first_frame for part in legacy.segments] == [0, 0, 0, 0]
+    assert [part.generated_frames for part in legacy.segments] == [81, 17, 81, 49]
+
+
+@pytest.mark.parametrize("policy", [1, None, "true"])
+def test_scene_continuation_policy_is_not_coerced(policy):
+    with pytest.raises(ValueError):
+        timeline(
+            frames=210, fps=15, seed=43, mode="shots", scene_frames=[90, 120], continue_within_scenes=policy
+        )

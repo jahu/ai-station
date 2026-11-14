@@ -24,7 +24,7 @@ def enqueue(session, root, source_id, profile, renderer, *, revision=1):
     if (
         source is None
         or source.task_id != root.task_id
-        or source.executor_type not in {"wan_video", "media_compose"}
+        or source.executor_type not in {"wan_video", "wan_svi_video", "media_compose"}
     ):
         raise ValueError("Sound source does not belong to this film task")
     operation = f"film-sound:{revision}:prepare"

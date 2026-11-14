@@ -19,6 +19,7 @@ function mount(
   available = true,
   models: { id: string; name: string; available: boolean }[] = [],
   portrait = false,
+  recurrent = false,
 ) {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
@@ -32,6 +33,21 @@ function mount(
               ...(path.includes("/video/models/")
                 ? {
                     configuration_source: "managed",
+                    ...(recurrent
+                      ? {
+                          operation_recipe: {
+                            label: "Wan 2.2 SVI Pro",
+                            width: 832,
+                            height: 480,
+                            frames: 81,
+                            fps: 15,
+                            steps: 20,
+                            cfg: 5,
+                            image_required: true,
+                            memory_mib: 18432,
+                          },
+                        }
+                      : {}),
                     recommended_memory_profile: "bounded_11g",
                     memory_profiles: [
                       {
@@ -383,4 +399,85 @@ it("queues a five-minute film with a duration instead of short-clip frames", asy
   const body = JSON.parse(String(call[1]?.body));
   expect(body.duration_seconds).toBe(300);
   expect(body).not.toHaveProperty("frames");
+});
+
+it.each(["81", "10s"])(
+  "uses the selected recurrent model's recipe for duration %s",
+  async (duration) => {
+    const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+    const fetch = mount(
+      `/video?model=${id}&input=source`,
+      true,
+      [{ id, name: "Continuous video", available: true }],
+      false,
+      true,
+    );
+    await screen.findByText("scene.png");
+    await screen.findByText(/18 GiB system RAM without swap/);
+    expect((screen.getByLabelText("Format") as HTMLSelectElement).value).toBe(
+      "832x480",
+    );
+    expect(
+      (screen.getByLabelText("Format") as HTMLSelectElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("radio", { name: "Text to video" }) as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.getByRole("option", { name: "5.4 seconds" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "3.4 seconds" })).toBeNull();
+    expect(screen.getByText(/Output is 15 fps/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Scene and motion"), {
+      target: { value: "A paper boat floats across a pond" },
+    });
+    fireEvent.change(screen.getByLabelText("Duration"), {
+      target: { value: duration },
+    });
+    const submit = screen.getByRole("button", { name: "Generate video" });
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(submit);
+    const route =
+      duration === "81" ? "/api/video/runs" : "/api/media/jobs/video";
+    await waitFor(() =>
+      expect(fetch.mock.calls.some(([path]) => path === route)).toBe(true),
+    );
+    const call = fetch.mock.calls.find(([path]) => path === route)!;
+    const body = JSON.parse(String(call[1]?.body));
+    expect(body).toMatchObject({
+      model_id: id,
+      image_artifact_id: "source",
+      width: 832,
+      height: 480,
+      steps: 20,
+      cfg: 5,
+    });
+    expect(body).not.toHaveProperty("memory_profile");
+    if (duration === "81") expect(body.frames).toBe(81);
+    else {
+      expect(body.duration_seconds).toBe(10);
+      expect(body.composition_mode).toBe("continuous");
+      expect(body).not.toHaveProperty("frames");
+    }
+  },
+);
+
+it("requires an original image for the recurrent model, including direct form submission", async () => {
+  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+  const fetch = mount(
+    `/video?model=${id}`,
+    true,
+    [{ id, name: "Continuous video", available: true }],
+    false,
+    true,
+  );
+  await screen.findByText(/18 GiB system RAM without swap/);
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "A paper boat floats across a pond" },
+  });
+  const submit = screen.getByRole("button", { name: "Generate video" });
+  expect(submit.hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(submit.closest("form")!);
+  expect(
+    fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+  ).toBe(false);
 });

@@ -1,4 +1,4 @@
-"""Queued SVI segment creation; workspace/model routing remains gated separately."""
+"""Queued recurrent segment creation with frozen model and original-image inputs."""
 
 import re
 from copy import deepcopy
@@ -6,11 +6,106 @@ from datetime import timedelta
 
 from fastapi import HTTPException
 
+from app.config import get_settings
 from app.db import utcnow
 from app.models import Artifact, Run
+from app.paths import safe_join
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task
 from app.svi_executor import GEOMETRY, NAME, RAM_MIB, available_artifact, checked_recipe, descriptor
+
+
+def checked_profile(body, profile, *, long=False):
+    if (
+        profile.get("available") is not True
+        or profile.get("backend") != "wan22-svi-pro-q4"
+        or profile.get("native_window_frames") != 81
+        or profile.get("continuation_frames") != 4
+        or profile.get("memory_estimate_mib") != RAM_MIB
+        or any(profile.get(key) != value for key, value in GEOMETRY.items() if key != "frames")
+    ):
+        raise HTTPException(409, "The selected SVI recipe is unavailable or has not been qualified")
+    if any(
+        getattr(body, key) != value
+        for key, value in GEOMETRY.items()
+        if key not in ({"fps", "frames"} if long else {"fps"})
+    ):
+        raise HTTPException(422, "This SVI recipe uses 832×480, 81 frames, 20 steps and CFG 5")
+    if body.memory_profile != "default":
+        raise HTTPException(422, "SVI uses its model-default 18-GiB workload, not the 11-GiB Wan profile")
+    parameters = {
+        **GEOMETRY,
+        "managed_runtime": profile.get("managed_runtime"),
+        "managed_video_gpu_indices": profile.get("eligible_gpu_indices"),
+    }
+    try:
+        checked_recipe(parameters, {"ram_mib": RAM_MIB})
+    except ValueError:
+        raise HTTPException(409, "Refresh the exact SVI engine and compatible GPU observation") from None
+    if body.gpu != "auto" and int(body.gpu) not in parameters["managed_video_gpu_indices"]:
+        raise HTTPException(422, "Choose a GPU compatible with the selected SVI engine")
+    if body.image_artifact_id is None:
+        raise HTTPException(422, "Choose an original image for recurrent video")
+    result = {
+        "managed_runtime": dict(parameters["managed_runtime"]),
+        "managed_video_gpu_indices": list(parameters["managed_video_gpu_indices"]),
+    }
+    if body.model_id:
+        model = profile.get("video_model")
+        if (
+            not isinstance(model, dict)
+            or model.get("definition_id") != str(body.model_id)
+            or not isinstance(model.get("binding"), dict)
+            or model["binding"].get("managed_runtime") != result["managed_runtime"]
+        ):
+            raise HTTPException(409, "The selected SVI model differs from its capability observation")
+        result["video_model"] = deepcopy(model)
+    return result
+
+
+def bind_previous(run, previous):
+    """A new attempt binds its own preceding producer; old checkpoints stay historical."""
+    old = run.parameters
+    retired = old.get("previous_motion_artifact_id")
+    values = {
+        key: value
+        for key, value in old.items()
+        if key
+        not in {
+            "previous_motion",
+            "previous_motion_artifact_id",
+            "svi_profile_identity",
+            "previous_motion_run_id",
+        }
+    }
+    values["parent_artifact_ids"] = [
+        identity for identity in old.get("parent_artifact_ids", []) if identity != retired
+    ]
+    if previous is not None:
+        values["previous_motion_run_id"] = previous.id
+    run.parameters = values
+
+
+def reusable_checkpoint(session, run, video):
+    """Resume needs the retained latent checkpoint, not just a playable old MP4."""
+    motion = session.get(Artifact, video.metadata_json.get("motion_context_artifact_id", ""))
+    if (
+        not available_artifact(motion, run.owner_id)
+        or motion.run_id != run.id
+        or motion.artifact_type != "document"
+        or motion.metadata_json.get("role") != "svi_motion"
+        or motion.metadata_json.get("context_frames") != 4
+        or motion.metadata_json.get("profile_identity") != video.metadata_json.get("profile_identity")
+        or video.id not in motion.parent_artifact_ids
+        or type(motion.size_bytes) is not int
+        or not 0 < motion.size_bytes <= 512 * 1024
+    ):
+        return False
+    try:
+        path = safe_join(get_settings().data_dir, motion.relative_path)
+        return path.is_file() and path.stat().st_size == motion.size_bytes
+    except (OSError, ValueError):
+        return False
 
 
 def create_svi_run(
@@ -22,19 +117,7 @@ def create_svi_run(
             profile = RunnerClient().request("GET", "/v1/video/svi/capabilities")
         except (RunnerError, RunnerUnavailable):
             raise HTTPException(409, "Connect the Host Runner to inspect SVI video") from None
-    if (
-        profile.get("available") is not True
-        or profile.get("backend") != "wan22-svi-pro-q4"
-        or profile.get("native_window_frames") != 81
-        or profile.get("continuation_frames") != 4
-        or profile.get("memory_estimate_mib") != RAM_MIB
-        or any(profile.get(key) != value for key, value in GEOMETRY.items() if key != "frames")
-    ):
-        raise HTTPException(409, "The selected SVI recipe is unavailable or has not been qualified")
-    if any(getattr(body, key) != value for key, value in GEOMETRY.items() if key != "fps"):
-        raise HTTPException(422, "This SVI recipe uses 832×480, 81 frames, 20 steps and CFG 5")
-    if body.memory_profile != "default":
-        raise HTTPException(422, "SVI uses its model-default 18-GiB workload, not the 11-GiB Wan profile")
+    managed = checked_profile(body, profile)
     parameters = {
         **body.model_dump(mode="json", exclude={"gpu", "image_artifact_id"}),
         **GEOMETRY,
@@ -43,24 +126,7 @@ def create_svi_run(
         "managed_video_gpu_indices": profile.get("eligible_gpu_indices"),
         "execution_deadline_at": (utcnow() + timedelta(hours=24)).isoformat(),
     }
-    try:
-        checked_recipe(parameters, {"ram_mib": RAM_MIB})
-    except ValueError:
-        raise HTTPException(409, "Refresh the exact SVI engine and compatible GPU observation") from None
-    parameters["managed_runtime"] = dict(parameters["managed_runtime"])
-    parameters["managed_video_gpu_indices"] = list(parameters["managed_video_gpu_indices"])
-    if body.gpu != "auto" and int(body.gpu) not in parameters["managed_video_gpu_indices"]:
-        raise HTTPException(422, "Choose a GPU compatible with the selected SVI engine")
-    if body.model_id:
-        model = profile.get("video_model")
-        if (
-            not isinstance(model, dict)
-            or model.get("definition_id") != str(body.model_id)
-            or not isinstance(model.get("binding"), dict)
-            or model["binding"].get("managed_runtime") != parameters["managed_runtime"]
-        ):
-            raise HTTPException(409, "The selected SVI model differs from its capability observation")
-        parameters["video_model"] = deepcopy(model)
+    parameters.update(managed)
     scope = getattr(session, "scope", None)
     owner = task.owner_id if task else scope.user_id if scope else None
     source = session.get(Artifact, str(body.image_artifact_id)) if body.image_artifact_id else None

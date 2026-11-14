@@ -1,7 +1,7 @@
 """Recurrent video adapter over the common owned-process lifecycle.
 
-Not registered or exposed by creation routes until the complete guided model
-binding and actual managed-runtime qualification pass.
+The shared worker registers this adapter; native admission stays closed until
+managed-runtime inference and temporal qualification pass.
 """
 
 import math

@@ -94,6 +94,11 @@ def publish_video(
         from app.video_models import profile_for
 
         observed_profile = profile_for(session, body.model_id, observed_profile)
+    recurrent = observed_profile.get("backend") == "wan22-svi-pro-q4"
+    if recurrent:
+        from app.svi_runs import checked_profile
+
+        checked_profile(body, observed_profile, long=True)
     if task is None:
         task = Task(
             id=str(body.client_request_id),
@@ -114,8 +119,14 @@ def publish_video(
         ):
             raise HTTPException(409, "Media plan belongs to a different reviewed publication")
         return job_view(session, task)
-    reservation = memory_reservation(body, observed_profile)
-    managed = managed_parameters(body, observed_profile)
+    if recurrent:
+        from app.svi_executor import RAM_MIB
+
+        reservation = RAM_MIB
+        managed = checked_profile(body, observed_profile, long=True)
+    else:
+        reservation = memory_reservation(body, observed_profile)
+        managed = managed_parameters(body, observed_profile)
     if managed and not budget:
         execution_deadline_at = (utcnow() + timedelta(hours=72)).isoformat()
         # Manual long films previously had no whole-film expiry. Bound the
@@ -139,25 +150,34 @@ def publish_video(
         if continuation_strategy == "last_frame_apg_v1"
         else {}
     )
-    window_frames = native_window_frames(body, observed_profile)
+    if recurrent:
+        continuation_strategy = "svi_original_anchor_v1"
+    fps = 15 if recurrent else 24
+    window_frames = 81 if recurrent else native_window_frames(body, observed_profile)
     timing = timeline(
-        frames=duration_frames(body.duration_seconds, 24),
-        fps=24,
+        frames=duration_frames(body.duration_seconds, fps),
+        fps=fps,
         seed=body.seed,
         mode=body.composition_mode,
-        scene_frames=[scene.duration_seconds * 24 for scene in body.scenes] if body.scenes else None,
-        context_frames=1 if continuation_strategy in ("last_frame_v1", "last_frame_apg_v1") else 17,
+        scene_frames=[scene.duration_seconds * fps for scene in body.scenes] if body.scenes else None,
+        context_frames=4
+        if recurrent
+        else 1
+        if continuation_strategy in ("last_frame_v1", "last_frame_apg_v1")
+        else 17,
         window_frames=window_frames,
+        fixed_windows=recurrent,
+        continue_within_scenes=recurrent,
     )
     scene_index = 0
-    scene_end = body.scenes[0].duration_seconds * 24 if body.scenes else 0
+    scene_end = body.scenes[0].duration_seconds * fps if body.scenes else 0
     runs = []
     previous = None
     for segment in timing.segments:
         if body.scenes:
             while segment.start_frame >= scene_end:
                 scene_index += 1
-                scene_end += body.scenes[scene_index].duration_seconds * 24
+                scene_end += body.scenes[scene_index].duration_seconds * fps
         settings = VideoRequest.model_validate(
             {
                 **body.model_dump(
@@ -191,8 +211,18 @@ def publish_video(
         }
         if body.scenes:
             run.parameters = {**run.parameters, "scene_index": scene_index}
-        if previous and body.composition_mode == "continuous":
-            run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
+        if previous and (
+            body.composition_mode == "continuous"
+            or recurrent
+            and body.scenes
+            and previous.parameters.get("scene_index") == scene_index
+        ):
+            if recurrent:
+                from app.svi_runs import bind_previous
+
+                bind_previous(run, previous)
+            else:
+                run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
             depend_on(session, run, previous)
         runs.append(run)
         previous = run
@@ -222,7 +252,7 @@ def publish_video(
             "timeline": timing.model_dump(mode="json"),
             "width": body.width,
             "height": body.height,
-            "backend": "wan2.2-5b",
+            "backend": "wan22-svi-pro-q4" if recurrent else "wan2.2-5b",
             "composition_mode": body.composition_mode,
             "continuation_strategy": continuation_strategy,
             **guidance_snapshot,
@@ -736,7 +766,19 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
             and artifact.trashed_at is None
             and safe_join(get_settings().data_dir, artifact.relative_path).is_file()
         )
-        if reusable and (plan["mode"] != "continuous" or reusable_prefix):
+        recurrent_stage = source.executor_type == "wan_svi_video"
+        if reusable and recurrent_stage:
+            from app.svi_runs import reusable_checkpoint
+
+            reusable = reusable_checkpoint(session, source, artifact)
+        linked = previous is not None and (
+            plan["mode"] == "continuous"
+            or recurrent_stage
+            and source.parameters.get("previous_motion_run_id")
+        )
+        if not linked:
+            reusable_prefix = True
+        if reusable and (not linked or reusable_prefix):
             run = source
         else:
             reusable_prefix = False
@@ -755,13 +797,18 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
                 parent_run_id=source.id,
                 retry_class="inspect",
             )
+            if recurrent_stage:
+                from app.svi_runs import bind_previous
+
+                bind_previous(run, previous if linked else None)
             from app.media_translation import prepare_retry
 
             entry = prepare_retry(session, source, run, body.translation)
             if entry:
                 translation_entries.append(entry)
-            if previous and plan["mode"] == "continuous":
-                run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
+            if linked:
+                if not recurrent_stage:
+                    run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
                 depend_on(session, run, previous)
         new_ids.append(run.id)
         previous = run

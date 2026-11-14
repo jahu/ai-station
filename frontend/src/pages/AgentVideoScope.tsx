@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Settings2 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
@@ -7,10 +8,12 @@ import {
   type SceneDraft,
 } from "../components/media/video-scenes";
 import { randomId } from "../lib/random-id";
-import { useHardware } from "../api";
+import { api, useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import type { VideoMediaRequest } from "./agent-media";
-import VideoMemoryProfile from "../components/media/VideoMemoryProfile";
+import VideoMemoryProfile, {
+  type VideoCapabilities,
+} from "../components/media/VideoMemoryProfile";
 import VideoModelChoice from "../components/media/VideoModelChoice";
 
 export default function AgentVideoScope({
@@ -25,6 +28,18 @@ export default function AgentVideoScope({
   onBusy: (busy: boolean) => void;
 }) {
   const hardware = useHardware();
+  const capability = useQuery({
+    queryKey: value.model_id
+      ? ["video-capabilities", value.model_id]
+      : ["video-capabilities"],
+    queryFn: () =>
+      api<VideoCapabilities>(
+        value.model_id
+          ? `/video/models/${value.model_id}/capabilities`
+          : "/video/capabilities",
+      ),
+  });
+  const recipe = capability.data?.operation_recipe;
   const incoming = value.scenes;
   const [sceneState, setSceneState] = useState(() => ({
     source: incoming,
@@ -63,17 +78,25 @@ export default function AgentVideoScope({
       <VideoModelChoice
         value={value.model_id ?? ""}
         disabled={disabled}
-        onChange={(id) =>
+        onChange={(id, model) =>
           patch({
             model_id: id || undefined,
-            ...(id
+            ...(model?.operation_recipe
               ? {
-                  width: 1280,
-                  height: 704,
-                  steps: Math.max(20, value.steps ?? 20),
-                  memory_profile: "bounded_11g" as const,
+                  width: model.operation_recipe.width,
+                  height: model.operation_recipe.height,
+                  steps: model.operation_recipe.steps,
+                  cfg: model.operation_recipe.cfg,
+                  memory_profile: "default" as const,
                 }
-              : {}),
+              : id
+                ? {
+                    width: 1280,
+                    height: 704,
+                    steps: Math.max(20, value.steps ?? 20),
+                    memory_profile: "bounded_11g" as const,
+                  }
+                : {}),
           })
         }
       />
@@ -141,8 +164,16 @@ export default function AgentVideoScope({
       )}
       <MediaInput
         kind="image"
-        label="First frame (optional)"
-        hint="Choose a PNG/JPEG image, or leave empty to create the film from text."
+        label={
+          recipe?.image_required
+            ? "First frame (required)"
+            : "First frame (optional)"
+        }
+        hint={
+          recipe?.image_required
+            ? "Choose the original PNG/JPEG image. It anchors every continuation of the film."
+            : "Choose a PNG/JPEG image, or leave empty to create the film from text."
+        }
         value={value.image_artifact_id ?? ""}
         disabled={disabled}
         onBusy={onBusy}
@@ -177,7 +208,7 @@ export default function AgentVideoScope({
             Resolution
             <select
               aria-label="Agent video resolution"
-              disabled={value.memory_profile === "bounded_11g"}
+              disabled={!!recipe || value.memory_profile === "bounded_11g"}
               value={`${value.width ?? 1280}x${value.height ?? 704}`}
               onChange={(e) => {
                 const [width, height] = e.target.value.split("x").map(Number);
@@ -211,6 +242,7 @@ export default function AgentVideoScope({
               min={value.memory_profile === "bounded_11g" ? 20 : 4}
               max={40}
               aria-label="Agent video steps"
+              disabled={!!recipe}
               value={value.steps ?? 20}
               onChange={(e) => patch({ steps: Number(e.target.value) })}
             />
@@ -234,6 +266,7 @@ export default function AgentVideoScope({
               max={10}
               step={0.1}
               aria-label="Agent video CFG"
+              disabled={!!recipe}
               value={value.cfg ?? 5}
               onChange={(e) => patch({ cfg: Number(e.target.value) })}
             />

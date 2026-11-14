@@ -67,7 +67,7 @@ def image_capabilities(session: DB, model_id: UUID | None = None):
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
 
-    result = workflow_steps(session, run_id, {"photo_pipe", "wan_video", "image_edit"})
+    result = workflow_steps(session, run_id, {"photo_pipe", "wan_video", "wan_svi_video", "image_edit"})
     root = session.get(Run, str(run_id))
     if root.executor_type == "image_edit" and len(result["steps"]) == 1 and root.status == "succeeded":
         from app.image_edits import child

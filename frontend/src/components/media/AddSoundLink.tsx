@@ -10,7 +10,7 @@ export default function AddSoundLink({ artifact }: { artifact: Artifact }) {
     artifact.purge_run_id ||
     artifact.purged_at ||
     !artifact.metadata?.frames ||
-    ![24, 25].includes(Number(artifact.metadata?.fps))
+    ![15, 24, 25].includes(Number(artifact.metadata?.fps))
   )
     return null;
   return (

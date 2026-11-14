@@ -1,5 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
+import type { VideoCapabilities } from "./VideoMemoryProfile";
+
+type VideoChoice = {
+  id: string;
+  name: string;
+  available: boolean;
+  profile?: string;
+  operation_recipe?: VideoCapabilities["operation_recipe"];
+};
 
 export default function VideoModelChoice({
   value,
@@ -7,19 +16,14 @@ export default function VideoModelChoice({
   disabled,
 }: {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, model?: VideoChoice) => void;
   disabled?: boolean;
 }) {
   const models = useQuery({
     queryKey: ["video-models"],
     queryFn: () =>
       api<{
-        items?: {
-          id: string;
-          name: string;
-          available: boolean;
-          profile?: string;
-        }[];
+        items?: VideoChoice[];
       }>("/video/models"),
   });
   if (!value && !models.data?.items?.length) return null;
@@ -29,7 +33,12 @@ export default function VideoModelChoice({
       <select
         aria-label="Video model"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(
+            event.target.value,
+            models.data?.items?.find((item) => item.id === event.target.value),
+          )
+        }
         disabled={disabled}
       >
         <option value="">Default · current video setup</option>

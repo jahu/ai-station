@@ -5,6 +5,17 @@ import { boundedResolutions } from "./video-geometry";
 export type VideoProfile = "default" | "bounded_11g";
 export type VideoCapabilities = {
   available: boolean;
+  operation_recipe?: {
+    label: string;
+    width: number;
+    height: number;
+    frames: number;
+    fps: number;
+    steps: number;
+    cfg: number;
+    image_required: boolean;
+    memory_mib: number;
+  };
   reason?: string;
   configuration_source?: "managed" | "configured";
   eligible_gpu_indices?: number[];
@@ -46,6 +57,20 @@ export default function VideoMemoryProfile({
       (profile) => profile.id === "bounded_11g" && profile.available,
     );
   const portrait = boundedResolutions(capability.data).length > 1;
+  const recipe = capability.data?.operation_recipe;
+  if (recipe)
+    return (
+      <div className="notice">
+        <strong>{recipe.label} · installed video profile</strong>
+        <p>
+          {recipe.width} × {recipe.height} · {recipe.fps} fps · {recipe.steps}{" "}
+          steps · {recipe.memory_mib / 1024} GiB system RAM without swap. Clips
+          use complete {(recipe.frames / recipe.fps).toFixed(1)}-second samples;
+          longer films are joined to your requested length. Generation can take
+          hours.
+        </p>
+      </div>
+    );
   if (capability.data?.configuration_source === "managed")
     return (
       <div className="notice">

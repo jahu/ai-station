@@ -151,7 +151,7 @@ function SceneForm({
   ) as Record<string, unknown>;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [mode, setMode] = useState(
+  const [modeChoice, setMode] = useState(
     String(
       saved.mode ??
         ((saved.image_artifact_id ?? initialImage) ? "animate" : "generate"),
@@ -179,7 +179,7 @@ function SceneForm({
           : "1280x704"),
     ),
   );
-  const [duration, setDuration] = useState(
+  const [durationChoice, setDuration] = useState(
     String(
       saved.duration ??
         (saved.duration_seconds
@@ -207,7 +207,9 @@ function SceneForm({
       })) ?? [{ key: "first", prompt: "", duration_seconds: 5 }],
   );
   const planningScenes =
-    duration.endsWith("s") && compositionMode === "shots" && scenePlanning;
+    durationChoice.endsWith("s") &&
+    compositionMode === "shots" &&
+    scenePlanning;
   const totalSceneSeconds = scenes.reduce(
     (total, scene) => total + scene.duration_seconds,
     0,
@@ -236,25 +238,34 @@ function SceneForm({
           : "/video/capabilities",
       ),
   });
+  const recipe = capability.data?.operation_recipe;
+  const mode = recipe?.image_required ? "animate" : modeChoice;
+  const duration =
+    recipe && !durationChoice.endsWith("s")
+      ? String(recipe.frames)
+      : durationChoice;
   const managed = capability.data?.configuration_source === "managed";
   const fixedResolutions = boundedResolutions(capability.data);
-  const fixedProfile = managed || profileChoice === "bounded_11g";
-  const resolution =
-    fixedProfile && !fixedResolutions.includes(resolutionChoice)
+  const fixedProfile = !!recipe || managed || profileChoice === "bounded_11g";
+  const resolution = recipe
+    ? `${recipe.width}x${recipe.height}`
+    : fixedProfile && !fixedResolutions.includes(resolutionChoice)
       ? "1280x704"
       : resolutionChoice;
-  const steps = managed ? Math.max(20, stepsChoice) : stepsChoice;
-  const memoryProfile: VideoProfile =
-    (managed ? "bounded_11g" : profileChoice) ??
-    (mode === "generate" &&
-    fixedResolutions.includes(resolution) &&
-    steps >= 20 &&
-    capability.data?.memory_profiles?.some(
-      (row) => row.id === "bounded_11g" && row.available,
-    ) &&
-    capability.data.recommended_memory_profile === "bounded_11g"
-      ? "bounded_11g"
-      : "default");
+  const steps =
+    recipe?.steps ?? (managed ? Math.max(20, stepsChoice) : stepsChoice);
+  const memoryProfile: VideoProfile = recipe
+    ? "default"
+    : ((managed ? "bounded_11g" : profileChoice) ??
+      (mode === "generate" &&
+      fixedResolutions.includes(resolution) &&
+      steps >= 20 &&
+      capability.data?.memory_profiles?.some(
+        (row) => row.id === "bounded_11g" && row.available,
+      ) &&
+      capability.data.recommended_memory_profile === "bounded_11g"
+        ? "bounded_11g"
+        : "default"));
   useCreativeDraft({
     formState: {
       mode,
@@ -295,6 +306,7 @@ function SceneForm({
         seed,
         gpu,
         image_artifact_id: mode === "animate" ? image : null,
+        ...(recipe ? { cfg: recipe.cfg } : {}),
         ...translationRequest(translation),
       };
       if (duration.endsWith("s")) {
@@ -391,7 +403,7 @@ function SceneForm({
         action={
           <span className="media-runtime">
             {capability.data?.available && <i />}
-            Wan 2.2 · Local
+            {recipe?.label ?? (modelId ? "Local video" : "Wan 2.2")} · Local
           </span>
         }
       >
@@ -441,7 +453,7 @@ function SceneForm({
           </div>
           <VideoModelChoice
             value={modelId}
-            onChange={setModelId}
+            onChange={(id) => setModelId(id)}
             disabled={generate.isPending}
           />
           <fieldset disabled={busy || uploading}>
@@ -452,6 +464,7 @@ function SceneForm({
                   type="radio"
                   name="video-source"
                   checked={mode === "generate"}
+                  disabled={recipe?.image_required}
                   onChange={() => setMode("generate")}
                 />
                 Text to video
@@ -505,7 +518,9 @@ function SceneForm({
                 <select
                   aria-label="Format"
                   value={resolution}
-                  disabled={fixedProfile && fixedResolutions.length === 1}
+                  disabled={
+                    !!recipe || (fixedProfile && fixedResolutions.length === 1)
+                  }
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -542,9 +557,17 @@ function SceneForm({
                     value={duration}
                     onChange={(event) => setDuration(event.target.value)}
                   >
-                    <option value={33}>1.4 seconds</option>
-                    <option value={49}>2 seconds</option>
-                    <option value={81}>3.4 seconds</option>
+                    {recipe ? (
+                      <option value={recipe.frames}>
+                        {(recipe.frames / recipe.fps).toFixed(1)} seconds
+                      </option>
+                    ) : (
+                      <>
+                        <option value={33}>1.4 seconds</option>
+                        <option value={49}>2 seconds</option>
+                        <option value={81}>3.4 seconds</option>
+                      </>
+                    )}
                     {duration.endsWith("s") &&
                       ![
                         "10s",
@@ -654,6 +677,7 @@ function SceneForm({
                     min={managed || profileChoice === "bounded_11g" ? 20 : 4}
                     max={40}
                     value={steps}
+                    disabled={!!recipe}
                     onChange={(event) => setSteps(Number(event.target.value))}
                   />
                 </label>
@@ -709,8 +733,8 @@ function SceneForm({
               {busy ? progressLabel : "Generate video"}
             </Button>
             <p className="media-privacy">
-              Your images and prompt stay on this workstation. Output is 24 fps,
-              without sound.
+              Your images and prompt stay on this workstation. Output is{" "}
+              {recipe?.fps ?? 24} fps, without sound.
             </p>
           </fieldset>
         </form>

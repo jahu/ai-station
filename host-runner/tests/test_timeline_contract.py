@@ -101,3 +101,44 @@ def test_native_timeline_journal_is_idempotent_and_retains_fixed_scope(tmp_path,
     assert sent["deadline_at"] == request.deadline_at
     with pytest.raises(ValueError, match="identity"):
         runtime.start(manager, request.model_copy(update={"deadline_at": request.deadline_at + 1}))
+
+
+@pytest.mark.parametrize("qualified", [False, True])
+def test_cpu_timeline_can_use_owned_svi_without_a_five_b_installation(tmp_path, monkeypatch, qualified):
+    from types import SimpleNamespace
+
+    from ai_station_runner import effects_selection, svi_environment, video_selection
+
+    settings = SimpleNamespace(mmaudio_enabled=False, video_python="", host_data_dir=lambda: tmp_path)
+    monkeypatch.setattr(runtime, "get_settings", lambda: settings)
+    monkeypatch.setattr(runtime, "available", lambda: True)
+    monkeypatch.setattr(video_selection, "selection", lambda _: None)
+    monkeypatch.setattr(effects_selection, "selection", lambda _: None)
+    monkeypatch.setattr(svi_environment, "QUALIFIED", qualified)
+    monkeypatch.setattr(svi_environment, "read_json", lambda _: {"fixed": True})
+    monkeypatch.setattr(svi_environment, "resolve", lambda root, identity: {"video_python": sys.executable})
+    if qualified:
+        assert runtime.installation() == __import__("pathlib").Path(sys.executable)
+    else:
+        with pytest.raises(ValueError, match="Configure"):
+            runtime.installation()
+
+
+def test_explicit_partial_video_configuration_cannot_silently_select_svi(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from ai_station_runner import effects_selection, svi_environment, video_selection
+
+    monkeypatch.setattr(
+        runtime,
+        "get_settings",
+        lambda: SimpleNamespace(mmaudio_enabled=False, video_python="", host_data_dir=lambda: tmp_path),
+    )
+    monkeypatch.setattr(video_selection, "selection", lambda _: {"managed": False})
+    monkeypatch.setattr(effects_selection, "selection", lambda _: None)
+    monkeypatch.setattr(svi_environment, "QUALIFIED", True)
+    monkeypatch.setattr(
+        svi_environment, "resolve", lambda *a: pytest.fail("Partial configuration was ignored")
+    )
+    with pytest.raises(ValueError, match="Configure"):
+        runtime.installation()

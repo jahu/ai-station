@@ -129,7 +129,13 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 from app.video import memory_reservation
                 from app.video_models import profile_for
 
-                memory_reservation(body.media.request, profile_for(session, body.media.request.model_id))
+                profile = profile_for(session, body.media.request.model_id)
+                if profile.get("backend") == "wan22-svi-pro-q4":
+                    from app.svi_runs import checked_profile
+
+                    checked_profile(body.media.request, profile, long=True)
+                else:
+                    memory_reservation(body.media.request, profile)
             elif body.media.kind == "speech" and body.media.request.model_id:
                 from app.audio_models import profile_for
 

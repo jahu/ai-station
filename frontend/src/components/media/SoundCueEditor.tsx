@@ -17,7 +17,7 @@ export default function SoundCueEditor({
   frames: number;
   disabled: boolean;
 }) {
-  if (![24, 25].includes(fps) || !Number.isInteger(frames) || frames < 1)
+  if (![15, 24, 25].includes(fps) || !Number.isInteger(frames) || frames < 1)
     return null;
   const seconds = (frame: number) => Number((frame / fps).toFixed(3));
   const next = value.at(-1)?.end_frame ?? 0;
