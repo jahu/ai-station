@@ -35,6 +35,8 @@ class SviSetupExecutor(SpeechSetupExecutor):
 
     def validate(self, run):
         RuntimeSetupExecutor.validate(self, run)
+        if run.task.metadata_json["runtime_preparation"].get("workload_accepted") is not True:
+            raise ValueError("SVI setup requires its explicitly reviewed CPU-offload workload")
         recipe = run.parameters["recipe"]
         inputs = recipe.get("inputs") or []
         if (
@@ -74,3 +76,8 @@ class SviSetupExecutor(SpeechSetupExecutor):
 
     def adopt(self, runner, run):
         return runner.adopt_svi_environment(run.id, {"profile": SVI_PROFILE, "permissions": PERMISSIONS})
+
+    def on_prepared(self, session, run, prepared, files):
+        from app.svi_models import register_prepared
+
+        return register_prepared(session, run, prepared, files)

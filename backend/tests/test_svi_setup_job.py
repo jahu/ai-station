@@ -152,6 +152,7 @@ def body(source):
         "profile": runtime_setup_api.SVI_PROFILE,
         "manifest_sha256": source["manifest_sha256"],
         "license_accepted": True,
+        "workload_accepted": True,
     }
 
 
@@ -432,3 +433,18 @@ def test_unqualified_svi_catalog_never_queues_a_preparation(svi_source, monkeypa
         with control_session_factory()() as session:
             assert not list(session.scalars(select(Run)))
         assert not svi_source["source"]["calls"] and not svi_source["starts"]
+
+
+@pytest.mark.parametrize("value", [False, None])
+def test_recurrent_workload_requires_explicit_acceptance_before_enqueue(svi_source, value):
+    request = body(svi_source)
+    if value is None:
+        request.pop("workload_accepted")
+    else:
+        request["workload_accepted"] = value
+    with TestClient(app) as api:
+        result = api.post("/api/setup/runtimes", json=request)
+        assert result.status_code == 422
+        assert not svi_source["source"]["calls"] and not svi_source["starts"]
+        with control_session_factory()() as session:
+            assert not list(session.scalars(select(Run)))

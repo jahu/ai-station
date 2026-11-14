@@ -62,6 +62,7 @@ class Prepare(BaseModel):
     profile: Profile
     manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     license_accepted: StrictBool
+    workload_accepted: StrictBool = False
 
 
 def report(profile="llamacpp-cuda-linux-amd64-v1"):
@@ -197,6 +198,8 @@ def attempt(session, task, saved, previous=None):
 @router.post("", status_code=202)
 def prepare(body: Prepare, session: DB):
     administrator(session)
+    if body.profile == SVI_PROFILE and not body.workload_accepted:
+        raise HTTPException(422, "Review and accept the recurrent model CPU-offload and memory workload")
     if not body.license_accepted:
         raise HTTPException(422, "Review the runtime and bundled component licenses before preparing")
     existing = session.get(Task, str(body.client_request_id))
@@ -244,6 +247,7 @@ def prepare(body: Prepare, session: DB):
                 "recipe": recipe,
                 "manifest_sha256": body.manifest_sha256,
                 "license_accepted": True,
+                **({"workload_accepted": True} if body.profile == SVI_PROFILE else {}),
                 "attempt": 1,
                 "receipts": {},
             },

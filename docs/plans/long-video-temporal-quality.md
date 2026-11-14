@@ -642,3 +642,40 @@ film is in the owner's private Library. A ten-second continuation now reuses its
 first window and original anchor; no repeated initial generation is required.
 It uses the same method's separate 512×288 motion identity, not a relabeled public
 832×480 checkpoint. This measurement does not yet change the product recipe.
+
+
+## Shared recurrent model registration
+
+Successful SVI setup now registers one shared Video definition for its complete
+six-component bundle and opaque prepared engine. Each component retains its
+owned registry ID, hash, relative store path, byte size and mtime; selection
+rechecks all six and the primary high-noise model. The definition binds the
+actual fixed geometry, 15-fps timing, four-frame context and 18-GiB workload.
+Shared metadata contains no private setup operation ID. Registration is
+idempotent for the same environment and refuses conflicting bindings.
+
+SVI setup requires separate explicit CPU-offload/workload acceptance in addition
+to license acceptance. Older runtime setup requests keep their existing contract.
+The shared offline-setup executor has a default empty post-preparation hook;
+SVI alone uses it to register the complete model before its private setup receipt
+and success transition. Other media setup paths retain their receipt format.
+
+Video model capabilities select the SVI typed engine endpoint without passing a
+5B checkpoint slot. Incompatible engine/geometry/fps/context/resources are
+rejected. An unregistered recurrent execution adapter cannot be advertised as
+available, even when an isolated native test engine reports readiness. Short/
+long public dispatch and UI admission remain separate outstanding work.
+
+The existing model-install Run also has a metadata-only SVI bundle recheck; it
+does not parse the GGUF as a conversational model, download weights or load a
+GPU. It preserves the frozen bundle, claim fencing, Stop and administrator
+checks, and returns an honest metadata-only receipt (no new full weight hash or
+inference claim). Native inference retains its full six-object hash validation.
+Focused tests cover selection tampering, private-ID exclusion, immutable
+snapshots, typed capabilities, consent, recheck cancellation and stale claims.
+
+The integrated registry/setup group passed 195 tests in 260.2 seconds, including
+existing 5B model installation/definitions and speech/music/avatar/effects/Fish
+setup regressions. Repository Ruff and format checks passed for 1,393 files.
+This remains focused normal-test evidence, separate from actual owned assembly,
+new native inference and final whole-source validation.

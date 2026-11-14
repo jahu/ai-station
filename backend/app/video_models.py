@@ -1,5 +1,6 @@
 """Explicit installed video choices over shared definitions and native readiness."""
 
+from copy import deepcopy
 from typing import Annotated
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.db import session_scope
 from app.models import ModelDefinition, ModelFile
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+from app.svi_models import CHECKPOINT_PROFILE as SVI_CHECKPOINT_PROFILE
+from app.svi_models import checked_binding
 
 router = APIRouter(prefix="/api/video/models", tags=["video"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
@@ -26,19 +29,26 @@ def frozen_model(session, identity, *, recheck=False):
         or (definition.status != "registered" and not recheck)
         or file is None
         or file.availability != "present"
-        or not binding
+        or not isinstance(binding, dict)
         or file.sha256 != video.get("sha256")
         or not file.sha256
         or file.relative_path != "models/store/" + file.sha256
-        or binding.get("checkpoint_profile") != "wan22-5b-diffusion-v1"
+        or binding.get("checkpoint_profile") not in {"wan22-5b-diffusion-v1", SVI_CHECKPOINT_PROFILE}
         or binding.get("cpu_offload") is not True
         or binding.get("workload_accepted") is not True
     ):
         raise HTTPException(409, "Selected video model is unavailable or needs its reviewed workload")
+    if binding["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE:
+        try:
+            binding = checked_binding(session, file, binding)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(
+                409, "The complete recurrent video model changed; inspect its installation"
+            ) from exc
     return {
         "definition_id": definition.id,
         "name": definition.name,
-        "binding": dict(binding),
+        "binding": deepcopy(binding),
         "checkpoint": {
             "profile": binding["checkpoint_profile"],
             "relative_path": file.relative_path,
@@ -65,17 +75,29 @@ def profile_for(session, identity, observed=None, *, recheck=False):
 
         return observed if observed is not None else capabilities()
     model = frozen_model(session, identity, recheck=recheck)
-    if observed is not None and same_model(observed.get("video_model"), model):
+    recurrent = model["binding"]["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE
+    if recurrent:
+        from app.executors import EXECUTORS
+        from app.svi_executor import NAME
+
+        if NAME not in EXECUTORS:
+            raise HTTPException(409, "Recurrent video execution is still being qualified")
+    cached = observed is not None and same_model(observed.get("video_model"), model)
+    if cached and not recurrent:
         return observed
     try:
-        report = RunnerClient(timeout=20).request(
-            "POST",
-            "/v1/video/model-capabilities",
-            {
-                "checkpoint": model["checkpoint"],
-                "managed_runtime": model["binding"]["managed_runtime"],
-                "permissions": ["filesystem_read"],
-            },
+        report = (
+            observed
+            if cached
+            else RunnerClient(timeout=20).request(
+                "POST",
+                "/v1/video/svi/model-capabilities" if recurrent else "/v1/video/model-capabilities",
+                {
+                    **({} if recurrent else {"checkpoint": model["checkpoint"]}),
+                    "managed_runtime": model["binding"]["managed_runtime"],
+                    "permissions": ["filesystem_read"],
+                },
+            )
         )
     except (RunnerError, RunnerUnavailable):
         raise HTTPException(409, "Connect the Host Runner to inspect the selected video model") from None
@@ -83,7 +105,33 @@ def profile_for(session, identity, observed=None, *, recheck=False):
         raise HTTPException(
             409, report.get("reason") or "The selected video model's fixed engine is unavailable"
         )
-    return {**report, "video_model": model, "recommended_memory_profile": "bounded_11g"}
+    if recurrent:
+        from app.svi_executor import GEOMETRY, RAM_MIB, checked_recipe
+
+        try:
+            if (
+                report.get("backend") != "wan22-svi-pro-q4"
+                or report.get("native_window_frames") != 81
+                or report.get("continuation_frames") != 4
+            ):
+                raise ValueError("The recurrent native window changed")
+            checked_recipe(
+                {
+                    **report,
+                    "frames": GEOMETRY["frames"],
+                    "managed_video_gpu_indices": report.get("eligible_gpu_indices"),
+                },
+                {"ram_mib": RAM_MIB},
+            )
+            if report.get("memory_estimate_mib") != RAM_MIB:
+                raise ValueError("The recurrent resource profile changed")
+        except ValueError as exc:
+            raise HTTPException(409, "The recurrent video recipe changed; refresh its capabilities") from exc
+    return {
+        **report,
+        "video_model": model,
+        "recommended_memory_profile": "default" if recurrent else "bounded_11g",
+    }
 
 
 @router.get("")
@@ -95,17 +143,24 @@ def choices(session: DB):
         if not isinstance(row.metadata_json.get("video"), dict):
             continue
         try:
-            frozen_model(session, row.id)
+            model = frozen_model(session, row.id)
+            if model["binding"]["checkpoint_profile"] == SVI_CHECKPOINT_PROFILE:
+                profile_for(session, row.id)
             available = True
         except HTTPException:
             available = False
+        recurrent = (row.metadata_json["video"].get("binding") or {}).get(
+            "checkpoint_profile"
+        ) == SVI_CHECKPOINT_PROFILE
         items.append(
             {
                 "id": row.id,
                 "name": row.name,
                 "available": available,
                 "cpu_offload": True,
-                "profile": "1280×704 · 12 GiB GPU · 24 GiB RAM",
+                "profile": "832×480 · 15 fps · 12 GiB GPU · 24 GiB RAM"
+                if recurrent
+                else "1280×704 · 12 GiB GPU · 24 GiB RAM",
             }
         )
     return {"items": items}

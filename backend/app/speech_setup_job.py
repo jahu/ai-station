@@ -208,6 +208,9 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
             self.metadata_prefix + "_inference_tested": False,
         }
 
+    def on_prepared(self, session, run, prepared, files):
+        return {}
+
     def complete(self, session, run, result, runner):
         from app.artifacts import register_file
         from app.runs import transition
@@ -236,7 +239,13 @@ class SpeechSetupExecutor(RuntimeSetupExecutor):
             or prepared.get("environment_prepared") is not True
         ):
             raise ValueError(f"The native {self.setup_label} activation receipt changed")
-        receipt = {**prepared, "model_files": files, self.metadata_prefix + "_inference_tested": False}
+        extra = self.on_prepared(session, run, prepared, files)
+        receipt = {
+            **prepared,
+            "model_files": files,
+            self.metadata_prefix + "_inference_tested": False,
+            **extra,
+        }
         with tempfile.NamedTemporaryFile("w", suffix=".json") as output:
             json.dump(receipt, output)
             output.flush()

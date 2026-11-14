@@ -604,9 +604,13 @@ remain behind qualification. The fixed `/v1/setup/svi` protocol and the existing
 administrator-owned runtime preparation Tasks reuse verified downloads, offline
 assembly, immutable process journals, Stop and lease recovery. Activation and new
 installation remain closed by the same native qualification flag; no caller can
-choose a graph, command, dependency or model path. Actual fresh preparation,
-model-aware timelines/composition, UI selection and broader film qualification
-remain required admission gates.
+choose a graph, command, dependency or model path. Successful setup registers one
+shared six-component model binding without a private setup Run identity; workload
+consent is separate from license acceptance. CPU composition resolves the exact
+SVI engine in parent and child. Actual fresh preparation, model-aware public
+timelines/dispatch, UI selection and broader film qualification remain admission
+gates. The common model-install Run can recheck the complete SVI metadata/engine
+binding with claim fencing and Stop, without misclassifying its GGUF as an LLM.
 
 Creative Studio development follows [the creative production contract](plans/creative-studio.md).
 CreativeProject is an account-owned brand/editorial identity, separate from the
