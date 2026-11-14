@@ -14,10 +14,12 @@ export default function VideoModelChoice({
   value,
   onChange,
   disabled,
+  defaultLabel = "Default · current video setup",
 }: {
   value: string;
   onChange: (value: string, model?: VideoChoice) => void;
   disabled?: boolean;
+  defaultLabel?: string;
 }) {
   const models = useQuery({
     queryKey: ["video-models"],
@@ -41,7 +43,7 @@ export default function VideoModelChoice({
         }
         disabled={disabled}
       >
-        <option value="">Default · current video setup</option>
+        <option value="">{defaultLabel}</option>
         {value && !models.data?.items?.some((model) => model.id === value) && (
           <option value={value} disabled>
             Saved model · unavailable

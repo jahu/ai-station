@@ -46,6 +46,7 @@ export default function ConversationVideoScope({
   return (
     <section className="agent-media-scope" aria-label="Video settings">
       <VideoModelChoice
+        defaultLabel="Auto · choose for this task"
         value={value?.model_id ?? ""}
         disabled={disabled}
         onChange={(id, model) => {

@@ -76,6 +76,9 @@ it("keeps the chosen conversation model and format when changing film duration",
     </QueryClientProvider>,
   );
   await screen.findByRole("option", { name: "Continuous video" });
+  expect(
+    screen.getByRole("option", { name: "Auto · choose for this task" }),
+  ).toBeTruthy();
   fireEvent.change(screen.getByRole("combobox", { name: "Video model" }), {
     target: { value: "svi" },
   });
