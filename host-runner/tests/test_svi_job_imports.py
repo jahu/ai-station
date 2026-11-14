@@ -3,8 +3,11 @@
 import subprocess
 import sys
 
+import pytest
 
-def test_offline_svi_child_imports_without_api_server_torch_or_network(tmp_path):
+
+@pytest.mark.parametrize("admitted", [False, True])
+def test_offline_svi_child_imports_without_api_server_torch_or_network(tmp_path, admitted):
     result = subprocess.run(
         [
             sys.executable,
@@ -21,10 +24,13 @@ def offline(event,args):
     if event in {'socket.connect','socket.getaddrinfo','socket.sendto'}:
         raise AssertionError('Offline child attempted network access')
 sys.addaudithook(offline)
-from ai_station_runner import svi_video_job,svi_environment
-assert callable(svi_video_job.main) and not svi_environment.QUALIFIED
+from ai_station_runner import svi_environment
+svi_environment.QUALIFIED=sys.argv[1]=='1'
+from ai_station_runner import svi_video_job
+assert callable(svi_video_job.main)
 print('offline child imports passed')
 """,
+            "1" if admitted else "0",
         ],
         cwd=tmp_path,
         capture_output=True,

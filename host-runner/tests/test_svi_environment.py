@@ -11,7 +11,6 @@ from ai_station_runner import svi_environment as environment
 
 def test_svi_recipe_keeps_dependencies_and_excludes_unused_five_billion_weights():
     frozen = environment.recipe()
-    assert not environment.QUALIFIED
     models = [row for row in frozen["inputs"] if row["kind"] == "model"]
     assert {row["role"] for row in models} == environment.ROLES
     assert all("ti2v_5B" not in row["filename"] and "wan2.2_vae" not in row["filename"] for row in models)

@@ -1,4 +1,4 @@
-"""Owned offline SVI Pro assembly; no operational installation/API admission yet."""
+"""Owned offline SVI Pro assembly with a fixed native preparation contract."""
 
 import json
 import os
@@ -21,7 +21,8 @@ from ai_station_runner.speech_environment import (
 PROFILE = "wan22-svi-pro-q4-linux-x86-64-python312-v1"
 RECIPE = Path(__file__).with_name("recipes") / (PROFILE + ".json")
 BASE_MANIFEST = "13014b57a58c515483d8528a1fc2cb81a39bb698e6962a8cc606081d13314386"
-QUALIFIED = False
+# Release admission policy; complete native setup and resource readiness are still required.
+QUALIFIED = True
 ROLES = frozenset(
     {"wan_high_noise", "wan_low_noise", "svi_high_adapter", "svi_low_adapter", "wan_text_encoder", "wan_vae"}
 )

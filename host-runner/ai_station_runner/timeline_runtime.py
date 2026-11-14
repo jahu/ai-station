@@ -41,8 +41,12 @@ def installation():
             if svi_environment.QUALIFIED:
                 try:
                     root = cfg.host_data_dir().resolve()
-                    current = svi_environment.read_json(root / "runtime/svi-environments/active.json")
-                    configured = svi_environment.resolve(root, current)["video_python"]
+                    try:
+                        current = svi_environment.read_json(root / "runtime/svi-environments/active.json")
+                    except FileNotFoundError:
+                        pass  # An optional engine that was never selected is not a damaged installation.
+                    else:
+                        configured = svi_environment.resolve(root, current)["video_python"]
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     raise ValueError("The prepared CPU video environment is unavailable") from exc
     if not configured:

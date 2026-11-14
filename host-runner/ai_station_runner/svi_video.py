@@ -1,4 +1,4 @@
-"""Closed typed native SVI dispatch, unavailable until actual qualification."""
+"""Closed typed native SVI dispatch with exact engine, source and resource admission."""
 
 import json
 import math
@@ -25,7 +25,7 @@ from ai_station_runner.wan_svi_context import MAX_BYTES, generation_dimensions, 
 
 NAME = "wan_svi_video"
 RAM_MIB = 18432
-PORTRAIT_QUALIFIED = False
+PORTRAIT_QUALIFIED = True
 router = APIRouter(tags=["recurrent video"])
 
 

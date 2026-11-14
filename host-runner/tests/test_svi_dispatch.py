@@ -27,6 +27,19 @@ def runtime():
     }
 
 
+@pytest.mark.parametrize("generation_profile", ["landscape", "portrait"])
+def test_admitted_formats_still_require_the_exact_prepared_engine(tmp_path, monkeypatch, generation_profile):
+    monkeypatch.setattr(svi_video, "get_settings", lambda: SimpleNamespace(host_data_dir=lambda: tmp_path))
+    monkeypatch.setattr(
+        svi_video, "collect", lambda *_: pytest.fail("Inspected hardware before engine readiness")
+    )
+    report = svi_video.capabilities(runtime(), generation_profile)
+    assert report["available"] is False
+    assert report["backend"] == "wan22-svi-pro-q4"
+    assert "engine" in report["reason"]
+    assert not list(tmp_path.iterdir()), "Capability inspection must not prepare an engine"
+
+
 @pytest.fixture
 def fixture(tmp_path, monkeypatch):
     image = tmp_path / "artifacts/reference.png"

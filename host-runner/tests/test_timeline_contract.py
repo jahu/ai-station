@@ -142,3 +142,32 @@ def test_explicit_partial_video_configuration_cannot_silently_select_svi(tmp_pat
     )
     with pytest.raises(ValueError, match="Configure"):
         runtime.installation()
+
+
+@pytest.mark.parametrize("selected", [False, True])
+def test_optional_svi_absence_differs_from_a_lost_selected_cpu_engine(tmp_path, monkeypatch, selected):
+    from types import SimpleNamespace
+
+    from ai_station_runner import effects_selection, svi_environment, video_selection
+
+    monkeypatch.setattr(
+        runtime,
+        "get_settings",
+        lambda: SimpleNamespace(mmaudio_enabled=False, video_python="", host_data_dir=lambda: tmp_path),
+    )
+    monkeypatch.setattr(video_selection, "selection", lambda _: None)
+    monkeypatch.setattr(effects_selection, "selection", lambda _: None)
+    monkeypatch.setattr(svi_environment, "QUALIFIED", True)
+    if selected:
+        record = tmp_path / "runtime/svi-environments/active.json"
+        record.parent.mkdir(parents=True)
+        record.write_text("{}")
+
+    def resolve(*args):
+        if not selected:
+            pytest.fail("An absent optional selection must not resolve an engine")
+        raise FileNotFoundError("Previously selected owned Python is gone")
+
+    monkeypatch.setattr(svi_environment, "resolve", resolve)
+    with pytest.raises(ValueError, match="prepared CPU video environment" if selected else "Configure"):
+        runtime.installation()
