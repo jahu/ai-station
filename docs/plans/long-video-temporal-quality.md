@@ -933,6 +933,9 @@ The earlier full Python run at immutable `8e84c524` failed at the public desktop
 health identity test. An interrupted failure-report teardown also obscured the
 normal traceback. The individual test, its nearest 49-test group and the 91-test
 desktop group passed separately; this does not waive the full-run failure. A
-failure-capturing replay of the original 2,613-test prefix is running against the
-unchanged source to identify the actual order-dependent fault. The full-source
-check and draft integration PR remain unqualified until this is resolved.
+failure-capturing replay of the original 2,613-test prefix was intentionally
+stopped before reaching that test once the portrait source was committed. The
+required full `scripts/check.sh` for the completed source now includes immediate
+failure capture, consolidating diagnosis and final validation without running two
+duplicate Python suites. The original failure remains unresolved; the full-source
+check and draft integration PR remain unqualified until it is resolved.
