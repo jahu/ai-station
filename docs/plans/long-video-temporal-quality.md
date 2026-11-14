@@ -992,3 +992,24 @@ portrait or generated-sound result is claimed yet. Only the isolated qualificati
 Runner overrides the admission flags in memory. Source flags and production
 remain unchanged. Existing completed films and motion checkpoints keep their
 original immutable source; none are replayed or relabeled for this new source.
+
+## Conversation model handoff repair
+
+Review found that the Video/agent model integration did not yet reach the normal
+conversation video tool. `VideoScope` contained only duration/composition/memory,
+the controller replaced that entire scope with its proposed duration, and the
+legacy assistant always inspected the default 5B capabilities. A selectable Video
+profile alone therefore did not improve the main conversation path.
+
+The staged repair retains optional model and paired dimensions in that existing
+scope, preserving old serialization when absent. Video tools retain reviewed
+settings and use the selected model's actual native recipe for ordinary film
+publication. A bounded metadata-only registered-video catalog lets the local
+controller choose a recurrent model for a longer reference-based film; explicit
+user model/format/duration selections take precedence. Snapshot identity and
+required reference checks reject unavailable, invented or changed choices. The
+conversation tool panel shares the existing model/format controls and displays
+the fixed workload. Sound cue timing follows the chosen model's frame rate.
+New ordinary API tests publish both orientations without inference, verify closed
+readiness never falls back, and exercise real controller argument binding. The
+candidate remains separate from immutable running GPU qualification source.

@@ -337,6 +337,11 @@ a new source. The same binding is available to reviewed video agents and Studio.
 This profile requires Linux x86-64, a compatible NVIDIA driver, one 12-GiB GPU
 and at least 24 GiB physical RAM; inference reserves 18 GiB RAM without swap.
 
+The staged Chat tool panel also offers **Generate video → Video model**, format
+and length. The controller can choose a captured registered model for an ordinary
+video request; explicit reviewed selections take precedence. It reuses the same
+frozen film Runs and native admission, rather than a separate chat video engine.
+
 Actual isolated managed setup, owned Stop/recovery, a complete 20-second
 landscape film and CPU editing have passed their recorded technical checks.
 Full-body portrait/multiple-seed generation, nonhuman footage, generated sound

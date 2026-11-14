@@ -2161,3 +2161,9 @@ source hashes, memory scope and explicit deadlines remain mandatory. Both the
 engine and separate portrait qualification gates remain false while real visual
 qualification and full local checks continue. Legacy landscape serialization
 remains unchanged; no production portrait admission is claimed.
+
+Conversation video planning can choose only a captured registered-model alias.
+Its component/engine identity is rechecked before dispatch, with the same native
+readiness, source ownership and resource admission as Video. An explicit reviewed
+model, format or duration cannot be replaced by a tool proposal. Model metadata
+does not grant setup authority, inference readiness or a new execution capability.

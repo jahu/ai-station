@@ -1953,3 +1953,11 @@ correction. It adds no execution service or arbitrary model graph. Both native
 qualification gates remain closed pending complete local checks and real visual
 qualification; staged public/UI implementation does not imply production
 availability. See the [long-video plan](plans/long-video-temporal-quality.md).
+
+The staged conversation bridge freezes at most sixteen registered video choices
+from metadata at enqueue, including an explicitly selected choice first. Local
+planning sees bounded names, conditioning/workload hints and the user's reviewed
+video settings. Closed model aliases are rechecked before binding ordinary film
+Runs; selected native capabilities supply the sampling recipe and orientation.
+No hardware probe or inference runs in the enqueue handler. Unsupported or
+changed choices refuse rather than falling back to the default 5B engine.
