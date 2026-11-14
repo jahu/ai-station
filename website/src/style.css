@@ -1803,6 +1803,13 @@ dialog > p a {
 .release-update > .text-link {
   margin-top: 24px;
 }
+.release-note {
+  max-width: 85ch;
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
 
 .hero-freedom {
   color: var(--green);

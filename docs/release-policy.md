@@ -38,6 +38,22 @@ PRs, so release PRs are created by **github-actions[bot]**, not the owner's CLI
 identity. Do not weaken protection or count an agent acting as @jahu as the
 owner's human approval.
 
+## Public release information
+
+Before promoting a release, align `website/site.config.json` with the application
+version, update the landing page’s “What's new” section and review the root README.
+Keep the README an introduction and installation entry point; detailed change
+history, qualification logs and model-specific setup belong in the linked docs.
+Run `backend/tests/test_public_install_guide.py` and `python3 website/build.py`.
+Check the compiled landing and installation pages against the actual GitHub release
+asset names before publication. The version regression check refuses a stale
+website configuration even when the application packages agree with each other.
+
+Cloudflare Pages publishes the website from `master` after the owner's merge.
+A published GitHub tag alone does not change the website. Check the public page
+and installation links after the Pages deployment; do not move a release tag or
+rebuild installers for documentation-only corrections.
+
 ## Prepare a release PR
 
 After reviewing and validating `develop`, the owner or an authorized agent using
