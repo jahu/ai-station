@@ -1,6 +1,6 @@
 The [long-video quality investigation](plans/long-video-temporal-quality.md)
-keeps larger native windows behind a closed operator qualification gate. Only
-advertised fixed window sizes enter new frozen timelines; legacy publications,
+keeps existing 5B native-window configuration separate from recurrent-model
+qualification. Only advertised fixed window sizes enter new frozen timelines; legacy publications,
 avatar windows and native process ownership remain unchanged. A successful
 decode is not a claim of temporal or subject consistency.
 

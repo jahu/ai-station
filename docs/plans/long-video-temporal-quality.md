@@ -5,8 +5,8 @@
 The fixed Linux SVI Pro Q4 profile is qualified for 832×480 landscape and 480×832
 portrait, with 81-frame native windows at 15 fps, 20 steps and CFG 5. It keeps the
 original image plus four-frame recurrent motion context. This is a distinct owned
-model/engine, not an enlarged or relabeled 5B window. The earlier 5B larger-window
-gate remains closed. The sections below retain the chronological investigation;
+model/engine, not an enlarged or relabeled 5B window. Existing 5B native-window
+configuration is preserved; this qualification does not change it. The sections below retain the chronological investigation;
 their earlier pending/closed observations are historical.
 
 Actual complete results include a 20-second landscape human scene and two
