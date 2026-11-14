@@ -939,3 +939,35 @@ required full `scripts/check.sh` for the completed source now includes immediate
 failure capture, consolidating diagnosis and final validation without running two
 duplicate Python suites. The original failure remains unresolved; the full-source
 check and draft integration PR remain unqualified until it is resolved.
+
+
+## Full-suite startup failure: reproduced fixture lifecycle leak
+
+The final-source Python run at `b9654650` completed 2,612 tests before reproducing
+the same desktop-health test failure in 4,154 seconds. Immediate failure capture
+shows `RecursionError` during `TestClient` application startup, before the health
+request itself. A new focused regression reproduces that exact failure in 1.73
+seconds by entering/leaving the real private-account fixture 256 times and then
+starting the application.
+
+`install_account_access` includes two FastAPI routers. FastAPI merges their
+lifespan contexts even when they have no custom lifespan. The fixture restored
+routes, handlers and account state but retained the new lifespan wrappers on the
+shared application. Repeated fixtures therefore accumulated recursive startup
+layers until a later consumer overflowed Python's stack. Restoring the original
+lifespan and startup/shutdown callback lists in both test-only account activation
+scopes fixes the state leak. Application registration/security behavior and
+Python's recursion limit stay unchanged. The regression remains part of ordinary
+checks; it does not skip the formerly failing test. All 51 focused lifecycle,
+account/private-startup and desktop-identity cases passed in 46.19 seconds after
+the repair. A new complete source check remains required before integration
+admission.
+
+The real public film separately completed its third 81-frame window. Six native
+full-size views around the second join retain the recognizable subject, clothing
+and coast through roughly fifteen seconds. The face remains soft at 480p; this
+sampled-frame observation does not establish full temporal playback or full-body
+quality. The fourth original native Run continues on its immutable earlier source.
+The subsequent portrait/nonhuman waiter stopped before creating any Task when
+full validation failed. It must be rescheduled only for the reviewed repaired
+source; the existing real film must not be replayed.
