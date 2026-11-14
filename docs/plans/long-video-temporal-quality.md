@@ -802,3 +802,80 @@ image, seed, model, permissions and memory profile stay exact. Longer requests
 show that the ceiling can be reached and may need shorter footage or a faster
 model. At an already accepted ceiling the guidance remains visible without a
 no-op Apply button. Other video models preserve their prior two-/four-hour hints.
+
+## Next implementation: finite portrait generation without losing the reference
+
+Status: pure motion primitives staged; native/public portrait dispatch remains
+unimplemented and unqualified. The current native SVI job passes
+its original reference through a center crop into fixed 832×480 conditioning.
+A portrait/full-body input can therefore lose its head, feet or other important
+context before diffusion. The completed coastal reference is landscape; it does
+not establish full-body/portrait behavior. This is an additional input-framing
+limitation, not proof that cropping caused the user's temporal deformation.
+
+Implement one additional closed 480×832 profile, keeping 81 frames, 15 fps,
+20 steps/CFG 5, four-frame context, existing six weights, one 12-GiB GPU and the
+18-GiB zero-swap workload. Both orientations have the same pixel count, but real
+memory/quality qualification is still required. Do not admit arbitrary geometry,
+silently rotate/stretch input or relabel a landscape motion checkpoint.
+
+Implementation sequence:
+
+1. Add pure finite geometry selection independently to the packaged backend and
+   Runner, with parity tests. Preserve exported landscape defaults and legacy
+   request serialization. Existing model definitions remain unchanged: they bind
+   the exact six components and engine; native capabilities authorize supported
+   generation geometry. Do not mutate existing definition bindings merely to add
+   another output orientation.
+2. Extend the typed native capability selection for an optional closed generation
+   profile; old requests retain their landscape meaning. Keep portrait behind its
+   own qualification gate. Only qualified formats appear in capability choices.
+   Dispatch rechecks the selected format, original image, engine and resource
+   contract. No graph, SDK/model path, shell or caller-controlled precision enters
+   the request.
+3. Generalize pure conditioning/checkpoint validation to the two fixed latent
+   shapes: landscape `[1,16,1,60,104]`, portrait `[1,16,1,104,60]`. Both remain F32.
+   Keep the exact original-anchor/four-frame continuation math. Include selected
+   geometry in motion identity, verify provenance and reject cross-orientation
+   continuation before GPU dispatch. Never rewrite old motion metadata to make a
+   checkpoint pass. Preserve finite/pixel checks, ownership, deadlines, Stop and
+   same-native recovery.
+4. Thread selected dimensions through public short/long requests, native job
+   sampling/decoding/report checks and immutable film plans. Keep composition at
+   the selected 15-fps geometry and exact retained-frame coverage. Default legacy
+   5B requests, retries and model definitions must remain unchanged.
+5. Let Video and agent format selectors use the qualified formats of the chosen
+   model. Retain explicit saved choices, fixed sampling controls and required
+   original image. Natural agent suggestions must validate an offered format,
+   rather than hard-coding every Video model to one geometry. Studio selects an
+   admitted profile for its actual aspect; an unavailable portrait choice stays
+   unavailable instead of stretching/cropping landscape footage into a claimed
+   portrait result.
+6. Run pure numerical conditioning equivalence and negative shape/dtype/context
+   tests; typed API/worker/Run, ownership, recovery and resume regressions; and
+   frontend format/save/restore tests. Then qualify actual portrait/full-body
+   output using a neutral fully clothed fictional adult reference and movement,
+   multiple seeds, exact decode/joins, memory, Stop and recovery. Prepare that
+   fictional reference with an existing local image engine once resources are
+   free. No public stock-person image has been imported for this investigation.
+
+Keep the running immutable `8e84c524` public-film source and existing full-source
+validation unchanged. New geometry work happens in a separate feature worktree;
+its code, full local checks and real profile qualification must pass before
+admission. A good twenty-second landscape film cannot by itself qualify portrait.
+
+The staged pure context functions now accept only the two exact orientations
+through explicit keyword dimensions. Default calls keep the landscape shape;
+portrait checkpoints still refuse a landscape consumer and the native route
+has not gained portrait authority. Header validation retains its F32, one-latent,
+owned-regular-file, bounded-size and exact-profile rules. Eighty-four focused
+context/native-dispatch/backend regressions passed. A separate actual CPU-only
+probe in the prepared SDK/Python checked normalized-core equivalence for first
+and continuation windows in both orientations: maximum error 0.0 in all four
+cases, with eight invalid dtype/shape/finite/cross-orientation cases rejected.
+No model or GPU was used; this is not portrait inference qualification.
+
+Changing the context source changes the native implementation fingerprint.
+Existing private landscape runs retain their immutable old source; their raw
+checkpoints must not be relabeled for the new implementation. Complete typed
+selection/job/model/UI integration and new-source real qualification remain next.

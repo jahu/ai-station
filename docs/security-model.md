@@ -2150,3 +2150,11 @@ limits bytes/pixels/types, and stores decoded canonical image artifacts. Browser
 previews use authenticated local artifact routes, not untrusted remote thumbnails.
 Imported references remain distinct from the requested edited result. See
 [the chat/image contract](plans/chat-web-images-and-clipboard.md).
+
+The planned recurrent portrait format must remain a finite, separately qualified
+480×832 geometry. Its F32 motion identity/shape cannot consume a landscape
+checkpoint, and a supported engine alone does not authorize that orientation.
+Existing definitions and frozen requests must not be rewritten to gain admission.
+Native process ownership, source hashes, memory scope and explicit deadlines
+remain mandatory. Only its bounded pure motion primitives are staged; portrait dispatch remains
+planned and is not currently operational.

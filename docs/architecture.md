@@ -1942,3 +1942,11 @@ web reference contract requires import before transformation; it does not treat
 an original downloaded image as the completed edit. Clipboard attachment events
 reuse the existing browser attachment pipeline. See
 [the 0.6.1 contract](plans/chat-web-images-and-clipboard.md).
+
+Planned recurrent portrait support is a second finite generation geometry over
+that same owned SVI engine and six-component binding. Its typed capabilities,
+raw motion shape/identity, immutable timelines and model-aware format controls
+must agree. It adds no execution service or arbitrary model graph. See the next
+implementation section in the [long-video plan](plans/long-video-temporal-quality.md).
+Only the pure two-orientation conditioning/checkpoint primitives are staged;
+native/public portrait dispatch is not yet implemented or admitted.

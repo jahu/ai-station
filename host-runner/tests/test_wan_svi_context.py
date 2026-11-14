@@ -95,3 +95,39 @@ def test_symlink_context_is_refused_before_loading(tmp_path):
     link.symlink_to(path)
     with pytest.raises(ValueError, match="regular file"):
         validate_checkpoint(link, PROFILE)
+
+
+def test_portrait_checkpoint_requires_explicit_matching_geometry_without_relabeled_identity(tmp_path):
+    from ai_station_runner.wan_svi_context import motion_shape
+
+    portrait = motion_shape(480, 832)
+    path = checkpoint(tmp_path, change={"shape": list(portrait)})
+    assert validate_checkpoint(path, PROFILE, width=480, height=832) == (1, 16, 1, 104, 60)
+    with pytest.raises(ValueError, match="geometry"):
+        validate_checkpoint(path, PROFILE)
+    with pytest.raises(ValueError, match="profile"):
+        validate_checkpoint(path, "b" * 64, width=480, height=832)
+    path = checkpoint(tmp_path)
+    with pytest.raises(ValueError, match="geometry"):
+        validate_checkpoint(path, PROFILE, width=480, height=832)
+
+
+@pytest.mark.parametrize(
+    "dimensions", [(832, 832), (480, 480), (512, 288), (True, 480), (832.0, 480), (480, "832")]
+)
+def test_context_geometry_cannot_expand_to_an_arbitrary_tensor_budget(tmp_path, dimensions):
+    from ai_station_runner.wan_svi_context import motion_shape
+
+    with pytest.raises(ValueError, match="fixed"):
+        motion_shape(*dimensions)
+    with pytest.raises(ValueError, match="fixed"):
+        validate_checkpoint(checkpoint(tmp_path), PROFILE, width=dimensions[0], height=dimensions[1])
+
+
+@pytest.mark.parametrize(
+    "change", [{"dtype": "F16"}, {"shape": [1, 16, 5, 104, 60]}, {"data_offsets": [0, PAYLOAD_BYTES - 4]}]
+)
+def test_portrait_retains_the_same_bounded_f32_single_motion_contract(tmp_path, change):
+    path = checkpoint(tmp_path, change={"shape": [1, 16, 1, 104, 60], **change})
+    with pytest.raises(ValueError, match="geometry"):
+        validate_checkpoint(path, PROFILE, width=480, height=832)
