@@ -679,3 +679,55 @@ existing 5B model installation/definitions and speech/music/avatar/effects/Fish
 setup regressions. Repository Ruff and format checks passed for 1,393 files.
 This remains focused normal-test evidence, separate from actual owned assembly,
 new native inference and final whole-source validation.
+
+
+## Actual owned SVI setup qualification
+
+The frozen `a4e5f896` source completed an actual new SVI setup in an isolated
+application data root in 507.7 seconds. The normal API service queued a setup
+Task/Run; the ordinary worker verified all 107 inputs, invoked the owned native
+preparation process, adopted the ready environment, registered six model files
+and one complete Video definition, and wrote its private receipt. All resource
+locks released and both observer-owned/native processes stopped.
+
+The test copied and fully hashed existing inputs without altering their source
+files. Only two missing small SDK/wheel inputs were downloaded by the normal
+verified downloader. The environment has its own pinned Python, SDKs and
+immutable store; the CPU-only offline probe passed with GGUF loader/tokenizer
+checks and no inference/GPU use. Private evidence is in
+`svi-managed-qualification/setup-probe.private.json` under the investigation
+root. Its qualification flag override applied only to that private Runner
+process/socket. Production flags and source files were unchanged. This proves
+actual owned assembly and the setup lifecycle; new-job GPU inference/Stop and
+broad video quality remain separate gates.
+
+The Video setup UI now offers a separate optional continuous-video card using
+the existing installation panel/history controls. It shows real storage and
+hardware requirements, qualification failures and separate license/workload
+acceptance. Prepared files cannot be presented as an operational engine while
+the shared execution adapter remains unregistered. Video model selection shows
+the model's actual profile instead of a hard-coded 5B resolution.
+
+The setup/picker UI passed 51 tests across eight files, including existing media
+setup panels; frontend lint, TypeScript and production build passed. The small
+backend readiness projection passed 37 model/setup tests. Existing unrelated
+ESLint warnings remain warnings; no lint errors occurred. These checks do not
+qualify the still-pending public generation/workflow controls.
+
+The 512×288 candidate's actual ten-second film also completed: 150 decoded frames
+at 15 fps, with its original first window reused and only the second window plus
+composition new (2227.6 seconds). Seventeen sampled views include the frame80/81
+join and final frame149. The recognizable car/harbor persist without obvious
+sampled severe geometry collapse, bleaching or an abrupt join. The continued
+camera move partly crops the car's front near the ending, so framing/trajectory
+needs longer review. This is nonhuman low-resolution evidence, not human/dynamic
+or broad twenty-second qualification. The complete checked film was imported
+into the owner's private Library; no sample was uploaded publicly.
+
+A separate real new-native-job qualification now uses the actually prepared
+owned SVI environment, the normal typed native endpoint and the shared SVI
+worker adapter in a private process registry. It first waits for an actual
+completed high-expert GPU step before Stop, then checks a complete new window
+and same-native worker recovery. The production admission flag and process
+registry remain unchanged. Poll its existing observer; never replay an uncertain
+native operation or relabel old private checkpoints as new managed outputs.

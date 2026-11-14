@@ -13,9 +13,14 @@ export default function VideoModelChoice({
   const models = useQuery({
     queryKey: ["video-models"],
     queryFn: () =>
-      api<{ items?: { id: string; name: string; available: boolean }[] }>(
-        "/video/models",
-      ),
+      api<{
+        items?: {
+          id: string;
+          name: string;
+          available: boolean;
+          profile?: string;
+        }[];
+      }>("/video/models"),
   });
   if (!value && !models.data?.items?.length) return null;
   return (
@@ -42,9 +47,10 @@ export default function VideoModelChoice({
       </select>
       {value && (
         <small className="muted">
-          Installed Wan profile · 1280 × 704 · at least 24 GiB system RAM. Uses
-          explicit CPU offload and no swap; the selected model stays with every
-          clip of a film.
+          {models.data?.items?.find((model) => model.id === value)?.profile ??
+            "Check the selected model's profile before generating."}{" "}
+          Uses explicit CPU offload and no swap; the selected model stays with
+          every clip of a film.
         </small>
       )}
     </label>

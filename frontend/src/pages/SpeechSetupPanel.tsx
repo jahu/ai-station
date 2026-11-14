@@ -16,11 +16,13 @@ import { Badge, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
-type Family = "speech" | "music" | "video" | "avatar" | "effects" | "fish";
+type Family =
+  "speech" | "music" | "video" | "avatar" | "effects" | "fish" | "svi";
 const profiles = {
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
   video: "wan22-5b-linux-x86-64-python312-v1",
+  svi: "wan22-svi-pro-q4-linux-x86-64-python312-v1",
   avatar: "sonic-whole-linux-x86-64-python310-v1",
   effects: "mmaudio-large44-linux-x86-64-python312-v1",
   fish: "fish-s2-pro-linux-x86-64-python312-v1",
@@ -32,12 +34,22 @@ const destination = (family: Family) =>
       ? "/audio?mode=effects"
       : family === "avatar"
         ? "/avatars"
-        : family === "video"
+        : family === "video" || family === "svi"
           ? "/video"
           : family === "music"
             ? "/audio?mode=music"
             : "/audio";
 const content = {
+  svi: {
+    title: "Continuous video",
+    heading: "Continuous video from an image",
+    description:
+      "Keep an original image as the anchor across a longer film. Check your hardware and prepare the complete local recurrent-video engine.",
+    ready:
+      "Choose SVI Pro in Video, add an image and describe its motion. Longer films keep their saved progress and versions.",
+    model: "Wan 2.2 SVI Pro · Q4",
+    open: "Open continuous video",
+  },
   fish: {
     title: "Expressive voice",
     heading: "Expressive voice & delivery",
@@ -124,6 +136,7 @@ type Catalog = {
   existing_speech?: { available: boolean; source: string };
   existing_music?: { available: boolean; source: string };
   existing_video?: { available: boolean; source: string };
+  managed_svi?: { available: boolean; source?: string };
   existing_avatar?: { available: boolean; source: string; readiness?: string };
   existing_effects?: { available: boolean; source: string; readiness?: string };
   existing_fish?: { available: boolean; source: string; readiness?: string };
@@ -186,9 +199,15 @@ function Attempt({
       ? "expressive voice"
       : family === "effects"
         ? "sound effects"
-        : family;
+        : family === "svi"
+          ? "continuous video"
+          : family;
   const Icon =
-    family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
+    family === "avatar"
+      ? UserRound
+      : family === "video" || family === "svi"
+        ? Film
+        : AudioLines;
   const familyPhases =
     family === "speech"
       ? phases
@@ -196,7 +215,7 @@ function Attempt({
           ...phases,
           downloading_files: `Downloading ${familyLabel} files`,
           files_verified: `Files verified · preparing the ${familyLabel} engine`,
-          creating_environment: `Preparing the local ${family} engine`,
+          creating_environment: `Preparing the local ${familyLabel} engine`,
           installing_dependencies: `Installing the ${familyLabel} engine`,
           preparing_sdk: `Preparing the ${familyLabel} SDK`,
           environment_prepared: `${title} engine prepared`,
@@ -236,7 +255,7 @@ function Attempt({
           ? "Ready to add film sound"
           : family === "avatar"
             ? "Ready for your first avatar"
-            : family === "video"
+            : family === "video" || family === "svi"
               ? "Ready for your first film"
               : family === "music"
                 ? "Ready for your first track"
@@ -339,9 +358,15 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       ? "expressive voice"
       : family === "effects"
         ? "sound effects"
-        : family;
+        : family === "svi"
+          ? "continuous video"
+          : family;
   const Icon =
-    family === "avatar" ? UserRound : family === "video" ? Film : AudioLines;
+    family === "avatar"
+      ? UserRound
+      : family === "video" || family === "svi"
+        ? Film
+        : AudioLines;
   const [search] = useSearchParams();
   const [opened, setExpanded] = useState(false);
   const expanded = opened || search.get("capability") === family;
@@ -373,6 +398,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
   const data = catalog.data;
   const token = useRef<{ hash: string; id: string } | null>(null);
   const [accepted, setAccepted] = useState("");
+  const [workloadAccepted, setWorkloadAccepted] = useState("");
   const [showManaged, setShowManaged] = useState(false);
   const completed = useRef(new Set<string>());
   const section = useRef<HTMLElement>(null);
@@ -416,6 +442,11 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
           void cache.invalidateQueries({
             queryKey: ["whole-avatar-capabilities"],
           });
+        if (family === "svi") {
+          void cache.invalidateQueries({ queryKey: ["video-models"] });
+          void cache.invalidateQueries({ queryKey: ["video-capabilities"] });
+          void cache.invalidateQueries({ queryKey: ["model-definitions"] });
+        }
         void cache.invalidateQueries({ queryKey: ["models"] });
       }
   }, [history.data, cache, family]);
@@ -423,6 +454,10 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
     mutationFn: () => {
       if (!data?.recipe || accepted !== data.manifest_sha256)
         throw new Error("Review the model and component licenses first.");
+      if (family === "svi" && workloadAccepted !== data.manifest_sha256)
+        throw new Error(
+          "Review the continuous video memory and CPU workload first.",
+        );
       if (!token.current || token.current.hash !== data.manifest_sha256)
         token.current = { hash: data.manifest_sha256, id: randomId() };
       return api(
@@ -432,6 +467,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
           profile,
           manifest_sha256: data.manifest_sha256,
           license_accepted: true,
+          ...(family === "svi" ? { workload_accepted: true } : {}),
         }),
       );
     },
@@ -449,11 +485,13 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
         ? data?.existing_effects
         : family === "avatar"
           ? data?.existing_avatar
-          : family === "video"
-            ? data?.existing_video
-            : family === "music"
-              ? data?.existing_music
-              : data?.existing_speech;
+          : family === "svi"
+            ? data?.managed_svi
+            : family === "video"
+              ? data?.existing_video
+              : family === "music"
+                ? data?.existing_music
+                : data?.existing_speech;
   const ready = existingRuntime?.available === true;
   const checkingRuntime =
     (family === "avatar" && data?.existing_avatar?.readiness === "checking") ||
@@ -473,7 +511,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
   return (
     <section
       className={`panel setup-runtime setup-${family}`}
-      aria-label={`Local ${family === "fish" ? familyLabel : family} setup`}
+      aria-label={`Local ${family === "fish" || family === "svi" ? familyLabel : family} setup`}
       ref={section}
     >
       <div className="speech-setup-heading">
@@ -605,6 +643,14 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                       Longer films retain their own saved progress and versions.
                     </p>
                   )}
+                  {family === "svi" && (
+                    <p className="muted setup-small">
+                      This profile uses CPU offload and reserves 18 GiB system
+                      RAM without swap, alongside one 12-GiB GPU. Generating
+                      longer films can take hours. The exact supported
+                      resolution and sampling recipe remain visible in Video.
+                    </p>
+                  )}
                   {family === "avatar" && (
                     <p className="muted setup-small">
                       One or two compatible GPUs · up to 768 px · 18 GiB system
@@ -690,11 +736,38 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                             component licenses.
                           </span>
                         </label>
+                        {family === "svi" && (
+                          <label className="setup-license">
+                            <input
+                              type="checkbox"
+                              checked={
+                                workloadAccepted === data.manifest_sha256
+                              }
+                              onChange={(event) =>
+                                setWorkloadAccepted(
+                                  event.target.checked
+                                    ? data.manifest_sha256
+                                    : "",
+                                )
+                              }
+                              disabled={
+                                !data.installation_available ||
+                                prepare.isPending
+                              }
+                            />
+                            <span>
+                              I accept CPU offload, the 18-GiB RAM reservation
+                              and the longer generation time.
+                            </span>
+                          </label>
+                        )}
                         <Button
                           disabled={
                             !data.installation_available ||
                             !storageFits ||
                             accepted !== data.manifest_sha256 ||
+                            (family === "svi" &&
+                              workloadAccepted !== data.manifest_sha256) ||
                             prepare.isPending
                           }
                           onClick={() => prepare.mutate()}

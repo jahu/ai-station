@@ -317,3 +317,20 @@ def test_stale_model_recheck_cannot_publish_a_receipt(session, prepared, monkeyp
     session.refresh(run)
     assert run.worker_id == "replacement-worker" and run.status == "running"
     assert not list(session.scalars(select(Artifact).where(Artifact.run_id == run.id)))
+
+
+def test_setup_catalog_does_not_claim_video_ready_before_shared_execution_admission(monkeypatch):
+    from app import runtime_setup_api
+    from app.executors import EXECUTORS
+    from app.svi_setup_client import SviSetupClient
+
+    monkeypatch.delitem(EXECUTORS, NAME, raising=False)
+    native = {
+        "installation_available": True,
+        "managed_svi": {"available": True, "managed_runtime": {"environment_id": "b" * 64}},
+    }
+    monkeypatch.setattr(SviSetupClient, "runtime_setup_catalog", lambda _: native)
+    result = runtime_setup_api.report(PROFILE)
+    assert result["installation_available"] is True
+    assert result["managed_svi"]["available"] is False
+    assert native["managed_svi"]["available"] is True

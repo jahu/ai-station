@@ -90,11 +90,18 @@ def report(profile="llamacpp-cuda-linux-amd64-v1"):
             if profile == SPEECH_PROFILE
             else RunnerClient(timeout=30)
         )
-        return (
+        result = (
             client.runtime_setup_catalog(profile=profile)
             if profile == "llamacpp-cpu-linux-amd64-v1" or profile in NATIVE_LLAMA_PROFILES
             else client.runtime_setup_catalog()
         )
+        if profile == SVI_PROFILE:
+            from app.executors import EXECUTORS
+            from app.svi_executor import NAME
+
+            if NAME not in EXECUTORS and (result.get("managed_svi") or {}).get("available"):
+                result = {**result, "managed_svi": {**result["managed_svi"], "available": False}}
+        return result
     except (RunnerError, RunnerUnavailable):
         return {
             "installation_available": False,
