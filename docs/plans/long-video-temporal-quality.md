@@ -776,3 +776,29 @@ Studio selection and timeline). The agent/public bridge group passed 86 checks
 before the added lost-checkpoint resume cases. These use fake native generation
 and actual CPU codecs, not real model-quality claims. Final full-source checks
 and real managed continuation/quality qualification remain required.
+
+## New managed native window result and agent allowance follow-up
+
+The actual newly prepared engine completed its full 832×480, 81-frame, 15-fps,
+20-step sample in 3154.8 seconds. Every frame decoded; the output hash and raw
+motion provenance were verified. GPU-phase Stop and recovery of the same native
+process after worker replacement passed separately. All original qualification
+roles/processes stopped. Eleven sampled views retain the fictional adult's face,
+hair, coat/scarf and coast without obvious severe collapse or bleaching. This is
+calm upper-body, soft 480p footage; sampled contact-sheet review does not qualify
+complete temporal playback, full-body motion, portrait or arbitrary subjects.
+A fresh twenty-second public-API qualification is now running four actual full
+windows from one original anchor with a different seed and greater shoulder,
+facial and camera movement. It does not reuse earlier private method outputs.
+Production admission remains closed while that and broader quality tests run.
+
+The agent setup hint must also distinguish this recurrent engine from 5B. The
+old short-film suggestion of two hours can expire before three ~53-minute
+windows finish on the tested workstation, even before queue waiting. For the
+recurrent profile the explicit suggestion therefore uses the existing four-hour
+agent ceiling; it does not automatically change a saved definition, increase the
+ceiling or promise that generation takes four hours. Reviewed geometry, original
+image, seed, model, permissions and memory profile stay exact. Longer requests
+show that the ceiling can be reached and may need shorter footage or a faster
+model. At an already accepted ceiling the guidance remains visible without a
+no-op Apply button. Other video models preserve their prior two-/four-hour hints.
