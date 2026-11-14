@@ -27,6 +27,16 @@ class Links(HTMLParser):
                 self.targets.append(fields[name])
 
 
+def test_public_download_version_matches_the_application_release():
+    config = json.loads((REPOSITORY / "website/site.config.json").read_text())
+    application = json.loads((REPOSITORY / "frontend/package.json").read_text())
+    assert config["version"] == application["version"], (
+        "Update website/site.config.json when preparing a release; "
+        "otherwise the public installer links keep serving an older version."
+    )
+    assert (REPOSITORY / f"docs/releases/{config['version']}.md").is_file()
+
+
 @pytest.fixture
 def website(tmp_path):
     source = REPOSITORY / "website"
@@ -59,6 +69,13 @@ def test_guide_and_sitemap_preserve_portable_routes_and_current_release(website,
     assert "{{" not in guide
     assert f"AI-Station-{config['version']}-windows-x64-Setup.exe" in guide
     assert f"AI-Station-{config['version']}-linux-amd64.deb" in guide
+    for document in (landing, guide):
+        for asset in ("windows-x64-Setup.exe", "linux-amd64.deb"):
+            assert (
+                f'href="{config["repository"]}/releases/download/v{config["version"]}/'
+                f'AI-Station-{config["version"]}-{asset}"'
+            ) in document
+        assert f"/blob/{config['release_branch']}/docs/releases/{config['version']}.md" in document
     assert "<script" not in guide
     parser = Links()
     parser.feed(guide)

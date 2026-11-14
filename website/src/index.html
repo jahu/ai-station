@@ -1759,51 +1759,59 @@
         <div class="section-heading">
           <p class="eyebrow">NEW IN v{{VERSION}}</p>
           <h2 id="updates-title">
-            Your next model. <br /><span>Checked for your station.</span>
+            Keep the motion. <br /><span>Keep the scene.</span>
           </h2>
           <p>
-            Local AI keeps moving. Add compatible new models after setup,<br />
-            without guessing what your hardware can handle.
+            Longer clips need more than a fresh start at every cut.<br />
+            Wan 2.2 SVI Pro carries the original image and motion context
+            forward.
           </p>
         </div>
         <div class="capability-grid">
           <article>
             <div class="capability-top">
-              <span class="index">01 / DISCOVER</span>
+              <span class="index">01 / CONTINUE</span>
               <svg aria-hidden="true"><use href="#icon-image" /></svg>
             </div>
-            <h3>Choose what <br />you want to create.</h3>
+            <h3>Let the scene <br />keep moving.</h3>
             <p>
-              Find models for conversation, images, video, voice, music, avatars
-              or memory. Browse popular or recently updated sources, search by
-              name, or paste a Hugging Face link.
+              Animate a reference image across connected windows. The new local
+              engine carries motion context between them to help the subject and
+              setting stay consistent through a longer shot.
             </p>
           </article>
           <article>
             <div class="capability-top">
-              <span class="index">02 / CHECK THE FIT</span>
+              <span class="index">02 / FRAME IT</span>
               <svg aria-hidden="true"><use href="#icon-image" /></svg>
             </div>
-            <h3>Your hardware. <br />An informed choice.</h3>
+            <h3>Landscape or portrait. <br />Your choice stays with it.</h3>
             <p>
-              Check each GPU, conversation context, RAM, disk and companion
-              files before downloading weights. Unknown requirements and
-              unsupported model families stay clearly marked.
+              Choose 832×480 landscape or 480×832 portrait at 15 fps. Chat,
+              Video, agents and Studio share your selected model and format,
+              without losing those choices as work moves between tools.
             </p>
           </article>
           <article>
             <div class="capability-top">
-              <span class="index">03 / MAKE IT YOURS</span>
+              <span class="index">03 / SET UP ONCE</span>
               <svg aria-hidden="true"><use href="#icon-agent" /></svg>
             </div>
-            <h3>Review once. <br />Create in your workspace.</h3>
+            <h3>A new engine. <br />The same workspace.</h3>
             <p>
-              Review the files and license, install compatible models and select
-              them in their workspaces and supported assistant or agent
-              settings. New revisions never replace your choices silently.
+              Open Video → Set up video → Continuous video to review and prepare
+              the optional engine. Your existing models and results stay
+              available; generated clips work with the sound and timeline tools
+              you already use.
             </p>
           </article>
         </div>
+        <p class="release-note">
+          Qualified on Linux with a 12 GB NVIDIA GPU and 32 GB system RAM. A
+          10-second clip took about 1 h 46 min on an RTX 3060; a 20-second scene
+          took 3 h 32 min. Detail is 480p-class, and framing or motion can still
+          be imperfect. Physical Windows GPU testing remains pending.
+        </p>
         <a class="text-link" href="{{RELEASE_NOTES_URL}}"
           >See what's changed in {{VERSION}}
           <span aria-hidden="true">↗</span></a
@@ -2151,8 +2159,8 @@ cp .env.example .env
               servers or technical configuration. v{{VERSION}} packages Python
               and the app, guides required OS permissions and recommends models
               for your hardware. Model downloads still need storage and suitable
-              RAM/VRAM. Windows CPU first use is tested; physical NVIDIA and
-              human voice/film evaluation follow release. macOS is unsupported.
+              RAM/VRAM. Windows CPU first use is tested; physical Windows NVIDIA
+              testing remains pending. macOS is unsupported.
               Your feedback will help us make setup better.
               <a href="{{RELEASE_NOTES_URL}}"
                 >See qualification and known issues.</a
