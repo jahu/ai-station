@@ -316,6 +316,36 @@ was performed. 0.1.2 packages and production preview are unchanged. FP8/GGUF/sha
 other Wan architectures and other media families require their own supported
 slots and complete plans, not this F16 admission path.
 
+### Continuous SVI Pro video (staged; production gate closed)
+
+The separate fixed `wan22-svi-pro-q4-linux-x86-64-python312-v1` preparation
+profile assembles the high/low Wan 2.2 GGUF experts, their paired SVI Pro adapters,
+text encoder and VAE. This six-component binding is distinct from the single
+5B SafeTensors slot above: a matching filename or generic GGUF inspection cannot
+activate it. Preparation uses the existing private administrator-owned Task,
+verified content store, license consent and explicit CPU-offload acceptance.
+The shared definition retains opaque engine/component identities; it exposes no
+administrator setup history or host paths.
+
+After admission, **Video → Continuous video** prepares the complete profile.
+Choose **SVI Pro** from **Video model**, select the original PNG/JPEG image and
+describe its motion. The staged model-aware controls offer only native-advertised
+formats: 832×480 landscape, or separately qualified 480×832 portrait. Sampling is
+fixed at 20 steps, CFG 5 and 15 fps. Longer requests reuse the original anchor
+and verified motion context instead of repeatedly using a decoded last frame as
+a new source. The same binding is available to reviewed video agents and Studio.
+This profile requires Linux x86-64, a compatible NVIDIA driver, one 12-GiB GPU
+and at least 24 GiB physical RAM; inference reserves 18 GiB RAM without swap.
+
+Actual isolated managed setup, owned Stop/recovery, a complete 20-second
+landscape film and CPU editing have passed their recorded technical checks.
+Full-body portrait/multiple-seed generation, nonhuman footage, generated sound
+and the repaired full Python suite are still being qualified. Both native
+admission flags remain false; these instructions describe staged controls, not
+an available production model. No Windows-native or dual-GPU inference result
+is claimed. See the [quality investigation](plans/long-video-temporal-quality.md)
+for exact measurements and remaining acceptance work.
+
 ### Speech checkpoint admission (structural only)
 
 The native preparation catalog declares `chatterbox-v3-t3-v1`, a single
