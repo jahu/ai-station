@@ -16,7 +16,7 @@ from ai_station_runner.media_compose_job import source_path
 from ai_station_runner.media_encoding import h264_options, video_encoding_metadata
 from ai_station_runner.memory_scope import current_group, require_scope
 from ai_station_runner.svi_identity import profile_identity
-from ai_station_runner.wan_svi_context import FPS, FRAMES, HEIGHT, METADATA_KEY, SHAPE, WIDTH
+from ai_station_runner.wan_svi_context import FPS, FRAMES, METADATA_KEY, generation_dimensions, motion_shape
 
 
 def sha(path):
@@ -33,6 +33,9 @@ def main(config_path):
     config = json.loads(path.read_text())
     root = Path(config["root"])
     request = config["request"]
+    generation_profile = request.get("generation_profile", "landscape")
+    width, height = generation_dimensions(generation_profile)
+    shape = motion_shape(width, height)
     identity = str(UUID(request["run_id"]))
     work = root / "runs" / identity / "svi"
     if root.resolve() != root or path.resolve() != path or path != work / "request.json":
@@ -56,7 +59,7 @@ def main(config_path):
         root, selected["environment"] / "models", svi_environment.recipe(), verify_weights=True
     )
     image_path = source_path(root, request["image"])
-    profile = profile_identity(request["managed_runtime"], request["image"]["sha256"])
+    profile = profile_identity(request["managed_runtime"], request["image"]["sha256"], generation_profile)
     if profile != config["profile_identity"]:
         raise ValueError("The frozen SVI implementation or original anchor changed")
     previous_path = None
@@ -64,7 +67,7 @@ def main(config_path):
         from ai_station_runner.wan_svi_context import validate_checkpoint
 
         previous_path = source_path(root, request["previous_motion"])
-        validate_checkpoint(previous_path, profile)
+        validate_checkpoint(previous_path, profile, width=width, height=height)
     sys.path.insert(0, str(selected["comfy_dir"]))
     sys.argv = [
         "ai-station-svi",
@@ -124,17 +127,17 @@ def main(config_path):
         with Image.open(image_path) as source:
             pixels = torch.from_numpy(np.array(source.convert("RGB"), dtype=np.float32) / 255).unsqueeze(0)
         pixels = comfy.utils.common_upscale(
-            pixels.movedim(-1, 1), WIDTH, HEIGHT, "bilinear", "center"
+            pixels.movedim(-1, 1), width, height, "bilinear", "center"
         ).movedim(1, -1)
         anchor = vae.encode(pixels)
         previous = load_file(str(previous_path), device="cpu")["motion"] if previous_path else None
-        raw, mask = conditioning(anchor, previous, fmt)
+        raw, mask = conditioning(anchor, previous, fmt, width=width, height=height)
         values = {"concat_latent_image": raw, "concat_mask": mask}
         positive = node_helpers.conditioning_set_values(positive, values)
         negative = node_helpers.conditioning_set_values(negative, values)
         comfy.model_management.unload_all_models()
         gc.collect()
-        samples = {"samples": torch.zeros((1, 16, 21, *SHAPE[-2:]), dtype=torch.float32)}
+        samples = {"samples": torch.zeros((1, 16, 21, *shape[-2:]), dtype=torch.float32)}
         reports, cut = [], None
         for role in ("high", "low"):
             stage("loading " + role + " expert")
@@ -191,12 +194,12 @@ def main(config_path):
         partial.replace(motion)
         stage("decoding frames")
         frames = nodes.VAEDecode().decode(vae, samples)[0]
-        if tuple(frames.shape) != (FRAMES, HEIGHT, WIDTH, 3) or not torch.isfinite(frames).all():
+        if tuple(frames.shape) != (FRAMES, height, width, 3) or not torch.isfinite(frames).all():
             raise ValueError("The fixed SVI output geometry changed")
         final, partial = output.with_suffix(".mp4"), output.with_suffix(".partial.mp4")
         with av.open(str(partial), "w") as container:
             stream = container.add_stream("libx264", rate=FPS)
-            stream.width, stream.height, stream.pix_fmt = WIDTH, HEIGHT, "yuv420p"
+            stream.width, stream.height, stream.pix_fmt = width, height, "yuv420p"
             stream.options = h264_options()
             for pixels in frames:
                 frame = av.VideoFrame.from_ndarray(
@@ -211,8 +214,8 @@ def main(config_path):
             "backend": "wan22-svi-pro-q4",
             "profile_identity": profile,
             "managed_runtime": request["managed_runtime"],
-            "width": WIDTH,
-            "height": HEIGHT,
+            "width": width,
+            "height": height,
             "frames": FRAMES,
             "fps": FPS,
             "steps": 20,

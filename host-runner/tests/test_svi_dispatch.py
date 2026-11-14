@@ -113,10 +113,10 @@ def test_invalid_dispatch_refuses_before_creating_run_work(fixture, change):
     assert not calls and not (root / "runs").exists()
 
 
-def motion(root, profile):
+def motion(root, profile, shape=SHAPE):
     count = 16 * 60 * 104 * 4
     header = {
-        "motion": {"shape": list(SHAPE), "dtype": "F32", "data_offsets": [0, count]},
+        "motion": {"shape": list(shape), "dtype": "F32", "data_offsets": [0, count]},
         "__metadata__": {METADATA_KEY: profile},
     }
     raw = json.dumps(header).encode()
@@ -224,3 +224,82 @@ def test_fake_engine_reattaches_same_native_identity_and_cancel_escalates_only_o
         manager.shutdown()
         unrelated.terminate()
         unrelated.wait(timeout=3)
+
+
+def test_portrait_native_admission_is_separately_closed_even_with_a_qualified_engine(fixture, monkeypatch):
+    root, body, manager, calls = fixture
+    monkeypatch.setattr(svi_video, "capabilities", capabilities_original)
+    monkeypatch.setattr(svi_environment, "QUALIFIED", True)
+    monkeypatch.setattr(svi_video, "PORTRAIT_QUALIFIED", False)
+    monkeypatch.setattr(
+        svi_video, "collect", lambda *_: pytest.fail("Unqualified portrait inspected hardware")
+    )
+    body.generation_profile = "portrait"
+    assert capabilities_original(runtime(), "portrait")["available"] is False
+    with pytest.raises(HTTPException, match="portrait.*qualified"):
+        svi_video.start_video(manager, body)
+    assert not calls and not (root / "runs").exists()
+
+
+def test_qualified_format_catalog_and_portrait_dispatch_bind_the_same_geometry(fixture, monkeypatch):
+    root, body, manager, calls = fixture
+    monkeypatch.setattr(svi_video, "capabilities", capabilities_original)
+    monkeypatch.setattr(svi_environment, "QUALIFIED", True)
+    monkeypatch.setattr(svi_video, "PORTRAIT_QUALIFIED", False)
+    monkeypatch.setattr(
+        svi_video,
+        "collect",
+        lambda *_: {
+            "gpus": [{"index": 7, "memory_total_mib": 12288}],
+            "memory": {"total_mib": 32768},
+        },
+    )
+    monkeypatch.setattr(svi_video, "available", lambda: True)
+    monkeypatch.setattr(svi_video, "driver_supported", lambda *_: True)
+    assert capabilities_original(runtime())["generation_profiles"] == [
+        {"id": "landscape", "width": 832, "height": 480}
+    ]
+    monkeypatch.setattr(svi_video, "PORTRAIT_QUALIFIED", True)
+    report = capabilities_original(runtime(), "portrait")
+    assert (report["width"], report["height"]) == (480, 832)
+    assert report["memory_estimate_mib"] == 18432 and len(report["generation_profiles"]) == 2
+    body.generation_profile = "portrait"
+    identity = profile_identity(runtime(), body.image.sha256, "portrait")
+    body.previous_motion = svi_video.MediaInput.model_validate(motion(root, identity, (1, 16, 1, 104, 60)))
+    svi_video.start_video(manager, body)
+    saved = json.loads((calls[0]["cwd"] / "request.json").read_text())
+    assert saved["request"]["generation_profile"] == "portrait" and saved["profile_identity"] == identity
+
+
+@pytest.mark.parametrize("wrong", ["geometry", "identity"])
+def test_portrait_continuation_refuses_landscape_context_before_dispatch(fixture, wrong):
+    root, body, manager, calls = fixture
+    body.generation_profile = "portrait"
+    identity = profile_identity(
+        runtime(), body.image.sha256, "portrait" if wrong == "geometry" else "landscape"
+    )
+    shape = SHAPE if wrong == "geometry" else (1, 16, 1, 104, 60)
+    body.previous_motion = svi_video.MediaInput.model_validate(motion(root, identity, shape))
+    with pytest.raises(ValueError, match="geometry|profile"):
+        svi_video.start_video(manager, body)
+    assert not calls and not (root / "runs").exists()
+
+
+def test_generation_profile_is_closed_and_legacy_serialization_stays_landscape(fixture):
+    body = fixture[1]
+    assert "generation_profile" not in body.model_dump(mode="json")
+    assert profile_identity(runtime(), body.image.sha256) == profile_identity(
+        runtime(), body.image.sha256, "landscape"
+    )
+    assert profile_identity(runtime(), body.image.sha256) != profile_identity(
+        runtime(), body.image.sha256, "portrait"
+    )
+    selection = svi_video.Selection(managed_runtime=runtime(), permissions=["filesystem_read"])
+    assert "generation_profile" not in selection.model_dump(mode="json")
+    for invalid in ["square", "480x832", True, None]:
+        with pytest.raises(ValidationError):
+            svi_video.SviRequest.model_validate(
+                {**body.model_dump(mode="json"), "generation_profile": invalid}
+            )
+        with pytest.raises(ValueError, match="fixed"):
+            profile_identity(runtime(), body.image.sha256, invalid)

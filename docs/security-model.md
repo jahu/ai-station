@@ -2156,5 +2156,7 @@ The planned recurrent portrait format must remain a finite, separately qualified
 checkpoint, and a supported engine alone does not authorize that orientation.
 Existing definitions and frozen requests must not be rewritten to gain admission.
 Native process ownership, source hashes, memory scope and explicit deadlines
-remain mandatory. Only its bounded pure motion primitives are staged; portrait dispatch remains
-planned and is not currently operational.
+remain mandatory. Typed native portrait selection and inference dimension threading are staged
+behind their own false qualification gate. The legacy landscape serialization
+remains unchanged; public portrait selection and actual GPU qualification are
+still outstanding.

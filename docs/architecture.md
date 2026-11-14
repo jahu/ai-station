@@ -1948,5 +1948,6 @@ that same owned SVI engine and six-component binding. Its typed capabilities,
 raw motion shape/identity, immutable timelines and model-aware format controls
 must agree. It adds no execution service or arbitrary model graph. See the next
 implementation section in the [long-video plan](plans/long-video-temporal-quality.md).
-Only the pure two-orientation conditioning/checkpoint primitives are staged;
-native/public portrait dispatch is not yet implemented or admitted.
+Typed native format selection, orientation-bound conditioning/checkpoints and
+offline job dimensions are staged behind a separate closed portrait gate. Public
+model/UI selection and real portrait qualification remain outstanding.

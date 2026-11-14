@@ -6,9 +6,11 @@ from pathlib import Path
 
 from ai_station_runner import svi_environment
 from ai_station_runner.speech_environment import fingerprint
+from ai_station_runner.wan_svi_context import generation_dimensions
 
 
-def profile_identity(runtime, image_sha256):
+def profile_identity(runtime, image_sha256, generation_profile="landscape"):
+    width, height = generation_dimensions(generation_profile)
     frozen = svi_environment.recipe()
     if (
         not isinstance(runtime, dict)
@@ -38,6 +40,6 @@ def profile_identity(runtime, image_sha256):
             "engine": runtime,
             "implementation": implementation,
             "original_image_sha256": image_sha256,
-            "recipe": "svi-pro-q4-832x480-81f-15fps-20-euler-shift5-cfg5-v1",
+            "recipe": f"svi-pro-q4-{width}x{height}-81f-15fps-20-euler-shift5-cfg5-v1",
         }
     )

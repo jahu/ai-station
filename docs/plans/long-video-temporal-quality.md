@@ -805,8 +805,9 @@ no-op Apply button. Other video models preserve their prior two-/four-hour hints
 
 ## Next implementation: finite portrait generation without losing the reference
 
-Status: pure motion primitives staged; native/public portrait dispatch remains
-unimplemented and unqualified. The current native SVI job passes
+Status: native portrait selection/dispatch is staged behind a separate closed
+qualification gate; public model/UI selection remains unimplemented and the new
+format is unqualified. The current native SVI job passes
 its original reference through a center crop into fixed 832×480 conditioning.
 A portrait/full-body input can therefore lose its head, feet or other important
 context before diffusion. The completed coastal reference is landscape; it does
@@ -879,3 +880,21 @@ Changing the context source changes the native implementation fingerprint.
 Existing private landscape runs retain their immutable old source; their raw
 checkpoints must not be relabeled for the new implementation. Complete typed
 selection/job/model/UI integration and new-source real qualification remain next.
+
+The native typed request/inspection now accepts only an optional closed
+`generation_profile` (`landscape` or `portrait`); default serialization omits it
+to retain old landscape request identity. Portrait admission has its own false
+qualification flag in addition to the shared false engine flag. Available-format
+metadata cannot advertise it while that gate is closed. The offline child
+selects the same finite dimensions for source conditioning, motion validation,
+sample shape, decoding and output/report checks. Motion identity includes the
+chosen orientation; a landscape checkpoint cannot serve a portrait request even
+when its payload byte count is identical. Unknown profiles remain rejected.
+
+Ninety focused native/context/backend regressions passed after this native
+threading, including real closed-gate rejection, format discovery with synthetic
+hardware, request serialization, owned dispatch and cross-orientation refusal.
+The actual CPU normalized-core proof was repeated for the current context source
+and remains error 0.0 for both initial/continuation orientations. These checks
+load no model and do not qualify actual portrait GPU inference. Public model,
+workspace/agent/Studio and immutable-plan integration remain outstanding.

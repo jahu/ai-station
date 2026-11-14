@@ -21,10 +21,11 @@ from ai_station_runner.svi_identity import profile_identity
 from ai_station_runner.telemetry import collect
 from ai_station_runner.video_prepare import driver_supported
 from ai_station_runner.video_runtime_schema import SviManagedRuntime as ManagedRuntime
-from ai_station_runner.wan_svi_context import MAX_BYTES, validate_checkpoint
+from ai_station_runner.wan_svi_context import MAX_BYTES, generation_dimensions, validate_checkpoint
 
 NAME = "wan_svi_video"
 RAM_MIB = 18432
+PORTRAIT_QUALIFIED = False
 router = APIRouter(tags=["recurrent video"])
 
 
@@ -32,6 +33,9 @@ class Selection(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     managed_runtime: ManagedRuntime
     permissions: list[Literal["filesystem_read"]] = Field(max_length=1)
+    generation_profile: Literal["landscape", "portrait"] = Field(
+        default="landscape", exclude_if=lambda value: value == "landscape"
+    )
 
 
 class SviRequest(BaseModel):
@@ -46,6 +50,9 @@ class SviRequest(BaseModel):
     seed: StrictInt = Field(ge=0, le=2147483647)
     gpu: StrictInt = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    generation_profile: Literal["landscape", "portrait"] = Field(
+        default="landscape", exclude_if=lambda value: value == "landscape"
+    )
 
     @model_validator(mode="after")
     def bounds(self):
@@ -56,12 +63,19 @@ class SviRequest(BaseModel):
         return self
 
 
-def capabilities(runtime=None):
+def capabilities(runtime=None, generation_profile="landscape"):
+    width, height = generation_dimensions(generation_profile)
     if not svi_environment.QUALIFIED:
         return {
             "available": False,
             "backend": "wan22-svi-pro-q4",
             "reason": "SVI Pro video is still being qualified",
+        }
+    if generation_profile == "portrait" and not PORTRAIT_QUALIFIED:
+        return {
+            "available": False,
+            "backend": "wan22-svi-pro-q4",
+            "reason": "SVI Pro portrait video is still being qualified",
         }
     try:
         root = get_settings().host_data_dir().resolve()
@@ -97,8 +111,13 @@ def capabilities(runtime=None):
             "managed_runtime": runtime,
             "eligible_gpu_indices": eligible,
             "modes": ["animate"],
-            "width": 832,
-            "height": 480,
+            "width": width,
+            "height": height,
+            "generation_profiles": [
+                {"id": name, "width": w, "height": h}
+                for name in (("landscape", "portrait") if PORTRAIT_QUALIFIED else ("landscape",))
+                for w, h in [generation_dimensions(name)]
+            ],
             "fps": 15,
             "native_window_frames": 81,
             "continuation_frames": 4,
@@ -120,7 +139,11 @@ def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "SVI media read/write permissions are required")
     runtime = body.managed_runtime.model_dump(mode="json")
-    observed = capabilities(runtime)
+    observed = (
+        capabilities(runtime)
+        if body.generation_profile == "landscape"
+        else capabilities(runtime, body.generation_profile)
+    )
     if not observed["available"]:
         raise HTTPException(409, observed["reason"])
     if body.gpu not in observed["eligible_gpu_indices"]:
@@ -137,10 +160,11 @@ def start_video(manager, body):
             source.verify()
     except (OSError, ValueError, Image.DecompressionBombError) as exc:
         raise HTTPException(422, "Invalid SVI original image") from exc
-    identity = profile_identity(runtime, body.image.sha256)
+    width, height = generation_dimensions(body.generation_profile)
+    identity = profile_identity(runtime, body.image.sha256, body.generation_profile)
     if body.previous_motion is not None:
         motion = verified_path(root, body.previous_motion)
-        validate_checkpoint(motion, identity)
+        validate_checkpoint(motion, identity, width=width, height=height)
     run_id = str(body.run_id)
     work = root / "runs" / run_id / "svi"
     output = owned(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4")
@@ -199,7 +223,12 @@ def available_profile():
 def selected_profile(body: Selection):
     if set(body.permissions) != {"filesystem_read"}:
         raise HTTPException(403, "SVI model inspection requires filesystem read permission")
-    return capabilities(body.managed_runtime.model_dump(mode="json"))
+    runtime = body.managed_runtime.model_dump(mode="json")
+    return (
+        capabilities(runtime)
+        if body.generation_profile == "landscape"
+        else capabilities(runtime, body.generation_profile)
+    )
 
 
 @router.post("/v1/runs/svi")

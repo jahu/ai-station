@@ -19,6 +19,12 @@ METADATA_KEY = "station.svi_profile"
 SHAPE = (1, 16, 1, HEIGHT // 8, WIDTH // 8)
 
 
+def generation_dimensions(profile="landscape"):
+    if type(profile) is not str or profile not in {"landscape", "portrait"}:
+        raise ValueError("Choose a fixed SVI generation profile")
+    return (WIDTH, HEIGHT) if profile == "landscape" else (HEIGHT, WIDTH)
+
+
 def motion_shape(width=WIDTH, height=HEIGHT):
     """Finite geometry only; this primitive does not qualify a native format."""
     if (
