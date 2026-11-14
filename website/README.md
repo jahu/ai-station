@@ -1,21 +1,15 @@
 # Project landing page
 
-Release 0.3 adds durable ReAct conversation chains, retained references and
-compatible model selection for existing image agents.
+The public site is **https://ai-station.dev**, hosted on Cloudflare Pages from
+`master`. The landing page and installation guide use `site.config.json` for
+release filenames and links. The current published download is **0.7.0**.
+Update the configuration and the “What's new” section together when preparing a
+release, then verify the compiled output against the GitHub release assets.
+See [the release checklist](../docs/release-policy.md#public-release-information).
 
-The real creation showcase in `assets/showcase/` uses a dedicated
-non-administrator demo account. The owner approved the 30-asset image/voice/UI
-bundle on 2026-11-07 and requested two additional original local music examples.
-Future new photographic/generated imagery still requires its own review.
-See [the showcase plan](../docs/plans/public-showcase.md).
-
-Release 0.2 adds capability-guided public model discovery and hardware advice
-before weights transfer. Publisher links, complete model components, reviewed
-installation and explicit update review reuse the application model lifecycle.
-Download filenames and release-note URLs come from `site.config.json`; do not
-hard-code a prior version in HTML. The preview must use the newly compiled output.
-Previously approved neutral media stays unchanged. New showcase assets require
-their own publication review.
+Only previously approved neutral showcase media is public. New photographs,
+generated imagery or private Library exports still need the owner's review;
+see [the showcase plan](../docs/plans/public-showcase.md).
 
 A standalone, static product website. It lives alongside the application so its
 claims and screenshots can be reviewed together. It has **no application runtime,
@@ -44,7 +38,8 @@ Names and links are rendered into real HTML at build time; they do not depend on
 JavaScript or an API call. The logo is the existing `assets/station.svg` and can
 be replaced as a separate branding decision.
 
-Leave `canonical_url` empty until a real HTTPS address exists. Once configured,
+`canonical_url` is set to `https://ai-station.dev`. For a standalone fork, set it
+to the fork’s own HTTPS address, or leave it empty until one exists. Once configured,
 the build adds canonical/Open Graph URL and image tags, a sitemap and its robots
 entry. A URL with a repository subpath works; asset paths are relative. Rebuilding
 without a domain removes an old generated sitemap. No fabricated domain is used.
@@ -55,17 +50,17 @@ external font requests, signup forms or private application endpoints. Links ope
 normally in the same tab. Native FAQs, content and installation links work with
 JavaScript disabled. Clipboard copying also has a fallback for insecure contexts.
 
-## Future hosting
+## Hosting
 
-Upload the contents of **dist/** to any static host, including GitHub Pages,
-Cloudflare Pages or an ordinary web server. No domain is required to start; a
-host-provided URL can be configured later. GitHub Pages build commands would be
-`python3 website/build.py`, with `website/dist` as the deployment artifact.
+Cloudflare Pages builds the production `master` branch with
+`python3 website/build.py` and publishes **website/dist/** from the repository
+root. Set `SKIP_DEPENDENCY_INSTALL=1`: this static site uses Python’s standard
+library and must not auto-install the monorepo as a Python package. The owner
+approves and merges promotions to `master`; Pages then rebuilds automatically.
+Both `ai-station.dev` and `www.ai-station.dev` point to the Pages project.
 
-There is deliberately no deployment workflow, GitHub Pages setting change or
-public hosting registration in this change. The owner can choose hosting and a
-name before publishing. Normal source changes use a PR to `develop`; release PRs
-to `master` are created by the existing bot and remain for human-owner approval.
+To use another static host, upload the contents of `dist/`. No application API,
+models, secrets or private workstation endpoints belong in the public output.
 
 ## Content, privacy and licensing
 
