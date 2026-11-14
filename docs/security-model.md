@@ -676,6 +676,12 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Experimental [live conversion](plans/live-identity.md) must keep media ephemeral,
+validate WebSocket origin/account ownership throughout a session, and fail closed
+instead of leaking original face/microphone output on inference failure. Browser
+capture consent grants no new host filesystem, shell or device authority. The
+feature remains unavailable until its transport and native ownership checks pass.
+
 The fixed Linux SVI native operations passed their qualification gate. Their
 closed request still accepts only an opaque owned engine and bounded
 owned image/motion identities, never SDK paths, a graph or command arguments.
