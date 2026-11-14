@@ -1,5 +1,5 @@
 {
-  "version": 60,
+  "version": 61,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -49,7 +49,9 @@
     "docs/plans/studio-conversation-revisions.md",
     "docs/plans/studio-completion-audit.md",
     "docs/plans/unified-image-editing.md",
-    "docs/plans/model-aware-orchestrator-actions.md"
+    "docs/plans/model-aware-orchestrator-actions.md",
+    "docs/plans/long-video-temporal-quality.md",
+    "docs/releases/0.7.0.md"
   ],
   "cases": [
     {
@@ -7031,6 +7033,102 @@
       ],
       "resources": "Jedna rzeczywista edycja GPU z ośmioma referencjami; bez płatnych API.",
       "minutes": 20
+    },
+    {
+      "id": "VIDEO-103",
+      "area": "Wideo",
+      "priority": "P1",
+      "requirements": [
+        "spec-77",
+        "długie media",
+        "SVI-CONTINUITY"
+      ],
+      "title": "Przygotowanie Continuous video i zachowanie poprzednich modeli",
+      "prerequisites": [
+        "Linux x86-64, zgodna karta NVIDIA 12 GB i przynajmniej 18 GiB dostępnego RAM dla przygotowanego profilu. Nie usuwaj danych ani modeli, aby wykonać test."
+      ],
+      "steps": [
+        "Otwórz Video → Set up video → Continuous video. Sprawdź wymagania, rozmiar pobrania i dopiero wtedy zatwierdź przygotowanie.",
+        "Po zakończeniu wybierz SVI Pro. Sprawdź, czy wcześniejsze modele i filmy nadal istnieją."
+      ],
+      "expected": [
+        "Brak zgodnego silnika lub zasobów ma czytelny powód; nie oznacza gotowości.",
+        "Po przygotowaniu dostępny jest rzeczywisty model, a poprzednie pliki i historia pozostają zachowane."
+      ],
+      "resources": "Lokalny GPU; generowanie 10 s na RTX 3060 12 GB trwa około 1 h 46 min. Sieć potrzebna do jawnego przygotowania modelu.",
+      "minutes": 20
+    },
+    {
+      "id": "VIDEO-104",
+      "area": "Wideo",
+      "priority": "P1",
+      "requirements": [
+        "spec-77",
+        "długie media",
+        "SVI-CONTINUITY"
+      ],
+      "title": "Dziesięć sekund: ciągłość obiektu w poziomie i pionie",
+      "prerequisites": [
+        "Linux x86-64, zgodna karta NVIDIA 12 GB i przynajmniej 18 GiB dostępnego RAM dla przygotowanego profilu. Nie usuwaj danych ani modeli, aby wykonać test."
+      ],
+      "steps": [
+        "Użyj własnego niesensytywnego zdjęcia osoby, zwierzęcia lub przedmiotu. Wybierz SVI Pro, 10 s i jeden format. Opisz niewielki ruch.",
+        "Obejrzyj cały film, także okolice 5 s. Opcjonalnie powtórz w drugim formacie. Zapisz czas i załącz konkretne błędy."
+      ],
+      "expected": [
+        "Film ma oczekiwaną długość i format, ciągły ruch oraz rozpoznawalny obiekt i scenę na połączeniu okien.",
+        "Oceń oddzielnie jakość, kadr i wykonanie polecenia; sam status succeeded nie oznacza zaliczenia. Około 480p to spodziewana szczegółowość."
+      ],
+      "resources": "Lokalny GPU; generowanie 10 s na RTX 3060 12 GB trwa około 1 h 46 min. Sieć potrzebna do jawnego przygotowania modelu.",
+      "minutes": 120
+    },
+    {
+      "id": "VIDEO-105",
+      "area": "Wideo",
+      "priority": "P1",
+      "requirements": [
+        "spec-77",
+        "długie media",
+        "SVI-CONTINUITY"
+      ],
+      "title": "Chat respektuje wybrany model, długość i format filmu",
+      "prerequisites": [
+        "Linux x86-64, zgodna karta NVIDIA 12 GB i przynajmniej 18 GiB dostępnego RAM dla przygotowanego profilu. Nie usuwaj danych ani modeli, aby wykonać test."
+      ],
+      "steps": [
+        "Dodaj niesensytywne zdjęcie w Chat. W ustawieniach narzędzia wideo wybierz SVI Pro, 5 s i format. Poproś o płynny ruch.",
+        "Po zakończeniu sprawdź wynik pod odpowiedzią, szczegóły Task activity i Library."
+      ],
+      "expected": [
+        "Orkiestrator przekazuje wybrany model, format i długość; nie przełącza się po cichu na inny generator.",
+        "Prawdziwy końcowy film jest dostępny w rozmowie i Library. Brak zasobów pokazuje oczekiwanie lub przyczynę błędu, nie fikcyjny wynik."
+      ],
+      "resources": "Lokalny GPU; generowanie 10 s na RTX 3060 12 GB trwa około 1 h 46 min. Sieć potrzebna do jawnego przygotowania modelu.",
+      "minutes": 60
+    },
+    {
+      "id": "VIDEO-106",
+      "area": "Wideo",
+      "priority": "P1",
+      "requirements": [
+        "spec-77",
+        "długie media",
+        "SVI-CONTINUITY"
+      ],
+      "title": "Stop, zachowane okna, dźwięk i edytor",
+      "prerequisites": [
+        "Linux x86-64, zgodna karta NVIDIA 12 GB i przynajmniej 18 GiB dostępnego RAM dla przygotowanego profilu. Nie usuwaj danych ani modeli, aby wykonać test."
+      ],
+      "steps": [
+        "Dla własnego dłuższego zadania SVI użyj Stop po zakończeniu co najmniej jednego okna. Sprawdź historię i możliwość wznowienia, jeśli jest oferowana.",
+        "Na ukończonym filmie użyj Add sound oraz edytora: przytnij lub wyeksportuj krótki fragment."
+      ],
+      "expected": [
+        "Zatrzymane zadanie nie publikuje niepełnego filmu jako sukcesu; zatrzymuje wyłącznie własny proces. Wznowienie korzysta tylko ze zgodnego zachowanego kontekstu.",
+        "Dźwięk i eksport zachowują czas oraz format obrazu; obraz i dźwięk można rzeczywiście odtworzyć."
+      ],
+      "resources": "Lokalny GPU; generowanie 10 s na RTX 3060 12 GB trwa około 1 h 46 min. Sieć potrzebna do jawnego przygotowania modelu.",
+      "minutes": 120
     }
   ],
   "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",

@@ -12,7 +12,7 @@ Your conversations, images, videos, voices, music and agents — together, on yo
 
 [Get started](#-get-started) · [Installation guide](https://ai-station.dev/install/) · [See it in action](#-one-station-many-ways-to-create) · [Help us test](#help-make-it-simple) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.6.2` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.7.0` · `Linux & Windows` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -83,7 +83,7 @@ a completed Run alone is not treated as answer-quality evidence.
 > Windows 10 installation, login and worker execution were tested in a CPU-only VM.
 > First local-model replies were tested separately on Windows 11; physical Windows
 > NVIDIA tests and human evaluation of the new voice/film samples follow release.
-> [Exact qualification and known issues](docs/releases/0.6.2.md).
+> [Exact qualification and known issues](docs/releases/0.7.0.md).
 
 **Creative Studio:** brand projects, storyboards and complete productions
 combine generated visuals/video, narration and music into MP4 exports. Optional
@@ -138,7 +138,7 @@ choice silently. [Supported families and actual tests](docs/models.md) ·
 
 Release 0.5 retains reliable setup on Linux and Windows, your first local
 result, and updates that keep your accounts, models and saved work.
-[0.6.2 release notes and qualification status](docs/releases/0.6.2.md).
+[0.7.0 release notes and qualification status](docs/releases/0.7.0.md).
 
 **Creative Studio.** Organize reels, presentations and films by
 brand, course or series, with a shared visual identity and editorial brief.
@@ -410,8 +410,8 @@ hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB
 | **Edit · two references** | Same model/size/steps; ordered scene and person references | **3 min 10 s** |
 | **Generate two video shots in parallel** | Wan2.2 5B; 2 × 2-second shots; 1280×704; 20 steps; separate GPUs | **7 min 58 s** for the full four-second film and composition. |
 | **Generate a continuous one-minute film** | Wan2.2 5B; 1280×704; 24 fps; 20 steps; 18 sequential windows; bounded host RAM | **3 h 16 min** for the complete 1,440-frame workflow. |
-| **Steadier reference-based video · development profile** | Wan 2.2 SVI Pro Q4; two 10-second portrait seeds at 480×832 and a 10-second landscape car scene at 832×480; 15 fps; 20 steps; one GPU | **About 1 h 46 min per film**. Subject/object and scene remain recognizable in inspected frames across native-window joins. |
-| **Longer recurrent video · development profile** | Same SVI Pro profile; complete 20-second landscape scene; 832×480; 15 fps; one GPU | **3 h 32 min**, 300 decoded frames. |
+| **Steadier reference-based video · SVI Pro** | Wan 2.2 SVI Pro Q4; two 10-second portrait seeds at 480×832 and a 10-second landscape car scene at 832×480; 15 fps; 20 steps; one GPU | **About 1 h 46 min per film**. Subject/object and scene remain recognizable in inspected frames across native-window joins. |
+| **Longer recurrent video · SVI Pro** | Same SVI Pro profile; complete 20-second landscape scene; 832×480; 15 fps; one GPU | **3 h 32 min**, 300 decoded frames. |
 | **Create a one-minute speaking avatar** | EchoMimic V3; 384 px; 8 steps; 24 windows; one GPU; 60-second recording | **48 min 18 s**, including fresh source-speech preparation and composition. |
 | **Create a whole-recording avatar with more detail** | Sonic; native 512×768; 25 steps; both GPUs; complete 40.08-second recording | **2 h 27 min 18 s** end to end; 1,002 frames at 25 fps. Owner confirms substantially improved quality; not native HD. |
 
@@ -425,8 +425,7 @@ color/facial-detail limitations. The newer Sonic result received positive owner
 feedback; duration success alone is not a promise of perfect visual quality.
 [Method, exact scope and evidence](docs/benchmarks.md).
 
-**Steadier longer clips are coming in the next release.** The Linux SVI Pro
-development profile keeps the original image and motion context across windows,
+**Steadier longer clips with SVI Pro.** The qualified Linux profile keeps the original image and motion context across windows,
 improving subject consistency beyond a short clip. Actual qualification includes
 a complete 20-second landscape film, two 10-second moving-person portrait seeds
 and a 10-second car scene. The owner reports visible improvement in the first
@@ -437,7 +436,8 @@ This favors consistency over speed: the measurements above use one 12 GB GPU.
 Native detail is still 480p-class, some framing and secondary actions remain
 imperfect, and these examples cannot guarantee every future result. Chat,
 Video, agents and Studio share the selected model and format through ordinary
-Tasks and Runs. The v0.6.2 installers do not include this development profile.
+Tasks and Runs. Prepare this optional engine through **Video → Set up video →
+Continuous video**; its weights are not bundled with the installer.
 [Setup, exact qualification and remaining delivery checks](docs/plans/long-video-temporal-quality.md).
 
 ## 🚀 Get started
@@ -446,8 +446,8 @@ Tasks and Runs. The v0.6.2 installers do not include this development profile.
 
 Download the package for your computer from the release assets:
 
-- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.6.2-windows-x64-Setup.exe`.
-- **Ubuntu 24.04 x86-64:** `AI-Station-0.6.2-linux-amd64.deb`.
+- **Windows 10 (21H2/22H2) or 11 x64:** `AI-Station-0.7.0-windows-x64-Setup.exe`.
+- **Ubuntu 24.04 x86-64:** `AI-Station-0.7.0-linux-amd64.deb`.
 
 Open AI Station, follow the setup, create your administrator account and choose
 a recommended model. Downloads show their size and license before you agree.
@@ -465,7 +465,7 @@ policies may block it. Use only this repository's official assets and compare
 `SHA256SUMS`. Do not disable system protections. Signing is planned for a later
 release. A checksum checks file identity; it does not replace a code signature.
 
-[Installation, updates and known issues](docs/releases/0.6.2.md).
+[Installation, updates and known issues](docs/releases/0.7.0.md).
 The manual Linux path remains available below for advanced users.
 
 <details>
@@ -503,7 +503,7 @@ feature branches and PRs into `develop`.
 existing [0.1 foundation](docs/plans/next-release-0.1.md):
 private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. Qualified hardware and
-post-release QA are listed in the [release notes](docs/releases/0.6.2.md).
+post-release QA are listed in the [release notes](docs/releases/0.7.0.md).
 
 Private accounts provide per-user
 conversations, Library, memory and agents, with shared models/hardware, optional
@@ -760,7 +760,7 @@ Frontend/build and actual packaged platform evidence is recorded separately;
 unchanged code is not described as freshly retested. The offline QA tools pass
 29 tests. These results do not automatically qualify every model, media profile
 or machine.
-[Release verification](docs/releases/0.6.2.md#verification) ·
+[Release verification](docs/releases/0.7.0.md#verification) ·
 [Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 For an existing native photo pipeline, `AI_STATION_SD_CLI` can select its local
