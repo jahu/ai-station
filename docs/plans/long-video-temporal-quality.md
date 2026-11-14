@@ -1013,3 +1013,22 @@ the fixed workload. Sound cue timing follows the chosen model's frame rate.
 New ordinary API tests publish both orientations without inference, verify closed
 readiness never falls back, and exercise real controller argument binding. The
 candidate remains separate from immutable running GPU qualification source.
+
+## Studio fixture protocol repair
+
+The complete `f641c740` check passed 6,384 cases and skipped 17 opted-in cases
+before failing the two-shot Studio production test. Separate reproduction on
+`94414898` found two obsolete test doubles: their `lambda *args` signatures
+rejected Studio's new `requested_geometry` keyword. The production function
+already accepts that keyword. One test exposed this directly as `TypeError` in
+2.79 seconds; the coordinator test instead observed no child Task and raised
+`IndexError` after its fake production step failed.
+
+Both doubles now use `create_autospec` against the actual `profile_for` function,
+retaining the original graph, independent-shot and source-trim assertions. All
+29 Studio production/shared-source/shot tests pass after this test-only repair.
+The redundant `94414898` whole-suite process was gracefully interrupted after
+that same failure was reproduced, preserving its 356-pass/exit-2 record. A fresh
+complete check is required on the committed repair; neither interrupted nor
+failed full-suite run is counted as passing. Running native qualification and
+all production inference code remain unchanged.
