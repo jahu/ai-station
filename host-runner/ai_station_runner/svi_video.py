@@ -20,18 +20,12 @@ from ai_station_runner.memory_scope import available, scope_environment, scope_p
 from ai_station_runner.svi_identity import profile_identity
 from ai_station_runner.telemetry import collect
 from ai_station_runner.video_prepare import driver_supported
+from ai_station_runner.video_runtime_schema import SviManagedRuntime as ManagedRuntime
 from ai_station_runner.wan_svi_context import MAX_BYTES, validate_checkpoint
 
 NAME = "wan_svi_video"
 RAM_MIB = 18432
 router = APIRouter(tags=["recurrent video"])
-
-
-class ManagedRuntime(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-    profile: Literal["wan22-svi-pro-q4-linux-x86-64-python312-v1"]
-    manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    environment_id: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class Selection(BaseModel):

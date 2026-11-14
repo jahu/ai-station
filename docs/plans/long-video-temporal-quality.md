@@ -614,3 +614,31 @@ cases across the SVI/5B paths, 71 shared setup/account/recovery and recurrent-ru
 regressions, then the final 19 SVI setup cases after adding incomplete-component
 and closed-catalog regressions. Repository Ruff and format checks passed. These
 are focused checks, not a new full-suite pass or real installation evidence.
+
+
+## Recurrent CPU composition and lower-resolution observation
+
+CPU composition now accepts the closed SVI engine identity alongside the existing
+5B identity. The parent chooses the explicit SVI environment, checks its admission
+flag and refuses unavailable/changed receipts instead of falling back to a
+configured 5B Python. The offline child independently resolves the same frozen
+profile and requires its exact prepared interpreter, CPU resource scope and
+absolute deadline. The resolver imports no Runner API. Legacy 5B explicit-path
+precedence and requests without a managed identity retain their behavior.
+
+The final 146-case native/platform group passed, including actual tiny CPU encode/decode
+of two synthetic 81-frame clips into 150 frames at 15 fps, with four-frame context
+trimming and CRF18 output. The managed environment in this test is synthetic;
+it is not a fresh SVI installation or real GPU result. Negative tests reject
+foreign Python, unknown profiles, arbitrary paths and unqualified/missing engines.
+
+The private 512×288/50-step nonhuman candidate completed its first 81-frame window
+at 15 fps in 2236.5 seconds, including its actual worker/native execution boundary.
+All frames decoded and all owned processes stopped. Eleven sampled views preserve
+the recognizable harbor car, grille, round headlights, wheels/windows and scene,
+with a visible lateral camera reveal. This is low-resolution detail and only a
+5.4-second observation, not broad long-video quality qualification. The checked
+film is in the owner's private Library. A ten-second continuation now reuses its
+first window and original anchor; no repeated initial generation is required.
+It uses the same method's separate 512×288 motion identity, not a relabeled public
+832×480 checkpoint. This measurement does not yet change the product recipe.

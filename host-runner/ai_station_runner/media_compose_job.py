@@ -161,12 +161,12 @@ def compose(config):
         signal.setitimer(signal.ITIMER_REAL, remaining)
         sys.addaudithook(deny_network)
     if config["request"].get("managed_runtime"):
-        from ai_station_runner import video_environment
         from ai_station_runner.memory_scope import require_scope
+        from ai_station_runner.video_composition_runtime import resolve_public
         from ai_station_runner.video_job import deny_network
 
         request = config["request"]
-        frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
+        frozen = resolve_public(config["root"], request["managed_runtime"])
         if Path(sys.base_prefix).resolve() != frozen["environment"] / "python":
             raise ValueError("Composition must execute its exact frozen video environment")
         require_scope(request["run_id"], 4096)
