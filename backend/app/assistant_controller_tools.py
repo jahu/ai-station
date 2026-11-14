@@ -47,6 +47,19 @@ class Media(Images):
     duration_seconds: int | None = Field(default=None, ge=1, le=600, strict=True)
 
 
+class Video(Media):
+    video_model: Alias | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="An exact video_models alias. Honor the user's selected model. Prefer an offered original-image recurrent model for longer continuous reference-based films; inspect its substantial workload. Omit to retain the existing default engine.",
+    )
+    video_format: Literal["landscape", "portrait"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Optional format for the selected video_model. Honor the user's selected format; native capability admission must still pass.",
+    )
+
+
 class Project(Instruction):
     name: str = Field(min_length=1, max_length=200)
 
@@ -189,7 +202,7 @@ TOOLS = {
     "image.upscale": Tool("Enlarge one existing image. Does not implement a new scene.", ImageOperation),
     "video.generate": Tool(
         "Create local video from a prompt and optionally one image. Supply explicit duration_seconds, at most 300.",
-        Media,
+        Video,
     ),
     "avatar.animate": Tool(
         "Animate one portrait with one selected audio recording. Both references are required.", Media
@@ -746,7 +759,9 @@ def wrapper_parameters(session, root, name, raw):
     if name == "video.generate":
         if args.duration_seconds is None or args.duration_seconds > MAX_VIDEO_SECONDS:
             raise ValueError(f"Choose an explicit video duration from 1 to {MAX_VIDEO_SECONDS} seconds")
-        params["media"] = {"duration_seconds": args.duration_seconds}
+        from app.assistant_video_profiles import request_scope
+
+        params["media"] = request_scope(session, root, args, images)
     if name in {"project.create", "project.create_code"}:
         from app.project_setup import ProjectName
 

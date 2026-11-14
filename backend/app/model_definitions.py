@@ -459,6 +459,13 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         from app.registered_embeddings import frozen
 
         embedding_model = {"embedding_model": frozen(session, row.id)}
+    svi_model = {}
+    if ((row.metadata_json.get("video") or {}).get("binding") or {}).get(
+        "checkpoint_profile"
+    ) == "wan22-svi-pro-q4-bundle-v1":
+        from app.video_models import frozen_model
+
+        svi_model = {"svi_model": frozen_model(session, row.id, recheck=True)}
     task = create_task(
         session,
         title="Install " + row.name,
@@ -481,6 +488,7 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
         retry_class="safe",
         parameters={
             **embedding_model,
+            **svi_model,
             "definition_id": row.id,
             "file_id": file.id,
             **verify_source(source_of(file, session, row.id if row.binding_key else None)),
@@ -502,7 +510,7 @@ def install(definition_id: UUID, body: EmptyBody, session: DB):
             ),
             **(
                 {"video_checkpoint_binding": dict(row.metadata_json["video"]["binding"])}
-                if (row.metadata_json.get("video") or {}).get("binding")
+                if (row.metadata_json.get("video") or {}).get("binding") and not svi_model
                 else {}
             ),
             **(
@@ -574,6 +582,10 @@ class ModelInstallExecutor:
             return "done"
         if run.parameters.get("embedding_model"):
             from app.embedding_recheck import execute
+
+            return execute(session, run, row)
+        if run.parameters.get("svi_model"):
+            from app.svi_recheck import execute
 
             return execute(session, run, row)
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})

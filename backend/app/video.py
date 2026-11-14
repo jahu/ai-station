@@ -44,6 +44,19 @@ def recommended_profile(profile, available_mib):
     if (
         profile.get("available")
         and bounded
+        and any(
+            row.get("id") == "bounded_11g"
+            and row.get("available")
+            and row.get("ram_mib") == 11264
+            and isinstance(row.get("native_windows"), list)
+            and {"width": 1280, "height": 704, "frames": 121} in (row.get("native_windows") or [])
+            for row in profile.get("memory_profiles", [])
+        )
+    ):
+        return "bounded_11g"
+    if (
+        profile.get("available")
+        and bounded
         and type(standard) in (int, float)
         and math.isfinite(standard)
         and standard > 11264
@@ -53,6 +66,32 @@ def recommended_profile(profile, available_mib):
     ):
         return "bounded_11g"
     return "default"
+
+
+def native_window_frames(body, profile):
+    """Use only the selected recipe's qualified geometry; legacy plans stay 81."""
+    effective = "bounded_11g" if profile.get("configuration_source") == "managed" else body.memory_profile
+    if effective != "bounded_11g" or not profile.get("available"):
+        return 81
+    selected = next((row for row in profile.get("memory_profiles", []) if row.get("id") == effective), None)
+    if not selected or not selected.get("available") or selected.get("ram_mib") != 11264:
+        return 81
+    windows = selected.get("native_windows", [])
+    if not isinstance(windows, list):
+        raise HTTPException(409, "The Runner advertised an unsupported native video window")
+    result = 81
+    for window in windows:
+        if (
+            not isinstance(window, dict)
+            or set(window) != {"width", "height", "frames"}
+            or any(type(value) is not int for value in window.values())
+            or window["frames"] != 121
+            or (window["width"], window["height"]) not in {(1280, 704), (704, 1280)}
+        ):
+            raise HTTPException(409, "The Runner advertised an unsupported native video window")
+        if (window["width"], window["height"]) == (body.width, body.height) and body.steps >= 20:
+            result = 121
+    return result
 
 
 @router.get("/capabilities")
@@ -175,7 +214,22 @@ def create_video_run(
     if body.model_id:
         from app.video_models import profile_for
 
-        observed_profile = profile_for(session, body.model_id, observed_profile)
+        observed_profile = profile_for(
+            session, body.model_id, observed_profile, requested_geometry=(body.width, body.height)
+        )
+    if observed_profile.get("backend") == "wan22-svi-pro-q4":
+        from app.svi_runs import create_svi_run
+
+        return create_svi_run(
+            session,
+            body,
+            task=task,
+            parent_run_id=parent_run_id,
+            observed_profile=observed_profile,
+            _prepare_translation=_prepare_translation,
+        )
+    if body.frames > native_window_frames(body, observed_profile):
+        raise HTTPException(409, "The selected Runner has not qualified larger native video windows")
     managed = managed_parameters(body, observed_profile)
     reservation = None
     if body.memory_profile != "default" or managed:
@@ -249,6 +303,17 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
     mime_type = "video/mp4"
 
     def reserve_devices_from_hardware(self, session, run, hardware):
+        if run.parameters.get("frames", 0) > 81:
+            hardware = {
+                **hardware,
+                "gpus": [
+                    g
+                    for g in hardware.get("gpus", [])
+                    if type(g.get("memory_total_mib")) in (int, float)
+                    and math.isfinite(g["memory_total_mib"])
+                    and g["memory_total_mib"] >= 12288
+                ],
+            }
         if run.parameters.get("managed_runtime"):
             hardware = {
                 **hardware,

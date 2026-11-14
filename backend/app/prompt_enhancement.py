@@ -34,8 +34,8 @@ def recipe(run, *, translate):
         if parameters.get("cues"):
             identifier += ":scene-cues-v1"
             operation += "Each cue_ field is a distinct scene instruction: keep it below 500 characters, preserve its meaning and never merge scenes. "
-    elif executor == "wan_video":
-        identifier = f"{VERSION}:wan"
+    elif executor in {"wan_video", "wan_svi_video"}:
+        identifier = f"{VERSION}:wan" if executor == "wan_video" else f"{VERSION}:svi-pro"
         operation = "Describe coherent subject motion, camera movement, environment and temporal continuity. Avoid contradictory cuts in a continuous shot. "
     elif executor == "ace_step_music":
         identifier = f"{VERSION}:music"

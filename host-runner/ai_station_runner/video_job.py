@@ -7,6 +7,8 @@ import sys
 import time
 from pathlib import Path
 
+from ai_station_runner.media_encoding import h264_options, video_encoding_metadata
+
 
 def stage(message):
     print(f"video.stage: {message}", flush=True)
@@ -213,6 +215,7 @@ def main(config_path):
         with av.open(str(temporary), "w") as container:
             stream = container.add_stream("libx264", rate=24)
             stream.width, stream.height, stream.pix_fmt = request["width"], request["height"], "yuv420p"
+            stream.options = h264_options()
             for pixels in frames:
                 pixels = (pixels.clamp(0, 1).cpu().numpy() * 255).round().astype(np.uint8)
                 frame = av.VideoFrame.from_ndarray(pixels, format="rgb24")
@@ -238,6 +241,7 @@ def main(config_path):
             json.dumps(
                 {
                     **execution_profile,
+                    "video_encoding": video_encoding_metadata(),
                     **({"continuation_frames": 1} if request.get("continuation_frames") == 1 else {}),
                     **(
                         {

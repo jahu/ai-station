@@ -3,6 +3,7 @@
 import tempfile
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import create_autospec
 from uuid import uuid4
 
 import pytest
@@ -15,6 +16,7 @@ from app.recovery import recover_stale
 from app.runs import claim_next, create_run, create_task, transition
 from app.state import TERMINAL, RunStatus
 from app.studio_production import NAME, children
+from app.video_models import profile_for
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import select
@@ -264,9 +266,8 @@ def test_retry_of_partial_audio_reuses_completed_spoken_cues(movie, generators, 
 def test_multiple_video_shots_keep_separate_real_segment_plans(movie, monkeypatch):
     from app.models import Artifact
 
-    monkeypatch.setattr(
-        "app.video_models.profile_for", lambda *a: {"available": True, "memory_estimate_mib": 16384}
-    )
+    profile = create_autospec(profile_for, return_value={"available": True, "memory_estimate_mib": 16384})
+    monkeypatch.setattr("app.video_models.profile_for", profile)
     with TestClient(app) as api:
         row, revision = draft(api, kind="video")
         value = revision["storyboard"]

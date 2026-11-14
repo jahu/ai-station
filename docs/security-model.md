@@ -676,6 +676,21 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+The fixed Linux SVI native operations passed their qualification gate. Their
+closed request still accepts only an opaque owned engine and bounded
+owned image/motion identities, never SDK paths, a graph or command arguments.
+The offline child independently checks its immutable inputs, original-anchor
+context, implementation identity, 18-GiB zero-swap scope and absolute deadline.
+This is a separate recipe from the existing 48-channel 5B path; old/private
+experimental checkpoints cannot be adopted under its production metadata key.
+The shared worker registration does not bypass that native gate. Public film
+planning accepts only the selected engine's fixed geometry/resource contract and
+an owned original image. Agent deadlines are preserved, never expanded by the
+recurrent planner. Resuming creates new attempts and removes old derived motion
+bindings; unrelated historical producers remain untouched. The CPU editor may
+use the qualified owned SVI Python only when no explicit legacy video setup takes
+precedence. Supporting 15-fps sources adds no executable, filter or shell input.
+
 Creative projects use the same private-root account policy as creative sessions.
 Membership and logo references must belong to the same owner; administrator
 inspection remains read-only. Names/domains in aliases are planning context,
@@ -2135,3 +2150,22 @@ limits bytes/pixels/types, and stores decoded canonical image artifacts. Browser
 previews use authenticated local artifact routes, not untrusted remote thumbnails.
 Imported references remain distinct from the requested edited result. See
 [the chat/image contract](plans/chat-web-images-and-clipboard.md).
+
+The recurrent portrait format is a finite, separately qualified 480×832
+geometry. Its F32 motion identity/shape cannot consume a landscape checkpoint,
+and a supported engine alone does not authorize that orientation. Typed native
+selection and public model/workspace/agent/Studio requests bind the same exact
+format; cached observations cannot cross orientations. Existing definitions and
+frozen requests are not rewritten to gain admission. Native process ownership,
+source hashes, memory scope and explicit deadlines remain mandatory. Both the
+engine and separate portrait qualification gates now admit this fixed Linux
+profile after actual portrait/multiple-seed/nonhuman checks and the complete
+local suite. Installed-engine/source/resource checks still apply to every request;
+qualification does not activate an engine or clone a private setup identity.
+Legacy landscape serialization remains unchanged.
+
+Conversation video planning can choose only a captured registered-model alias.
+Its component/engine identity is rechecked before dispatch, with the same native
+readiness, source ownership and resource admission as Video. An explicit reviewed
+model, format or duration cannot be replaced by a tool proposal. Model metadata
+does not grant setup authority, inference readiness or a new execution capability.

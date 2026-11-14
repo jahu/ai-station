@@ -21,6 +21,9 @@ def private_app(monkeypatch):
     monkeypatch.setenv("AI_STATION_ACCESS_PROFILE", "accounts")
     clear_settings_cache()
     routes = list(app.router.routes)
+    lifespan = app.router.lifespan_context
+    startup = list(app.router.on_startup)
+    shutdown = list(app.router.on_shutdown)
     handlers = dict(app.exception_handlers)
     previous = getattr(app.state, "account_access_enabled", False)
     app.middleware_stack = None
@@ -29,6 +32,12 @@ def private_app(monkeypatch):
         yield app
     finally:
         app.router.routes = routes
+        # include_router merges lifecycle contexts even for routers with no
+        # custom lifespan. Leaving those wrappers behind eventually makes a
+        # later TestClient startup exceed Python's recursion limit.
+        app.router.lifespan_context = lifespan
+        app.router.on_startup = startup
+        app.router.on_shutdown = shutdown
         app.exception_handlers = handlers
         app.state.account_access_enabled = previous
         app.middleware_stack = None

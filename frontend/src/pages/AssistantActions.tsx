@@ -55,6 +55,9 @@ import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { NewProjectBuild } from "./NewProjectBuild";
 import { AssistantAgentDraft } from "./AssistantAgentDraft";
 import ControllerResults from "./ControllerResults";
+import ConversationVideoScope, {
+  type ConversationVideoSettings,
+} from "./ConversationVideoScope";
 import "./ControllerActivity.css";
 import { newProjectScope, type NewProjectScope } from "./new-project-scope";
 import { GgufChoiceList } from "./GgufChoiceList";
@@ -116,10 +119,7 @@ export type AssistantOptions = {
   speech_text?: string | null;
   speech_model_id?: string | null;
   avatar_model_id?: string | null;
-  media?: {
-    duration_seconds: number;
-    composition_mode: "continuous" | "shots";
-  } | null;
+  media?: ConversationVideoSettings | null;
 };
 type Project = { id: string; name: string; updated_at: string };
 type TaskStep = {
@@ -1121,6 +1121,7 @@ export default function AssistantActions({
     value.action === "audio.speech" && !!value.audio_artifact_id,
   );
   const [mediaLanguageOpen, setMediaLanguageOpen] = useState(false);
+  const [videoFps, setVideoFps] = useState(24);
   const repositories = useQuery({
     queryKey: ["connectors"],
     queryFn: () =>
@@ -1971,35 +1972,20 @@ export default function AssistantActions({
           />
         )}
         {value.action === "video.generate" && (
-          <label>
-            Video length
-            <select
-              value={value.media?.duration_seconds ?? "preview"}
-              disabled={busy}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  effects: value.effects
-                    ? { ...value.effects, cues: [] }
-                    : value.effects,
-                  media:
-                    event.target.value === "preview"
-                      ? null
-                      : {
-                          duration_seconds: Number(event.target.value),
-                          composition_mode: "continuous",
-                        },
-                })
-              }
-            >
-              <option value="preview">
-                Short preview · or describe the duration
-              </option>
-              <option value="15">15 seconds</option>
-              <option value="30">30 seconds</option>
-              <option value="60">60 seconds</option>
-            </select>
-          </label>
+          <ConversationVideoScope
+            value={value.media}
+            disabled={busy}
+            onFrameRateChange={setVideoFps}
+            onChange={(media) =>
+              onChange({
+                ...value,
+                media,
+                effects: value.effects
+                  ? { ...value.effects, cues: [] }
+                  : value.effects,
+              })
+            }
+          />
         )}
         {value.action === "video.generate" && (
           <section className="agent-media-scope" aria-label="New film sound">
@@ -2026,7 +2012,7 @@ export default function AssistantActions({
             {value.effects && (
               <ConversationEffectsScope
                 newFilm
-                frames={(value.media?.duration_seconds ?? 0) * 24}
+                frames={(value.media?.duration_seconds ?? 0) * videoFps}
                 value={value.effects}
                 disabled={busy}
                 onBusy={onUploading}

@@ -76,6 +76,7 @@ def video_snapshot(session, identity, *, verify=False):
         or original.executor_type
         not in {
             "wan_video",
+            "wan_svi_video",
             "media_compose",
             "echomimic",
             "sonic_whole",
@@ -88,7 +89,7 @@ def video_snapshot(session, identity, *, verify=False):
     if (
         any(type(v) is not int for k, v in values.items() if k != "fps")
         or type(values["fps"]) not in (int, float)
-        or values["fps"] not in (24, 25)
+        or values["fps"] not in (15, 24, 25)
     ):
         raise ValueError("The video has no supported inspected timing")
     values["fps"] = int(values["fps"])

@@ -1,6 +1,7 @@
 # Recorded workstation results
 
-These are observations from real AI Station work, recorded on 2026-10-25/26 and 29:
+These are observations from real AI Station work, recorded on 2026-10-25/26,
+2026-10-29 and 2026-11-14:
 Intel Core i7-6900K, 32 GB RAM and two NVIDIA RTX 3060 cards with 12 GB VRAM each.
 The devices are separately allocated; this is not an architecture requirement or
 a claim that any model can use their VRAM as one unrestricted pool.
@@ -45,6 +46,39 @@ side is 512 pixels: this is not native HD. The owner subsequently confirmed
 substantial overall improvement; precise lip-sync remains
 unqualified. Retain the original Echo quality failure. See the
 [explicit acceptance supplement](qa/whole-avatar-follow-up.md).
+
+## Recurrent video follow-up, 2026-11-14
+
+The Linux development profile uses Wan 2.2 SVI Pro Q4, its two paired adapters,
+81-frame native windows, four-frame motion continuation, an original image
+anchor, 20 steps, CFG 5 and 15 fps. These complete workflows used **one** RTX 3060
+12 GB; they are not a two-card speed result. The owned installation was already
+prepared. Timing runs from the first native source Run's `started_at` through
+the ordinary composition Run's `finished_at`, including per-window verification,
+model loading and final assembly. It excludes reference-image generation and
+subsequent generated sound. Ordinary CPU checks ran concurrently during part of
+the qualification; these are observed workstation times, not isolated speed records.
+
+| Complete result | Native output | Elapsed |
+| --- | --- | --- |
+| Moving-person portrait, seed 817239 | 480×832, 150 frames / 10 s | 6,371.80 s · 1 h 46 min 12 s |
+| Moving-person portrait, seed 419803 | 480×832, 150 frames / 10 s | 6,357.01 s · 1 h 45 min 57 s |
+| Car and moving camera, seed 317749 | 832×480, 150 frames / 10 s | 6,379.20 s · 1 h 46 min 19 s |
+| Landscape human scene | 832×480, 300 frames / 20 s | 12,742.35 s · 3 h 32 min 22 s |
+
+All frames were decoded with their actual timestamps. Full-film sampled views
+and native joins retain recognizable subjects/objects and scenery, with real
+motion across windows. The owner reports improvement in the first portrait.
+This is not perfect prompt fidelity: portrait feet can leave the frame and the
+second seed misses the final requested return toward the camera. Native face
+and finger detail remains soft; no universal quality or 4K claim is made.
+
+Actual MMAudio generation also produced ten seconds of mono 44.1-kHz PCM and a
+150-frame/15-fps MP4 preview. PCM peak is 0.9883 with no near-clipped samples.
+The ordinary composition renderer re-encodes H.264; comparison of all 150 preview
+frames gives mean PSNR 43.72 dB, not bit-exact video copying. Subjective listening
+is not claimed. Private evidence and the separate station delivery work are
+recorded in [the qualification plan](plans/long-video-temporal-quality.md).
 
 ## Local language model
 

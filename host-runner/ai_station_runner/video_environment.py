@@ -67,7 +67,9 @@ def verify_source(source, frozen):
     return source
 
 
-def model_paths(root, folder, frozen, *, verify_weights=False, check=lambda: None):
+def model_paths(
+    root, folder, frozen, *, verify_weights=False, check=lambda: None, roles=ROLES, suffixes=(".safetensors",)
+):
     root, folder = Path(root), Path(folder)
     store = root / "models/store"
     if store.resolve(strict=True) != store or folder.resolve(strict=True) != folder:
@@ -75,8 +77,8 @@ def model_paths(root, folder, frozen, *, verify_weights=False, check=lambda: Non
     paths = {}
     for item in (v for v in frozen["inputs"] if v["kind"] == "model"):
         name = item["filename"]
-        if Path(name).name != name or not name.endswith(".safetensors") or item["role"] not in ROLES:
-            raise ValueError("Video models require their fixed safetensors names and roles")
+        if Path(name).name != name or not name.endswith(suffixes) or item["role"] not in roles:
+            raise ValueError("Video models require their fixed format names and roles")
         link, target = folder / name, store / item["sha256"]
         if (
             not link.is_symlink()
@@ -96,8 +98,8 @@ def model_paths(root, folder, frozen, *, verify_weights=False, check=lambda: Non
         if verify_weights:
             verified_object(root, item, check)
         paths[item["role"]] = link
-    if paths.keys() != ROLES:
-        raise ValueError("All three video model companions are required")
+    if paths.keys() != roles:
+        raise ValueError("All fixed video model companions are required")
     return paths
 
 

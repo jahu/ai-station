@@ -31,6 +31,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             "image_setup",
             "music_setup",
             "video_setup",
+            "svi_setup",
             "avatar_setup",
             "effects_setup",
             "fish_setup",
@@ -45,6 +46,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         "image_setup",
         "music_setup",
         "video_setup",
+        "svi_setup",
         "avatar_setup",
         "effects_setup",
         "fish_setup",
@@ -74,6 +76,10 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             from app.avatar_setup_job import AvatarSetupExecutor
 
             input_contract = AvatarSetupExecutor()
+        elif run.executor_type == "svi_setup":
+            from app.svi_setup_job import SviSetupExecutor
+
+            input_contract = SviSetupExecutor()
         elif run.executor_type == "video_setup":
             from app.video_setup_job import VideoSetupExecutor
 

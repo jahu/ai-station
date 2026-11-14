@@ -5,7 +5,7 @@ from uuid import UUID
 from app.models import Run
 from app.state import TERMINAL
 
-EXECUTORS = {"photo_pipe", "image_edit", "wan_video", "ace_step_music"}
+EXECUTORS = {"photo_pipe", "image_edit", "wan_video", "wan_svi_video", "ace_step_music"}
 
 
 def current_attempt(session, source):

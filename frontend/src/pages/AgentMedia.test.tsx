@@ -1151,62 +1151,133 @@ it("shows the stored Juggernaut negative prompt and clears incompatible options 
   expect(screen.queryByLabelText("Agent negative prompt")).toBeNull();
 });
 
-it("keeps an installed video choice in the agent scope despite unavailable default setup", async () => {
-  const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string) => ({
-      ok: true,
-      json: async () =>
-        path.endsWith("/video/models")
-          ? { items: [{ id, name: "Installed Wan", available: true }] }
-          : path.includes(`/video/models/${id}/capabilities`)
-            ? { available: true, configuration_source: "managed" }
-            : path.endsWith("/hardware")
-              ? { gpus: [] }
-              : { available: false },
-    })),
-  );
-  function Editor() {
-    const [value, setValue] = useState<AgentMediaScope>(
-      newAgentMedia("video", "A river"),
+it.each([
+  [false, false],
+  [true, false],
+  [true, true],
+])(
+  "keeps an installed video choice and its recipe in the agent scope (recurrent=%s, portrait=%s)",
+  async (recurrent, portrait) => {
+    const id = "cf567bf6-cd46-4102-992a-e7913c404f06";
+    const recipe = recurrent
+      ? {
+          label: "SVI Pro",
+          width: 832,
+          height: 480,
+          frames: 81,
+          fps: 15,
+          steps: 20,
+          cfg: 5,
+          image_required: true,
+          memory_mib: 18432,
+          ...(portrait
+            ? {
+                resolutions: [
+                  { width: 832, height: 480 },
+                  { width: 480, height: 832 },
+                ],
+              }
+            : {}),
+        }
+      : undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string) => ({
+        ok: true,
+        json: async () =>
+          path.endsWith("/video/models")
+            ? {
+                items: [
+                  {
+                    id,
+                    name: "Installed Wan",
+                    available: true,
+                    operation_recipe: recipe,
+                  },
+                ],
+              }
+            : path.includes(`/video/models/${id}/capabilities`)
+              ? {
+                  available: true,
+                  configuration_source: "managed",
+                  operation_recipe: recipe,
+                }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : { available: false },
+      })),
     );
-    return (
-      <>
-        <AgentMediaScopeEditor
-          value={value}
-          goal="A river"
-          disabled={false}
-          onChange={setValue}
-          onBusy={() => {}}
-          readiness={{
-            video: { ready: false, reason: "Default setup unavailable" },
-          }}
-        />
-        <output data-testid="video-scope">{JSON.stringify(value)}</output>
-      </>
+    function Editor() {
+      const [value, setValue] = useState<AgentMediaScope>(
+        newAgentMedia("video", "A river"),
+      );
+      return (
+        <>
+          <AgentMediaScopeEditor
+            value={value}
+            goal="A river"
+            disabled={false}
+            onChange={setValue}
+            onBusy={() => {}}
+            readiness={{
+              video: { ready: false, reason: "Default setup unavailable" },
+            }}
+          />
+          <output data-testid="video-scope">{JSON.stringify(value)}</output>
+        </>
+      );
+    }
+    render(
+      <Frame>
+        <Editor />
+      </Frame>,
     );
-  }
-  render(
-    <Frame>
-      <Editor />
-    </Frame>,
-  );
-  fireEvent.change(await screen.findByLabelText("Video model"), {
-    target: { value: id },
-  });
-  await waitFor(() =>
-    expect(screen.queryByText(/Default setup unavailable/)).toBeNull(),
-  );
-  expect(
-    JSON.parse(screen.getByTestId("video-scope").textContent ?? "{}").request,
-  ).toMatchObject({
-    model_id: id,
-    width: 1280,
-    height: 704,
-    memory_profile: "bounded_11g",
-  });
-});
+    fireEvent.change(await screen.findByLabelText("Video model"), {
+      target: { value: id },
+    });
+    await waitFor(() =>
+      expect(screen.queryByText(/Default setup unavailable/)).toBeNull(),
+    );
+    expect(
+      JSON.parse(screen.getByTestId("video-scope").textContent ?? "{}").request,
+    ).toMatchObject({
+      model_id: id,
+      width: recurrent ? 832 : 1280,
+      height: recurrent ? 480 : 704,
+      memory_profile: recurrent ? "default" : "bounded_11g",
+    });
+    if (recurrent) {
+      await screen.findByText("First frame (required)");
+      expect(
+        (screen.getByLabelText("Agent video resolution") as HTMLSelectElement)
+          .disabled,
+      ).toBe(!portrait);
+      if (portrait) {
+        const before = JSON.parse(
+          screen.getByTestId("video-scope").textContent!,
+        );
+        fireEvent.change(screen.getByLabelText("Agent video resolution"), {
+          target: { value: "480x832" },
+        });
+        const after = JSON.parse(
+          screen.getByTestId("video-scope").textContent!,
+        );
+        expect(after).toEqual({
+          ...before,
+          request: { ...before.request, width: 480, height: 832 },
+        });
+        expect(screen.queryByRole("option", { name: /1280 × 704/ })).toBeNull();
+      }
+      expect(
+        (screen.getByLabelText("Agent video steps") as HTMLInputElement)
+          .disabled,
+      ).toBe(true);
+      expect(
+        (screen.getByLabelText("Agent video CFG") as HTMLInputElement).disabled,
+      ).toBe(true);
+    }
+  },
+);
 
 it("keeps an installed speech model in the reviewed agent scope without default speech readiness", async () => {
   const id = "cf567bf6-cd46-4102-992a-e7913c404f06";

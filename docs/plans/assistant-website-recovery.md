@@ -185,7 +185,11 @@ Its final model response nevertheless had invalid terminal syntax and exhausted
 the two corrections, causing an unnecessary clarification after completed work.
 That fallback now finishes with authoritative successful evidence only when all
 independently frozen outcomes are fulfilled. Missing, failed, interrupted or
-undeclared outcomes still require clarification; no additional tool is executed.
+undeclared outcomes could not authorize completion. The later
+[model-aware action repair](model-aware-orchestrator-actions.md) tightened this
+technical-failure case to a typed planner error, preserving completed results
+without pretending that an internal contract error needs user clarification.
+Genuinely missing user choices still use the explicit `ask_user` operation.
 Both the complete and incomplete cases and the durable API/worker flow are
 regressed. The earlier attempt and its actual files remain unchanged.
 

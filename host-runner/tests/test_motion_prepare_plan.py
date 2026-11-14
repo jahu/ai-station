@@ -92,6 +92,7 @@ def test_host_mount_or_unpinned_base_cannot_be_adopted(owned):
 @pytest.mark.parametrize(
     "stage,identity,receipt",
     [("shell", str(uuid4()), "a" * 64), ("sdk", "../other", "a" * 64), ("sdk", str(uuid4()), "shell")],
+    ids=["unapproved-stage", "escaping-identity", "invalid-receipt"],
 )
 def test_callers_cannot_select_a_program_or_path(stage, identity, receipt):
     with pytest.raises(ValueError):

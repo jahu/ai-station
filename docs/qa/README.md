@@ -1,5 +1,10 @@
 # Operator QA catalog and workbook
 
+Catalog v61 adds VIDEO-103–106 for SVI setup, full-film continuity in both formats,
+selected-model handoff from Chat, Stop/resume and sound/editor timing. All 308
+active cases start untested; real Linux GPU qualification is recorded separately.
+Allow about 1 h 46 min for each 10-second SVI generation on an RTX 3060 12 GB.
+
 Catalog v57 adds UPDATE-101–103 for the visible running version, administrator
 release checks, a preserving one-click update and cancellation before activation.
 All 287 active cases start untested in new release exports; an unavailable

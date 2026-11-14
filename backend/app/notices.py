@@ -90,6 +90,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         "chatterbox",
         "fish_speech",
         "wan_video",
+        "wan_svi_video",
         "media_compose",
         "echomimic",
         "sonic_whole",
@@ -109,7 +110,10 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
             return None
     if media and (
         status == "succeeded"
-        and (run.executor_type in {"agent_media", "wan_video"} or run.metadata_json.get("upscale_run_id"))
+        and (
+            run.executor_type in {"agent_media", "wan_video", "wan_svi_video"}
+            or run.metadata_json.get("upscale_run_id")
+        )
         or status == "interrupted"
         and not run.error_type
         and not run.metadata_json.get("process_confirmed_gone")

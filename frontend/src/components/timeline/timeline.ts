@@ -9,7 +9,7 @@ export type Placement = {
 export type Clip = Placement & { in_frame: number; out_frame: number };
 export type Track = Placement & { in_sample: number; duration_frames: number };
 export type Manifest = {
-  fps: 24 | 25;
+  fps: 15 | 24 | 25;
   width: number;
   height: number;
   clips: Clip[];
@@ -53,7 +53,7 @@ const place = (p: Partial<Placement>): Placement => ({
 });
 export function normalize(value?: Partial<Manifest>): Manifest {
   return {
-    fps: value?.fps === 25 ? 25 : 24,
+    fps: value?.fps === 15 ? 15 : value?.fps === 25 ? 25 : 24,
     width: value?.width ?? 1280,
     height: value?.height ?? 704,
     clips: (value?.clips ?? []).map((c) => ({
@@ -166,7 +166,7 @@ export function errorFor(
     return "Keep the complete film within five minutes.";
   return null;
 }
-export function retime(m: Manifest, fps: 24 | 25): Manifest {
+export function retime(m: Manifest, fps: 15 | 24 | 25): Manifest {
   const factor = fps / m.fps;
   const common = (p: Placement) => ({
     ...p,

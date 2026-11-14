@@ -1,5 +1,14 @@
 import type { VideoCapabilities } from "./VideoMemoryProfile";
 
+export function recipeResolutions(capability?: VideoCapabilities): string[] {
+  const recipe = capability?.operation_recipe;
+  return recipe
+    ? (recipe.resolutions ?? [recipe]).map(
+        (size) => `${size.width}x${size.height}`,
+      )
+    : [];
+}
+
 export function boundedResolutions(capability?: VideoCapabilities): string[] {
   const portrait = capability?.memory_profiles?.some(
     (profile) =>

@@ -45,3 +45,37 @@ it("retains source-frame trims across frame-rate changes and rejects overlapping
     ),
   ).toContain("overlap");
 });
+
+it("preserves a native fifteen-fps project and exact clip duration", () => {
+  const m = normalize({
+    fps: 15,
+    clips: [
+      {
+        artifact_id: "source",
+        in_frame: 0,
+        out_frame: 150,
+        start_frame: 0,
+        gain: 1,
+        muted: false,
+        fade_in_frames: 0,
+        fade_out_frames: 0,
+      },
+    ],
+    tracks: [],
+  });
+  const sources: Record<string, Source> = {
+    source: {
+      artifact_id: "source",
+      kind: "video",
+      title: "SVI clip",
+      fps: 15,
+      frames: 150,
+    },
+  };
+  expect(m.fps).toBe(15);
+  expect(endFrame(m, sources)).toBe(150);
+  expect(errorFor(m, sources)).toBeNull();
+  const changed = retime(m, 24);
+  expect(changed.clips[0].out_frame).toBe(150);
+  expect(endFrame(changed, sources)).toBe(240);
+});

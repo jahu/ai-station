@@ -154,6 +154,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             "image_setup",
             "music_setup",
             "video_setup",
+            "svi_setup",
             "avatar_setup",
             "effects_setup",
             "fish_setup",

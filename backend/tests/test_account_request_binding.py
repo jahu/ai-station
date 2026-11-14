@@ -14,6 +14,8 @@ def test_expected_account_binding_rejects_stale_requests_without_revoking_the_ne
     monkeypatch.setenv("AI_STATION_ACCESS_PROFILE", "accounts")
     clear_settings_cache()
     routes, handlers = list(app.router.routes), dict(app.exception_handlers)
+    lifespan = app.router.lifespan_context
+    startup, shutdown = list(app.router.on_startup), list(app.router.on_shutdown)
     previous = getattr(app.state, "account_access_enabled", False)
     app.middleware_stack = None
     app.mount("/", StaticFiles(directory=tmp_path, html=True), name="synthetic-built-frontend")
@@ -41,5 +43,7 @@ def test_expected_account_binding_rejects_stale_requests_without_revoking_the_ne
         assert browser.get("/api/runs", headers={"X-AI-Station-Account": member["id"]}).status_code == 200
     finally:
         app.router.routes, app.exception_handlers = routes, handlers
+        app.router.lifespan_context = lifespan
+        app.router.on_startup, app.router.on_shutdown = startup, shutdown
         app.state.account_access_enabled = previous
         app.middleware_stack, app.openapi_schema = None, None

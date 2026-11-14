@@ -36,7 +36,7 @@ class AudioTrack(Placement):
 
 
 class Manifest(Fields):
-    fps: Literal[24, 25] = 24
+    fps: Literal[15, 24, 25] = 24
     width: StrictInt = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: StrictInt = Field(default=704, ge=128, le=1280, multiple_of=32)
     clips: list[VideoClip] = Field(default_factory=list, max_length=16)

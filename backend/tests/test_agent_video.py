@@ -241,6 +241,7 @@ def test_expired_video_budget_never_dispatches_and_agent_resume_cannot_extend_it
         {"frames": 81},
         {"client_request_id": str(uuid4())},
         {"duration_seconds": 61},
+        {"duration_seconds": 300},
         {"composition_mode": "shots", "scenes": [{"prompt": "A", "duration_seconds": 1}]},
     ],
 )
@@ -252,6 +253,16 @@ def test_video_scopes_reject_extra_identity_short_frames_or_conflicting_timing(c
             tools=["create_media"],
             media={"kind": "video", "request": settings(**change)},
         )
+
+
+def test_agent_duration_ceiling_does_not_inherit_the_workspace_footage_limit():
+    from app.agent_media_schema import AgentVideoRequest
+    from app.video_schema import LongVideoSettings
+
+    reviewed = AgentVideoRequest(**settings(duration_seconds=60))
+    assert AgentVideoRequest.model_validate(reviewed.model_dump()).duration_seconds == 60
+    assert LongVideoSettings(**settings(duration_seconds=300)).duration_seconds == 300
+    assert AgentVideoRequest.model_json_schema()["properties"]["duration_seconds"]["maximum"] == 60
 
 
 def test_video_proposal_does_not_invent_a_first_frame():

@@ -9,6 +9,8 @@ import wave
 from fractions import Fraction
 from pathlib import Path
 
+from ai_station_runner.media_encoding import h264_options, video_encoding_metadata
+
 
 def source_path(root, item):
     relative = item["relative_path"]
@@ -34,6 +36,7 @@ def checked_frames(av, root, request):
         path = source_path(root, clip)
         count = 0
         previous = None
+        origin = None
         with av.open(str(path)) as source:
             if len(source.streams.video) != 1:
                 raise ValueError("Choose a single video stream")
@@ -50,6 +53,12 @@ def checked_frames(av, root, request):
                 timestamp = Fraction(frame.pts) * frame.time_base
                 if previous is not None and timestamp <= previous:
                     raise ValueError("Nonmonotonic video timing")
+                if origin is None:
+                    origin = timestamp
+                if abs(timestamp - origin - Fraction(count, request["fps"])) > Fraction(
+                    1, request["fps"] * 100
+                ):
+                    raise ValueError("Source frame rate differs from the frozen composition timing")
                 previous = timestamp
                 if frame.width != request["width"] or frame.height != request["height"]:
                     raise ValueError("Segment dimensions changed")
@@ -152,12 +161,12 @@ def compose(config):
         signal.setitimer(signal.ITIMER_REAL, remaining)
         sys.addaudithook(deny_network)
     if config["request"].get("managed_runtime"):
-        from ai_station_runner import video_environment
         from ai_station_runner.memory_scope import require_scope
+        from ai_station_runner.video_composition_runtime import resolve_public
         from ai_station_runner.video_job import deny_network
 
         request = config["request"]
-        frozen = video_environment.resolve_public(config["root"], request["managed_runtime"])
+        frozen = resolve_public(config["root"], request["managed_runtime"])
         if Path(sys.base_prefix).resolve() != frozen["environment"] / "python":
             raise ValueError("Composition must execute its exact frozen video environment")
         require_scope(request["run_id"], 4096)
@@ -185,6 +194,7 @@ def compose(config):
             video.height = request["height"]
             video.pix_fmt = "yuv420p"
             video.codec_context.thread_count = 2
+            video.options = h264_options()
             audio_stream = target.add_stream("aac", rate=48000) if request.get("audio") else None
             if audio_stream:
                 audio_stream.layout = pending.layout.name if pending else "mono"
@@ -213,6 +223,7 @@ def compose(config):
                 for packet in audio_stream.encode():
                     target.mux(packet)
         report = verify(av, temporary, request)
+        report["video_encoding"] = video_encoding_metadata()
         temporary.replace(output)
         output.with_suffix(".json").write_text(json.dumps(report))
         print("media.stage: completed", flush=True)

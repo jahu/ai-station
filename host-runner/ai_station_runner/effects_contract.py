@@ -61,7 +61,7 @@ WRAPPERS = (
 
 class VideoInput(MediaInput):
     frames: StrictInt = Field(ge=1, le=7500)
-    fps: Literal[24, 25]
+    fps: Literal[15, 24, 25]
     width: StrictInt = Field(ge=128, le=1280, multiple_of=32)
     height: StrictInt = Field(ge=128, le=1280, multiple_of=32)
 
