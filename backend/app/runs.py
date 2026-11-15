@@ -335,6 +335,7 @@ def request_cancel(session: Session, run: Run) -> Run:
                 "music_setup",
                 "video_setup",
                 "svi_setup",
+                "live_setup",
                 "avatar_setup",
                 "effects_setup",
                 "fish_setup",

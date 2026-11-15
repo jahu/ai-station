@@ -159,6 +159,7 @@ def _execute_claimed(session, run, worker_id, executors):
             "music_setup",
             "video_setup",
             "svi_setup",
+            "live_setup",
             "avatar_setup",
             "effects_setup",
             "fish_setup",

@@ -16,6 +16,7 @@ import {
   Bot,
   Box,
   Code2,
+  Camera,
   Command as CommandIcon,
   Film,
   FolderGit2,
@@ -48,6 +49,7 @@ import AdvancedWorkspaces from "./components/AdvancedWorkspaces";
 import Chat from "./pages/Chat";
 import Audio from "./pages/Audio";
 import Avatars from "./pages/Avatars";
+import Live from "./pages/Live";
 import Video from "./pages/Video";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
@@ -81,6 +83,7 @@ const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
       ["/video", "Video", Film],
       ["/audio", "Audio", AudioLines],
       ["/avatars", "Avatars", Users],
+      ["/live", "Live", Camera],
     ],
   },
   {
@@ -378,6 +381,7 @@ export default function App() {
             <Route path="/" element={<Chat assistant />} />
             <Route path="/home" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
+            <Route path="/live" element={<Live />} />
             <Route path="/studio" element={<Studio />} />
             <Route
               path="/studio/materials/new"

@@ -97,9 +97,60 @@ browser capture, transport and playback latency. Host sound-device access was
 explicitly disabled: browser PCM must not require PortAudio or a host microphone.
 The real FSMN VAD and conversion models ran; no model output was simulated.
 
-Closed packet framing and face-tracking failure tests currently pass 28 cases.
-Normal tests load no GPU model or optional inference dependencies. Full session
-transport, resource/recovery/privacy checks and Live UI remain to be implemented.
+## Session implementation and integrated qualification
 
-Status: implementation in progress; no session adapter or UI is reported
-operational yet. This plan is not a completed feature.
+The feature branch now contains the fixed offline recipe (118 verified inputs),
+owned preparation over the existing setup worker, closed native session dispatch,
+separate face/voice children, a bounded private Unix media broker, authenticated
+WebSocket proxies, the shared HostMediaExecutor adapter and the Live workspace.
+Browser audio uses an AudioWorklet with fixed 200-ms PCM blocks; converted-video
+presentation follows its audio clock. Neither live camera frames nor microphone
+blocks are persisted. Voice references and conditioning are sealed memory files.
+
+The profile requires Linux x86-64, CUDA-13-compatible drivers and NVIDIA compute
+capability 7.5 or newer. Each enabled medium reserves one distinct GPU (at least
+4 GiB total VRAM), and the session reserves a 12-GiB, zero-swap host-memory scope.
+The workstation needs at least 16 GiB system RAM. Busy VRAM waits through ordinary
+resource admission; external processes are never stopped. This initial profile
+qualifies separate GPUs for simultaneous face and voice, not shared-GPU inference.
+
+A fresh fixed-runtime assembly passed hash verification, four reproducible
+pure-Python source builds, offline wheel installation, dependency checks and
+imports. A second installation completed through an actual administrator-owned
+Task/Run, native preparation and activation in an isolated QA station.
+
+With both real engines in the prepared runtime, a ten-second duplex stream
+returned all 50 consecutive audio blocks and 146 of 150 camera frames. Face p95
+was 61.76 ms and voice p95 137.61 ms per 200-ms block. The latest-frame camera
+queue intentionally discards stale input rather than delaying the whole stream.
+Disconnect stopped both children and returned GPU memory to the prior baseline.
+
+A Chrome synthetic-camera/microphone test completed Library selection, ordinary
+Run dispatch, converted preview and explicit Stop without JavaScript errors. It
+measured roughly 563 ms preview delay. Its initial 6.7-fps browser pacing exposed
+an avoidable timer skip; acknowledgement-driven pacing replaces that delay and
+has a regression test. Re-measure the final browser build before publication.
+These are real model tests with synthetic capture devices, not a physical-webcam
+or phone acceptance claim. Screenshots and short test outputs remain private.
+
+The private Runner's existing platform admission dependency now accepts an
+HTTPConnection, so the same platform policy covers HTTP and WebSocket routes.
+Linux accepts the qualified duplex transport; Mac/unknown platforms refuse it.
+Lost start replies inspect the original native journal. A pre-dispatch Stop
+fences late starts. Lost workers resume inspection rather than camera capture;
+revoked accounts can only stop their original owned process through trusted
+coordination. Unknown dispatches retain reservations until a native Stop fence
+is confirmed. First attachment must arrive within 15 seconds of readiness;
+loss of media ends the session within five seconds. The UI defaults to a
+30-minute session, unmonitored voice output and hidden local input.
+
+Remaining delivery gates: finish the complete backend/runner regression and
+final browser remeasurement; review the complete diff; merge to develop and deploy the tested build; run production
+startup/readiness checks and remove task-owned QA/runtime duplicates. A physical
+camera/microphone and subjective face/voice quality remain explicit user
+acceptance tests. No virtual-device export or Windows GPU qualification is
+claimed by the Linux measurements above.
+
+Status: integrated implementation has passed real synthetic-device qualification;
+the Linux readiness gates are qualified. Publication/deployment still waits for
+complete regression checks and review.

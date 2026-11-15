@@ -68,6 +68,25 @@ creative tools, models and recurring jobs share the same workspace and history.
 You can inspect what ran, stop it and keep its results. Existing compatible local
 services can stay in place. [How it fits alongside other tools →](docs/alternatives.md)
 
+## On develop: Live (experimental)
+
+Choose a portrait and a short voice recording in **Live**, then start your browser
+camera and microphone. AI Station transforms the preview locally; it keeps the
+same references throughout the session and stops capture when you leave the page.
+Live camera frames and microphone samples are not recorded by default.
+
+An administrator prepares the optional runtime from the Live page, with reviewed
+sizes and component licenses. The first qualified profile uses Linux and NVIDIA
+GPUs with compute capability 7.5 or newer: one GPU per enabled medium, at least
+4 GiB VRAM each and 16 GiB system RAM. Face and voice together currently require
+two compatible GPUs. Use localhost or your private HTTPS address for camera/mic
+permissions; ordinary HTTP LAN access cannot provide browser capture.
+
+This is an unreleased development feature, separately tested with real inference
+and synthetic browser devices. Physical-device and subjective quality acceptance
+remain distinct. OBS/Zoom virtual-device export is not included.
+[Implementation and measured qualification →](docs/plans/live-identity.md)
+
 ## Made locally
 
 These examples were created in AI Station on an i7-6900K workstation with
