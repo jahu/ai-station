@@ -63,3 +63,10 @@ Model source:
 https://huggingface.co/ACE-Step/Ace-Step1.5/tree/19671f406d603126926c1b7e2adc169acbcade22
 Model weights and SDK code are not redistributed with the website; component
 terms remain independent of the AI Station application/site license.
+
+Live screenshot (assets/live.png): unaltered pre-release browser capture of local
+LivePortrait inference with Show local input enabled. The webcam participant is
+fictional and AI-generated. The Morgan Freeman reference uses the public-domain
+DoD photograph credited above. This is synthetic demonstration media, not an
+authentic recording, endorsement or an official celebrity preset. Models and SDK
+weights are not distributed with the website.

@@ -51,6 +51,7 @@ from app.hub_installations import router as hub_installations_router
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
 from app.library import router as library_router
+from app.live import router as live_router
 from app.llama import router as llama_router
 from app.local_coding import router as local_coding_router
 from app.maintenance import router as maintenance_router
@@ -480,6 +481,7 @@ app.include_router(audio_models_router)
 app.include_router(music_router)
 app.include_router(music_models_router)
 app.include_router(effects_router)
+app.include_router(live_router)
 app.include_router(timeline_router)
 app.include_router(waveform_router)
 app.include_router(transcription_router)

@@ -676,6 +676,20 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Experimental [live conversion](plans/live-identity.md) must keep media ephemeral,
+validate WebSocket origin/account ownership throughout a session, and fail closed
+instead of leaking original face/microphone output on inference failure. Browser
+capture consent grants no new host filesystem, shell or device authority. The
+feature is qualified on Linux with the documented real synthetic-device checks.
+
+The optional portrait extension admits only its fixed mode, five pinned human
+model files and exact MIT SDK source snapshot. It records the immutable base Live
+environment binding rather than following a moving active pointer. Reject changed,
+linked, writable or injected SDK files and use weights-only state loading. The
+camera contributes motion; all displayed pixels come from the reference-conditioned
+renderer. Tracking failure retains the existing pause/Stop policy. Preparation,
+account revocation and recovery use the existing owned lifecycle.
+
 The fixed Linux SVI native operations passed their qualification gate. Their
 closed request still accepts only an opaque owned engine and bounded
 owned image/motion identities, never SDK paths, a graph or command arguments.

@@ -595,6 +595,19 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+The experimental [Live identity workspace](plans/live-identity.md) uses
+one owned session Run with browser capture, bounded bidirectional media and a
+private native inference process. Engine qualification, authenticated transport,
+resource ownership, cancellation and recovery gate availability. Ordinary SSE
+and existing media workflows remain unchanged.
+
+Live also exposes an explicit animated-reference-portrait mode. Its pinned
+LivePortrait extension freezes a qualified base Live environment and adds only
+its model/source objects, sharing the existing prepared Python and separate voice
+child. It renders reference appearance from camera motion; webcam pixels are not
+composited into its output. Mode and opaque runtime identity are frozen on each
+ordinary session Run. The face-swap default and old saved requests remain valid.
+
 The [long-video investigation](plans/long-video-temporal-quality.md) now includes
 qualified fixed SVI Pro context primitives, separate from the 5B adapter.
 They preserve the original anchor and one preceding motion latent, validate the

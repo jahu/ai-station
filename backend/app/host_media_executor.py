@@ -26,6 +26,7 @@ from app.state import TERMINAL, RunStatus
 # These adapters share the exact owned-process polling/collection contract.
 # Inspection may resume, but the native start operation is never repeated.
 RESUMABLE_MEDIA = {
+    "live_identity",
     "photo_pipe",
     "wan_video",
     "wan_svi_video",

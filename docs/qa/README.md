@@ -1,5 +1,10 @@
 # Operator QA catalog and workbook
 
+Catalog v62 adds LIVE-001–005 for optional preparation, Face swap, Animated
+portrait, voice, one-GPU operation, Stop and account privacy. All 313 active
+cases start untested in a new release export. Live GPU cases target qualified
+Linux NVIDIA hardware; Windows Live inference is not advertised as ready.
+
 Catalog v61 adds VIDEO-103–106 for SVI setup, full-film continuity in both formats,
 selected-model handoff from Chat, Stop/resume and sound/editor timing. All 308
 active cases start untested; real Linux GPU qualification is recorded separately.

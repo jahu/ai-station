@@ -17,8 +17,18 @@ import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
 type Family =
-  "speech" | "music" | "video" | "avatar" | "effects" | "fish" | "svi";
+  | "speech"
+  | "music"
+  | "video"
+  | "avatar"
+  | "effects"
+  | "fish"
+  | "svi"
+  | "live"
+  | "portrait";
 const profiles = {
+  portrait: "live-portrait-linux-x86-64-python312-v1",
+  live: "live-identity-linux-x86-64-python312-v1",
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
   video: "wan22-5b-linux-x86-64-python312-v1",
@@ -28,18 +38,40 @@ const profiles = {
   fish: "fish-s2-pro-linux-x86-64-python312-v1",
 };
 const destination = (family: Family) =>
-  family === "fish"
-    ? "/audio?engine=fish_s2_pro"
-    : family === "effects"
-      ? "/audio?mode=effects"
-      : family === "avatar"
-        ? "/avatars"
-        : family === "video" || family === "svi"
-          ? "/video"
-          : family === "music"
-            ? "/audio?mode=music"
-            : "/audio";
+  family === "live" || family === "portrait"
+    ? "/live"
+    : family === "fish"
+      ? "/audio?engine=fish_s2_pro"
+      : family === "effects"
+        ? "/audio?mode=effects"
+        : family === "avatar"
+          ? "/avatars"
+          : family === "video" || family === "svi"
+            ? "/video"
+            : family === "music"
+              ? "/audio?mode=music"
+              : "/audio";
 const content = {
+  portrait: {
+    title: "Animated portrait",
+    heading: "Animate your reference portrait",
+    description:
+      "Your camera drives the reference person’s expression and head motion. The portrait supplies the appearance, hair and head; camera pixels are never layered into the result. Prepare the Live base runtime first.",
+    ready:
+      "Open Live and choose Animated portrait. Start looking toward the camera with a relaxed expression, then move and speak naturally.",
+    model: "LivePortrait · Seed-VC",
+    open: "Open Live",
+  },
+  live: {
+    title: "Live",
+    heading: "Live face & voice",
+    description:
+      "Transform your browser camera and microphone on your own GPUs. Choose a fixed portrait and a short reference recording; nothing is recorded by default.",
+    ready:
+      "Open Live, choose references and start your camera or microphone. Use headphones when monitoring converted speech.",
+    model: "ONNX face swap · Seed-VC",
+    open: "Open Live",
+  },
   svi: {
     title: "Continuous video",
     heading: "Continuous video from an image",
@@ -136,6 +168,7 @@ type Catalog = {
   existing_speech?: { available: boolean; source: string };
   existing_music?: { available: boolean; source: string };
   existing_video?: { available: boolean; source: string };
+  managed_live?: { available: boolean; source?: string };
   managed_svi?: { available: boolean; source?: string };
   existing_avatar?: { available: boolean; source: string; readiness?: string };
   existing_effects?: { available: boolean; source: string; readiness?: string };
@@ -479,19 +512,21 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "fish"
-      ? data?.existing_fish
-      : family === "effects"
-        ? data?.existing_effects
-        : family === "avatar"
-          ? data?.existing_avatar
-          : family === "svi"
-            ? data?.managed_svi
-            : family === "video"
-              ? data?.existing_video
-              : family === "music"
-                ? data?.existing_music
-                : data?.existing_speech;
+    family === "live" || family === "portrait"
+      ? data?.managed_live
+      : family === "fish"
+        ? data?.existing_fish
+        : family === "effects"
+          ? data?.existing_effects
+          : family === "avatar"
+            ? data?.existing_avatar
+            : family === "svi"
+              ? data?.managed_svi
+              : family === "video"
+                ? data?.existing_video
+                : family === "music"
+                  ? data?.existing_music
+                  : data?.existing_speech;
   const ready = existingRuntime?.available === true;
   const checkingRuntime =
     (family === "avatar" && data?.existing_avatar?.readiness === "checking") ||
@@ -499,6 +534,9 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       data?.existing_effects?.readiness === "checking") ||
     (family === "fish" && data?.existing_fish?.readiness === "checking");
   useEffect(() => {
+    if ((family === "live" || family === "portrait") && ready) {
+      void cache.invalidateQueries({ queryKey: ["live-capabilities"] });
+    }
     if (family === "fish" && ready) {
       void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
       void cache.invalidateQueries({
@@ -603,7 +641,9 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                     <div>
                       <small>HARDWARE</small>
                       <strong>
-                        {family === "fish" ? (
+                        {family === "live" || family === "portrait" ? (
+                          "One GPU per medium · 4 GiB each · 16 GiB system RAM"
+                        ) : family === "fish" ? (
                           "Two NVIDIA GPUs · 10 + 5 GiB VRAM"
                         ) : (
                           <>
