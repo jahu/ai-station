@@ -3078,3 +3078,10 @@ dialog > p a {
 .studio-workflow p, .studio-footer { color: #aeb8a4; line-height: 1.7; }
 .studio-footer { margin-top: 2rem; max-width: 65ch; }
 @media (max-width: 760px) { .studio-story { grid-template-columns: 1fr; gap: 1.5rem; } }
+
+.live-showcase { margin: 0 0 2.5rem; }
+.live-showcase img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 18px; }
+.live-showcase figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; }
+.live-showcase figcaption p { max-width: 64ch; margin: 0; color: var(--muted); }
+.live-showcase-credit { color: var(--muted); font-size: .8rem; line-height: 1.6; max-width: 95ch; }
+.live-showcase-credit a { color: inherit; text-underline-offset: .2em; }

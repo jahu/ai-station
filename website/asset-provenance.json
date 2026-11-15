@@ -1,6 +1,25 @@
 {
   "media": "Four actual 2026-11-07 browser captures in the dedicated demo account at 1600x1200, device scale2. Chat, Library and Video show real completed results. Agents shows a saved disabled review draft, without an execution claim. No DOM rewrites or operator Library export. Owner reviewed this candidate on 2026-11-07 and identified the agent-section positioning as the only requested change. That copy now leads with general-purpose agents created from one instruction; the market result is one example. The station tour retains its historical owner-approved provenance.",
   "media_sha256": {
+    "live.png": {
+      "sha256": "1e75d2005a4f8ca25f2ee811049f1ad6960251a74f06bd5837d172fbba803432",
+      "size_bytes": 374784,
+      "capture": {
+        "date": "2026-11-15",
+        "account": "dedicated temporary non-administrator showcase account",
+        "run_id": "2911d6dd-843b-4ed0-a61c-b8843bb7e751",
+        "viewport": [
+          1440,
+          1100
+        ],
+        "capture": "Unaltered full-page browser screenshot of actual locally running Animated portrait. Show local input is enabled; both views are rendered by the application, not composited for publication. Synthetic camera input; real local inference.",
+        "reference": "Existing showcase/morgan-portrait.webp: public-domain DoD photograph, Alexander Kubitza, 2 August 2023. Same source/license credit retained in NOTICE.",
+        "camera_input": "Fictional ordinary adult webcam participant generated with built-in imagegen; not a real recording or participant.",
+        "disclosure": "Synthetic transformation, not authentic Morgan Freeman footage, endorsement or a built-in celebrity preset. Voice is not enabled in this capture.",
+        "application_version": "Pre-release Live capture; displayed 0.7.0 version metadata, matching the reviewed Live implementation shipped in 0.8.0.",
+        "publication": "Owner approved the Animated portrait screenshot on 2026-11-15; rejected Face swap capture is excluded."
+      }
+    },
     "conversation.png": {
       "sha256": "ebc267a542edfc861e9dc2eafad6a7476d979e4a0031700b0e6b4459724666f8",
       "size_bytes": 360892,

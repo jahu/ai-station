@@ -1,5 +1,5 @@
 {
-  "version": 61,
+  "version": 62,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -51,7 +51,9 @@
     "docs/plans/unified-image-editing.md",
     "docs/plans/model-aware-orchestrator-actions.md",
     "docs/plans/long-video-temporal-quality.md",
-    "docs/releases/0.7.0.md"
+    "docs/releases/0.7.0.md",
+    "docs/plans/live-identity.md",
+    "docs/releases/0.8.0.md"
   ],
   "cases": [
     {
@@ -7129,6 +7131,120 @@
       ],
       "resources": "Lokalny GPU; generowanie 10 s na RTX 3060 12 GB trwa około 1 h 46 min. Sieć potrzebna do jawnego przygotowania modelu.",
       "minutes": 120
+    },
+    {
+      "id": "LIVE-001",
+      "area": "Live",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Przygotowanie Live i zgodność sprzętu",
+      "prerequisites": [
+        "AI Station 0.8.0; własna lub zatwierdzona referencja, kamera i mikrofon, localhost albo prywatny HTTPS. Testy modelowe tylko na kwalifikowanym Linuxie NVIDIA."
+      ],
+      "steps": [
+        "Jako administrator otwórz Live, sprawdź wymagania i rozmiary opcjonalnego przygotowania.",
+        "Na zgodnym Linuxie zaakceptuj licencje i przygotuj bazowy runtime, następnie rozszerzenie Animated portrait.",
+        "Na niezgodnej platformie sprawdź komunikat zamiast obchodzić bramkę."
+      ],
+      "expected": [
+        "Gotowość wynika z faktycznych modeli, środowiska i GPU; pobieranie wymaga świadomej akceptacji.",
+        "Rozszerzenie korzysta z bazowego runtime; brak sprzętu lub uprawnień nie jest przedstawiany jako gotowość."
+      ],
+      "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
+      "minutes": 10
+    },
+    {
+      "id": "LIVE-002",
+      "area": "Live",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Face swap: kamera, głos i Stop",
+      "prerequisites": [
+        "AI Station 0.8.0; własna lub zatwierdzona referencja, kamera i mikrofon, localhost albo prywatny HTTPS. Testy modelowe tylko na kwalifikowanym Linuxie NVIDIA."
+      ],
+      "steps": [
+        "W localhost lub prywatnym HTTPS wybierz Face swap, portret i opcjonalnie wzorzec głosu.",
+        "Uruchom sesję, poruszaj głową i wypowiedz kilka zdań; włącz odsłuch tylko w słuchawkach.",
+        "Użyj Stop, sprawdź zatrzymanie kamery i mikrofonu oraz terminalny Run."
+      ],
+      "expected": [
+        "Podmieniona twarz pozostaje w scenie kamery; głos używa jednego wzorca.",
+        "Stop kończy przechwytywanie i zwalnia zasoby tylko tej sesji. Kamera i mikrofon nie trafiają domyślnie do Library."
+      ],
+      "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
+      "minutes": 10
+    },
+    {
+      "id": "LIVE-003",
+      "area": "Live",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Animated portrait: wygląd, mimika i proporcje",
+      "prerequisites": [
+        "AI Station 0.8.0; własna lub zatwierdzona referencja, kamera i mikrofon, localhost albo prywatny HTTPS. Testy modelowe tylko na kwalifikowanym Linuxie NVIDIA."
+      ],
+      "steps": [
+        "Wybierz Animated portrait oraz portret; rozpocznij z neutralną miną patrząc w kamerę.",
+        "Zmień mimikę, mrugnij i wykonaj mały obrót głowy; porównaj włosy i wygląd do referencji.",
+        "Sprawdź proporcje podglądu na komputerze i telefonie, następnie zatrzymaj sesję."
+      ],
+      "expected": [
+        "Renderowany wygląd pochodzi z portretu, ruch i mimika z kamery; nie ma podklejania obrazu kamery.",
+        "Kwadratowy wynik 512×512 zachowuje proporcje. Przy utracie twarzy lub zbyt dużym obrocie komunikat nie udaje poprawnego śledzenia."
+      ],
+      "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
+      "minutes": 10
+    },
+    {
+      "id": "LIVE-004",
+      "area": "Live",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Animated portrait bez głosu na jednej karcie",
+      "prerequisites": [
+        "AI Station 0.8.0; własna lub zatwierdzona referencja, kamera i mikrofon, localhost albo prywatny HTTPS. Testy modelowe tylko na kwalifikowanym Linuxie NVIDIA."
+      ],
+      "steps": [
+        "W zgodnym środowisku z jedną wolną kartą wybierz portret bez wzorca głosu.",
+        "Uruchom i zatrzymaj sesję; obejrzyj przydział zasobów w Runs."
+      ],
+      "expected": [
+        "Portret wymaga jednej karty. Dodanie głosu wymaga drugiej zgodnej karty; system nie uruchamia go po cichu na CPU.",
+        "Stop zwalnia rezerwację; istniejące Face swap i historia są nadal dostępne."
+      ],
+      "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
+      "minutes": 10
+    },
+    {
+      "id": "LIVE-005",
+      "area": "Live",
+      "priority": "P1",
+      "requirements": [
+        "NR-14"
+      ],
+      "title": "Prywatność i zakończenie sesji po opuszczeniu strony",
+      "prerequisites": [
+        "AI Station 0.8.0; własna lub zatwierdzona referencja, kamera i mikrofon, localhost albo prywatny HTTPS. Testy modelowe tylko na kwalifikowanym Linuxie NVIDIA."
+      ],
+      "steps": [
+        "Uruchom Live na koncie testowym, następnie przejdź do innej zakładki aplikacji.",
+        "Sprawdź wskaźnik przechwytywania przeglądarki, historię oraz zasoby sesji.",
+        "Na osobnym koncie sprawdź brak dostępu do referencji i sesji pierwszego konta."
+      ],
+      "expected": [
+        "Opuszczenie Live kończy przechwytywanie i własny proces; historia jest inspekcyjna.",
+        "Inny użytkownik nie uzyskuje dostępu do prywatnych referencji ani sesji."
+      ],
+      "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
+      "minutes": 10
     }
   ],
   "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
