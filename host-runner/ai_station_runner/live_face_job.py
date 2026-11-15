@@ -27,14 +27,17 @@ def image(data, *, reference=False):
     return cv2.resize(source, (round(width * scale), round(height * scale))) if scale < 1 else source
 
 
-def serve(body, source, target):
+def serve(body, source, target, *, engine_factory=None):
     from ai_station_runner.live_face_engine import FaceEngine, FaceTrackingError
 
     bind_parent(body["parent_pid"])
     if os.environ.get("CUDA_VISIBLE_DEVICES", "").count(",") or not os.environ.get("CUDA_VISIBLE_DEVICES"):
         raise ValueError("The face child needs exactly its allocated visible GPU")
-    paths = {key: Path(body[key]) for key in ("face_detector", "face_recognizer", "face_swapper")}
-    engine = FaceEngine(paths["face_detector"], paths["face_recognizer"], paths["face_swapper"], gpu=0)
+    if engine_factory is None:
+        paths = {key: Path(body[key]) for key in ("face_detector", "face_recognizer", "face_swapper")}
+        engine = FaceEngine(paths["face_detector"], paths["face_recognizer"], paths["face_swapper"], gpu=0)
+    else:
+        engine = engine_factory(body)
     engine.set_reference(
         image(snapshot_bytes(body["reference_fd"], body["reference_sha256"]), reference=True)
     )

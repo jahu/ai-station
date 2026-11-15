@@ -221,3 +221,81 @@ coverage or concurrent voice performance. Include turns/profile views, hairline,
 neck/skin consistency, occlusions and fail-closed tracking in that qualification.
 Keep the working face-swap profile available independently. No new engine, weights
 or changed defaults are installed by this acceptance note.
+
+
+## Active implementation: animated reference portrait — 2026-11-15
+
+Add an explicit `portrait` mode beside the existing default `face_swap`. The
+portrait is the rendered appearance source (including its hair/head/skin), while
+the browser camera supplies motion and expression. Never composite webcam pixels
+into this mode. Keep ordinary Task/Run history, resource locks, sealed references,
+bounded binary transport, Stop, revocation and crash recovery. Existing requests
+without a mode and frozen old runtimes retain face-swap behaviour.
+
+Qualify a pinned MIT LivePortrait human model/SDK in an optional fixed runtime,
+with actual CUDA inference before advertising availability. Reuse the verified
+Live Python/dependency inputs and independent voice process, avoiding additional
+large qualification environments. Closed mode/runtime validation must reject
+mismatches. The UI explains both choices, requires an image for portrait mode,
+shows its own preparation readiness, and freezes mode during capture.
+
+Measure real motion transfer and reference appearance retention, tracking loss
+and multiple faces, GPU/RAM use and end-to-end browser A/V pacing. Test default
+compatibility, cancellation, account isolation and setup/recovery routing. Deploy
+only after review and local checks; retain the working face-swap runtime. Remove
+owned probes and duplicate SDK/model/environment copies at completion.
+
+
+### Animated-portrait implementation qualification
+
+The pinned human LivePortrait SDK uses only its reviewed model classes and
+configuration. Five weights load with `weights_only=True` and strict state
+dictionaries in the existing qualified Live Python. The extension downloads
+522,362,364 bytes of model/SDK inputs and binds an immutable base-runtime
+observation; switching the base active pointer does not retarget an existing
+extension. Empty upstream package initializers are omitted: namespace packages
+need no zero-byte downloads, and every downloadable object satisfies FileSpec.
+
+The initial real CUDA qualification on the dual-RTX3060 workstation rendered
+60 measured 512×512 frames at 6.72 fps (148.22-ms median, 155.35-ms p95), with
+about 1,057 MiB peak allocated tensors. Rotated driving inputs changed the
+rendered portrait while retaining its reference appearance. Missing faces refused
+output. A ten-second actual dual-GPU stream returned 65 portrait frames and all
+50 audio blocks, portrait p95 157.54 ms, voice p95 134.42 ms, and exit 75 on
+disconnect. Latest-frame dropping bounded the queue; no raw-camera fallback was
+used. This is an experimental portrait profile, not a 25/30-fps claim.
+
+An isolated station prepared the extension through normal setup Run
+`742ab92b-8a28-49c6-87db-cd4820fa6f74`, then ran an ordinary portrait session
+with synthetic Chrome camera/microphone. Desktop/mobile layout, reference
+selection, converted preview and Stop passed with no JavaScript errors. Under
+concurrent regression load the UI reported 5.3 fps, 161-ms portrait processing,
+137-ms voice blocks and 555-ms preview delay. Stop canceled the owned Run and
+confirmed process exit. These are real models with synthetic devices; physical
+camera and subjective motion quality are still user acceptance.
+
+A further pinned real driving-video check rendered all 48 sampled frames, with
+no tracking pauses. Visual inspection confirmed transferred gaze, mouth opening,
+smiles and eye closure while keeping the reference hair, head and background.
+This complements the rotated-image throughput fixture. New model links are
+relative to the data root; the runtime retains its explicit original base binding.
+
+Final local validation covered all 639 backend/runner/integration test files in
+four disjoint invocations of `scripts/check.sh`. The first pass reported 10,320
+passed tests and 25 opt-in skips. Five failures came from source/manifest
+snapshots imported before active edits: the two portrait recipe tests and three
+Runner compatibility/transport checks. All four affected files passed together
+on the frozen source (20 tests), without loosening their assertions. Focused
+Live/portrait/account/recovery checks also passed (31 tests). The complete
+frontend suite passed 1,291 tests; lint, types, formatting, production build,
+Docker image and production/development Compose validation passed.
+
+Browser review found and fixed an output-geometry bug: the capture client had
+stretched the square portrait to the webcam's dimensions. The preview now uses
+the actual converted bitmap dimensions independently of camera capture, with
+regressions for square and 4:3 output. A further real browser portrait-only
+session passed on one GPU, including exact 512×512 canvas dimensions and Stop.
+The original face/voice browser session still passed at 10.1 fps.
+
+Production adoption and cleanup remain delivery gates for this extension.
+The existing face-swap deployment remains intact.

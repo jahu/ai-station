@@ -19,10 +19,17 @@ from ai_station_runner.speech_environment import offline_environment
 
 
 async def run(body, root, folder, secret):
-    selected = live_environment.resolve_public(root, body.managed_runtime.model_dump())
+    from ai_station_runner import live_portrait_environment
+
+    policy = live_portrait_environment if body.mode == "portrait" else live_environment
+    selected = policy.resolve_public(root, body.managed_runtime.model_dump())
     live_environment.model_paths(
         root, selected["environment"] / "models", live_environment.recipe(), verify_weights=True
     )
+    if body.mode == "portrait":
+        policy.model_paths(
+            root, selected["portrait_environment"] / "models", policy.recipe(), verify_weights=True
+        )
     environment = selected["environment"]
     children, descriptors = [], []
 
@@ -30,7 +37,18 @@ async def run(body, root, folder, secret):
         fd = reference_snapshot(root, reference)
         descriptors.append(fd)
         request = {"parent_pid": os.getpid(), "reference_fd": fd, "reference_sha256": reference.sha256}
-        if kind == "face":
+        if kind == "face" and body.mode == "portrait":
+            request.update(
+                face_detector=str(selected["face_detector"]),
+                portrait_sdk=str(selected["portrait_sdk"]),
+                portrait_models={
+                    k: str(v)
+                    for k, v in selected.items()
+                    if k.startswith("portrait_") and k not in {"portrait_sdk", "portrait_environment"}
+                },
+            )
+            argv = [str(selected["python"]), "-B", "-m", "ai_station_runner.live_portrait_job"]
+        elif kind == "face":
             request.update(
                 {key: str(selected[key]) for key in ("face_detector", "face_recognizer", "face_swapper")}
             )

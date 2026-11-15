@@ -27,6 +27,7 @@ class Bundle(BaseModel):
         "mmaudio",
         "fish_s2_pro",
         "live_identity",
+        "live_portrait",
     ] = "chatterbox"
     license: Literal["MIT", "Qwen Research", "Apache-2.0", "Multiple component licenses"] = "MIT"
     license_url: str

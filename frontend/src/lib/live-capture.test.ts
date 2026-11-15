@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LiveCapture } from "./live-capture";
+import { encodeLivePacket } from "./live-protocol";
 
 class Socket {
   static OPEN = 1;
@@ -10,7 +11,7 @@ class Socket {
   onopen?: () => void;
   onclose?: () => void;
   onerror?: () => void;
-  onmessage?: (event: { data: string }) => void;
+  onmessage?: (event: { data: string | ArrayBuffer }) => void;
   send = vi.fn();
   close = vi.fn();
   constructor() {
@@ -138,3 +139,41 @@ it("stops late permission results instead of leaving a camera active after Stop"
   expect(video.play).not.toHaveBeenCalled();
   expect(Socket.instances).toHaveLength(0);
 });
+
+it.each([
+  [512, 512],
+  [640, 480],
+])(
+  "preserves converted picture geometry %sx%s independently of the webcam",
+  async (width, height) => {
+    const { video } = devices();
+    const output = document.createElement("canvas");
+    const bitmap = { width, height, close: vi.fn() };
+    vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue(bitmap));
+    const capture = new LiveCapture(video, output, vi.fn(), vi.fn());
+    await capture.prepare({ face: true, voice: false });
+    expect([output.width, output.height]).toEqual([640, 480]);
+    capture.connect("run-1");
+    const socket = Socket.instances[0];
+    socket.onopen?.();
+    socket.onmessage?.({
+      data: JSON.stringify({ face: { sequence: 0, tracking: true } }),
+    });
+    socket.onmessage?.({
+      data: encodeLivePacket({
+        kind: 17,
+        sequence: 0,
+        timestampUs: 0,
+        body: new Uint8Array([255, 216, 255, 217]).buffer,
+      }),
+    });
+    await vi.waitFor(() => expect(createImageBitmap).toHaveBeenCalledOnce());
+    const paint = vi.mocked(requestAnimationFrame).mock.calls.at(-1)![0];
+    paint(performance.now());
+    expect([output.width, output.height]).toEqual([width, height]);
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(video.videoWidth).toBe(640);
+    expect(video.videoHeight).toBe(480);
+    capture.stop();
+  },
+);
