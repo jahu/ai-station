@@ -99,7 +99,7 @@ The real FSMN VAD and conversion models ran; no model output was simulated.
 
 ## Session implementation and integrated qualification
 
-The feature branch now contains the fixed offline recipe (118 verified inputs),
+The implementation on develop contains the fixed offline recipe (118 verified inputs),
 owned preparation over the existing setup worker, closed native session dispatch,
 separate face/voice children, a bounded private Unix media broker, authenticated
 WebSocket proxies, the shared HostMediaExecutor adapter and the Live workspace.
@@ -155,13 +155,42 @@ The full frontend suite passed 1,286 tests, with the later pacing test separatel
 verified; lint, typecheck, formatting, production build, Docker image and both
 Compose variants passed.
 
-Remaining delivery gates: finalize review, merge to develop and deploy the tested
-build; run production
-startup/readiness checks and remove task-owned QA/runtime duplicates. A physical
-camera/microphone and subjective face/voice quality remain explicit user
-acceptance tests. No virtual-device export or Windows GPU qualification is
-claimed by the Linux measurements above.
+## Delivered on develop and local deployment
 
-Status: integrated implementation has passed real synthetic-device qualification;
-the Linux readiness gates are qualified. Publication/deployment still waits for
-complete regression checks and review.
+PR #783 was reviewed and squash-merged to develop at
+`a3b64e6c28192cd0aba3e78aaa4cda1b59c71fc4`. The immutable local production
+checkout and image use that reviewed application source. The preserving upgrade
+backed up and checked SQLite first, retained the existing LAN bindings, private
+Tailscale service and search container, and passed API/Runner health checks.
+Stable 0.7.0 release artifacts were not changed.
+
+The production runtime was prepared by the ordinary worker/native setup flow:
+Run `f6b3eddc-d5bd-475e-8640-8c5a93d39100` succeeded. A temporary non-admin
+account then exercised the real production UI with synthetic camera/microphone:
+Library references, device capture, converted preview and Stop. Localhost measured
+9.7 fps, 68-ms face processing, 139-ms voice processing per 200-ms block and
+544-ms preview delay. The same flow passed through the existing private
+Tailscale HTTPS service and WebSocket transport: 9.3 fps, 66-ms face processing,
+136-ms voice processing and 544-ms preview delay. Both Runs ended canceled with
+confirmed process exit and no JavaScript errors. HTTPS certificate verification
+remained enabled; no public listener, Funnel or OS networking changes were added.
+
+The temporary account was disabled, its sessions revoked and generated credential
+removed. All isolated QA service processes had exited. The temporary loopback
+transport probe was stopped. After checking processes/open files, container and
+service configuration, database references, active-runtime links and Python path
+files, task cleanup removed duplicate qualification models/SDKs/environments,
+the isolated QA station, temporary wheel builds/capture fixtures and the obsolete
+unregistered component-qualification runtime/identity. Filesystem free space
+increased by **21.08 GiB**, measured before/after cleanup. Installed model inputs
+and the active runtime are retained. Private concise evidence has a 30-day review
+period; the 0.7.0 image/source and checked database backup remain rollback inputs
+until the next qualified release. No unrelated models, shared environments or
+virtual machines were removed.
+
+Status: the requested experimental in-platform Live workspace is implemented,
+reviewed, locally deployed and qualified with real models and synthetic browser
+devices, including private HTTPS/WSS. Physical webcam/microphone, phone capture
+and subjective face/voice quality remain explicit user acceptance tests. OBS/Zoom
+virtual-device export and Windows GPU qualification are separate extensions;
+these Linux measurements do not claim them. No live recording is enabled.
