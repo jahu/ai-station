@@ -129,7 +129,10 @@ A Chrome synthetic-camera/microphone test completed Library selection, ordinary
 Run dispatch, converted preview and explicit Stop without JavaScript errors. It
 measured roughly 563 ms preview delay. Its initial 6.7-fps browser pacing exposed
 an avoidable timer skip; acknowledgement-driven pacing replaces that delay and
-has a regression test. Re-measure the final browser build before publication.
+has a regression test. The frozen default-gate build then measured 10.5 fps,
+64-ms face processing, 140-ms voice processing per block and 544-ms preview delay
+under concurrent regression load. Stop again canceled the owned Run without
+JavaScript errors.
 These are real model tests with synthetic capture devices, not a physical-webcam
 or phone acceptance claim. Screenshots and short test outputs remain private.
 
@@ -144,8 +147,16 @@ is confirmed. First attachment must arrive within 15 seconds of readiness;
 loss of media ends the session within five seconds. The UI defaults to a
 30-minute session, unmonitored voice output and hidden local input.
 
-Remaining delivery gates: finish the complete backend/runner regression and
-final browser remeasurement; review the complete diff; merge to develop and deploy the tested build; run production
+The complete Python regression ran in four file shards: 10,297 tests passed on
+the first pass. Three source-fingerprint checks raced ongoing edits; all affected
+transport/launcher checks passed on the frozen head without changing their
+assertions. Supplementary current Live/account/recovery/platform tests also passed.
+The full frontend suite passed 1,286 tests, with the later pacing test separately
+verified; lint, typecheck, formatting, production build, Docker image and both
+Compose variants passed.
+
+Remaining delivery gates: finalize review, merge to develop and deploy the tested
+build; run production
 startup/readiness checks and remove task-owned QA/runtime duplicates. A physical
 camera/microphone and subjective face/voice quality remain explicit user
 acceptance tests. No virtual-device export or Windows GPU qualification is
