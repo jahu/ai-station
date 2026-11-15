@@ -211,10 +211,10 @@ frame with a soft elliptical mask; hair, neck, ears outside the mask and the
 background are not replaced. A wider mask alone cannot synthesize the reference
 person's hair or unseen head geometry.
 
-A separate future full-portrait mode should investigate reference-portrait
-animation driven by webcam motion, rather than widening this face-swap mask.
-[LivePortrait](https://github.com/KlingAIResearch/LivePortrait) provides a relevant
-source-image/driving-video architecture; its documented head-focused framing and
+The requested follow-up is now implemented as a separate reference-portrait
+animation mode driven by webcam motion, rather than widening the face-swap mask.
+[LivePortrait](https://github.com/KlingAIResearch/LivePortrait) provides its
+source-image/driving-video architecture; the documented head-focused framing and
 motion constraints must remain visible in evaluation. Benchmark a real streaming
 adapter on the actual GPUs before promising frame rate, resolution, full-head
 coverage or concurrent voice performance. Include turns/profile views, hairline,
@@ -223,7 +223,7 @@ Keep the working face-swap profile available independently. No new engine, weigh
 or changed defaults are installed by this acceptance note.
 
 
-## Active implementation: animated reference portrait — 2026-11-15
+## Animated reference portrait — delivered on develop, 2026-11-15
 
 Add an explicit `portrait` mode beside the existing default `face_swap`. The
 portrait is the rendered appearance source (including its hair/head/skin), while
@@ -282,7 +282,7 @@ relative to the data root; the runtime retains its explicit original base bindin
 
 Final local validation covered all 639 backend/runner/integration test files in
 four disjoint invocations of `scripts/check.sh`. The first pass reported 10,320
-passed tests and 25 opt-in skips. Five failures came from source/manifest
+passed tests and 25 skipped cases. Five failures came from source/manifest
 snapshots imported before active edits: the two portrait recipe tests and three
 Runner compatibility/transport checks. All four affected files passed together
 on the frozen source (20 tests), without loosening their assertions. Focused
@@ -297,5 +297,37 @@ regressions for square and 4:3 output. A further real browser portrait-only
 session passed on one GPU, including exact 512×512 canvas dimensions and Stop.
 The original face/voice browser session still passed at 10.1 fps.
 
-Production adoption and cleanup remain delivery gates for this extension.
-The existing face-swap deployment remains intact.
+### Production delivery and cleanup
+
+PR #786 was reviewed and squash-merged to develop at
+`a0d66494cbe01447d7ad2ad4949c1c5e83c9591f`. The same qualified control-plane
+image and immutable native checkout are deployed locally. The preserving upgrade
+checked a SQLite backup and retained existing data, localhost/LAN bindings,
+Tailscale HTTPS and search. Stable 0.7.0 release assets were not changed.
+
+The ordinary production setup Run `b53a913d-9bfd-4cc7-80f8-ed48d47c6eba`
+succeeded and registered the extension. Its base binding remains the already
+prepared Live environment; retain this transitive dependency even if an active
+base pointer changes. Production private HTTPS/WSS with a non-admin test account
+passed converted portrait/voice, exact 512×512 preview geometry and Stop:
+5.0 fps, 155-ms portrait processing, 137-ms audio blocks and 555-ms preview delay.
+The production legacy face/voice test also passed at 10.2 fps, with Stop and no
+JavaScript errors. No physical-device acceptance is inferred from synthetic
+capture.
+
+The temporary production account was disabled, sessions revoked and generated
+credentials removed. Owned QA servers, browser capture and the temporary local
+transport proxy were stopped. After process/file/configuration/database reference
+checks, cleanup removed the isolated 8.8-GiB runtime clone, obsolete component
+SDK/runtime copies and mapping, capture fixtures, the unused candidate image and
+identified temporary directories from this task's tests. Actual filesystem free
+space increased by **18.55 GiB**. Installed model inputs, the active portrait and
+base runtimes, current/rollback sources and checked database backup remain intact.
+Small private logs/receipts/images and a credential-retired diagnostic QA database
+have a 30-day review period. Unrelated test directories and virtual machines were
+not removed.
+
+Status: both Live visual modes are implemented, reviewed, deployed and qualified
+with real local models and browser transport. The owner can select Animated
+portrait in Live; personal-camera expression quality remains normal user feedback.
+The feature is in develop for the next owner-approved release.
