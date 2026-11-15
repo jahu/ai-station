@@ -19,7 +19,9 @@ PERMISSIONS = {"filesystem_read", "workspace_write"}
 
 class Runtime(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    profile: Literal["live-identity-linux-x86-64-python312-v1"] = PROFILE
+    profile: Literal["live-identity-linux-x86-64-python312-v1", "live-portrait-linux-x86-64-python312-v1"] = (
+        PROFILE
+    )
     manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     environment_id: str = Field(pattern=r"^[a-f0-9]{64}$")
 
@@ -32,6 +34,7 @@ class LiveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     run_id: UUID
     managed_runtime: Runtime
+    mode: Literal["face_swap", "portrait"] = "face_swap"
     image: Reference | None = None
     voice: Reference | None = None
     gpus: list[StrictInt] = Field(min_length=1, max_length=2)
@@ -42,6 +45,9 @@ class LiveRequest(BaseModel):
 
     @model_validator(mode="after")
     def media(self):
+        profile = "live-portrait-linux-x86-64-python312-v1" if self.mode == "portrait" else PROFILE
+        if self.managed_runtime.profile != profile or self.mode == "portrait" and self.image is None:
+            raise ValueError("Choose the reviewed runtime for this Live mode; portrait needs an image")
         if (
             self.image is None
             and self.voice is None

@@ -7,6 +7,7 @@ import secrets
 import sys
 import time
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, WebSocket
@@ -33,7 +34,10 @@ def session_folder(identity):
     )
 
 
-def capabilities():
+def capabilities(mode="face_swap"):
+    from ai_station_runner import live_portrait_environment
+
+    policy = live_portrait_environment if mode == "portrait" else live_environment
     root = get_settings().host_data_dir().resolve()
     hardware = collect(root)
     eligible = [int(g["index"]) for g in compatible_gpus(hardware)]
@@ -49,16 +53,16 @@ def capabilities():
         "reason": "Prepare the Live face and voice runtime first",
     }
     try:
-        private = read_json(root / "runtime/live-environments/active.json")
-        selected = live_environment.resolve(root, private)
-        result["managed_runtime"] = live_environment.public_observation(selected["observation"])
-        if not live_environment.QUALIFIED:
+        private = read_json(root / f"runtime/{policy.NAMESPACE}/active.json")
+        selected = policy.resolve(root, private)
+        result["managed_runtime"] = policy.public_observation(selected["observation"])
+        if not policy.QUALIFIED:
             result["reason"] = "Live session transport and recovery are still being qualified"
         elif (
             not eligible
             or (hardware.get("memory") or {}).get("total_mib", 0) < 16384
             or not available()
-            or not driver_supported(live_environment.recipe()["driver_minimum"])
+            or not driver_supported(policy.recipe()["driver_minimum"])
         ):
             result["reason"] = "Live needs compatible CUDA GPUs, 16 GiB host RAM and a user memory scope"
         else:
@@ -71,6 +75,8 @@ def capabilities():
 def start(manager, body):
     identity = str(body.run_id)
     request = body.model_dump(mode="json")
+    if "mode" not in body.model_fields_set:
+        request.pop("mode")
     request["permissions"] = sorted(request["permissions"])
     digest = live_environment.fingerprint(request)
     with runtime_install.locked():
@@ -87,7 +93,7 @@ def start(manager, body):
             if result.get("executor") != NAME:
                 raise HTTPException(409, "This process belongs to a different executor")
             return result
-        ready = capabilities()
+        ready = capabilities(mode=body.mode) if body.mode == "portrait" else capabilities()
         if not ready["available"] or body.managed_runtime.model_dump() != ready.get("managed_runtime"):
             raise HTTPException(409, ready.get("reason") or "The Live runtime identity changed")
         if any(g not in ready["eligible_gpu_indices"] for g in body.gpus):
@@ -151,8 +157,8 @@ def cancel(manager, identity):
 
 
 @router.get("/v1/live/capabilities")
-def capabilities_endpoint():
-    return capabilities()
+def capabilities_endpoint(mode: Literal["face_swap", "portrait"] = "face_swap"):
+    return capabilities(mode=mode) if mode == "portrait" else capabilities()
 
 
 @router.post("/v1/runs/live")

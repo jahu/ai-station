@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import secrets
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -34,12 +34,15 @@ INTENT = "live.identity"
 class Start(BaseModel):
     model_config = ConfigDict(extra="forbid")
     client_request_id: UUID
+    mode: Literal["face_swap", "portrait"] = "face_swap"
     image_artifact_id: UUID | None = None
     voice_artifact_id: UUID | None = None
     maximum_seconds: StrictInt = Field(default=1800, ge=60, le=3600)
 
     @model_validator(mode="after")
     def medium(self):
+        if self.mode == "portrait" and self.image_artifact_id is None:
+            raise ValueError("Animated portrait needs a reference image")
         if self.image_artifact_id is None and self.voice_artifact_id is None:
             raise ValueError("Choose a portrait, a reference voice, or both")
         return self
@@ -86,10 +89,12 @@ def view(run):
 
 
 @router.get("/capabilities")
-def capabilities(session: DB):
+def capabilities(session: DB, mode: Literal["face_swap", "portrait"] = "face_swap"):
     scope = getattr(session, "scope", None)
     try:
-        ready = RunnerClient().request("GET", "/v1/live/capabilities")
+        ready = RunnerClient().request(
+            "GET", "/v1/live/capabilities" + ("?mode=portrait" if mode == "portrait" else "")
+        )
     except (RunnerError, RunnerUnavailable):
         ready = {"available": False, "reason": "Connect the Host Runner to prepare Live"}
     if scope is None or scope.inspect_all:
@@ -113,18 +118,21 @@ def start(body: Start, session: DB):
         raise HTTPException(403, "Sign in to your own account to start Live")
     identity = str(body.client_request_id)
     request = body.model_dump(mode="json")
+    if "mode" not in body.model_fields_set:
+        request.pop("mode")
     previous = session.get(Task, identity)
     if previous is not None:
         if previous.intent != INTENT or previous.metadata_json.get("live_request") != request:
             raise HTTPException(409, "The live session identity belongs to a different request")
         return view(session.scalar(select(Run).where(Run.task_id == identity, Run.executor_type == NAME)))
-    ready = capabilities(session)
+    ready = capabilities(session, mode=body.mode)
     if not ready.get("available"):
         raise HTTPException(409, ready.get("reason") or "Prepare the Live runtime first")
     count = int(body.image_artifact_id is not None) + int(body.voice_artifact_id is not None)
     if len(ready.get("eligible_gpu_indices", [])) < count:
         raise HTTPException(409, "Choose face or voice alone on one GPU; both need two compatible GPUs")
     parameters = {
+        "mode": body.mode,
         "managed_runtime": ready["managed_runtime"],
         "eligible_gpu_indices": ready["eligible_gpu_indices"],
         "seed": secrets.randbelow(2**31),
@@ -142,7 +150,9 @@ def start(body: Start, session: DB):
     ]
     task = Task(
         id=identity,
-        title="Live · face and voice"
+        title="Live · animated portrait"
+        if body.mode == "portrait"
+        else "Live · face and voice"
         if count == 2
         else "Live · face"
         if body.image_artifact_id

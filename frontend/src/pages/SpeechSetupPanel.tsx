@@ -17,8 +17,17 @@ import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 
 type Family =
-  "speech" | "music" | "video" | "avatar" | "effects" | "fish" | "svi" | "live";
+  | "speech"
+  | "music"
+  | "video"
+  | "avatar"
+  | "effects"
+  | "fish"
+  | "svi"
+  | "live"
+  | "portrait";
 const profiles = {
+  portrait: "live-portrait-linux-x86-64-python312-v1",
   live: "live-identity-linux-x86-64-python312-v1",
   speech: "chatterbox-v3-linux-x86-64-python312-v1",
   music: "ace-step15-turbo-linux-x86-64-python312-v1",
@@ -29,7 +38,7 @@ const profiles = {
   fish: "fish-s2-pro-linux-x86-64-python312-v1",
 };
 const destination = (family: Family) =>
-  family === "live"
+  family === "live" || family === "portrait"
     ? "/live"
     : family === "fish"
       ? "/audio?engine=fish_s2_pro"
@@ -43,6 +52,16 @@ const destination = (family: Family) =>
               ? "/audio?mode=music"
               : "/audio";
 const content = {
+  portrait: {
+    title: "Animated portrait",
+    heading: "Animate your reference portrait",
+    description:
+      "Your camera drives the reference person’s expression and head motion. The portrait supplies the appearance, hair and head; camera pixels are never layered into the result. Prepare the Live base runtime first.",
+    ready:
+      "Open Live and choose Animated portrait. Start looking toward the camera with a relaxed expression, then move and speak naturally.",
+    model: "LivePortrait · Seed-VC",
+    open: "Open Live",
+  },
   live: {
     title: "Live",
     heading: "Live face & voice",
@@ -493,7 +512,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       (row.resume_allowed && row.manifest_sha256 === data?.manifest_sha256),
   );
   const existingRuntime =
-    family === "live"
+    family === "live" || family === "portrait"
       ? data?.managed_live
       : family === "fish"
         ? data?.existing_fish
@@ -515,6 +534,9 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
       data?.existing_effects?.readiness === "checking") ||
     (family === "fish" && data?.existing_fish?.readiness === "checking");
   useEffect(() => {
+    if ((family === "live" || family === "portrait") && ready) {
+      void cache.invalidateQueries({ queryKey: ["live-capabilities"] });
+    }
     if (family === "fish" && ready) {
       void cache.invalidateQueries({ queryKey: ["speech-capabilities"] });
       void cache.invalidateQueries({
@@ -619,7 +641,7 @@ export function EnvironmentSetupPanel({ family }: { family: Family }) {
                     <div>
                       <small>HARDWARE</small>
                       <strong>
-                        {family === "live" ? (
+                        {family === "live" || family === "portrait" ? (
                           "One GPU per medium · 4 GiB each · 16 GiB system RAM"
                         ) : family === "fish" ? (
                           "Two NVIDIA GPUs · 10 + 5 GiB VRAM"

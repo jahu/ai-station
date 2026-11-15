@@ -30,6 +30,7 @@ const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 
 export default function Live() {
   const cache = useQueryClient();
+  const [mode, setMode] = useState<"face_swap" | "portrait">("face_swap");
   const [image, setImage] = useState("");
   const [voice, setVoice] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -52,8 +53,11 @@ export default function Live() {
   const secure =
     window.isSecureContext && !!navigator.mediaDevices?.getUserMedia;
   const capabilities = useQuery({
-    queryKey: ["live-capabilities"],
-    queryFn: () => api<Capabilities>("/live/capabilities"),
+    queryKey: ["live-capabilities", mode],
+    queryFn: () =>
+      api<Capabilities>(
+        "/live/capabilities" + (mode === "portrait" ? "?mode=portrait" : ""),
+      ),
     refetchInterval: busy ? false : 10000,
   });
   const history = useQuery({
@@ -161,6 +165,7 @@ export default function Live() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_request_id: randomId(),
+          mode,
           image_artifact_id: image || null,
           voice_artifact_id: voice || null,
           maximum_seconds: 1800,
@@ -247,6 +252,49 @@ export default function Live() {
           </div>
         </div>
       )}
+      <div
+        className="live-mode-selector"
+        role="group"
+        aria-label="Live visual mode"
+      >
+        {(
+          [
+            [
+              "face_swap",
+              "Face swap",
+              "Replace your face and keep your camera scene.",
+            ],
+            [
+              "portrait",
+              "Animated portrait",
+              "Bring the reference portrait to life with your expressions.",
+            ],
+          ] as const
+        ).map(([value, title, description]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={mode === value}
+            disabled={busy}
+            onClick={() => {
+              setMode(value);
+              setError(null);
+              setRunId("");
+              setStatus({});
+            }}
+          >
+            <strong>{title}</strong>
+            <span>{description}</span>
+          </button>
+        ))}
+      </div>
+      {mode === "portrait" && (
+        <p className="muted live-mode-hint">
+          The portrait supplies the whole rendered head, including hair and
+          skin. Start facing the camera with a relaxed expression to calibrate
+          motion. Keep your head visible; large turns may pause tracking.
+        </p>
+      )}
       <div className="live-layout">
         <section
           className="panel live-stage"
@@ -279,7 +327,9 @@ export default function Live() {
                       ? "Face tracking paused"
                       : live && !image
                         ? "Your converted voice is live"
-                        : "Your transformed preview"}
+                        : mode === "portrait"
+                          ? "Your animated portrait"
+                          : "Your transformed preview"}
                 </h2>
                 <p>
                   {pending
@@ -353,7 +403,10 @@ export default function Live() {
           {live && (
             <div className="live-metrics" aria-live="off">
               <span>{status.fps?.toFixed(1) ?? "—"} fps</span>
-              <span>Face {status.faceMs?.toFixed(0) ?? "—"} ms</span>
+              <span>
+                {mode === "portrait" ? "Portrait" : "Face"}{" "}
+                {status.faceMs?.toFixed(0) ?? "—"} ms
+              </span>
               <span>Voice {status.voiceMs?.toFixed(0) ?? "—"} ms / 200 ms</span>
               <span>
                 {status.buffering
@@ -377,7 +430,11 @@ export default function Live() {
           <MediaInput
             kind="image"
             label="Reference portrait"
-            hint="One clear face · PNG or JPEG"
+            hint={
+              mode === "portrait"
+                ? "Frontal head-and-shoulders portrait · PNG or JPEG"
+                : "One clear face · PNG or JPEG"
+            }
             value={image}
             onChange={setImage}
             disabled={busy}
@@ -450,6 +507,7 @@ export default function Live() {
               !busy &&
               (uploading ||
                 (!image && !voice) ||
+                (mode === "portrait" && !image) ||
                 !secure ||
                 !capabilities.data?.available ||
                 insufficient)
@@ -466,7 +524,12 @@ export default function Live() {
           </p>
         </aside>
       </div>
-      {!capabilities.data?.available && <EnvironmentSetupPanel family="live" />}
+      {!capabilities.data?.available && (
+        <EnvironmentSetupPanel
+          key={mode}
+          family={mode === "portrait" ? "portrait" : "live"}
+        />
+      )}
       {!!history.data?.length && (
         <details className="panel live-history">
           <summary>
@@ -476,7 +539,10 @@ export default function Live() {
           {history.data.map(({ run }) => (
             <div className="row spread" key={run.id}>
               <Link to={`/runs/${run.id}`}>
-                {new Date(run.created_at).toLocaleString()}
+                {run.parameters?.mode === "portrait"
+                  ? "Animated portrait"
+                  : "Face / voice"}{" "}
+                · {new Date(run.created_at).toLocaleString()}
               </Link>
               <Badge status={run.status} />
               {!terminal.has(run.status) && (

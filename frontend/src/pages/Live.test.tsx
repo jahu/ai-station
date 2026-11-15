@@ -188,3 +188,86 @@ it("cancels a delayed enqueue acknowledgement after the user has already stopped
   );
   expect(state.connect).not.toHaveBeenCalled();
 });
+
+it("checks portrait readiness independently and preserves the working face-swap choice", async () => {
+  const base = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (path, options) =>
+    path === "/live/capabilities?mode=portrait"
+      ? ({
+          available: false,
+          reason: "Prepare the portrait extension",
+          eligible_gpu_indices: [3, 7],
+        } as never)
+      : base(path, options),
+  );
+  open();
+  fireEvent.change(screen.getByLabelText("Reference portrait"), {
+    target: { value: "face-1" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Start live session" }),
+    ).toHaveProperty("disabled", false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /^Animated portrait/ }));
+  await screen.findByText("Prepare the portrait extension");
+  expect(
+    screen.getByRole("button", { name: "Start live session" }),
+  ).toHaveProperty("disabled", true);
+  expect(state.prepare).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /^Face swap/ }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Start live session" }),
+    ).toHaveProperty("disabled", false),
+  );
+});
+
+it("requires a portrait image and freezes the mode once capture starts", async () => {
+  const base = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (path, options) =>
+    path === "/live/capabilities?mode=portrait"
+      ? ({ available: true, eligible_gpu_indices: [3, 7] } as never)
+      : path === "/live/sessions" && options?.method === "POST"
+        ? (queued as never)
+        : base(path, options),
+  );
+  open();
+  fireEvent.click(screen.getByRole("button", { name: /^Animated portrait/ }));
+  fireEvent.change(screen.getByLabelText("Reference voice"), {
+    target: { value: "voice-1" },
+  });
+  await waitFor(() =>
+    expect(api).toHaveBeenCalledWith("/live/capabilities?mode=portrait"),
+  );
+  expect(
+    screen.getByRole("button", { name: "Start live session" }),
+  ).toHaveProperty("disabled", true);
+  fireEvent.change(screen.getByLabelText("Reference portrait"), {
+    target: { value: "face-1" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Start live session" }),
+    ).toHaveProperty("disabled", false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Start live session" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /^Face swap/ })).toHaveProperty(
+      "disabled",
+      true,
+    ),
+  );
+  await waitFor(() =>
+    expect(api).toHaveBeenCalledWith(
+      "/live/sessions",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"mode":"portrait"'),
+      }),
+    ),
+  );
+  expect(state.prepare).toHaveBeenCalledWith(
+    expect.objectContaining({ face: true, voice: true }),
+  );
+});

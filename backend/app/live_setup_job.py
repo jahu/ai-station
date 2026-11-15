@@ -32,14 +32,19 @@ def model_bundle(recipe):
 
 class LiveSetupExecutor(SpeechSetupExecutor):
     name = "live_setup"
+    profile = LIVE_PROFILE
+    manifest = MANIFEST
     metadata_prefix = setup_label = "live"
     storage_headroom_bytes = 9 * 1024**3
 
     def validate(self, run):
         RuntimeSetupExecutor.validate(self, run)
-        if run.parameters.get("profile") != LIVE_PROFILE or run.parameters.get("manifest_sha256") != MANIFEST:
+        if (
+            run.parameters.get("profile") != self.profile
+            or run.parameters.get("manifest_sha256") != self.manifest
+        ):
             raise ValueError("Live requires its exact reviewed engine and model recipe")
-        model_bundle(run.parameters["recipe"])
+        self.bundle(run.parameters["recipe"])
 
     def runner(self):
         return LiveSetupClient(timeout=30)
@@ -47,9 +52,9 @@ class LiveSetupExecutor(SpeechSetupExecutor):
     def payload(self, run):
         return dict(
             run_id=run.id,
-            profile=LIVE_PROFILE,
-            manifest_sha256=MANIFEST,
-            deadline_at=run.metadata_json["live_native_deadline_at"],
+            profile=self.profile,
+            manifest_sha256=self.manifest,
+            deadline_at=run.metadata_json[self.metadata_prefix + "_native_deadline_at"],
             permissions=PERMISSIONS,
         )
 
@@ -57,4 +62,4 @@ class LiveSetupExecutor(SpeechSetupExecutor):
         return model_bundle(recipe)
 
     def adopt(self, runner, run):
-        return runner.adopt_live_environment(run.id, {"profile": LIVE_PROFILE, "permissions": PERMISSIONS})
+        return runner.adopt_live_environment(run.id, {"profile": self.profile, "permissions": PERMISSIONS})

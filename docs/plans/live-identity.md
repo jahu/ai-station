@@ -221,3 +221,26 @@ coverage or concurrent voice performance. Include turns/profile views, hairline,
 neck/skin consistency, occlusions and fail-closed tracking in that qualification.
 Keep the working face-swap profile available independently. No new engine, weights
 or changed defaults are installed by this acceptance note.
+
+
+## Active implementation: animated reference portrait — 2026-11-15
+
+Add an explicit `portrait` mode beside the existing default `face_swap`. The
+portrait is the rendered appearance source (including its hair/head/skin), while
+the browser camera supplies motion and expression. Never composite webcam pixels
+into this mode. Keep ordinary Task/Run history, resource locks, sealed references,
+bounded binary transport, Stop, revocation and crash recovery. Existing requests
+without a mode and frozen old runtimes retain face-swap behaviour.
+
+Qualify a pinned MIT LivePortrait human model/SDK in an optional fixed runtime,
+with actual CUDA inference before advertising availability. Reuse the verified
+Live Python/dependency inputs and independent voice process, avoiding additional
+large qualification environments. Closed mode/runtime validation must reject
+mismatches. The UI explains both choices, requires an image for portrait mode,
+shows its own preparation readiness, and freezes mode during capture.
+
+Measure real motion transfer and reference appearance retention, tracking loss
+and multiple faces, GPU/RAM use and end-to-end browser A/V pacing. Test default
+compatibility, cancellation, account isolation and setup/recovery routing. Deploy
+only after review and local checks; retain the working face-swap runtime. Remove
+owned probes and duplicate SDK/model/environment copies at completion.

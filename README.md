@@ -75,6 +75,11 @@ camera and microphone. AI Station transforms the preview locally; it keeps the
 same references throughout the session and stops capture when you leave the page.
 Live camera frames and microphone samples are not recorded by default.
 
+Choose **Face swap** to keep your camera scene, or **Animated portrait** to drive
+the reference portrait with your expressions and head motion, keeping its hair
+and appearance. The optional portrait extension reuses the prepared Live runtime;
+start facing the camera with a relaxed expression to calibrate motion.
+
 An administrator prepares the optional runtime from the Live page, with reviewed
 sizes and component licenses. The first qualified profile uses Linux and NVIDIA
 GPUs with compute capability 7.5 or newer: one GPU per enabled medium, at least

@@ -73,6 +73,7 @@ class LiveExecutor(HostMediaExecutor):
             "/v1/runs/live",
             {
                 "run_id": run.id,
+                **({"mode": run.parameters["mode"]} if "mode" in run.parameters else {}),
                 "managed_runtime": run.parameters["managed_runtime"],
                 "image": run.parameters.get("image"),
                 "voice": run.parameters.get("voice"),

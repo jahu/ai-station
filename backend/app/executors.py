@@ -52,6 +52,7 @@ from app.github_connector import GithubReadExecutor
 from app.image_edits import ImageEditExecutor, ImageEditReasonExecutor
 from app.image_setup_job import ImageSetupExecutor
 from app.live_executor import LiveExecutor
+from app.live_portrait_setup_job import PortraitSetupExecutor
 from app.live_setup_job import LiveSetupExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
@@ -367,6 +368,7 @@ EXECUTORS = {
     "video_setup": VideoSetupExecutor(),
     "svi_setup": SviSetupExecutor(),
     "live_setup": LiveSetupExecutor(),
+    "live_portrait_setup": PortraitSetupExecutor(),
     "live_identity": LiveExecutor(),
     "avatar_setup": AvatarSetupExecutor(),
     "effects_setup": EffectsSetupExecutor(),
