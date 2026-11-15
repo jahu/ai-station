@@ -194,3 +194,30 @@ devices, including private HTTPS/WSS. Physical webcam/microphone, phone capture
 and subjective face/voice quality remain explicit user acceptance tests. OBS/Zoom
 virtual-device export and Windows GPU qualification are separate extensions;
 these Linux measurements do not claim them. No live recording is enabled.
+
+## Owner acceptance and next release — 2026-11-15
+
+The owner tested Live and reported that it works very well, then explicitly
+requested inclusion in the next release. Keep the existing qualified face/voice
+profile in that release's scope; its implementation is committed in PR #783 and
+final deployment/cleanup evidence in #784. This records qualitative owner feedback,
+not a claim that every device/network/browser acceptance case was completed.
+Release promotion and publishing still follow the normal owner-approved master
+workflow; do not move the existing 0.7.0 tag.
+
+The owner also observed retained hair and skin characteristics. The current
+engine transforms a 128-pixel aligned face crop and blends it into the original
+frame with a soft elliptical mask; hair, neck, ears outside the mask and the
+background are not replaced. A wider mask alone cannot synthesize the reference
+person's hair or unseen head geometry.
+
+A separate future full-portrait mode should investigate reference-portrait
+animation driven by webcam motion, rather than widening this face-swap mask.
+[LivePortrait](https://github.com/KlingAIResearch/LivePortrait) provides a relevant
+source-image/driving-video architecture; its documented head-focused framing and
+motion constraints must remain visible in evaluation. Benchmark a real streaming
+adapter on the actual GPUs before promising frame rate, resolution, full-head
+coverage or concurrent voice performance. Include turns/profile views, hairline,
+neck/skin consistency, occlusions and fail-closed tracking in that qualification.
+Keep the working face-swap profile available independently. No new engine, weights
+or changed defaults are installed by this acceptance note.
