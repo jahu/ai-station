@@ -211,10 +211,10 @@ frame with a soft elliptical mask; hair, neck, ears outside the mask and the
 background are not replaced. A wider mask alone cannot synthesize the reference
 person's hair or unseen head geometry.
 
-A separate future full-portrait mode should investigate reference-portrait
-animation driven by webcam motion, rather than widening this face-swap mask.
-[LivePortrait](https://github.com/KlingAIResearch/LivePortrait) provides a relevant
-source-image/driving-video architecture; its documented head-focused framing and
+The requested follow-up is now implemented as a separate reference-portrait
+animation mode driven by webcam motion, rather than widening the face-swap mask.
+[LivePortrait](https://github.com/KlingAIResearch/LivePortrait) provides its
+source-image/driving-video architecture; the documented head-focused framing and
 motion constraints must remain visible in evaluation. Benchmark a real streaming
 adapter on the actual GPUs before promising frame rate, resolution, full-head
 coverage or concurrent voice performance. Include turns/profile views, hairline,
