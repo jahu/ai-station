@@ -280,5 +280,22 @@ smiles and eye closure while keeping the reference hair, head and background.
 This complements the rotated-image throughput fixture. New model links are
 relative to the data root; the runtime retains its explicit original base binding.
 
-Final regression review, production adoption and cleanup are delivery gates
-remaining for this extension. The existing face-swap deployment remains intact.
+Final local validation covered all 639 backend/runner/integration test files in
+four disjoint invocations of `scripts/check.sh`. The first pass reported 10,320
+passed tests and 25 opt-in skips. Five failures came from source/manifest
+snapshots imported before active edits: the two portrait recipe tests and three
+Runner compatibility/transport checks. All four affected files passed together
+on the frozen source (20 tests), without loosening their assertions. Focused
+Live/portrait/account/recovery checks also passed (31 tests). The complete
+frontend suite passed 1,291 tests; lint, types, formatting, production build,
+Docker image and production/development Compose validation passed.
+
+Browser review found and fixed an output-geometry bug: the capture client had
+stretched the square portrait to the webcam's dimensions. The preview now uses
+the actual converted bitmap dimensions independently of camera capture, with
+regressions for square and 4:3 output. A further real browser portrait-only
+session passed on one GPU, including exact 512×512 canvas dimensions and Stop.
+The original face/voice browser session still passed at 10.1 fps.
+
+Production adoption and cleanup remain delivery gates for this extension.
+The existing face-swap deployment remains intact.
