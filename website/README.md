@@ -138,3 +138,14 @@ installation detail is added to the showcase. Both pages work without JavaScript
 Canonical URLs and the sitemap include the guide and preserve a configured
 repository subpath. Public screenshots must be real neutral QA captures, recorded
 in asset provenance and reviewed by the owner before publication.
+
+## Live showcase in 0.8.0
+
+The owner-approved `assets/live.png` is a real pre-release Animated portrait
+capture with Show local input enabled. A fictional generated webcam participant
+is visible in the inset; the main view uses the already credited public-domain
+Morgan Freeman reference. The screen is not retouched or composited for the site.
+The earlier Face swap candidate was rejected and is not published. This capture
+has no voice conversion; independent measured duplex results are labeled in the
+release text. The site and README identify synthetic footage and do not imply
+endorsement or an official celebrity preset.

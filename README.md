@@ -94,6 +94,12 @@ model tests with synthetic browser capture, separately from the owner’s hands-
 feedback. OBS/Zoom virtual-device export is not included.
 [Implementation and measured qualification →](docs/plans/live-identity.md)
 
+![Live Animated portrait with Morgan Freeman and the synthetic webcam participant visible in Show local input](website/assets/live.png)
+
+*Actual local-model preview. The inset is a fictional, AI-generated webcam
+participant; the main view animates a public-domain Morgan Freeman portrait.
+Synthetic demonstration, not authentic footage or an endorsement.*
+
 ## Made locally
 
 These examples were created in AI Station on an i7-6900K workstation with

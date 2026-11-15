@@ -49,6 +49,11 @@
       "Actual Video workspace with the coastal source image, real motion prompt and completed eight-second film",
       "From a scene to a short film, with inspectable progress and reusable results.",
     ],
+    live: [
+      "live.png",
+      "Actual Live Animated portrait preview with Morgan Freeman and a fictional webcam participant visible in Show local input",
+      "See your camera input beside the locally animated reference portrait. Synthetic demonstration, not authentic footage or endorsement.",
+    ],
     agents: [
       "agents.png",
       "Actual Agents workspace showing a saved, paused daily market-research draft awaiting review",

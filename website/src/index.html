@@ -135,6 +135,16 @@
               <svg aria-hidden="true"><use href="#icon-play" /></svg>Video
             </button>
             <button
+              id="tab-live"
+              role="tab"
+              aria-selected="false"
+              aria-controls="workspace-panel"
+              tabindex="-1"
+              data-screen="live"
+            >
+              <svg aria-hidden="true"><use href="#icon-image" /></svg>Live
+            </button>
+            <button
               id="tab-agents"
               role="tab"
               aria-selected="false"
@@ -1766,6 +1776,22 @@
             Transform your live preview, right on your own computer.
           </p>
         </div>
+        <figure class="live-showcase">
+          <a href="assets/live.png" aria-label="View the full Live screenshot">
+            <img src="assets/live.png" width="1440" height="1260" loading="lazy"
+              alt="Actual Live Animated portrait preview: Morgan Freeman in the main view, with a different synthetic webcam participant visible in Show local input" />
+          </a>
+          <figcaption>
+            <p>One camera input. A different appearance. Actual local-model output,
+              with <strong>Show local input</strong> enabled.</p>
+            <a class="text-link" href="assets/live.png">View full screenshot ↗</a>
+          </figcaption>
+          <p class="live-showcase-credit">Synthetic demonstration, not authentic
+            footage or an endorsement. The webcam participant is fictional and
+            AI-generated. Morgan Freeman reference: U.S. Department of Defense /
+            Alexander Kubitza, public domain.
+            <a href="asset-provenance.json">Sources and capture details</a>.</p>
+        </figure>
         <div class="capability-grid">
           <article>
             <div class="capability-top">
