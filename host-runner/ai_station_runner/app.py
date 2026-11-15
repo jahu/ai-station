@@ -53,6 +53,8 @@ from ai_station_runner.krea2 import KreaFile
 from ai_station_runner.krea2_native import KreaRunRequest
 from ai_station_runner.krea2_native import capabilities as krea_capabilities
 from ai_station_runner.krea2_native import start as start_krea
+from ai_station_runner.live_api import router as live_router
+from ai_station_runner.live_prepare import router as live_setup_router
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
@@ -786,6 +788,8 @@ app.include_router(music_setup_router)
 app.include_router(video_setup_router)
 app.include_router(svi_video_router)
 app.include_router(svi_setup_router)
+app.include_router(live_setup_router)
+app.include_router(live_router)
 app.include_router(avatar_setup_router)
 app.include_router(effects_setup_router)
 app.include_router(fish_setup_router)

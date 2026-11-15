@@ -7,7 +7,11 @@ export default defineConfig({
   server: {
     strictPort: true,
     proxy: {
-      "/api": { target: "http://ai-station:8765", changeOrigin: false },
+      "/api": {
+        target: "http://ai-station:8765",
+        changeOrigin: false,
+        ws: true,
+      },
     },
   },
   test: { environment: "jsdom", maxWorkers: 4 },

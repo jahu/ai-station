@@ -59,7 +59,9 @@ def publish_verified_models(session, entry, objects):
                 size_bytes=item.file.size_bytes,
                 mtime=mtime,
                 format=Path(item.filename).suffix.lstrip("."),
-                category="audio"
+                category="other"
+                if entry.capability == "live"
+                else "audio"
                 if entry.capability in {"speech", "music", "effects"}
                 else "video"
                 if entry.capability in {"video", "avatar"}

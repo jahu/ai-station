@@ -51,6 +51,8 @@ from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
 from app.image_edits import ImageEditExecutor, ImageEditReasonExecutor
 from app.image_setup_job import ImageSetupExecutor
+from app.live_executor import LiveExecutor
+from app.live_setup_job import LiveSetupExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
 from app.local_coding import LocalProposalExecutor
@@ -364,6 +366,8 @@ EXECUTORS = {
     "music_setup": MusicSetupExecutor(),
     "video_setup": VideoSetupExecutor(),
     "svi_setup": SviSetupExecutor(),
+    "live_setup": LiveSetupExecutor(),
+    "live_identity": LiveExecutor(),
     "avatar_setup": AvatarSetupExecutor(),
     "effects_setup": EffectsSetupExecutor(),
     "fish_setup": FishSetupExecutor(),

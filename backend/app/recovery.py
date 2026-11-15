@@ -155,6 +155,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             "music_setup",
             "video_setup",
             "svi_setup",
+            "live_setup",
             "avatar_setup",
             "effects_setup",
             "fish_setup",
@@ -240,6 +241,24 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
             try:
                 info = {**fence_missing_dispatch(runner, run), "reachable": True}
+            except (RunnerError, RunnerUnavailable, ValueError):
+                info = {"reachable": False}
+            session.refresh(run)
+        if (
+            run.executor_type == "live_identity"
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("known") is False
+            and info.get("reachable") is True
+        ):
+            try:
+                fenced = runner.request("POST", f"/v1/live/{run.id}/cancel")
+                if (
+                    fenced.get("run_id") != run.id
+                    or fenced.get("executor") != "live_identity"
+                    or type(fenced.get("alive")) is not bool
+                ):
+                    raise ValueError("The native Live cancellation identity changed")
+                info = {**fenced, "reachable": True, "known": True}
             except (RunnerError, RunnerUnavailable, ValueError):
                 info = {"reachable": False}
             session.refresh(run)

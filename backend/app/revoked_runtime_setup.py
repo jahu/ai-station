@@ -23,6 +23,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
     image_job = run.executor_type == "photo_pipe" and isinstance(
         run.parameters.get("managed_image_runtime"), dict
     )
+    live_job = run.executor_type == "live_identity"
     if (
         run.executor_type
         not in {
@@ -32,6 +33,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             "music_setup",
             "video_setup",
             "svi_setup",
+            "live_setup",
             "avatar_setup",
             "effects_setup",
             "fish_setup",
@@ -39,6 +41,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             "motion_setup",
         }
         and not image_job
+        and not live_job
     ) or run.owner_id is None:
         return False
     inputs = run.executor_type in {
@@ -47,6 +50,7 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         "music_setup",
         "video_setup",
         "svi_setup",
+        "live_setup",
         "avatar_setup",
         "effects_setup",
         "fish_setup",
@@ -76,6 +80,10 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
             from app.avatar_setup_job import AvatarSetupExecutor
 
             input_contract = AvatarSetupExecutor()
+        elif run.executor_type == "live_setup":
+            from app.live_setup_job import LiveSetupExecutor
+
+            input_contract = LiveSetupExecutor()
         elif run.executor_type == "svi_setup":
             from app.svi_setup_job import SviSetupExecutor
 
@@ -95,7 +103,12 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         else:
             input_contract = SpeechSetupExecutor()
     user = session.get(User, run.owner_id, populate_existing=True)
-    if user is not None and user.enabled and (image_job or user.is_admin) and not user.bootstrap_pending:
+    if (
+        user is not None
+        and user.enabled
+        and (image_job or live_job or user.is_admin)
+        and not user.bootstrap_pending
+    ):
         return False
     if not run.metadata_json.get("dispatch_attempted"):
         return False
@@ -123,6 +136,17 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
                 or not {"filesystem_read", "workspace_write"} <= set(run.effective_permissions)
             ):
                 raise ValueError("The managed image identity requires inspection")
+        elif live_job:
+            if (
+                run.execution_target != "host"
+                or run.task is None
+                or run.task.owner_id != run.owner_id
+                or run.parameters.get("managed_runtime", {}).get("profile")
+                != "live-identity-linux-x86-64-python312-v1"
+                or run.requested_resources.get("ram_mib") != 12288
+                or not {"filesystem_read", "workspace_write"} <= set(run.effective_permissions)
+            ):
+                raise ValueError("The frozen live session identity requires inspection")
         elif inputs:
             input_contract.validate(run)
         else:
@@ -142,12 +166,23 @@ def cleanup_revoked_runtime_setup(session, run, worker_id):
         transition(session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested")
     run.metadata_json = {**run.metadata_json, "cancel_on_resume": True, "cleanup_requires_inspection": True}
     touch_lease(session, run)
-    payload = None if image_job else cancel_payload(run)
+    payload = None if image_job or live_job else cancel_payload(run)
     confirmed = run.metadata_json.get("process_confirmed_gone") is True
     session.commit()  # Native I/O must not hold the database transaction.
     if not confirmed:
         try:
-            if image_job:
+            if live_job:
+                from app.live_executor import LiveRunnerClient
+
+                result = LiveRunnerClient(timeout=10).cancel_process(identity)
+                confirmed = (
+                    result.get("run_id") == identity
+                    and result.get("executor") == "live_identity"
+                    and result.get("alive") is False
+                    and not result.get("completion_pending")
+                    and result.get("status") == "canceled"
+                )
+            elif image_job:
                 from app.managed_image_client import ManagedImageClient
 
                 result = ManagedImageClient(timeout=10).cancel_process(identity)

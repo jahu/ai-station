@@ -3,7 +3,8 @@
 import sys
 from pathlib import Path
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, WebSocketException
+from starlette.requests import HTTPConnection
 
 from ai_station_runner.processes import ProcessManager
 
@@ -43,10 +44,12 @@ def create_process_manager(data_dir: Path, grace_seconds: float = 3.0) -> Proces
     raise RuntimeError("Managed host processes require a qualified Linux or macOS adapter")
 
 
-def require_qualified_operation(request: Request) -> None:
+def require_qualified_operation(request: HTTPConnection) -> None:
     if sys.platform == "linux":
         return
     route = request.scope["route"]
-    if sys.platform == "darwin" and (request.method, route.path) in _DARWIN_OPERATIONS:
+    if sys.platform == "darwin" and (request.scope.get("method"), route.path) in _DARWIN_OPERATIONS:
         return
+    if request.scope["type"] == "websocket":
+        raise WebSocketException(code=1008, reason="Live media is not qualified on this platform")
     raise HTTPException(503, "This Host Runner operation is not yet qualified on this platform")
