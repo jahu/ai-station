@@ -48,7 +48,7 @@ def prepare(root, operation_id, *, check=lambda: None, progress=lambda value: No
         target = folder / area / item["target"]
         directory(folder, str(target.parent.relative_to(folder)))
         if area == "models":
-            target.symlink_to(objects[item["sha256"]])
+            target.symlink_to(os.path.relpath(objects[item["sha256"]], target.parent))
         else:
             shutil.copyfile(objects[item["sha256"]], target)
             target.chmod(0o400)

@@ -274,5 +274,11 @@ concurrent regression load the UI reported 5.3 fps, 161-ms portrait processing,
 confirmed process exit. These are real models with synthetic devices; physical
 camera and subjective motion quality are still user acceptance.
 
+A further pinned real driving-video check rendered all 48 sampled frames, with
+no tracking pauses. Visual inspection confirmed transferred gaze, mouth opening,
+smiles and eye closure while keeping the reference hair, head and background.
+This complements the rotated-image throughput fixture. New model links are
+relative to the data root; the runtime retains its explicit original base binding.
+
 Final regression review, production adoption and cleanup are delivery gates
 remaining for this extension. The existing face-swap deployment remains intact.

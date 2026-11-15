@@ -107,6 +107,7 @@ def prepared(tmp_path, monkeypatch):
 def test_extension_binds_original_base_even_after_active_base_selection_changes(prepared):
     root, observation, public = prepared
     original = portrait.resolve_public(root, public)
+    assert not original["portrait_motion"].readlink().is_absolute()
     active = root / "runtime" / live_environment.NAMESPACE / "active.json"
     active.write_text(json.dumps({"unrelated": "different active runtime"}))
     restored = portrait.resolve_public(root, public)
