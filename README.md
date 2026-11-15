@@ -6,7 +6,7 @@
 
 Chat, images, video, voices, music and agents — on your own computer.
 
-**[Download 0.7.0](https://github.com/jahu/ai-station/releases/tag/v0.7.0)** · **[See it in action](https://ai-station.dev/)** · [Installation guide](https://ai-station.dev/install/) · [Release notes](docs/releases/0.7.0.md)
+**[Download 0.8.0](https://github.com/jahu/ai-station/releases/tag/v0.8.0)** · **[See it in action](https://ai-station.dev/)** · [Installation guide](https://ai-station.dev/install/) · [Release notes](docs/releases/0.8.0.md)
 
 Linux & Windows · Local inference · Cloud optional · [Free for noncommercial use](LICENSE)
 
@@ -30,8 +30,8 @@ installation and everyday use. [Tell us what worked, what broke or what was conf
 
 | Your computer        | Official installer                                                                                                       |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Windows 10 / 11, x64 | [Download Setup.exe](https://github.com/jahu/ai-station/releases/download/v0.7.0/AI-Station-0.7.0-windows-x64-Setup.exe) |
-| Ubuntu 24.04, x86-64 | [Download .deb](https://github.com/jahu/ai-station/releases/download/v0.7.0/AI-Station-0.7.0-linux-amd64.deb)            |
+| Windows 10 / 11, x64 | [Download Setup.exe](https://github.com/jahu/ai-station/releases/download/v0.8.0/AI-Station-0.8.0-windows-x64-Setup.exe) |
+| Ubuntu 24.04, x86-64 | [Download .deb](https://github.com/jahu/ai-station/releases/download/v0.8.0/AI-Station-0.8.0-linux-amd64.deb)            |
 
 1. Install and open AI Station.
 2. Create your account and follow guided setup. Review model sizes and licenses
@@ -68,7 +68,7 @@ creative tools, models and recurring jobs share the same workspace and history.
 You can inspect what ran, stop it and keep its results. Existing compatible local
 services can stay in place. [How it fits alongside other tools →](docs/alternatives.md)
 
-## On develop: Live (experimental)
+## Live: a different face, a different voice
 
 Choose a portrait and a short voice recording in **Live**, then start your browser
 camera and microphone. AI Station transforms the preview locally; it keeps the
@@ -87,9 +87,11 @@ GPUs with compute capability 7.5 or newer: one GPU per enabled medium, at least
 two compatible GPUs. Use localhost or your private HTTPS address for camera/mic
 permissions; ordinary HTTP LAN access cannot provide browser capture.
 
-This is an unreleased development feature, separately tested with real inference
-and synthetic browser devices. Physical-device and subjective quality acceptance
-remain distinct. OBS/Zoom virtual-device export is not included.
+This experimental Linux feature runs locally. On two RTX 3060 12 GB cards,
+Face swap with voice reached about **10 fps** and Animated portrait with voice
+about **5 fps**; the portrait engine alone measured **6.7 fps**. These are real
+model tests with synthetic browser capture, separately from the owner’s hands-on
+feedback. OBS/Zoom virtual-device export is not included.
 [Implementation and measured qualification →](docs/plans/live-identity.md)
 
 ## Made locally
@@ -120,20 +122,21 @@ impressions. These are demonstrations, not endorsements or built-in celebrity
 presets. Public media and its sources are recorded in [asset provenance](website/asset-provenance.json).
 Direct publishing to social networks is still planned.
 
-## New in 0.7.0
+## New in 0.8.0
 
-**Longer, more consistent video with Wan 2.2 SVI Pro.** The new engine carries the
-original image and motion context between windows, helping the subject and scene
-stay consistent as the clip continues.
+**Live face, portrait and voice transformation — on your own computer.**
+Open **Live**, choose references, and start your camera and microphone.
 
-- Landscape 832×480 or portrait 480×832, at 15 fps.
-- Shared model and format selection in Chat, Video, agents and Studio.
-- Optional setup through **Video → Set up video → Continuous video**.
+- **Face swap:** change your face while keeping your camera scene.
+- **Animated portrait:** bring a reference portrait to life with your expressions
+  and head movement, including its hair and skin appearance.
+- **Optional voice transformation:** keep one voice reference throughout the
+  session, with local processing and explicit Start/Stop controls.
 
-Real Linux GPU tests include complete 10-second clips and a 20-second scene.
-This profile favors consistency over speed: a 10-second clip took about
-**1 h 46 min** on one RTX 3060 12 GB. Detail is 480p-class; framing and motion can
-still be imperfect. [Release notes and exact test coverage →](docs/releases/0.7.0.md)
+The optional runtime has guided setup. This first profile requires Linux and
+compatible NVIDIA GPUs; face/portrait and voice together need two cards. Camera
+and microphone use localhost or private HTTPS. No capture is saved by default.
+[Release notes and exact test coverage →](docs/releases/0.8.0.md)
 
 ## Real hardware, real timings
 
@@ -145,6 +148,7 @@ individual runtimes determine whether a job can use both.
 | Local chat       | RVN 27B Q4_K_M, llama.cpp, both GPUs, one 345-token completion | **16.9 generated tokens/s** |
 | Image generation | LUSTIFY v10 Turbo Q4_0, 768×1024, 8 steps                      | **1 min 40 s**              |
 | Continuous video | SVI Pro Q4, 832×480 or 480×832, 15 fps, one GPU, 10 seconds    | **About 1 h 46 min**        |
+| Live portrait + voice | LivePortrait + SeedVC, two RTX 3060 12 GB, 512×512 preview | **About 5 fps** |
 | Speaking avatar  | Sonic, 512×768, both GPUs, complete 40.08-second recording     | **2 h 27 min 18 s**         |
 
 These are recorded runs, not speed promises. Historical image timings exclude the
