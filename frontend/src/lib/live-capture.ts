@@ -353,7 +353,12 @@ export class LiveCapture {
       latest = this.pictures.shift();
     }
     if (latest) {
-      if (this.tracking)
+      if (this.tracking) {
+        // Render the engine's geometry, which may differ from the webcam input.
+        if (this.output.width !== latest.bitmap.width)
+          this.output.width = latest.bitmap.width;
+        if (this.output.height !== latest.bitmap.height)
+          this.output.height = latest.bitmap.height;
         this.output
           .getContext("2d")
           ?.drawImage(
@@ -363,6 +368,7 @@ export class LiveCapture {
             this.output.width,
             this.output.height,
           );
+      }
       latest.bitmap.close();
     }
     this.animation = requestAnimationFrame(this.paint);

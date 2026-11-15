@@ -493,8 +493,9 @@ export default function Live() {
           </details>
           {insufficient && (
             <p className="notice">
-              Both media need two compatible GPUs. Choose just a portrait or
-              voice to use one GPU.
+              {mode === "portrait"
+                ? "Portrait and voice together need two compatible GPUs. Remove the voice reference to animate the portrait on one GPU."
+                : "Both media need two compatible GPUs. Choose just a portrait or voice to use one GPU."}
             </p>
           )}
           {!capabilities.data?.available && (
