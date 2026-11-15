@@ -50,7 +50,9 @@ def capabilities(mode="face_swap"):
         "sample_rate": 22050,
         "block_samples": 4410,
         "maximum_seconds": 3600,
-        "reason": "Prepare the Live face and voice runtime first",
+        "reason": "Prepare the animated portrait extension first"
+        if mode == "portrait"
+        else "Prepare the Live face and voice runtime first",
     }
     try:
         private = read_json(root / f"runtime/{policy.NAMESPACE}/active.json")

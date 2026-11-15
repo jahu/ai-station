@@ -104,6 +104,9 @@ def test_portrait_setup_is_admin_only_queued_and_validates_the_real_recipe(accou
             / (PROFILE + ".json")
         ).read_text()
     )
+    from app.speech_setup_job import file_spec
+
+    assert all(file_spec(v).size_bytes >= 1 for v in recipe["inputs"])
     catalog = {"recipe": recipe, "manifest_sha256": fingerprint(recipe), "installation_available": True}
     monkeypatch.setattr(PortraitSetupClient, "runtime_setup_catalog", lambda _: catalog)
     owner, alice, _ = accounts

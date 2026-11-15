@@ -423,8 +423,9 @@ export default function Live() {
           <div>
             <h2>Your references</h2>
             <p className="muted">
-              Use either medium, or both. Each keeps the same reference for the
-              whole session.
+              {mode === "portrait"
+                ? "Choose a portrait. Add a voice reference if you also want to transform your microphone."
+                : "Use either medium, or both. Each keeps the same reference for the whole session."}
             </p>
           </div>
           <MediaInput

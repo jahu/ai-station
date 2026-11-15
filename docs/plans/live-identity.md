@@ -244,3 +244,35 @@ and multiple faces, GPU/RAM use and end-to-end browser A/V pacing. Test default
 compatibility, cancellation, account isolation and setup/recovery routing. Deploy
 only after review and local checks; retain the working face-swap runtime. Remove
 owned probes and duplicate SDK/model/environment copies at completion.
+
+
+### Animated-portrait implementation qualification
+
+The pinned human LivePortrait SDK uses only its reviewed model classes and
+configuration. Five weights load with `weights_only=True` and strict state
+dictionaries in the existing qualified Live Python. The extension downloads
+522,362,364 bytes of model/SDK inputs and binds an immutable base-runtime
+observation; switching the base active pointer does not retarget an existing
+extension. Empty upstream package initializers are omitted: namespace packages
+need no zero-byte downloads, and every downloadable object satisfies FileSpec.
+
+The initial real CUDA qualification on the dual-RTX3060 workstation rendered
+60 measured 512×512 frames at 6.72 fps (148.22-ms median, 155.35-ms p95), with
+about 1,057 MiB peak allocated tensors. Rotated driving inputs changed the
+rendered portrait while retaining its reference appearance. Missing faces refused
+output. A ten-second actual dual-GPU stream returned 65 portrait frames and all
+50 audio blocks, portrait p95 157.54 ms, voice p95 134.42 ms, and exit 75 on
+disconnect. Latest-frame dropping bounded the queue; no raw-camera fallback was
+used. This is an experimental portrait profile, not a 25/30-fps claim.
+
+An isolated station prepared the extension through normal setup Run
+`742ab92b-8a28-49c6-87db-cd4820fa6f74`, then ran an ordinary portrait session
+with synthetic Chrome camera/microphone. Desktop/mobile layout, reference
+selection, converted preview and Stop passed with no JavaScript errors. Under
+concurrent regression load the UI reported 5.3 fps, 161-ms portrait processing,
+137-ms voice blocks and 555-ms preview delay. Stop canceled the owned Run and
+confirmed process exit. These are real models with synthetic devices; physical
+camera and subjective motion quality are still user acceptance.
+
+Final regression review, production adoption and cleanup are delivery gates
+remaining for this extension. The existing face-swap deployment remains intact.
