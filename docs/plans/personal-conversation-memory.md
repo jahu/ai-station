@@ -140,3 +140,33 @@ A final consent review also removes the legacy queued pinned-context block when
 a new recall reference becomes invalid after a settings revision. The worker
 must not fall back to the old queued personal text; original Run parameters stay
 immutable for audit. A regression exercises this change before provider I/O.
+
+## Verified delivery — 2026-11-18
+
+Implemented the nine delivery requirements through ordinary account-scoped Runs,
+existing local providers and the installed CPU encoder; no external extraction,
+new embedding service or production-history backfill was introduced.
+
+Validation evidence is kept privately under the task's acceptance directory:
+
+- Full Python/Host Runner gate: 10,343 passed, 25 skipped. Later controller,
+  intent-envelope and consent corrections passed focused regressions (96 Chat/
+  controller tests, 63 intent/controller tests, and 42 memory tests), plus Ruff
+  and format checks. The full gate predates those focused corrections; it is not
+  represented as a second full-suite run against the final commit.
+- Frontend: 201 files / 1,295 tests, lint, typecheck and production build. Desktop
+  and mobile browser checks verified the settings layout without publishing images.
+- Alembic 0047 → 0048 preserves existing data; deployed database integrity and
+  foreign-key checks passed. Normal/development/LAN Compose and the Docker image
+  were checked. Application data, existing accounts and native Runner were preserved.
+- Actual opt-in tests used an isolated synthetic account, the already installed
+  local Qwen3.5 9B Q6 model and the installed E5 CPU encoder. They verified automatic
+  facts/preferences, semantic cross-chat recall, correction/consolidation, unchanged
+  facts after recall questions, forgetting, account opt-out and unified-controller
+  intent/final-answer context. Earlier failed attempts remain explicit diagnostic
+  records; subsequent fixes were retested, not waived.
+
+Learning remains opt-in per account. Historical chat/Run snapshots remain audit
+records when an entry is forgotten. Model extraction can make mistakes, so the
+Memory UI exposes quotations, correction/protection, disable/delete and activity.
+Existing project/agent memory permissions and external runtime ownership are intact.
