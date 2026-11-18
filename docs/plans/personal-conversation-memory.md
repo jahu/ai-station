@@ -135,3 +135,8 @@ ReAct intent envelopes now include the already retrieved personal context. Actio
 policies distinguish memory text from artifact aliases, without adding authority
 or special-casing personal fields. Regression tests assert both intent envelopes
 and final delivery, in addition to the live local-model acceptance.
+
+A final consent review also removes the legacy queued pinned-context block when
+a new recall reference becomes invalid after a settings revision. The worker
+must not fall back to the old queued personal text; original Run parameters stay
+immutable for audit. A regression exercises this change before provider I/O.

@@ -635,7 +635,7 @@ def apply_chat_recall(session, run, message, messages):
     conversation = session.get(Conversation, run.conversation_id, populate_existing=True)
     messages = [dict(item) for item in messages]
     block = run.parameters.get("memory_context_block")
-    if block and (result is not None or not allowed(session, conversation)):
+    if block and (run.parameters.get("personal_memory_recall_id") or not allowed(session, conversation)):
         for item in messages:
             if item["role"] == "system":
                 item["content"] = item["content"].replace(block.strip(), "").strip()

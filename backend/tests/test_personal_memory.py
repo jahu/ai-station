@@ -326,6 +326,22 @@ def test_orchestrator_completion_uses_original_user_text_only(session, monkeypat
     assert "Mallory" not in str(session.scalar(select(MemoryEntry)).learning)
 
 
+def test_revised_settings_do_not_restore_a_stale_queued_pinned_context(session):
+    upsert_memory(session, scope="global", content="Old private context", pinned=True)
+    session.commit()
+    run, conversation, response = consumer(session)
+    recall = schedule_recall(session, run, conversation, "context")
+    execute(session, recall)
+    block = "User-pinned reference context (may be outdated):\nOld private context"
+    messages = [{"role": "system", "content": "Your instructions\n\n" + block}, *run.parameters["messages"]]
+    run.parameters = {**run.parameters, "memory_context_block": block, "messages": messages}
+    consent(session, use=True, learn=False, revision=1)
+    assert recalled(session, run) is None
+    prepared = apply_chat_recall(session, run, response, messages)
+    assert prepared[0]["content"] == "Your instructions"
+    assert "Old private context" in run.parameters["messages"][0]["content"]
+
+
 def test_capture_jobs_are_serialized_per_account(session):
     consent(session, learn=True)
     first, _, _ = source(session)
