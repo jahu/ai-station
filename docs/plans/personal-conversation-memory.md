@@ -118,3 +118,11 @@ No-fact responses have an explicit empty-object envelope; an empty root list is
 also a safe no-op. Nonempty untyped lists/unknown fields remain rejected. Stored
 facts still inform the separate answer/decision recall path, never extraction.
 This is a general evidence boundary, not a question/name-specific classifier.
+
+The unified-controller acceptance also exposed a nested handoff: the final Chat
+consumer's immediate parent is a legacy adapter, not the controller carrying the
+recall reference. Final `chat.reply` consumers now resolve the existing validated
+controller tag, checking owner and conversation before inheriting recall. Other
+tools do not inherit personal context. Direct controller answers retain the exact
+decision memory snapshot in their visible message/Run metadata. Tests cover both
+delivery paths and refuse even an owned recall from a different conversation.

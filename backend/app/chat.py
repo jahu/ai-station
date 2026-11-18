@@ -608,10 +608,21 @@ def enqueue(
     )
     from app.llama import prepare_consumer
 
-    if parent and parent.parameters.get("personal_memory_recall_id"):
+    memory_parent = parent
+    tag = run.parameters.get("controller_tool_context") or {}
+    if tag.get("tool") == "chat.reply" and tag.get("root_id"):
+        controller = session.get(Run, tag["root_id"])
+        if (
+            controller
+            and controller.executor_type == "assistant_controller"
+            and controller.owner_id == run.owner_id
+            and controller.conversation_id == row.id
+        ):
+            memory_parent = controller
+    if memory_parent and memory_parent.parameters.get("personal_memory_recall_id"):
         run.parameters = {
             **run.parameters,
-            "personal_memory_recall_id": parent.parameters["personal_memory_recall_id"],
+            "personal_memory_recall_id": memory_parent.parameters["personal_memory_recall_id"],
         }
     elif controller_context is None:
         schedule_recall(session, run, row, intent)

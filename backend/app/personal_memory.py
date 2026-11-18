@@ -567,7 +567,11 @@ def recalled(session, consumer):
         return None
     key = consumer.parameters.get("personal_memory_recall_id")
     recall = session.get(Run, key) if key else None
-    if recall is None or recall.owner_id != consumer.owner_id:
+    if (
+        recall is None
+        or recall.owner_id != consumer.owner_id
+        or recall.conversation_id != consumer.conversation_id
+    ):
         return None
     if recall.parameters["revision"] != preferences(session)["revision"]:
         return None

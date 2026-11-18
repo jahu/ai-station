@@ -953,10 +953,14 @@ class AssistantControllerExecutor:
                 response = message_for(session, run)
                 response.content = value.response
                 response.metadata_json = {**response.metadata_json, "partial": False, "routing_only": False}
+                memory = decision.parameters.get("decision_context", {}).get("saved_user_context")
+                if memory:
+                    response.metadata_json = {**response.metadata_json, "personal_memory": memory}
                 run.metadata_json = {
                     **state,
                     "controller_phase": "finished",
                     "controller_outcome": value.kind,
+                    **({"personal_memory": memory} if memory else {}),
                 }
                 transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
             return "done"
