@@ -72,6 +72,7 @@ from app.music import MusicExecutor
 from app.music_setup_job import MusicSetupExecutor
 from app.native_llama_setup_job import NativeLlamaSetupExecutor
 from app.paths import safe_join, validate_relative
+from app.personal_memory import PersonalMemoryExecutor
 from app.photo_executor import PhotoPipeExecutor
 from app.private_ui import PrivateAccessExecutor
 from app.project_checks import ProjectPlanExecutor
@@ -352,6 +353,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    PersonalMemoryExecutor.name: PersonalMemoryExecutor(),
     ImageEditExecutor.name: ImageEditExecutor(),
     ImageEditReasonExecutor.name: ImageEditReasonExecutor(),
     AssistantStudioExecutor.name: AssistantStudioExecutor(),

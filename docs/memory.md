@@ -2,6 +2,54 @@
 
 Memory is control-plane metadata under the application data root. The existing Alembic-managed `memories` and FTS5 tables store content, tags, scope, pin/enabled state, confidence, timestamps and source Run/conversation/message references. Full-text search does not need an embedding model.
 
+## Personal context between conversations
+
+Open **Memory** or the **Memory** control in Chat. **Use saved memories** and
+**Learn from conversations** are separate account-private settings. Automatic
+learning starts off; enabling it allows successful visible Chat turns to queue
+bounded local extraction Runs. A per-conversation opt-out stops personal recall
+and learning there; it does not delete chat history. Turning off use preserves
+saved entries for inspection without using them in new inference.
+
+Learning normally reuses the conversation's local model. Under **Local learning
+model**, choose a fixed local model to also learn from conversations with external
+providers. Extraction never silently calls an external model. When you explicitly
+choose an external Chat provider, recalled context becomes part of that provider
+request, just like other conversation context.
+
+The model proposes useful lasting facts/preferences with exact quotations from
+the original user text. Attached documents, web results, tool observations and
+assistant assertions are not evidence. Stable topics consolidate repetitions and
+newer corrections; updates retain the original source and up to eight later
+evidence records. Manual edits are protected. Disabled entries stay disabled.
+Deleting a learned entry retains only a bounded topic digest and processing
+receipts, fencing stale jobs and history reimports without retaining its content.
+Historical Run snapshots remain audit records; forgetting is not their erasure.
+
+Both direct replies and orchestration decisions use owned recall Runs. Retrieval
+combines pinned/core personal context, literal FTS matches and current local CPU
+vectors when available. At most sixteen entries and 8,000 content characters
+are recalled. Missing encoders fall back to profile/lexical recall with the method
+visible in Run metadata. Project, agent and other-conversation records stay out;
+the current conversation's pinned entries remain eligible. Rolling conversation
+summaries keep their existing dedicated context path. Exact IDs, versions and
+worker-prepared context are recorded separately from the queued request.
+
+Consent/version/source checks run again before inference and publication. Capture
+Runs serialize within an account; a new conversation can wait for pending
+captures before recall. Extraction failures preserve the completed Chat reply.
+No database writer stays held during model or CPU inference. Pure local work
+without a child PID has one bounded lease recovery; uncertain CPU processes
+retain inspection semantics. Settings changes fence pending work.
+
+**Learn from earlier chats** is a separate opt-in action, processing at most
+twenty previously unprocessed successful turns per batch. Activity shows the
+ordinary Runs and Stop. Another batch continues from processing receipts; it
+does not silently scan all accounts or resurrect deleted memories. You can edit,
+disable or forget learned entries and inspect their quoted sources in Memory.
+The [design and delivery contract](plans/personal-conversation-memory.md) records
+the product comparison, safety boundaries and verification requirements.
+
 **Semantic search** offers a managed **Multilingual E5 Small** CPU model. In Memory,
 confirm the approximately 130 MiB model/tokenizer download and choose **Set up
 semantic memory**. Preparation verifies pinned bytes, checks actual vectors and
@@ -13,7 +61,8 @@ available throughout setup and failures.
 The panel shows readiness, current enabled-memory coverage, progress, errors and
 Stop. **Search by meaning** uses the current scope/target filters and displays
 matches with links to the original entries. Editing content invalidates its old
-vector; choose **Index remaining memories** to update coverage. Disabled/deleted
+vector; learned/edited entries queue local indexing automatically when configured.
+**Index remaining memories** also remains available. Disabled/deleted
 memories never appear in new results. Changing scope hides old search hits until a
 matching search completes. Historical Run results retain their original provenance.
 
@@ -31,7 +80,12 @@ Download progress has no memory text; weights/tokenizer stay in application-owne
 
 The Memory workspace supports search, scope/target filtering, editing, pinning, disabling, and confirmed deletion. The entry list is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; the pin icon stays out of the tab order. Pin and enabled flags on an entry reuse that sequence with unique Memory names; Space or Enter selects the focused row and does not invent a memory-flag Run. `GET /api/memory` supports literal-token text search, exact tag filtering, pagination and optional disabled entries. SQL filters scope and enabled state before applying the result limit. `POST /api/memory` validates scope targets and compatible provenance references. Sources are immutable after creation; edits and deletion require `expected_updated_at` and reject stale versions with 409. Source-free entries are explicitly user-entered, not attributed to an AI. Linked sources establish provenance, not truth or endorsement.
 
-Chat snapshots enabled, pinned global and matching conversation memory into a new Run's parameters. The snapshot includes the exact context and memory IDs/versions. Retrieval selects at most 20 entries, newest first, within a 12,000-character content budget; oversized entries are skipped. Project, agent, disabled, unpinned and other-conversation entries do not enter Chat. Editing or deleting a memory affects future Runs only; historical Run snapshots remain auditable. Memory content is user-controlled reference context and can be outdated.
+For compatibility, queued Chat parameters still retain the original bounded pinned
+snapshot (twenty entries / 12,000 characters). New worker recall replaces that
+block in the actual inference input and rechecks current consent and entry
+versions. Changed/disabled/deleted entries cannot enter prepared recall through
+stale vector hits. Historical snapshots remain auditable. Memory is reference
+data and may be imperfect; it never grants tools or changes permissions.
 
 Project and agent scopes are stored and searchable; consumers must request their own scope explicitly. No agent silently promotes inferred information into global memory. [Rolling conversation summaries](conversation-summaries.md) create editable scoped entries with exact coverage and source Run provenance. Oversized older messages are chunked at a recorded character offset rather than blocking the segment. Updates are user-requested; disabling/deleting the current entry stops future use without resurrecting an older summary. Existing recent-message window limits remain in force.
 

@@ -8479,3 +8479,67 @@ section:has(> .memory-grid) > .dashboard-note {
   width: 160px;
   flex-shrink: 0;
 }
+.personal-memory-panel {
+  margin-bottom: 20px;
+  padding: 20px;
+}
+.personal-memory-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.personal-memory-body {
+  display: grid;
+  gap: 14px;
+}
+.personal-memory-body > p {
+  margin: 0;
+  line-height: 1.6;
+}
+.personal-memory-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.personal-memory-choice input {
+  margin-top: 4px;
+  accent-color: var(--accent);
+}
+.personal-memory-choice span {
+  display: grid;
+  gap: 5px;
+}
+.personal-memory-choice small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.personal-memory-trigger {
+  align-self: flex-start;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.personal-memory-sources {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0;
+}
+.personal-memory-sources summary {
+  cursor: pointer;
+}
+.personal-memory-sources summary svg {
+  display: inline;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.personal-memory-sources ul {
+  padding-left: 18px;
+}
+.personal-memory-activity .row {
+  padding: 8px 0;
+  flex-wrap: wrap;
+}

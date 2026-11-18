@@ -152,6 +152,22 @@ def transition(
     from app.email_delivery import sync_delivery_from_run
 
     sync_delivery_from_run(session, run, target)
+    if target == RunStatus.SUCCEEDED and run.executor_type in {"chat", "assistant_controller"}:
+        from fastapi import HTTPException
+
+        from app.personal_memory import schedule_capture
+        from app.providers import ProviderError
+
+        try:
+            with session.begin_nested():
+                schedule_capture(session, run)
+        except (HTTPException, ProviderError, ValueError):
+            append_event(
+                session,
+                run.id,
+                "memory.learning_unavailable",
+                {"reason": "Personal learning could not be queued. Completed chat results are preserved."},
+            )
     return run
 
 

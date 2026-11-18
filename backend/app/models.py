@@ -337,6 +337,7 @@ class Conversation(Owned, Base):
     execution_mode: Mapped[str] = mapped_column(String(40), default="local")
     settings_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     auto_summary: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    personal_memory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
@@ -493,6 +494,7 @@ class MemoryEntry(Owned, Base):
     source_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_message_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    learning: Mapped[dict] = mapped_column(JSON, default=dict, server_default=text("'{}'"))
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 

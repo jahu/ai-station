@@ -7,7 +7,7 @@ from alembic import command
 from app import models as m
 from app.config import get_settings
 from app.db import alembic_config, migrate, reset_engine, session_factory
-from sqlalchemy import inspect, text
+from sqlalchemy import MetaData, Table, inspect, text
 
 ROOTS = (
     m.Task,
@@ -45,6 +45,7 @@ def test_all_existing_private_roots_are_backfilled_without_rebuilding_children_o
     }
     with session_factory()() as session:
         owner = session.query(m.User).one().id
+        legacy = MetaData()
         for model in (
             m.Conversation,
             m.Project,
@@ -57,7 +58,13 @@ def test_all_existing_private_roots_are_backfilled_without_rebuilding_children_o
             m.Connector,
             m.ChatProvider,
         ):
-            session.execute(model.__table__.insert().values(id=ids[model], **values[model]))
+            # Populate the actual old schema, not new columns supplied by the
+            # current ORM's Python defaults before the migration is executed.
+            table = Table(model.__tablename__, legacy, autoload_with=session.connection())
+            for column in model.__table__.columns:
+                if column.name in table.c and column.default is not None:
+                    table.c[column.name].default = column.default
+            session.execute(table.insert().values(id=ids[model], **values[model]))
         session.execute(
             m.Message.__table__.insert().values(
                 id=str(uuid4()),

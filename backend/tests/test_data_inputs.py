@@ -53,6 +53,8 @@ def inspect(client, artifact):
 @pytest.mark.parametrize(
     "name,payload",
     [("sales.csv", b"Item;Total\nApple;12\nPear;15\n"), ("sales.xlsx", workbook(formula=True))],
+    # ZIP timestamps differ between workers; binary payloads are not test IDs.
+    ids=["csv", "xlsx-with-formula"],
 )
 def test_upload_queues_bounded_preview_with_original_source_and_lineage(name, payload):
     with TestClient(app) as client:
@@ -87,6 +89,7 @@ def test_upload_queues_bounded_preview_with_original_source_and_lineage(name, pa
         ("traversal.xlsx", workbook(member=("../file", b"escape"))),
         ("entities.xlsx", workbook(sheet_xml='<!DOCTYPE test [<!ENTITY x "expansion">]><test/>')),
     ],
+    ids=["broken", "binary", "macro", "traversal", "entities"],
 )
 def test_invalid_inputs_fail_without_a_preview_or_source_changes(name, payload):
     with TestClient(app) as client:
