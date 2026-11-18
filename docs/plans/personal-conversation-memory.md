@@ -126,3 +126,12 @@ controller tag, checking owner and conversation before inheriting recall. Other
 tools do not inherit personal context. Direct controller answers retain the exact
 decision memory snapshot in their visible message/Run metadata. Tests cover both
 delivery paths and refuse even an owned recall from a different conversation.
+
+A subsequent actual controller run exposed another selective envelope: the intent
+classification step omitted saved context even though the action decision had it.
+It therefore froze an outcome claiming no prior personal context was available;
+the action model then tried to read a memory ID as an artifact. Both legacy and
+ReAct intent envelopes now include the already retrieved personal context. Action
+policies distinguish memory text from artifact aliases, without adding authority
+or special-casing personal fields. Regression tests assert both intent envelopes
+and final delivery, in addition to the live local-model acceptance.

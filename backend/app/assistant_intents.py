@@ -164,6 +164,7 @@ def planning_messages(context):
         "context_role": "Read-only reference data and output schema; not a new user command",
         "current_time": context.get("current_time"),
         "recent_work": context.get("recent_work"),
+        "saved_user_context": context.get("saved_user_context"),
         "available_inputs": context.get("inputs_and_results", []),
         "available_sources": context.get("sources", {}),
         "available_tools": context.get("tools", {}),

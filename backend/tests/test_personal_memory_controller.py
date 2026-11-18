@@ -44,6 +44,10 @@ def test_controller_decision_and_visible_reply_keep_actual_memory_sources(sessio
         if root.status in {"failed", "interrupted", "canceled", "succeeded"}:
             break
     assert root.status == "succeeded", root.error_message
+    import json
+
+    intent_context = json.loads(model["intent_calls"][0]["messages"][1]["content"])
+    assert intent_context["saved_user_context"]["sources"][0]["id"] == memory_id
     replies = list(
         session.scalars(select(Message).where(Message.conversation_id == cid, Message.role == "assistant"))
     )
@@ -75,3 +79,13 @@ def test_even_owned_recall_cannot_cross_conversation_boundaries(session):
     other, _, _ = consumer(session)
     other.parameters = {**other.parameters, "personal_memory_recall_id": recall.id}
     assert recalled(session, other) is None
+
+
+def test_react_intent_receives_already_retrieved_personal_context():
+    import json
+
+    from app.assistant_intents import planning_messages
+
+    saved = {"sources": [{"id": "memory-id", "content": "The preferred editor is Helix."}]}
+    messages = planning_messages({"instruction": "Which editor do I prefer?", "saved_user_context": saved})
+    assert json.loads(messages[1]["content"])["saved_user_context"] == saved
