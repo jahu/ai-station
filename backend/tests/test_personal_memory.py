@@ -77,7 +77,7 @@ def execute(session, run):
     return run
 
 
-def fake_proposal(monkeypatch, *, name="Alex", quote="My name is Alex", target=None, topic="user.name"):
+def fake_proposal(monkeypatch, *, name="Alex", quote="My name is Alex", topic="user.name"):
     async def infer(session, run, messages, **kwargs):
         assert run.parameters["location"] == "local"
         assert "user_message" in messages[1]["content"]
@@ -89,7 +89,6 @@ def fake_proposal(monkeypatch, *, name="Alex", quote="My name is Alex", target=N
                         "content": f"The user's name is {name}.",
                         "kind": "fact",
                         "quote": quote,
-                        "target_id": target,
                     }
                 ]
             }
@@ -172,15 +171,13 @@ def test_learns_name_and_recalls_in_fresh_conversation_without_embeddings(sessio
 def test_repetition_and_correction_consolidate_instead_of_growing(session, monkeypatch):
     consent(session, learn=True)
     _, _, first = capture(session, monkeypatch)
-    entry = session.scalar(select(MemoryEntry))
-    capture(session, monkeypatch, target=entry.id)
+    capture(session, monkeypatch)
     capture(
         session,
         monkeypatch,
         "Actually my name is Robin",
         name="Robin",
         quote="my name is Robin",
-        target=entry.id,
     )
     entries = list(session.scalars(select(MemoryEntry)))
     assert len(entries) == 1
@@ -383,7 +380,7 @@ def test_pinning_a_learned_fact_does_not_freeze_future_corrections(session, monk
     assert result.status_code == 200, result.text
     assert not result.json()["learning"]["protected"]
     session.expire_all()
-    capture(session, monkeypatch, "My name is Robin", name="Robin", quote="My name is Robin", target=entry_id)
+    capture(session, monkeypatch, "My name is Robin", name="Robin", quote="My name is Robin")
     entry = session.get(MemoryEntry, entry_id)
     assert "Robin" in entry.content and entry.pinned
 
@@ -423,3 +420,25 @@ def test_internal_or_superseded_turns_are_not_personal_learning_sources(session,
         }
     session.commit()
     assert schedule_capture(session, source_run) is None
+
+
+@pytest.mark.parametrize("empty", ['{"memories":[]}', "[]"])
+def test_extraction_cannot_echo_stored_values_or_copy_database_ids(session, monkeypatch, empty):
+    consent(session, learn=True)
+    stored = upsert_memory(session, scope="global", content="The preferred editor is Helix.")
+    stored.learning = {"topic": "user.preferred_editor", "origin": "conversation", "protected": False}
+    session.commit()
+    source_run, _, message = source(session, "Which editor do I prefer?")
+    run = schedule_capture(session, source_run)
+
+    async def infer(session, run, messages, **kwargs):
+        prompt = messages[1]["content"]
+        assert "Helix" not in prompt and stored.id not in prompt
+        assert json.loads(prompt)["known_topics"] == ["user.preferred_editor"]
+        return empty
+
+    monkeypatch.setattr("app.assistant_decisions.infer", infer)
+    execute(session, run)
+    assert run.status == "succeeded" and run.metadata_json["memory_ids"] == []
+    assert message.metadata_json["personal_memory_capture"]["memory_ids"] == []
+    assert len(list(session.scalars(select(MemoryEntry)))) == 1

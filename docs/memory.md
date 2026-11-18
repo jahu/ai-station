@@ -19,7 +19,9 @@ request, just like other conversation context.
 
 The model proposes useful lasting facts/preferences with exact quotations from
 the original user text. Attached documents, web results, tool observations and
-assistant assertions are not evidence. Stable topics consolidate repetitions and
+assistant assertions are not evidence. The extractor receives only source text
+and known topic names, not stored values or database IDs. The server resolves
+owned consolidation targets. Stable topics consolidate repetitions and
 newer corrections; updates retain the original source and up to eight later
 evidence records. Manual edits are protected. Disabled entries stay disabled.
 Deleting a learned entry retains only a bounded topic digest and processing

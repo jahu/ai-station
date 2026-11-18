@@ -43,8 +43,10 @@ providers and Task → Run → Events → Artifacts rather than add a vector ser
    the existing provider/managed-runtime lifecycle; no hidden external extraction,
    downloads or shell authority. Failed/canceled/internal planning turns save none.
 3. A closed structured proposal chooses durable facts/preferences, exact source
-   quotes and existing memory IDs for consolidation. Validate quotes against owned
-   messages and every target before publication. Merge repetitions; update newer
+   quotes and stable topic keys. Extraction sees only original user text and topic
+   vocabulary, never stored values/IDs or assistant answers. The server resolves
+   consolidation against owned entries and optimistic versions. Validate quotes
+   against owned messages before publication. Merge repetitions; update newer
    explicit corrections. Never overwrite manual edits or unrelated scoped entries.
    Preserve creation provenance plus bounded update evidence. Serial owner-scoped
    jobs and version checks avoid stale/concurrent overwrites. Malformed output has
@@ -101,3 +103,18 @@ Completion requires the end-to-end behavior above, not documentation or green
 unit checks alone. Record exact evidence and limitations. Keep source/fixtures
 small, reuse installed models, remove owned test helpers and temporary data after
 verification, and preserve the user's dirty root checkout.
+
+## Real-model finding and design correction — 2026-11-18
+
+The first local Qwen 9B acceptance successfully saved a name and recalled it
+semantically in a new conversation. However, extraction from the subsequent
+question echoed the saved name and mistyped its UUID. Supplying saved values to
+the extractor created a feedback path: an existing fact could be presented as
+new user evidence. An exact quotation alone does not prove semantic support.
+
+The extractor now receives source text plus topic vocabulary only. Consolidation
+and database IDs stay server-owned; inference cannot copy/mistype an entry ID.
+No-fact responses have an explicit empty-object envelope; an empty root list is
+also a safe no-op. Nonempty untyped lists/unknown fields remain rejected. Stored
+facts still inform the separate answer/decision recall path, never extraction.
+This is a general evidence boundary, not a question/name-specific classifier.

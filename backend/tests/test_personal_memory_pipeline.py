@@ -129,7 +129,6 @@ def test_manual_edit_during_inference_wins(session, monkeypatch):
                         "kind": "fact",
                         "quote": "My name is Robin",
                         "content": "Robin",
-                        "target_id": entry.id,
                     }
                 ]
             }
