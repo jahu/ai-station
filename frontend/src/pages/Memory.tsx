@@ -12,6 +12,7 @@ import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
 import MemorySemantic from "./MemorySemantic";
+import PersonalMemory from "./PersonalMemory";
 
 type Scope = "global" | "project" | "conversation" | "agent";
 interface Entry {
@@ -29,6 +30,16 @@ interface Entry {
   source_run_id: string | null;
   source_conversation_id: string | null;
   source_message_id: string | null;
+  learning?: {
+    origin?: string;
+    protected?: boolean;
+    evidence?: {
+      message_id: string;
+      conversation_id: string;
+      quote: string;
+      captured_at: string;
+    }[];
+  };
 }
 const kinds = [
   "fact",
@@ -93,7 +104,9 @@ function MemoryCards({ entries }: { entries: Entry[] }) {
                 {entry.source_run_id ||
                 entry.source_message_id ||
                 entry.source_conversation_id
-                  ? "Linked source"
+                  ? entry.learning?.origin === "conversation"
+                    ? "Learned from conversation"
+                    : "Linked source"
                   : "User entered"}{" "}
                 · {new Date(entry.updated_at).toLocaleString()}
               </small>
@@ -138,6 +151,7 @@ export function Memory() {
         Inspect what AI Station remembers, where it came from, and where it
         applies.
       </PageTitle>
+      <PersonalMemory />
       <section className="panel memory-filters">
         <label>
           <Search size={15} /> Search memory
@@ -388,9 +402,9 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
         title={entry ? "Memory entry" : "Add memory"}
         action={<Link to="/memory">All memories</Link>}
       >
-        Only enabled, pinned global and conversation entries are included in new
-        Chat Runs. Agents can explicitly retrieve their own enabled scoped
-        memories.
+        Personal memories can inform future conversations when memory is
+        enabled. Your edits stay protected from automatic changes. Project and
+        agent context keeps its own scope.
       </PageTitle>
       <ErrorNotice error={save.error ?? remove.error} />
       <form
@@ -490,7 +504,9 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
             {entry.source_run_id ||
             entry.source_message_id ||
             entry.source_conversation_id
-              ? "User-recorded memory linked to the following source. The link does not certify the claim."
+              ? entry.learning?.origin === "conversation"
+                ? "Learned from your conversation using a local model. Review the original words below; memories can be corrected."
+                : "User-recorded memory linked to the following source. The link does not certify the claim."
               : "User-entered memory. No AI-generated source is claimed."}
           </p>
           <p className="muted">
@@ -510,6 +526,20 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
           {entry.source_message_id && (
             <code>Message {entry.source_message_id}</code>
           )}
+          {entry.learning?.protected && (
+            <p className="notice">
+              Manually reviewed: automatic learning will not overwrite this
+              entry.
+            </p>
+          )}
+          {entry.learning?.evidence?.map((source) => (
+            <blockquote key={`${source.message_id}-${source.captured_at}`}>
+              <p>{source.quote}</p>
+              <Link to={`/chat/${source.conversation_id}`}>
+                Source conversation
+              </Link>
+            </blockquote>
+          ))}
           {entry.scope === "agent" && entry.scope_id ? (
             <p className="muted">
               <Link

@@ -1975,3 +1975,12 @@ video settings. Closed model aliases are rechecked before binding ordinary film
 Runs; selected native capabilities supply the sampling recipe and orientation.
 No hardware probe or inference runs in the enqueue handler. Unsupported or
 changed choices refuse rather than falling back to the default 5B engine.
+Personal cross-conversation memory is account-private control-plane metadata.
+Opt-in successful-turn capture, bounded history learning and pre-inference recall
+reuse durable Tasks/Runs and existing local providers/CPU embeddings. Structured
+proposals require exact owned user-message evidence; consolidation, consent and
+source/version checks remain server-owned. Workers record recalled context and
+sources separately from immutable queued messages. Manual corrections, disabling
+and hashed-topic forgetting fence automatic updates. No inference runs in HTTP
+handlers, no vector service is added, and project/agent scope stays explicit.
+See [personal memory](plans/personal-conversation-memory.md).

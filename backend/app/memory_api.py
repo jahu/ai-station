@@ -11,10 +11,12 @@ from sqlalchemy.orm import Session
 from app.db import session_scope, utcnow
 from app.memory import delete_memory, search_memory, upsert_memory
 from app.models import Agent, Conversation, MemoryEntry, Message, Project, Run
+from app.personal_memory import register_routes
 from app.serialize import memory_dict
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
 DB = Annotated[Session, Depends(session_scope, scope="function")]
+register_routes(router)
 Scope = Literal["global", "conversation", "project", "agent"]
 Kind = Literal["fact", "decision", "preference", "project_context", "summary", "observation", "procedure"]
 
@@ -141,6 +143,9 @@ def update_memory(entry_id: UUID, body: MemoryUpdate, session: DB):
     entry = entry_or_error(session, entry_id)
     if entry.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Memory changed. Reload before saving.")
+    manually_changed = any(
+        getattr(entry, key) != getattr(body, key) for key in ("content", "memory_type", "tags", "confidence")
+    )
     upsert_memory(
         session,
         scope=entry.scope,
@@ -148,7 +153,13 @@ def update_memory(entry_id: UUID, body: MemoryUpdate, session: DB):
         **body.model_dump(exclude={"enabled", "expected_updated_at"}),
     )
     entry.enabled = body.enabled
+    from app.personal_memory import protect, queue_index
+
+    if manually_changed:
+        protect(entry)
     entry.updated_at = utcnow()
+    if entry.enabled:
+        queue_index(session, entry.owner_id)
     session.commit()
     return memory_dict(entry)
 
@@ -158,5 +169,8 @@ def remove_memory(entry_id: UUID, body: MemoryDelete, session: DB):
     entry = entry_or_error(session, entry_id)
     if entry.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Memory changed. Reload before deleting.")
+    from app.personal_memory import forget
+
+    forget(session, entry)
     delete_memory(session, entry.id)
     session.commit()

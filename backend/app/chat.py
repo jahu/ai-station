@@ -122,7 +122,11 @@ def ensure_idle(session, conversation_id, *, allow_archived=False):
     if row.archived_at is not None and not allow_archived:
         raise HTTPException(409, "Restore this archived conversation before continuing")
     active = session.scalar(
-        select(Run).where(Run.conversation_id == conversation_id, Run.status.not_in(TERMINAL))
+        select(Run).where(
+            Run.conversation_id == conversation_id,
+            Run.status.not_in(TERMINAL),
+            Run.executor_type != "personal_memory",
+        )
     )
     if active is not None:
         raise HTTPException(409, "This conversation already has an active run")
@@ -217,6 +221,7 @@ def archive_conversation(conversation_id: UUID, body: ArchiveBody, session: DB):
 class ContextPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
     auto_summary: StrictBool
+    personal_memory: StrictBool | None = None
 
 
 @router.patch("/conversations/{conversation_id}/context")
@@ -224,6 +229,10 @@ def edit_context(conversation_id: UUID, body: ContextPolicy, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
     row.auto_summary = body.auto_summary
+    if body.personal_memory is not None:
+        if row.personal_memory != body.personal_memory:
+            row.settings_version += 1
+        row.personal_memory = body.personal_memory
     row.updated_at = utcnow()
     session.commit()
     return conversation_view(session, row)
@@ -243,7 +252,9 @@ def detail(conversation_id: UUID, session: DB):
     )
     active = session.scalar(
         select(Run)
-        .where(Run.conversation_id == row.id, Run.status.not_in(TERMINAL))
+        .where(
+            Run.conversation_id == row.id, Run.status.not_in(TERMINAL), Run.executor_type != "personal_memory"
+        )
         .order_by((Run.executor_type == "assistant_controller").desc(), Run.created_at)
     )
     streaming = (
@@ -477,18 +488,24 @@ def enqueue(
         else:
             alternating.append(item)
     context = alternating
-    pinned = list(
-        session.scalars(
-            select(MemoryEntry)
-            .where(
-                MemoryEntry.enabled.is_(True),
-                MemoryEntry.pinned.is_(True),
-                ((MemoryEntry.scope == "conversation") & (MemoryEntry.scope_id == row.id))
-                | ((MemoryEntry.scope == "global") & (MemoryEntry.scope_id == "")),
+    from app.personal_memory import allowed, schedule_recall
+
+    pinned = (
+        list(
+            session.scalars(
+                select(MemoryEntry)
+                .where(
+                    MemoryEntry.enabled.is_(True),
+                    MemoryEntry.pinned.is_(True),
+                    ((MemoryEntry.scope == "conversation") & (MemoryEntry.scope_id == row.id))
+                    | ((MemoryEntry.scope == "global") & (MemoryEntry.scope_id == "")),
+                )
+                .order_by(MemoryEntry.updated_at.desc(), MemoryEntry.id)
+                .limit(20)
             )
-            .order_by(MemoryEntry.updated_at.desc(), MemoryEntry.id)
-            .limit(20)
         )
+        if allowed(session, row)
+        else []
     )
     memory_context, memory_sources = [], []
     memory_budget = 12000
@@ -503,8 +520,10 @@ def enqueue(
         system += (
             "\n\nEarlier conversation summary (reference only; may be imperfect):\n" + summary_entry.content
         )
+    memory_block = ""
     if memory_context:
-        system += "\n\nUser-pinned reference context (may be outdated):\n" + "\n\n".join(memory_context)
+        memory_block = "\n\nUser-pinned reference context (may be outdated):\n" + "\n\n".join(memory_context)
+        system += memory_block
     if system:
         context.insert(0, {"role": "system", "content": system.strip()})
     if controller_context:
@@ -566,6 +585,7 @@ def enqueue(
             ),
             "messages": context,
             "memory_sources": memory_sources,
+            **({"memory_context_block": memory_block} if memory_block else {}),
             **(
                 {"agent_result_sources": list(reversed(agent_result_sources))} if agent_result_sources else {}
             ),
@@ -588,6 +608,24 @@ def enqueue(
     )
     from app.llama import prepare_consumer
 
+    memory_parent = parent
+    tag = run.parameters.get("controller_tool_context") or {}
+    if tag.get("tool") == "chat.reply" and tag.get("root_id"):
+        controller = session.get(Run, tag["root_id"])
+        if (
+            controller
+            and controller.executor_type == "assistant_controller"
+            and controller.owner_id == run.owner_id
+            and controller.conversation_id == row.id
+        ):
+            memory_parent = controller
+    if memory_parent and memory_parent.parameters.get("personal_memory_recall_id"):
+        run.parameters = {
+            **run.parameters,
+            "personal_memory_recall_id": memory_parent.parameters["personal_memory_recall_id"],
+        }
+    elif controller_context is None:
+        schedule_recall(session, run, row, intent)
     prepare_page_browser(session, run)
     prepare_consumer(session, run)
     response = Message(

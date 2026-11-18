@@ -72,6 +72,7 @@ def conversation_dict(conversation: Conversation) -> dict:
         "max_tokens": conversation.max_tokens,
         "execution_mode": conversation.execution_mode,
         "auto_summary": conversation.auto_summary,
+        "personal_memory": conversation.personal_memory,
         "archived_at": iso(conversation.archived_at),
         "created_at": iso(conversation.created_at),
         "updated_at": iso(conversation.updated_at),
@@ -188,6 +189,7 @@ def memory_dict(entry: MemoryEntry) -> dict:
         "source_run_id": entry.source_run_id,
         "source_conversation_id": entry.source_conversation_id,
         "source_message_id": entry.source_message_id,
+        "learning": entry.learning,
         "created_at": iso(entry.created_at),
         "updated_at": iso(entry.updated_at),
     }

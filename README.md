@@ -53,6 +53,11 @@ Version 0.4 and older need a one-time installation of the newer desktop client.
 
 ## What can I do with it?
 
+**New on develop:** optional [personal memory](docs/memory.md) learns useful
+details from conversations and recalls them in new chats. Review, correct or
+forget saved context at any time. Extraction and semantic indexing run locally;
+automatic learning is off until you enable it. This is newer than the 0.8.0 installers.
+
 | Workspace                    | Use it for                                                                                                                                                          |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Chat and research**        | Pick a local LLM, attach files, search the web and read pages. Follow up in the same conversation.                                                                  |

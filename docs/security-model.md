@@ -2183,3 +2183,15 @@ Its component/engine identity is rechecked before dispatch, with the same native
 readiness, source ownership and resource admission as Video. An explicit reviewed
 model, format or duration cannot be replaced by a tool proposal. Model metadata
 does not grant setup authority, inference readiness or a new execution capability.
+Personal learning requires account consent plus the conversation's memory policy.
+Only original owned user messages support proposed global personal facts; tools,
+attachments and model statements cannot provide extraction evidence. Exact quote,
+owned target, immutable creation source and optimistic version checks fence writes.
+Global means private to that account. Manual edits stay protected; disabled entries
+do not reactivate. Forgetting retains non-content topic digests and source receipts
+to prevent stale/backfill resurrection; historical execution snapshots remain.
+Extraction is local-only, including when a separately selected local learning
+model processes user text from an external Chat. Explicitly selected external
+Chat models receive enabled recalled context as part of the ordinary request.
+Consent is rechecked before publication, semantic work uses owned bounded CPU
+processes, and a failed optional memory Run cannot invalidate a completed reply.

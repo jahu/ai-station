@@ -724,6 +724,11 @@ class MemoryEmbedExecutor:
             run.metadata_json = {**run.metadata_json, **result}
             run.summary = result.get("summary") or "Embeddings Run completed."
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload=result)
+            if run.capability == "memory.embed.index" and run.metadata_json.get("personal_memory_reindex"):
+                from app.personal_memory import preferences, queue_index
+
+                if preferences(session)["use"]:
+                    queue_index(session, run.owner_id)
             session.commit()
         except Exception as exc:
             session.rollback()

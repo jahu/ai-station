@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import UnifiedModelPicker from "./UnifiedModelPicker";
+import PersonalMemory from "./PersonalMemory";
 import ChatThinking from "./ChatThinking";
 import { useThinking } from "./chat-thinking";
 import ConversationComposer from "./ConversationComposer";
@@ -272,6 +273,7 @@ export default function NewChat({
           : "Ask a question or describe what you want to create."}
       </p>
       <div className="new-chat-controls">
+        <PersonalMemory compact />
         {workTaskId ? (
           <p className="muted">
             Task model:{" "}

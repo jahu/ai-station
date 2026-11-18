@@ -12,6 +12,7 @@ KEYS = {
     "media_prompt_translation",
     "image_model_defaults",
     "memory_embedding_activity",
+    "personal_memory",
 }
 
 
@@ -25,7 +26,7 @@ def preference_row(session, key: str, *, default: dict | None = None, lock: bool
         statement = select(Setting).where(Setting.key == key)
     if lock:
         statement = statement.with_for_update().execution_options(populate_existing=True)
-    row = session.scalar(statement)
+    row = session.scalar(statement.execution_options(populate_existing=True))
     if row is None and default is not None:
         row = (
             UserSetting(user_id=owner, key=key, value=deepcopy(default))

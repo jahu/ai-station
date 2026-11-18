@@ -93,6 +93,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             session.commit()
             touched.append(run.id)
             continue
+        if run.executor_type == "personal_memory" and not run.pid:
+            from app.personal_memory import recover
+
+            recover(session, run)
+            session.commit()
+            touched.append(run.id)
+            continue
         if run.executor_type in {"studio_audio_step", "studio_production_step", "assistant_studio"}:
             from app.studio_audio_production import recover_enqueue_step
 
