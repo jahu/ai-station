@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import UnifiedModelPicker from "./UnifiedModelPicker";
+import PersonalMemory from "./PersonalMemory";
 import ChatThinking from "./ChatThinking";
 import { useThinking } from "./chat-thinking";
 import ConversationComposer from "./ConversationComposer";
@@ -462,7 +463,9 @@ export default function NewChat({
           )
         }
         controls={
-          workTaskId ? undefined : (
+          workTaskId ? (
+            <PersonalMemory compact />
+          ) : (
             <>
               {[
                 "auto",
@@ -483,6 +486,7 @@ export default function NewChat({
                     onRenderPages={web.setRenderPages}
                   />
                 )}
+              <PersonalMemory compact />
             </>
           )
         }

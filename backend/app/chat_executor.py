@@ -165,6 +165,13 @@ class ChatExecutor:
             from app.vision import image_context
 
             messages = image_context(session, run, messages)
+        from app.personal_memory import apply_chat_recall
+
+        prepared = await checkpoint(
+            session, run, claim, deadline, lambda: apply_chat_recall(session, run, message, messages)
+        )
+        if prepared is not None:
+            messages = prepared
         params = {**run.parameters, "messages": messages}
         stream = completion_stream(session, params)
         # Binding the provider can read private/model records. Finish that

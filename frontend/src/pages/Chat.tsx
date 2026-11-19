@@ -33,6 +33,10 @@ import {
 import LlamaModels from "./LlamaModels";
 import UnifiedModelPicker from "./UnifiedModelPicker";
 import ChatThinking from "./ChatThinking";
+import PersonalMemory, {
+  MemorySources,
+  type MemoryRecall,
+} from "./PersonalMemory";
 import ChatWorkPicker from "./ChatWorkPicker";
 import { useThinking } from "./chat-thinking";
 import NewChat from "./NewChat";
@@ -123,6 +127,12 @@ type Message = ActionResult & {
   };
   error_message: string;
   metadata: {
+    personal_memory?: MemoryRecall;
+    personal_memory_capture?: {
+      run_id?: string;
+      status: string;
+      memory_ids?: string[];
+    };
     agent_result_sources?: AgentResultSource[];
     transcript_sources?: {
       source_message_id: string;
@@ -193,6 +203,7 @@ type Detail = Conversation & {
   settings_version: number;
   work_context?: WorkContext | null;
   auto_summary: boolean;
+  personal_memory?: boolean;
   summary_update: { id: string; status: string; error_message: string } | null;
   messages: Message[];
   active_run: Run | null;
@@ -942,6 +953,15 @@ function Transcript({
                 value={message.metadata.creation_context}
                 active={current}
               />
+              <MemorySources value={message.metadata.personal_memory} />
+              {message.metadata.personal_memory_capture?.status ===
+                "succeeded" &&
+                !!message.metadata.personal_memory_capture.memory_ids
+                  ?.length && (
+                  <p className="muted">
+                    Memory updated · <Link to="/memory">Review memories</Link>
+                  </p>
+                )}
               {message.metadata.conversation_reference && (
                 <p className="muted">
                   {message.metadata.conversation_reference.use_result_file
@@ -1496,10 +1516,19 @@ function ConversationView({
       </div>
       <ErrorNotice error={archive.error ?? web.error} />
       {conversation.archived_at && (
-        <p className="dashboard-note">
-          Archived conversation. Messages, tasks and files are preserved.
-          Restore it to continue.
-        </p>
+        <>
+          <p className="dashboard-note">
+            Archived conversation. Messages, tasks and files are preserved.
+            Restore it to continue.
+          </p>
+          <PersonalMemory
+            compact
+            conversationId={conversation.id}
+            enabled={conversation.personal_memory !== false}
+            autoSummary={conversation.auto_summary}
+            busy={busy}
+          />
+        </>
       )}
       {thinking.available && !continuing && (
         <ChatThinking
@@ -1931,6 +1960,13 @@ function ConversationView({
                     onRenderPages={web.setRenderPages}
                   />
                 )}
+                <PersonalMemory
+                  compact
+                  conversationId={conversation.id}
+                  enabled={conversation.personal_memory !== false}
+                  autoSummary={conversation.auto_summary}
+                  busy={busy}
+                />
               </>
             }
             sendButton={

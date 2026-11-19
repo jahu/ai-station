@@ -6,7 +6,7 @@
 
 Chat, images, video, voices, music and agents — on your own computer.
 
-**[Download 0.8.0](https://github.com/jahu/ai-station/releases/tag/v0.8.0)** · **[See it in action](https://ai-station.dev/)** · [Installation guide](https://ai-station.dev/install/) · [Release notes](docs/releases/0.8.0.md)
+**[Download 0.8.1](https://github.com/jahu/ai-station/releases/tag/v0.8.1)** · **[See it in action](https://ai-station.dev/)** · [Installation guide](https://ai-station.dev/install/) · [Release notes](docs/releases/0.8.1.md)
 
 Linux & Windows · Local inference · Cloud optional · [Free for noncommercial use](LICENSE)
 
@@ -30,8 +30,8 @@ installation and everyday use. [Tell us what worked, what broke or what was conf
 
 | Your computer        | Official installer                                                                                                       |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Windows 10 / 11, x64 | [Download Setup.exe](https://github.com/jahu/ai-station/releases/download/v0.8.0/AI-Station-0.8.0-windows-x64-Setup.exe) |
-| Ubuntu 24.04, x86-64 | [Download .deb](https://github.com/jahu/ai-station/releases/download/v0.8.0/AI-Station-0.8.0-linux-amd64.deb)            |
+| Windows 10 / 11, x64 | [Download Setup.exe](https://github.com/jahu/ai-station/releases/download/v0.8.1/AI-Station-0.8.1-windows-x64-Setup.exe) |
+| Ubuntu 24.04, x86-64 | [Download .deb](https://github.com/jahu/ai-station/releases/download/v0.8.1/AI-Station-0.8.1-linux-amd64.deb)            |
 
 1. Install and open AI Station.
 2. Create your account and follow guided setup. Review model sizes and licenses
@@ -52,6 +52,11 @@ Already using the desktop app? Open **Settings → Updates → Update and restar
 Version 0.4 and older need a one-time installation of the newer desktop client.
 
 ## What can I do with it?
+
+**Optional [personal memory](docs/memory.md)** learns useful
+details from conversations and recalls them in new chats. Review, correct or
+forget saved context at any time. Extraction and semantic indexing run locally;
+automatic learning is off until you enable it.
 
 | Workspace                    | Use it for                                                                                                                                                          |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -128,7 +133,17 @@ impressions. These are demonstrations, not endorsements or built-in celebrity
 presets. Public media and its sources are recorded in [asset provenance](website/asset-provenance.json).
 Direct publishing to social networks is still planned.
 
-## New in 0.8.0
+## New in 0.8.1
+
+Turn on **Memory → Learn from conversations** to let AI Station remember useful
+details across chats. Review and correct what it saved in **Memory**, or switch
+it off for a single conversation. The control sits beside **Web search** in the
+composer. Background history updates also keep Chat responsive while the local
+database saves changes.
+
+[Release notes →](docs/releases/0.8.1.md)
+
+## Live face, portrait and voice
 
 **Live face, portrait and voice transformation — on your own computer.**
 Open **Live**, choose references, and start your camera and microphone.

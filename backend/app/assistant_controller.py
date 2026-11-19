@@ -340,6 +340,9 @@ def enqueue(session, conversation, body, *, commit=True):
         metadata={"controller_steps": [], "controller_phase": "decide"},
     )
     user.run_id = run.id
+    from app.personal_memory import schedule_recall
+
+    schedule_recall(session, run, conversation, body.content)
     link_attachments(session, user, run)
     session.add(
         Message(
@@ -445,6 +448,7 @@ def analysis_catalog(session, root):
 
 def decision_context(session, root):
     from app.conversation_assets import reference_context
+    from app.personal_memory import recalled
 
     observations = []
     for step in root.metadata_json.get("controller_steps", []):
@@ -485,6 +489,7 @@ def decision_context(session, root):
     from app.studio_conversation import public_materials
 
     return {
+        "saved_user_context": recalled(session, root),
         "creative_projects": public_projects(root.parameters.get("controller_creative_projects", {})),
         "studio_materials": public_materials(root.parameters.get("controller_studio_materials", {})),
         "instruction": root.parameters["content"],
@@ -948,10 +953,14 @@ class AssistantControllerExecutor:
                 response = message_for(session, run)
                 response.content = value.response
                 response.metadata_json = {**response.metadata_json, "partial": False, "routing_only": False}
+                memory = decision.parameters.get("decision_context", {}).get("saved_user_context")
+                if memory:
+                    response.metadata_json = {**response.metadata_json, "personal_memory": memory}
                 run.metadata_json = {
                     **state,
                     "controller_phase": "finished",
                     "controller_outcome": value.kind,
+                    **({"personal_memory": memory} if memory else {}),
                 }
                 transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
             return "done"
