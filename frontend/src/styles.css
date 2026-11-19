@@ -8519,9 +8519,89 @@ section:has(> .memory-grid) > .dashboard-note {
   line-height: 1.5;
 }
 .personal-memory-trigger {
-  align-self: flex-start;
+  min-height: 36px;
+  padding: 6px 10px;
+  gap: 6px;
   flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 12px;
+}
+.personal-memory-trigger .chip {
+  color: inherit;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.new-chat-footer > .personal-memory-trigger {
+  margin-left: 0;
+}
+.personal-memory-trigger[data-memory-state="on"] {
+  color: #c9ec9a;
+  background: #23321c;
+  border-color: #74934f;
+}
+.personal-memory-trigger[data-memory-state="saved only"] svg {
+  color: var(--accent);
+}
+.personal-memory-trigger[data-memory-state="off"] {
+  color: var(--danger, #f87171);
+}
+.chat-main
+  .shared-chat-composer
+  .new-chat-footer:has(> .personal-memory-trigger) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.new-chat-footer:has(> .personal-memory-trigger) > .chat-web-search {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.new-chat-footer:has(> .personal-memory-trigger) .web-search-toggle {
+  min-height: 36px;
+  padding: 6px 10px;
+}
+.new-chat-footer:has(> .personal-memory-trigger)
+  > .chat-web-search:has(.web-search-query) {
+  flex-basis: 100%;
+  order: 3;
+}
+@media (max-width: 600px) {
+  .chat-main .shared-chat-composer .new-chat-footer .personal-memory-trigger {
+    width: auto;
+    padding: 6px 8px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-toggle {
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-toggle span,
+  .new-chat-footer .personal-memory-label {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .chat-main .shared-chat-composer:has(.personal-memory-trigger) {
+    padding-inline: 12px;
+  }
+  .chat-main
+    .shared-chat-composer
+    .new-chat-footer:has(> .personal-memory-trigger) {
+    gap: 3px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-actions {
+    gap: 4px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-toggle,
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-options {
+    width: 32px;
+    padding-inline: 6px;
+  }
+  .new-chat-footer .personal-memory-trigger .chip {
+    padding-inline: 4px;
+  }
 }
 .personal-memory-sources {
   color: var(--muted);

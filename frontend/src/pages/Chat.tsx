@@ -1514,19 +1514,21 @@ function ConversationView({
           </Link>
         )}
       </div>
-      <PersonalMemory
-        compact
-        conversationId={conversation.id}
-        enabled={conversation.personal_memory !== false}
-        autoSummary={conversation.auto_summary}
-        busy={busy}
-      />
       <ErrorNotice error={archive.error ?? web.error} />
       {conversation.archived_at && (
-        <p className="dashboard-note">
-          Archived conversation. Messages, tasks and files are preserved.
-          Restore it to continue.
-        </p>
+        <>
+          <p className="dashboard-note">
+            Archived conversation. Messages, tasks and files are preserved.
+            Restore it to continue.
+          </p>
+          <PersonalMemory
+            compact
+            conversationId={conversation.id}
+            enabled={conversation.personal_memory !== false}
+            autoSummary={conversation.auto_summary}
+            busy={busy}
+          />
+        </>
       )}
       {thinking.available && !continuing && (
         <ChatThinking
@@ -1958,6 +1960,13 @@ function ConversationView({
                     onRenderPages={web.setRenderPages}
                   />
                 )}
+                <PersonalMemory
+                  compact
+                  conversationId={conversation.id}
+                  enabled={conversation.personal_memory !== false}
+                  autoSummary={conversation.auto_summary}
+                  busy={busy}
+                />
               </>
             }
             sendButton={
