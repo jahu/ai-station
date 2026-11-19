@@ -13,7 +13,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
@@ -42,7 +43,15 @@ from app.creative_sessions import router as creative_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
-from app.db import control_session_factory, get_engine, migrate, session_factory, session_scope, utcnow
+from app.db import (
+    control_session_factory,
+    migrate,
+    read_projection,
+    session_factory,
+    session_scope,
+    sqlite_busy,
+    utcnow,
+)
 from app.effects import router as effects_router
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
@@ -156,7 +165,10 @@ async def local_requests(request: Request, call_next):
         guard = require_account_session
     else:
         guard = require_operator_session
-    gated = await run_in_threadpool(guard, request)
+    try:
+        gated = await run_in_threadpool(guard, request)
+    except OperationalError as error:
+        return await database_operation_failed(request, error)
     if gated is not None:
         return gated
     if accounts_active:
@@ -202,6 +214,17 @@ async def invalid_request(_request, error):
     )
 
 
+@app.exception_handler(OperationalError)
+async def database_operation_failed(_request, error):
+    if not sqlite_busy(error):
+        raise error
+    return JSONResponse(
+        {"detail": "AI Station is saving changes. Please try again in a moment."},
+        status_code=503,
+        headers={"Cache-Control": "no-store", "Retry-After": "1"},
+    )
+
+
 @app.exception_handler(RegistryDeletedError)
 async def removed_definition(_request, error):
     return JSONResponse({"detail": str(error)}, status_code=409)
@@ -237,8 +260,9 @@ def get_run(session: Session, run_id: UUID) -> Run:
 @app.get("/api/health")
 def health(response: Response):
     # Public readiness checks reveal no account rows or application history.
-    with get_engine().connect() as connection:
-        connection.execute(text("SELECT 1"))
+    with control_session_factory()() as session:
+        read_projection(session)
+        session.execute(select(1))
     response.headers["Cache-Control"] = "no-store"
     result = {"status": "ok", "version": __version__}
     if instance_id := get_settings().desktop_instance_id:

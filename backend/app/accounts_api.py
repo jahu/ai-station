@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app import account_mfa, accounts
 from app.account_credentials import username_identity
 from app.account_http import attach_cookie, attempt_budget, clear_cookies
-from app.db import control_session_scope
+from app.db import control_session_scope, read_projection
 from app.models import User, UserSession
 from app.private_access import private_access_enabled, secure_cookie
 
@@ -105,6 +105,7 @@ def _status(session, actor) -> dict:
 @router.get("/auth")
 def status(request: Request, response: Response, session: DB):
     response.headers["Cache-Control"] = "no-store"
+    read_projection(session)
     result = _status(session, getattr(request.state, "account_principal", None))
     peer = request.client.host if request.client else ""
     result["setup_link_required"] = result["setup_required"] and (

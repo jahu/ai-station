@@ -14,10 +14,11 @@ DEFAULT = {"revision": 0, "enabled": False, "password_required": False}
 
 def read(session=None, *, run=None):
     if session is None:
-        from app.db import control_session_factory
+        from app.db import control_session_factory, read_projection
 
         try:
             with control_session_factory()() as current:
+                read_projection(current)
                 return read(current)
         except OperationalError:
             return dict(DEFAULT)

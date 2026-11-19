@@ -107,17 +107,23 @@ def _verdict(row: UserSession, token: str, now: datetime) -> str:
         return "invalid"
 
 
-def _lookup(session: Session, token: str, *, legacy: bool) -> UserSession | None:
+def _lookup(session: Session, token: str, *, legacy: bool, lock: bool) -> UserSession | None:
     if not isinstance(token, str) or not 1 <= len(token) <= 256:
         return None
     digest = hashlib.sha256(token.encode()).hexdigest()
     clause = UserSession.lookup_hash == digest
     if legacy:
         clause = or_(clause, UserSession.legacy_operator_key == "operator_session")
-    for row in session.scalars(select(UserSession).where(clause).with_for_update()):
+    query = select(UserSession).where(clause)
+    for row in session.scalars(query.with_for_update() if lock else query):
         if _verdict(row, token, utcnow()) in {"valid", "idle", "expired"}:
             return row
     return None
+
+
+def activity_refresh_due(row: UserSession, now: datetime) -> bool:
+    last_seen = parse_time(row.token_record.get("last_seen_at"))
+    return last_seen is None or (now - last_seen).total_seconds() >= LAST_SEEN_MIN_WRITE_SECONDS
 
 
 def authenticate(
@@ -126,12 +132,13 @@ def authenticate(
     *,
     legacy: bool = False,
     now: datetime | None = None,
+    refresh_activity: bool = True,
 ) -> Principal | None:
     """Validate expiry, current account status and enrollment before refreshing idle time."""
     if not token:
         return None
     now = now or utcnow()
-    row = _lookup(session, token, legacy=legacy)
+    row = _lookup(session, token, legacy=legacy, lock=refresh_activity)
     if row is None or _verdict(row, token, now) != "valid":
         return None
     user = session.get(User, row.user_id, populate_existing=True)
@@ -145,18 +152,19 @@ def authenticate(
         issued = parse_time(row.token_record.get("issued_at"))
         if issued is None or issued < user.password_changed_at:
             return None
-    last_seen = parse_time(row.token_record.get("last_seen_at"))
-    if last_seen is None or (now - last_seen).total_seconds() >= LAST_SEEN_MIN_WRITE_SECONDS:
+    if refresh_activity and activity_refresh_due(row, now):
         row.token_record = {**row.token_record, "last_seen_at": now.isoformat()}
     return Principal(user.id, row.id, user.is_admin)
 
 
-def authenticate_cookies(session: Session, cookies: dict[str, str]) -> Principal | None:
+def authenticate_cookies(
+    session: Session, cookies: dict[str, str], *, refresh_activity: bool = True
+) -> Principal | None:
     # Presence wins, including an empty/expired account cookie: never fall back
     # to the previous device operator's privileged cookie after switching users.
     if COOKIE in cookies:
-        return authenticate(session, cookies[COOKIE])
-    return authenticate(session, cookies.get(LEGACY_COOKIE), legacy=True)
+        return authenticate(session, cookies[COOKIE], refresh_activity=refresh_activity)
+    return authenticate(session, cookies.get(LEGACY_COOKIE), legacy=True, refresh_activity=refresh_activity)
 
 
 def _issue_session(
