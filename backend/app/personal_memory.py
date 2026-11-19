@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from app.db import session_scope, utcnow
+from app.db import read_projection, session_scope, utcnow
 from app.dependencies import depend_on
 from app.events import append_event
 from app.memory import re_tokens, search_memory, upsert_memory
@@ -106,6 +106,7 @@ def register_routes(router):
     # Fixed routes must precede the existing /{entry_id} UUID routes.
     @router.get("/personal/settings")
     def get_settings(session: DB):
+        read_projection(session)
         return settings_view(session)
 
     @router.put("/personal/settings")

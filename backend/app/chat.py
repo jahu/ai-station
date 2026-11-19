@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from functools import cache
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -31,7 +32,7 @@ from app.conversation_summary import (
     uncovered_text,
 )
 from app.data_access import private_for_update
-from app.db import session_scope, utcnow
+from app.db import read_projection, session_scope, utcnow
 from app.models import (
     ChatTurnRequest,
     ChatWorkContext,
@@ -92,28 +93,34 @@ def conversation(session, conversation_id, *, lock=False):
     return row
 
 
-def conversation_view(session, row):
+def _conversation_labels(session, model_key, provider_key):
     from app.models import ChatProvider
 
-    label = row.model
-    if row.model.startswith("llamacpp:"):
+    label = model_key
+    if model_key.startswith("llamacpp:"):
         from app.model_selection import resolve
         from app.model_sources import label_of
 
-        model, definition = resolve(session, row.model, include_removed=True)
+        model, definition = resolve(session, model_key, include_removed=True)
         if model:
             label = definition.name if definition and definition.binding_key else label_of(model)
     from app.chat_providers import normalize_provider_key
 
     provider = session.scalar(
-        select(ChatProvider).where(ChatProvider.key == normalize_provider_key(row.provider))
+        select(ChatProvider).where(ChatProvider.key == normalize_provider_key(provider_key))
     )
     return {
-        **conversation_dict(row),
         "model_label": label,
-        "settings_version": row.settings_version,
-        "provider_name": provider.name if provider else row.provider,
+        "provider_name": provider.name if provider else provider_key,
         "provider_location": provider.location if provider else "local",
+    }
+
+
+def conversation_view(session, row, *, labels=None):
+    return {
+        **conversation_dict(row),
+        "settings_version": row.settings_version,
+        **(labels if labels is not None else _conversation_labels(session, row.model, row.provider)),
     }
 
 
@@ -140,12 +147,9 @@ def conversations(
     before_id: UUID | None = None,
     archived: bool = False,
 ):
-    from app.chat_providers import ensure_builtin
-
-    ensure_builtin(session)
-    session.commit()
     if (before is None) != (before_id is None):
         raise HTTPException(422, "History cursor requires both timestamp and conversation ID")
+    read_projection(session)
     query = select(Conversation).where(
         Conversation.archived_at.is_not(None) if archived else Conversation.archived_at.is_(None)
     )
@@ -167,8 +171,13 @@ def conversations(
                 and_(Conversation.updated_at == before, Conversation.id < str(before_id)),
             )
         )
+
+    @cache
+    def labels(model, provider):
+        return _conversation_labels(session, model, provider)
+
     return [
-        conversation_view(session, row)
+        conversation_view(session, row, labels=labels(row.model, row.provider))
         for row in session.scalars(
             query.order_by(Conversation.updated_at.desc(), Conversation.id.desc()).limit(100)
         )
@@ -240,6 +249,7 @@ def edit_context(conversation_id: UUID, body: ContextPolicy, session: DB):
 
 @router.get("/conversations/{conversation_id}")
 def detail(conversation_id: UUID, session: DB):
+    read_projection(session)
     row = conversation(session, conversation_id)
     # Bounded UI history; older messages remain in the database.
     messages = list(

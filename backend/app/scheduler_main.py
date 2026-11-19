@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import time
 
-from app.db import control_session_factory, migrate, utcnow
+from sqlalchemy.exc import OperationalError
+
+from app.db import control_session_factory, migrate, sqlite_busy, utcnow
 from app.llama import reconcile
 from app.models import Setting
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -37,6 +40,11 @@ def main() -> None:
                 record_sample(session, {"available": False})
             session.merge(Setting(key="scheduler_heartbeat", value={"at": utcnow().isoformat()}))
             session.commit()
+        except OperationalError as exc:
+            session.rollback()
+            if not sqlite_busy(exc):
+                raise
+            logging.warning("SQLite busy; scheduler will inspect durable state on its next tick")
         finally:
             session.close()
         time.sleep(15)

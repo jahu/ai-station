@@ -61,6 +61,14 @@ a lost worker. It never replays generation. Claims, resource locks, original
 deadlines and Stop remain authoritative. Scheduler telemetry performs native I/O
 after releasing its database transaction.
 
+Chat history, conversation details and personal memory settings use SELECT-only
+WAL snapshots. Reading them can continue while the worker writes. Account
+checks also read a snapshot on ordinary requests. When a device actually needs
+an activity or legacy-cookie update, authentication runs again inside the
+writer transaction before changing the device record. A timed-out SQLite write
+returns HTTP 503 with a retry hint, and the scheduler rolls back a busy tick
+before checking durable state again.
+
 The staged account profile shares model runtimes without sharing private Run
 graphs. A consumer of another account's pending llama.cpp startup depends on an
 owner-local readiness Run bound to immutable startup/source observations. It

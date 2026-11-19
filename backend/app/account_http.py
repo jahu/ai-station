@@ -10,8 +10,8 @@ from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
-from app.accounts import COOKIE, LEGACY_COOKIE, authenticate_cookies
-from app.db import control_session_factory, utcnow
+from app.accounts import COOKIE, LEGACY_COOKIE, activity_refresh_due, authenticate_cookies
+from app.db import control_session_factory, read_projection, utcnow
 from app.models import Setting, UserSession
 from app.operator_auth import cookie_max_age, parse_time
 from app.private_access import secure_cookie
@@ -168,17 +168,21 @@ def require_account_session(request: Request) -> JSONResponse | None:
     public = (request.method in {"GET", "HEAD"} and path in PUBLIC_GET) or (
         request.method == "POST" and path in PUBLIC_POST
     )
+    cookies = dict(request.cookies)
     with control_session_factory()() as session:
-        principal = authenticate_cookies(session, dict(request.cookies))
+        read_projection(session)
+        principal = authenticate_cookies(session, cookies, refresh_activity=False)
+        row = session.get(UserSession, principal.session_id) if principal else None
+        if row is not None and (row.lookup_hash is None or activity_refresh_due(row, utcnow())):
+            # End the snapshot and validate again under the writer lock. The
+            # device, password or account policy may have changed meanwhile.
+            session.rollback()
+            principal = authenticate_cookies(session, cookies)
+            row = session.get(UserSession, principal.session_id) if principal else None
         if principal is not None:
-            row = session.get(UserSession, principal.session_id)
             # The original legacy session has no lookup digest. Rotate only its
             # cookie name; retain the original token, issued time and expiry.
-            token = (
-                request.cookies.get(COOKIE)
-                if COOKIE in request.cookies
-                else request.cookies.get(LEGACY_COOKIE)
-            )
+            token = cookies.get(COOKIE, cookies.get(LEGACY_COOKIE))
             if token:
                 if row.lookup_hash is None:
                     row.lookup_hash = hashlib.sha256(token.encode()).hexdigest()
