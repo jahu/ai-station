@@ -1,5 +1,5 @@
 {
-  "version": 62,
+  "version": 63,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -53,7 +53,8 @@
     "docs/plans/long-video-temporal-quality.md",
     "docs/releases/0.7.0.md",
     "docs/plans/live-identity.md",
-    "docs/releases/0.8.0.md"
+    "docs/releases/0.8.0.md",
+    "docs/plans/personal-conversation-memory.md"
   ],
   "cases": [
     {
@@ -7245,6 +7246,74 @@
       ],
       "resources": "Opcjonalne pobranie po akceptacji; jedna karta na medium (minimum 4 GiB VRAM), 16 GiB RAM; słuchawki do odsłuchu.",
       "minutes": 10
+    },
+    {
+      "id": "MEM-101",
+      "area": "Pamięć",
+      "priority": "P1",
+      "requirements": [
+        "NR-08"
+      ],
+      "title": "Zapamiętanie i korekta informacji między rozmowami",
+      "prerequisites": [
+        "Konto testowe, lokalny model tekstowy i skonfigurowany lokalny enkoder. Używaj danych fikcyjnych."
+      ],
+      "steps": [
+        "Włącz w Chat opcję Learn from conversations. Podaj fikcyjne imię i preferencję. Zaczekaj na wpis i indeks w Memory.",
+        "Otwórz nowy chat i zapytaj o swoje imię. Sprawdź źródła pamięci pod odpowiedzią.",
+        "Podaj korektę w kolejnej rozmowie. Sprawdź wpis w Memory i zapytaj o imię w nowym chacie."
+      ],
+      "expected": [
+        "Nowe rozmowy używają zapisanych szczegółów. Korekta aktualizuje istniejący wpis i zachowuje ślad źródła.",
+        "Odpowiedź i jej źródła wskazują aktualne dane oraz prywatny wpis właściwego konta."
+      ],
+      "resources": "Istniejący model lokalny i CPU E5. Bez pobierania nowych wag.",
+      "minutes": 8
+    },
+    {
+      "id": "MEM-102",
+      "area": "Pamięć",
+      "priority": "P1",
+      "requirements": [
+        "NR-08"
+      ],
+      "title": "Wyłączenie i zapomnienie zapisanej pamięci",
+      "prerequisites": [
+        "Konto testowe po MEM-101 i drugie odrębne konto."
+      ],
+      "steps": [
+        "Zaloguj się na drugim koncie i sprawdź Memory. Nie wysyłaj wcześniejszych danych na tym koncie.",
+        "Na pierwszym koncie wyłącz pamięć w jednej rozmowie. Podaj nową fikcyjną preferencję i sprawdź, czy nie zapisano wpisu.",
+        "Usuń wybrany wpis w Memory. Otwórz nową rozmowę i sprawdź źródła użyte do odpowiedzi."
+      ],
+      "expected": [
+        "Drugie konto nie widzi cudzych wspomnień. Rozmowa z wyłączoną pamięcią nie uczy się i nie przywołuje wpisów.",
+        "Usunięty wpis nie pojawia się w źródłach nowej odpowiedzi."
+      ],
+      "resources": "Dwa konta testowe i ten sam lokalny model.",
+      "minutes": 8
+    },
+    {
+      "id": "MEM-103",
+      "area": "Chat",
+      "priority": "P2",
+      "requirements": [
+        "NR-08"
+      ],
+      "title": "Pamięć w pasku chatu i odświeżanie w tle",
+      "prerequisites": [
+        "Konto z historią rozmów, przeglądarka na komputerze i wąski ekran mobilny."
+      ],
+      "steps": [
+        "Otwórz nowy i istniejący chat. Włącz i wyłącz pamięć, otwórz ustawienia Web search i wróć do pisania.",
+        "W drugiej karcie wykonaj zwykłą aktualizację ustawień lub pozwól zakończyć się zadaniu. Obserwuj listę rozmów."
+      ],
+      "expected": [
+        "Kontrolka pamięci jest obok Web search z czytelnym stanem. Przycisk Send i pole wiadomości pozostają dostępne.",
+        "Odświeżanie historii działa podczas zwykłego zapisu bez okresowych ogólnych komunikatów Request failed."
+      ],
+      "resources": "Bez nowych modeli. Użyj zwykłej pracy operatora.",
+      "minutes": 5
     }
   ],
   "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",

@@ -2,7 +2,7 @@
 
 The public site is **https://ai-station.dev**, hosted on Cloudflare Pages from
 `master`. The landing page and installation guide use `site.config.json` for
-release filenames and links. The current published download is **0.8.0**.
+release filenames and links. The download links target **0.8.1**.
 Update the configuration and the “What's new” section together when preparing a
 release, then verify the compiled output against the GitHub release assets.
 See [the release checklist](../docs/release-policy.md#public-release-information).
