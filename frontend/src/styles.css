@@ -8583,10 +8583,21 @@ section:has(> .memory-grid) > .dashboard-note {
   }
 }
 @media (max-width: 360px) {
+  .chat-main .shared-chat-composer:has(.personal-memory-trigger) {
+    padding-inline: 12px;
+  }
   .chat-main
     .shared-chat-composer
     .new-chat-footer:has(> .personal-memory-trigger) {
+    gap: 3px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-actions {
     gap: 4px;
+  }
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-toggle,
+  .new-chat-footer:has(> .personal-memory-trigger) .web-search-options {
+    width: 32px;
+    padding-inline: 6px;
   }
   .new-chat-footer .personal-memory-trigger .chip {
     padding-inline: 4px;
