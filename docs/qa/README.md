@@ -1,5 +1,8 @@
 # Operator QA catalog and workbook
 
+Catalog v63 adds MEM-101–103 for cross-chat learning and correction, account
+isolation, forgetting and the Chat toolbar. All 316 active cases begin untested.
+
 Catalog v62 adds LIVE-001–005 for optional preparation, Face swap, Animated
 portrait, voice, one-GPU operation, Stop and account privacy. All 313 active
 cases start untested in a new release export. Live GPU cases target qualified
