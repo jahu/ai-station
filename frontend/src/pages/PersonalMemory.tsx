@@ -306,10 +306,15 @@ export default function PersonalMemory({
           type="button"
           variant="ghost"
           className="personal-memory-trigger"
+          data-memory-state={!data ? "loading" : state}
           aria-label={`Personal memory: ${state}`}
+          title={`Personal memory: ${state} · Open settings`}
         >
           <Brain size={16} aria-hidden="true" />
-          <span>Memory · {state}</span>
+          <span className="personal-memory-label">Memory</span>
+          <span className="chip">
+            {state === "saved only" ? "saved" : state}
+          </span>
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>

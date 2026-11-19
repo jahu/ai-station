@@ -273,7 +273,6 @@ export default function NewChat({
           : "Ask a question or describe what you want to create."}
       </p>
       <div className="new-chat-controls">
-        <PersonalMemory compact />
         {workTaskId ? (
           <p className="muted">
             Task model:{" "}
@@ -464,7 +463,9 @@ export default function NewChat({
           )
         }
         controls={
-          workTaskId ? undefined : (
+          workTaskId ? (
+            <PersonalMemory compact />
+          ) : (
             <>
               {[
                 "auto",
@@ -485,6 +486,7 @@ export default function NewChat({
                     onRenderPages={web.setRenderPages}
                   />
                 )}
+              <PersonalMemory compact />
             </>
           )
         }
