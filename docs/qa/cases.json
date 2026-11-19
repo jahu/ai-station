@@ -7252,7 +7252,8 @@
       "area": "Pamięć",
       "priority": "P1",
       "requirements": [
-        "NR-08"
+        "MVP-121",
+        "embeddingi"
       ],
       "title": "Zapamiętanie i korekta informacji między rozmowami",
       "prerequisites": [
@@ -7275,7 +7276,8 @@
       "area": "Pamięć",
       "priority": "P1",
       "requirements": [
-        "NR-08"
+        "MVP-121",
+        "NR-11"
       ],
       "title": "Wyłączenie i zapomnienie zapisanej pamięci",
       "prerequisites": [
@@ -7298,7 +7300,8 @@
       "area": "Chat",
       "priority": "P2",
       "requirements": [
-        "NR-08"
+        "MVP-113",
+        "MVP-121"
       ],
       "title": "Pamięć w pasku chatu i odświeżanie w tle",
       "prerequisites": [
@@ -7316,7 +7319,7 @@
       "minutes": 5
     }
   ],
-  "scope_notice": "Wydanie 0.5: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
+  "scope_notice": "Wydanie 0.8.1: Linux i Windows oraz wspólne funkcje platformy. macOS jest niedostępny i odłożony decyzją właściciela z 2026-11-03. Przypadki SETUP-155–158 zachowano na przyszłość poza aktywnym arkuszem; nie wykonuj testów Maca. Wyniki użytkownika pozostają Nie testowano. Właściciel wykona testy GPU na fizycznym Windowsie (SETUP-164) i ocenę próbek głosu/filmu po release; pozostają Nie testowano, a nie OK. Instalator Windows jest świadomie wydawany bez podpisu; ostrzeżenia lub blokada systemowa nie są automatycznie obchodzone.",
   "deferred_cases": [
     {
       "id": "SETUP-155",
